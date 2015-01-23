@@ -1,7 +1,7 @@
 import org.gradle.plugins.ide.eclipse.model.Classpath
 
 /*
- * Copyright 2014 Real Logic Ltd.
+ * Copyright 2015 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,9 +100,9 @@ subprojects {
     }
 
     javadoc {
-        title = '<h1>Fix Engine</h1>'
+        title = '<h1>Fix Gateway</h1>'
 
-        options.bottom = '<i>Copyright &#169; 2014 Real Logic Ltd. All Rights Reserved.</i>'
+        options.bottom = '<i>Copyright &#169; 2015 Real Logic Ltd. All Rights Reserved.</i>'
         options.addStringOption('XDignore.symbol.file', '-quiet')
     }
 
@@ -194,19 +194,17 @@ uploadArchives {
             }
 
             pom.project {
-                name = 'Fix'
+                name = 'Fix Gateway'
                 packaging = 'pom'
-                description = 'Fix Engine'
-                /*
-                TODO: determine these after github project setup
-                url = 'https://github.com/real-logic/fix-engine'
+                description = 'Resilient High-Performance FIX Gateway'
+                
+                url = 'https://github.com/real-logic/FIX-Gateway'
 
                 scm {
-                    connection = 'scm:git:https://github.com/real-logic/Aeron.git'
-                    developerConnection = 'scm:git:https://github.com/real-logic/Aeron.git'
-                    url = 'https://github.com/real-logic/Aeron.git'
+                    connection = 'scm:git:https://github.com/real-logic/FIX-Gateway.git'
+                    developerConnection = 'scm:git:https://github.com/real-logic/FIX-Gateway.git'
+                    url = 'https://github.com/real-logic/FIX-Gateway.git'
                 }
-                */
 
                 licenses {
                     license {
@@ -237,3 +235,4 @@ uploadArchives {
 task wrapper(type: Wrapper) {
     gradleVersion = '2.1'
 }
+

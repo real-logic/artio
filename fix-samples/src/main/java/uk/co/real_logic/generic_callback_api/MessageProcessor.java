@@ -19,30 +19,36 @@ import uk.co.real_logic.fix.generic_callback_api.FixMessageHandler;
 import uk.co.real_logic.fix.util.MutableString;
 
 // TODO: figure out what we should use as our example to implement in all 3 APIs
-public class MessageProcessor implements FixMessageHandler {
+public class MessageProcessor implements FixMessageHandler
+{
 
     @Override
-    public void onStartMessage() {
+    public void onStartMessage()
+    {
 
     }
 
     @Override
-    public void onStringField(final int tag, final MutableString value) {
+    public void onStringField(final int tag, final MutableString value)
+    {
 
     }
 
     @Override
-    public void onIntField(final int tag, final int value) {
+    public void onIntField(final int tag, final int value)
+    {
 
     }
 
     @Override
-    public void onGroup(final int tag, final int numberOfElements) {
+    public void onGroup(final int tag, final int numberOfElements)
+    {
 
     }
 
     @Override
-    public void onEndMessage() {
+    public void onEndMessage()
+    {
 
     }
 

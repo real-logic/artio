@@ -19,7 +19,8 @@ import uk.co.real_logic.fix.util.MutableString;
 
 import java.nio.ByteBuffer;
 
-public interface LogonHandler {
+public interface LogonHandler
+{
 
     void onLogon(
         final StandardHeader standardHeader,
@@ -28,8 +29,8 @@ public interface LogonHandler {
         final ByteBuffer rawData,
         final boolean resetSeqNumFlag,
         final int maxMessageSize,
-        final int NoMsgTypes,
-        final MutableString RefMsgType,
+        final int noMsgTypes,
+        final MutableString refMsgType,
         final char msgDirection
     );
 

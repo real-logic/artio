@@ -18,7 +18,8 @@ package uk.co.real_logic.fix.generic_iterator_api;
 import uk.co.real_logic.fix.util.MutableString;
 
 // TODO: figure out to do groups with this API.
-public interface FixMessage {
+public interface FixMessage
+{
 
     boolean hasNextField();
 

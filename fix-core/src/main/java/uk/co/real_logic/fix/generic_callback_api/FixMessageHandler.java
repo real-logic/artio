@@ -17,7 +17,8 @@ package uk.co.real_logic.fix.generic_callback_api;
 
 import uk.co.real_logic.fix.util.MutableString;
 
-public interface FixMessageHandler {
+public interface FixMessageHandler
+{
 
     void onStartMessage();
 

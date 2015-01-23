@@ -21,7 +21,8 @@ import uk.co.real_logic.fix.util.MutableString;
 
 import java.nio.ByteBuffer;
 
-public class LogonProcessor implements LogonHandler {
+public class LogonProcessor implements LogonHandler
+{
 
     @Override
     public void onLogon(
@@ -31,9 +32,10 @@ public class LogonProcessor implements LogonHandler {
             final ByteBuffer rawData,
             final boolean resetSeqNumFlag,
             final int maxMessageSize,
-            final int NoMsgTypes,
-            final MutableString RefMsgType,
-            final char msgDirection) {
+            final int noMsgTypes,
+            final MutableString refMsgType,
+            final char msgDirection)
+    {
 
     }
 

@@ -15,5 +15,6 @@
  */
 package uk.co.real_logic.fix.specific_callback_api;
 
-public class StandardHeader {
+public class StandardHeader
+{
 }

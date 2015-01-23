@@ -18,5 +18,6 @@ package uk.co.real_logic.fix.util;
 /**
  * Mutable String class that flyweights a data buffer.
  */
-public class MutableString {
+public class MutableString
+{
 }
