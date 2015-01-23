@@ -13,15 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix;
+package uk.co.real_logic.fix.generic_iterator_api;
 
-public class FixEngine
-{
+import uk.co.real_logic.fix.util.MutableString;
 
-  public static void main(String[] args)
-  {
-    System.out.println("Hello World");
-  }
+// TODO: figure out to do groups with this API.
+public interface FixMessage {
+
+    boolean hasNextField();
+
+    int tag();
+
+    MutableString value();
 
 }
-

@@ -13,15 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix;
+package uk.co.real_logic.fix.specific_callback_api;
 
-public class FixEngine
-{
+import uk.co.real_logic.fix.util.MutableString;
 
-  public static void main(String[] args)
-  {
-    System.out.println("Hello World");
-  }
+import java.nio.ByteBuffer;
+
+public interface LogonHandler {
+
+    void onLogon(
+        final StandardHeader standardHeader,
+        final int heartBeatInterval,
+        final int rawDataLength,
+        final ByteBuffer rawData,
+        final boolean resetSeqNumFlag,
+        final int maxMessageSize,
+        final int NoMsgTypes,
+        final MutableString RefMsgType,
+        final char msgDirection
+    );
 
 }
-

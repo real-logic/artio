@@ -13,15 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix;
+package uk.co.real_logic.fix.specific_callback_api;
 
-public class FixEngine
-{
-
-  public static void main(String[] args)
-  {
-    System.out.println("Hello World");
-  }
-
+public class StandardHeader {
 }
-

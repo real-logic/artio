@@ -13,15 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix;
+package uk.co.real_logic.fix.util;
 
-public class FixEngine
-{
-
-  public static void main(String[] args)
-  {
-    System.out.println("Hello World");
-  }
-
+/**
+ * Mutable String class that flyweights a data buffer.
+ */
+public class MutableString {
 }
-
