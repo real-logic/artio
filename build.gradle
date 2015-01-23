@@ -1,0 +1,239 @@
+import org.gradle.plugins.ide.eclipse.model.Classpath
+
+/*
+ * Copyright 2014 Real Logic Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+apply plugin: 'maven'
+apply plugin: 'signing'
+
+defaultTasks 'clean', 'build', 'install'
+
+ext {
+    group = fixGroup
+    version = fixVersion
+
+    if (!project.hasProperty('ossrhUsername'))
+        ossrhUsername = ''
+
+    if (!project.hasProperty('ossrhPassword'))
+        ossrhPassword = ''
+}
+
+allprojects {
+    apply plugin: 'eclipse'
+}
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:0.8'
+        classpath 'com.puppycrawl.tools:checkstyle:5.9'
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'maven'
+    apply plugin: 'checkstyle'
+
+    // Make sure that we use the correct JDK in Eclipse
+    // There needs to be a JDK8 JVM installed in Eclipse before
+    // importing the generated projects.
+    plugins.withType(JavaBasePlugin) {
+        eclipse.classpath.file.whenMerged { Classpath path ->
+            path.entries.findAll { it.path.contains('JRE_CONTAINER') }.each {
+                it.path += "/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"
+            }
+        }
+    }
+
+    group = fixGroup
+    version = fixVersion
+
+    compileJava {
+        sourceCompatibility = 1.8
+        targetCompatibility = 1.8
+    }
+
+    [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+
+    repositories {
+        mavenCentral()
+        mavenLocal()
+    }
+
+    dependencies {
+        testCompile 'org.hamcrest:hamcrest-all:1.3', 'junit:junit:4.11', 'org.mockito:mockito-all:1.9.5'
+    }
+
+    checkstyle {
+        configFile = new File(rootDir, 'config/checkstyle/checkstyle.xml')
+        toolVersion = 5.9
+    }
+
+    test {
+        testLogging {
+            events 'skipped', 'failed'
+            showStandardStreams = true
+            exceptionFormat = 'full'
+            afterSuite { desc, result ->
+                if (!desc.parent) {
+                    println "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
+                }
+            }
+        }
+    }
+
+    javadoc {
+        title = '<h1>Fix Engine</h1>'
+
+        options.bottom = '<i>Copyright &#169; 2014 Real Logic Ltd. All Rights Reserved.</i>'
+        options.addStringOption('XDignore.symbol.file', '-quiet')
+    }
+
+    task sourcesJar(type: Jar) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+    }
+
+    task testJar(type: Jar, dependsOn: testClasses) {
+        baseName = "test-${project.archivesBaseName}"
+        from sourceSets.test.output
+    }
+
+    task javadocJar(type: Jar) {
+        classifier = 'javadoc'
+        from javadoc.destinationDir
+    }
+
+    configurations {
+        tests
+    }
+
+    artifacts {
+        archives sourcesJar, javadocJar
+        tests testJar
+    }
+}
+
+project(':fix-core') {
+    apply plugin: 'application'
+
+    mainClassName = 'uk.co.real_logic.fix.FixEngine'
+
+    dependencies {
+        compile 'uk.co.real-logic:Agrona:0.2-SNAPSHOT'
+        compile 'uk.co.real-logic:aeron-client:0.1-SNAPSHOT'
+    }
+    
+    run {
+        systemProperties(System.properties)
+    }
+
+    build.doLast {
+        tasks.distZip.execute()
+    }
+    
+    test {
+        systemProperties('java.net.preferIPv4Stack': true)
+    }
+}
+
+project(':fix-system-tests') {
+    dependencies {
+        testCompile project(path: ':fix-core', configuration: 'tests')
+    }
+    
+    test {
+        systemProperties('java.net.preferIPv4Stack': true)
+    }
+}
+
+project(':fix-samples') {
+    apply plugin: 'shadow'
+
+    dependencies {
+        compile project(':fix-core')
+    }
+
+    shadow {
+        outputFile = new File('fix-samples/build/libs/samples.jar')
+    }
+
+    build.doLast {
+        tasks.shadowJar.execute()
+    }
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            pom.project {
+                name = 'Fix'
+                packaging = 'pom'
+                description = 'Fix Engine'
+                /*
+                TODO: determine these after github project setup
+                url = 'https://github.com/real-logic/fix-engine'
+
+                scm {
+                    connection = 'scm:git:https://github.com/real-logic/Aeron.git'
+                    developerConnection = 'scm:git:https://github.com/real-logic/Aeron.git'
+                    url = 'https://github.com/real-logic/Aeron.git'
+                }
+                */
+
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = 'mjpt777'
+                        name = 'Martin Thompson'
+                        email = 'mjpt777@gmail.com'
+                        url = 'https://github.com/mjpt777'
+                    }
+                    developer {
+                        id = 'RichardWarburton'
+                        name = 'Richard Warburton'
+                        email = 'richard.warburton@gmail.com'
+                        url = 'https://github.com/RichardWarburton'
+                    }
+                }
+            }
+        }
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.1'
+}
