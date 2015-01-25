@@ -1,1 +1,1 @@
-include 'fix-core', 'fix-samples', 'fix-system-tests'
+include 'fix_gateway-core', 'fix_gateway-samples', 'fix_gateway-system-tests'

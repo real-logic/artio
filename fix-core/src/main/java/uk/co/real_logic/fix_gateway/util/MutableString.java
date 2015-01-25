@@ -13,18 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix.generic_iterator_api;
+package uk.co.real_logic.fix_gateway.util;
 
-import uk.co.real_logic.fix.util.MutableString;
-
-// TODO: figure out to do groups with this API.
-public interface FixMessage
+/**
+ * Mutable String class that flyweights a data buffer.
+ */
+public class MutableString
 {
-
-    boolean hasNextField();
-
-    int tag();
-
-    MutableString value();
-
 }

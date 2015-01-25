@@ -131,10 +131,10 @@ subprojects {
     }
 }
 
-project(':fix-core') {
+project(':fix_gateway-core') {
     apply plugin: 'application'
 
-    mainClassName = 'uk.co.real_logic.fix.FixEngine'
+    mainClassName = 'uk.co.real_logic.fix_gateway.FixEngine'
 
     dependencies {
         compile 'uk.co.real-logic:Agrona:0.2-SNAPSHOT'
@@ -154,9 +154,9 @@ project(':fix-core') {
     }
 }
 
-project(':fix-system-tests') {
+project(':fix_gateway-system-tests') {
     dependencies {
-        testCompile project(path: ':fix-core', configuration: 'tests')
+        testCompile project(path: ':fix_gateway-core', configuration: 'tests')
     }
     
     test {
@@ -164,15 +164,15 @@ project(':fix-system-tests') {
     }
 }
 
-project(':fix-samples') {
+project(':fix_gateway-samples') {
     apply plugin: 'shadow'
 
     dependencies {
-        compile project(':fix-core')
+        compile project(':fix_gateway-core')
     }
 
     shadow {
-        outputFile = new File('fix-samples/build/libs/samples.jar')
+        outputFile = new File('fix_gateway-samples/build/libs/samples.jar')
     }
 
     build.doLast {

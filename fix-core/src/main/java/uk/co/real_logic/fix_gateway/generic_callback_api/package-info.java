@@ -1,11 +1,11 @@
 /**
  * Strawman API proposal where:
  *
- * There is a single generic handler interface to be called for any type of fix message.
+ * There is a single generic handler interface to be called for any type of fix_gateway message.
  *
  * This handler could be registered against different types of Fix messages.
  *
  * Pros: simple, generic and flexible
  * Cons: not semantic, nearly all call sites megamorphic in practice, potentially slower
  */
-package uk.co.real_logic.fix.generic_callback_api;
+package uk.co.real_logic.fix_gateway.generic_callback_api;

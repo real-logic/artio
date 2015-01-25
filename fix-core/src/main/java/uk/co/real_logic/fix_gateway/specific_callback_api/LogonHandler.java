@@ -13,21 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix.generic_callback_api;
+package uk.co.real_logic.fix_gateway.specific_callback_api;
 
-import uk.co.real_logic.fix.util.MutableString;
+import uk.co.real_logic.fix_gateway.util.MutableString;
 
-public interface FixMessageHandler
+import java.nio.ByteBuffer;
+
+public interface LogonHandler
 {
 
-    void onStartMessage();
-
-    void onStringField(int tag, MutableString value);
-
-    void onIntField(int tag, int value);
-
-    void onGroup(int tag, int numberOfElements);
-
-    void onEndMessage();
+    void onLogon(
+        final StandardHeader standardHeader,
+        final int heartBeatInterval,
+        final int rawDataLength,
+        final ByteBuffer rawData,
+        final boolean resetSeqNumFlag,
+        final int maxMessageSize,
+        final int noMsgTypes,
+        final MutableString refMsgType,
+        final char msgDirection
+    );
 
 }

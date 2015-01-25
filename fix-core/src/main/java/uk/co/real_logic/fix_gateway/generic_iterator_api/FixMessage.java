@@ -13,25 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix.specific_callback_api;
+package uk.co.real_logic.fix_gateway.generic_iterator_api;
 
-import uk.co.real_logic.fix.util.MutableString;
+import uk.co.real_logic.fix_gateway.util.MutableString;
 
-import java.nio.ByteBuffer;
-
-public interface LogonHandler
+// TODO: figure out to do groups with this API.
+public interface FixMessage
 {
 
-    void onLogon(
-        final StandardHeader standardHeader,
-        final int heartBeatInterval,
-        final int rawDataLength,
-        final ByteBuffer rawData,
-        final boolean resetSeqNumFlag,
-        final int maxMessageSize,
-        final int noMsgTypes,
-        final MutableString refMsgType,
-        final char msgDirection
-    );
+    boolean hasNextField();
+
+    int tag();
+
+    MutableString value();
 
 }

@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.specific_callback_api;
 
-import uk.co.real_logic.fix.specific_callback_api.LogonHandler;
-import uk.co.real_logic.fix.specific_callback_api.StandardHeader;
-import uk.co.real_logic.fix.util.MutableString;
+import uk.co.real_logic.fix_gateway.specific_callback_api.LogonHandler;
+import uk.co.real_logic.fix_gateway.specific_callback_api.StandardHeader;
+import uk.co.real_logic.fix_gateway.util.MutableString;
 
 import java.nio.ByteBuffer;
 

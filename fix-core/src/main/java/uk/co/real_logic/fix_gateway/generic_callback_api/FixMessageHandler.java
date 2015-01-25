@@ -13,15 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix;
+package uk.co.real_logic.fix_gateway.generic_callback_api;
 
-public class FixEngine
+import uk.co.real_logic.fix_gateway.util.MutableString;
+
+public interface FixMessageHandler
 {
 
-  public static void main(String[] args)
-  {
-    System.out.println("Hello World");
-  }
+    void onStartMessage();
+
+    void onStringField(int tag, MutableString value);
+
+    void onIntField(int tag, int value);
+
+    void onGroup(int tag, int numberOfElements);
+
+    void onEndMessage();
 
 }
-

@@ -13,11 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix.util;
+package uk.co.real_logic.fix_gateway;
 
-/**
- * Mutable String class that flyweights a data buffer.
- */
-public class MutableString
+public class FixEngine
 {
+
+  public static void main(String[] args)
+  {
+    System.out.println("Hello World");
+  }
+
 }
+

@@ -8,4 +8,4 @@
  * Pros: a more semantic API
  * Cons: if all the handlers do is to serialise messages into a binary format its a harder API to use.
  */
-package uk.co.real_logic.fix.specific_callback_api;
+package uk.co.real_logic.fix_gateway.specific_callback_api;

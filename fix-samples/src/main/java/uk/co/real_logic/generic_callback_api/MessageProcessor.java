@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.generic_callback_api;
 
-import uk.co.real_logic.fix.generic_callback_api.FixMessageHandler;
-import uk.co.real_logic.fix.util.MutableString;
+import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageHandler;
+import uk.co.real_logic.fix_gateway.util.MutableString;
 
 // TODO: figure out what we should use as our example to implement in all 3 APIs
 public class MessageProcessor implements FixMessageHandler
