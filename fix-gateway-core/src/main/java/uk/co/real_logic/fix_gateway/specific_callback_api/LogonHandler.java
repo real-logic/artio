@@ -23,15 +23,15 @@ public interface LogonHandler
 {
 
     void onLogon(
-        final StandardHeader standardHeader,
-        final int heartBeatInterval,
-        final int rawDataLength,
-        final ByteBuffer rawData,
-        final boolean resetSeqNumFlag,
-        final int maxMessageSize,
-        final int noMsgTypes,
-        final MutableString refMsgType,
-        final char msgDirection
+            final StandardHeader standardHeader,
+            final int heartBeatInterval,
+            final int rawDataLength,
+            final ByteBuffer rawData,
+            final boolean resetSeqNumFlag,
+            final int maxMessageSize,
+            final int noMsgTypes,
+            final MutableString refMsgType,
+            final char msgDirection
     );
 
 }

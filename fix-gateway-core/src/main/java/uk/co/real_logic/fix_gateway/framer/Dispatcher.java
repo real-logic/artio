@@ -13,15 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway;
+package uk.co.real_logic.fix_gateway.framer;
 
-public class FixEngine
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.nio.channels.ServerSocketChannel;
+
+public class Dispatcher
 {
 
-  public static void main(String[] args)
-  {
-    System.out.println("Hello World");
-  }
+    private final ServerSocketChannel channel;
+
+    public Dispatcher(final SocketAddress address)
+    {
+        try
+        {
+            channel = ServerSocketChannel.open();
+            channel.bind(address)
+                    .configureBlocking(false);
+        }
+        catch (IOException e)
+        {
+            throw new IllegalArgumentException(e);
+        }
+    }
 
 }
-

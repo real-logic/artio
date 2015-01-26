@@ -131,7 +131,7 @@ subprojects {
     }
 }
 
-project(':fix_gateway-core') {
+project(':fix-gateway-core') {
     apply plugin: 'application'
 
     mainClassName = 'uk.co.real_logic.fix_gateway.FixEngine'
@@ -139,8 +139,9 @@ project(':fix_gateway-core') {
     dependencies {
         compile 'uk.co.real-logic:Agrona:0.2-SNAPSHOT'
         compile 'uk.co.real-logic:aeron-client:0.1-SNAPSHOT'
+        compile 'uk.co.real-logic:aeron-common:0.1-SNAPSHOT'
     }
-    
+
     run {
         systemProperties(System.properties)
     }
@@ -148,31 +149,31 @@ project(':fix_gateway-core') {
     build.doLast {
         tasks.distZip.execute()
     }
-    
+
     test {
         systemProperties('java.net.preferIPv4Stack': true)
     }
 }
 
-project(':fix_gateway-system-tests') {
+project(':fix-gateway-system-tests') {
     dependencies {
-        testCompile project(path: ':fix_gateway-core', configuration: 'tests')
+        testCompile project(path: ':fix-gateway-core', configuration: 'tests')
     }
-    
+
     test {
         systemProperties('java.net.preferIPv4Stack': true)
     }
 }
 
-project(':fix_gateway-samples') {
+project(':fix-gateway-samples') {
     apply plugin: 'shadow'
 
     dependencies {
-        compile project(':fix_gateway-core')
+        compile project(':fix-gateway-core')
     }
 
     shadow {
-        outputFile = new File('fix_gateway-samples/build/libs/samples.jar')
+        outputFile = new File('fix-gateway-samples/build/libs/samples.jar')
     }
 
     build.doLast {
@@ -197,7 +198,7 @@ uploadArchives {
                 name = 'Fix Gateway'
                 packaging = 'pom'
                 description = 'Resilient High-Performance FIX Gateway'
-                
+
                 url = 'https://github.com/real-logic/FIX-Gateway'
 
                 scm {
