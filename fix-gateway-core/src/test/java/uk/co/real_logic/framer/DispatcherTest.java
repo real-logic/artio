@@ -24,15 +24,14 @@ import uk.co.real_logic.fix_gateway.framer.ReceiveEndPoint;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.Selector;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class DispatcherTest
 {
@@ -40,6 +39,8 @@ public class DispatcherTest
     private static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", 9999);
 
     private SocketChannel client;
+    private ByteBuffer clientBuffer = ByteBuffer.allocate(1024);
+
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private ReceiveEndPoint mockReceiveEndPoint = mock(ReceiveEndPoint.class);
 
@@ -48,6 +49,8 @@ public class DispatcherTest
     @Before
     public void setUp()
     {
+        clientBuffer.putInt(10, 5);
+
         when(mockConnectionHandler.onNewConnection(any(SocketChannel.class)))
             .thenReturn(mockReceiveEndPoint);
 
@@ -70,7 +73,7 @@ public class DispatcherTest
     }
 
     @Test
-    public void shouldRegisterEndPointWhenClientConnects() throws Exception
+    public void shouldCreateEndPointWhenClientConnects() throws Exception
     {
         given:
         connect();
@@ -80,12 +83,32 @@ public class DispatcherTest
 
         then:
         verify(mockConnectionHandler).onNewConnection(notNull(SocketChannel.class));
-        verify(mockReceiveEndPoint).register(any(Selector.class));
+    }
+
+    @Test
+    public void shouldPassDataToEndPointWhenSent() throws Exception
+    {
+        given:
+        connect();
+        dispatcher.doWork();
+
+        when:
+        sendData();
+        dispatcher.doWork();
+
+        then:
+        verify(mockReceiveEndPoint).receiveData();
     }
 
     private void connect() throws IOException
     {
         client = SocketChannel.open(ADDRESS);
+    }
+
+    private void sendData() throws IOException
+    {
+        clientBuffer.position(0);
+        assertEquals("Has written bytes", clientBuffer.remaining(), client.write(clientBuffer));
     }
 
 }

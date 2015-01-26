@@ -15,15 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
-import java.nio.channels.Selector;
-
 /**
  * Handles incoming data from sockets
  */
 public class ReceiveEndPoint
 {
-    public void register(final Selector selector)
+
+    public void receiveData()
     {
 
     }
+
 }

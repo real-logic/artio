@@ -22,8 +22,11 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
+
+import static java.nio.channels.SelectionKey.OP_READ;
 
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
@@ -61,27 +64,29 @@ public class Dispatcher implements Agent
 
     private int pollSockets() throws IOException
     {
-        selector.selectNow();
+        final int count = selector.selectNow();
 
         final Set<SelectionKey> keys = selector.selectedKeys();
-        for (Iterator<SelectionKey> it = keys.iterator(); it.hasNext(); )
+        for (Iterator<SelectionKey> it = keys.iterator(); it.hasNext();)
         {
             final SelectionKey key = it.next();
             if (key.isAcceptable())
             {
-                ReceiveEndPoint endPoint = connectionHandler.onNewConnection(listeningChannel.accept());
-                endPoint.register(selector);
-            }
-            /*else
-            if (key.isReadable())
-            {
+                final SocketChannel channel = listeningChannel.accept();
+                channel.configureBlocking(false);
 
-            }*/
+                ReceiveEndPoint endPoint = connectionHandler.onNewConnection(channel);
+                channel.register(selector, OP_READ, endPoint);
+            }
+            else if (key.isReadable())
+            {
+                ((ReceiveEndPoint) key.attachment()).receiveData();
+            }
 
             it.remove();
         }
 
-        return 0;
+        return count;
     }
 
     @Override
