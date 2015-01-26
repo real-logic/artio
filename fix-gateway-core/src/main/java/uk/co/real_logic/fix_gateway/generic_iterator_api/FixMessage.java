@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.generic_iterator_api;
 
-import uk.co.real_logic.fix_gateway.util.MutableString;
+import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
 // TODO: figure out to do groups with this API.
 public interface FixMessage
@@ -25,6 +25,6 @@ public interface FixMessage
 
     int tag();
 
-    MutableString value();
+    StringFlyweight value();
 
 }

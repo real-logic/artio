@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.specific_callback_api;
 
-import uk.co.real_logic.fix_gateway.util.MutableString;
+import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
 import java.nio.ByteBuffer;
 
@@ -30,7 +30,7 @@ public interface LogonHandler
             final boolean resetSeqNumFlag,
             final int maxMessageSize,
             final int noMsgTypes,
-            final MutableString refMsgType,
+            final StringFlyweight refMsgType,
             final char msgDirection
     );
 

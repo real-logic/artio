@@ -13,11 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.util;
+package uk.co.real_logic.fix_gateway.framer;
+
+import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 
 /**
- * Mutable String class that flyweights a data buffer.
+ * Handler for messages that have been identified and framed coming in off the wire.
  */
-public class MutableString
+public interface MessageHandler
 {
+    void onMessage(final AtomicBuffer buffer, final int offset, final int length);
 }

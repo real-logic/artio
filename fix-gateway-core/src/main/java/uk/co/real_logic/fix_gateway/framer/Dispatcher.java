@@ -75,12 +75,12 @@ public class Dispatcher implements Agent
                 final SocketChannel channel = listeningChannel.accept();
                 channel.configureBlocking(false);
 
-                ReceiveEndPoint endPoint = connectionHandler.onNewConnection(channel);
+                ReceiverEndPoint endPoint = connectionHandler.onNewConnection(channel);
                 channel.register(selector, OP_READ, endPoint);
             }
             else if (key.isReadable())
             {
-                ((ReceiveEndPoint) key.attachment()).receiveData();
+                ((ReceiverEndPoint) key.attachment()).receiveData();
             }
 
             it.remove();

@@ -15,14 +15,14 @@
  */
 package uk.co.real_logic.fix_gateway.generic_callback_api;
 
-import uk.co.real_logic.fix_gateway.util.MutableString;
+import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
 public interface FixMessageHandler
 {
 
     void onStartMessage();
 
-    void onStringField(int tag, MutableString value);
+    void onStringField(int tag, StringFlyweight value);
 
     void onIntField(int tag, int value);
 

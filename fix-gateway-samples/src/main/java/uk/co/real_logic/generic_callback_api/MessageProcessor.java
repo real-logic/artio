@@ -16,7 +16,7 @@
 package uk.co.real_logic.generic_callback_api;
 
 import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageHandler;
-import uk.co.real_logic.fix_gateway.util.MutableString;
+import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
 // TODO: figure out what we should use as our example to implement in all 3 APIs
 public class MessageProcessor implements FixMessageHandler
@@ -29,7 +29,7 @@ public class MessageProcessor implements FixMessageHandler
     }
 
     @Override
-    public void onStringField(final int tag, final MutableString value)
+    public void onStringField(final int tag, final StringFlyweight value)
     {
 
     }

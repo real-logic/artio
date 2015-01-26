@@ -24,15 +24,17 @@ public class ConnectionHandler
 {
 
     private final int bufferSize;
+    private final MessageHandler messageHandler;
 
-    public ConnectionHandler(final int bufferSize)
+    public ConnectionHandler(final int bufferSize, final MessageHandler messageHandler)
     {
         this.bufferSize = bufferSize;
+        this.messageHandler = messageHandler;
     }
 
-    public ReceiveEndPoint onNewConnection(SocketChannel accept)
+    public ReceiverEndPoint onNewConnection(SocketChannel accept)
     {
-        return new ReceiveEndPoint(accept, bufferSize);
+        return new ReceiverEndPoint(accept, bufferSize, messageHandler);
     }
 
 }

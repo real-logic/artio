@@ -20,7 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.framer.Dispatcher;
-import uk.co.real_logic.fix_gateway.framer.ReceiveEndPoint;
+import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -42,7 +42,7 @@ public class DispatcherTest
     private ByteBuffer clientBuffer = ByteBuffer.allocate(1024);
 
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
-    private ReceiveEndPoint mockReceiveEndPoint = mock(ReceiveEndPoint.class);
+    private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
 
     private Dispatcher dispatcher = new Dispatcher(ADDRESS, mockConnectionHandler);
 
@@ -52,7 +52,7 @@ public class DispatcherTest
         clientBuffer.putInt(10, 5);
 
         when(mockConnectionHandler.onNewConnection(any(SocketChannel.class)))
-            .thenReturn(mockReceiveEndPoint);
+            .thenReturn(mockReceiverEndPoint);
 
     }
 
@@ -97,7 +97,7 @@ public class DispatcherTest
         dispatcher.doWork();
 
         then:
-        verify(mockReceiveEndPoint).receiveData();
+        verify(mockReceiverEndPoint).receiveData();
     }
 
     private void connect() throws IOException
