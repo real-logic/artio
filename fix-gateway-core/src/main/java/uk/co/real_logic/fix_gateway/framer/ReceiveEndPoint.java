@@ -15,15 +15,38 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+
+import java.io.IOException;
+import java.nio.channels.SocketChannel;
+
 /**
  * Handles incoming data from sockets
  */
 public class ReceiveEndPoint
 {
 
+    private final AtomicBuffer buffer;
+    private final SocketChannel channel;
+
+    public ReceiveEndPoint(final SocketChannel channel, final int bufferSize)
+    {
+        this.channel = channel;
+        buffer = new UnsafeBuffer(new byte[bufferSize]);
+    }
+
     public void receiveData()
     {
-
+        try
+        {
+            final int read = channel.read(buffer.byteBuffer());
+        }
+        catch (IOException e)
+        {
+            // TODO
+            e.printStackTrace();
+        }
     }
 
 }

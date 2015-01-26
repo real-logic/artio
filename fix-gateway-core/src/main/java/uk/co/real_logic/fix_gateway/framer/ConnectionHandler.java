@@ -22,9 +22,17 @@ import java.nio.channels.SocketChannel;
  */
 public class ConnectionHandler
 {
+
+    private final int bufferSize;
+
+    public ConnectionHandler(final int bufferSize)
+    {
+        this.bufferSize = bufferSize;
+    }
+
     public ReceiveEndPoint onNewConnection(SocketChannel accept)
     {
-
-        return null;
+        return new ReceiveEndPoint(accept, bufferSize);
     }
+
 }
