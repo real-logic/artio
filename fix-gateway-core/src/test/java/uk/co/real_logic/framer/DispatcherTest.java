@@ -15,15 +15,24 @@
  */
 package uk.co.real_logic.framer;
 
-import org.junit.Ignore;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.framer.Dispatcher;
+import uk.co.real_logic.fix_gateway.framer.ReceiveEndPoint;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.notNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class DispatcherTest
 {
@@ -31,21 +40,52 @@ public class DispatcherTest
     private static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", 9999);
 
     private SocketChannel client;
+    private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
+    private ReceiveEndPoint mockReceiveEndPoint = mock(ReceiveEndPoint.class);
 
-    private Dispatcher dispatcher = new Dispatcher(ADDRESS);
+    private Dispatcher dispatcher = new Dispatcher(ADDRESS, mockConnectionHandler);
+
+    @Before
+    public void setUp()
+    {
+        when(mockConnectionHandler.onNewConnection(any(SocketChannel.class)))
+            .thenReturn(mockReceiveEndPoint);
+
+    }
+
+    @After
+    public void tearDown()
+    {
+        dispatcher.onClose();
+    }
 
     @Test
     public void shouldListenOnSpecifiedPort() throws IOException
     {
-        client = SocketChannel.open(ADDRESS);
+        when:
+        connect();
+
+        then:
         assertTrue("Client has failed to connect", client.finishConnect());
     }
 
-    @Ignore
     @Test
-    public void shouldInitiateFramerWhenClientConnects()
+    public void shouldRegisterEndPointWhenClientConnects() throws Exception
     {
+        given:
+        connect();
 
+        when:
+        dispatcher.doWork();
+
+        then:
+        verify(mockConnectionHandler).onNewConnection(notNull(SocketChannel.class));
+        verify(mockReceiveEndPoint).register(any(Selector.class));
+    }
+
+    private void connect() throws IOException
+    {
+        client = SocketChannel.open(ADDRESS);
     }
 
 }
