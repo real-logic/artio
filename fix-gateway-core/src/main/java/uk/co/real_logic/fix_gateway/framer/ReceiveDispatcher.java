@@ -33,7 +33,7 @@ import static java.nio.channels.SelectionKey.OP_READ;
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
  */
-public class Dispatcher implements Agent
+public class ReceiveDispatcher implements Agent
 {
 
     private final ServerSocketChannel listeningChannel;
@@ -41,7 +41,7 @@ public class Dispatcher implements Agent
     private final Selector selector;
 
     // TODO: add hooks for receive and send buffer sizes
-    public Dispatcher(final SocketAddress address, ConnectionHandler connectionHandler)
+    public ReceiveDispatcher(final SocketAddress address, ConnectionHandler connectionHandler)
     {
         this.connectionHandler = connectionHandler;
 
