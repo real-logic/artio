@@ -19,7 +19,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
-import uk.co.real_logic.fix_gateway.framer.ReceiveDispatcher;
+import uk.co.real_logic.fix_gateway.framer.Receiver;
 import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
 
 import java.io.IOException;
@@ -33,7 +33,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
 
-public class ReceiveDispatcherTest
+public class ReceiverTest
 {
 
     private static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", 9999);
@@ -44,7 +44,7 @@ public class ReceiveDispatcherTest
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
 
-    private ReceiveDispatcher receiveDispatcher = new ReceiveDispatcher(ADDRESS, mockConnectionHandler);
+    private Receiver receiver = new Receiver(ADDRESS, mockConnectionHandler);
 
     @Before
     public void setUp()
@@ -59,7 +59,7 @@ public class ReceiveDispatcherTest
     @After
     public void tearDown()
     {
-        receiveDispatcher.onClose();
+        receiver.onClose();
     }
 
     @Test
@@ -79,7 +79,7 @@ public class ReceiveDispatcherTest
         aClientConnects();
 
         when:
-        receiveDispatcher.doWork();
+        receiver.doWork();
 
         then:
         verify(mockConnectionHandler).onNewConnection(notNull(SocketChannel.class));
@@ -90,11 +90,11 @@ public class ReceiveDispatcherTest
     {
         given:
         aClientConnects();
-        receiveDispatcher.doWork();
+        receiver.doWork();
 
         when:
         aClientSendsData();
-        receiveDispatcher.doWork();
+        receiver.doWork();
 
         then:
         verify(mockReceiverEndPoint).receiveData();
