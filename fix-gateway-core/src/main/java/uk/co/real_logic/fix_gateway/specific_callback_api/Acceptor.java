@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway;
+package uk.co.real_logic.fix_gateway.specific_callback_api;
 
-public class FixEngine
+public interface Acceptor
 {
 
-    public static void main(String[] args)
-    {
-        System.out.println("Hello World");
-    }
+    void onOrderSingle(OrderSingleDecoder message, long sessionId);
+
+    void onMarketDataRequest(MarketDataRequestDecoder message, long sessionId);
+
+    // ...
 
 }
-

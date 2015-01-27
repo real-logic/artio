@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.specific_callback_api;
+package uk.co.real_logic.fix_gateway.builder;
 
 import sun.nio.ch.DirectBuffer;
+import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.fix_gateway.specific_callback_api.*;
 import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
 import java.util.Currency;
@@ -23,10 +25,10 @@ import java.util.Currency;
 /**
  * .
  */
-public class OrderSingleDecoder
+public class OrderSingleEncoder
 {
 
-    private final DirectBuffer buffer;
+    private DirectBuffer buffer;
 
     private StringFlyweight clOrdID;
     private char handlInst;
@@ -34,36 +36,6 @@ public class OrderSingleDecoder
     private OrdType ordType;
     private long transactTime;
     private StringFlyweight symbol;
-
-    public StringFlyweight clOrdID()
-    {
-        return clOrdID;
-    }
-
-    public char handlInst()
-    {
-        return handlInst;
-    }
-
-    public Side side()
-    {
-        return side;
-    }
-
-    public OrdType ordType()
-    {
-        return ordType;
-    }
-
-    public long transactTime()
-    {
-        return transactTime;
-    }
-
-    public StringFlyweight symbol()
-    {
-        return symbol;
-    }
 
     private boolean hasClientID;
     private StringFlyweight clientID;
@@ -206,12 +178,51 @@ public class OrderSingleDecoder
     private boolean hasCommType;
     private CommType commType;
 
-    public OrderSingleDecoder(final DirectBuffer buffer)
+    public OrderSingleEncoder()
     {
-        this.buffer = buffer;
     }
 
-    public void decode(final int offset, final int length)
+    public int encode(final MutableDirectBuffer buffer, final int offset)
+    {
+        return 0;
+    }
+
+    public void clOrdID(String clOrdID)
+    {
+        // TODO
+    }
+
+    public void clOrdID(StringFlyweight clOrdID)
+    {
+        // TODO
+    }
+
+    public void clOrdID(DirectBuffer clOrdID, int offset, int length)
+    {
+        // TODO
+    }
+
+    public void handlInst(char handlInst)
+    {
+        this.handlInst = handlInst;
+    }
+
+    public void side(Side side)
+    {
+        this.side = side;
+    }
+
+    public void ordType(OrdType ordType)
+    {
+        this.ordType = ordType;
+    }
+
+    public void transactTime(long transactTime)
+    {
+        this.transactTime = transactTime;
+    }
+
+    public void symbol(String symbol)
     {
 
     }

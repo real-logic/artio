@@ -13,15 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.specific_callback_api;
+package uk.co.real_logic.fix_gateway;
 
-public interface MessageHandler
+import uk.co.real_logic.fix_gateway.builder.DataDictionary;
+
+public class FixGateway implements AutoCloseable
 {
 
-    void onOrderSingle(OrderSingleDecoder message);
+    FixGateway()
+    {
 
-    void onMarketDataRequest(MarketDataRequestDecoder message);
+    }
 
-    // ...
+    public void close() throws Exception
+    {
 
+    }
+
+    public SessionHandler newSessionHandler()
+    {
+        return null;
+    }
+
+    public static FixGateway launch(StaticConfiguration configuration)
+    {
+        return new FixGateway();
+    }
+
+    public Session initiate(SessionConfiguration host, DataDictionary port)
+    {
+
+        return null;
+    }
 }
