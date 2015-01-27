@@ -66,7 +66,7 @@ public class DispatcherTest
     public void shouldListenOnSpecifiedPort() throws IOException
     {
         when:
-        connect();
+        aClientConnects();
 
         then:
         assertTrue("Client has failed to connect", client.finishConnect());
@@ -76,7 +76,7 @@ public class DispatcherTest
     public void shouldCreateEndPointWhenClientConnects() throws Exception
     {
         given:
-        connect();
+        aClientConnects();
 
         when:
         dispatcher.doWork();
@@ -89,23 +89,23 @@ public class DispatcherTest
     public void shouldPassDataToEndPointWhenSent() throws Exception
     {
         given:
-        connect();
+        aClientConnects();
         dispatcher.doWork();
 
         when:
-        sendData();
+        aClientSendsData();
         dispatcher.doWork();
 
         then:
         verify(mockReceiverEndPoint).receiveData();
     }
 
-    private void connect() throws IOException
+    private void aClientConnects() throws IOException
     {
         client = SocketChannel.open(ADDRESS);
     }
 
-    private void sendData() throws IOException
+    private void aClientSendsData() throws IOException
     {
         clientBuffer.position(0);
         assertEquals("Has written bytes", clientBuffer.remaining(), client.write(clientBuffer));

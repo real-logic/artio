@@ -24,6 +24,7 @@ import uk.co.real_logic.agrona.MutableDirectBuffer;
 public class StringFlyweight
 {
     public static final int UNKNOWN_INDEX = -1;
+
     private final MutableDirectBuffer buffer;
 
     public StringFlyweight(final MutableDirectBuffer buffer)

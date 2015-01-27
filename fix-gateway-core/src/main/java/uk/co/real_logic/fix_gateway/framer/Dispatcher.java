@@ -19,6 +19,7 @@ import uk.co.real_logic.aeron.common.Agent;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -26,6 +27,7 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 
+import static java.net.StandardSocketOptions.TCP_NODELAY;
 import static java.nio.channels.SelectionKey.OP_READ;
 
 /**
@@ -38,6 +40,7 @@ public class Dispatcher implements Agent
     private final ConnectionHandler connectionHandler;
     private final Selector selector;
 
+    // TODO: add hooks for receive and send buffer sizes
     public Dispatcher(final SocketAddress address, ConnectionHandler connectionHandler)
     {
         this.connectionHandler = connectionHandler;
@@ -74,6 +77,7 @@ public class Dispatcher implements Agent
             {
                 final SocketChannel channel = listeningChannel.accept();
                 channel.configureBlocking(false);
+                channel.setOption(TCP_NODELAY, false);
 
                 ReceiverEndPoint endPoint = connectionHandler.onNewConnection(channel);
                 channel.register(selector, OP_READ, endPoint);
