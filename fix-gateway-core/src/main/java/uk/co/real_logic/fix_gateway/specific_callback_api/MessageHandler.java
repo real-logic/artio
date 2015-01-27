@@ -13,18 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.generic_iterator_api;
+package uk.co.real_logic.fix_gateway.specific_callback_api;
 
-import uk.co.real_logic.fix_gateway.util.StringFlyweight;
-
-// TODO: figure out to do groups with this API.
-public interface FixMessage
+public interface MessageHandler
 {
 
-    boolean hasNextField();
+    void onOrderSingle(OrderSingleDecoder message);
 
-    int tag();
+    void onMarketDataRequest(MarketDataRequestDecoder message);
 
-    StringFlyweight value();
+    // ...
 
 }

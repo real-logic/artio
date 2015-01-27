@@ -7,5 +7,7 @@
  *
  * Pros: a more semantic API
  * Cons: if all the handlers do is to serialise messages into a binary format its a harder API to use.
+ *
+ * Can use Chain of responsibility pattern for hooking our own code in.
  */
 package uk.co.real_logic.fix_gateway.specific_callback_api;

@@ -21,6 +21,7 @@ import uk.co.real_logic.agrona.MutableDirectBuffer;
  * Mutable String class that flyweights a data buffer. This assumes a US-ASCII encoding
  * and should only be used for performance sensitive decoding/encoding tasks.
  */
+// TODO: add ability to wrap
 public class StringFlyweight
 {
     public static final int UNKNOWN_INDEX = -1;

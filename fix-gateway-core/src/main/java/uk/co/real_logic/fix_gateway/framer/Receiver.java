@@ -19,7 +19,6 @@ import uk.co.real_logic.aeron.common.Agent;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.net.StandardSocketOptions;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;

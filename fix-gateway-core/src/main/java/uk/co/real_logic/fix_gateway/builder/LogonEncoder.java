@@ -13,30 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.specific_callback_api;
+package uk.co.real_logic.fix_gateway.builder;
 
-import uk.co.real_logic.fix_gateway.specific_callback_api.LogonHandler;
+import sun.nio.ch.DirectBuffer;
+import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.fix_gateway.specific_callback_api.StandardHeader;
 import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
-import java.nio.ByteBuffer;
-
-public class LogonProcessor implements LogonHandler
+/**
+ * .
+ */
+public class LogonEncoder
 {
 
-    @Override
-    public void onLogon(
-            final StandardHeader standardHeader,
-            final int heartBeatInterval,
-            final int rawDataLength,
-            final ByteBuffer rawData,
-            final boolean resetSeqNumFlag,
-            final int maxMessageSize,
-            final int noMsgTypes,
-            final StringFlyweight refMsgType,
-            final char msgDirection)
-    {
+    private final MutableDirectBuffer buffer;
 
+    StandardHeader standardHeader;
+    int heartBeatInterval;
+    // Or offer a default value
+    int rawDataLength;
+    DirectBuffer rawData;
+    boolean resetSeqNumFlag;
+    int maxMessageSize;
+    int noMsgTypes;
+
+    boolean hasRefMsgType;
+    StringFlyweight refMsgType;
+
+    char msgDirection;
+
+    LogonEncoder(final MutableDirectBuffer buffer)
+    {
+        this.buffer = buffer;
+    }
+
+    public int encode(final int offset)
+    {
+        return 0;
     }
 
 }

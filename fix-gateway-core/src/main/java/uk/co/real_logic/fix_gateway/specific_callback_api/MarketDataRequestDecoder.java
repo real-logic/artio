@@ -15,23 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.specific_callback_api;
 
-import uk.co.real_logic.fix_gateway.util.StringFlyweight;
-
-import java.nio.ByteBuffer;
-
-public interface LogonHandler
+/**
+ * .
+ */
+public class MarketDataRequestDecoder
 {
-
-    void onLogon(
-            final StandardHeader standardHeader,
-            final int heartBeatInterval,
-            final int rawDataLength,
-            final ByteBuffer rawData,
-            final boolean resetSeqNumFlag,
-            final int maxMessageSize,
-            final int noMsgTypes,
-            final StringFlyweight refMsgType,
-            final char msgDirection
-    );
-
 }

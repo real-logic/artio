@@ -15,18 +15,18 @@
  */
 package uk.co.real_logic.fix_gateway.generic_callback_api;
 
-import uk.co.real_logic.fix_gateway.util.StringFlyweight;
+import uk.co.real_logic.agrona.DirectBuffer;
 
 public interface FixMessageHandler
 {
 
     void onStartMessage();
 
-    void onStringField(int tag, StringFlyweight value);
+    void onField(int tag, DirectBuffer buffer, int offset, int length);
 
-    void onIntField(int tag, int value);
+    void onGroupBegin(int tag, int numberOfElements);
 
-    void onGroup(int tag, int numberOfElements);
+    void onGroupEnd(int tag);
 
     void onEndMessage();
 
