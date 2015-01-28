@@ -43,16 +43,6 @@ public class StringFlyweightTest
     }
 
     @Test
-    public void shouldFindScannedIntegers()
-    {
-        when:
-        value = string.scanInt(OFFSET + 13, OFFSET + BYTES.length, (byte) 'A');
-
-        then:
-        assertEquals(value, 145);
-    }
-
-    @Test
     public void shouldReadDigits()
     {
         when:

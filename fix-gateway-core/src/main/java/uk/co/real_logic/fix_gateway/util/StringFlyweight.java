@@ -33,22 +33,6 @@ public class StringFlyweight
         this.buffer = buffer;
     }
 
-    public int scanInt(final int startInclusive, final int endExclusive, final byte terminatingCharacter)
-    {
-        int tally = 0;
-        for (int index = startInclusive; index < endExclusive; index++)
-        {
-            final byte value = buffer.getByte(index);
-            if (value == terminatingCharacter)
-            {
-                return tally;
-            }
-
-            tally = tally * 10 + toDigit(value);
-        }
-        return tally;
-    }
-
     public int getInt(final int startInclusive, final int endExclusive)
     {
         int tally = 0;
