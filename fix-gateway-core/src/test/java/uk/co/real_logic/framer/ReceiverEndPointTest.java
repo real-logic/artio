@@ -16,6 +16,8 @@
 package uk.co.real_logic.framer;
 
 import org.junit.Test;
+import org.mockito.InOrder;
+import org.mockito.Mockito;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
 import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
@@ -23,6 +25,7 @@ import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.function.ToIntFunction;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.mockito.Matchers.any;
@@ -43,36 +46,23 @@ public class ReceiverEndPointTest
     private ReceiverEndPoint endPoint = new ReceiverEndPoint(mockChannel, 16 * 1024, mockHandler);
 
     @Test
-    public void shouldValidateAmountOfDataReceivedBeforePassingOn()
-    {
-        given:
-        theEndpointReceives(EG_MESSAGE, 0, 3);
-
-        when:
-        endPoint.receiveData();
-
-        then:
-        handlerNotcalled();
-    }
-
-    @Test
     public void shouldHandleValidFixMessageInOneGo()
     {
         given:
-        theEndpointReceives(EG_MESSAGE, 0, MSG_LENGTH);
+        theEndpointReceivesACompleteMessage();
 
         when:
         endPoint.receiveData();
 
         then:
-        handlerReceivesFramedMessage();
+        handlerReceivesAFramedMessage();
     }
 
     @Test
     public void shouldOnlyFrameCompleteFixMessage()
     {
         given:
-        theEndpointReceives(EG_MESSAGE, 0, MSG_LENGTH - 8);
+        theEndpointReceivesAnIncompleteMessage();
 
         when:
         endPoint.receiveData();
@@ -85,20 +75,74 @@ public class ReceiverEndPointTest
     public void shouldFrameSplitFixMessage()
     {
         given:
-        theEndpointReceives(EG_MESSAGE, 0, MSG_LENGTH - 8);
+        theEndpointReceivesAnIncompleteMessage();
         endPoint.receiveData();
 
         when:
-        theEndpointReceives(EG_MESSAGE, MSG_LENGTH - 8, 8);
+        theEndpointReceivesTheRestOfTheMessage();
         endPoint.receiveData();
 
         then:
-        handlerReceivesFramedMessage();
+        handlerReceivesAFramedMessage();
     }
 
-    private void handlerReceivesFramedMessage()
+    @Test
+    public void shouldFrameTwoCompleteFixMessagesInOnePacket()
     {
-        verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LENGTH));
+        given:
+        theEndpointReceivesTwoCompleteMessages();
+
+        when:
+        endPoint.receiveData();
+
+        then:
+        handlerReceivesTwoFramedMessages();
+    }
+
+    @Test
+    public void shouldFrameOneCompleteMessageWhenTheSecondMessageIsIncomplete()
+    {
+        given:
+        theEndpointReceivesACompleteAndAnIncompleteMessage();
+
+        when:
+        endPoint.receiveData();
+
+        then:
+        handlerReceivesAFramedMessage();
+    }
+
+    @Test
+    public void shouldFrameSecondSplitMessage()
+    {
+        given:
+        theEndpointReceivesACompleteAndAnIncompleteMessage();
+        endPoint.receiveData();
+
+        when:
+        theEndpointReceivesTheRestOfTheMessage();
+        endPoint.receiveData();
+
+        then:
+        handlerReceivesFramedMessages(2);
+    }
+
+    private void handlerReceivesAFramedMessage()
+    {
+        handlerReceivesFramedMessages(1);
+    }
+
+    private void handlerReceivesFramedMessages(int numberOfMessages)
+    {
+        verify(mockHandler, times(numberOfMessages)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LENGTH));
+    }
+
+    private void handlerReceivesTwoFramedMessages()
+    {
+        InOrder inOrder = Mockito.inOrder(mockHandler);
+        inOrder.verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LENGTH));
+        inOrder.verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(MSG_LENGTH), eq(MSG_LENGTH));
+        inOrder.verifyNoMoreInteractions();
     }
 
     private void handlerNotcalled()
@@ -106,14 +150,55 @@ public class ReceiverEndPointTest
         verify(mockHandler, never()).onMessage(any(AtomicBuffer.class), anyInt(), anyInt());
     }
 
+    private void theEndpointReceivesACompleteMessage()
+    {
+        theEndpointReceives(EG_MESSAGE, 0, MSG_LENGTH);
+    }
+
+    private void theEndpointReceivesTwoCompleteMessages()
+    {
+        theEndpointReceivesTwoMessages(0, MSG_LENGTH);
+    }
+
+    private void theEndpointReceivesAnIncompleteMessage()
+    {
+        theEndpointReceives(EG_MESSAGE, 0, MSG_LENGTH - 8);
+    }
+
+    private void theEndpointReceivesTheRestOfTheMessage()
+    {
+        theEndpointReceives(EG_MESSAGE, MSG_LENGTH - 8, 8);
+    }
+
+    private void theEndpointReceivesACompleteAndAnIncompleteMessage()
+    {
+        theEndpointReceivesTwoMessages(0, MSG_LENGTH - 8);
+    }
+
     private void theEndpointReceives(byte[] data, int offset, int length)
+    {
+        endpointBufferUpdatedWith(buffer -> {
+            buffer.put(data, offset, length);
+            return length;
+        });
+    }
+
+    private void theEndpointReceivesTwoMessages(int secondOffset, int secondLength)
+    {
+        endpointBufferUpdatedWith(buffer -> {
+            buffer.put(EG_MESSAGE)
+                  .put(EG_MESSAGE, secondOffset, secondLength);
+            return MSG_LENGTH + secondLength;
+        });
+    }
+
+    private void endpointBufferUpdatedWith(ToIntFunction<ByteBuffer> bufferUpdater)
     {
         try
         {
             doAnswer(invocation -> {
                 ByteBuffer buffer = (ByteBuffer) invocation.getArguments()[0];
-                buffer.put(data, offset, length);
-                return length;
+                return bufferUpdater.applyAsInt(buffer);
             }).when(mockChannel).read(any(ByteBuffer.class));
         }
         catch (IOException e)

@@ -71,8 +71,7 @@ public class ReceiverEndPoint
 
     private void readData() throws IOException
     {
-        final int read = channel.read(buffer.byteBuffer());
-        usedBufferData += read;
+        usedBufferData += channel.read(buffer.byteBuffer());
     }
 
     private void frameMessages()
@@ -87,24 +86,22 @@ public class ReceiverEndPoint
                 break;
             }
 
-            if (validateBodyLengthTag())
-            {
-                invalidateMessage();
-                return;
-            }
-
             try
             {
-                final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData, START_OF_HEADER);
-                final int earliestPossibleChecksumEnd = endOfBodyLength + getBodyLength(endOfBodyLength) + MIN_CHECKSUM_SIZE;
-                final int indexOfLastByteOfMessage = string.scan(earliestPossibleChecksumEnd, usedBufferData, START_OF_HEADER);
+                if (validateBodyLengthTag(offset))
+                {
+                    invalidateMessage();
+                    return;
+                }
+
+                final int indexOfLastByteOfMessage = findIndexOfLastByteOfMessage(offset, startOfBodyLength);
                 if (indexOfLastByteOfMessage == UNKNOWN_INDEX)
                 {
                     // Need more data
                     break;
                 }
 
-                final int length = indexOfLastByteOfMessage + 1;
+                final int length = (indexOfLastByteOfMessage + 1) - offset;
                 handler.onMessage(buffer, offset, length);
 
                 offset += length;
@@ -117,25 +114,31 @@ public class ReceiverEndPoint
             }
         }
 
-        pushRemainderToBufferStart(offset);
+        moveRemainingDataToBufferStart(offset);
     }
 
-    private int getBodyLength(final int endOfBodyLength)
+    private int findIndexOfLastByteOfMessage(int offset, int startOfBodyLength)
     {
-        return string.getInt(START_OF_BODY_LENGTH, endOfBodyLength);
+        final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData, START_OF_HEADER);
+        final int earliestChecksumEnd = endOfBodyLength + getBodyLength(offset, endOfBodyLength) + MIN_CHECKSUM_SIZE;
+        return string.scan(earliestChecksumEnd, usedBufferData, START_OF_HEADER);
     }
 
-    private boolean validateBodyLengthTag()
+    private int getBodyLength(final int offset, final int endOfBodyLength)
     {
-        return string.getDigit(COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD
-            || string.getChar(COMMON_PREFIX_LENGTH + 1) != '=';
+        return string.getInt(offset + START_OF_BODY_LENGTH, endOfBodyLength);
     }
 
-    private void pushRemainderToBufferStart(final int offset)
+    private boolean validateBodyLengthTag(final int offset)
     {
-        final int length = usedBufferData - offset;
-        buffer.putBytes(0, buffer, offset, length);
-        usedBufferData = length;
+        return string.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD
+            || string.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
+    }
+
+    private void moveRemainingDataToBufferStart(final int offset)
+    {
+        usedBufferData -= offset;
+        buffer.putBytes(0, buffer, offset, usedBufferData);
         buffer.byteBuffer().position(usedBufferData);
     }
 
