@@ -30,11 +30,6 @@ public class FixGateway implements AutoCloseable
 
     }
 
-    public SessionHandler newSessionHandler()
-    {
-        return null;
-    }
-
     public static FixGateway launch(StaticConfiguration configuration)
     {
         return new FixGateway();
