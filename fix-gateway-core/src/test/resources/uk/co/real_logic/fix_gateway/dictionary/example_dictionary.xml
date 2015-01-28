@@ -4,10 +4,8 @@
         <field name="BeginString" required="Y"/>
         <field name="BodyLength" required="Y"/>
         <field name="MsgType" required="Y"/>
-        <field name="DeliverToCompID" required="N"/>
     </header>
     <trailer>
-        <field name="Signature" required="N"/>
         <field name="CheckSum" required="Y"/>
     </trailer>
     <messages>

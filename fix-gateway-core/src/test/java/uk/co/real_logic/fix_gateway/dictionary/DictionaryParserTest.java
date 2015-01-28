@@ -21,11 +21,13 @@ import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
+import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
+import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 
 public class DictionaryParserTest
 {
@@ -40,7 +42,7 @@ public class DictionaryParserTest
     }
 
     @Test
-    public void parsesExampleDictionary()
+    public void shouldParseExampleDictionary()
     {
         assertNotNull("Missing dictionary", dictionary);
         assertNotNull("Missing messages", dictionary.messages());
@@ -48,7 +50,7 @@ public class DictionaryParserTest
     }
 
     @Test
-    public void parsesSimpleField()
+    public void shouldParseSimpleField()
     {
         final Field bodyLength = field("BodyLength");
 
@@ -59,20 +61,20 @@ public class DictionaryParserTest
     }
 
     @Test
-    public void parsesAllFields()
+    public void shouldParseAllFields()
     {
         assertEquals(32, dictionary.fields().size());
     }
 
     @Test
-    public void parsesEnumField()
+    public void shouldParseEnumField()
     {
         final Field msgType = field("MsgType");
 
         assertNotNull("Hasn't found MsgType", msgType);
         assertEquals("MsgType", msgType.name());
         assertEquals(35, msgType.number());
-        assertEquals(Type.STRING, msgType.type());
+        assertEquals(STRING, msgType.type());
 
         final List<Value> values = msgType.values();
 
@@ -82,15 +84,45 @@ public class DictionaryParserTest
     }
 
     @Test
-    public void parsesAllEnum()
+    public void shouldParseAllEnum()
     {
         assertEquals(9, countEnumFields());
     }
 
     @Test
-    public void parseSimpleMessage()
+    public void shouldParseSimpleMessage()
     {
+        final Message heartbeat = dictionary.messages().get(0);
 
+        assertEquals("Heartbeat", heartbeat.name());
+        assertEquals('0', heartbeat.type());
+        assertEquals(ADMIN, heartbeat.category());
+
+        final Field field = heartbeat.optionalFields().get(0);
+
+        assertEquals("TestReqID", field.name());
+        assertEquals(112, field.number());
+        assertFalse(field.isEnum());
+        assertEquals(STRING, field.type());
+    }
+
+    @Test
+    public void shouldParseAllMessages()
+    {
+        assertEquals(3, dictionary.messages().size());
+    }
+
+    @Test
+    public void messagesShouldHaveCommonFields()
+    {
+        final Message heartbeat = dictionary.messages().get(0);
+
+        final List<Field> fields = heartbeat.requiredFields();
+
+        assertEquals("BeginString", fields.get(0).name());
+        assertEquals("BodyLength", fields.get(1).name());
+        assertEquals("MsgType", fields.get(2).name());
+        assertEquals("CheckSum", fields.get(3).name());
     }
 
     private long countEnumFields()

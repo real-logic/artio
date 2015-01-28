@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.dictionary;
 
 import org.w3c.dom.*;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Category;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
@@ -34,6 +35,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static javax.xml.xpath.XPathConstants.NODESET;
@@ -41,10 +43,16 @@ import static javax.xml.xpath.XPathConstants.NODESET;
 public class DictionaryParser
 {
     private static final String FIELD_EXPR = "/fix/fields/field";
+    private static final String MESSAGE_EXPR = "/fix/messages/message";
+    private static final String HEADER_EXPR = "/fix/header/field";
+    private static final String TRAILER_EXPR = "/fix/trailer/field";
 
     private final DocumentBuilder documentBuilder;
     private final XPath xPath;
     private final XPathExpression findField;
+    private final XPathExpression findMessage;
+    private final XPathExpression findHeader;
+    private final XPathExpression findTrailer;
 
     public DictionaryParser()
     {
@@ -53,6 +61,9 @@ public class DictionaryParser
             documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
             xPath = XPathFactory.newInstance().newXPath();
             findField = xPath.compile(FIELD_EXPR);
+            findMessage = xPath.compile(MESSAGE_EXPR);
+            findHeader = xPath.compile(HEADER_EXPR);
+            findTrailer = xPath.compile(TRAILER_EXPR);
         }
         catch (ParserConfigurationException | XPathExpressionException e)
         {
@@ -65,13 +76,15 @@ public class DictionaryParser
         final Document document = documentBuilder.parse(in);
         final Map<String, Field> fields = parseFields(document);
         final List<Message> messages = parseMessages(document, fields);
+        extractCommonFields(document, messages, fields);
         return new DataDictionary(messages, fields);
     }
 
     private Map<String, Field> parseFields(final Document document) throws XPathExpressionException
     {
         final HashMap<String, Field> fields = new HashMap<>();
-        extractNodes(document, findField, node -> {
+        extractNodes(document, findField, node ->
+        {
             final NamedNodeMap attributes = node.getAttributes();
 
             final int number = Integer.parseInt(getValue(attributes, "number"));
@@ -79,28 +92,88 @@ public class DictionaryParser
             final Type type = Type.valueOf(getValue(attributes, "type"));
             final Field field = new Field(number, name, type);
 
-            extractChildren(field.values(), node.getChildNodes());
+            extractEnumValues(field.values(), node.getChildNodes());
             fields.put(name, field);
         });
         return fields;
     }
 
-    private void extractChildren(final List<Value> values, final NodeList childNodes)
+    private void extractEnumValues(final List<Value> values, final NodeList childNodes)
     {
-        forEach(childNodes, node -> {
-            if (node instanceof Element)
-            {
-                final NamedNodeMap attributes = node.getAttributes();
-                final char representation = getValue(attributes, "enum").charAt(0);
-                final String description = getValue(attributes, "description");
-                values.add(new Value(representation, description));
-            }
+        forEach(childNodes, node ->
+        {
+            final NamedNodeMap attributes = node.getAttributes();
+            final char representation = getValue(attributes, "enum").charAt(0);
+            final String description = getValue(attributes, "description");
+            values.add(new Value(representation, description));
         });
     }
 
-    private List<Message> parseMessages(final Document document, final Map<String, Field> fields)
+    private List<Message> parseMessages(final Document document, final Map<String, Field> fields) throws XPathExpressionException
     {
-        return new ArrayList<>();
+        final ArrayList<Message> messages = new ArrayList<>();
+
+        extractNodes(document, findMessage, node ->
+        {
+            final NamedNodeMap attributes = node.getAttributes();
+
+            final String name = getValue(attributes, "name");
+            final char type = getValue(attributes, "msgtype").charAt(0);
+            final Category category = parseCategory(getValue(attributes, "msgcat"));
+            final Message message = new Message(name, type, category);
+
+            forEach(node.getChildNodes(), extractField(message.requiredFields(), message.optionalFields(), fields));
+
+            messages.add(message);
+        });
+
+        return messages;
+    }
+
+    private void extractCommonFields(final Document document, final List<Message> messages, final Map<String, Field> fields)
+            throws XPathExpressionException
+    {
+        addFields(document, messages, fields, (left, right) -> left.addAll(0, right), findHeader);
+        addFields(document, messages, fields, List::addAll, findTrailer);
+    }
+
+    private void addFields(
+            final Document document,
+            final List<Message> messages,
+            final Map<String, Field> fields,
+            final BiConsumer<List<Field>, List<Field>> merge,
+            final XPathExpression expression)
+            throws XPathExpressionException
+    {
+        final List<Field> requiredFields = new ArrayList<>();
+        final List<Field> optionalFields = new ArrayList<>();
+        extractNodes(document, expression, extractField(requiredFields, optionalFields, fields));
+
+        messages.forEach(message ->
+        {
+            merge.accept(message.optionalFields(), optionalFields);
+            merge.accept(message.requiredFields(), requiredFields);
+        });
+    }
+
+    private Consumer<Node> extractField(
+            final List<Field> requiredFields, final List<Field> optionalFields, final Map<String, Field> fields)
+    {
+        return node ->
+        {
+            final NamedNodeMap attributes = node.getAttributes();
+
+            final boolean required = "Y".equals(getValue(attributes, "required"));
+            final String name = getValue(attributes, "name");
+            final Field field = fields.get(name);
+
+            (required ? requiredFields : optionalFields).add(field);
+        };
+    }
+
+    private Category parseCategory(final String from)
+    {
+        return Category.valueOf(from.toUpperCase());
     }
 
     private String getValue(final NamedNodeMap attributes, final String attributeName)
@@ -119,7 +192,11 @@ public class DictionaryParser
     {
         for (int i = 0; i < nodes.getLength(); i++)
         {
-            handler.accept(nodes.item(i));
+            final Node node = nodes.item(i);
+            if (node instanceof Element)
+            {
+                handler.accept(node);
+            }
         }
     }
 
