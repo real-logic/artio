@@ -16,13 +16,14 @@
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
 import java.util.List;
+import java.util.Map;
 
 public class DataDictionary
 {
     private final List<Message> messages;
-    private final List<Field> fields;
+    private final Map<String, Field> fields;
 
-    public DataDictionary(final List<Message> messages, final List<Field> fields)
+    public DataDictionary(final List<Message> messages, final Map<String, Field> fields)
     {
         this.messages = messages;
         this.fields = fields;
@@ -33,7 +34,7 @@ public class DataDictionary
         return messages;
     }
 
-    public List<Field> fields()
+    public Map<String, Field> fields()
     {
         return fields;
     }

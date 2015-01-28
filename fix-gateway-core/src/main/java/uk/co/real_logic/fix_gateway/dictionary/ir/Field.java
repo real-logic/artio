@@ -15,18 +15,23 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Field
 {
 
     private final int number;
     private final String name;
     private final Type type;
+    private final List<Value> values;
 
     public Field(final int number, final String name, final Type type)
     {
         this.number = number;
         this.name = name;
         this.type = type;
+        this.values = new ArrayList<>();
     }
 
     public Type type()
@@ -44,13 +49,24 @@ public class Field
         return number;
     }
 
+    public List<Value> values()
+    {
+        return values;
+    }
+
+    public boolean isEnum()
+    {
+        return !values.isEmpty();
+    }
+
     @Override
     public String toString()
     {
-        return "Field{" +
+        return "EnumField{" +
                 "number=" + number +
                 ", name='" + name + '\'' +
                 ", type=" + type +
+                "values=" + values +
                 '}';
     }
 
@@ -67,6 +83,61 @@ public class Field
         CURRENCY,
         SEQNUM,
         MULTIPLEVALUESTRING,
+        DATA,
+        UTCTIMESTAMP,
+        PRICE
+    }
 
+    public static class Value
+    {
+        private final char representation;
+        private final String description;
+
+        public Value(final char representation, final String description)
+        {
+            this.representation = representation;
+            this.description = description;
+        }
+
+        public char representation()
+        {
+            return representation;
+        }
+
+        public String description()
+        {
+            return description;
+        }
+
+        @Override
+        public boolean equals(final Object o)
+        {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            final Value value = (Value) o;
+
+            if (representation != value.representation) return false;
+            if (description != null ? !description.equals(value.description) : value.description != null) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = (int) representation;
+            result = 31 * result + (description != null ? description.hashCode() : 0);
+            return result;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "Value{" +
+                    "representation=" + representation +
+                    ", description='" + description + '\'' +
+                    '}';
+        }
     }
 }
