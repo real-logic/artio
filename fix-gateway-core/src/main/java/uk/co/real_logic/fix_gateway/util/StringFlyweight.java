@@ -92,6 +92,7 @@ public class StringFlyweight
         for (int index = startInclusive; index <= endExclusive; index++)
         {
             final byte value = buffer.getByte(index);
+            //System.out.println(value + " @ " + index);
             if (value == terminator)
             {
                 return index;

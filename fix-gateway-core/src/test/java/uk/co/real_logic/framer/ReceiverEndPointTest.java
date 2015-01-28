@@ -52,7 +52,7 @@ public class ReceiverEndPointTest
         endPoint.receiveData();
 
         then:
-        verifyHandlerNotcalled();
+        handlerNotcalled();
     }
 
     @Test
@@ -65,10 +65,43 @@ public class ReceiverEndPointTest
         endPoint.receiveData();
 
         then:
+        handlerReceivesFramedMessage();
+    }
+
+    @Test
+    public void shouldOnlyFrameCompleteFixMessage()
+    {
+        given:
+        theEndpointReceives(EG_MESSAGE, 0, MSG_LENGTH - 8);
+
+        when:
+        endPoint.receiveData();
+
+        then:
+        handlerNotcalled();
+    }
+
+    @Test
+    public void shouldFrameSplitFixMessage()
+    {
+        given:
+        theEndpointReceives(EG_MESSAGE, 0, MSG_LENGTH - 8);
+        endPoint.receiveData();
+
+        when:
+        theEndpointReceives(EG_MESSAGE, MSG_LENGTH - 8, 8);
+        endPoint.receiveData();
+
+        then:
+        handlerReceivesFramedMessage();
+    }
+
+    private void handlerReceivesFramedMessage()
+    {
         verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LENGTH));
     }
 
-    private void verifyHandlerNotcalled()
+    private void handlerNotcalled()
     {
         verify(mockHandler, never()).onMessage(any(AtomicBuffer.class), anyInt(), anyInt());
     }

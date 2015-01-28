@@ -125,11 +125,6 @@ public class ReceiverEndPoint
         return string.getInt(START_OF_BODY_LENGTH, endOfBodyLength);
     }
 
-    private boolean validateCheckSumTag(final int lastEquals, final int lastField)
-    {
-        return string.getInt(lastField + 1, lastEquals) != CHECKSUM_FIELD;
-    }
-
     private boolean validateBodyLengthTag()
     {
         return string.getDigit(COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD
@@ -141,7 +136,7 @@ public class ReceiverEndPoint
         final int length = usedBufferData - offset;
         buffer.putBytes(0, buffer, offset, length);
         usedBufferData = length;
-        buffer.byteBuffer().position(0);
+        buffer.byteBuffer().position(usedBufferData);
     }
 
     private void invalidateMessage()
