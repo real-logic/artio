@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary.ir;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class Field
 {
@@ -112,15 +113,14 @@ public class Field
         @Override
         public boolean equals(final Object o)
         {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (o == null || getClass() != o.getClass())
+            {
+                return false;
+            }
 
             final Value value = (Value) o;
-
-            if (representation != value.representation) return false;
-            if (description != null ? !description.equals(value.description) : value.description != null) return false;
-
-            return true;
+            return Objects.equals(representation, value.representation)
+                && Objects.equals(description, value.description);
         }
 
         @Override

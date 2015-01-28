@@ -87,6 +87,12 @@ public class DictionaryParserTest
         assertEquals(9, countEnumFields());
     }
 
+    @Test
+    public void parseSimpleMessage()
+    {
+
+    }
+
     private long countEnumFields()
     {
         return dictionary
