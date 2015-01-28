@@ -1,0 +1,222 @@
+<!-- Simple Data Dictionary for testing purposes -->
+<fix major="7" minor="2">
+    <header>
+        <field name="BeginString" required="Y"/>
+        <field name="BodyLength" required="Y"/>
+        <field name="MsgType" required="Y"/>
+        <field name="DeliverToCompID" required="N"/>
+    </header>
+    <trailer>
+        <field name="Signature" required="N"/>
+        <field name="CheckSum" required="Y"/>
+    </trailer>
+    <messages>
+        <message name="Heartbeat" msgtype="0" msgcat="admin">
+            <field name="TestReqID" required="N"/>
+        </message>
+        <message name="NewOrderSingle" msgtype="D" msgcat="app">
+            <field name="ClOrdID" required="Y"/>
+            <field name="HandlInst" required="Y"/>
+            <field name="MinQty" required="N"/>
+            <group name="NoTradingSessions" required="N">
+                <field name="TradingSessionID" required="N"/>
+            </group>
+            <field name="ProcessCode" required="N"/>
+            <field name="Symbol" required="Y"/>
+            <field name="Side" required="Y"/>
+            <field name="TransactTime" required="Y"/>
+            <field name="OrdType" required="Y"/>
+        </message>
+        <message name="ExecutionReport" msgtype="8" msgcat="app">
+            <field name="OrderID" required="Y"/>
+            <group name="NoContraBrokers" required="N">
+                <field name="ContraBroker" required="N"/>
+                <field name="ContraTrader" required="N"/>
+                <field name="ContraTradeQty" required="N"/>
+                <field name="ContraTradeTime" required="N"/>
+            </group>
+            <field name="ExecID" required="Y"/>
+            <field name="ExecTransType" required="Y"/>
+            <field name="ExecType" required="Y"/>
+            <field name="OrdStatus" required="Y"/>
+            <field name="SettlmntTyp" required="N"/>
+            <field name="Symbol" required="Y"/>
+            <field name="Side" required="Y"/>
+            <field name="OrderQty" required="N"/>
+            <field name="LeavesQty" required="Y"/>
+            <field name="CumQty" required="Y"/>
+            <field name="AvgPx" required="Y"/>
+        </message>
+    </messages>
+    <fields>
+        <field number="8" name="BeginString" type="STRING"/>
+        <field number="9" name="BodyLength" type="INT"/>
+        <field number="35" name="MsgType" type="STRING">
+            <value enum="0" description="HEARTBEAT"/>
+            <value enum="1" description="TEST_REQUEST"/>
+            <value enum="2" description="RESEND_REQUEST"/>
+            <value enum="3" description="REJECT"/>
+            <value enum="4" description="SEQUENCE_RESET"/>
+            <value enum="5" description="LOGOUT"/>
+            <value enum="6" description="INDICATION_OF_INTEREST"/>
+            <value enum="7" description="ADVERTISEMENT"/>
+            <value enum="8" description="EXECUTION_REPORT"/>
+            <value enum="9" description="ORDER_CANCEL_REJECT"/>
+            <value enum="A" description="LOGON"/>
+            <value enum="B" description="NEWS"/>
+            <value enum="C" description="EMAIL"/>
+            <value enum="D" description="ORDER_SINGLE"/>
+            <value enum="E" description="ORDER_LIST"/>
+            <value enum="F" description="ORDER_CANCEL_REQUEST"/>
+            <value enum="G" description="ORDER_CANCEL"/>
+            <value enum="H" description="ORDER_STATUS_REQUEST"/>
+            <value enum="J" description="ALLOCATION"/>
+            <value enum="K" description="LIST_CANCEL_REQUEST"/>
+            <value enum="L" description="LIST_EXECUTE"/>
+            <value enum="M" description="LIST_STATUS_REQUEST"/>
+            <value enum="N" description="LIST_STATUS"/>
+            <value enum="P" description="ALLOCATION_ACK"/>
+            <value enum="Q" description="DONT_KNOW_TRADE"/>
+            <value enum="R" description="QUOTE_REQUEST"/>
+            <value enum="S" description="QUOTE"/>
+            <value enum="T" description="SETTLEMENT_INSTRUCTIONS"/>
+            <value enum="V" description="MARKET_DATA_REQUEST"/>
+            <value enum="W" description="MARKET_DATA_SNAPSHOT"/>
+            <value enum="X" description="MARKET_DATA_INCREMENTAL_REFRESH"/>
+            <value enum="Y" description="MARKET_DATA_REQUEST_REJECT"/>
+            <value enum="Z" description="QUOTE_CANCEL"/>
+            <value enum="a" description="QUOTE_STATUS_REQUEST"/>
+            <value enum="b" description="MASS_QUOTE_ACKNOWLEDGEMENT"/>
+            <value enum="c" description="SECURITY_DEFINITION_REQUEST"/>
+            <value enum="d" description="SECURITY_DEFINITION"/>
+            <value enum="e" description="SECURITY_STATUS_REQUEST"/>
+            <value enum="f" description="SECURITY_STATUS"/>
+            <value enum="g" description="TRADING_SESSION_STATUS_REQUEST"/>
+            <value enum="h" description="TRADING_SESSION_STATUS"/>
+            <value enum="i" description="MASS_QUOTE"/>
+            <value enum="j" description="BUSINESS_MESSAGE_REJECT"/>
+            <value enum="k" description="BID_REQUEST"/>
+            <value enum="l" description="BID_RESPONSE"/>
+            <value enum="m" description="LIST_STRIKE_PRICE"/>
+        </field>
+        <field number="128" name="DeliverToCompID" type="STRING"/>
+        <field number="89" name="Signature" type="DATA"/>
+        <field number="10" name="CheckSum" type="STRING"/>
+        <field number="112" name="TestReqID" type="STRING"/>
+        <field number="11" name="ClOrdID" type="STRING"/>
+        <field number="21" name="HandlInst" type="CHAR">
+            <value enum="1" description="AUTOMATED_EXECUTION_ORDER_PRIVATE_NO_BROKER_INTERVENTION"/>
+            <value enum="2" description="AUTOMATED_EXECUTION_ORDER_PUBLIC_BROKER_INTERVENTION_OK"/>
+            <value enum="3" description="MANUAL_ORDER_BEST_EXECUTION"/>
+        </field>
+        <field number="110" name="MinQty" type="QTY"/>
+        <field number="386" name="NoTradingSessions" type="INT"/>
+        <field number="336" name="TradingSessionID" type="STRING"/>
+        <field number="81" name="ProcessCode" type="CHAR">
+            <value enum="0" description="REGULAR"/>
+            <value enum="1" description="SOFT_DOLLAR"/>
+            <value enum="2" description="STEPIN"/>
+            <value enum="3" description="STEPOUT"/>
+            <value enum="4" description="SOFTDOLLAR_STEPIN"/>
+            <value enum="5" description="SOFTDOLLAR_STEPOUT"/>
+            <value enum="6" description="PLAN_SPONSOR"/>
+        </field>
+        <field number="55" name="Symbol" type="STRING"/>
+        <field number="54" name="Side" type="CHAR">
+            <value enum="1" description="BUY"/>
+            <value enum="2" description="SELL"/>
+            <value enum="3" description="BUY_MINUS"/>
+            <value enum="4" description="SELL_PLUS"/>
+            <value enum="5" description="SELL_SHORT"/>
+            <value enum="6" description="SELL_SHORT_EXEMPT"/>
+            <value enum="7" description="D"/>
+            <value enum="8" description="CROSS"/>
+            <value enum="9" description="CROSS_SHORT"/>
+        </field>
+        <field number="60" name="TransactTime" type="UTCTIMESTAMP"/>
+        <field number="40" name="OrdType" type="CHAR">
+            <value enum="1" description="MARKET"/>
+            <value enum="2" description="LIMIT"/>
+            <value enum="3" description="STOP"/>
+            <value enum="4" description="STOP_LIMIT"/>
+            <value enum="5" description="MARKET_ON_CLOSE"/>
+            <value enum="6" description="WITH_OR_WITHOUT"/>
+            <value enum="7" description="LIMIT_OR_BETTER"/>
+            <value enum="8" description="LIMIT_WITH_OR_WITHOUT"/>
+            <value enum="9" description="ON_BASIS"/>
+            <value enum="A" description="ON_CLOSE"/>
+            <value enum="B" description="LIMIT_ON_CLOSE"/>
+            <value enum="C" description="FOREX_MARKET"/>
+            <value enum="D" description="PREVIOUSLY_QUOTED"/>
+            <value enum="E" description="PREVIOUSLY_INDICATED"/>
+            <value enum="F" description="FOREX_LIMIT"/>
+            <value enum="G" description="FOREX_SWAP"/>
+            <value enum="H" description="FOREX_PREVIOUSLY_QUOTED"/>
+            <value enum="I" description="FUNARI"/>
+            <value enum="P" description="PEGGED"/>
+        </field>
+        <field number="37" name="OrderID" type="STRING"/>
+        <field number="382" name="NoContraBrokers" type="INT"/>
+        <field number="375" name="ContraBroker" type="STRING"/>
+        <field number="337" name="ContraTrader" type="STRING"/>
+        <field number="437" name="ContraTradeQty" type="QTY"/>
+        <field number="438" name="ContraTradeTime" type="UTCTIMESTAMP"/>
+        <field number="17" name="ExecID" type="STRING"/>
+        <field number="20" name="ExecTransType" type="CHAR">
+            <value enum="0" description="NEW"/>
+            <value enum="1" description="CANCEL"/>
+            <value enum="2" description="CORRECT"/>
+            <value enum="3" description="STATUS"/>
+        </field>
+        <field number="150" name="ExecType" type="CHAR">
+            <value enum="0" description="NEW"/>
+            <value enum="1" description="PARTIAL_FILL"/>
+            <value enum="2" description="FILL"/>
+            <value enum="3" description="DONE_FOR_DAY"/>
+            <value enum="4" description="CANCELED"/>
+            <value enum="5" description="REPLACE"/>
+            <value enum="6" description="PENDING_CANCEL"/>
+            <value enum="7" description="STOPPED"/>
+            <value enum="8" description="REJECTED"/>
+            <value enum="9" description="SUSPENDED"/>
+            <value enum="A" description="PENDING_NEW"/>
+            <value enum="B" description="CALCULATED"/>
+            <value enum="C" description="EXPIRED"/>
+            <value enum="D" description="RESTATED"/>
+            <value enum="E" description="PENDING_REPLACE"/>
+        </field>
+        <field number="39" name="OrdStatus" type="CHAR">
+            <value enum="0" description="NEW"/>
+            <value enum="1" description="PARTIALLY_FILLED"/>
+            <value enum="2" description="FILLED"/>
+            <value enum="3" description="DONE_FOR_DAY"/>
+            <value enum="4" description="CANCELED"/>
+            <value enum="5" description="REPLACED"/>
+            <value enum="6" description="PENDING_CANCEL"/>
+            <value enum="7" description="STOPPED"/>
+            <value enum="8" description="REJECTED"/>
+            <value enum="9" description="SUSPENDED"/>
+            <value enum="A" description="PENDING_NEW"/>
+            <value enum="B" description="CALCULATED"/>
+            <value enum="C" description="EXPIRED"/>
+            <value enum="D" description="ACCEPTED_FOR_BIDDING"/>
+            <value enum="E" description="PENDING_REPLACE"/>
+        </field>
+        <field number="63" name="SettlmntTyp" type="CHAR">
+            <value enum="0" description="REGULAR"/>
+            <value enum="1" description="CASH"/>
+            <value enum="2" description="NEXT_DAY"/>
+            <value enum="3" description="TPLUS2"/>
+            <value enum="4" description="TPLUS3"/>
+            <value enum="5" description="TPLUS4"/>
+            <value enum="6" description="FUTURE"/>
+            <value enum="7" description="WHEN_ISSUED"/>
+            <value enum="8" description="SELLERS_OPTION"/>
+            <value enum="9" description="TPLUS5"/>
+        </field>
+        <field number="38" name="OrderQty" type="QTY"/>
+        <field number="151" name="LeavesQty" type="QTY"/>
+        <field number="14" name="CumQty" type="QTY"/>
+        <field number="6" name="AvgPx" type="PRICE"/>
+    </fields>
+</fix>

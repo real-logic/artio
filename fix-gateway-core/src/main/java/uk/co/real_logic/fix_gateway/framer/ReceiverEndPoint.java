@@ -33,7 +33,6 @@ public class ReceiverEndPoint
     private static final byte START_OF_HEADER = 0x01;
 
     private static final byte BODY_LENGTH_FIELD = 9;
-    private static final byte CHECKSUM_FIELD = 10;
 
     private static final int COMMON_PREFIX_LENGTH = "8=FIX.4.2 ".length();
     private static final int START_OF_BODY_LENGTH = COMMON_PREFIX_LENGTH + 2;
