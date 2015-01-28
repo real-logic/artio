@@ -32,9 +32,11 @@ import static org.mockito.Mockito.*;
 public class ReceiverEndPointTest
 {
 
-    private static final byte[] EG_MESSAGE = ("8=FIX.4.2\1 9=145\1 35=D\1 34=4\1 49=ABC_DEFG01\1 52=20090323-15:40:29\1 " +
-            "56=CCG\1\n115=XYZ\1 11=NF 0542/03232009\1 54=1\1 38=100\1 55=CVS\1 40=1\1 59=0\1 47=A\1\n" +
-            "60=20090323-15:40:29\1 21=1\1 207=N\1 10=139\1 ").getBytes(US_ASCII);
+    private static final byte[] EG_MESSAGE = ("8=FIX.4.2 9=145 35=D 34=4 49=ABC_DEFG01 52=20090323-15:40:29 " +
+            "56=CCG 115=XYZ 11=NF 0542/03232009 54=1 38=100 55=CVS 40=1 59=0 47=A" +
+            "60=20090323-15:40:29 21=1 207=N 10=139 ").replace(' ', '\1').getBytes(US_ASCII);
+
+    private static final int MSG_LENGTH = EG_MESSAGE.length;
 
     private SocketChannel mockChannel = mock(SocketChannel.class);
     private MessageHandler mockHandler = mock(MessageHandler.class);
@@ -44,29 +46,34 @@ public class ReceiverEndPointTest
     public void shouldValidateAmountOfDataReceivedBeforePassingOn()
     {
         given:
-        mockReadData(EG_MESSAGE, 0, 3);
+        theEndpointReceives(EG_MESSAGE, 0, 3);
 
         when:
         endPoint.receiveData();
 
         then:
-        verify(mockHandler, never()).onMessage(any(AtomicBuffer.class), anyInt(), anyInt());
+        verifyHandlerNotcalled();
     }
 
     @Test
     public void shouldHandleValidFixMessageInOneGo()
     {
         given:
-        mockReadData(EG_MESSAGE, 0, EG_MESSAGE.length);
+        theEndpointReceives(EG_MESSAGE, 0, MSG_LENGTH);
 
         when:
         endPoint.receiveData();
 
         then:
-        verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(0), anyInt());
+        verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LENGTH));
     }
 
-    private void mockReadData(byte[] data, int offset, int length)
+    private void verifyHandlerNotcalled()
+    {
+        verify(mockHandler, never()).onMessage(any(AtomicBuffer.class), anyInt(), anyInt());
+    }
+
+    private void theEndpointReceives(byte[] data, int offset, int length)
     {
         try
         {

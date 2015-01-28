@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
+import static uk.co.real_logic.fix_gateway.util.StringFlyweight.UNKNOWN_INDEX;
+
 /**
  * Handles incoming data from sockets
  */
@@ -33,8 +35,10 @@ public class ReceiverEndPoint
     private static final byte BODY_LENGTH_FIELD = 9;
     private static final byte CHECKSUM_FIELD = 10;
 
-    private static final int COMMON_PREFIX_LENGTH = "8=FIX.4.2\1 ".length();
+    private static final int COMMON_PREFIX_LENGTH = "8=FIX.4.2 ".length();
     private static final int START_OF_BODY_LENGTH = COMMON_PREFIX_LENGTH + 2;
+
+    private static final int MIN_CHECKSUM_SIZE = " 10=".length() + 1;
 
     private final AtomicBuffer buffer;
     private final SocketChannel channel;
@@ -91,25 +95,24 @@ public class ReceiverEndPoint
 
             try
             {
-                final int endOfBodyLength = string.scan(startOfBodyLength, usedBufferData, START_OF_HEADER);
-                final int checksumOffset = endOfBodyLength + getBodyLength(endOfBodyLength) + 4;
-                final int endOfMessage = string.scan(checksumOffset, usedBufferData, START_OF_HEADER);
-                if (checksumOffset > usedBufferData)
+                final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData, START_OF_HEADER);
+                final int earliestPossibleChecksumEnd = endOfBodyLength + getBodyLength(endOfBodyLength) + MIN_CHECKSUM_SIZE;
+                final int indexOfLastByteOfMessage = string.scan(earliestPossibleChecksumEnd, usedBufferData, START_OF_HEADER);
+                if (indexOfLastByteOfMessage == UNKNOWN_INDEX)
                 {
                     // Need more data
                     break;
                 }
 
-                // TODO: validate checksum
-                // TODO: fix endOfMessage
+                final int length = indexOfLastByteOfMessage + 1;
+                handler.onMessage(buffer, offset, length);
 
-                handler.onMessage(buffer, offset, endOfMessage);
-
-                offset += endOfMessage;
+                offset += length;
             }
             catch (Exception e)
             {
                 // TODO: remove exceptions from the common path
+                e.printStackTrace();
                 break;
             }
         }

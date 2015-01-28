@@ -25,11 +25,6 @@ public class FixGateway implements AutoCloseable
 
     }
 
-    public void close() throws Exception
-    {
-
-    }
-
     public static FixGateway launch(StaticConfiguration configuration)
     {
         return new FixGateway();
@@ -37,7 +32,11 @@ public class FixGateway implements AutoCloseable
 
     public Session initiate(SessionConfiguration host, DataDictionary port)
     {
-
         return null;
+    }
+
+    public void close() throws Exception
+    {
+
     }
 }
