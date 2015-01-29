@@ -17,10 +17,17 @@ package uk.co.real_logic.fix_gateway.dictionary.ir;
 
 public class Group extends Entry
 {
+    private final boolean required;
 
-    protected Group(final String name)
+    public Group(final String name, final boolean required)
     {
         super(name);
+        this.required = required;
+    }
+
+    public boolean required()
+    {
+        return this.required;
     }
 
     @Override

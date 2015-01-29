@@ -15,16 +15,21 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Message extends Entry
 {
     private final char type;
     private final Category category;
+    private List<Group> groups;
 
     public Message(final String name, final char type, final Category category)
     {
         super(name);
         this.type = type;
         this.category = category;
+        groups = new ArrayList<>();
     }
 
     public char type()
@@ -47,5 +52,10 @@ public class Message extends Entry
                 ", requiredFields=" + requiredFields() +
                 ", optionalFields=" + optionalFields() +
                 '}';
+    }
+
+    public List<Group> groups()
+    {
+        return groups;
     }
 }

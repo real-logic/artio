@@ -21,10 +21,13 @@ import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Group;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
 
 import java.util.List;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
@@ -124,6 +127,23 @@ public class DictionaryParserTest
         assertEquals("MsgType", fields.get(2).name());
         assertEquals("CheckSum", fields.get(3).name());
     }
+
+    @Test
+    public void shouldParseGroups()
+    {
+        final Message newOrderSingle = dictionary.messages().get(1);
+        final List<Group> groups = newOrderSingle.groups();
+        assertThat(groups, hasSize(1));
+
+        final Group noTradingSessions = groups.get(0);
+
+        assertEquals("NoTradingSessions", noTradingSessions.name());
+        assertFalse(noTradingSessions.required());
+        assertThat(noTradingSessions.requiredFields(), hasSize(0));
+        assertThat(noTradingSessions.optionalFields(), contains(field("TradingSessionID")));
+    }
+
+    // TODO: Components
 
     private long countEnumFields()
     {

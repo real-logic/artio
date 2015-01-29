@@ -16,12 +16,9 @@
 package uk.co.real_logic.fix_gateway.dictionary;
 
 import org.w3c.dom.*;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Category;
-import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
+import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -48,7 +45,6 @@ public class DictionaryParser
     private static final String TRAILER_EXPR = "/fix/trailer/field";
 
     private final DocumentBuilder documentBuilder;
-    private final XPath xPath;
     private final XPathExpression findField;
     private final XPathExpression findMessage;
     private final XPathExpression findHeader;
@@ -59,7 +55,8 @@ public class DictionaryParser
         try
         {
             documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-            xPath = XPathFactory.newInstance().newXPath();
+
+            final XPath xPath = XPathFactory.newInstance().newXPath();
             findField = xPath.compile(FIELD_EXPR);
             findMessage = xPath.compile(MESSAGE_EXPR);
             findHeader = xPath.compile(HEADER_EXPR);
@@ -122,12 +119,36 @@ public class DictionaryParser
             final Category category = parseCategory(getValue(attributes, "msgcat"));
             final Message message = new Message(name, type, category);
 
-            forEach(node.getChildNodes(), extractField(message.requiredFields(), message.optionalFields(), fields));
+            extractChildFields(node.getChildNodes(), fields, message);
+            extractGroups(node.getChildNodes(), fields, message.groups());
 
             messages.add(message);
         });
 
         return messages;
+    }
+
+    private void extractGroups(final NodeList childNodes, final Map<String, Field> fields, final List<Group> groups)
+    {
+        forEach(childNodes, node ->
+        {
+            if ("group".equals(node.getNodeName()))
+            {
+                final NamedNodeMap attributes = node.getAttributes();
+
+                final String name = getValue(attributes, "name");
+                final Group group = new Group(name, isRequired(attributes));
+
+                extractChildFields(node.getChildNodes(), fields, group);
+
+                groups.add(group);
+            }
+        });
+    }
+
+    private void extractChildFields(final NodeList childNodes, final Map<String, Field> fields, final Entry entry)
+    {
+        forEach(childNodes, extractField(entry.requiredFields(), entry.optionalFields(), fields));
     }
 
     private void extractCommonFields(final Document document, final List<Message> messages, final Map<String, Field> fields)
@@ -161,14 +182,21 @@ public class DictionaryParser
     {
         return node ->
         {
-            final NamedNodeMap attributes = node.getAttributes();
+            if ("field".equals(node.getNodeName()))
+            {
+                final NamedNodeMap attributes = node.getAttributes();
 
-            final boolean required = "Y".equals(getValue(attributes, "required"));
-            final String name = getValue(attributes, "name");
-            final Field field = fields.get(name);
+                final String name = getValue(attributes, "name");
+                final Field field = fields.get(name);
 
-            (required ? requiredFields : optionalFields).add(field);
+                (isRequired(attributes) ? requiredFields : optionalFields).add(field);
+            }
         };
+    }
+
+    private boolean isRequired(final NamedNodeMap attributes)
+    {
+        return "Y".equals(getValue(attributes, "required"));
     }
 
     private Category parseCategory(final String from)
