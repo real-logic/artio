@@ -15,26 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
-public class Message extends Entry
+public class Group extends Entry
 {
-    private final char type;
-    private final Category category;
 
-    public Message(final String name, final char type, final Category category)
+    protected Group(final String name)
     {
         super(name);
-        this.type = type;
-        this.category = category;
-    }
-
-    public char type()
-    {
-        return type;
-    }
-
-    public Category category()
-    {
-        return category;
     }
 
     @Override
@@ -42,8 +28,6 @@ public class Message extends Entry
     {
         return "Message{" +
                 "name='" + name() + '\'' +
-                ", type=" + type +
-                ", category=" + category +
                 ", requiredFields=" + requiredFields() +
                 ", optionalFields=" + optionalFields() +
                 '}';

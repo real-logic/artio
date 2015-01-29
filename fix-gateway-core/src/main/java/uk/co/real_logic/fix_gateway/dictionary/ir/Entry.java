@@ -15,37 +15,37 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
-public class Message extends Entry
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * An entry is either a group or a message.
+ */
+public abstract class Entry
 {
-    private final char type;
-    private final Category category;
+    private final String name;
+    private final List<Field> requiredFields;
+    private final List<Field> optionalFields;
 
-    public Message(final String name, final char type, final Category category)
+    protected Entry(final String name)
     {
-        super(name);
-        this.type = type;
-        this.category = category;
+        this.name = name;
+        this.requiredFields = new ArrayList<>();
+        this.optionalFields = new ArrayList<>();
     }
 
-    public char type()
+    public String name()
     {
-        return type;
+        return name;
     }
 
-    public Category category()
+    public List<Field> requiredFields()
     {
-        return category;
+        return requiredFields;
     }
 
-    @Override
-    public String toString()
+    public List<Field> optionalFields()
     {
-        return "Message{" +
-                "name='" + name() + '\'' +
-                ", type=" + type +
-                ", category=" + category +
-                ", requiredFields=" + requiredFields() +
-                ", optionalFields=" + optionalFields() +
-                '}';
+        return optionalFields;
     }
 }
