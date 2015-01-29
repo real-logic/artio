@@ -41,12 +41,14 @@ public class DictionaryParser
 {
     private static final String FIELD_EXPR = "/fix/fields/field";
     private static final String MESSAGE_EXPR = "/fix/messages/message";
+    private static final String COMPONENT_EXPR = "/fix/components/component";
     private static final String HEADER_EXPR = "/fix/header/field";
     private static final String TRAILER_EXPR = "/fix/trailer/field";
 
     private final DocumentBuilder documentBuilder;
     private final XPathExpression findField;
     private final XPathExpression findMessage;
+    private final XPathExpression findComponent;
     private final XPathExpression findHeader;
     private final XPathExpression findTrailer;
 
@@ -59,6 +61,7 @@ public class DictionaryParser
             final XPath xPath = XPathFactory.newInstance().newXPath();
             findField = xPath.compile(FIELD_EXPR);
             findMessage = xPath.compile(MESSAGE_EXPR);
+            findComponent = xPath.compile(COMPONENT_EXPR);
             findHeader = xPath.compile(HEADER_EXPR);
             findTrailer = xPath.compile(TRAILER_EXPR);
         }
@@ -72,16 +75,28 @@ public class DictionaryParser
     {
         final Document document = documentBuilder.parse(in);
         final Map<String, Field> fields = parseFields(document);
-        final Map<String, Component> components = parseComponents();
+        final Map<String, Component> components = parseComponents(document, fields);
         final List<Message> messages = parseMessages(document, fields, components);
 
-        extractCommonEntries(document, messages, fields);
+        extractCommonEntries(document, messages, fields, components);
         return new DataDictionary(messages, fields, components);
     }
 
-    private Map<String, Component> parseComponents()
+    private Map<String, Component> parseComponents(
+            final Document document, final Map<String, Field> fields) throws XPathExpressionException
     {
-        return new HashMap<>();
+        final Map<String, Component> components = new HashMap<>();
+        extractNodes(document, findComponent, node ->
+        {
+            final NamedNodeMap attributes = node.getAttributes();
+            final String name = name(attributes);
+            final Component component = new Component(name);
+
+            extractEntries(node.getChildNodes(), fields, component.entries(), components);
+
+            components.put(name, component);
+        });
+        return components;
     }
 
     private Map<String, Field> parseFields(final Document document) throws XPathExpressionException
@@ -91,8 +106,8 @@ public class DictionaryParser
         {
             final NamedNodeMap attributes = node.getAttributes();
 
+            final String name = name(attributes);
             final int number = Integer.parseInt(getValue(attributes, "number"));
-            final String name = getValue(attributes, "name");
             final Type type = Type.valueOf(getValue(attributes, "type"));
             final Field field = new Field(number, name, type);
 
@@ -124,12 +139,12 @@ public class DictionaryParser
         {
             final NamedNodeMap attributes = node.getAttributes();
 
-            final String name = getValue(attributes, "name");
+            final String name = name(attributes);
             final char type = getValue(attributes, "msgtype").charAt(0);
             final Category category = parseCategory(getValue(attributes, "msgcat"));
             final Message message = new Message(name, type, category);
 
-            extractEntries(node.getChildNodes(), fields, message.entries());
+            extractEntries(node.getChildNodes(), fields, message.entries(), components);
 
             messages.add(message);
         });
@@ -137,43 +152,46 @@ public class DictionaryParser
         return messages;
     }
 
-    private void extractEntries(final NodeList childNodes, final Map<String, Field> fields, final List<Entry> entries)
+    private void extractEntries(
+            final NodeList childNodes,
+            final Map<String, Field> fields,
+            final List<Entry> entries,
+            final Map<String, Component> components)
     {
         forEach(childNodes, node ->
         {
             final NamedNodeMap attributes = node.getAttributes();
-            final String name = getValue(attributes, "name");
-            Entry.Element element = null;
+            final String name = name(attributes);
+            final boolean required = isRequired(attributes);
+            final Consumer<Entry.Element> newEntry = element -> entries.add(new Entry(required, element));
 
             switch (node.getNodeName())
             {
+                case "field":
+                    newEntry.accept(fields.get(name));
+                    break;
                 case "group":
                     final Group group = new Group(name);
-                    extractEntries(node.getChildNodes(), fields, group.entries());
-                    element = group;
+                    extractEntries(node.getChildNodes(), fields, group.entries(), components);
+                    newEntry.accept(group);
                     break;
                 case  "component":
-                    final Component component = new Component(name);
-                    extractEntries(node.getChildNodes(), fields, component.entries());
-                    element = component;
+                    newEntry.accept(components.get(name));
                     break;
-                case "field":
-                    element = fields.get(name);
-                    break;
-            }
-
-            if (element != null)
-            {
-                entries.add(new Entry(isRequired(attributes), element));
             }
         });
     }
 
-    private void extractCommonEntries(final Document document, final List<Message> messages, final Map<String, Field> fields)
+    private void extractCommonEntries(
+            final Document document,
+            final List<Message> messages,
+            final Map<String, Field> fields,
+            final Map<String, Component> components)
+
             throws XPathExpressionException
     {
-        addEntries(document, messages, fields, (left, right) -> left.addAll(0, right), findHeader);
-        addEntries(document, messages, fields, List::addAll, findTrailer);
+        addEntries(document, messages, fields, (left, right) -> left.addAll(0, right), findHeader, components);
+        addEntries(document, messages, fields, List::addAll, findTrailer, components);
     }
 
     private void addEntries(
@@ -181,12 +199,18 @@ public class DictionaryParser
             final List<Message> messages,
             final Map<String, Field> fields,
             final BiConsumer<List<Entry>, List<Entry>> merge,
-            final XPathExpression expression)
+            final XPathExpression expression,
+            final Map<String, Component> components)
             throws XPathExpressionException
     {
         final List<Entry> entries = new ArrayList<>();
-        extractEntries(evaluate(document, expression), fields, entries);
+        extractEntries(evaluate(document, expression), fields, entries, components);
         messages.forEach(message -> merge.accept(message.entries(), entries));
+    }
+
+    private String name(final NamedNodeMap attributes)
+    {
+        return getValue(attributes, "name");
     }
 
     private boolean isRequired(final NamedNodeMap attributes)

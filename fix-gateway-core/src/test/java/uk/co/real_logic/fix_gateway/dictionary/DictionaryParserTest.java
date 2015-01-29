@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.dictionary;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
@@ -154,17 +153,28 @@ public class DictionaryParserTest
         assertEquals(field("TradingSessionID"), groupEntries.get(0).element());
     }
 
-    @Ignore
     @Test
     public void shouldParseComponents()
     {
         final Message newOrderSingle = newOrderSingle();
-        final Entry noMemberIDs = newOrderSingle.entries().get(4);
-        //newOrderSingle.entries().forEach(entry -> System.out.println(entry.element().name()));
+        final Entry noMemberIDs = newOrderSingle.entries().get(7);
 
         assertFalse(noMemberIDs.required());
-        assertEquals(component("NoMemberIDs"), noMemberIDs.element());
+        assertEquals(component("Members"), noMemberIDs.element());
     }
+
+    @Test
+    public void shouldParseNestedGroups()
+    {
+        final Component members = component("Members");
+        final Group noMemberIDs = (Group) members.entries().get(0).element();
+
+        final Entry noMemberSubIDs = noMemberIDs.entries().get(1);
+        assertFalse(noMemberSubIDs.required());
+        assertThat(noMemberSubIDs.element(), instanceOf(Group.class));
+    }
+
+    // TODO: nested groups
 
     private Component component(final String name)
     {
@@ -175,9 +185,6 @@ public class DictionaryParserTest
     {
         return dictionary.messages().get(1);
     }
-
-    // TODO: Components
-    // TODO: nested groups
 
     private long countEnumFields()
     {
