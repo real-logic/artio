@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.builder;
 
 import sun.nio.ch.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
-import uk.co.real_logic.fix_gateway.specific_callback_api.StandardHeader;
+import uk.co.real_logic.fix_gateway.generated_api.StandardHeader;
 import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
 /**

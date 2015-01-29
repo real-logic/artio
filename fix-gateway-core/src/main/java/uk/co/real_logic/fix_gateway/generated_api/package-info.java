@@ -10,4 +10,4 @@
  *
  * Can use Chain of responsibility pattern for hooking our own code in.
  */
-package uk.co.real_logic.fix_gateway.specific_callback_api;
+package uk.co.real_logic.fix_gateway.generated_api;

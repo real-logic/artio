@@ -174,8 +174,6 @@ public class DictionaryParserTest
         assertThat(noMemberSubIDs.element(), instanceOf(Group.class));
     }
 
-    // TODO: nested groups
-
     private Component component(final String name)
     {
         return dictionary.components().get(name);

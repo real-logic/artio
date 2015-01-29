@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.specific_callback_api;
+package uk.co.real_logic.fix_gateway.generated_api;
 
 import sun.nio.ch.DirectBuffer;
 import uk.co.real_logic.fix_gateway.util.StringFlyweight;

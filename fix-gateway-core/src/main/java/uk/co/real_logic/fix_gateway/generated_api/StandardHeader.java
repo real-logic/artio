@@ -13,15 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.specific_callback_api;
+package uk.co.real_logic.fix_gateway.generated_api;
 
-public interface Acceptor
+public class StandardHeader
 {
-
-    void onOrderSingle(OrderSingleDecoder message, long sessionId);
-
-    void onMarketDataRequest(MarketDataRequestDecoder message, long sessionId);
-
-    // ...
-
 }
