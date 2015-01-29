@@ -15,37 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
-public class Message extends Composite
-{
-    private final char type;
-    private final Category category;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
 
-    public Message(final String name, final char type, final Category category)
+public class Component extends Composite implements Element
+{
+    public Component(final String name)
     {
         super(name);
-        this.type = type;
-        this.category = category;
     }
-
-    public char type()
-    {
-        return type;
-    }
-
-    public Category category()
-    {
-        return category;
-    }
-
-    @Override
-    public String toString()
-    {
-        return "Message{" +
-                "name='" + name() + '\'' +
-                ", type=" + type +
-                ", category=" + category +
-                ", entries=" + entries() +
-                '}';
-    }
-
 }

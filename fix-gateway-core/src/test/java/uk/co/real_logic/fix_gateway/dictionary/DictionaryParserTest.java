@@ -16,18 +16,17 @@
 package uk.co.real_logic.fix_gateway.dictionary;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
+import uk.co.real_logic.fix_gateway.dictionary.ir.*;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Group;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
 
 import java.util.List;
 
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
@@ -50,6 +49,7 @@ public class DictionaryParserTest
         assertNotNull("Missing dictionary", dictionary);
         assertNotNull("Missing messages", dictionary.messages());
         assertNotNull("Missing fields", dictionary.fields());
+        assertNotNull("Missing components", dictionary.components());
     }
 
     @Test
@@ -101,8 +101,10 @@ public class DictionaryParserTest
         assertEquals('0', heartbeat.type());
         assertEquals(ADMIN, heartbeat.category());
 
-        final Field field = heartbeat.optionalFields().get(0);
+        final Entry entry = heartbeat.entries().get(3);
+        assertFalse(entry.required());
 
+        final Field field = (Field) entry.element();
         assertEquals("TestReqID", field.name());
         assertEquals(112, field.number());
         assertFalse(field.isEnum());
@@ -120,30 +122,62 @@ public class DictionaryParserTest
     {
         final Message heartbeat = dictionary.messages().get(0);
 
-        final List<Field> fields = heartbeat.requiredFields();
+        final List<Entry> fields = heartbeat.entries();
 
-        assertEquals("BeginString", fields.get(0).name());
-        assertEquals("BodyLength", fields.get(1).name());
-        assertEquals("MsgType", fields.get(2).name());
-        assertEquals("CheckSum", fields.get(3).name());
+        assertRequiredField("BeginString", fields.get(0));
+        assertRequiredField("BodyLength", fields.get(1));
+        assertRequiredField("MsgType", fields.get(2));
+        assertRequiredField("CheckSum", fields.get(4));
+    }
+
+    private void assertRequiredField(final String name, final Entry entry)
+    {
+        assertTrue(entry.required());
+
+        final Element element = entry.element();
+        assertThat(element, instanceOf(Field.class));
+        assertEquals(name, ((Field)element).name());
     }
 
     @Test
     public void shouldParseGroups()
     {
-        final Message newOrderSingle = dictionary.messages().get(1);
-        final List<Group> groups = newOrderSingle.groups();
-        assertThat(groups, hasSize(1));
+        final Message newOrderSingle = newOrderSingle();
+        final List<Entry> entries = newOrderSingle.entries();
 
-        final Group noTradingSessions = groups.get(0);
-
+        final Entry entry = entries.get(6);
+        final Group noTradingSessions = (Group) entry.element();
         assertEquals("NoTradingSessions", noTradingSessions.name());
-        assertFalse(noTradingSessions.required());
-        assertThat(noTradingSessions.requiredFields(), hasSize(0));
-        assertThat(noTradingSessions.optionalFields(), contains(field("TradingSessionID")));
+
+        final List<Entry> groupEntries = noTradingSessions.entries();
+        assertThat(groupEntries, hasSize(1));
+        assertEquals(field("TradingSessionID"), groupEntries.get(0).element());
+    }
+
+    @Ignore
+    @Test
+    public void shouldParseComponents()
+    {
+        final Message newOrderSingle = newOrderSingle();
+        final Entry noMemberIDs = newOrderSingle.entries().get(4);
+        //newOrderSingle.entries().forEach(entry -> System.out.println(entry.element().name()));
+
+        assertFalse(noMemberIDs.required());
+        assertEquals(component("NoMemberIDs"), noMemberIDs.element());
+    }
+
+    private Component component(final String name)
+    {
+        return dictionary.components().get(name);
+    }
+
+    private Message newOrderSingle()
+    {
+        return dictionary.messages().get(1);
     }
 
     // TODO: Components
+    // TODO: nested groups
 
     private long countEnumFields()
     {

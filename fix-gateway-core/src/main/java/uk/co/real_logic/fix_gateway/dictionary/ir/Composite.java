@@ -15,37 +15,31 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
-public class Message extends Composite
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * A composite is either a group or a message.
+ */
+public abstract class Composite
 {
-    private final char type;
-    private final Category category;
+    private final String name;
+    private final List<Entry> entries;
 
-    public Message(final String name, final char type, final Category category)
+    protected Composite(final String name)
     {
-        super(name);
-        this.type = type;
-        this.category = category;
+        this.name = name;
+        entries = new ArrayList<>();
     }
 
-    public char type()
+    public String name()
     {
-        return type;
+        return name;
     }
 
-    public Category category()
+    public List<Entry> entries()
     {
-        return category;
-    }
-
-    @Override
-    public String toString()
-    {
-        return "Message{" +
-                "name='" + name() + '\'' +
-                ", type=" + type +
-                ", category=" + category +
-                ", entries=" + entries() +
-                '}';
+        return entries;
     }
 
 }

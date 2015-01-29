@@ -22,11 +22,16 @@ public class DataDictionary
 {
     private final List<Message> messages;
     private final Map<String, Field> fields;
+    private final Map<String, Component> components;
 
-    public DataDictionary(final List<Message> messages, final Map<String, Field> fields)
+    public DataDictionary(
+            final List<Message> messages,
+            final Map<String, Field> fields,
+            final Map<String, Component> components)
     {
         this.messages = messages;
         this.fields = fields;
+        this.components = components;
     }
 
     public List<Message> messages()
@@ -46,5 +51,10 @@ public class DataDictionary
                 "messages=" + messages +
                 ", fields=" + fields +
                 '}';
+    }
+
+    public Map<String, Component> components()
+    {
+        return components;
     }
 }

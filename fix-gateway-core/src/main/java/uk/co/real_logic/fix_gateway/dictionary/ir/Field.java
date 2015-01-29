@@ -15,11 +15,13 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
+import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class Field
+public class Field implements Element
 {
 
     private final int number;

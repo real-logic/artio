@@ -48,7 +48,7 @@
         </message>
     </messages>
     <components>
-        <component name="Parties">
+        <component name="Members">
             <group name="NoMemberIDs" required="N">
                 <field name="MemberID" required="N"/>
                 <group name="NoMemberSubIDs" required="N">

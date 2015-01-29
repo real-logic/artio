@@ -15,37 +15,38 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
-import java.util.ArrayList;
-import java.util.List;
-
-/**
- * An entry is either a group or a message.
- */
-public abstract class Entry
+public class Entry
 {
-    private final String name;
-    private final List<Field> requiredFields;
-    private final List<Field> optionalFields;
+    private final boolean required;
+    private final Element element;
 
-    protected Entry(final String name)
+    public Entry(final boolean required, final Element element)
     {
-        this.name = name;
-        this.requiredFields = new ArrayList<>();
-        this.optionalFields = new ArrayList<>();
+        this.required = required;
+        this.element = element;
     }
 
-    public String name()
+    public boolean required()
     {
-        return name;
+        return this.required;
     }
 
-    public List<Field> requiredFields()
+    public Element element()
     {
-        return requiredFields;
+        return this.element;
     }
 
-    public List<Field> optionalFields()
+    @Override
+    public String toString()
     {
-        return optionalFields;
+        return "Entry{" +
+                "required=" + required +
+                ", element=" + element +
+                '}';
+    }
+
+    public interface Element
+    {
+        String name();
     }
 }

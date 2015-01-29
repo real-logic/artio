@@ -15,28 +15,13 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
-public class Group extends Entry
-{
-    private final boolean required;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
 
-    public Group(final String name, final boolean required)
+public class Group extends Composite implements Element
+{
+    public Group(final String name)
     {
         super(name);
-        this.required = required;
     }
 
-    public boolean required()
-    {
-        return this.required;
-    }
-
-    @Override
-    public String toString()
-    {
-        return "Message{" +
-                "name='" + name() + '\'' +
-                ", requiredFields=" + requiredFields() +
-                ", optionalFields=" + optionalFields() +
-                '}';
-    }
 }
