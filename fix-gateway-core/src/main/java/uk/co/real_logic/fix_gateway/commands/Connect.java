@@ -13,28 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer;
+package uk.co.real_logic.fix_gateway.commands;
 
-import java.nio.channels.SocketChannel;
+import uk.co.real_logic.fix_gateway.framer.Sender;
 
-/**
- * Handles incoming connections including setting up framers
- */
-public class ConnectionHandler
+import java.net.InetSocketAddress;
+
+public class Connect implements SenderCommand
 {
+    private InetSocketAddress address;
 
-    private final int bufferSize;
-    private final MessageHandler messageHandler;
-
-    public ConnectionHandler(final int bufferSize, final MessageHandler messageHandler)
+    public Connect(final InetSocketAddress address)
     {
-        this.bufferSize = bufferSize;
-        this.messageHandler = messageHandler;
+        this.address = address;
     }
 
-    public InboundEndPoint onNewInboundConnection(SocketChannel channel)
+    @Override
+    public void execute(final Sender sender)
     {
-        return new InboundEndPoint(channel, bufferSize, messageHandler);
+        sender.onConnect(address);
     }
-
 }

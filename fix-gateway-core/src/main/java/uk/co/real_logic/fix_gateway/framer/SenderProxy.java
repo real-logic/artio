@@ -15,26 +15,23 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
-import java.nio.channels.SocketChannel;
+import uk.co.real_logic.fix_gateway.commands.Connect;
+import uk.co.real_logic.fix_gateway.commands.SenderCommand;
 
-/**
- * Handles incoming connections including setting up framers
- */
-public class ConnectionHandler
+import java.net.InetSocketAddress;
+import java.util.Queue;
+
+public class SenderProxy
 {
+    private final Queue<SenderCommand> commandQueue;
 
-    private final int bufferSize;
-    private final MessageHandler messageHandler;
-
-    public ConnectionHandler(final int bufferSize, final MessageHandler messageHandler)
+    public SenderProxy(final Queue<SenderCommand> commandQueue)
     {
-        this.bufferSize = bufferSize;
-        this.messageHandler = messageHandler;
+        this.commandQueue = commandQueue;
     }
 
-    public InboundEndPoint onNewInboundConnection(SocketChannel channel)
+    public void connect(final InetSocketAddress address)
     {
-        return new InboundEndPoint(channel, bufferSize, messageHandler);
+        commandQueue.offer(new Connect(address));
     }
-
 }

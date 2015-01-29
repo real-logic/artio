@@ -28,7 +28,7 @@ import static uk.co.real_logic.fix_gateway.util.StringFlyweight.UNKNOWN_INDEX;
 /**
  * Handles incoming data from sockets
  */
-public class ReceiverEndPoint
+public class InboundEndPoint
 {
     private static final byte START_OF_HEADER = 0x01;
 
@@ -46,7 +46,7 @@ public class ReceiverEndPoint
 
     private int usedBufferData = 0;
 
-    public ReceiverEndPoint(final SocketChannel channel, final int bufferSize, final MessageHandler handler)
+    public InboundEndPoint(final SocketChannel channel, final int bufferSize, final MessageHandler handler)
     {
         this.channel = channel;
         this.handler = handler;

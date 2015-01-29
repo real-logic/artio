@@ -20,7 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.framer.Receiver;
-import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
+import uk.co.real_logic.fix_gateway.framer.InboundEndPoint;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -42,7 +42,7 @@ public class ReceiverTest
     private ByteBuffer clientBuffer = ByteBuffer.allocate(1024);
 
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
-    private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
+    private InboundEndPoint mockInboundEndPoint = mock(InboundEndPoint.class);
 
     private Receiver receiver = new Receiver(ADDRESS, mockConnectionHandler);
 
@@ -51,8 +51,8 @@ public class ReceiverTest
     {
         clientBuffer.putInt(10, 5);
 
-        when(mockConnectionHandler.onNewConnection(any(SocketChannel.class)))
-            .thenReturn(mockReceiverEndPoint);
+        when(mockConnectionHandler.onNewInboundConnection(any(SocketChannel.class)))
+            .thenReturn(mockInboundEndPoint);
 
     }
 
@@ -82,7 +82,7 @@ public class ReceiverTest
         receiver.doWork();
 
         then:
-        verify(mockConnectionHandler).onNewConnection(notNull(SocketChannel.class));
+        verify(mockConnectionHandler).onNewInboundConnection(notNull(SocketChannel.class));
     }
 
     @Test
@@ -97,7 +97,7 @@ public class ReceiverTest
         receiver.doWork();
 
         then:
-        verify(mockReceiverEndPoint).receiveData();
+        verify(mockInboundEndPoint).receiveData();
     }
 
     private void aClientConnects() throws IOException

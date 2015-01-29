@@ -20,7 +20,7 @@ import org.mockito.InOrder;
 import org.mockito.Mockito;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
-import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
+import uk.co.real_logic.fix_gateway.framer.InboundEndPoint;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -32,7 +32,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
 
-public class ReceiverEndPointTest
+public class InboundEndPointTest
 {
 
     private static final byte[] EG_MESSAGE = ("8=FIX.4.2 9=145 35=D 34=4 49=ABC_DEFG01 52=20090323-15:40:29 " +
@@ -43,7 +43,7 @@ public class ReceiverEndPointTest
 
     private SocketChannel mockChannel = mock(SocketChannel.class);
     private MessageHandler mockHandler = mock(MessageHandler.class);
-    private ReceiverEndPoint endPoint = new ReceiverEndPoint(mockChannel, 16 * 1024, mockHandler);
+    private InboundEndPoint endPoint = new InboundEndPoint(mockChannel, 16 * 1024, mockHandler);
 
     @Test
     public void shouldHandleValidFixMessageInOneGo()
