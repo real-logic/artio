@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.generated_api;
+package uk.co.real_logic.generic_callback_api;
 
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.Session;
@@ -25,11 +25,12 @@ import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
 import static uk.co.real_logic.fix_gateway.generated_api.OrdType.Market;
 import static uk.co.real_logic.fix_gateway.generated_api.Side.Buy;
 import static uk.co.real_logic.fix_gateway.generated_api.Side.Sell;
+import static uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor.NEW_ORDER_SINGLE;
 
 /**
  * .
  */
-public class SampleMain
+public class GenericApiSampleMain
 {
     public static void main(String[] args) throws Exception
     {
@@ -37,8 +38,9 @@ public class SampleMain
         final StaticConfiguration configuration = new StaticConfiguration();
 
         // You register the acceptor - which is your custom application hook
-        // that receives messages from external connections.
-        configuration.registerAcceptor(new SampleAcceptor());
+        // Your generic acceptor then gets callbacks for each field of the tag or tags that it
+        // gets registered for
+        configuration.registerAcceptor(new SampleGenericAcceptor(), NEW_ORDER_SINGLE);
 
         try(final FixGateway gateway = FixGateway.launch(configuration))
         {

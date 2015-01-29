@@ -30,13 +30,15 @@ public class SampleAcceptor implements Acceptor
 
     public void onOrderSingle(final OrderSingleDecoder message, final long sessionId)
     {
+        System.out.println("a NewOrderSingle has arrived");
+
         // Each field in the message is represented by a fluent decoder method.
         if (message.side() == Sell)
         {
             // Required fields can just be used directly
             if ("USD".equals(message.symbol()))
             {
-
+                System.out.println("Our client wants to sell dollars");
             }
         }
         // Optional fields would all have boolean flags to indicate whether

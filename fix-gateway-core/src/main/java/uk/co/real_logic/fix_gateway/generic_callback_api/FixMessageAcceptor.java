@@ -17,8 +17,12 @@ package uk.co.real_logic.fix_gateway.generic_callback_api;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 
-public interface FixMessageHandler
+public interface FixMessageAcceptor
 {
+    int NEW_ORDER_SINGLE = 'D';
+    char SELL = '2';
+    int SIDE = 54;
+    int SYMBOL = 55;
 
     void onStartMessage();
 
@@ -28,6 +32,6 @@ public interface FixMessageHandler
 
     void onGroupEnd(int tag);
 
-    void onEndMessage();
+    void onEndMessage(boolean passedChecksum);
 
 }
