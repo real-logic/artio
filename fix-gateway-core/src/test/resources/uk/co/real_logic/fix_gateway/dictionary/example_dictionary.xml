@@ -19,6 +19,7 @@
             <group name="NoTradingSessions" required="N">
                 <field name="TradingSessionID" required="N"/>
             </group>
+            <component name="Members" required="N"/>
             <field name="ProcessCode" required="N"/>
             <field name="Symbol" required="Y"/>
             <field name="Side" required="Y"/>
@@ -46,6 +47,16 @@
             <field name="AvgPx" required="Y"/>
         </message>
     </messages>
+    <components>
+        <component name="Parties">
+            <group name="NoMemberIDs" required="N">
+                <field name="MemberID" required="N"/>
+                <group name="NoMemberSubIDs" required="N">
+                    <field name="MemberSubID" required="N"/>
+                </group>
+            </group>
+        </component>
+    </components>
     <fields>
         <field number="8" name="BeginString" type="STRING"/>
         <field number="9" name="BodyLength" type="INT"/>
@@ -173,5 +184,9 @@
         <field number="151" name="LeavesQty" type="QTY"/>
         <field number="14" name="CumQty" type="QTY"/>
         <field number="6" name="AvgPx" type="PRICE"/>
+        <field number="100" name="MemberID" type="STRING"/>
+        <field number="101" name="NoMemberIDs" type="NUMINGROUP"/>
+        <field number="102" name="NoMemberSubIDs" type="NUMINGROUP"/>
+        <field number="103" name="MemberSubIDType" type="INT"/>
     </fields>
 </fix>
