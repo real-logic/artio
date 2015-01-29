@@ -60,13 +60,28 @@ public class OrderSingleDecoder
         return transactTime;
     }
 
-    public StringFlyweight symbol()
+    public StringFlyweight symbolFlyweight()
     {
         return symbol;
     }
 
+    public String symbol()
+    {
+        return null;
+    }
+
     private boolean hasClientID;
     private StringFlyweight clientID;
+
+    public boolean hasClientID()
+    {
+        return hasClientID;
+    }
+
+    public StringFlyweight clientID()
+    {
+        return clientID;
+    }
 
     private boolean hasExecBroker;
     private StringFlyweight execBroker;
