@@ -16,15 +16,15 @@
 package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.aeron.common.Agent;
+import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
+import uk.co.real_logic.fix_gateway.framer.commands.ReceiverCommand;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import static java.net.StandardSocketOptions.TCP_NODELAY;
 import static java.nio.channels.SelectionKey.OP_READ;
@@ -34,15 +34,21 @@ import static java.nio.channels.SelectionKey.OP_READ;
  */
 public class Receiver implements Agent
 {
+    private final Consumer<ReceiverCommand> onCommandFunc = this::onCommand;
 
     private final ServerSocketChannel listeningChannel;
     private final ConnectionHandler connectionHandler;
+    private final OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue;
     private final Selector selector;
 
     // TODO: add hooks for receive and send buffer sizes
-    public Receiver(final SocketAddress address, ConnectionHandler connectionHandler)
+    public Receiver(
+            final SocketAddress address,
+            final ConnectionHandler connectionHandler,
+            final OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue)
     {
         this.connectionHandler = connectionHandler;
+        this.commandQueue = commandQueue;
 
         try
         {
@@ -61,7 +67,12 @@ public class Receiver implements Agent
     @Override
     public int doWork() throws Exception
     {
-        return pollSockets();
+        return commandQueue.drain(onCommandFunc) + pollSockets();
+    }
+
+    private void onCommand(final ReceiverCommand command)
+    {
+        command.execute(this);
     }
 
     private int pollSockets() throws IOException
@@ -79,17 +90,37 @@ public class Receiver implements Agent
                 channel.setOption(TCP_NODELAY, false);
 
                 final Connection connection = connectionHandler.createConnection(channel);
-                channel.register(selector, OP_READ, connection);
+                final ReceiverEndPoint receiverEndPoint = connection.receiverEndPoint();
+                register(channel, receiverEndPoint);
             }
             else if (key.isReadable())
             {
-                ((Connection) key.attachment()).receiveData();
+                ((ReceiverEndPoint) key.attachment()).receiveData();
             }
 
             it.remove();
         }
 
         return count;
+    }
+
+    public void onNewConnection(final Connection connection)
+    {
+        try
+        {
+            final ReceiverEndPoint receiverEndPoint = connection.receiverEndPoint();
+            register(receiverEndPoint.channel(), receiverEndPoint);
+        }
+        catch (ClosedChannelException e)
+        {
+            // TODO
+            e.printStackTrace();
+        }
+    }
+
+    private void register(final SocketChannel channel, final ReceiverEndPoint receiverEndPoint) throws ClosedChannelException
+    {
+        channel.register(selector, OP_READ, receiverEndPoint);
     }
 
     @Override
@@ -113,5 +144,4 @@ public class Receiver implements Agent
     {
         return "Dispatcher";
     }
-
 }

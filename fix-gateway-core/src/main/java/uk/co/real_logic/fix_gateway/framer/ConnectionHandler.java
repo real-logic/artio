@@ -20,7 +20,9 @@ import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 
 /**
- * Handles incoming connections including setting up framers
+ * Handles incoming connections including setting up framers.
+ *
+ * Immutable & Threadsafe.
  */
 public class ConnectionHandler
 {

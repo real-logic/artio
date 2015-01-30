@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.aeron.common.Agent;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
-import uk.co.real_logic.fix_gateway.commands.SenderCommand;
+import uk.co.real_logic.fix_gateway.framer.commands.SenderCommand;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -33,13 +33,15 @@ public class Sender implements Agent
 {
 
     private final Consumer<SenderCommand> onCommandFunc = this::onCommand;
-    private final List<SocketChannel> channels = new ArrayList<>();
+    private final List<Connection> connections = new ArrayList<>();
 
     private final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue;
+    private final ConnectionHandler connectionHandler;
 
-    public Sender(final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue)
+    public Sender(final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue, final ConnectionHandler connectionHandler)
     {
         this.commandQueue = commandQueue;
+        this.connectionHandler = connectionHandler;
     }
 
     public int doWork() throws Exception
@@ -59,7 +61,9 @@ public class Sender implements Agent
             final SocketChannel channel = SocketChannel.open();
             channel.connect(address);
             channel.configureBlocking(false);
-            channels.add(channel);
+
+            final Connection connection = connectionHandler.createConnection(channel);
+            connections.add(connection);
         }
         catch (IOException e)
         {
@@ -68,23 +72,19 @@ public class Sender implements Agent
         }
     }
 
+    public void onNewConnection(final Connection connection)
+    {
+        connections.add(connection);
+    }
+
     public void onClose()
     {
-        channels.forEach((socketChannel) -> {
-            try
-            {
-                socketChannel.close();
-            }
-            catch (IOException e)
-            {
-                // TODO
-                e.printStackTrace();
-            }
-        });
+        // TODO: decide on whether the Connections should be closed from the sender or the receiver
     }
 
     public String roleName()
     {
         return "Sender";
     }
+
 }

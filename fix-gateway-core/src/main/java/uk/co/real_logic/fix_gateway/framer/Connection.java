@@ -18,7 +18,8 @@ package uk.co.real_logic.fix_gateway.framer;
 import java.net.InetSocketAddress;
 
 /**
- * ThreadSafe for publication.
+ * ThreadSafe for publication, operations delegating to receiver and sender end points
+ * should be
  */
 public class Connection
 {
@@ -36,9 +37,14 @@ public class Connection
         this.senderEndPoint = senderEndPoint;
     }
 
-    public void receiveData()
+    public ReceiverEndPoint receiverEndPoint()
     {
-        receiverEndPoint.receiveData();
+        return this.receiverEndPoint;
+    }
+
+    public SenderEndPoint senderEndPoint()
+    {
+        return this.senderEndPoint;
     }
 
 }

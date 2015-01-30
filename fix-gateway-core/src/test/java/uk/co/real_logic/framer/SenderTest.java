@@ -15,26 +15,30 @@
  */
 package uk.co.real_logic.framer;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
-import uk.co.real_logic.fix_gateway.commands.SenderCommand;
+import uk.co.real_logic.fix_gateway.framer.commands.SenderCommand;
+import uk.co.real_logic.fix_gateway.framer.commands.SenderProxy;
+import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.framer.Sender;
-import uk.co.real_logic.fix_gateway.framer.SenderProxy;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
 
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.Mockito.mock;
 
 public class SenderTest
 {
     private static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", 9999);
 
+    private final ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private final SenderProxy proxy = new SenderProxy(commandQueue);
-    private final Sender sender = new Sender(commandQueue);
+    private final Sender sender = new Sender(commandQueue, mockConnectionHandler);
 
     private ServerSocketChannel server;
 
@@ -43,6 +47,12 @@ public class SenderTest
     {
         server = ServerSocketChannel.open().bind(ADDRESS);
         server.configureBlocking(false);
+    }
+
+    @After
+    public void tearDown() throws IOException
+    {
+        server.close();
     }
 
     @Test

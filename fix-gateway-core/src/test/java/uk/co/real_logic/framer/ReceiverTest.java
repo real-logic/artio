@@ -18,9 +18,12 @@ package uk.co.real_logic.framer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.framer.Connection;
 import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.framer.Receiver;
+import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
+import uk.co.real_logic.fix_gateway.framer.commands.ReceiverCommand;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -41,10 +44,12 @@ public class ReceiverTest
     private SocketChannel client;
     private ByteBuffer clientBuffer = ByteBuffer.allocate(1024);
 
+    private OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private Connection mockConnection = mock(Connection.class);
+    private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
 
-    private Receiver receiver = new Receiver(ADDRESS, mockConnectionHandler);
+    private Receiver receiver = new Receiver(ADDRESS, mockConnectionHandler, commandQueue);
 
     @Before
     public void setUp() throws IOException
@@ -54,6 +59,7 @@ public class ReceiverTest
         when(mockConnectionHandler.createConnection(any(SocketChannel.class)))
             .thenReturn(mockConnection);
 
+        when(mockConnection.receiverEndPoint()).thenReturn(mockReceiverEndPoint);
     }
 
     @After
@@ -97,7 +103,7 @@ public class ReceiverTest
         receiver.doWork();
 
         then:
-        verify(mockConnection).receiveData();
+        verify(mockReceiverEndPoint).receiveData();
     }
 
     private void aClientConnects() throws IOException

@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.commands;
+package uk.co.real_logic.fix_gateway.framer.commands;
 
-import uk.co.real_logic.fix_gateway.framer.Sender;
+import uk.co.real_logic.fix_gateway.framer.Receiver;
 
-public interface SenderCommand
+public interface ReceiverCommand
 {
-    void execute(Sender sender);
+    void execute(Receiver receiver);
 }

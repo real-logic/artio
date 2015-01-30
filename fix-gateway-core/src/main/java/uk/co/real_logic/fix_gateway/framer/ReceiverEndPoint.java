@@ -41,9 +41,10 @@ public class ReceiverEndPoint
 
     private final AtomicBuffer buffer;
     private final SocketChannel channel;
-    private final MessageHandler handler;
-    private final StringFlyweight string;
 
+    private final MessageHandler handler;
+
+    private final StringFlyweight string;
     private int usedBufferData = 0;
 
     public ReceiverEndPoint(final SocketChannel channel, final int bufferSize, final MessageHandler handler)
@@ -52,6 +53,11 @@ public class ReceiverEndPoint
         this.handler = handler;
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new StringFlyweight(buffer);
+    }
+
+    public SocketChannel channel()
+    {
+        return channel;
     }
 
     public void receiveData()
@@ -146,5 +152,4 @@ public class ReceiverEndPoint
         // TODO
         System.err.println("Invalid message");
     }
-
 }

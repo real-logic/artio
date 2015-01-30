@@ -13,25 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer;
+package uk.co.real_logic.fix_gateway.framer.commands;
 
-import uk.co.real_logic.fix_gateway.commands.Connect;
-import uk.co.real_logic.fix_gateway.commands.SenderCommand;
+import uk.co.real_logic.fix_gateway.framer.Connection;
+import uk.co.real_logic.fix_gateway.framer.Receiver;
+import uk.co.real_logic.fix_gateway.framer.Sender;
 
-import java.net.InetSocketAddress;
-import java.util.Queue;
-
-public class SenderProxy
+class NewConnection implements SenderCommand, ReceiverCommand
 {
-    private final Queue<SenderCommand> commandQueue;
+    private final Connection connection;
 
-    public SenderProxy(final Queue<SenderCommand> commandQueue)
+    NewConnection(final Connection connection)
     {
-        this.commandQueue = commandQueue;
+        this.connection = connection;
     }
 
-    public void connect(final InetSocketAddress address)
+    @Override
+    public void execute(final Sender sender)
     {
-        commandQueue.offer(new Connect(address));
+        sender.onNewConnection(connection);
+    }
+
+    @Override
+    public void execute(final Receiver receiver)
+    {
+        receiver.onNewConnection(connection);
     }
 }
