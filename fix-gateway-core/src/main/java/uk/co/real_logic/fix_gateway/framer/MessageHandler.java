@@ -15,12 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
-import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.agrona.DirectBuffer;
 
 /**
  * Handler for messages that have been identified and framed coming in off the wire.
  */
 public interface MessageHandler
 {
-    void onMessage(final AtomicBuffer buffer, final int offset, final int length);
+    void onMessage(final DirectBuffer buffer, final int offset, final int length);
 }
