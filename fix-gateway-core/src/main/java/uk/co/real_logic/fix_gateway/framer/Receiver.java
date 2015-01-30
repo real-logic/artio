@@ -78,12 +78,12 @@ public class Receiver implements Agent
                 channel.configureBlocking(false);
                 channel.setOption(TCP_NODELAY, false);
 
-                ReceiverEndPoint endPoint = connectionHandler.onNewInboundConnection(channel);
-                channel.register(selector, OP_READ, endPoint);
+                final Connection connection = connectionHandler.createConnection(channel);
+                channel.register(selector, OP_READ, connection);
             }
             else if (key.isReadable())
             {
-                ((ReceiverEndPoint) key.attachment()).receiveData();
+                ((Connection) key.attachment()).receiveData();
             }
 
             it.remove();
@@ -99,6 +99,7 @@ public class Receiver implements Agent
         {
             // JDK on Windows - sigh
             selector.selectNow();
+            selector.close();
             listeningChannel.close();
         }
         catch (IOException e)

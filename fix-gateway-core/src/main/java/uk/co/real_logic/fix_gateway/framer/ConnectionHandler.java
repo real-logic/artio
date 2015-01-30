@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 
 /**
@@ -32,9 +34,11 @@ public class ConnectionHandler
         this.messageHandler = messageHandler;
     }
 
-    public ReceiverEndPoint onNewInboundConnection(SocketChannel channel)
+    public Connection createConnection(final SocketChannel channel) throws IOException
     {
-        return new ReceiverEndPoint(channel, bufferSize, messageHandler);
+        final ReceiverEndPoint receiverEndPoint = new ReceiverEndPoint(channel, bufferSize, messageHandler);
+        final SenderEndPoint senderEndPoint = new SenderEndPoint(channel);
+        return new Connection((InetSocketAddress) channel.getRemoteAddress(), receiverEndPoint, senderEndPoint);
     }
 
 }
