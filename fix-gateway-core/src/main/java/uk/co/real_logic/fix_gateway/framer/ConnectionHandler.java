@@ -32,9 +32,9 @@ public class ConnectionHandler
         this.messageHandler = messageHandler;
     }
 
-    public InboundEndPoint onNewInboundConnection(SocketChannel channel)
+    public ReceiverEndPoint onNewInboundConnection(SocketChannel channel)
     {
-        return new InboundEndPoint(channel, bufferSize, messageHandler);
+        return new ReceiverEndPoint(channel, bufferSize, messageHandler);
     }
 
 }

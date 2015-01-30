@@ -78,12 +78,12 @@ public class Receiver implements Agent
                 channel.configureBlocking(false);
                 channel.setOption(TCP_NODELAY, false);
 
-                InboundEndPoint endPoint = connectionHandler.onNewInboundConnection(channel);
+                ReceiverEndPoint endPoint = connectionHandler.onNewInboundConnection(channel);
                 channel.register(selector, OP_READ, endPoint);
             }
             else if (key.isReadable())
             {
-                ((InboundEndPoint) key.attachment()).receiveData();
+                ((ReceiverEndPoint) key.attachment()).receiveData();
             }
 
             it.remove();
