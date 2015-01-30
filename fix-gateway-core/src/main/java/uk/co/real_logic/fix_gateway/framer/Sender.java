@@ -81,7 +81,7 @@ public class Sender implements Agent
 
     public void onNewConnection(final Connection connection)
     {
-        multiplexer.onNewConnection(connection);
+        multiplexer.onNewConnection(connection.connectionId(), connection.senderEndPoint());
     }
 
     public void onClose()

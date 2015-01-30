@@ -20,12 +20,12 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.framer.Connection;
+import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.framer.Multiplexer;
+import uk.co.real_logic.fix_gateway.framer.Sender;
 import uk.co.real_logic.fix_gateway.framer.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.framer.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.framer.commands.SenderProxy;
-import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
-import uk.co.real_logic.fix_gateway.framer.Sender;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -33,10 +33,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class SenderTest
 {
@@ -93,16 +90,6 @@ public class SenderTest
 
         then:
         verify(mockReceiver).newConnection(mockConnection);
-    }
-
-    @Test
-    public void shouldNotifyMultiplexerWhenConnectionEstablished() throws Exception
-    {
-        when:
-        sender.onNewConnection(mockConnection);
-
-        then:
-        verify(mockMultiplexer).onNewConnection(mockConnection);
     }
 
 }

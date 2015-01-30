@@ -15,26 +15,42 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 
 /**
  * Responsible for splitting the data coming out of the replication
  * buffers and pushing it out to the sender end points.
  */
-public class Multiplexer
+public class Multiplexer implements MessageHandler
 {
-    private final Long2ObjectHashMap<Connection> connections = new Long2ObjectHashMap<>();
+    private final Long2ObjectHashMap<SenderEndPoint> endpoints = new Long2ObjectHashMap<>();
+    private final MessageSource source;
 
-    public void onNewConnection(final Connection connection)
+    public Multiplexer(final MessageSource source)
     {
-        connections.put(connection.connectionId(), connection);
+        this.source = source;
+    }
+
+    public void onNewConnection(final long connectionId, final SenderEndPoint senderEndPoint)
+    {
+        endpoints.put(connectionId, senderEndPoint);
     }
 
     public int scanBuffers()
     {
-        // TODO: read message off buffers
-        // TODO: lookup connection id from the message
-        // TODO: mux message to correct sender end point by connection id
-        return 0;
+        return source.drainTo(this);
+    }
+
+    /**
+     * Receive a message from a message source buffer.
+     */
+    public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long connectionId)
+    {
+        final SenderEndPoint endPoint = endpoints.get(connectionId);
+        if (endPoint != null)
+        {
+            endPoint.onFramedMessage(buffer, offset, length);
+        }
     }
 }
