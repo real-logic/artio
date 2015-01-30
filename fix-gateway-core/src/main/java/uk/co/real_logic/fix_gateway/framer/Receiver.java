@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.framer;
 import uk.co.real_logic.aeron.common.Agent;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.framer.commands.ReceiverCommand;
+import uk.co.real_logic.fix_gateway.framer.commands.SenderProxy;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -39,16 +40,19 @@ public class Receiver implements Agent
     private final ServerSocketChannel listeningChannel;
     private final ConnectionHandler connectionHandler;
     private final OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue;
+    private final SenderProxy sender;
     private final Selector selector;
 
     // TODO: add hooks for receive and send buffer sizes
     public Receiver(
             final SocketAddress address,
             final ConnectionHandler connectionHandler,
-            final OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue)
+            final OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue,
+            final SenderProxy sender)
     {
         this.connectionHandler = connectionHandler;
         this.commandQueue = commandQueue;
+        this.sender = sender;
 
         try
         {
@@ -90,8 +94,8 @@ public class Receiver implements Agent
                 channel.setOption(TCP_NODELAY, false);
 
                 final Connection connection = connectionHandler.createConnection(channel);
-                final ReceiverEndPoint receiverEndPoint = connection.receiverEndPoint();
-                register(channel, receiverEndPoint);
+                register(channel, connection.receiverEndPoint());
+                sender.newConnection(connection);
             }
             else if (key.isReadable())
             {

@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.aeron.common.Agent;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
+import uk.co.real_logic.fix_gateway.framer.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.framer.commands.SenderCommand;
 
 import java.io.IOException;
@@ -37,11 +38,16 @@ public class Sender implements Agent
 
     private final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue;
     private final ConnectionHandler connectionHandler;
+    private final ReceiverProxy receiver;
 
-    public Sender(final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue, final ConnectionHandler connectionHandler)
+    public Sender(
+            final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue,
+            final ConnectionHandler connectionHandler,
+            final ReceiverProxy receiver)
     {
         this.commandQueue = commandQueue;
         this.connectionHandler = connectionHandler;
+        this.receiver = receiver;
     }
 
     public int doWork() throws Exception
@@ -63,7 +69,8 @@ public class Sender implements Agent
             channel.configureBlocking(false);
 
             final Connection connection = connectionHandler.createConnection(channel);
-            connections.add(connection);
+            onNewConnection(connection);
+            receiver.newConnection(connection);
         }
         catch (IOException e)
         {

@@ -19,6 +19,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
+import uk.co.real_logic.fix_gateway.framer.Connection;
+import uk.co.real_logic.fix_gateway.framer.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.framer.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.framer.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
@@ -27,18 +29,24 @@ import uk.co.real_logic.fix_gateway.framer.Sender;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class SenderTest
 {
     private static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", 9999);
 
-    private final ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
-    private final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
-    private final SenderProxy proxy = new SenderProxy(commandQueue);
-    private final Sender sender = new Sender(commandQueue, mockConnectionHandler);
+    private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
+    private Connection mockConnection = mock(Connection.class);
+    private OneToOneConcurrentArrayQueue<SenderCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
+    private SenderProxy proxy = new SenderProxy(commandQueue);
+    private ReceiverProxy mockReceiver = mock(ReceiverProxy.class);
+    private Sender sender = new Sender(commandQueue, mockConnectionHandler, mockReceiver);
 
     private ServerSocketChannel server;
 
@@ -47,6 +55,9 @@ public class SenderTest
     {
         server = ServerSocketChannel.open().bind(ADDRESS);
         server.configureBlocking(false);
+
+        when(mockConnectionHandler.createConnection(any(SocketChannel.class)))
+                .thenReturn(mockConnection);
     }
 
     @After
@@ -67,4 +78,18 @@ public class SenderTest
         then:
         assertNotNull("Sender hasn't connected to server", server.accept());
     }
+
+    @Test
+    public void shouldNotifyReceiverWhenConnectionEstablished() throws Exception
+    {
+        given:
+        proxy.connect(ADDRESS);
+
+        when:
+        sender.doWork();
+
+        then:
+        verify(mockReceiver).newConnection(mockConnection);
+    }
+
 }

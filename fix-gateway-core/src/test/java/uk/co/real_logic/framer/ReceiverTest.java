@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.framer.Receiver;
 import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
 import uk.co.real_logic.fix_gateway.framer.commands.ReceiverCommand;
+import uk.co.real_logic.fix_gateway.framer.commands.SenderProxy;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -48,8 +49,9 @@ public class ReceiverTest
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private Connection mockConnection = mock(Connection.class);
     private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
+    private SenderProxy mockSender = mock(SenderProxy.class);
 
-    private Receiver receiver = new Receiver(ADDRESS, mockConnectionHandler, commandQueue);
+    private Receiver receiver = new Receiver(ADDRESS, mockConnectionHandler, commandQueue, mockSender);
 
     @Before
     public void setUp() throws IOException
@@ -89,6 +91,19 @@ public class ReceiverTest
 
         then:
         verify(mockConnectionHandler).createConnection(notNull(SocketChannel.class));
+    }
+
+    @Test
+    public void shouldNotifySenderWhenClientConnects() throws Exception
+    {
+        given:
+        aClientConnects();
+
+        when:
+        receiver.doWork();
+
+        then:
+        verify(mockSender).newConnection(mockConnection);
     }
 
     @Test
