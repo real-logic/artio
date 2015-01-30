@@ -15,20 +15,24 @@
  */
 package uk.co.real_logic.fix_gateway.util;
 
-import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.agrona.DirectBuffer;
 
 /**
  * Mutable String class that flyweights a data buffer. This assumes a US-ASCII encoding
  * and should only be used for performance sensitive decoding/encoding tasks.
  */
-// TODO: add ability to wrap
 public class StringFlyweight
 {
     public static final int UNKNOWN_INDEX = -1;
 
-    private final MutableDirectBuffer buffer;
+    private DirectBuffer buffer;
 
-    public StringFlyweight(final MutableDirectBuffer buffer)
+    public StringFlyweight(final DirectBuffer buffer)
+    {
+        this.buffer = buffer;
+    }
+
+    public void wrap(final DirectBuffer buffer)
     {
         this.buffer = buffer;
     }

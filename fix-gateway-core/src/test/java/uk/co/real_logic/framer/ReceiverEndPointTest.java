@@ -27,19 +27,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.function.ToIntFunction;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.util.TestMessages.EG_MESSAGE;
+import static uk.co.real_logic.util.TestMessages.MSG_LEN;
 
 public class ReceiverEndPointTest
 {
-
-    private static final byte[] EG_MESSAGE = ("8=FIX.4.2 9=145 35=D 34=4 49=ABC_DEFG01 52=20090323-15:40:29 " +
-            "56=CCG 115=XYZ 11=NF 0542/03232009 54=1 38=100 55=CVS 40=1 59=0 47=A" +
-            "60=20090323-15:40:29 21=1 207=N 10=139 ").replace(' ', '\1').getBytes(US_ASCII);
-
-    private static final int MSG_LEN = EG_MESSAGE.length;
 
     private static final long ID = 20L;
 
