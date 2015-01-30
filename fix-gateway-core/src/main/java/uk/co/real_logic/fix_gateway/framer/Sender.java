@@ -23,8 +23,6 @@ import uk.co.real_logic.fix_gateway.framer.commands.SenderCommand;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -34,25 +32,27 @@ public class Sender implements Agent
 {
 
     private final Consumer<SenderCommand> onCommandFunc = this::onCommand;
-    private final List<Connection> connections = new ArrayList<>();
 
     private final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue;
     private final ConnectionHandler connectionHandler;
     private final ReceiverProxy receiver;
+    private final Multiplexer multiplexer;
 
     public Sender(
             final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue,
             final ConnectionHandler connectionHandler,
-            final ReceiverProxy receiver)
+            final ReceiverProxy receiver,
+            final Multiplexer multiplexer)
     {
         this.commandQueue = commandQueue;
         this.connectionHandler = connectionHandler;
         this.receiver = receiver;
+        this.multiplexer = multiplexer;
     }
 
     public int doWork() throws Exception
     {
-        return commandQueue.drain(onCommandFunc);
+        return commandQueue.drain(onCommandFunc) + multiplexer.scanBuffers();
     }
 
     private void onCommand(final SenderCommand command)
@@ -81,7 +81,7 @@ public class Sender implements Agent
 
     public void onNewConnection(final Connection connection)
     {
-        connections.add(connection);
+        multiplexer.onNewConnection(connection);
     }
 
     public void onClose()

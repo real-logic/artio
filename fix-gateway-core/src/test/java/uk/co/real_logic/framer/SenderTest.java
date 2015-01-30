@@ -20,6 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.framer.Connection;
+import uk.co.real_logic.fix_gateway.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.framer.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.framer.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.framer.commands.SenderProxy;
@@ -46,7 +47,9 @@ public class SenderTest
     private OneToOneConcurrentArrayQueue<SenderCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private SenderProxy proxy = new SenderProxy(commandQueue);
     private ReceiverProxy mockReceiver = mock(ReceiverProxy.class);
-    private Sender sender = new Sender(commandQueue, mockConnectionHandler, mockReceiver);
+    private Multiplexer mockMultiplexer = mock(Multiplexer.class);
+
+    private Sender sender = new Sender(commandQueue, mockConnectionHandler, mockReceiver, mockMultiplexer);
 
     private ServerSocketChannel server;
 
@@ -90,6 +93,16 @@ public class SenderTest
 
         then:
         verify(mockReceiver).newConnection(mockConnection);
+    }
+
+    @Test
+    public void shouldNotifyMultiplexerWhenConnectionEstablished() throws Exception
+    {
+        when:
+        sender.onNewConnection(mockConnection);
+
+        then:
+        verify(mockMultiplexer).onNewConnection(mockConnection);
     }
 
 }
