@@ -18,14 +18,17 @@ package uk.co.real_logic.fix_gateway.framer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Handles incoming connections including setting up framers.
  *
- * Immutable & Threadsafe.
+ * Threadsafe.
  */
 public class ConnectionHandler
 {
+
+    private final AtomicLong idSource = new AtomicLong(0);
 
     private final int bufferSize;
     private final MessageHandler messageHandler;
@@ -40,7 +43,9 @@ public class ConnectionHandler
     {
         final ReceiverEndPoint receiverEndPoint = new ReceiverEndPoint(channel, bufferSize, messageHandler);
         final SenderEndPoint senderEndPoint = new SenderEndPoint(channel);
-        return new Connection((InetSocketAddress) channel.getRemoteAddress(), receiverEndPoint, senderEndPoint);
+        final long connectionId = idSource.getAndIncrement();
+        final InetSocketAddress remoteAddress = (InetSocketAddress) channel.getRemoteAddress();
+        return new Connection(connectionId, remoteAddress, receiverEndPoint, senderEndPoint);
     }
 
 }

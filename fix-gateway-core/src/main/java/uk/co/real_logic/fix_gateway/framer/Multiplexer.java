@@ -15,15 +15,19 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
+
 /**
  * Responsible for splitting the data coming out of the replication
  * buffers and pushing it out to the sender end points.
  */
 public class Multiplexer
 {
+    private final Long2ObjectHashMap<Connection> connections = new Long2ObjectHashMap<>();
+
     public void onNewConnection(final Connection connection)
     {
-        // TODO: stash connection
+        connections.put(connection.connectionId(), connection);
     }
 
     public int scanBuffers()

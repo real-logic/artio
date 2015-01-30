@@ -23,15 +23,18 @@ import java.net.InetSocketAddress;
  */
 public class Connection
 {
+    private final long connectionId;
     private final InetSocketAddress remoteAddress;
     private final ReceiverEndPoint receiverEndPoint;
     private final SenderEndPoint senderEndPoint;
 
     public Connection(
+            final long connectionId,
             final InetSocketAddress remoteAddress,
             final ReceiverEndPoint receiverEndPoint,
             final SenderEndPoint senderEndPoint)
     {
+        this.connectionId = connectionId;
         this.remoteAddress = remoteAddress;
         this.receiverEndPoint = receiverEndPoint;
         this.senderEndPoint = senderEndPoint;
@@ -47,4 +50,8 @@ public class Connection
         return this.senderEndPoint;
     }
 
+    public long connectionId()
+    {
+        return connectionId;
+    }
 }
