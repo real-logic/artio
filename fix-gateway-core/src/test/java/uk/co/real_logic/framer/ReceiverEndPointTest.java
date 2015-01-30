@@ -39,11 +39,13 @@ public class ReceiverEndPointTest
             "56=CCG 115=XYZ 11=NF 0542/03232009 54=1 38=100 55=CVS 40=1 59=0 47=A" +
             "60=20090323-15:40:29 21=1 207=N 10=139 ").replace(' ', '\1').getBytes(US_ASCII);
 
-    private static final int MSG_LENGTH = EG_MESSAGE.length;
+    private static final int MSG_LEN = EG_MESSAGE.length;
+
+    private static final long ID = 20L;
 
     private SocketChannel mockChannel = mock(SocketChannel.class);
     private MessageHandler mockHandler = mock(MessageHandler.class);
-    private ReceiverEndPoint endPoint = new ReceiverEndPoint(mockChannel, 16 * 1024, mockHandler);
+    private ReceiverEndPoint endPoint = new ReceiverEndPoint(mockChannel, 16 * 1024, mockHandler, ID);
 
     @Test
     public void shouldHandleValidFixMessageInOneGo()
@@ -134,45 +136,45 @@ public class ReceiverEndPointTest
 
     private void handlerReceivesFramedMessages(int numberOfMessages)
     {
-        verify(mockHandler, times(numberOfMessages)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LENGTH));
+        verify(mockHandler, times(numberOfMessages)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(ID));
     }
 
     private void handlerReceivesTwoFramedMessages()
     {
         InOrder inOrder = Mockito.inOrder(mockHandler);
-        inOrder.verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LENGTH));
-        inOrder.verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(MSG_LENGTH), eq(MSG_LENGTH));
+        inOrder.verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(ID));
+        inOrder.verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(ID));
         inOrder.verifyNoMoreInteractions();
     }
 
     private void handlerNotcalled()
     {
-        verify(mockHandler, never()).onMessage(any(AtomicBuffer.class), anyInt(), anyInt());
+        verify(mockHandler, never()).onMessage(any(AtomicBuffer.class), anyInt(), anyInt(), eq(ID));
     }
 
     private void theEndpointReceivesACompleteMessage()
     {
-        theEndpointReceives(EG_MESSAGE, 0, MSG_LENGTH);
+        theEndpointReceives(EG_MESSAGE, 0, MSG_LEN);
     }
 
     private void theEndpointReceivesTwoCompleteMessages()
     {
-        theEndpointReceivesTwoMessages(0, MSG_LENGTH);
+        theEndpointReceivesTwoMessages(0, MSG_LEN);
     }
 
     private void theEndpointReceivesAnIncompleteMessage()
     {
-        theEndpointReceives(EG_MESSAGE, 0, MSG_LENGTH - 8);
+        theEndpointReceives(EG_MESSAGE, 0, MSG_LEN - 8);
     }
 
     private void theEndpointReceivesTheRestOfTheMessage()
     {
-        theEndpointReceives(EG_MESSAGE, MSG_LENGTH - 8, 8);
+        theEndpointReceives(EG_MESSAGE, MSG_LEN - 8, 8);
     }
 
     private void theEndpointReceivesACompleteAndAnIncompleteMessage()
     {
-        theEndpointReceivesTwoMessages(0, MSG_LENGTH - 8);
+        theEndpointReceivesTwoMessages(0, MSG_LEN - 8);
     }
 
     private void theEndpointReceives(byte[] data, int offset, int length)
@@ -187,8 +189,8 @@ public class ReceiverEndPointTest
     {
         endpointBufferUpdatedWith(buffer -> {
             buffer.put(EG_MESSAGE)
-                  .put(EG_MESSAGE, secondOffset, secondLength);
-            return MSG_LENGTH + secondLength;
+                    .put(EG_MESSAGE, secondOffset, secondLength);
+            return MSG_LEN + secondLength;
         });
     }
 

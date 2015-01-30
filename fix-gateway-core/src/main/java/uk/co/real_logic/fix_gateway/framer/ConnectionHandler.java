@@ -41,9 +41,9 @@ public class ConnectionHandler
 
     public Connection createConnection(final SocketChannel channel) throws IOException
     {
-        final ReceiverEndPoint receiverEndPoint = new ReceiverEndPoint(channel, bufferSize, messageHandler);
-        final SenderEndPoint senderEndPoint = new SenderEndPoint(channel);
         final long connectionId = idSource.getAndIncrement();
+        final ReceiverEndPoint receiverEndPoint = new ReceiverEndPoint(channel, bufferSize, messageHandler, connectionId);
+        final SenderEndPoint senderEndPoint = new SenderEndPoint(channel);
         final InetSocketAddress remoteAddress = (InetSocketAddress) channel.getRemoteAddress();
         return new Connection(connectionId, remoteAddress, receiverEndPoint, senderEndPoint);
     }

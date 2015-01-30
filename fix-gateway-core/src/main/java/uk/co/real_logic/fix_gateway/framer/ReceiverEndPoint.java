@@ -39,18 +39,21 @@ public class ReceiverEndPoint
 
     private static final int MIN_CHECKSUM_SIZE = " 10=".length() + 1;
 
-    private final AtomicBuffer buffer;
     private final SocketChannel channel;
-
     private final MessageHandler handler;
-
+    private final long connectionId;
+    private final AtomicBuffer buffer;
     private final StringFlyweight string;
+
     private int usedBufferData = 0;
 
-    public ReceiverEndPoint(final SocketChannel channel, final int bufferSize, final MessageHandler handler)
+    public ReceiverEndPoint(
+            final SocketChannel channel, final int bufferSize, final MessageHandler handler, final long connectionId)
     {
         this.channel = channel;
         this.handler = handler;
+        this.connectionId = connectionId;
+
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new StringFlyweight(buffer);
     }
@@ -107,7 +110,7 @@ public class ReceiverEndPoint
                 }
 
                 final int length = (indexOfLastByteOfMessage + 1) - offset;
-                handler.onMessage(buffer, offset, length);
+                handler.onMessage(buffer, offset, length, connectionId);
 
                 offset += length;
             }
