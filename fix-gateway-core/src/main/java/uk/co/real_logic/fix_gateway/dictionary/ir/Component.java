@@ -17,7 +17,8 @@ package uk.co.real_logic.fix_gateway.dictionary.ir;
 
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
 
-public class Component extends Composite implements Element
+// TODO: check whether this is a composite and check terminology
+public class Component extends Aggregate implements Element
 {
     public Component(final String name)
     {

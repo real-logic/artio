@@ -19,14 +19,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A composite is either a group or a message.
+ * A Aggregate is either a group, a message or a component.
  */
-public abstract class Composite
+public abstract class Aggregate
 {
     private final String name;
     private final List<Entry> entries;
 
-    protected Composite(final String name)
+    protected Aggregate(final String name)
     {
         this.name = name;
         entries = new ArrayList<>();

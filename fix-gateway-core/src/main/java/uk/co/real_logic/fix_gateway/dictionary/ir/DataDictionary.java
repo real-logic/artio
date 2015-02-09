@@ -44,6 +44,11 @@ public class DataDictionary
         return fields;
     }
 
+    public Map<String, Component> components()
+    {
+        return components;
+    }
+
     @Override
     public String toString()
     {
@@ -51,10 +56,5 @@ public class DataDictionary
                 "messages=" + messages +
                 ", fields=" + fields +
                 '}';
-    }
-
-    public Map<String, Component> components()
-    {
-        return components;
     }
 }

@@ -88,7 +88,7 @@ public class Field implements Element
         MULTIPLEVALUESTRING,
         DATA,
         UTCTIMESTAMP,
-        PRICE
+        PRICE // TODO: check price isn't formatted in the dictionary, 5DP?
     }
 
     public static class Value
