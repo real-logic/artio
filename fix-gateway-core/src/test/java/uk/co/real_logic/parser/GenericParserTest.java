@@ -23,8 +23,7 @@ import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
 import uk.co.real_logic.fix_gateway.parser.GenericParser;
 
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.util.TestMessages.EG_MESSAGE_NO_GROUP;
-import static uk.co.real_logic.util.TestMessages.MSG_NO_GROUP_LEN;
+import static uk.co.real_logic.util.TestMessages.*;
 
 public class GenericParserTest
 {
@@ -39,24 +38,24 @@ public class GenericParserTest
     @Before
     public void setUp()
     {
-        buffer.putBytes(0, EG_MESSAGE_NO_GROUP);
+        buffer.putBytes(0, EG_MESSAGE);
     }
 
     @Test
-    public void parserNotifiesAcceptorOfMessageStart()
+    public void notifiesAcceptorOfMessageStart()
     {
         when:
-        parser.onMessage(buffer, 0, MSG_NO_GROUP_LEN, 1L);
+        parser.onMessage(buffer, 0, MSG_LEN, 1L);
 
         then:
         verify(mockAcceptor).onStartMessage(1L);
     }
 
     @Test
-    public void parserInvokesAcceptorMethodsForValidFixMessage()
+    public void notifiesAcceptorOfValidMessageFields()
     {
         when:
-        parser.onMessage(buffer, 0, MSG_NO_GROUP_LEN, 1L);
+        parser.onMessage(buffer, 0, MSG_LEN, 1L);
 
         then:
         inOrder = inOrder(mockAcceptor);
@@ -69,7 +68,30 @@ public class GenericParserTest
         //34=4
         inOrder.verify(mockAcceptor).onField(34, buffer, 24, 1);
 
-        inOrder.verify(mockAcceptor, times(14)).onField(anyInt(), eq(buffer), anyInt(), anyInt());
+        inOrder.verify(mockAcceptor, times(15)).onField(anyInt(), eq(buffer), anyInt(), anyInt());
+    }
+
+    @Test
+    public void notifiesAcceptorOfValidMessageEnd()
+    {
+        when:
+        parser.onMessage(buffer, 0, MSG_LEN, 1L);
+
+        then:
+        verify(mockAcceptor).onEndMessage(true);
+    }
+
+    @Test
+    public void notifiesAcceptorOfInvalidChecksum() throws Exception
+    {
+        given:
+        buffer.putBytes(0, INVALID_CHECKSUM_MSG);
+
+        when:
+        parser.onMessage(buffer, 0, INVALID_CHECKSUM_LEN, 1L);
+
+        then:
+        verify(mockAcceptor).onEndMessage(false);
     }
 
     // TODO: Invalid checksum

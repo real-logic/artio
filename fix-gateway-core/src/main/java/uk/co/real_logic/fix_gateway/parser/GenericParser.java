@@ -20,11 +20,13 @@ import uk.co.real_logic.fix_gateway.framer.MessageHandler;
 import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
+import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.CHECKSUM;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.util.StringFlyweight.UNKNOWN_INDEX;
 
 public class GenericParser implements MessageHandler
 {
+    public static final int NO_CHECKSUM = 0;
     private final StringFlyweight string = new StringFlyweight(null);
 
     private final FixMessageAcceptor acceptor;
@@ -37,9 +39,13 @@ public class GenericParser implements MessageHandler
     public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long connectionId)
     {
         string.wrap(buffer);
+        acceptor.onStartMessage(connectionId);
+
         final int end = offset + length;
         int position = offset;
-        acceptor.onStartMessage(connectionId);
+
+        int checksum = NO_CHECKSUM;
+        int checksumOffset = 0;
 
         while (position < end)
         {
@@ -62,10 +68,17 @@ public class GenericParser implements MessageHandler
             // TODO: what should we do if onField throws an exception?
             acceptor.onField(tag, buffer, valueOffset, valueLength);
 
+            if (tag == CHECKSUM)
+            {
+                checksum = string.getInt(valueOffset, endOfField);
+                checksumOffset = equalsPosition - 2;
+            }
+
             position = endOfField + 1;
         }
 
-        acceptor.onEndMessage(true);
+
+        acceptor.onEndMessage(validateChecksum(buffer, offset, checksumOffset, checksum));
     }
 
     private boolean validatePosition(final int position, final FixMessageAcceptor acceptor)
@@ -77,6 +90,24 @@ public class GenericParser implements MessageHandler
         }
 
         return true;
+    }
+
+    private boolean validateChecksum(final DirectBuffer buffer, final int offset, final int length, final int checksum)
+    {
+        if (checksum == NO_CHECKSUM)
+        {
+            return false;
+        }
+
+        final int end = offset + length;
+
+        long total = 0L;
+        for (int index = offset; index < end; index++)
+        {
+            total += (int) buffer.getByte(index);
+        }
+
+        return (total % 256) == checksum;
     }
 
 }
