@@ -20,6 +20,9 @@ import uk.co.real_logic.fix_gateway.framer.MessageHandler;
 import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
+import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
+import static uk.co.real_logic.fix_gateway.util.StringFlyweight.UNKNOWN_INDEX;
+
 public class GenericParser implements MessageHandler
 {
     private final StringFlyweight string = new StringFlyweight(null);
@@ -33,9 +36,47 @@ public class GenericParser implements MessageHandler
 
     public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long connectionId)
     {
-        // TODO: lookup session id from connection id
         string.wrap(buffer);
+        final int end = offset + length;
         int position = offset;
+        acceptor.onStartMessage(connectionId);
 
+        while (position < end)
+        {
+            final int equalsPosition = string.scan(position, end, '=');
+            if (!validatePosition(equalsPosition, acceptor))
+            {
+                return;
+            }
+
+            final int tag = string.getInt(position, equalsPosition);
+            final int valueOffset = equalsPosition + 1;
+            final int endOfField = string.scan(valueOffset, end, START_OF_HEADER);
+            if (!validatePosition(endOfField, acceptor))
+            {
+                return;
+            }
+
+            final int valueLength = endOfField - valueOffset;
+
+            // TODO: what should we do if onField throws an exception?
+            acceptor.onField(tag, buffer, valueOffset, valueLength);
+
+            position = endOfField + 1;
+        }
+
+        acceptor.onEndMessage(true);
     }
+
+    private boolean validatePosition(final int position, final FixMessageAcceptor acceptor)
+    {
+        if (position == UNKNOWN_INDEX)
+        {
+            acceptor.onEndMessage(false);
+            return false;
+        }
+
+        return true;
+    }
+
 }

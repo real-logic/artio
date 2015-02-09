@@ -25,7 +25,7 @@ public class SampleGenericAcceptor implements FixMessageAcceptor
     private String symbol;
 
     @Override
-    public void onStartMessage()
+    public void onStartMessage(final long connectionId)
     {
         System.out.println("a NewOrderSingle has arrived");
     }

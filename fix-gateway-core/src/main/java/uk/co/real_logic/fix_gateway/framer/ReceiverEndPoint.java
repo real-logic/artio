@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
 import java.io.IOException;
@@ -30,8 +31,6 @@ import static uk.co.real_logic.fix_gateway.util.StringFlyweight.UNKNOWN_INDEX;
  */
 public class ReceiverEndPoint
 {
-    private static final byte START_OF_HEADER = 0x01;
-
     private static final byte BODY_LENGTH_FIELD = 9;
 
     private static final int COMMON_PREFIX_LENGTH = "8=FIX.4.2 ".length();
@@ -127,9 +126,9 @@ public class ReceiverEndPoint
 
     private int findIndexOfLastByteOfMessage(int offset, int startOfBodyLength)
     {
-        final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData, START_OF_HEADER);
+        final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData, StandardFixConstants.START_OF_HEADER);
         final int earliestChecksumEnd = endOfBodyLength + getBodyLength(offset, endOfBodyLength) + MIN_CHECKSUM_SIZE;
-        return string.scan(earliestChecksumEnd, usedBufferData, START_OF_HEADER);
+        return string.scan(earliestChecksumEnd, usedBufferData, StandardFixConstants.START_OF_HEADER);
     }
 
     private int getBodyLength(final int offset, final int endOfBodyLength)

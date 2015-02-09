@@ -13,25 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.generic_callback_api;
+package uk.co.real_logic.fix_gateway.dictionary;
 
-import uk.co.real_logic.agrona.DirectBuffer;
-
-public interface FixMessageAcceptor
+public class StandardFixConstants
 {
-    int NEW_ORDER_SINGLE = 'D';
-    char SELL = '2';
-    int SIDE = 54;
-    int SYMBOL = 55;
-
-    void onStartMessage(long connectionId);
-
-    void onField(int tag, DirectBuffer buffer, int offset, int length);
-
-    void onGroupBegin(int tag, int numberOfElements);
-
-    void onGroupEnd(int tag);
-
-    void onEndMessage(boolean passedChecksum);
-
+    public static final byte START_OF_HEADER = 0x01;
 }

@@ -42,24 +42,28 @@ public class StringFlyweight
         int tally = 0;
         for (int index = startInclusive; index < endExclusive; index++)
         {
-            tally = tally * 10 + toDigit(buffer.getByte(index));
+            tally = tally * 10 + getDigit(index);
         }
         return tally;
     }
 
     public int getDigit(final int index)
     {
-        return toDigit(buffer.getByte(index));
-    }
-
-    private static int toDigit(final byte value)
-    {
+        final byte value = buffer.getByte(index);
         if (value < 0x30 || value > 0x39)
         {
-            throw new IllegalArgumentException("'" + ((char)value) + "' isn't a valid digit");
+            throw new IllegalArgumentException("'" + ((char)value) + "' isn't a valid digit @ " + index);
         }
 
         return value - 0x30;
+    }
+
+    // TODO: improve debug logging
+    public void log(final int start, final int length)
+    {
+        final byte[] buff = new byte[length];
+        buffer.getBytes(start, buff);
+        System.out.println(new String(buff, 0, length));
     }
 
     public char getChar(final int index)
