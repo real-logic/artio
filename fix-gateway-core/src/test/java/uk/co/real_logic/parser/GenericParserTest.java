@@ -94,8 +94,19 @@ public class GenericParserTest
         verify(mockAcceptor).onEndMessage(false);
     }
 
-    // TODO: Invalid checksum
-    // TODO: Invalid message format
+    @Test
+    public void notifiesAcceptorOfInvalidMessage() throws Exception
+    {
+        given:
+        buffer.putBytes(0, INVALID_MESSAGE);
+
+        when:
+        parser.onMessage(buffer, 0, INVALID_LEN, 1L);
+
+        then:
+        verify(mockAcceptor).onEndMessage(false);
+    }
+
     // TODO: Dictionary Validation
     // TODO: support groups
 

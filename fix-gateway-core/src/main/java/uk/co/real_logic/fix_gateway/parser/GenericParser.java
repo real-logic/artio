@@ -46,39 +46,45 @@ public class GenericParser implements MessageHandler
 
         int checksum = NO_CHECKSUM;
         int checksumOffset = 0;
-
-        while (position < end)
+        try
         {
-            final int equalsPosition = string.scan(position, end, '=');
-            if (!validatePosition(equalsPosition, acceptor))
+            while (position < end)
             {
-                return;
+                final int equalsPosition = string.scan(position, end, '=');
+                if (!validatePosition(equalsPosition, acceptor))
+                {
+                    return;
+                }
+
+                final int tag = string.getInt(position, equalsPosition);
+                final int valueOffset = equalsPosition + 1;
+                final int endOfField = string.scan(valueOffset, end, START_OF_HEADER);
+                if (!validatePosition(endOfField, acceptor))
+                {
+                    return;
+                }
+
+                final int valueLength = endOfField - valueOffset;
+
+                // TODO: what should we do if onField throws an exception?
+                acceptor.onField(tag, buffer, valueOffset, valueLength);
+
+                if (tag == CHECKSUM)
+                {
+                    checksum = string.getInt(valueOffset, endOfField);
+                    checksumOffset = equalsPosition - 2;
+                }
+
+                position = endOfField + 1;
             }
 
-            final int tag = string.getInt(position, equalsPosition);
-            final int valueOffset = equalsPosition + 1;
-            final int endOfField = string.scan(valueOffset, end, START_OF_HEADER);
-            if (!validatePosition(endOfField, acceptor))
-            {
-                return;
-            }
-
-            final int valueLength = endOfField - valueOffset;
-
-            // TODO: what should we do if onField throws an exception?
-            acceptor.onField(tag, buffer, valueOffset, valueLength);
-
-            if (tag == CHECKSUM)
-            {
-                checksum = string.getInt(valueOffset, endOfField);
-                checksumOffset = equalsPosition - 2;
-            }
-
-            position = endOfField + 1;
+            acceptor.onEndMessage(validateChecksum(buffer, offset, checksumOffset, checksum));
         }
-
-
-        acceptor.onEndMessage(validateChecksum(buffer, offset, checksumOffset, checksum));
+        catch (IllegalArgumentException e)
+        {
+            // Error parsing the message
+            acceptor.onEndMessage(false);
+        }
     }
 
     private boolean validatePosition(final int position, final FixMessageAcceptor acceptor)

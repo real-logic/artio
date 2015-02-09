@@ -32,6 +32,12 @@ public class TestMessages
 
     public static final int INVALID_CHECKSUM_LEN = INVALID_CHECKSUM_MSG.length;
 
+    public static final byte[] INVALID_MESSAGE = toAscii("8=FIX.4.2\0019=145\00135=D\00134=4\00149=ABC_DEFG01\001" +
+            "52=\\\\\20156=CCG\001115=XYZ\00111=NF 0542/03232009\001\001\001\001\001\00154=1\00138=55140=" +
+            "\00159=0\00147=A\00160=20090323-15:40:29\00121=1\001207=N\00110=194\001");
+
+    public static final int INVALID_LEN = INVALID_MESSAGE.length;
+
     private static byte[] toAscii(String str)
     {
         return str.getBytes(US_ASCII);
