@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
-public class Message extends Aggregate
+public final class Message extends Aggregate
 {
     private final int type;
     private final Category category;

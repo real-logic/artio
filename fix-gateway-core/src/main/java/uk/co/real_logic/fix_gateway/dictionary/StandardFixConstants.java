@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary;
 
-public class StandardFixConstants
+public final class StandardFixConstants
 {
 
     public static final byte START_OF_HEADER = 0x01;

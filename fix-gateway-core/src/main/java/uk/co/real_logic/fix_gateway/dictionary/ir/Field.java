@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class Field implements Element
+public final class Field implements Element
 {
 
     private final int number;

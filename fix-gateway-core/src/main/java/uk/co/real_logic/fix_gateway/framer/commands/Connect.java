@@ -19,7 +19,7 @@ import uk.co.real_logic.fix_gateway.framer.Sender;
 
 import java.net.InetSocketAddress;
 
-class Connect implements SenderCommand
+final class Connect implements SenderCommand
 {
     private InetSocketAddress address;
 

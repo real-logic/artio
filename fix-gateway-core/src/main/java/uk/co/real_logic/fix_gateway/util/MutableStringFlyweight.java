@@ -19,7 +19,7 @@ import uk.co.real_logic.agrona.MutableDirectBuffer;
 
 import java.nio.charset.StandardCharsets;
 
-public class MutableStringFlyweight extends StringFlyweight
+public final class MutableStringFlyweight extends StringFlyweight
 {
 
     private final MutableDirectBuffer buffer;

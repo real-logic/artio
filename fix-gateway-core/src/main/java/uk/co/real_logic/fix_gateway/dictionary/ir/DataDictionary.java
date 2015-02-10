@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.dictionary.ir;
 import java.util.List;
 import java.util.Map;
 
-public class DataDictionary
+public final class DataDictionary
 {
     private final List<Message> messages;
     private final Map<String, Field> fields;

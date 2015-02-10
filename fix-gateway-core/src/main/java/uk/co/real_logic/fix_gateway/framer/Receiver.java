@@ -33,7 +33,7 @@ import static java.nio.channels.SelectionKey.OP_READ;
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
  */
-public class Receiver implements Agent
+public final class Receiver implements Agent
 {
     private final Consumer<ReceiverCommand> onCommandFunc = this::onCommand;
 

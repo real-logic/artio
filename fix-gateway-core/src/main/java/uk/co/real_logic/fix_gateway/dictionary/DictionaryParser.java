@@ -37,7 +37,7 @@ import java.util.function.Consumer;
 
 import static javax.xml.xpath.XPathConstants.NODESET;
 
-public class DictionaryParser
+public final class DictionaryParser
 {
     private static final String FIELD_EXPR = "/fix/fields/field";
     private static final String MESSAGE_EXPR = "/fix/messages/message";

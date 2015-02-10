@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.fix_gateway.builder.DataDictionary;
 
-public class FixGateway implements AutoCloseable
+public final class FixGateway implements AutoCloseable
 {
 
     FixGateway()

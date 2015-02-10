@@ -28,7 +28,7 @@ import java.util.function.Consumer;
 /**
  * Sends outbound data
  */
-public class Sender implements Agent
+public final class Sender implements Agent
 {
 
     private final Consumer<SenderCommand> onCommandFunc = this::onCommand;

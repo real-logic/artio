@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary.ir;
 
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
 
-public class Group extends Aggregate implements Element
+public final class Group extends Aggregate implements Element
 {
     public Group(final String name)
     {

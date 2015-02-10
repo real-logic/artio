@@ -19,7 +19,7 @@ import uk.co.real_logic.fix_gateway.framer.Connection;
 import uk.co.real_logic.fix_gateway.framer.Receiver;
 import uk.co.real_logic.fix_gateway.framer.Sender;
 
-class NewConnection implements SenderCommand, ReceiverCommand
+final class NewConnection implements SenderCommand, ReceiverCommand
 {
     private final Connection connection;
 

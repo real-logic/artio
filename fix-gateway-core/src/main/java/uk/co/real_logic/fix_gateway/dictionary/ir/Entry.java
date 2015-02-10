@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
-public class Entry
+public final class Entry
 {
     private final boolean required;
     private final Element element;
