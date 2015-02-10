@@ -16,12 +16,15 @@
 package uk.co.real_logic.fix_gateway.parser;
 
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.ValidationDictionary;
 import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
 import uk.co.real_logic.fix_gateway.generic_callback_api.InvalidMessageHandler;
+import uk.co.real_logic.fix_gateway.util.IntHashSet;
 import uk.co.real_logic.fix_gateway.util.MutableStringFlyweight;
 
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.MESSAGE_TYPE;
 
@@ -35,7 +38,7 @@ public class GenericValidatorTest
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[16 * 1024]);
     private MutableStringFlyweight string = new MutableStringFlyweight(buffer);
 
-    private GenericValidator validator = new GenericValidator(acceptor, invalidMessageHandler, allFields);
+    private GenericValidator validator = new GenericValidator(acceptor, invalidMessageHandler, allFields, requiredFields);
 
     @Test
     public void validStartMessageDelegates()
@@ -50,6 +53,11 @@ public class GenericValidatorTest
     @Test
     public void validEndMessageDelegates()
     {
+        given:
+        heartBeatsAreKnownMessages();
+        messageIsAHeartBeat();
+        validateMessageType();
+
         when:
         validator.onEndMessage(true);
 
@@ -61,40 +69,137 @@ public class GenericValidatorTest
     public void validMessageTypeDelegates()
     {
         given:
-        allFields.put('0', MESSAGE_TYPE);
-        string.putAscii(0, "0");
+        heartBeatsAreKnownMessages();
+        messageIsAHeartBeat();
 
         when:
-        validator.onField(MESSAGE_TYPE, buffer, 0, 1);
+        validateMessageType();
 
         then:
-        verify(acceptor).onField(MESSAGE_TYPE, buffer, 0, 1);
+        verifyAcceptorReceivesMessageType();
     }
 
     @Test
     public void invalidMessageTypeNotifiesErrorHandler()
     {
         given:
-        string.putAscii(0, "0");
+        messageIsAHeartBeat();
 
         when:
-        validator.onField(MESSAGE_TYPE, buffer, 0, 1);
+        validateMessageType();
 
         then:
-        verify(acceptor, never()).onField(MESSAGE_TYPE, buffer, 0, 1);
-        verify(invalidMessageHandler).onInvalidMessage('0');
+        verifyAcceptorNotNotifiedOf(MESSAGE_TYPE);
+        verifyUnknownMessage();
     }
 
     @Test
-    public void missingRequiredFieldsNotifiesErrorHandler()
+    public void validFieldDelegates()
     {
+        given:
+        heartbeatsHaveATestReqId();
+        messageIsAHeartBeat();
 
+        when:
+        validateMessageType();
+        validateTestReqId();
+
+        then:
+        verifyAcceptorReceivesMessageType();
     }
 
     @Test
     public void unknownFieldNotifiesErrorHandler()
     {
+        given:
+        heartBeatsAreKnownMessages();
+        messageIsAHeartBeat();
 
+        when:
+        validateMessageType();
+        validateTestReqId();
+
+        then:
+        verifyAcceptorNotNotifiedOf(112);
+        verifyUnknownField();
+    }
+
+    @Test
+    public void missingRequiredFieldsNotifiesErrorHandler()
+    {
+        given:
+        heartBeatsAreKnownMessages();
+        testReqIdIsARequiredHeartBeatField();
+        messageIsAHeartBeat();
+
+        when:
+        validateMessageType();
+        validator.onEndMessage(true);
+
+        then:
+        verify(acceptor).onEndMessage(false);
+        verifyMissingRequiredField();
+    }
+
+    private void testReqIdIsARequiredHeartBeatField()
+    {
+        requiredFields.put('0', 112);
+    }
+
+    private void heartbeatsHaveATestReqId()
+    {
+        heartBeatsAreKnownMessages();
+        allFields.put('0', 112);
+    }
+
+    private void heartBeatsAreKnownMessages()
+    {
+        requiredFields.put('0', MESSAGE_TYPE);
+        allFields.put('0', MESSAGE_TYPE);
+    }
+
+    private void messageIsAHeartBeat()
+    {
+        string.putAscii(0, "0");
+    }
+
+    private void validateMessageType()
+    {
+        validator.onField(MESSAGE_TYPE, buffer, 0, 1);
+    }
+
+    private void verifyAcceptorReceivesMessageType()
+    {
+        verify(acceptor).onField(MESSAGE_TYPE, buffer, 0, 1);
+    }
+
+    private void verifyAcceptorNotNotifiedOf(final int tag)
+    {
+        verify(acceptor, never()).onField(tag, buffer, 0, 1);
+    }
+
+    private void verifyUnknownMessage()
+    {
+        verify(invalidMessageHandler).onUnknownMessage('0');
+    }
+
+    private void verifyUnknownField()
+    {
+        verify(invalidMessageHandler).onUnknownField('0', 112);
+    }
+
+    private void verifyMissingRequiredField()
+    {
+        ArgumentCaptor<IntHashSet> fieldsCaptor = ArgumentCaptor.forClass(IntHashSet.class);
+        verify(invalidMessageHandler).onMissingRequiredFields(eq((int) '0'), fieldsCaptor.capture());
+
+        final IntHashSet fields = fieldsCaptor.getValue();
+        assertTrue(fields.contains(112));
+    }
+
+    private void validateTestReqId()
+    {
+        validator.onField(112, buffer, 0, 1);
     }
 
 }

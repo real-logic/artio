@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.ValidationDictionary;
 import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
 import uk.co.real_logic.fix_gateway.generic_callback_api.InvalidMessageHandler;
+import uk.co.real_logic.fix_gateway.util.IntHashSet;
 import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.MESSAGE_TYPE;
@@ -29,25 +30,37 @@ import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.MESSA
 public final class GenericValidator implements FixMessageAcceptor
 {
 
+    private static final int UNKNOWN_MESSAGE_TYPE = -1;
+
+    private final IntHashSet fieldsForMessage = new IntHashSet(1024, UNKNOWN_MESSAGE_TYPE);
+    private final StringFlyweight string = new StringFlyweight(null);
+
     private final FixMessageAcceptor delegate;
     private final InvalidMessageHandler invalidMessageHandler;
     private final ValidationDictionary allFields;
+    private final ValidationDictionary requiredFields;
 
-    private final StringFlyweight string = new StringFlyweight(null);
+    private int messageType;
+    private IntHashSet allFieldsForMessageType;
 
     public GenericValidator(
             final FixMessageAcceptor delegate,
             final InvalidMessageHandler invalidMessageHandler,
-            final ValidationDictionary allFields)
+            final ValidationDictionary allFields,
+            final ValidationDictionary requiredFields)
     {
         this.delegate = delegate;
         this.invalidMessageHandler = invalidMessageHandler;
         this.allFields = allFields;
+        this.requiredFields = requiredFields;
     }
 
     public void onStartMessage(final long connectionId)
     {
         delegate.onStartMessage(connectionId);
+        fieldsForMessage.clear();
+        messageType = UNKNOWN_MESSAGE_TYPE;
+        allFieldsForMessageType = null;
     }
 
     public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
@@ -55,14 +68,21 @@ public final class GenericValidator implements FixMessageAcceptor
         if (tag == MESSAGE_TYPE)
         {
             string.wrap(buffer);
-            final int messageType = string.getMessageType(offset, length);
-            if (allFields.fields(messageType) == null)
+            messageType = string.getMessageType(offset, length);
+            allFieldsForMessageType = allFields.fields(messageType);
+            if (allFieldsForMessageType == null)
             {
-                invalidMessageHandler.onInvalidMessage(messageType);
+                invalidMessageHandler.onUnknownMessage(messageType);
                 return;
             }
         }
+        else if (!allFieldsForMessageType.contains(tag))
+        {
+            invalidMessageHandler.onUnknownField(messageType, tag);
+            return;
+        }
 
+        fieldsForMessage.add(tag);
         delegate.onField(tag, buffer, offset, length);
     }
 
@@ -78,7 +98,16 @@ public final class GenericValidator implements FixMessageAcceptor
 
     public void onEndMessage(final boolean passedChecksum)
     {
-        delegate.onEndMessage(passedChecksum);
+        final IntHashSet missingFields = requiredFields.fields(messageType).difference(fieldsForMessage);
+        if (missingFields == null)
+        {
+            delegate.onEndMessage(passedChecksum);
+        }
+        else
+        {
+            invalidMessageHandler.onMissingRequiredFields(messageType, missingFields);
+            delegate.onEndMessage(false);
+        }
     }
 
 }

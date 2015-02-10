@@ -20,6 +20,8 @@ import uk.co.real_logic.agrona.BitUtil;
 import java.util.*;
 import java.util.function.Predicate;
 
+import static java.util.stream.Collectors.joining;
+
 /**
  * Simple fixed-size int hashset for validating tags.
  */
@@ -168,21 +170,36 @@ public final class IntHashSet implements Set<Integer>
     }
 
     /**
-     * Fast Path removeAll for comparison with another IntHashSet.
+     * Fast Path set difference for comparison with another IntHashSet.
      *
-     * @param collection
-     * @return
+     * NB: garbage free in the identical case, allocates otherwise.
+     *
+     * @param collection the other set to subtract
+     * @return null if identical, otherwise the set of differences
      */
-    public void removeAll(final IntHashSet collection)
+    public IntHashSet difference(final IntHashSet collection)
     {
         Objects.requireNonNull(collection);
 
-        final IntIterator it = collection.iterator();
+        IntHashSet difference = null;
+
+        final IntIterator it = iterator();
 
         while (it.hasNext())
         {
-            remove(it.nextValue());
+            final int value = it.nextValue();
+            if (!collection.contains(value))
+            {
+                if (difference == null)
+                {
+                    difference = new IntHashSet(size, missingValue);
+                }
+
+                difference.add(value);
+            }
         }
+
+        return difference;
     }
 
     public boolean removeAll(final Collection<?> coll)
@@ -247,6 +264,13 @@ public final class IntHashSet implements Set<Integer>
         {
             position = 0;
         }
+    }
+
+    public String toString()
+    {
+        return stream()
+              .map(x -> Integer.toString(x))
+              .collect(joining(",", "{", "}"));
     }
 
     // --- Unimplemented below here

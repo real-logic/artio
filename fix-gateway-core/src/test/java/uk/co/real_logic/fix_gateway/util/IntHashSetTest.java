@@ -19,9 +19,7 @@ import org.junit.Test;
 
 import java.util.Iterator;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class IntHashSetTest
 {
@@ -127,6 +125,46 @@ public class IntHashSetTest
         iteratorsListElements();
 
         assertIteratorHasElements();
+    }
+
+    @Test
+    public void clearRemovesAllElementsOfTheSet()
+    {
+        obj.add(1);
+        obj.add(2);
+
+        obj.clear();
+
+        assertEquals(0, obj.size());
+        assertFalse(obj.contains(1));
+        assertFalse(obj.contains(2));
+    }
+
+    @Test
+    public void differenceReturnsNullIfBothSetsEqual()
+    {
+        obj.add(1);
+        obj.add(2);
+
+        IntHashSet other = new IntHashSet(100, -1);
+        other.add(1);
+        other.add(2);
+
+        assertNull(obj.difference(other));
+    }
+
+    @Test
+    public void differenceReturnsSetDifference()
+    {
+        obj.add(1);
+        obj.add(2);
+
+        final IntHashSet other = new IntHashSet(100, -1);
+        other.add(1);
+
+        final IntHashSet diff = obj.difference(other);
+        assertEquals(1, diff.size());
+        assertTrue(diff.contains(2));
     }
 
     private void assertIteratorHasElements()

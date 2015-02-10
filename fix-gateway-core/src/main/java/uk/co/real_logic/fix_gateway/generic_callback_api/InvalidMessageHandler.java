@@ -15,7 +15,13 @@
  */
 package uk.co.real_logic.fix_gateway.generic_callback_api;
 
+import uk.co.real_logic.fix_gateway.util.IntHashSet;
+
 public interface InvalidMessageHandler
 {
-    void onInvalidMessage(int messageType);
+    void onUnknownMessage(int messageType);
+
+    void onUnknownField(int messageType, int fieldNumber);
+
+    void onMissingRequiredFields(int messageType, IntHashSet missingFieldTypes);
 }
