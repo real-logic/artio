@@ -13,14 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.framer;
+package uk.co.real_logic.fix_gateway.framer;
 
 import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.fix_gateway.framer.MessageHandler;
-import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,8 +28,8 @@ import java.util.function.ToIntFunction;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.util.TestMessages.EG_MESSAGE;
-import static uk.co.real_logic.util.TestMessages.MSG_LEN;
+import static uk.co.real_logic.fix_gateway.util.TestMessages.EG_MESSAGE;
+import static uk.co.real_logic.fix_gateway.util.TestMessages.MSG_LEN;
 
 public class ReceiverEndPointTest
 {

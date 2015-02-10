@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.parser;
+package uk.co.real_logic.fix_gateway.parser;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
-import uk.co.real_logic.fix_gateway.parser.GenericParser;
 
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.util.TestMessages.*;
+import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
 public class GenericParserTest
 {

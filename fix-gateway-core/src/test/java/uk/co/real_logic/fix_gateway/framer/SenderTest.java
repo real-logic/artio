@@ -13,16 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.framer;
+package uk.co.real_logic.fix_gateway.framer;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
-import uk.co.real_logic.fix_gateway.framer.Connection;
-import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
-import uk.co.real_logic.fix_gateway.framer.Multiplexer;
-import uk.co.real_logic.fix_gateway.framer.Sender;
 import uk.co.real_logic.fix_gateway.framer.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.framer.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.framer.commands.SenderProxy;

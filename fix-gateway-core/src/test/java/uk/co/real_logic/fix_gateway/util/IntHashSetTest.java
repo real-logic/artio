@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.util;
+package uk.co.real_logic.fix_gateway.util;
 
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.util.IntHashSet;
 
 import java.util.Iterator;
 

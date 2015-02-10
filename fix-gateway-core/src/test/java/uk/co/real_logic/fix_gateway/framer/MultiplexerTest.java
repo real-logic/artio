@@ -13,14 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.framer;
+package uk.co.real_logic.fix_gateway.framer;
 
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.framer.MessageSource;
-import uk.co.real_logic.fix_gateway.framer.Multiplexer;
-import uk.co.real_logic.fix_gateway.framer.SenderEndPoint;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
