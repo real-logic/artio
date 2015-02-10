@@ -20,6 +20,16 @@ public class Entry
     private final boolean required;
     private final Element element;
 
+    public static Entry required(final Element element)
+    {
+        return new Entry(true, element);
+    }
+
+    public static Entry optional(final Element element)
+    {
+        return new Entry(false, element);
+    }
+
     public Entry(final boolean required, final Element element)
     {
         this.required = required;
