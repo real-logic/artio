@@ -58,14 +58,6 @@ public class StringFlyweight
         return value - 0x30;
     }
 
-    // TODO: improve debug logging
-    public void log(final int start, final int length)
-    {
-        final byte[] buff = new byte[length];
-        buffer.getBytes(start, buff);
-        System.out.println(new String(buff, 0, length));
-    }
-
     public char getChar(final int index)
     {
         return (char) buffer.getByte(index);
@@ -108,6 +100,27 @@ public class StringFlyweight
         }
 
         return UNKNOWN_INDEX;
+    }
+
+    // TODO: improve debug logging
+    public void log(final int offset, final int length)
+    {
+        final byte[] buff = new byte[length];
+        buffer.getBytes(offset, buff);
+        System.out.println(new String(buff, 0, length));
+    }
+
+    public int getMessageType(final int offset, final int length)
+    {
+        // message types can only be 1 or 2 bytes in size
+        int messageType = buffer.getByte(offset);
+
+        if (length == 2)
+        {
+            messageType |= buffer.getByte(offset + 1) >> 1;
+        }
+
+        return messageType;
     }
 
 }

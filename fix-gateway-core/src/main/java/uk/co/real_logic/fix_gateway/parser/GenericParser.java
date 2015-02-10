@@ -24,7 +24,7 @@ import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.CHECK
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.util.StringFlyweight.UNKNOWN_INDEX;
 
-public class GenericParser implements MessageHandler
+public final class GenericParser implements MessageHandler
 {
     public static final int NO_CHECKSUM = 0;
     private final StringFlyweight string = new StringFlyweight(null);

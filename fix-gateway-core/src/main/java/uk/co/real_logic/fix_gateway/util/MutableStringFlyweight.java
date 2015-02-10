@@ -13,17 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.dictionary;
+package uk.co.real_logic.fix_gateway.util;
 
-public class StandardFixConstants
+import uk.co.real_logic.agrona.MutableDirectBuffer;
+
+import java.nio.charset.StandardCharsets;
+
+public class MutableStringFlyweight extends StringFlyweight
 {
 
-    public static final byte START_OF_HEADER = 0x01;
+    private final MutableDirectBuffer buffer;
 
-    // Message Types
+    public MutableStringFlyweight(final MutableDirectBuffer buffer)
+    {
+        super(buffer);
+        this.buffer = buffer;
+    }
 
-    public static final int HEARTBEAT = 0;
-    public static final int CHECKSUM = 10;
-    public static final int MESSAGE_TYPE = 35;
-
+    public int putAscii(final int index, final String string)
+    {
+        final byte[] bytes = string.getBytes(StandardCharsets.US_ASCII);
+        buffer.putBytes(index, bytes);
+        return bytes.length;
+    }
 }

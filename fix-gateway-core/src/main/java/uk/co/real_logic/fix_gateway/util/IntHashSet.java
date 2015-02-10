@@ -23,7 +23,7 @@ import java.util.function.Predicate;
 /**
  * Simple fixed-size int hashset for validating tags.
  */
-public class IntHashSet implements Set<Integer>
+public final class IntHashSet implements Set<Integer>
 {
     private final int[] values;
     private final IntIterator iterator;
@@ -167,6 +167,24 @@ public class IntHashSet implements Set<Integer>
         return conjunction(coll, this::contains);
     }
 
+    /**
+     * Fast Path removeAll for comparison with another IntHashSet.
+     *
+     * @param collection
+     * @return
+     */
+    public void removeAll(final IntHashSet collection)
+    {
+        Objects.requireNonNull(collection);
+
+        final IntIterator it = collection.iterator();
+
+        while (it.hasNext())
+        {
+            remove(it.nextValue());
+        }
+    }
+
     public boolean removeAll(final Collection<?> coll)
     {
         return conjunction(coll, this::remove);
@@ -185,9 +203,7 @@ public class IntHashSet implements Set<Integer>
         return acc;
     }
 
-    // --- Unimplemented below here
-
-    public Iterator<Integer> iterator()
+    public IntIterator iterator()
     {
         iterator.reset();
         return iterator;
@@ -217,6 +233,11 @@ public class IntHashSet implements Set<Integer>
 
         public Integer next()
         {
+            return nextValue();
+        }
+
+        public int nextValue()
+        {
             final int value = values[position];
             position++;
             return value;
@@ -227,6 +248,8 @@ public class IntHashSet implements Set<Integer>
             position = 0;
         }
     }
+
+    // --- Unimplemented below here
 
     public boolean retainAll(final Collection<?> coll)
     {

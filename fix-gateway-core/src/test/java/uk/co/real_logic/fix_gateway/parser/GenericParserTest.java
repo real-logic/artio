@@ -106,7 +106,6 @@ public class GenericParserTest
         verify(mockAcceptor).onEndMessage(false);
     }
 
-    // TODO: Dictionary Validation
     // TODO: support groups
 
 }

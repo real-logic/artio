@@ -13,17 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.dictionary;
+package uk.co.real_logic.fix_gateway.generic_callback_api;
 
-public class StandardFixConstants
+public interface InvalidMessageHandler
 {
-
-    public static final byte START_OF_HEADER = 0x01;
-
-    // Message Types
-
-    public static final int HEARTBEAT = 0;
-    public static final int CHECKSUM = 10;
-    public static final int MESSAGE_TYPE = 35;
-
+    void onInvalidMessage(int messageType);
 }
