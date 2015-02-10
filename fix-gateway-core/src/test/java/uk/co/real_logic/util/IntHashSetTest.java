@@ -18,6 +18,9 @@ package uk.co.real_logic.util;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
 
+import java.util.Iterator;
+
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -36,20 +39,105 @@ public class IntHashSetTest
     }
 
     @Test
-    public void containsAddedElement() throws Exception
+    public void initiallyContainsNoBoxedElements()
     {
-        obj.add(1);
+        for (int i = 0; i < 10_000; i++)
+        {
+            assertFalse(obj.contains(Integer.valueOf(i)));
+        }
+    }
+
+    @Test
+    public void containsAddedBoxedElement()
+    {
+        assertTrue(obj.add(1));
 
         assertTrue(obj.contains(1));
     }
 
     @Test
-    public void containsAddedElements() throws Exception
+    public void addingAnElementTwiceDoesNothing()
+    {
+        assertTrue(obj.add(1));
+
+        assertFalse(obj.add(1));
+    }
+
+    @Test
+    public void containsAddedBoxedElements()
+    {
+        assertTrue(obj.add(1));
+        assertTrue(obj.add(Integer.valueOf(2)));
+
+        assertTrue(obj.contains(Integer.valueOf(1)));
+        assertTrue(obj.contains(2));
+    }
+
+    @Test
+    public void removingAnElementFromAnEmptyListDoesNothing()
+    {
+        assertFalse(obj.remove(0));
+    }
+
+    @Test
+    public void removingAPresentElementRemovesIt()
+    {
+        assertTrue(obj.add(1));
+
+        assertTrue(obj.remove(1));
+
+        assertFalse(obj.contains(1));
+    }
+
+    @Test
+    public void sizeIsInitiallyZero()
+    {
+        assertEquals(0, obj.size());
+    }
+
+    @Test
+    public void sizeIncrementsWithNumberOfAddedElements()
     {
         obj.add(1);
         obj.add(2);
 
-        assertTrue(obj.contains(1));
-        assertTrue(obj.contains(2));
+        assertEquals(2, obj.size());
     }
+
+    @Test
+    public void sizeContainsNumberOfNewElements()
+    {
+        obj.add(1);
+        obj.add(1);
+
+        assertEquals(1, obj.size());
+    }
+
+    @Test
+    public void iteratorsListElements()
+    {
+        obj.add(1);
+        obj.add(2);
+
+        assertIteratorHasElements();
+    }
+
+    @Test
+    public void iteratorsStartFromTheBeginningEveryTime()
+    {
+        iteratorsListElements();
+
+        assertIteratorHasElements();
+    }
+
+    private void assertIteratorHasElements()
+    {
+        final Iterator<Integer> it = obj.iterator();
+        assertTrue(it.hasNext());
+        assertEquals(Integer.valueOf(1), it.next());
+        assertTrue(it.hasNext());
+        assertEquals(Integer.valueOf(2), it.next());
+        assertFalse(it.hasNext());
+    }
+
 }
