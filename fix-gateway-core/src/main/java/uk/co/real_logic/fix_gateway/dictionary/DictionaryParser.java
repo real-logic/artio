@@ -140,7 +140,7 @@ public class DictionaryParser
             final NamedNodeMap attributes = node.getAttributes();
 
             final String name = name(attributes);
-            final char type = getValue(attributes, "msgtype").charAt(0);
+            final int type = parseMessageType(attributes);
             final Category category = parseCategory(getValue(attributes, "msgcat"));
             final Message message = new Message(name, type, category);
 
@@ -150,6 +150,17 @@ public class DictionaryParser
         });
 
         return messages;
+    }
+
+    private int parseMessageType(final NamedNodeMap attributes)
+    {
+        final String msgtype = getValue(attributes, "msgtype");
+        int type = msgtype.charAt(0);
+        if (msgtype.length() == 2)
+        {
+            type |= (msgtype.charAt(1) >> 1);
+        }
+        return type;
     }
 
     private void extractEntries(

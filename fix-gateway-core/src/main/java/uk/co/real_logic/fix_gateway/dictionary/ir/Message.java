@@ -17,17 +17,17 @@ package uk.co.real_logic.fix_gateway.dictionary.ir;
 
 public class Message extends Aggregate
 {
-    private final char type;
+    private final int type;
     private final Category category;
 
-    public Message(final String name, final char type, final Category category)
+    public Message(final String name, final int type, final Category category)
     {
         super(name);
         this.type = type;
         this.category = category;
     }
 
-    public char type()
+    public int type()
     {
         return type;
     }
