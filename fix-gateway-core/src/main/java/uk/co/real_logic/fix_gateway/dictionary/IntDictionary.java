@@ -68,20 +68,33 @@ public final class IntDictionary
         map = new Int2ObjectHashMap<>();
     }
 
-    public void put(final int messageType, final int fieldNumber)
+    public void put(final int key, final int value)
     {
-        final IntHashSet fields = map.getOrDefault(messageType, () -> new IntHashSet(CAPACITY, MISSING_FIELD));
-        fields.add(fieldNumber);
+        valuesOrDefault(key).add(value);
     }
 
-    public IntHashSet values(final int messageType)
+    public void putAll(final int key, final int ... valuesToAdd)
     {
-        return map.get(messageType);
+        final IntHashSet values = valuesOrDefault(key);
+        for (final int value : valuesToAdd)
+        {
+            values.add(value);
+        }
     }
 
-    public boolean contains(final int messageType, final int fieldNumber)
+    private IntHashSet valuesOrDefault(final int key)
     {
-        final IntHashSet fields = values(messageType);
-        return fields != null && fields.contains(fieldNumber);
+        return map.getOrDefault(key, () -> new IntHashSet(CAPACITY, MISSING_FIELD));
+    }
+
+    public IntHashSet values(final int key)
+    {
+        return map.get(key);
+    }
+
+    public boolean contains(final int key, final int value)
+    {
+        final IntHashSet fields = values(key);
+        return fields != null && fields.contains(value);
     }
 }

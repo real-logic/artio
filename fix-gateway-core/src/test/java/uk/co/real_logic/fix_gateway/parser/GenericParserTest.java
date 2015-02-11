@@ -16,11 +16,11 @@
 package uk.co.real_logic.fix_gateway.parser;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
 
 import static org.mockito.Mockito.*;
@@ -32,9 +32,10 @@ public class GenericParserTest
 
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[LENGTH]);
     private FixMessageAcceptor mockAcceptor = mock(FixMessageAcceptor.class);
-    private GenericParser parser = new GenericParser(mockAcceptor);
+    private IntDictionary groupToField = new IntDictionary();
+    private GenericParser parser = new GenericParser(mockAcceptor, groupToField);
 
-    private InOrder inOrder;
+    private InOrder inOrder = Mockito.inOrder(mockAcceptor);
 
     @Before
     public void setUp()
@@ -109,23 +110,33 @@ public class GenericParserTest
     }
 
     // TODO: support groups
-    @Ignore
     @Test
     public void notifiesAcceptorOfRepeatingGroup()
     {
         given:
+        groupToField.putAll(382, 337, 375, 437, 438);
+
         buffer.putBytes(0, EXECUTION_REPORT);
 
         when:
         parser.onMessage(buffer, 0, EXECUTION_REPORT_LEN, 1L);
 
         then:
-        inOrder = Mockito.inOrder(mockAcceptor);
         inOrder.verify(mockAcceptor, times(1)).onGroupBegin(382, 1);
-        inOrder.verify(mockAcceptor, times(1)).onField(437, buffer, anyInt(), anyInt());
-        inOrder.verify(mockAcceptor, times(1)).onField(438, buffer, anyInt(), anyInt());
+        verifyInOrderField(375);
+        verifyInOrderField(337);
+        verifyInOrderField(437);
+        verifyInOrderField(438);
         inOrder.verify(mockAcceptor, times(1)).onGroupEnd(382);
     }
 
+    private void verifyInOrderField(final int tag)
+    {
+        inOrder.verify(mockAcceptor, times(1)).onField(eq(tag), eq(buffer), anyInt(), anyInt());
+    }
 
+    // groupNo=0 case
+    // missing group case
+    // nested groups
+    // combinations thereof
 }

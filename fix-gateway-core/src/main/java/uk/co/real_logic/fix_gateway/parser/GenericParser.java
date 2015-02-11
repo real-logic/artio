@@ -16,24 +16,34 @@
 package uk.co.real_logic.fix_gateway.parser;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
 import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
+import uk.co.real_logic.fix_gateway.util.IntHashSet;
 import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.CHECKSUM;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.util.StringFlyweight.UNKNOWN_INDEX;
 
+// TODO: what should we do if the callbacks throw an exception?
 public final class GenericParser implements MessageHandler
 {
-    public static final int NO_CHECKSUM = 0;
+    private static final int NO_CHECKSUM = 0;
+    private static final int NO_GROUP = -1;
+
     private final StringFlyweight string = new StringFlyweight(null);
 
     private final FixMessageAcceptor acceptor;
+    private final IntDictionary groupToField;
 
-    public GenericParser(final FixMessageAcceptor acceptor)
+    private IntHashSet currentGroupFields;
+    private int currentGroupNumber;
+
+    public GenericParser(final FixMessageAcceptor acceptor, final IntDictionary groupToField)
     {
         this.acceptor = acceptor;
+        this.groupToField = groupToField;
     }
 
     public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long connectionId)
@@ -66,13 +76,22 @@ public final class GenericParser implements MessageHandler
 
                 final int valueLength = endOfField - valueOffset;
 
-                // TODO: what should we do if onField throws an exception?
-                acceptor.onField(tag, buffer, valueOffset, valueLength);
-
-                if (tag == CHECKSUM)
+                final IntHashSet currentGroupFields = groupToField.values(tag);
+                if (currentGroupFields == null)
                 {
-                    checksum = string.getInt(valueOffset, endOfField);
-                    checksumOffset = equalsPosition - 2;
+                    checkGroupEnd(tag);
+
+                    acceptor.onField(tag, buffer, valueOffset, valueLength);
+
+                    if (tag == CHECKSUM)
+                    {
+                        checksum = string.getInt(valueOffset, endOfField);
+                        checksumOffset = equalsPosition - 2;
+                    }
+                }
+                else
+                {
+                    groupBegin(tag, valueOffset, endOfField, currentGroupFields);
                 }
 
                 position = endOfField + 1;
@@ -85,6 +104,29 @@ public final class GenericParser implements MessageHandler
             // Error parsing the message
             acceptor.onEndMessage(false);
         }
+    }
+
+    private void checkGroupEnd(final int tag)
+    {
+        if (!fieldIsInCurrentGroup(tag))
+        {
+            acceptor.onGroupEnd(currentGroupNumber);
+            this.currentGroupFields = null;
+            this.currentGroupNumber = NO_GROUP;
+        }
+    }
+
+    private void groupBegin(final int tag, final int valueOffset, final int endOfField, final IntHashSet currentGroupFields)
+    {
+        this.currentGroupFields = currentGroupFields;
+        this.currentGroupNumber = tag;
+        final int numberOfElements = string.getInt(valueOffset, endOfField);
+        acceptor.onGroupBegin(tag, numberOfElements);
+    }
+
+    private boolean fieldIsInCurrentGroup(final int tag)
+    {
+        return this.currentGroupFields != null && this.currentGroupFields.contains(tag);
     }
 
     private boolean validatePosition(final int position, final FixMessageAcceptor acceptor)
