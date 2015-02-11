@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.parser;
 
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.dictionary.ValidationDictionary;
+import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
 import uk.co.real_logic.fix_gateway.generic_callback_api.InvalidMessageHandler;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
@@ -37,8 +37,8 @@ public final class GenericValidator implements FixMessageAcceptor
 
     private final FixMessageAcceptor delegate;
     private final InvalidMessageHandler invalidMessageHandler;
-    private final ValidationDictionary allFields;
-    private final ValidationDictionary requiredFields;
+    private final IntDictionary allFields;
+    private final IntDictionary requiredFields;
 
     private int messageType;
     private IntHashSet allFieldsForMessageType;
@@ -46,8 +46,8 @@ public final class GenericValidator implements FixMessageAcceptor
     public GenericValidator(
             final FixMessageAcceptor delegate,
             final InvalidMessageHandler invalidMessageHandler,
-            final ValidationDictionary allFields,
-            final ValidationDictionary requiredFields)
+            final IntDictionary allFields,
+            final IntDictionary requiredFields)
     {
         this.delegate = delegate;
         this.invalidMessageHandler = invalidMessageHandler;
@@ -69,7 +69,7 @@ public final class GenericValidator implements FixMessageAcceptor
         {
             string.wrap(buffer);
             messageType = string.getMessageType(offset, length);
-            allFieldsForMessageType = allFields.fields(messageType);
+            allFieldsForMessageType = allFields.values(messageType);
             if (allFieldsForMessageType == null)
             {
                 invalidMessageHandler.onUnknownMessage(messageType);
@@ -98,7 +98,7 @@ public final class GenericValidator implements FixMessageAcceptor
 
     public void onEndMessage(final boolean passedChecksum)
     {
-        final IntHashSet missingFields = requiredFields.fields(messageType).difference(fieldsForMessage);
+        final IntHashSet missingFields = requiredFields.values(messageType).difference(fieldsForMessage);
         if (missingFields == null)
         {
             delegate.onEndMessage(passedChecksum);

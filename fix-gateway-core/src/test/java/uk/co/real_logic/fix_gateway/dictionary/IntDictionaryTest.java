@@ -33,7 +33,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 
-public class ValidationDictionaryTest
+public class IntDictionaryTest
 {
 
     private DataDictionary data;
@@ -52,26 +52,26 @@ public class ValidationDictionaryTest
     @Test
     public void buildsValidationDictionaryForRequiredFields()
     {
-        final ValidationDictionary validationDictionary = ValidationDictionary.requiredFields(data);
-        final IntHashSet heartbeat = validationDictionary.fields('0');
+        final IntDictionary intDictionary = IntDictionary.requiredFields(data);
+        final IntHashSet heartbeat = intDictionary.values('0');
 
         assertThat(heartbeat, hasItem(115));
         assertThat(heartbeat, hasSize(1));
-        assertTrue(validationDictionary.contains('0', 115));
+        assertTrue(intDictionary.contains('0', 115));
     }
 
     @Test
     public void buildsValidationDictionaryForAllFields()
     {
-        final ValidationDictionary validationDictionary = ValidationDictionary.allFields(data);
-        final IntHashSet heartbeat = validationDictionary.fields('0');
+        final IntDictionary intDictionary = IntDictionary.allFields(data);
+        final IntHashSet heartbeat = intDictionary.values('0');
 
         assertThat(heartbeat, hasItem(115));
         assertThat(heartbeat, hasItem(112));
         assertThat(heartbeat, hasSize(2));
 
-        assertTrue(validationDictionary.contains('0', 115));
-        assertTrue(validationDictionary.contains('0', 112));
+        assertTrue(intDictionary.contains('0', 115));
+        assertTrue(intDictionary.contains('0', 112));
     }
 
 }

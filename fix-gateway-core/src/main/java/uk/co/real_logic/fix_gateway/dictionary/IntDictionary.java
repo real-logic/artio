@@ -28,26 +28,26 @@ import java.util.function.Predicate;
  *
  * Essentially a map from ints to a set of ints.
  */
-public final class ValidationDictionary
+public final class IntDictionary
 {
     private static final int MISSING_FIELD = -1;
     private static final int CAPACITY = 1024;
 
     private final Int2ObjectHashMap<IntHashSet> map;
 
-    public static ValidationDictionary requiredFields(final DataDictionary dataDictionary)
+    public static IntDictionary requiredFields(final DataDictionary dataDictionary)
     {
         return fields(dataDictionary, Entry::required);
     }
 
-    public static ValidationDictionary allFields(final DataDictionary dataDictionary)
+    public static IntDictionary allFields(final DataDictionary dataDictionary)
     {
         return fields(dataDictionary, entry -> true);
     }
 
-    private static ValidationDictionary fields(final DataDictionary dataDictionary, final Predicate<Entry> entryPredicate)
+    private static IntDictionary fields(final DataDictionary dataDictionary, final Predicate<Entry> entryPredicate)
     {
-        final ValidationDictionary fields = new ValidationDictionary();
+        final IntDictionary fields = new IntDictionary();
 
         dataDictionary.messages().forEach(message ->
         {
@@ -63,7 +63,7 @@ public final class ValidationDictionary
         return fields;
     }
 
-    public ValidationDictionary()
+    public IntDictionary()
     {
         map = new Int2ObjectHashMap<>();
     }
@@ -74,14 +74,14 @@ public final class ValidationDictionary
         fields.add(fieldNumber);
     }
 
-    public IntHashSet fields(final int messageType)
+    public IntHashSet values(final int messageType)
     {
         return map.get(messageType);
     }
 
     public boolean contains(final int messageType, final int fieldNumber)
     {
-        final IntHashSet fields = fields(messageType);
+        final IntHashSet fields = values(messageType);
         return fields != null && fields.contains(fieldNumber);
     }
 }

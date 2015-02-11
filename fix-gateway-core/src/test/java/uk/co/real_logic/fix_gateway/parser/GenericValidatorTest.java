@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.parser;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.dictionary.ValidationDictionary;
+import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
 import uk.co.real_logic.fix_gateway.generic_callback_api.InvalidMessageHandler;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
@@ -33,8 +33,8 @@ public class GenericValidatorTest
     private FixMessageAcceptor acceptor = mock(FixMessageAcceptor.class);
     private InvalidMessageHandler invalidMessageHandler = mock(InvalidMessageHandler.class);
 
-    private ValidationDictionary requiredFields = new ValidationDictionary();
-    private ValidationDictionary allFields = new ValidationDictionary();
+    private IntDictionary requiredFields = new IntDictionary();
+    private IntDictionary allFields = new IntDictionary();
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[16 * 1024]);
     private MutableStringFlyweight string = new MutableStringFlyweight(buffer);
 

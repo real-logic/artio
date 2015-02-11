@@ -16,8 +16,10 @@
 package uk.co.real_logic.fix_gateway.parser;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.InOrder;
+import org.mockito.Mockito;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
 
@@ -81,7 +83,7 @@ public class GenericParserTest
     }
 
     @Test
-    public void notifiesAcceptorOfInvalidChecksum() throws Exception
+    public void notifiesAcceptorOfInvalidChecksum()
     {
         given:
         buffer.putBytes(0, INVALID_CHECKSUM_MSG);
@@ -94,7 +96,7 @@ public class GenericParserTest
     }
 
     @Test
-    public void notifiesAcceptorOfInvalidMessage() throws Exception
+    public void notifiesAcceptorOfInvalidMessage()
     {
         given:
         buffer.putBytes(0, INVALID_MESSAGE);
@@ -107,5 +109,23 @@ public class GenericParserTest
     }
 
     // TODO: support groups
+    @Ignore
+    @Test
+    public void notifiesAcceptorOfRepeatingGroup()
+    {
+        given:
+        buffer.putBytes(0, EXECUTION_REPORT);
+
+        when:
+        parser.onMessage(buffer, 0, EXECUTION_REPORT_LEN, 1L);
+
+        then:
+        inOrder = Mockito.inOrder(mockAcceptor);
+        inOrder.verify(mockAcceptor, times(1)).onGroupBegin(382, 1);
+        inOrder.verify(mockAcceptor, times(1)).onField(437, buffer, anyInt(), anyInt());
+        inOrder.verify(mockAcceptor, times(1)).onField(438, buffer, anyInt(), anyInt());
+        inOrder.verify(mockAcceptor, times(1)).onGroupEnd(382);
+    }
+
 
 }

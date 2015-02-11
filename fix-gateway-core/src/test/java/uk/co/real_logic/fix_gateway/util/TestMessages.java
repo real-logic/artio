@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.util;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
-public class TestMessages
+public final class TestMessages
 {
     // BUY 100 CVS MKT DAY
     public static final byte[] EG_MESSAGE = toAscii("8=FIX.4.2\0019=145\00135=D\00134=4\00149=ABC_DEFG01\001" +
@@ -42,5 +42,15 @@ public class TestMessages
     {
         return str.getBytes(US_ASCII);
     }
+
+    public static final byte[] EXECUTION_REPORT = toAscii("8=FIX.4.2\0019=378\00135=8\001128=XYZ\00134=5\00149=CCG" +
+            "\00156=ABC_DEFG01\00152=20090323-" +
+            "15:40:35\00155=CVS\00137=NF 0542/03232009\00111=NF 0542/03232009\00117=NF 0542/03232009" +
+            "001001001\00120=0\00139=2\001150=2\00154=1\00138=100\00140=1\00159=0\00131=25.4800\00132=100^A" +
+            "14=0\0016=0\001151=0\00160=20090323-15:40:30\00158=Fill\00130=N\00176=0034\001207=N\00147=A^A" +
+            "9430=NX\0019483=000008\0019578=1\001382=1\001375=TOD\001337=0000\001437=100\001438=1243^A" +
+            "9579=0000100001\0019426=2/2\0019433=0034\00129=1\00163=0\0019440=001001001\00110=080\001");
+
+    public static final int EXECUTION_REPORT_LEN = EXECUTION_REPORT.length;
 
 }
