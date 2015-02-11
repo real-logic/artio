@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.util;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.parser.DecimalFloat;
 
 /**
  * Mutable String class that flyweights a data buffer. This assumes a US-ASCII encoding
@@ -50,6 +51,11 @@ public class StringFlyweight
     public int getDigit(final int index)
     {
         final byte value = buffer.getByte(index);
+        return getDigit(index, value);
+    }
+
+    private int getDigit(final int index, final byte value)
+    {
         if (value < 0x30 || value > 0x39)
         {
             throw new IllegalArgumentException("'" + ((char)value) + "' isn't a valid digit @ " + index);
@@ -121,6 +127,49 @@ public class StringFlyweight
         }
 
         return messageType;
+    }
+
+    public void parseFloat(int offset, int length, final DecimalFloat number)
+    {
+        // Throw away trailing zeros
+        int end = offset + length;
+        for(int index = end - 1; buffer.getByte(index) == '0' && index > offset; index--)
+        {
+            end--;
+        }
+
+        // Is it negative?
+        final boolean negative = buffer.getByte(offset) == '-';
+        if (negative)
+        {
+            offset++;
+            length--;
+        }
+
+        // Throw away leading zeros
+        for (int index = offset; buffer.getByte(index) == '0' && index < end; index++)
+        {
+            offset++;
+        }
+
+        int scale = length;
+        long value = 0;
+        for (int index = offset; index < end; index++)
+        {
+            final byte byteValue = buffer.getByte(index);
+            if (byteValue == '.')
+            {
+                scale = index - offset;
+            }
+            else
+            {
+                final int digit = getDigit(index);
+                value = value * 10 + digit;
+            }
+        }
+
+        number.value(negative ? -1 * value : value);
+        number.scale(scale);
     }
 
 }
