@@ -114,12 +114,12 @@ public class GenericParserTest
     public void notifiesAcceptorOfRepeatingGroup()
     {
         given:
-        groupToField.putAll(382, 337, 375, 437, 438);
+        understandsContraBrokersGroup();
 
         buffer.putBytes(0, EXECUTION_REPORT);
 
         when:
-        parser.onMessage(buffer, 0, EXECUTION_REPORT_LEN, 1L);
+        parser.onMessage(buffer, 0, EXECUTION_REPORT.length, 1L);
 
         then:
         inOrder.verify(mockAcceptor, times(1)).onGroupBegin(382, 1);
@@ -130,13 +130,32 @@ public class GenericParserTest
         inOrder.verify(mockAcceptor, times(1)).onGroupEnd(382);
     }
 
+    // TODO: decide whether this is the correct approach to normalising empty groups
+    @Test
+    public void normalisesAwayEmptyRepeatingGroup()
+    {
+        given:
+        understandsContraBrokersGroup();
+        buffer.putBytes(0, ZERO_REPEATING_GROUP);
+
+        when:
+        parser.onMessage(buffer, 0, ZERO_REPEATING_GROUP.length, 1L);
+
+        then:
+        inOrder.verify(mockAcceptor, never()).onGroupBegin(eq(382), anyInt());
+        inOrder.verify(mockAcceptor, never()).onGroupEnd(382);
+    }
+
+    private void understandsContraBrokersGroup()
+    {
+        groupToField.putAll(382, 337, 375, 437, 438);
+    }
+
     private void verifyInOrderField(final int tag)
     {
         inOrder.verify(mockAcceptor, times(1)).onField(eq(tag), eq(buffer), anyInt(), anyInt());
     }
-
-    // groupNo=0 case
-    // missing group case
+    
     // nested groups
     // combinations thereof
 }

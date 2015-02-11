@@ -118,10 +118,14 @@ public final class GenericParser implements MessageHandler
 
     private void groupBegin(final int tag, final int valueOffset, final int endOfField, final IntHashSet currentGroupFields)
     {
-        this.currentGroupFields = currentGroupFields;
-        this.currentGroupNumber = tag;
         final int numberOfElements = string.getInt(valueOffset, endOfField);
-        acceptor.onGroupBegin(tag, numberOfElements);
+        // Normalise away empty repeating groups, since its valid to leave them out anyway
+        if (numberOfElements > 0)
+        {
+            this.currentGroupFields = currentGroupFields;
+            this.currentGroupNumber = tag;
+            acceptor.onGroupBegin(tag, numberOfElements);
+        }
     }
 
     private boolean fieldIsInCurrentGroup(final int tag)
