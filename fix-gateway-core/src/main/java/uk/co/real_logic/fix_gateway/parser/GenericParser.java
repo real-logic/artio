@@ -97,23 +97,39 @@ public final class GenericParser implements MessageHandler
                 position = endOfField + 1;
             }
 
+            if (isInGroup())
+            {
+                endGroup();
+            }
+
             acceptor.onEndMessage(validateChecksum(buffer, offset, checksumOffset, checksum));
         }
         catch (IllegalArgumentException e)
         {
+            //e.printStackTrace();
             // Error parsing the message
             acceptor.onEndMessage(false);
         }
+    }
+
+    private boolean isInGroup()
+    {
+        return this.currentGroupNumber != NO_GROUP;
     }
 
     private void checkGroupEnd(final int tag)
     {
         if (!fieldIsInCurrentGroup(tag))
         {
-            acceptor.onGroupEnd(currentGroupNumber);
-            this.currentGroupFields = null;
-            this.currentGroupNumber = NO_GROUP;
+            endGroup();
         }
+    }
+
+    private void endGroup()
+    {
+        acceptor.onGroupEnd(currentGroupNumber);
+        this.currentGroupFields = null;
+        this.currentGroupNumber = NO_GROUP;
     }
 
     private void groupBegin(final int tag, final int valueOffset, final int endOfField, final IntHashSet currentGroupFields)

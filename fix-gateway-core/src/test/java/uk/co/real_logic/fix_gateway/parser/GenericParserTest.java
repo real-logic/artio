@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.parser;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
-import org.mockito.Mockito;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
@@ -35,7 +34,7 @@ public class GenericParserTest
     private IntDictionary groupToField = new IntDictionary();
     private GenericParser parser = new GenericParser(mockAcceptor, groupToField);
 
-    private InOrder inOrder = Mockito.inOrder(mockAcceptor);
+    private InOrder inOrder = inOrder(mockAcceptor);
 
     @Before
     public void setUp()
@@ -60,7 +59,6 @@ public class GenericParserTest
         parser.onMessage(buffer, 0, MSG_LEN, 1L);
 
         then:
-        inOrder = inOrder(mockAcceptor);
         //8=FIX.4.2
         inOrder.verify(mockAcceptor).onField(8, buffer, 2, 7);
         //9=145
@@ -109,7 +107,6 @@ public class GenericParserTest
         verify(mockAcceptor).onEndMessage(false);
     }
 
-    // TODO: support groups
     @Test
     public void notifiesAcceptorOfRepeatingGroup()
     {
@@ -122,12 +119,12 @@ public class GenericParserTest
         parser.onMessage(buffer, 0, EXECUTION_REPORT.length, 1L);
 
         then:
-        inOrder.verify(mockAcceptor, times(1)).onGroupBegin(382, 1);
+        verifyGroupBegin(382, 1);
         verifyInOrderField(375);
         verifyInOrderField(337);
         verifyInOrderField(437);
         verifyInOrderField(438);
-        inOrder.verify(mockAcceptor, times(1)).onGroupEnd(382);
+        verifyGroupEnd(382);
     }
 
     // TODO: decide whether this is the correct approach to normalising empty groups
@@ -146,6 +143,49 @@ public class GenericParserTest
         inOrder.verify(mockAcceptor, never()).onGroupEnd(382);
     }
 
+    @Test
+    public void notifiesAcceptorOfMultiElementRepeatingGroup()
+    {
+        given:
+        understandsNoOrdersGroup();
+
+        buffer.putBytes(0, REPEATING_GROUP);
+
+        when:
+        parser.onMessage(buffer, 0, REPEATING_GROUP.length, 1L);
+
+        then:
+        verifyGroupBegin(73, 2);
+        verifyNoOrdersFields();
+        verifyNoOrdersFields();
+        verifyGroupEnd(73);
+    }
+
+    private void verifyGroupBegin(final int groupNumber, final int numberOfElements)
+    {
+        inOrder.verify(mockAcceptor, times(1)).onGroupBegin(groupNumber, numberOfElements);
+    }
+
+    private void verifyGroupEnd(final int groupNumber)
+    {
+        inOrder.verify(mockAcceptor, times(1)).onGroupEnd(groupNumber);
+    }
+
+    private void verifyNoOrdersFields()
+    {
+        verifyInOrderField(11);
+        verifyInOrderField(67);
+        verifyInOrderField(55);
+        verifyInOrderField(54);
+        verifyInOrderField(38);
+        verifyInOrderField(40);
+    }
+
+    private void understandsNoOrdersGroup()
+    {
+        groupToField.putAll(73, 11, 67, 55, 54, 38, 40);
+    }
+
     private void understandsContraBrokersGroup()
     {
         groupToField.putAll(382, 337, 375, 437, 438);
@@ -155,7 +195,7 @@ public class GenericParserTest
     {
         inOrder.verify(mockAcceptor, times(1)).onField(eq(tag), eq(buffer), anyInt(), anyInt());
     }
-    
+
     // nested groups
     // combinations thereof
 }

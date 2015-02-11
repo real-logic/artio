@@ -54,6 +54,22 @@ public final class TestMessages
             "9430=NX\0019483=000008\0019578=1\001382=0\001" +
             "9579=0000100001\0019426=2/2\0019433=0034\00129=1\00163=0\0019440=001001001\00110=080\001");
 
+    public static final byte[] REPEATING_GROUP = toAscii("8=FIX.4.2\0019=190\00135=E\00149=INST\00156=BROK\001" +
+            "52=20050908-15:51:22\00134=200\00166=14\001394=1\00168=2\001" +
+            "73=2\001" +
+                "11=order-1\00167=1\00155=IBM\00154=2\00138=2000\00140=1\001" +
+                "11=order-2\00167=2\00155=AOL\00154=2\00138=1000\00140=1\001");
+
+    // See http://fixwiki.org/fixwiki/FPL:Tag_Value_Syntax#Example_of_nested_repeating_group for details
+    public static final byte[] NESTED_REPEATING_GROUP = toAscii("8=FIX.4.2\0019=190\00135=E\00149=INST\00156=BROK\001" +
+            "52=20050908-15:51:22\00134=200\00166=14\001394=1\00168=2\001" +
+            "73=2\001" +            // NoOrders Group
+                "11=order-1\00167=1\00155=IBM\00154=2\00138=2000\00140=1\001" +
+                    "78=2\001" +    // NoAllocs nested group
+                        "79=bob\001467=10\001366=4\001" +
+                        "79=sally\001467=11\001366=5\001" +
+                "11=order-2\00167=2\00155=AOL\00154=2\00138=1000\00140=1\001");
+
     private static byte[] toAscii(String str)
     {
         return str.getBytes(US_ASCII);
