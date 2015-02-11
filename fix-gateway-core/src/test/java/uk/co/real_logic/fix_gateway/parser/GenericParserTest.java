@@ -161,6 +161,32 @@ public class GenericParserTest
         verifyGroupEnd(73);
     }
 
+    @Test
+    public void notifiesAcceptorOfNestedRepeatingGroup()
+    {
+        given:
+        understandsNoOrdersGroup();
+        understandsNoAllocsGroup();
+
+        buffer.putBytes(0, NESTED_REPEATING_GROUP);
+
+        when:
+        parser.onMessage(buffer, 0, NESTED_REPEATING_GROUP.length, 1L);
+
+        then:
+        verifyGroupBegin(73, 2);
+
+        verifyNoOrdersFields();
+
+        verifyGroupBegin(78, 2);
+        verifyNoAllocsFields();
+        verifyGroupEnd(78);
+
+        verifyNoOrdersFields();
+
+        verifyGroupEnd(73);
+    }
+
     private void verifyGroupBegin(final int groupNumber, final int numberOfElements)
     {
         inOrder.verify(mockAcceptor, times(1)).onGroupBegin(groupNumber, numberOfElements);
@@ -181,9 +207,11 @@ public class GenericParserTest
         verifyInOrderField(40);
     }
 
-    private void understandsNoOrdersGroup()
+    private void verifyNoAllocsFields()
     {
-        groupToField.putAll(73, 11, 67, 55, 54, 38, 40);
+        verifyInOrderField(79);
+        verifyInOrderField(467);
+        verifyInOrderField(366);
     }
 
     private void understandsContraBrokersGroup()
@@ -191,11 +219,19 @@ public class GenericParserTest
         groupToField.putAll(382, 337, 375, 437, 438);
     }
 
+    private void understandsNoOrdersGroup()
+    {
+        groupToField.putAll(73, 11, 67, 55, 54, 38, 40, 78);
+    }
+
+    private void understandsNoAllocsGroup()
+    {
+        groupToField.putAll(78, 79, 467, 366);
+    }
+
     private void verifyInOrderField(final int tag)
     {
         inOrder.verify(mockAcceptor, times(1)).onField(eq(tag), eq(buffer), anyInt(), anyInt());
     }
 
-    // nested groups
-    // combinations thereof
 }

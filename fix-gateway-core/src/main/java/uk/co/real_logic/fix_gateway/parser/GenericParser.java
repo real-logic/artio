@@ -22,6 +22,9 @@ import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
 import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.CHECKSUM;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.util.StringFlyweight.UNKNOWN_INDEX;
@@ -33,12 +36,14 @@ public final class GenericParser implements MessageHandler
     private static final int NO_GROUP = -1;
 
     private final StringFlyweight string = new StringFlyweight(null);
+    private final Deque<IntHashSet> outerGroupFields = new ArrayDeque<>();
+    private final Deque<Integer> outerGroupNumber = new ArrayDeque<>();
 
     private final FixMessageAcceptor acceptor;
     private final IntDictionary groupToField;
 
-    private IntHashSet currentGroupFields;
-    private int currentGroupNumber;
+    private IntHashSet currentGroupFields = null;
+    private int currentGroupNumber = NO_GROUP;
 
     public GenericParser(final FixMessageAcceptor acceptor, final IntDictionary groupToField)
     {
@@ -76,8 +81,8 @@ public final class GenericParser implements MessageHandler
 
                 final int valueLength = endOfField - valueOffset;
 
-                final IntHashSet currentGroupFields = groupToField.values(tag);
-                if (currentGroupFields == null)
+                final IntHashSet newGroupFields = groupToField.values(tag);
+                if (newGroupFields == null)
                 {
                     checkGroupEnd(tag);
 
@@ -91,13 +96,14 @@ public final class GenericParser implements MessageHandler
                 }
                 else
                 {
-                    groupBegin(tag, valueOffset, endOfField, currentGroupFields);
+                    groupBegin(tag, valueOffset, endOfField, newGroupFields);
                 }
 
                 position = endOfField + 1;
             }
 
-            if (isInGroup())
+            // While due to the possibility of nested groups all ending at the end of the message
+            while (insideAGroup())
             {
                 endGroup();
             }
@@ -112,14 +118,14 @@ public final class GenericParser implements MessageHandler
         }
     }
 
-    private boolean isInGroup()
+    private boolean insideAGroup()
     {
         return this.currentGroupNumber != NO_GROUP;
     }
 
     private void checkGroupEnd(final int tag)
     {
-        if (!fieldIsInCurrentGroup(tag))
+        if (insideAGroup() && !fieldIsInCurrentGroup(tag))
         {
             endGroup();
         }
@@ -128,17 +134,23 @@ public final class GenericParser implements MessageHandler
     private void endGroup()
     {
         acceptor.onGroupEnd(currentGroupNumber);
-        this.currentGroupFields = null;
-        this.currentGroupNumber = NO_GROUP;
+        currentGroupFields = outerGroupFields.poll();
+        currentGroupNumber = currentGroupFields == null ? NO_GROUP : outerGroupNumber.poll();
     }
 
-    private void groupBegin(final int tag, final int valueOffset, final int endOfField, final IntHashSet currentGroupFields)
+    private void groupBegin(final int tag, final int valueOffset, final int endOfField, final IntHashSet newGroupFields)
     {
         final int numberOfElements = string.getInt(valueOffset, endOfField);
         // Normalise away empty repeating groups, since its valid to leave them out anyway
         if (numberOfElements > 0)
         {
-            this.currentGroupFields = currentGroupFields;
+            if (insideAGroup())
+            {
+                outerGroupFields.push(this.currentGroupFields);
+                outerGroupNumber.push(Integer.valueOf(this.currentGroupNumber));
+            }
+
+            this.currentGroupFields = newGroupFields;
             this.currentGroupNumber = tag;
             acceptor.onGroupBegin(tag, numberOfElements);
         }
