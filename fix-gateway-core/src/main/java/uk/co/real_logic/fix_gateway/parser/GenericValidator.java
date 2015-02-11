@@ -40,6 +40,8 @@ public final class GenericValidator implements FixMessageAcceptor
     private final IntDictionary allFields;
     private final IntDictionary requiredFields;
 
+    private int groupLevel = 0;
+
     private int messageType;
     private IntHashSet allFieldsForMessageType;
 
@@ -65,21 +67,24 @@ public final class GenericValidator implements FixMessageAcceptor
 
     public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
     {
-        if (tag == MESSAGE_TYPE)
+        if (groupLevel == 0)
         {
-            string.wrap(buffer);
-            messageType = string.getMessageType(offset, length);
-            allFieldsForMessageType = allFields.values(messageType);
-            if (allFieldsForMessageType == null)
+            if (tag == MESSAGE_TYPE)
             {
-                invalidMessageHandler.onUnknownMessage(messageType);
+                string.wrap(buffer);
+                messageType = string.getMessageType(offset, length);
+                allFieldsForMessageType = allFields.values(messageType);
+                if (allFieldsForMessageType == null)
+                {
+                    invalidMessageHandler.onUnknownMessage(messageType);
+                    return;
+                }
+            }
+            else if (!allFieldsForMessageType.contains(tag))
+            {
+                invalidMessageHandler.onUnknownField(messageType, tag);
                 return;
             }
-        }
-        else if (!allFieldsForMessageType.contains(tag))
-        {
-            invalidMessageHandler.onUnknownField(messageType, tag);
-            return;
         }
 
         fieldsForMessage.add(tag);
@@ -88,12 +93,14 @@ public final class GenericValidator implements FixMessageAcceptor
 
     public void onGroupBegin(final int tag, final int numberOfElements)
     {
-
+        groupLevel++;
+        delegate.onGroupBegin(tag, numberOfElements);
     }
 
     public void onGroupEnd(final int tag)
     {
-
+        delegate.onGroupEnd(tag);
+        groupLevel--;
     }
 
     public void onEndMessage(final boolean passedChecksum)

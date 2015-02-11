@@ -141,9 +141,6 @@ public class GenericValidatorTest
         verifyMissingRequiredField();
     }
 
-    // TODO: allow groups to be missing (implies they are empty)
-    // TODO: support groups
-
     private void testReqIdIsARequiredHeartBeatField()
     {
         requiredFields.put('0', 112);
