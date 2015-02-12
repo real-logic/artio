@@ -131,6 +131,7 @@ public class StringFlyweight
 
     public void parseFloat(int offset, int length, final DecimalFloat number)
     {
+        // TODO: add support to skip whitespace
         // Throw away trailing zeros
         int end = offset + length;
         for(int index = end - 1; buffer.getByte(index) == '0' && index > offset; index--)

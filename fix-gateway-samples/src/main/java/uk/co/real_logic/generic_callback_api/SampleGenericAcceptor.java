@@ -62,16 +62,21 @@ public class SampleGenericAcceptor implements FixMessageAcceptor
         }
     }
 
-
     @Override
-    public void onGroupBegin(final int tag, final int numberOfElements)
+    public void onGroupHeader(int tag, int numberOfElements)
     {
         // Some FIX fields consist of repeating groups, you get callbacks
         // when these start and end.
     }
 
+
     @Override
-    public void onGroupEnd(final int tag)
+    public void onGroupBegin(final int tag, final int numberOfElements, final int index)
+    {
+    }
+
+    @Override
+    public void onGroupEnd(final int tag, final int numberOfElements, final int index)
     {
 
     }

@@ -35,6 +35,8 @@ package uk.co.real_logic.fix_gateway.parser;
  * -.995
  * -0.9950
  * -25
+ *
+ * TODO: document range of valid values
  */
 public final class DecimalFloat
 {

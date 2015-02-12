@@ -91,16 +91,27 @@ public final class GenericValidator implements FixMessageAcceptor
         delegate.onField(tag, buffer, offset, length);
     }
 
-    public void onGroupBegin(final int tag, final int numberOfElements)
+    @Override
+    public void onGroupHeader(int tag, int numberOfElements)
     {
         groupLevel++;
-        delegate.onGroupBegin(tag, numberOfElements);
     }
 
-    public void onGroupEnd(final int tag)
+    @Override
+    public void onGroupBegin(int tag, int numberOfElements, int index)
     {
-        delegate.onGroupEnd(tag);
-        groupLevel--;
+
+        delegate.onGroupBegin(tag, numberOfElements, index);
+    }
+
+    @Override
+    public void onGroupEnd(int tag, int numberOfElements, int index)
+    {
+        delegate.onGroupEnd(tag, numberOfElements, index);
+        if (numberOfElements == index + 1)
+        {
+            groupLevel--;
+        }
     }
 
     public void onEndMessage(final boolean passedChecksum)

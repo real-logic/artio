@@ -133,7 +133,7 @@ public final class GenericParser implements MessageHandler
 
     private void endGroup()
     {
-        acceptor.onGroupEnd(currentGroupNumber);
+        acceptor.onGroupEnd(currentGroupNumber, 0, 0);
         currentGroupFields = outerGroupFields.poll();
         currentGroupNumber = currentGroupFields == null ? NO_GROUP : outerGroupNumber.poll();
     }
@@ -152,7 +152,7 @@ public final class GenericParser implements MessageHandler
 
             this.currentGroupFields = newGroupFields;
             this.currentGroupNumber = tag;
-            acceptor.onGroupBegin(tag, numberOfElements);
+            acceptor.onGroupBegin(tag, numberOfElements, 0);
         }
     }
 

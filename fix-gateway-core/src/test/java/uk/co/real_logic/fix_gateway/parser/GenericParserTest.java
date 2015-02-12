@@ -107,6 +107,7 @@ public class GenericParserTest
         verify(mockAcceptor).onEndMessage(false);
     }
 
+    // TODO: change group parsing code to reflect updated API
     @Test
     public void notifiesAcceptorOfRepeatingGroup()
     {
@@ -127,7 +128,7 @@ public class GenericParserTest
         verifyGroupEnd(382);
     }
 
-    // TODO: decide whether this is the correct approach to normalising empty groups
+    // TODO: change normalisation to get header callbacks for each group
     @Test
     public void normalisesAwayEmptyRepeatingGroup()
     {
@@ -139,8 +140,8 @@ public class GenericParserTest
         parser.onMessage(buffer, 0, ZERO_REPEATING_GROUP.length, 1L);
 
         then:
-        inOrder.verify(mockAcceptor, never()).onGroupBegin(eq(382), anyInt());
-        inOrder.verify(mockAcceptor, never()).onGroupEnd(382);
+        inOrder.verify(mockAcceptor, never()).onGroupBegin(eq(382), anyInt(), eq(0));
+        inOrder.verify(mockAcceptor, never()).onGroupEnd(382, 0, 0);
     }
 
     @Test
@@ -189,12 +190,12 @@ public class GenericParserTest
 
     private void verifyGroupBegin(final int groupNumber, final int numberOfElements)
     {
-        inOrder.verify(mockAcceptor, times(1)).onGroupBegin(groupNumber, numberOfElements);
+        inOrder.verify(mockAcceptor, times(1)).onGroupBegin(groupNumber, numberOfElements, 0);
     }
 
     private void verifyGroupEnd(final int groupNumber)
     {
-        inOrder.verify(mockAcceptor, times(1)).onGroupEnd(groupNumber);
+        inOrder.verify(mockAcceptor, times(1)).onGroupEnd(groupNumber, 0, 0);
     }
 
     private void verifyNoOrdersFields()
