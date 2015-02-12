@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.builder;
+package uk.co.real_logic.fix_gateway.flyweight_api;
 
 import sun.nio.ch.DirectBuffer;
-import uk.co.real_logic.agrona.MutableDirectBuffer;
-import uk.co.real_logic.fix_gateway.flyweight_api.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.util.Currency;
@@ -25,10 +23,10 @@ import java.util.Currency;
 /**
  * .
  */
-public class OrderSingleEncoder
+public class OrderSingleDecoder
 {
 
-    private DirectBuffer buffer;
+    private final DirectBuffer buffer;
 
     private AsciiFlyweight clOrdID;
     private char handlInst;
@@ -37,8 +35,53 @@ public class OrderSingleEncoder
     private long transactTime;
     private AsciiFlyweight symbol;
 
+    public AsciiFlyweight clOrdID()
+    {
+        return clOrdID;
+    }
+
+    public char handlInst()
+    {
+        return handlInst;
+    }
+
+    public Side side()
+    {
+        return side;
+    }
+
+    public OrdType ordType()
+    {
+        return ordType;
+    }
+
+    public long transactTime()
+    {
+        return transactTime;
+    }
+
+    public AsciiFlyweight symbolFlyweight()
+    {
+        return symbol;
+    }
+
+    public String symbol()
+    {
+        return null;
+    }
+
     private boolean hasClientID;
     private AsciiFlyweight clientID;
+
+    public boolean hasClientID()
+    {
+        return hasClientID;
+    }
+
+    public AsciiFlyweight clientID()
+    {
+        return clientID;
+    }
 
     private boolean hasExecBroker;
     private AsciiFlyweight execBroker;
@@ -178,51 +221,12 @@ public class OrderSingleEncoder
     private boolean hasCommType;
     private CommType commType;
 
-    public OrderSingleEncoder()
+    public OrderSingleDecoder(final DirectBuffer buffer)
     {
+        this.buffer = buffer;
     }
 
-    public int encode(final MutableDirectBuffer buffer, final int offset)
-    {
-        return 0;
-    }
-
-    public void clOrdID(String clOrdID)
-    {
-        // TODO
-    }
-
-    public void clOrdID(AsciiFlyweight clOrdID)
-    {
-        // TODO
-    }
-
-    public void clOrdID(DirectBuffer clOrdID, int offset, int length)
-    {
-        // TODO
-    }
-
-    public void handlInst(char handlInst)
-    {
-        this.handlInst = handlInst;
-    }
-
-    public void side(Side side)
-    {
-        this.side = side;
-    }
-
-    public void ordType(OrdType ordType)
-    {
-        this.ordType = ordType;
-    }
-
-    public void transactTime(long transactTime)
-    {
-        this.transactTime = transactTime;
-    }
-
-    public void symbol(String symbol)
+    public void decode(final int offset, final int length)
     {
 
     }

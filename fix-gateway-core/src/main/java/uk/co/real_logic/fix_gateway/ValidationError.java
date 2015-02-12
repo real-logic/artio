@@ -15,28 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
-import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
-
-/**
- * .
- */
-public final class StaticConfiguration
+public enum ValidationError
 {
-
-    public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
-    {
-
-    }
-
-    public void registerAcceptor(
-            final uk.co.real_logic.fix_gateway.reactive_api.OrderSingleAcceptor orderSingleAcceptor)
-    {
-
-    }
-
-    public void registerAcceptor(final OtfMessageAcceptor messageAcceptor, final int ... tag)
-    {
-
-    }
+    INVALID_CHECKSUM,
+    MISSING_REQUIRED_FIELD,
+    UNKNOWN_FIELD
 }

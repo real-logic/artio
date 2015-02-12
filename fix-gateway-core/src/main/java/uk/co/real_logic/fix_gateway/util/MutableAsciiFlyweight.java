@@ -13,30 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway;
+package uk.co.real_logic.fix_gateway.util;
 
-import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
-import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
+import uk.co.real_logic.agrona.MutableDirectBuffer;
 
-/**
- * .
- */
-public final class StaticConfiguration
+import java.nio.charset.StandardCharsets;
+
+public final class MutableAsciiFlyweight extends AsciiFlyweight
 {
 
-    public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
-    {
+    private final MutableDirectBuffer buffer;
 
+    public MutableAsciiFlyweight(final MutableDirectBuffer buffer)
+    {
+        super(buffer);
+        this.buffer = buffer;
     }
 
-    public void registerAcceptor(
-            final uk.co.real_logic.fix_gateway.reactive_api.OrderSingleAcceptor orderSingleAcceptor)
+    public int putAscii(final int index, final String string)
     {
-
-    }
-
-    public void registerAcceptor(final OtfMessageAcceptor messageAcceptor, final int ... tag)
-    {
-
+        final byte[] bytes = string.getBytes(StandardCharsets.US_ASCII);
+        buffer.putBytes(index, bytes);
+        return bytes.length;
     }
 }

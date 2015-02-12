@@ -20,7 +20,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.StringFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.util.Arrays;
 
@@ -65,7 +65,7 @@ public class DecimalFloatParsingTest
     public void parseTestData()
     {
         final UnsafeBuffer buffer = new UnsafeBuffer(input.getBytes(US_ASCII));
-        final StringFlyweight string = new StringFlyweight(buffer);
+        final AsciiFlyweight string = new AsciiFlyweight(buffer);
         final DecimalFloat price = new DecimalFloat();
 
         string.parseFloat(0, buffer.capacity(), price);

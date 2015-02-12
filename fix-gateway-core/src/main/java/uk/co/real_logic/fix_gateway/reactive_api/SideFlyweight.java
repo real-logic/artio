@@ -13,30 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway;
+package uk.co.real_logic.fix_gateway.reactive_api;
 
-import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
-import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.flyweight_api.Side;
 
 /**
  * .
  */
-public final class StaticConfiguration
+public interface SideFlyweight extends AsciiFieldFlyweight
 {
-
-    public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
-    {
-
-    }
-
-    public void registerAcceptor(
-            final uk.co.real_logic.fix_gateway.reactive_api.OrderSingleAcceptor orderSingleAcceptor)
-    {
-
-    }
-
-    public void registerAcceptor(final OtfMessageAcceptor messageAcceptor, final int ... tag)
-    {
-
-    }
+    Side getSide();
 }

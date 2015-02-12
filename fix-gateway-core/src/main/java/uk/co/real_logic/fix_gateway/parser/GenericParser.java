@@ -18,34 +18,35 @@ package uk.co.real_logic.fix_gateway.parser;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
-import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
+import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
-import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.CHECKSUM;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
-import static uk.co.real_logic.fix_gateway.util.StringFlyweight.UNKNOWN_INDEX;
+import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
 // TODO: what should we do if the callbacks throw an exception?
+// TODO: encode 2 char message types into ints
 public final class GenericParser implements MessageHandler
 {
     private static final int NO_CHECKSUM = 0;
     private static final int NO_GROUP = -1;
 
-    private final StringFlyweight string = new StringFlyweight(null);
+    private final AsciiFlyweight string = new AsciiFlyweight(null);
     private final Deque<IntHashSet> outerGroupFields = new ArrayDeque<>();
     private final Deque<Integer> outerGroupNumber = new ArrayDeque<>();
 
-    private final FixMessageAcceptor acceptor;
+    private final OtfMessageAcceptor acceptor;
     private final IntDictionary groupToField;
 
     private IntHashSet currentGroupFields = null;
     private int currentGroupNumber = NO_GROUP;
 
-    public GenericParser(final FixMessageAcceptor acceptor, final IntDictionary groupToField)
+    public GenericParser(final OtfMessageAcceptor acceptor, final IntDictionary groupToField)
     {
         this.acceptor = acceptor;
         this.groupToField = groupToField;
@@ -54,7 +55,7 @@ public final class GenericParser implements MessageHandler
     public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long connectionId)
     {
         string.wrap(buffer);
-        acceptor.onStartMessage(connectionId);
+        acceptor.onNext();
 
         final int end = offset + length;
         int position = offset;
@@ -108,13 +109,15 @@ public final class GenericParser implements MessageHandler
                 endGroup();
             }
 
-            acceptor.onEndMessage(validateChecksum(buffer, offset, checksumOffset, checksum));
+            // TODO: update to API
+            //acceptor.onError(validateChecksum(buffer, offset, checksumOffset, checksum));
         }
         catch (IllegalArgumentException e)
         {
             //e.printStackTrace();
             // Error parsing the message
-            acceptor.onEndMessage(false);
+            // TODO: update to API
+            //acceptor.onError(false);
         }
     }
 
@@ -161,11 +164,12 @@ public final class GenericParser implements MessageHandler
         return this.currentGroupFields != null && this.currentGroupFields.contains(tag);
     }
 
-    private boolean validatePosition(final int position, final FixMessageAcceptor acceptor)
+    private boolean validatePosition(final int position, final OtfMessageAcceptor acceptor)
     {
         if (position == UNKNOWN_INDEX)
         {
-            acceptor.onEndMessage(false);
+            // TODO: update to API
+            // acceptor.onError(false);
             return false;
         }
 

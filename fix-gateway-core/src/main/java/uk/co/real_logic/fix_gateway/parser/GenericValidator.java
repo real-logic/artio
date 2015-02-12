@@ -16,27 +16,27 @@
 package uk.co.real_logic.fix_gateway.parser;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
-import uk.co.real_logic.fix_gateway.generic_callback_api.FixMessageAcceptor;
-import uk.co.real_logic.fix_gateway.generic_callback_api.InvalidMessageHandler;
+import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.reactive_api.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
-import uk.co.real_logic.fix_gateway.util.StringFlyweight;
 
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.MESSAGE_TYPE;
 
 /**
  * Acceptor that validates messages according to a dictionary
  */
-public final class GenericValidator implements FixMessageAcceptor
+public final class GenericValidator implements OtfMessageAcceptor
 {
 
     private static final int UNKNOWN_MESSAGE_TYPE = -1;
 
     private final IntHashSet fieldsForMessage = new IntHashSet(1024, UNKNOWN_MESSAGE_TYPE);
-    private final StringFlyweight string = new StringFlyweight(null);
+    private final AsciiFlyweight string = new AsciiFlyweight(null);
 
-    private final FixMessageAcceptor delegate;
-    private final InvalidMessageHandler invalidMessageHandler;
+    private final OtfMessageAcceptor delegate;
     private final IntDictionary allFields;
     private final IntDictionary requiredFields;
 
@@ -46,23 +46,37 @@ public final class GenericValidator implements FixMessageAcceptor
     private IntHashSet allFieldsForMessageType;
 
     public GenericValidator(
-            final FixMessageAcceptor delegate,
-            final InvalidMessageHandler invalidMessageHandler,
+            final OtfMessageAcceptor delegate,
             final IntDictionary allFields,
             final IntDictionary requiredFields)
     {
         this.delegate = delegate;
-        this.invalidMessageHandler = invalidMessageHandler;
         this.allFields = allFields;
         this.requiredFields = requiredFields;
     }
 
-    public void onStartMessage(final long connectionId)
+    public void onNext()
     {
-        delegate.onStartMessage(connectionId);
+        delegate.onNext();
         fieldsForMessage.clear();
         messageType = UNKNOWN_MESSAGE_TYPE;
         allFieldsForMessageType = null;
+    }
+
+    @Override
+    public void onComplete()
+    {
+        // TODO: update to API
+        final IntHashSet missingFields = requiredFields.values(messageType).difference(fieldsForMessage);
+        if (missingFields == null)
+        {
+            //delegate.onError(passedChecksum);
+        }
+        else
+        {
+            //invalidMessageHandler.onMissingRequiredFields(messageType, missingFields);
+            //delegate.onError(false);
+        }
     }
 
     public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
@@ -76,13 +90,13 @@ public final class GenericValidator implements FixMessageAcceptor
                 allFieldsForMessageType = allFields.values(messageType);
                 if (allFieldsForMessageType == null)
                 {
-                    invalidMessageHandler.onUnknownMessage(messageType);
+                    // TODO: invalidMessageHandler.onUnknownMessage(messageType);
                     return;
                 }
             }
             else if (!allFieldsForMessageType.contains(tag))
             {
-                invalidMessageHandler.onUnknownField(messageType, tag);
+                // TODO: invalidMessageHandler.onUnknownField(messageType, tag);
                 return;
             }
         }
@@ -114,18 +128,9 @@ public final class GenericValidator implements FixMessageAcceptor
         }
     }
 
-    public void onEndMessage(final boolean passedChecksum)
+    @Override
+    public boolean onError(ValidationError error, int messageType, int tagNumber, AsciiFieldFlyweight value)
     {
-        final IntHashSet missingFields = requiredFields.values(messageType).difference(fieldsForMessage);
-        if (missingFields == null)
-        {
-            delegate.onEndMessage(passedChecksum);
-        }
-        else
-        {
-            invalidMessageHandler.onMissingRequiredFields(messageType, missingFields);
-            delegate.onEndMessage(false);
-        }
+        return false;
     }
-
 }

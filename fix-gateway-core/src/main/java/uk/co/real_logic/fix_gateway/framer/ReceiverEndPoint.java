@@ -18,13 +18,13 @@ package uk.co.real_logic.fix_gateway.framer;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
-import uk.co.real_logic.fix_gateway.util.StringFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-import static uk.co.real_logic.fix_gateway.util.StringFlyweight.UNKNOWN_INDEX;
+import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
 /**
  * Handles incoming data from sockets
@@ -42,7 +42,7 @@ public class ReceiverEndPoint
     private final MessageHandler handler;
     private final long connectionId;
     private final AtomicBuffer buffer;
-    private final StringFlyweight string;
+    private final AsciiFlyweight string;
 
     private int usedBufferData = 0;
 
@@ -54,7 +54,7 @@ public class ReceiverEndPoint
         this.connectionId = connectionId;
 
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
-        string = new StringFlyweight(buffer);
+        string = new AsciiFlyweight(buffer);
     }
 
     public SocketChannel channel()

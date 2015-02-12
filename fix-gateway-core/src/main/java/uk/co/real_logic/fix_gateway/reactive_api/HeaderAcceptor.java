@@ -13,30 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway;
+package uk.co.real_logic.fix_gateway.reactive_api;
 
-import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
-import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.MessageAcceptor;
 
 /**
  * .
  */
-public final class StaticConfiguration
+public interface HeaderAcceptor extends MessageAcceptor
 {
+    void onMessageTypeField(int messageType);
 
-    public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
-    {
+    void onSenderCompIdField(AsciiFieldFlyweight senderCompId);
 
-    }
+    void onSenderSubIdField(AsciiFieldFlyweight senderSubId);
 
-    public void registerAcceptor(
-            final uk.co.real_logic.fix_gateway.reactive_api.OrderSingleAcceptor orderSingleAcceptor)
-    {
+    void onSenderLocationIdField(AsciiFieldFlyweight senderLocationId);
 
-    }
-
-    public void registerAcceptor(final OtfMessageAcceptor messageAcceptor, final int ... tag)
-    {
-
-    }
+    // -- callback methods for any other header fields specified in the dictionary
 }
