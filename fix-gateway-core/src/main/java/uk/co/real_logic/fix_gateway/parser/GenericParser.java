@@ -24,9 +24,6 @@ import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 import static uk.co.real_logic.fix_gateway.ValidationError.PARSE_ERROR;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.*;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
@@ -34,19 +31,24 @@ import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 // TODO: what should we do if the callbacks throw an exception?
 public final class GenericParser implements MessageHandler
 {
+    public static final int MAX_NUMBER_OF_GROUPS = 1024;
+
     private static final int NO_CHECKSUM = 0;
     private static final int UNKNOWN = -1;
 
     private final AsciiFlyweight string = new AsciiFlyweight(null);
     private final AsciiFieldFlyweight stringField = new AsciiFieldFlyweight();
-    private final Deque<IntHashSet> outerGroupFields = new ArrayDeque<>();
-    private final Deque<Integer> outerGroupNumber = new ArrayDeque<>();
+    /*private final Deque<IntHashSet> outerGroupFields = new ArrayDeque<>();
+    private final Deque<Integer> outerGroupNumber = new ArrayDeque<>();*/
 
     private final OtfMessageAcceptor acceptor;
     private final IntDictionary groupToField;
 
+    private int currentGroupTag = UNKNOWN;
     private IntHashSet currentGroupFields = null;
-    private int currentGroupNumber = UNKNOWN;
+    private int currentGroupFirstField;
+    private int currentGroupNumberOfElements;
+    private int currentGroupIndex;
 
     public GenericParser(final OtfMessageAcceptor acceptor, final IntDictionary groupToField)
     {
@@ -89,7 +91,7 @@ public final class GenericParser implements MessageHandler
                 final IntHashSet newGroupFields = groupToField.values(tag);
                 if (newGroupFields == null)
                 {
-                    checkGroupEnd(tag);
+                    checkGroup(tag);
 
                     acceptor.onField(tag, buffer, valueOffset, valueLength);
 
@@ -105,7 +107,7 @@ public final class GenericParser implements MessageHandler
                 }
                 else
                 {
-                    groupBegin(tag, valueOffset, endOfField, newGroupFields);
+                    groupHeader(tag, valueOffset, endOfField, newGroupFields);
                 }
 
                 position = endOfField + 1;
@@ -114,7 +116,7 @@ public final class GenericParser implements MessageHandler
             // While due to the possibility of nested groups all ending at the end of the message
             while (insideAGroup())
             {
-                endGroup();
+                endRepeatingGroupBlock();
             }
 
             if (validateChecksum(buffer, offset, checksumOffset, checksum))
@@ -134,47 +136,82 @@ public final class GenericParser implements MessageHandler
         }
     }
 
-    private boolean insideAGroup()
+    private void checkGroup(final int tag)
     {
-        return this.currentGroupNumber != UNKNOWN;
-    }
-
-    private void checkGroupEnd(final int tag)
-    {
-        if (insideAGroup() && !fieldIsInCurrentGroup(tag))
+        if (insideAGroup())
         {
-            endGroup();
+            // Non-group field means end of group
+            if (!currentGroupFields.contains(tag))
+            {
+                endRepeatingGroupBlock();
+            }
+            else
+            {
+                // First field first iteration
+                if (currentGroupFirstField == UNKNOWN)
+                {
+                    currentGroupFirstField = tag;
+                }
+                // We've seen the first field again - its a new group iteration
+                else if(tag == currentGroupFirstField)
+                {
+                    onEndGroup();
+                    currentGroupIndex++;
+                    onGroupBegin();
+                }
+            }
         }
     }
 
-    private void endGroup()
+    private boolean insideAGroup()
     {
-        acceptor.onGroupEnd(currentGroupNumber, 0, 0);
-        currentGroupFields = outerGroupFields.poll();
-        currentGroupNumber = currentGroupFields == null ? UNKNOWN : outerGroupNumber.poll();
+        return this.currentGroupTag != UNKNOWN;
     }
 
-    private void groupBegin(final int tag, final int valueOffset, final int endOfField, final IntHashSet newGroupFields)
+    private void endRepeatingGroupBlock()
+    {
+        onEndGroup();
+        currentGroupTag = UNKNOWN;
+    }
+
+    private void onEndGroup()
+    {
+        acceptor.onGroupEnd(currentGroupTag, currentGroupNumberOfElements, currentGroupIndex);
+
+        // TODO:
+        /*currentGroupFields = outerGroupFields.poll();
+        currentGroupNumber = currentGroupFields == null ? UNKNOWN : outerGroupNumber.poll();*/
+
+    }
+
+    private void groupHeader(final int tag, final int valueOffset, final int endOfField, final IntHashSet newGroupFields)
     {
         final int numberOfElements = string.getInt(valueOffset, endOfField);
         // Normalise away empty repeating groups, since its valid to leave them out anyway
-        if (numberOfElements > 0)
-        {
-            if (insideAGroup())
+
+            // TODO:
+            /*if (insideAGroup())
             {
                 outerGroupFields.push(this.currentGroupFields);
-                outerGroupNumber.push(Integer.valueOf(this.currentGroupNumber));
-            }
+                outerGroupNumber.push(Integer.valueOf(this.currentGroupTag));
+            }*/
+        acceptor.onGroupHeader(tag, numberOfElements);
 
-            this.currentGroupFields = newGroupFields;
-            this.currentGroupNumber = tag;
-            acceptor.onGroupBegin(tag, numberOfElements, 0);
+        if (numberOfElements > 0)
+        {
+            currentGroupTag = tag;
+            currentGroupFields = newGroupFields;
+            currentGroupFirstField = UNKNOWN;
+            currentGroupNumberOfElements = numberOfElements;
+            currentGroupIndex = 0;
+
+            onGroupBegin();
         }
     }
 
-    private boolean fieldIsInCurrentGroup(final int tag)
+    private void onGroupBegin()
     {
-        return this.currentGroupFields != null && this.currentGroupFields.contains(tag);
+        acceptor.onGroupBegin(currentGroupTag, currentGroupNumberOfElements, currentGroupIndex);
     }
 
     private boolean validatePosition(final int position, final OtfMessageAcceptor acceptor, final int messageType, final int tag)

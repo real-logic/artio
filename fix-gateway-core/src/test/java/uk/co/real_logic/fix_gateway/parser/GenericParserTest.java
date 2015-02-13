@@ -31,8 +31,6 @@ import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
 public class GenericParserTest
 {
-    // TODO: Update to API
-
     public static final int LENGTH = 16 * 1024;
 
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[LENGTH]);
@@ -113,7 +111,6 @@ public class GenericParserTest
         verify(mockAcceptor).onError(eq(PARSE_ERROR), eq((int) 'D'), eq(11), any(AsciiFieldFlyweight.class));
     }
 
-    // TODO: change group parsing code to reflect updated API
     @Test
     public void notifiesAcceptorOfRepeatingGroup()
     {
@@ -126,17 +123,17 @@ public class GenericParserTest
         parser.onMessage(buffer, 0, EXECUTION_REPORT.length, 1L);
 
         then:
-        verifyGroupBegin(382, 1);
+        verifyGroupHeader(382, 1);
+        verifyGroupBegin(382, 1, 0);
         verifyInOrderField(375);
         verifyInOrderField(337);
         verifyInOrderField(437);
         verifyInOrderField(438);
-        verifyGroupEnd(382);
+        verifyGroupEnd(382, 1, 0);
     }
 
-    // TODO: change normalisation to get header callbacks for each group
     @Test
-    public void normalisesAwayEmptyRepeatingGroup()
+    public void notifiesAcceptorOfOnlyHeaderForEmptyGroup()
     {
         given:
         understandsContraBrokersGroup();
@@ -146,8 +143,9 @@ public class GenericParserTest
         parser.onMessage(buffer, 0, ZERO_REPEATING_GROUP.length, 1L);
 
         then:
-        inOrder.verify(mockAcceptor, never()).onGroupBegin(eq(382), anyInt(), eq(0));
-        inOrder.verify(mockAcceptor, never()).onGroupEnd(382, 0, 0);
+        verifyGroupHeader(382, 0);
+        inOrder.verify(mockAcceptor, never()).onGroupBegin(anyInt(), anyInt(), anyInt());
+        inOrder.verify(mockAcceptor, never()).onGroupEnd(anyInt(), anyInt(), anyInt());
     }
 
     @Test
@@ -162,12 +160,12 @@ public class GenericParserTest
         parser.onMessage(buffer, 0, REPEATING_GROUP.length, 1L);
 
         then:
-        verifyGroupBegin(73, 2);
-        verifyNoOrdersFields();
-        verifyNoOrdersFields();
-        verifyGroupEnd(73);
+        verifyGroupHeader(NO_ORDERS, 2);
+        verifyNoOrdersFields(0);
+        verifyNoOrdersFields(1);
     }
 
+    /*
     @Test
     public void notifiesAcceptorOfNestedRepeatingGroup()
     {
@@ -181,37 +179,44 @@ public class GenericParserTest
         parser.onMessage(buffer, 0, NESTED_REPEATING_GROUP.length, 1L);
 
         then:
-        verifyGroupBegin(73, 2);
+        verifyGroupHeader(73, 2);
 
         verifyNoOrdersFields();
 
-        verifyGroupBegin(78, 2);
+        verifyGroupHeader(78, 2);
         verifyNoAllocsFields();
         verifyGroupEnd(78);
 
         verifyNoOrdersFields();
 
         verifyGroupEnd(73);
+    }*/
+
+    private void verifyGroupHeader(final int groupNumber, final int numberOfElements)
+    {
+        inOrder.verify(mockAcceptor, times(1)).onGroupHeader(groupNumber, numberOfElements);
     }
 
-    private void verifyGroupBegin(final int groupNumber, final int numberOfElements)
+    private void verifyGroupBegin(final int groupNumber, final int numberOfElements, final int index)
     {
-        inOrder.verify(mockAcceptor, times(1)).onGroupBegin(groupNumber, numberOfElements, 0);
+        inOrder.verify(mockAcceptor, times(1)).onGroupBegin(groupNumber, numberOfElements, index);
     }
 
-    private void verifyGroupEnd(final int groupNumber)
+    private void verifyGroupEnd(final int groupNumber, final int numberOfElements, final int index)
     {
-        inOrder.verify(mockAcceptor, times(1)).onGroupEnd(groupNumber, 0, 0);
+        inOrder.verify(mockAcceptor, times(1)).onGroupEnd(groupNumber, numberOfElements, index);
     }
 
-    private void verifyNoOrdersFields()
+    private void verifyNoOrdersFields(final int index)
     {
+        verifyGroupBegin(NO_ORDERS, 2, index);
         verifyInOrderField(11);
         verifyInOrderField(67);
         verifyInOrderField(55);
         verifyInOrderField(54);
         verifyInOrderField(38);
         verifyInOrderField(40);
+        verifyGroupEnd(NO_ORDERS, 2, index);
     }
 
     private void verifyNoAllocsFields()

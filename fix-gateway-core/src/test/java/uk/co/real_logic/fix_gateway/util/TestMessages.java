@@ -70,6 +70,9 @@ public final class TestMessages
                         "79=sally\001467=11\001366=5\001" +
                 "11=order-2\00167=2\00155=AOL\00154=2\00138=1000\00140=1\001");
 
+    public static final int NO_ORDERS = 73;
+    public static final int NO_ALLOCS = 78;
+
     private static byte[] toAscii(String str)
     {
         return str.getBytes(US_ASCII);
