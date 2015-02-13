@@ -243,7 +243,7 @@ public final class IntHashSet implements Set<Integer>
         this.size = obj.size;
     }
 
-    private class IntIterator implements Iterator<Integer>
+    public class IntIterator implements Iterator<Integer>
     {
         final int[] values = IntHashSet.this.values;
 

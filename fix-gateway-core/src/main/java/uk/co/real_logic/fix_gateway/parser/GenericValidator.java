@@ -18,11 +18,12 @@ package uk.co.real_logic.fix_gateway.parser;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
-import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
 
+import static uk.co.real_logic.fix_gateway.ValidationError.*;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.MESSAGE_TYPE;
 
 /**
@@ -31,10 +32,11 @@ import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.MESSA
 public final class GenericValidator implements OtfMessageAcceptor
 {
 
-    private static final int UNKNOWN_MESSAGE_TYPE = -1;
+    private static final int UNKNOWN = -1;
 
-    private final IntHashSet fieldsForMessage = new IntHashSet(1024, UNKNOWN_MESSAGE_TYPE);
+    private final IntHashSet fieldsForMessage = new IntHashSet(1024, UNKNOWN);
     private final AsciiFlyweight string = new AsciiFlyweight(null);
+    private final AsciiFieldFlyweight stringField = new AsciiFieldFlyweight();
 
     private final OtfMessageAcceptor delegate;
     private final IntDictionary allFields;
@@ -59,23 +61,25 @@ public final class GenericValidator implements OtfMessageAcceptor
     {
         delegate.onNext();
         fieldsForMessage.clear();
-        messageType = UNKNOWN_MESSAGE_TYPE;
+        messageType = UNKNOWN;
         allFieldsForMessageType = null;
     }
 
     @Override
     public void onComplete()
     {
-        // TODO: update to API
         final IntHashSet missingFields = requiredFields.values(messageType).difference(fieldsForMessage);
         if (missingFields == null)
         {
-            //delegate.onError(passedChecksum);
+            delegate.onComplete();
         }
         else
         {
-            //invalidMessageHandler.onMissingRequiredFields(messageType, missingFields);
-            //delegate.onError(false);
+            final IntHashSet.IntIterator it = missingFields.iterator();
+            while (it.hasNext())
+            {
+                delegate.onError(MISSING_REQUIRED_FIELD, messageType, it.nextValue(), stringField);
+            }
         }
     }
 
@@ -90,13 +94,13 @@ public final class GenericValidator implements OtfMessageAcceptor
                 allFieldsForMessageType = allFields.values(messageType);
                 if (allFieldsForMessageType == null)
                 {
-                    // TODO: invalidMessageHandler.onUnknownMessage(messageType);
+                    delegate.onError(UNKNOWN_MESSAGE_TYPE, messageType, UNKNOWN, stringField);
                     return;
                 }
             }
             else if (!allFieldsForMessageType.contains(tag))
             {
-                // TODO: invalidMessageHandler.onUnknownField(messageType, tag);
+                delegate.onError(UNKNOWN_FIELD, messageType, tag, stringField);
                 return;
             }
         }

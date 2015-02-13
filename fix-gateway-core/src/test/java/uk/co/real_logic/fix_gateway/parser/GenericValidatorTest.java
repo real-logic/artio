@@ -15,19 +15,27 @@
  */
 package uk.co.real_logic.fix_gateway.parser;
 
+import org.junit.Test;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
+import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+
+import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.ValidationError.*;
+import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.MESSAGE_TYPE;
+
 public class GenericValidatorTest
 {
-    // TODO: update to API
-    /*
     private OtfMessageAcceptor acceptor = mock(OtfMessageAcceptor.class);
-    private InvalidMessageHandler invalidMessageHandler = mock(InvalidMessageHandler.class);
 
     private IntDictionary requiredFields = new IntDictionary();
     private IntDictionary allFields = new IntDictionary();
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[16 * 1024]);
     private MutableAsciiFlyweight string = new MutableAsciiFlyweight(buffer);
 
-    private GenericValidator validator = new GenericValidator(acceptor, invalidMessageHandler, allFields, requiredFields);
+    private GenericValidator validator = new GenericValidator(acceptor, allFields, requiredFields);
 
     @Test
     public void validStartMessageDelegates()
@@ -48,10 +56,10 @@ public class GenericValidatorTest
         validateMessageType();
 
         when:
-        validator.onError(true);
+        validator.onComplete();
 
         then:
-        verify(acceptor).onError(true);
+        verify(acceptor).onComplete();
     }
 
     @Test
@@ -123,10 +131,9 @@ public class GenericValidatorTest
 
         when:
         validateMessageType();
-        validator.onError(true);
+        validator.onComplete();
 
         then:
-        verify(acceptor).onError(false);
         verifyMissingRequiredField();
     }
 
@@ -169,27 +176,22 @@ public class GenericValidatorTest
 
     private void verifyUnknownMessage()
     {
-        verify(invalidMessageHandler).onUnknownMessage('0');
+        verify(acceptor).onError(eq(UNKNOWN_MESSAGE_TYPE), eq((int) '0'), anyInt(), any(AsciiFieldFlyweight.class));
     }
 
     private void verifyUnknownField()
     {
-        verify(invalidMessageHandler).onUnknownField('0', 112);
+        verify(acceptor).onError(eq(UNKNOWN_FIELD), eq((int) '0'), eq(112), any(AsciiFieldFlyweight.class));
     }
 
     private void verifyMissingRequiredField()
     {
-        ArgumentCaptor<IntHashSet> fieldsCaptor = ArgumentCaptor.forClass(IntHashSet.class);
-        verify(invalidMessageHandler).onMissingRequiredFields(eq((int) '0'), fieldsCaptor.capture());
-
-        final IntHashSet fields = fieldsCaptor.getValue();
-        assertTrue(fields.contains(112));
+        verify(acceptor).onError(eq(MISSING_REQUIRED_FIELD), eq((int) '0'), eq(112), any(AsciiFieldFlyweight.class));
     }
 
     private void validateTestReqId()
     {
         validator.onField(112, buffer, 0, 1);
     }
-    */
 
 }
