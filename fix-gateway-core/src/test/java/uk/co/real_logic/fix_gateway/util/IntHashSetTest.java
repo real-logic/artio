@@ -19,6 +19,7 @@ import org.junit.Test;
 
 import java.util.Iterator;
 
+import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.*;
 
 public class IntHashSetTest
@@ -165,6 +166,18 @@ public class IntHashSetTest
         final IntHashSet diff = obj.difference(other);
         assertEquals(1, diff.size());
         assertTrue(diff.contains(2));
+    }
+
+    @Test
+    public void copiesOtherIntHashSet()
+    {
+        obj.add(1);
+        obj.add(2);
+
+        final IntHashSet other = new IntHashSet(100, -1);
+        other.copy(obj);
+
+        assertThat(other, contains(1, 2));
     }
 
     private void assertIteratorHasElements()

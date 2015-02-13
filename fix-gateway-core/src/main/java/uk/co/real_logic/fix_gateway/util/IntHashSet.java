@@ -34,14 +34,14 @@ public final class IntHashSet implements Set<Integer>
 
     private int size;
 
-    public IntHashSet(final int capacity, final int missingValue)
+    public IntHashSet(final int proposedCapacity, final int missingValue)
     {
         size = 0;
         this.missingValue = missingValue;
-        final int capacity1 = BitUtil.findNextPositivePowerOfTwo(capacity);
-        mask = capacity1 - 1;
-        values = new int[capacity1];
-        for (int i = 0; i < capacity1; i++)
+        final int capacity = BitUtil.findNextPositivePowerOfTwo(proposedCapacity);
+        mask = capacity - 1;
+        values = new int[capacity];
+        for (int i = 0; i < capacity; i++)
         {
             values[i] = missingValue;
         }
@@ -224,6 +224,23 @@ public final class IntHashSet implements Set<Integer>
     {
         iterator.reset();
         return iterator;
+    }
+
+    public void copy(final IntHashSet obj)
+    {
+        // NB: mask also implies the length is the same
+        if (this.mask != obj.mask)
+        {
+            throw new IllegalArgumentException("Cannot copy object: masks not equal");
+        }
+
+        if(this.missingValue != obj.missingValue)
+        {
+            throw new IllegalArgumentException("Cannot copy object: missingValues not equal");
+        }
+
+        System.arraycopy(obj.values, 0, this.values, 0, this.values.length);
+        this.size = obj.size;
     }
 
     private class IntIterator implements Iterator<Integer>
