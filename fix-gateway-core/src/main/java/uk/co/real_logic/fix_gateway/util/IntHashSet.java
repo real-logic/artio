@@ -46,7 +46,7 @@ public final class IntHashSet implements Set<Integer>
             values[i] = missingValue;
         }
         // NB: references values in the constructor, so must be assigned after values
-        iterator = new IntIterator();
+        iterator = new IntIterator(missingValue, values);
     }
 
     public boolean add(final Integer value)
@@ -241,46 +241,6 @@ public final class IntHashSet implements Set<Integer>
 
         System.arraycopy(obj.values, 0, this.values, 0, this.values.length);
         this.size = obj.size;
-    }
-
-    public class IntIterator implements Iterator<Integer>
-    {
-        final int[] values = IntHashSet.this.values;
-
-        private int position;
-
-        public boolean hasNext()
-        {
-            final int[] values = this.values;
-            while (position < values.length)
-            {
-                if (values[position] != missingValue)
-                {
-                    return true;
-                }
-
-                position++;
-            }
-
-            return false;
-        }
-
-        public Integer next()
-        {
-            return nextValue();
-        }
-
-        public int nextValue()
-        {
-            final int value = values[position];
-            position++;
-            return value;
-        }
-
-        public void reset()
-        {
-            position = 0;
-        }
     }
 
     public String toString()

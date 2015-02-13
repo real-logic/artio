@@ -127,7 +127,7 @@ public final class GenericParser implements MessageHandler
         catch (IllegalArgumentException e)
         {
             // Error parsing the message
-            e.printStackTrace();
+            //e.printStackTrace();
             acceptor.onError(PARSE_ERROR, messageType, tag, stringField);
         }
     }
