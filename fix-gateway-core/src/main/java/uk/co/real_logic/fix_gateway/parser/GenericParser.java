@@ -24,6 +24,9 @@ import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 import static uk.co.real_logic.fix_gateway.ValidationError.PARSE_ERROR;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.*;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
@@ -31,24 +34,17 @@ import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 // TODO: what should we do if the callbacks throw an exception?
 public final class GenericParser implements MessageHandler
 {
-    public static final int MAX_NUMBER_OF_GROUPS = 1024;
-
     private static final int NO_CHECKSUM = 0;
     private static final int UNKNOWN = -1;
 
     private final AsciiFlyweight string = new AsciiFlyweight(null);
     private final AsciiFieldFlyweight stringField = new AsciiFieldFlyweight();
-    /*private final Deque<IntHashSet> outerGroupFields = new ArrayDeque<>();
-    private final Deque<Integer> outerGroupNumber = new ArrayDeque<>();*/
+    private final Deque<GroupInformation> groups = new ArrayDeque<>();
 
     private final OtfMessageAcceptor acceptor;
     private final IntDictionary groupToField;
 
-    private int currentGroupTag = UNKNOWN;
-    private IntHashSet currentGroupFields = null;
-    private int currentGroupFirstField;
-    private int currentGroupNumberOfElements;
-    private int currentGroupIndex;
+    private GroupInformation currentGroup = new GroupInformation();
 
     public GenericParser(final OtfMessageAcceptor acceptor, final IntDictionary groupToField)
     {
@@ -131,7 +127,7 @@ public final class GenericParser implements MessageHandler
         catch (IllegalArgumentException e)
         {
             // Error parsing the message
-            // e.printStackTrace();
+            e.printStackTrace();
             acceptor.onError(PARSE_ERROR, messageType, tag, stringField);
         }
     }
@@ -141,22 +137,25 @@ public final class GenericParser implements MessageHandler
         if (insideAGroup())
         {
             // Non-group field means end of group
-            if (!currentGroupFields.contains(tag))
+            if (!currentGroup.fields.contains(tag))
             {
-                endRepeatingGroupBlock();
+                if (endRepeatingGroupBlock())
+                {
+                    checkGroup(tag);
+                }
             }
             else
             {
                 // First field first iteration
-                if (currentGroupFirstField == UNKNOWN)
+                if (currentGroup.firstField == UNKNOWN)
                 {
-                    currentGroupFirstField = tag;
+                    currentGroup.firstField = tag;
                 }
                 // We've seen the first field again - its a new group iteration
-                else if(tag == currentGroupFirstField)
+                else if(tag == currentGroup.firstField)
                 {
-                    onEndGroup();
-                    currentGroupIndex++;
+                    onGroupEnd();
+                    currentGroup.index++;
                     onGroupBegin();
                 }
             }
@@ -165,45 +164,49 @@ public final class GenericParser implements MessageHandler
 
     private boolean insideAGroup()
     {
-        return this.currentGroupTag != UNKNOWN;
+        return this.currentGroup.tag != UNKNOWN;
     }
 
-    private void endRepeatingGroupBlock()
+    private boolean endRepeatingGroupBlock()
     {
-        onEndGroup();
-        currentGroupTag = UNKNOWN;
+        onGroupEnd();
+
+        final boolean wasNested = !groups.isEmpty();
+        if (wasNested)
+        {
+            currentGroup = groups.pop();
+        }
+        else
+        {
+            currentGroup.tag = UNKNOWN;
+        }
+        return wasNested;
     }
 
-    private void onEndGroup()
+    private void onGroupEnd()
     {
-        acceptor.onGroupEnd(currentGroupTag, currentGroupNumberOfElements, currentGroupIndex);
-
-        // TODO:
-        /*currentGroupFields = outerGroupFields.poll();
-        currentGroupNumber = currentGroupFields == null ? UNKNOWN : outerGroupNumber.poll();*/
-
+        acceptor.onGroupEnd(currentGroup.tag, currentGroup.numberOfElements, currentGroup.index);
     }
 
     private void groupHeader(final int tag, final int valueOffset, final int endOfField, final IntHashSet newGroupFields)
     {
         final int numberOfElements = string.getInt(valueOffset, endOfField);
-        // Normalise away empty repeating groups, since its valid to leave them out anyway
 
-            // TODO:
-            /*if (insideAGroup())
-            {
-                outerGroupFields.push(this.currentGroupFields);
-                outerGroupNumber.push(Integer.valueOf(this.currentGroupTag));
-            }*/
         acceptor.onGroupHeader(tag, numberOfElements);
 
         if (numberOfElements > 0)
         {
-            currentGroupTag = tag;
-            currentGroupFields = newGroupFields;
-            currentGroupFirstField = UNKNOWN;
-            currentGroupNumberOfElements = numberOfElements;
-            currentGroupIndex = 0;
+            if (insideAGroup())
+            {
+                groups.push(currentGroup);
+                currentGroup = new GroupInformation();
+            }
+
+            currentGroup.tag = tag;
+            currentGroup.fields = newGroupFields;
+            currentGroup.firstField = UNKNOWN;
+            currentGroup.numberOfElements = numberOfElements;
+            currentGroup.index = 0;
 
             onGroupBegin();
         }
@@ -211,7 +214,7 @@ public final class GenericParser implements MessageHandler
 
     private void onGroupBegin()
     {
-        acceptor.onGroupBegin(currentGroupTag, currentGroupNumberOfElements, currentGroupIndex);
+        acceptor.onGroupBegin(currentGroup.tag, currentGroup.numberOfElements, currentGroup.index);
     }
 
     private boolean validatePosition(final int position, final OtfMessageAcceptor acceptor, final int messageType, final int tag)
@@ -242,6 +245,15 @@ public final class GenericParser implements MessageHandler
         }
 
         return (total % 256) == checksum;
+    }
+
+    private class GroupInformation
+    {
+        private int tag = UNKNOWN;
+        private IntHashSet fields = null;
+        private int firstField;
+        private int numberOfElements;
+        private int index;
     }
 
 }
