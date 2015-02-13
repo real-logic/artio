@@ -15,31 +15,54 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**
  * .
  */
 public class AsciiFieldFlyweight
 {
+    protected final AsciiFlyweight ascii = new AsciiFlyweight();
+    protected DirectBuffer buffer;
+    protected int offset;
+    protected int length;
+
+    public void wrap(final DirectBuffer buffer, final int offset, final int length)
+    {
+        this.buffer = buffer;
+        this.offset = offset;
+        this.length = length;
+        ascii.wrap(buffer);
+    }
+
     public String toString()
     {
-        // TODO: implement
-        return super.toString();
+        return new String(toByteArray(), US_ASCII);
     }
 
     public char[] toCharArray()
     {
-        throw new UnsupportedOperationException("unimplemented");
+        final char[] characters = new char[length];
+        for (int i = 0; i < length; i++)
+        {
+            characters[i] = ascii.getChar(i + offset);
+        }
+        return characters;
     }
 
     public byte[] toByteArray()
     {
-        throw new UnsupportedOperationException("unimplemented");
+        final byte[] bytes = new byte[length];
+        buffer.getBytes(offset, bytes);
+        return bytes;
     }
 
     public void getBytes(MutableDirectBuffer dest, int offset)
     {
-        throw new UnsupportedOperationException("unimplemented");
+        dest.putBytes(offset, buffer, this.offset, this.length);
     }
 }

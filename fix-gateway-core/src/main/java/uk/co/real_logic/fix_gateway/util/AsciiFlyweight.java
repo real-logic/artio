@@ -28,6 +28,11 @@ public class AsciiFlyweight
 
     private DirectBuffer buffer;
 
+    public AsciiFlyweight()
+    {
+        this(null);
+    }
+
     public AsciiFlyweight(final DirectBuffer buffer)
     {
         this.buffer = buffer;

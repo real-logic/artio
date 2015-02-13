@@ -22,6 +22,6 @@ public class DecimalFloatFlyweight extends AsciiFieldFlyweight
 {
     public void getFloat(DecimalFloat value)
     {
-
+        ascii.parseFloat(offset, length, value);
     }
 }

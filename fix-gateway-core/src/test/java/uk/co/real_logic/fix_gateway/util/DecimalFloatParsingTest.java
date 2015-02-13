@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.parser;
+package uk.co.real_logic.fix_gateway.util;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -21,7 +21,6 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.util.Arrays;
 

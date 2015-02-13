@@ -24,7 +24,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
-public class AsciiFieldFlyweightTest
+public class AsciiFlyweightTest
 {
     private static final int OFFSET = 3;
     private static final byte[] BYTES = "8=FIX.4.2A 9=145A ".getBytes(US_ASCII);

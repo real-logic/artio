@@ -38,10 +38,21 @@ package uk.co.real_logic.fix_gateway.fields;
  *
  * TODO: document range of valid values
  */
-public final class DecimalFloat
+public final class DecimalFloat implements Comparable<DecimalFloat>
 {
     private long value;
     private int scale;
+
+    public DecimalFloat()
+    {
+        this(0,0);
+    }
+
+    public DecimalFloat(final long value, final int scale)
+    {
+        this.value = value;
+        this.scale = scale;
+    }
 
     public long value()
     {
@@ -91,5 +102,20 @@ public final class DecimalFloat
     {
         final String value = String.valueOf(this.value);
         return value.substring(0, scale) + "." + value.substring(scale);
+    }
+
+    public int compareTo(final DecimalFloat other)
+    {
+        final boolean isPositive = value >= 0;
+        final int negativeComparison = Boolean.compare(isPositive, other.value >= 0);
+        if (negativeComparison != 0)
+        {
+            return negativeComparison;
+        }
+
+        final int scaleComparison = Long.compare(scale, other.scale);
+        return (scaleComparison == 0)
+             ? Long.compare(value, other.value)
+             : !isPositive ? -1 * scaleComparison : scaleComparison;
     }
 }
