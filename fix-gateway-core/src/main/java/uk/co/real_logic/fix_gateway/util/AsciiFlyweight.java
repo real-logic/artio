@@ -131,10 +131,9 @@ public class AsciiFlyweight
 
     public void parseFloat(int offset, int length, final DecimalFloat number)
     {
-        // TODO: add support to skip whitespace
         // Throw away trailing zeros
         int end = offset + length;
-        for(int index = end - 1; buffer.getByte(index) == '0' && index > offset; index--)
+        for(int index = end - 1; isDispensibleCharacter(index) && index > offset; index--)
         {
             end--;
         }
@@ -148,7 +147,7 @@ public class AsciiFlyweight
         }
 
         // Throw away leading zeros
-        for (int index = offset; buffer.getByte(index) == '0' && index < end; index++)
+        for (int index = offset; isDispensibleCharacter(index) && index < end; index++)
         {
             offset++;
         }
@@ -171,6 +170,12 @@ public class AsciiFlyweight
 
         number.value(negative ? -1 * value : value);
         number.scale(scale);
+    }
+
+    private boolean isDispensibleCharacter(final int index)
+    {
+        final byte character = buffer.getByte(index);
+        return character == '0' || character == ' ';
     }
 
 }
