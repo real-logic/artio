@@ -13,14 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.reactive_api;
+package uk.co.real_logic.fix_gateway.fields;
 
-import uk.co.real_logic.fix_gateway.flyweight_api.Side;
+import uk.co.real_logic.agrona.MutableDirectBuffer;
 
 /**
  * .
  */
-public interface SideFlyweight extends AsciiFieldFlyweight
+public class AsciiFieldFlyweight
 {
-    Side getSide();
+    public String toString()
+    {
+        // TODO: implement
+        return super.toString();
+    }
+
+    public char[] toCharArray()
+    {
+        throw new UnsupportedOperationException("unimplemented");
+    }
+
+    public byte[] toByteArray()
+    {
+        throw new UnsupportedOperationException("unimplemented");
+    }
+
+    public void getBytes(MutableDirectBuffer dest, int offset)
+    {
+        throw new UnsupportedOperationException("unimplemented");
+    }
 }

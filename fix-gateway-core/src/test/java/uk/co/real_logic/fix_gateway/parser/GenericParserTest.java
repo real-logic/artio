@@ -15,10 +15,24 @@
  */
 package uk.co.real_logic.fix_gateway.parser;
 
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.InOrder;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
+import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
+
+import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.ValidationError.INVALID_CHECKSUM;
+import static uk.co.real_logic.fix_gateway.ValidationError.PARSE_ERROR;
+import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
+
+
 public class GenericParserTest
 {
     // TODO: Update to API
-    /*
+
     public static final int LENGTH = 16 * 1024;
 
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[LENGTH]);
@@ -70,7 +84,7 @@ public class GenericParserTest
         parser.onMessage(buffer, 0, MSG_LEN, 1L);
 
         then:
-        verify(mockAcceptor).onError(true);
+        verify(mockAcceptor).onComplete();
     }
 
     @Test
@@ -83,7 +97,7 @@ public class GenericParserTest
         parser.onMessage(buffer, 0, INVALID_CHECKSUM_LEN, 1L);
 
         then:
-        verify(mockAcceptor).onError(false);
+        verify(mockAcceptor).onError(eq(INVALID_CHECKSUM), eq((int) 'D'), eq(10), any(AsciiFieldFlyweight.class));
     }
 
     @Test
@@ -96,7 +110,7 @@ public class GenericParserTest
         parser.onMessage(buffer, 0, INVALID_LEN, 1L);
 
         then:
-        verify(mockAcceptor).onError(false);
+        verify(mockAcceptor).onError(eq(PARSE_ERROR), eq((int) 'D'), eq(11), any(AsciiFieldFlyweight.class));
     }
 
     // TODO: change group parsing code to reflect updated API
@@ -226,6 +240,6 @@ public class GenericParserTest
     {
         inOrder.verify(mockAcceptor, times(1)).onField(eq(tag), eq(buffer), anyInt(), anyInt());
     }
-    */
+
 
 }

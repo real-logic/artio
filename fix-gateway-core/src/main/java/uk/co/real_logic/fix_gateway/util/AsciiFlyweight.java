@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.util;
 
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.parser.DecimalFloat;
+import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 
 /**
  * Mutable String class that flyweights a data buffer. This assumes a US-ASCII encoding

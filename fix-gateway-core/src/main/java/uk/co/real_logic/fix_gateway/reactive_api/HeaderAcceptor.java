@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.reactive_api;
 
 import uk.co.real_logic.fix_gateway.MessageAcceptor;
+import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 
 /**
  * .

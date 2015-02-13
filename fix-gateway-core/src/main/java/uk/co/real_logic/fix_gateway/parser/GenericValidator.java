@@ -19,7 +19,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
-import uk.co.real_logic.fix_gateway.reactive_api.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
 

@@ -1,4 +1,4 @@
-package uk.co.real_logic.fix_gateway.reactive_api;
+package uk.co.real_logic.fix_gateway.fields;
 
 import uk.co.real_logic.fix_gateway.flyweight_api.OrdType;
 

@@ -16,6 +16,10 @@
 package uk.co.real_logic.reactive_api;
 
 import uk.co.real_logic.fix_gateway.ValidationError;
+import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.fields.DecimalFloatFlyweight;
+import uk.co.real_logic.fix_gateway.fields.OrdTypeFlyweight;
+import uk.co.real_logic.fix_gateway.fields.SideFlyweight;
 import uk.co.real_logic.fix_gateway.reactive_api.*;
 
 import static uk.co.real_logic.fix_gateway.flyweight_api.Side.Sell;

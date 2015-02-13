@@ -16,7 +16,9 @@
 package uk.co.real_logic.fix_gateway.parser;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
+import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
 import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
@@ -25,18 +27,18 @@ import uk.co.real_logic.fix_gateway.util.IntHashSet;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.CHECKSUM;
-import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
+import static uk.co.real_logic.fix_gateway.ValidationError.PARSE_ERROR;
+import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.*;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
 // TODO: what should we do if the callbacks throw an exception?
-// TODO: encode 2 char message types into ints
 public final class GenericParser implements MessageHandler
 {
     private static final int NO_CHECKSUM = 0;
-    private static final int NO_GROUP = -1;
+    private static final int UNKNOWN = -1;
 
     private final AsciiFlyweight string = new AsciiFlyweight(null);
+    private final AsciiFieldFlyweight stringField = new AsciiFieldFlyweight();
     private final Deque<IntHashSet> outerGroupFields = new ArrayDeque<>();
     private final Deque<Integer> outerGroupNumber = new ArrayDeque<>();
 
@@ -44,7 +46,7 @@ public final class GenericParser implements MessageHandler
     private final IntDictionary groupToField;
 
     private IntHashSet currentGroupFields = null;
-    private int currentGroupNumber = NO_GROUP;
+    private int currentGroupNumber = UNKNOWN;
 
     public GenericParser(final OtfMessageAcceptor acceptor, final IntDictionary groupToField)
     {
@@ -62,20 +64,22 @@ public final class GenericParser implements MessageHandler
 
         int checksum = NO_CHECKSUM;
         int checksumOffset = 0;
+        int messageType = UNKNOWN;
+        int tag = UNKNOWN;
         try
         {
             while (position < end)
             {
                 final int equalsPosition = string.scan(position, end, '=');
-                if (!validatePosition(equalsPosition, acceptor))
+                if (!validatePosition(equalsPosition, acceptor, messageType, tag))
                 {
                     return;
                 }
 
-                final int tag = string.getInt(position, equalsPosition);
+                tag = string.getInt(position, equalsPosition);
                 final int valueOffset = equalsPosition + 1;
                 final int endOfField = string.scan(valueOffset, end, START_OF_HEADER);
-                if (!validatePosition(endOfField, acceptor))
+                if (!validatePosition(endOfField, acceptor, messageType, tag))
                 {
                     return;
                 }
@@ -94,6 +98,10 @@ public final class GenericParser implements MessageHandler
                         checksum = string.getInt(valueOffset, endOfField);
                         checksumOffset = equalsPosition - 2;
                     }
+                    else if(tag == MESSAGE_TYPE)
+                    {
+                        messageType = string.getMessageType(valueOffset, valueLength);
+                    }
                 }
                 else
                 {
@@ -109,21 +117,26 @@ public final class GenericParser implements MessageHandler
                 endGroup();
             }
 
-            // TODO: update to API
-            //acceptor.onError(validateChecksum(buffer, offset, checksumOffset, checksum));
+            if (validateChecksum(buffer, offset, checksumOffset, checksum))
+            {
+                acceptor.onComplete();
+            }
+            else
+            {
+                acceptor.onError(ValidationError.INVALID_CHECKSUM, messageType, CHECKSUM, stringField);
+            }
         }
         catch (IllegalArgumentException e)
         {
-            //e.printStackTrace();
             // Error parsing the message
-            // TODO: update to API
-            //acceptor.onError(false);
+            // e.printStackTrace();
+            acceptor.onError(PARSE_ERROR, messageType, tag, stringField);
         }
     }
 
     private boolean insideAGroup()
     {
-        return this.currentGroupNumber != NO_GROUP;
+        return this.currentGroupNumber != UNKNOWN;
     }
 
     private void checkGroupEnd(final int tag)
@@ -138,7 +151,7 @@ public final class GenericParser implements MessageHandler
     {
         acceptor.onGroupEnd(currentGroupNumber, 0, 0);
         currentGroupFields = outerGroupFields.poll();
-        currentGroupNumber = currentGroupFields == null ? NO_GROUP : outerGroupNumber.poll();
+        currentGroupNumber = currentGroupFields == null ? UNKNOWN : outerGroupNumber.poll();
     }
 
     private void groupBegin(final int tag, final int valueOffset, final int endOfField, final IntHashSet newGroupFields)
@@ -164,12 +177,12 @@ public final class GenericParser implements MessageHandler
         return this.currentGroupFields != null && this.currentGroupFields.contains(tag);
     }
 
-    private boolean validatePosition(final int position, final OtfMessageAcceptor acceptor)
+    private boolean validatePosition(final int position, final OtfMessageAcceptor acceptor, final int messageType, final int tag)
     {
         if (position == UNKNOWN_INDEX)
         {
-            // TODO: update to API
-            // acceptor.onError(false);
+            // null because there's no actual field data at this point.
+            acceptor.onError(PARSE_ERROR, messageType, tag, null);
             return false;
         }
 

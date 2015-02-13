@@ -13,20 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.reactive_api;
+package uk.co.real_logic.fix_gateway.fields;
 
-import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.fix_gateway.flyweight_api.Side;
 
 /**
  * .
  */
-public interface AsciiFieldFlyweight
+public class SideFlyweight extends AsciiFieldFlyweight
 {
-    String toString();
-
-    char[] toCharArray();
-
-    byte[] toByteArray();
-
-    void getBytes(MutableDirectBuffer dest, int offset);
+    public Side getSide()
+    {
+        return null;
+    }
 }

@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway;
 public enum ValidationError
 {
     INVALID_CHECKSUM,
+    PARSE_ERROR,
     MISSING_REQUIRED_FIELD,
     UNKNOWN_FIELD
 }
