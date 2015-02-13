@@ -113,7 +113,7 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
             return negativeComparison;
         }
 
-        final int scaleComparison = Long.compare(scale, other.scale);
+        final int scaleComparison = Integer.compare(scale, other.scale);
         return (scaleComparison == 0)
              ? Long.compare(value, other.value)
              : !isPositive ? -1 * scaleComparison : scaleComparison;
