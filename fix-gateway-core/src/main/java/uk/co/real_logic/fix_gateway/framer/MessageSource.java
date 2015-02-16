@@ -18,7 +18,8 @@ package uk.co.real_logic.fix_gateway.framer;
 /**
  * A message source might be the replication buffer, or a directly plugged in message builder.
  */
+@FunctionalInterface
 public interface MessageSource
 {
-    int drainTo(final MessageHandler handler);
+    int drainTo(MessageHandler handler);
 }

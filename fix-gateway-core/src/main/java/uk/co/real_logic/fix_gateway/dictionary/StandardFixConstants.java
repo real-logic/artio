@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.dictionary;
 
 public final class StandardFixConstants
 {
-
     public static final byte START_OF_HEADER = 0x01;
 
     // Message Types
@@ -25,5 +24,4 @@ public final class StandardFixConstants
     public static final int HEARTBEAT = 0;
     public static final int CHECKSUM = 10;
     public static final int MESSAGE_TYPE = 35;
-
 }

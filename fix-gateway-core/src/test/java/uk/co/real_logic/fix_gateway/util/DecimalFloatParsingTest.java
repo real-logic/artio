@@ -33,7 +33,8 @@ public class DecimalFloatParsingTest
     @Parameters(name = "{index}: {0} => {1},{2}")
     public static Iterable<Object[]> data1()
     {
-        return Arrays.asList(new Object[][]{
+        return Arrays.asList(new Object[][]
+            {
                 {"55.36", 5536L, 2},
                 {"55.3600", 5536L, 2},
                 {"0055.36", 5536L, 2},
@@ -51,7 +52,7 @@ public class DecimalFloatParsingTest
                 {"-.995", -995L, 0},
                 {"-0.9950", -995L, 0},
                 {"-25", -25L, 2},
-        });
+            });
     }
 
     private final String input;

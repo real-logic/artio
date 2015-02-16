@@ -48,8 +48,9 @@ public class AsciiFlyweight
         int tally = 0;
         for (int index = startInclusive; index < endExclusive; index++)
         {
-            tally = tally * 10 + getDigit(index);
+            tally = (tally * 10) + getDigit(index);
         }
+
         return tally;
     }
 
@@ -71,12 +72,12 @@ public class AsciiFlyweight
 
     public char getChar(final int index)
     {
-        return (char) buffer.getByte(index);
+        return (char)buffer.getByte(index);
     }
 
     public int scanBack(final int startInclusive, final int endExclusive, final char terminatingCharacter)
     {
-        return scanBack(startInclusive, endExclusive, (byte) terminatingCharacter);
+        return scanBack(startInclusive, endExclusive, (byte)terminatingCharacter);
     }
 
     public int scanBack(final int startInclusive, final int endExclusive, final byte terminator)
@@ -95,22 +96,24 @@ public class AsciiFlyweight
 
     public int scan(final int startInclusive, final int endExclusive, final char terminatingCharacter)
     {
-        return scan(startInclusive, endExclusive, (byte) terminatingCharacter);
+        return scan(startInclusive, endExclusive, (byte)terminatingCharacter);
     }
 
     public int scan(final int startInclusive, final int endExclusive, final byte terminator)
     {
-        for (int index = startInclusive; index <= endExclusive; index++)
+        int indexValue = UNKNOWN_INDEX;
+        for (int i = startInclusive; i <= endExclusive; i++)
         {
-            final byte value = buffer.getByte(index);
-            //System.out.println(value + " @ " + index);
+            final byte value = buffer.getByte(i);
+            //System.out.println(value + " @ " + i);
             if (value == terminator)
             {
-                return index;
+                indexValue = i;
+                break;
             }
         }
 
-        return UNKNOWN_INDEX;
+        return indexValue;
     }
 
     // TODO: improve debug logging
@@ -138,7 +141,7 @@ public class AsciiFlyweight
     {
         // Throw away trailing zeros
         int end = offset + length;
-        for(int index = end - 1; isDispensibleCharacter(index) && index > offset; index--)
+        for (int index = end - 1; isDispensableCharacter(index) && index > offset; index--)
         {
             end--;
         }
@@ -152,7 +155,7 @@ public class AsciiFlyweight
         }
 
         // Throw away leading zeros
-        for (int index = offset; isDispensibleCharacter(index) && index < end; index++)
+        for (int index = offset; isDispensableCharacter(index) && index < end; index++)
         {
             offset++;
         }
@@ -177,7 +180,7 @@ public class AsciiFlyweight
         number.scale(scale);
     }
 
-    private boolean isDispensibleCharacter(final int index)
+    private boolean isDispensableCharacter(final int index)
     {
         final byte character = buffer.getByte(index);
         return character == '0' || character == ' ';

@@ -45,7 +45,7 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 
     public DecimalFloat()
     {
-        this(0,0);
+        this(0, 0);
     }
 
     public DecimalFloat(final long value, final int scale)
@@ -88,13 +88,13 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
             return false;
         }
 
-        final DecimalFloat that = (DecimalFloat) o;
+        final DecimalFloat that = (DecimalFloat)o;
         return scale == that.scale && value == that.value;
     }
 
     public int hashCode()
     {
-        int result = (int) (value ^ (value >>> 32));
+        int result = (int)(value ^ (value >>> 32));
         return 31 * result + scale;
     }
 
@@ -114,8 +114,8 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         }
 
         final int scaleComparison = Integer.compare(scale, other.scale);
-        return (scaleComparison == 0)
-             ? Long.compare(value, other.value)
-             : !isPositive ? -1 * scaleComparison : scaleComparison;
+        return scaleComparison == 0
+            ? Long.compare(value, other.value)
+            : !isPositive ? -1 * scaleComparison : scaleComparison;
     }
 }

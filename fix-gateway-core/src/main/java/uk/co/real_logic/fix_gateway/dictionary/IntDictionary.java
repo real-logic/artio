@@ -42,23 +42,24 @@ public final class IntDictionary
 
     public static IntDictionary allFields(final DataDictionary dataDictionary)
     {
-        return fields(dataDictionary, entry -> true);
+        return fields(dataDictionary, (entry) -> true);
     }
 
     private static IntDictionary fields(final DataDictionary dataDictionary, final Predicate<Entry> entryPredicate)
     {
         final IntDictionary fields = new IntDictionary();
 
-        dataDictionary.messages().forEach(message ->
-        {
-            final int type = message.type();
-            message.entries()
-                   .stream()
-                   .filter(entryPredicate)
-                   .filter(entry -> entry.element() instanceof Field)
-                   .map(entry -> (Field) entry.element())
-                   .forEach(field -> fields.put(type, field.number()));
-        });
+        dataDictionary.messages().forEach(
+            (message) ->
+            {
+                final int type = message.type();
+                message.entries()
+                    .stream()
+                    .filter(entryPredicate)
+                    .filter((entry) -> entry.element() instanceof Field)
+                    .map((entry) -> (Field)entry.element())
+                    .forEach((field) -> fields.put(type, field.number()));
+            });
 
         return fields;
     }
@@ -73,7 +74,7 @@ public final class IntDictionary
         valuesOrDefault(key).add(value);
     }
 
-    public void putAll(final int key, final int ... valuesToAdd)
+    public void putAll(final int key, final int... valuesToAdd)
     {
         final IntHashSet values = valuesOrDefault(key);
         for (final int value : valuesToAdd)

@@ -24,7 +24,6 @@ import static org.mockito.Mockito.*;
 
 public class MultiplexerTest
 {
-
     private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
     private MessageSource mockSource = mock(MessageSource.class);
     private Multiplexer multiplexer = new Multiplexer(mockSource);
@@ -35,11 +34,12 @@ public class MultiplexerTest
     @Before
     public void setUp()
     {
-        doAnswer(inv ->
-        {
-            multiplexer.onMessage(buffer, 1, 1, 1L);
-            return 1;
-        }).when(mockSource).drainTo(multiplexer);
+        doAnswer(
+            (inv) ->
+            {
+                multiplexer.onMessage(buffer, 1, 1, 1L);
+                return 1;
+            }).when(mockSource).drainTo(multiplexer);
     }
 
     @Test

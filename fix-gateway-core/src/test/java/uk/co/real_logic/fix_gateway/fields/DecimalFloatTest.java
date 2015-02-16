@@ -24,59 +24,59 @@ import static org.junit.Assert.assertThat;
 
 public class DecimalFloatTest
 {
-    private DecimalFloat _0 = new DecimalFloat(0, 0);
-    private DecimalFloat _5 = new DecimalFloat(5, 0);
-    private DecimalFloat minus5 = new DecimalFloat(-5, 0);
+    private static final DecimalFloat ZERO = new DecimalFloat(0, 0);
+    private static final DecimalFloat FIVE = new DecimalFloat(5, 0);
+    private static final DecimalFloat MINUS_FIVE = new DecimalFloat(-5, 0);
 
-    private DecimalFloat point1 = new DecimalFloat(1, 1);
-    private DecimalFloat _5point5 = new DecimalFloat(55, 1);
-    private DecimalFloat minus5point5 = new DecimalFloat(-55, 1);
+    private static final DecimalFloat POINT_ONE = new DecimalFloat(1, 1);
+    private static final DecimalFloat FIVE_POINT_FIVE = new DecimalFloat(55, 1);
+    private static final DecimalFloat MINUS_FIVE_POINT_FIVE = new DecimalFloat(-55, 1);
 
     @Test
     public void compareToDetectsEqualIntegers()
     {
-        assertThat(_0, comparesEqualTo(_0));
-        assertThat(_5, comparesEqualTo(new DecimalFloat(5, 0)));
-        assertThat(minus5, comparesEqualTo(new DecimalFloat(-5, 0)));
+        assertThat(ZERO, comparesEqualTo(ZERO));
+        assertThat(FIVE, comparesEqualTo(new DecimalFloat(5, 0)));
+        assertThat(MINUS_FIVE, comparesEqualTo(new DecimalFloat(-5, 0)));
     }
 
     @Test
     public void compareToOrdersIntegers()
     {
-        assertThat(_0, lessThan(_5));
-        assertThat(_5, greaterThan(_0));
+        assertThat(ZERO, lessThan(FIVE));
+        assertThat(FIVE, greaterThan(ZERO));
 
-        assertThat(minus5, lessThan(_0));
-        assertThat(_0, greaterThan(minus5));
+        assertThat(MINUS_FIVE, lessThan(ZERO));
+        assertThat(ZERO, greaterThan(MINUS_FIVE));
 
-        assertThat(minus5, lessThan(_5));
-        assertThat(_5, greaterThan(minus5));
+        assertThat(MINUS_FIVE, lessThan(FIVE));
+        assertThat(FIVE, greaterThan(MINUS_FIVE));
     }
 
     @Test
     public void compareToOrdersFloatsOfSameScale()
     {
-        assertThat(point1, lessThan(_5point5));
-        assertThat(_5point5, greaterThan(point1));
+        assertThat(POINT_ONE, lessThan(FIVE_POINT_FIVE));
+        assertThat(FIVE_POINT_FIVE, greaterThan(POINT_ONE));
 
-        assertThat(minus5point5, lessThan(point1));
-        assertThat(point1, greaterThan(minus5point5));
+        assertThat(MINUS_FIVE_POINT_FIVE, lessThan(POINT_ONE));
+        assertThat(POINT_ONE, greaterThan(MINUS_FIVE_POINT_FIVE));
 
-        assertThat(minus5point5, lessThan(_5));
-        assertThat(_5point5, greaterThan(minus5point5));
+        assertThat(MINUS_FIVE_POINT_FIVE, lessThan(FIVE));
+        assertThat(FIVE_POINT_FIVE, greaterThan(MINUS_FIVE_POINT_FIVE));
     }
 
     @Test
     public void compareToOrdersFloatsWithIntegers()
     {
-        assertThat(_0, lessThan(point1));
-        assertThat(point1, greaterThan(_0));
+        assertThat(ZERO, lessThan(POINT_ONE));
+        assertThat(POINT_ONE, greaterThan(ZERO));
 
-        assertThat(minus5point5, lessThan(_0));
-        assertThat(_0, greaterThan(minus5point5));
+        assertThat(MINUS_FIVE_POINT_FIVE, lessThan(ZERO));
+        assertThat(ZERO, greaterThan(MINUS_FIVE_POINT_FIVE));
 
-        assertThat(minus5point5, lessThan(_5));
-        assertThat(_5, greaterThan(minus5point5));
+        assertThat(MINUS_FIVE_POINT_FIVE, lessThan(FIVE));
+        assertThat(FIVE, greaterThan(MINUS_FIVE_POINT_FIVE));
     }
 
     @Test
@@ -91,10 +91,10 @@ public class DecimalFloatTest
         assertThat(new DecimalFloat(45, 2), greaterThan(new DecimalFloat(-45, 1)));
         assertThat(new DecimalFloat(-45, 1), lessThan(new DecimalFloat(45, 2)));
 
-        assertThat(_0, greaterThan(new DecimalFloat(-45, 1)));
-        assertThat(new DecimalFloat(-45, 1), lessThan(_0));
+        assertThat(ZERO, greaterThan(new DecimalFloat(-45, 1)));
+        assertThat(new DecimalFloat(-45, 1), lessThan(ZERO));
 
-        assertThat(new DecimalFloat(45, 2), greaterThan(_0));
-        assertThat(_0, lessThan(new DecimalFloat(45, 2)));
+        assertThat(new DecimalFloat(45, 2), greaterThan(ZERO));
+        assertThat(ZERO, lessThan(new DecimalFloat(45, 2)));
     }
 }

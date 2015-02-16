@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class ConnectionHandler
 {
-
     private final AtomicLong idSource = new AtomicLong(0);
 
     private final int bufferSize;
@@ -45,7 +44,7 @@ public class ConnectionHandler
         final ReceiverEndPoint receiverEndPoint = new ReceiverEndPoint(channel, bufferSize, messageHandler, connectionId);
         final SenderEndPoint senderEndPoint = new SenderEndPoint(channel);
         final InetSocketAddress remoteAddress = (InetSocketAddress) channel.getRemoteAddress();
+
         return new Connection(connectionId, remoteAddress, receiverEndPoint, senderEndPoint);
     }
-
 }

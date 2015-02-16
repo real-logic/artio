@@ -24,7 +24,6 @@ import static org.junit.Assert.*;
 
 public class IntHashSetTest
 {
-
     private IntHashSet obj = new IntHashSet(100, -1);
 
     @Test
@@ -182,12 +181,11 @@ public class IntHashSetTest
 
     private void assertIteratorHasElements()
     {
-        final Iterator<Integer> it = obj.iterator();
-        assertTrue(it.hasNext());
-        assertEquals(Integer.valueOf(1), it.next());
-        assertTrue(it.hasNext());
-        assertEquals(Integer.valueOf(2), it.next());
-        assertFalse(it.hasNext());
+        final Iterator<Integer> iter = obj.iterator();
+        assertTrue(iter.hasNext());
+        assertEquals(Integer.valueOf(1), iter.next());
+        assertTrue(iter.hasNext());
+        assertEquals(Integer.valueOf(2), iter.next());
+        assertFalse(iter.hasNext());
     }
-
 }

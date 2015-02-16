@@ -33,26 +33,25 @@ public interface OtfMessageAcceptor extends MessageAcceptor
      * Called at the beginning of a repeating group.
      *
      * @param tag the tag number of the field representing the number of elements, eg NoAllocs
-     * @param numberOfElements the number of group elements repeated
+     * @param numInGroup the number of group elements repeated
      */
-    void onGroupHeader(int tag, int numberOfElements);
+    void onGroupHeader(int tag, int numInGroup);
 
     /**
      * Called at the beginning of each group entry.
      *
      * @param tag
-     * @param numberOfElements
+     * @param numInGroup
      * @param index
      */
-    void onGroupBegin(int tag, int numberOfElements, int index);
+    void onGroupBegin(int tag, int numInGroup, int index);
 
     /**
      * Called at the end of each group entry
      *
      * @param tag
-     * @param numberOfElements
+     * @param numInGroup
      * @param index
      */
-    void onGroupEnd(int tag, int numberOfElements, int index);
-
+    void onGroupEnd(int tag, int numInGroup, int index);
 }

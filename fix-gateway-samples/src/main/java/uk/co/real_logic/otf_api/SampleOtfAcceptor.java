@@ -22,7 +22,6 @@ import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 
 public class SampleOtfAcceptor implements OtfMessageAcceptor
 {
-
     private boolean wantsToSell;
     private String symbol;
 
@@ -53,21 +52,20 @@ public class SampleOtfAcceptor implements OtfMessageAcceptor
     }
 
     @Override
-    public void onGroupHeader(int tag, int numberOfElements)
+    public void onGroupHeader(final int tag, final int numInGroup)
     {
         // Some FIX fields consist of repeating groups, you get callbacks
         // when these start and end.
     }
 
     @Override
-    public void onGroupBegin(final int tag, final int numberOfElements, final int index)
+    public void onGroupBegin(final int tag, final int numInGroup, final int index)
     {
     }
 
     @Override
-    public void onGroupEnd(final int tag, final int numberOfElements, final int index)
+    public void onGroupEnd(final int tag, final int numInGroup, final int index)
     {
-
     }
 
     @Override
@@ -83,7 +81,8 @@ public class SampleOtfAcceptor implements OtfMessageAcceptor
     }
 
     @Override
-    public boolean onError(ValidationError error, int messageType, int tagNumber, AsciiFieldFlyweight value)
+    public boolean onError(
+        final ValidationError error, final int messageType, final int tagNumber, final AsciiFieldFlyweight value)
     {
         return false;
     }

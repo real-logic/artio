@@ -103,7 +103,7 @@ public class DictionaryParserTest
         final Entry entry = heartbeat.entries().get(3);
         assertFalse(entry.required());
 
-        final Field field = (Field) entry.element();
+        final Field field = (Field)entry.element();
         assertEquals("TestReqID", field.name());
         assertEquals(112, field.number());
         assertFalse(field.isEnum());
@@ -145,7 +145,7 @@ public class DictionaryParserTest
         final List<Entry> entries = newOrderSingle.entries();
 
         final Entry entry = entries.get(6);
-        final Group noTradingSessions = (Group) entry.element();
+        final Group noTradingSessions = (Group)entry.element();
         assertEquals("NoTradingSessions", noTradingSessions.name());
 
         final List<Entry> groupEntries = noTradingSessions.entries();
@@ -167,7 +167,7 @@ public class DictionaryParserTest
     public void shouldParseNestedGroups()
     {
         final Component members = component("Members");
-        final Group noMemberIDs = (Group) members.entries().get(0).element();
+        final Group noMemberIDs = (Group)members.entries().get(0).element();
 
         final Entry noMemberSubIDs = noMemberIDs.entries().get(1);
         assertFalse(noMemberSubIDs.required());
@@ -187,11 +187,11 @@ public class DictionaryParserTest
     private long countEnumFields()
     {
         return dictionary
-                .fields()
-                .values()
-                .stream()
-                .filter(Field::isEnum)
-                .count();
+            .fields()
+            .values()
+            .stream()
+            .filter(Field::isEnum)
+            .count();
     }
 
     private Field field(final String name)
@@ -203,5 +203,4 @@ public class DictionaryParserTest
     {
         return new DictionaryParser().parse(DictionaryParserTest.class.getResourceAsStream(EXAMPLE_FILE));
     }
-
 }

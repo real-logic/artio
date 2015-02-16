@@ -193,5 +193,4 @@ public class GenericValidatorTest
     {
         validator.onField(112, buffer, 0, 1);
     }
-
 }

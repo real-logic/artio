@@ -45,10 +45,10 @@ public final class Receiver implements Agent
 
     // TODO: add hooks for receive and send buffer sizes
     public Receiver(
-            final SocketAddress address,
-            final ConnectionHandler connectionHandler,
-            final OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue,
-            final SenderProxy sender)
+        final SocketAddress address,
+        final ConnectionHandler connectionHandler,
+        final OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue,
+        final SenderProxy sender)
     {
         this.connectionHandler = connectionHandler;
         this.commandQueue = commandQueue;
@@ -62,9 +62,9 @@ public final class Receiver implements Agent
             selector = Selector.open();
             listeningChannel.register(selector, SelectionKey.OP_ACCEPT);
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
-            throw new IllegalArgumentException(e);
+            throw new IllegalArgumentException(ex);
         }
     }
 
@@ -84,9 +84,9 @@ public final class Receiver implements Agent
         final int count = selector.selectNow();
 
         final Set<SelectionKey> keys = selector.selectedKeys();
-        for (Iterator<SelectionKey> it = keys.iterator(); it.hasNext();)
+        for (Iterator<SelectionKey> iter = keys.iterator(); iter.hasNext(); )
         {
-            final SelectionKey key = it.next();
+            final SelectionKey key = iter.next();
             if (key.isAcceptable())
             {
                 final SocketChannel channel = listeningChannel.accept();
@@ -99,10 +99,10 @@ public final class Receiver implements Agent
             }
             else if (key.isReadable())
             {
-                ((ReceiverEndPoint) key.attachment()).receiveData();
+                ((ReceiverEndPoint)key.attachment()).receiveData();
             }
 
-            it.remove();
+            iter.remove();
         }
 
         return count;
@@ -115,10 +115,10 @@ public final class Receiver implements Agent
             final ReceiverEndPoint receiverEndPoint = connection.receiverEndPoint();
             register(receiverEndPoint.channel(), receiverEndPoint);
         }
-        catch (ClosedChannelException e)
+        catch (final ClosedChannelException ex)
         {
             // TODO
-            e.printStackTrace();
+            ex.printStackTrace();
         }
     }
 
@@ -137,9 +137,9 @@ public final class Receiver implements Agent
             selector.close();
             listeningChannel.close();
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException(ex);
         }
     }
 

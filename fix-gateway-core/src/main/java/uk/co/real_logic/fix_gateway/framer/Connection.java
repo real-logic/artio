@@ -29,10 +29,10 @@ public class Connection
     private final SenderEndPoint senderEndPoint;
 
     public Connection(
-            final long connectionId,
-            final InetSocketAddress remoteAddress,
-            final ReceiverEndPoint receiverEndPoint,
-            final SenderEndPoint senderEndPoint)
+        final long connectionId,
+        final InetSocketAddress remoteAddress,
+        final ReceiverEndPoint receiverEndPoint,
+        final SenderEndPoint senderEndPoint)
     {
         this.connectionId = connectionId;
         this.remoteAddress = remoteAddress;

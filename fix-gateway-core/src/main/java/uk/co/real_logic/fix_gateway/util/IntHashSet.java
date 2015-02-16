@@ -41,10 +41,8 @@ public final class IntHashSet implements Set<Integer>
         final int capacity = BitUtil.findNextPositivePowerOfTwo(proposedCapacity);
         mask = capacity - 1;
         values = new int[capacity];
-        for (int i = 0; i < capacity; i++)
-        {
-            values[i] = missingValue;
-        }
+        Arrays.fill(values, missingValue);
+
         // NB: references values in the constructor, so must be assigned after values
         iterator = new IntIterator(missingValue, values);
     }
@@ -76,13 +74,13 @@ public final class IntHashSet implements Set<Integer>
 
         values[index] = value;
         size++;
+
         return true;
     }
 
     public boolean remove(final Object value)
     {
-        return value instanceof Integer
-            && remove(((Integer) value).intValue());
+        return value instanceof Integer && remove(((Integer)value).intValue());
     }
 
     public boolean remove(final int value)
@@ -105,8 +103,7 @@ public final class IntHashSet implements Set<Integer>
 
     public boolean contains(final Object value)
     {
-        return value instanceof Integer
-            && contains(((Integer) value).intValue());
+        return value instanceof Integer && contains(((Integer)value).intValue());
     }
 
     public boolean contains(final int value)
@@ -156,12 +153,12 @@ public final class IntHashSet implements Set<Integer>
     @SuppressWarnings("unchecked")
     public <T> T[] toArray(final T[] ignore)
     {
-        return (T[]) (Object) Arrays.copyOf(values, values.length);
+        return (T[])(Object)Arrays.copyOf(values, values.length);
     }
 
     public boolean addAll(final Collection<? extends Integer> coll)
     {
-        return conjunction(coll, x -> add(x));
+        return conjunction(coll, (x) -> add(x));
     }
 
     public boolean containsAll(final Collection<?> coll)
@@ -212,11 +209,12 @@ public final class IntHashSet implements Set<Integer>
         Objects.requireNonNull(collection);
 
         boolean acc = false;
-        for(T t : collection)
+        for (final T t : collection)
         {
             // Deliberate strict evaluation
             acc |= predicate.test(t);
         }
+
         return acc;
     }
 
@@ -234,7 +232,7 @@ public final class IntHashSet implements Set<Integer>
             throw new IllegalArgumentException("Cannot copy object: masks not equal");
         }
 
-        if(this.missingValue != obj.missingValue)
+        if (this.missingValue != obj.missingValue)
         {
             throw new IllegalArgumentException("Cannot copy object: missingValues not equal");
         }
@@ -246,8 +244,8 @@ public final class IntHashSet implements Set<Integer>
     public String toString()
     {
         return stream()
-              .map(x -> Integer.toString(x))
-              .collect(joining(",", "{", "}"));
+            .map((x) -> Integer.toString(x))
+            .collect(joining(",", "{", "}"));
     }
 
     // --- Unimplemented below here

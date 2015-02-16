@@ -32,7 +32,7 @@ import static uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor.NEW_ORDER_
  */
 public class SampleOtfMain
 {
-    public static void main(String[] args) throws Exception
+    public static void main(final String[] args) throws Exception
     {
         // Static configuration lasts the duration of a FIX-Gateway instance
         final StaticConfiguration configuration = new StaticConfiguration();
@@ -42,7 +42,7 @@ public class SampleOtfMain
         // gets registered for
         configuration.registerAcceptor(new SampleOtfAcceptor(), NEW_ORDER_SINGLE);
 
-        try(final FixGateway gateway = FixGateway.launch(configuration))
+        try (final FixGateway gateway = FixGateway.launch(configuration))
         {
             // The data dictionary is generated from the standard FIX XML dictionary specification.
             final DataDictionary dictionary = new DataDictionary();
@@ -51,8 +51,8 @@ public class SampleOtfMain
             // a Session object. Each session object can be configured with connection
             // details and credentials.
             final SessionConfiguration sessionConfig = new SessionConfiguration()
-                    .address("broker.example.com", 9999)
-                    .credentials("username", "password");
+                .address("broker.example.com", 9999)
+                .credentials("username", "password");
 
             final Session session = gateway.initiate(sessionConfig, dictionary);
 

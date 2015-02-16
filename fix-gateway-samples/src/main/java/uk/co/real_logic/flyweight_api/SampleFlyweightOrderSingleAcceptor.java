@@ -26,7 +26,6 @@ import static uk.co.real_logic.fix_gateway.flyweight_api.Side.Sell;
  */
 public class SampleFlyweightOrderSingleAcceptor implements OrderSingleAcceptor
 {
-
     public void onOrderSingle(final OrderSingleDecoder message)
     {
         System.out.println("a NewOrderSingle has arrived");
@@ -42,7 +41,7 @@ public class SampleFlyweightOrderSingleAcceptor implements OrderSingleAcceptor
         }
         // Optional fields would all have boolean flags to indicate whether
         // They were present in the message that was decoded or not.
-        else if(message.hasClientID())
+        else if (message.hasClientID())
         {
             final AsciiFlyweight clientID = message.clientID();
         }

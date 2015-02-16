@@ -25,7 +25,6 @@ import java.util.Currency;
  */
 public class OrderSingleDecoder
 {
-
     private final DirectBuffer buffer;
 
     private AsciiFlyweight clOrdID;
@@ -228,7 +227,5 @@ public class OrderSingleDecoder
 
     public void decode(final int offset, final int length)
     {
-
     }
-
 }

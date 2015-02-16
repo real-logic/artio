@@ -25,9 +25,9 @@ public final class DataDictionary
     private final Map<String, Component> components;
 
     public DataDictionary(
-            final List<Message> messages,
-            final Map<String, Field> fields,
-            final Map<String, Component> components)
+        final List<Message> messages,
+        final Map<String, Field> fields,
+        final Map<String, Component> components)
     {
         this.messages = messages;
         this.fields = fields;
@@ -53,8 +53,8 @@ public final class DataDictionary
     public String toString()
     {
         return "DataDictionary{" +
-                "messages=" + messages +
-                ", fields=" + fields +
-                '}';
+            "messages=" + messages +
+            ", fields=" + fields +
+            '}';
     }
 }

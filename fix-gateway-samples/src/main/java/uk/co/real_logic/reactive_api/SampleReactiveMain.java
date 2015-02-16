@@ -23,7 +23,7 @@ import uk.co.real_logic.fix_gateway.StaticConfiguration;
  */
 public class SampleReactiveMain
 {
-    public static void main(String[] args) throws Exception
+    public static void main(final String[] args) throws Exception
     {
         // Static configuration lasts the duration of a FIX-Gateway instance
         final StaticConfiguration configuration = new StaticConfiguration();
@@ -32,7 +32,7 @@ public class SampleReactiveMain
         // that receives messages from external connections.
         configuration.registerAcceptor(new SampleReactiveAcceptor());
 
-        try(final FixGateway gateway = FixGateway.launch(configuration))
+        try (final FixGateway gateway = FixGateway.launch(configuration))
         {
             // This would be the same as the SampleOtfMain sample code
         }

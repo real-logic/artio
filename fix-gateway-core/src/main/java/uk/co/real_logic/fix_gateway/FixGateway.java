@@ -19,24 +19,21 @@ import uk.co.real_logic.fix_gateway.builder.DataDictionary;
 
 public final class FixGateway implements AutoCloseable
 {
-
     FixGateway()
     {
-
     }
 
-    public static FixGateway launch(StaticConfiguration configuration)
+    public static FixGateway launch(final StaticConfiguration configuration)
     {
         return new FixGateway();
     }
 
-    public Session initiate(SessionConfiguration host, DataDictionary port)
+    public Session initiate(final SessionConfiguration host, final DataDictionary port)
     {
         return null;
     }
 
     public void close() throws Exception
     {
-
     }
 }

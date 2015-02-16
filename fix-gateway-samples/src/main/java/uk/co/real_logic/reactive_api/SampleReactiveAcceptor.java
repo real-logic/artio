@@ -29,7 +29,6 @@ import static uk.co.real_logic.fix_gateway.flyweight_api.Side.Sell;
  */
 public class SampleReactiveAcceptor implements OrderSingleAcceptor, HeaderAcceptor
 {
-
     private boolean wantsToSell;
     private String symbol;
 
@@ -40,69 +39,60 @@ public class SampleReactiveAcceptor implements OrderSingleAcceptor, HeaderAccept
     }
 
     @Override
-    public void onMessageTypeField(int messageType)
+    public void onMessageTypeField(final int messageType)
     {
-
     }
 
     @Override
-    public void onSenderCompIdField(AsciiFieldFlyweight senderCompId)
+    public void onSenderCompIdField(final AsciiFieldFlyweight senderCompId)
     {
-
     }
 
     @Override
-    public void onSenderSubIdField(AsciiFieldFlyweight senderSubId)
+    public void onSenderSubIdField(final AsciiFieldFlyweight senderSubId)
     {
-
     }
 
     @Override
-    public void onSenderLocationIdField(AsciiFieldFlyweight senderLocationId)
+    public void onSenderLocationIdField(final AsciiFieldFlyweight senderLocationId)
     {
-
     }
 
     @Override
-    public void onClOrdIDField(AsciiFieldFlyweight clOrdID)
+    public void onClOrdIDField(final AsciiFieldFlyweight clOrdID)
     {
-
     }
 
     @Override
-    public void onHandlInstField(char handlInst)
+    public void onHandlInstField(final char handlInst)
     {
-
     }
 
     @Override
-    public void onSideField(SideFlyweight side)
+    public void onSideField(final SideFlyweight side)
     {
         wantsToSell = side.getSide() == Sell;
     }
 
     @Override
-    public void onPriceField(DecimalFloatFlyweight price)
+    public void onPriceField(final DecimalFloatFlyweight price)
     {
-
     }
 
     @Override
-    public void onOrdTypeField(OrdTypeFlyweight ordType)
+    public void onOrdTypeField(final OrdTypeFlyweight ordType)
     {
-
     }
 
     @Override
-    public void onTransactTimeField(long transactTime)
+    public void onTransactTimeField(final long transactTime)
     {
-
     }
 
     @Override
-    public void onSymbolField(AsciiFieldFlyweight symbol)
+    public void onSymbolField(final AsciiFieldFlyweight symbol)
     {
-
+        this.symbol = symbol.toString();
     }
 
     @Override
@@ -115,7 +105,8 @@ public class SampleReactiveAcceptor implements OrderSingleAcceptor, HeaderAccept
     }
 
     @Override
-    public boolean onError(ValidationError error, int messageType, int tagNumber, AsciiFieldFlyweight value)
+    public boolean onError(
+        final ValidationError error, final int messageType, final int tagNumber, final AsciiFieldFlyweight value)
     {
         System.err.println(error);
         return false;

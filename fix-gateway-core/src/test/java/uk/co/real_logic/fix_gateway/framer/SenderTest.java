@@ -53,7 +53,7 @@ public class SenderTest
         server.configureBlocking(false);
 
         when(mockConnectionHandler.createConnection(any(SocketChannel.class)))
-                .thenReturn(mockConnection);
+            .thenReturn(mockConnection);
     }
 
     @After
@@ -87,5 +87,4 @@ public class SenderTest
         then:
         verify(mockReceiver).newConnection(mockConnection);
     }
-
 }

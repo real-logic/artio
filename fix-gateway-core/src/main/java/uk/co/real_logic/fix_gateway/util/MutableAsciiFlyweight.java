@@ -21,7 +21,6 @@ import java.nio.charset.StandardCharsets;
 
 public final class MutableAsciiFlyweight extends AsciiFlyweight
 {
-
     private final MutableDirectBuffer buffer;
 
     public MutableAsciiFlyweight(final MutableDirectBuffer buffer)
@@ -34,6 +33,7 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
     {
         final byte[] bytes = string.getBytes(StandardCharsets.US_ASCII);
         buffer.putBytes(index, bytes);
+
         return bytes.length;
     }
 }

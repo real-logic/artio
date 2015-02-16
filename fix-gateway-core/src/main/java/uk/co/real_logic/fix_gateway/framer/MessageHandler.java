@@ -20,7 +20,8 @@ import uk.co.real_logic.agrona.DirectBuffer;
 /**
  * Handler for messages that have been identified and framed coming in off the wire.
  */
+@FunctionalInterface
 public interface MessageHandler
 {
-    void onMessage(final DirectBuffer buffer, final int offset, final int length, final long connectionId);
+    void onMessage(DirectBuffer buffer, int offset, int length, long connectionId);
 }

@@ -30,7 +30,6 @@ import java.util.function.Consumer;
  */
 public final class Sender implements Agent
 {
-
     private final Consumer<SenderCommand> onCommandFunc = this::onCommand;
 
     private final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue;
@@ -39,10 +38,10 @@ public final class Sender implements Agent
     private final Multiplexer multiplexer;
 
     public Sender(
-            final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue,
-            final ConnectionHandler connectionHandler,
-            final ReceiverProxy receiver,
-            final Multiplexer multiplexer)
+        final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue,
+        final ConnectionHandler connectionHandler,
+        final ReceiverProxy receiver,
+        final Multiplexer multiplexer)
     {
         this.commandQueue = commandQueue;
         this.connectionHandler = connectionHandler;
@@ -72,10 +71,10 @@ public final class Sender implements Agent
             onNewConnection(connection);
             receiver.newConnection(connection);
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
             // TODO
-            e.printStackTrace();
+            ex.printStackTrace();
         }
     }
 
@@ -93,5 +92,4 @@ public final class Sender implements Agent
     {
         return "Sender";
     }
-
 }

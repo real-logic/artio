@@ -27,7 +27,6 @@ import java.util.Currency;
  */
 public class OrderSingleEncoder
 {
-
     private DirectBuffer buffer;
 
     private AsciiFlyweight clOrdID;
@@ -187,44 +186,42 @@ public class OrderSingleEncoder
         return 0;
     }
 
-    public void clOrdID(String clOrdID)
+    public void clOrdID(final String clOrdID)
     {
         // TODO
     }
 
-    public void clOrdID(AsciiFlyweight clOrdID)
+    public void clOrdID(final AsciiFlyweight clOrdID)
     {
         // TODO
     }
 
-    public void clOrdID(DirectBuffer clOrdID, int offset, int length)
+    public void clOrdID(final DirectBuffer clOrdID, final int offset, final int length)
     {
         // TODO
     }
 
-    public void handlInst(char handlInst)
+    public void handlInst(final char handlInst)
     {
         this.handlInst = handlInst;
     }
 
-    public void side(Side side)
+    public void side(final Side side)
     {
         this.side = side;
     }
 
-    public void ordType(OrdType ordType)
+    public void ordType(final OrdType ordType)
     {
         this.ordType = ordType;
     }
 
-    public void transactTime(long transactTime)
+    public void transactTime(final long transactTime)
     {
         this.transactTime = transactTime;
     }
 
-    public void symbol(String symbol)
+    public void symbol(final String symbol)
     {
-
     }
-
 }

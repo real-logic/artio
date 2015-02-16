@@ -41,11 +41,10 @@ public final class Message extends Aggregate
     public String toString()
     {
         return "Message{" +
-                "name='" + name() + '\'' +
-                ", type=" + type +
-                ", category=" + category +
-                ", entries=" + entries() +
-                '}';
+            "name='" + name() + '\'' +
+            ", type=" + type +
+            ", category=" + category +
+            ", entries=" + entries() +
+            '}';
     }
-
 }

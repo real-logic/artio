@@ -25,22 +25,21 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
  */
 public class LogonEncoder
 {
-
     private final MutableDirectBuffer buffer;
 
-    StandardHeader standardHeader;
-    int heartBeatInterval;
+    private StandardHeader standardHeader;
+    private int heartBeatInterval;
     // Or offer a default value
-    int rawDataLength;
-    DirectBuffer rawData;
-    boolean resetSeqNumFlag;
-    int maxMessageSize;
-    int noMsgTypes;
+    private int rawDataLength;
+    private DirectBuffer rawData;
+    private boolean resetSeqNumFlag;
+    private int maxMessageSize;
+    private int noMsgTypes;
 
-    boolean hasRefMsgType;
-    AsciiFlyweight refMsgType;
+    private boolean hasRefMsgType;
+    private AsciiFlyweight refMsgType;
 
-    char msgDirection;
+    private char msgDirection;
 
     LogonEncoder(final MutableDirectBuffer buffer)
     {
@@ -51,5 +50,4 @@ public class LogonEncoder
     {
         return 0;
     }
-
 }

@@ -20,12 +20,12 @@ package uk.co.real_logic.fix_gateway;
  */
 public final class SessionConfiguration
 {
-    public SessionConfiguration credentials(String username, String password)
+    public SessionConfiguration credentials(final String username, final String password)
     {
         return this;
     }
 
-    public SessionConfiguration address(String host, int port)
+    public SessionConfiguration address(final String host, final int port)
     {
         return this;
     }

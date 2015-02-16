@@ -26,7 +26,6 @@ import uk.co.real_logic.fix_gateway.fields.SideFlyweight;
  */
 public interface OrderSingleAcceptor extends MessageAcceptor
 {
-
     // Each field has a callback
 
     void onClOrdIDField(AsciiFieldFlyweight clOrdID);

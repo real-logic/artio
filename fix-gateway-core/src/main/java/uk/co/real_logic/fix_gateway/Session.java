@@ -22,9 +22,7 @@ import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
  */
 public final class Session
 {
-
-    public void send(OrderSingleEncoder orderSingle)
+    public void send(final OrderSingleEncoder orderSingleEncoder)
     {
-
     }
 }

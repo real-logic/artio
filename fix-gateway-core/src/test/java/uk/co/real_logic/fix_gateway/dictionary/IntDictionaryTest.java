@@ -35,7 +35,6 @@ import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 
 public class IntDictionaryTest
 {
-
     private DataDictionary data;
 
     @Before
@@ -73,5 +72,4 @@ public class IntDictionaryTest
         assertTrue(intDictionary.contains('0', 115));
         assertTrue(intDictionary.contains('0', 112));
     }
-
 }

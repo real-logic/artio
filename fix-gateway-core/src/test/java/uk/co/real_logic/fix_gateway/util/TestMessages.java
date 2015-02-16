@@ -73,9 +73,8 @@ public final class TestMessages
     public static final int NO_ORDERS = 73;
     public static final int NO_ALLOCS = 78;
 
-    private static byte[] toAscii(String str)
+    private static byte[] toAscii(final String str)
     {
         return str.getBytes(US_ASCII);
     }
-
 }

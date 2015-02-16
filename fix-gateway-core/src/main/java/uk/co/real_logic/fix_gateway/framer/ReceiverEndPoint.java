@@ -47,7 +47,7 @@ public class ReceiverEndPoint
     private int usedBufferData = 0;
 
     public ReceiverEndPoint(
-            final SocketChannel channel, final int bufferSize, final MessageHandler handler, final long connectionId)
+        final SocketChannel channel, final int bufferSize, final MessageHandler handler, final long connectionId)
     {
         this.channel = channel;
         this.handler = handler;
@@ -69,10 +69,10 @@ public class ReceiverEndPoint
             readData();
             frameMessages();
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
             // TODO
-            e.printStackTrace();
+            ex.printStackTrace();
         }
     }
 
@@ -113,10 +113,10 @@ public class ReceiverEndPoint
 
                 offset += length;
             }
-            catch (Exception e)
+            catch (final Exception ex)
             {
                 // TODO: remove exceptions from the common path
-                e.printStackTrace();
+                ex.printStackTrace();
                 break;
             }
         }
@@ -128,6 +128,7 @@ public class ReceiverEndPoint
     {
         final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData, StandardFixConstants.START_OF_HEADER);
         final int earliestChecksumEnd = endOfBodyLength + getBodyLength(offset, endOfBodyLength) + MIN_CHECKSUM_SIZE;
+
         return string.scan(earliestChecksumEnd, usedBufferData, StandardFixConstants.START_OF_HEADER);
     }
 
@@ -138,8 +139,8 @@ public class ReceiverEndPoint
 
     private boolean validateBodyLengthTag(final int offset)
     {
-        return string.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD
-            || string.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
+        return string.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD ||
+            string.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
     }
 
     private void moveRemainingDataToBufferStart(final int offset)

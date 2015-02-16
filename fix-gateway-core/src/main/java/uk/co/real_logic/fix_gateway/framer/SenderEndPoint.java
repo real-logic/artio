@@ -35,6 +35,7 @@ public class SenderEndPoint
         final ByteBuffer buffer = directBuffer.byteBuffer();
         buffer.position(offset);
         buffer.limit(offset + length);
+
         try
         {
             int bytesWritten = 0;
@@ -44,10 +45,10 @@ public class SenderEndPoint
                 // TODO: figure backoff strategy
             }
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
             // TODO
-            e.printStackTrace();
+            ex.printStackTrace();
         }
     }
 }

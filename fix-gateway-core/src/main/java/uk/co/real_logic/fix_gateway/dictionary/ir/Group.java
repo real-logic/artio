@@ -23,5 +23,4 @@ public final class Group extends Aggregate implements Element
     {
         super(name);
     }
-
 }

@@ -35,7 +35,6 @@ import static org.mockito.Mockito.*;
 
 public class ReceiverTest
 {
-
     private static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", 9999);
 
     private SocketChannel client;
@@ -127,5 +126,4 @@ public class ReceiverTest
         clientBuffer.position(0);
         assertEquals("Has written bytes", clientBuffer.remaining(), client.write(clientBuffer));
     }
-
 }

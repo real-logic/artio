@@ -124,10 +124,10 @@ public final class GenericParser implements MessageHandler
                 acceptor.onError(ValidationError.INVALID_CHECKSUM, messageType, CHECKSUM, stringField);
             }
         }
-        catch (IllegalArgumentException e)
+        catch (final IllegalArgumentException ex)
         {
             // Error parsing the message
-            //e.printStackTrace();
+            //ex.printStackTrace();
             acceptor.onError(PARSE_ERROR, messageType, tag, stringField);
         }
     }
@@ -180,6 +180,7 @@ public final class GenericParser implements MessageHandler
         {
             currentGroup.tag = UNKNOWN;
         }
+
         return wasNested;
     }
 
@@ -223,6 +224,7 @@ public final class GenericParser implements MessageHandler
         {
             // null because there's no actual field data at this point.
             acceptor.onError(PARSE_ERROR, messageType, tag, null);
+
             return false;
         }
 
@@ -247,13 +249,12 @@ public final class GenericParser implements MessageHandler
         return (total % 256) == checksum;
     }
 
-    private class GroupInformation
+    private static class GroupInformation
     {
-        private int tag = UNKNOWN;
-        private IntHashSet fields = null;
-        private int firstField;
-        private int numberOfElements;
-        private int index;
+        int tag = UNKNOWN;
+        IntHashSet fields = null;
+        int firstField;
+        int numberOfElements;
+        int index;
     }
-
 }

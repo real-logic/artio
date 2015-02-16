@@ -254,5 +254,4 @@ public class GenericParserTest
     {
         inOrder.verify(mockAcceptor, times(1)).onField(eq(tag), eq(buffer), anyInt(), anyInt());
     }
-
 }

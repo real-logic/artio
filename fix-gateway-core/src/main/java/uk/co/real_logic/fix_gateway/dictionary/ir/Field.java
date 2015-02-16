@@ -23,7 +23,6 @@ import java.util.Objects;
 
 public final class Field implements Element
 {
-
     private final int number;
     private final String name;
     private final Type type;
@@ -66,11 +65,11 @@ public final class Field implements Element
     public String toString()
     {
         return "EnumField{" +
-                "number=" + number +
-                ", name='" + name + '\'' +
-                ", type=" + type +
-                "values=" + values +
-                '}';
+            "number=" + number +
+            ", name='" + name + '\'' +
+            ", type=" + type +
+            "values=" + values +
+            '}';
     }
 
     public static enum Type
@@ -121,15 +120,14 @@ public final class Field implements Element
                 return false;
             }
 
-            final Value value = (Value) o;
-            return Objects.equals(representation, value.representation)
-                && Objects.equals(description, value.description);
+            final Value value = (Value)o;
+            return Objects.equals(representation, value.representation) && Objects.equals(description, value.description);
         }
 
         @Override
         public int hashCode()
         {
-            int result = (int) representation;
+            int result = representation;
             result = 31 * result + (description != null ? description.hashCode() : 0);
             return result;
         }
@@ -138,9 +136,9 @@ public final class Field implements Element
         public String toString()
         {
             return "Value{" +
-                    "representation=" + representation +
-                    ", description='" + description + '\'' +
-                    '}';
+                "representation=" + representation +
+                ", description='" + description + '\'' +
+                '}';
         }
     }
 }

@@ -26,17 +26,32 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
  */
 public class AsciiFieldFlyweight
 {
-    protected final AsciiFlyweight ascii = new AsciiFlyweight();
-    protected DirectBuffer buffer;
-    protected int offset;
-    protected int length;
+    private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
+    private DirectBuffer buffer;
+    private int offset;
+    private int length;
 
     public void wrap(final DirectBuffer buffer, final int offset, final int length)
     {
+        asciiFlyweight.wrap(buffer);
         this.buffer = buffer;
         this.offset = offset;
         this.length = length;
-        ascii.wrap(buffer);
+    }
+
+    public final int offset()
+    {
+        return offset;
+    }
+
+    public final int length()
+    {
+        return length;
+    }
+
+    protected final AsciiFlyweight asciiFlyweight()
+    {
+        return asciiFlyweight;
     }
 
     public String toString()
@@ -49,8 +64,9 @@ public class AsciiFieldFlyweight
         final char[] characters = new char[length];
         for (int i = 0; i < length; i++)
         {
-            characters[i] = ascii.getChar(i + offset);
+            characters[i] = asciiFlyweight.getChar(i + offset);
         }
+
         return characters;
     }
 
@@ -58,11 +74,12 @@ public class AsciiFieldFlyweight
     {
         final byte[] bytes = new byte[length];
         buffer.getBytes(offset, bytes);
+
         return bytes;
     }
 
-    public void getBytes(MutableDirectBuffer dest, int offset)
+    public void getBytes(MutableDirectBuffer dstBuffer, int dstOffset)
     {
-        dest.putBytes(offset, buffer, this.offset, this.length);
+        dstBuffer.putBytes(dstOffset, buffer, offset, length);
     }
 }

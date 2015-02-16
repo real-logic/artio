@@ -33,7 +33,6 @@ import static uk.co.real_logic.fix_gateway.util.TestMessages.MSG_LEN;
 
 public class ReceiverEndPointTest
 {
-
     private static final long ID = 20L;
 
     private SocketChannel mockChannel = mock(SocketChannel.class);
@@ -63,7 +62,7 @@ public class ReceiverEndPointTest
         endPoint.receiveData();
 
         then:
-        handlerNotcalled();
+        handlerNotCalled();
     }
 
     @Test
@@ -140,7 +139,7 @@ public class ReceiverEndPointTest
         inOrder.verifyNoMoreInteractions();
     }
 
-    private void handlerNotcalled()
+    private void handlerNotCalled()
     {
         verify(mockHandler, never()).onMessage(any(AtomicBuffer.class), anyInt(), anyInt(), eq(ID));
     }
@@ -172,35 +171,37 @@ public class ReceiverEndPointTest
 
     private void theEndpointReceives(byte[] data, int offset, int length)
     {
-        endpointBufferUpdatedWith(buffer -> {
-            buffer.put(data, offset, length);
-            return length;
-        });
+        endpointBufferUpdatedWith(
+            (buffer) -> {
+                buffer.put(data, offset, length);
+                return length;
+            });
     }
 
     private void theEndpointReceivesTwoMessages(int secondOffset, int secondLength)
     {
-        endpointBufferUpdatedWith(buffer -> {
-            buffer.put(EG_MESSAGE)
+        endpointBufferUpdatedWith(
+            (buffer) -> {
+                buffer.put(EG_MESSAGE)
                     .put(EG_MESSAGE, secondOffset, secondLength);
-            return MSG_LEN + secondLength;
-        });
+                return MSG_LEN + secondLength;
+            });
     }
 
     private void endpointBufferUpdatedWith(ToIntFunction<ByteBuffer> bufferUpdater)
     {
         try
         {
-            doAnswer(invocation -> {
-                ByteBuffer buffer = (ByteBuffer) invocation.getArguments()[0];
-                return bufferUpdater.applyAsInt(buffer);
-            }).when(mockChannel).read(any(ByteBuffer.class));
+            doAnswer(
+                (invocation) -> {
+                    ByteBuffer buffer = (ByteBuffer)invocation.getArguments()[0];
+                    return bufferUpdater.applyAsInt(buffer);
+                }).when(mockChannel).read(any(ByteBuffer.class));
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
             // Should never happen, test in error
-            throw new RuntimeException(e);
+            throw new RuntimeException(ex);
         }
     }
-
 }

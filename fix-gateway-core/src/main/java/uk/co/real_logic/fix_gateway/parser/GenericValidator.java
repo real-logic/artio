@@ -22,7 +22,6 @@ import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
-import uk.co.real_logic.fix_gateway.util.IntIterator;
 
 import static uk.co.real_logic.fix_gateway.ValidationError.*;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.MESSAGE_TYPE;
@@ -32,7 +31,6 @@ import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.MESSA
  */
 public final class GenericValidator implements OtfMessageAcceptor
 {
-
     private static final int UNKNOWN = -1;
 
     private final IntHashSet fieldsForMessage = new IntHashSet(1024, UNKNOWN);
@@ -49,9 +47,9 @@ public final class GenericValidator implements OtfMessageAcceptor
     private IntHashSet allFieldsForMessageType;
 
     public GenericValidator(
-            final OtfMessageAcceptor delegate,
-            final IntDictionary allFields,
-            final IntDictionary requiredFields)
+        final OtfMessageAcceptor delegate,
+        final IntDictionary allFields,
+        final IntDictionary requiredFields)
     {
         this.delegate = delegate;
         this.allFields = allFields;
@@ -76,10 +74,9 @@ public final class GenericValidator implements OtfMessageAcceptor
         }
         else
         {
-            final IntIterator it = missingFields.iterator();
-            while (it.hasNext())
+            for (final int value : missingFields)
             {
-                delegate.onError(MISSING_REQUIRED_FIELD, messageType, it.nextValue(), stringField);
+                delegate.onError(MISSING_REQUIRED_FIELD, messageType, value, stringField);
             }
         }
     }
@@ -111,23 +108,23 @@ public final class GenericValidator implements OtfMessageAcceptor
     }
 
     @Override
-    public void onGroupHeader(int tag, int numberOfElements)
+    public void onGroupHeader(int tag, int numInGroup)
     {
         groupLevel++;
     }
 
     @Override
-    public void onGroupBegin(int tag, int numberOfElements, int index)
+    public void onGroupBegin(int tag, int numInGroup, int index)
     {
 
-        delegate.onGroupBegin(tag, numberOfElements, index);
+        delegate.onGroupBegin(tag, numInGroup, index);
     }
 
     @Override
-    public void onGroupEnd(int tag, int numberOfElements, int index)
+    public void onGroupEnd(int tag, int numInGroup, int index)
     {
-        delegate.onGroupEnd(tag, numberOfElements, index);
-        if (numberOfElements == index + 1)
+        delegate.onGroupEnd(tag, numInGroup, index);
+        if (numInGroup == index + 1)
         {
             groupLevel--;
         }
