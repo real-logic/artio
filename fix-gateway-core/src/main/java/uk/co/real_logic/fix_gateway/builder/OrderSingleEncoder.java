@@ -25,7 +25,7 @@ import java.util.Currency;
 /**
  * .
  */
-public class OrderSingleEncoder
+public class OrderSingleEncoder implements Encoder
 {
     private DirectBuffer buffer;
 

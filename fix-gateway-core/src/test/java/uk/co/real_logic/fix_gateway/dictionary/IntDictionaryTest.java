@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.dictionary;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
@@ -41,8 +40,8 @@ public class IntDictionaryTest
     public void createDataDictionary()
     {
         final Message heartbeat = new Message("Hearbeat", '0', ADMIN);
-        heartbeat.entries().add(Entry.required(new Field(115, "OnBehalfOfCompID", Type.STRING)));
-        heartbeat.entries().add(Entry.optional(new Field(112, "TestReqID", Type.STRING)));
+        heartbeat.requiredEntry(new Field(115, "OnBehalfOfCompID", Type.STRING));
+        heartbeat.optionalEntry(new Field(112, "TestReqID", Type.STRING));
 
         final List<Message> messages = Arrays.asList(heartbeat);
         data = new DataDictionary(messages, null, null);

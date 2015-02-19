@@ -41,4 +41,16 @@ public abstract class Aggregate
     {
         return entries;
     }
+
+    public Aggregate optionalEntry(final Entry.Element element)
+    {
+        entries().add(Entry.optional(element));
+        return this;
+    }
+
+    public Aggregate requiredEntry(final Entry.Element element)
+    {
+        entries().add(Entry.required(element));
+        return this;
+    }
 }

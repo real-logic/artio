@@ -17,18 +17,24 @@ package uk.co.real_logic.fix_gateway.dictionary;
 
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.util.Collections.*;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
+import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 
 public final class ExampleDictionary
 {
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
 
+    public static final String HEARTBEAT = PARENT_PACKAGE + "." + "Hearbeat";
+
     public static final DataDictionary FIELD_EXAMPLE;
+
+    public static final DataDictionary SINGLE_MESSAGE_EXAMPLE;
 
     static
     {
@@ -36,10 +42,23 @@ public final class ExampleDictionary
         egEnum.addValue('a', "AnEntry");
         egEnum.addValue('b', "AnotherEntry");
 
-        final Map<String, Field> fields = new HashMap<>();
-        fields.put("EgEnum", egEnum);
-        fields.put("egNotEnum", new Field(123, "EgNotEnum", Field.Type.CHAR));
+        final Map<String, Field> fieldEgFields = new HashMap<>();
+        fieldEgFields.put("EgEnum", egEnum);
+        fieldEgFields.put("egNotEnum", new Field(123, "EgNotEnum", Field.Type.CHAR));
 
-        FIELD_EXAMPLE = new DataDictionary(Collections.emptyList(), fields, Collections.emptyMap());
+        FIELD_EXAMPLE = new DataDictionary(emptyList(), fieldEgFields, emptyMap());
+
+        final Field onBehalfOfCompID = new Field(115, "OnBehalfOfCompID", Field.Type.STRING);
+        final Field testReqID = new Field(112, "TestReqID", Field.Type.STRING);
+
+        final Message heartbeat = new Message("Hearbeat", '0', ADMIN);
+        heartbeat.requiredEntry(onBehalfOfCompID);
+        heartbeat.optionalEntry(testReqID);
+
+        final Map<String, Field> messageEgFields = new HashMap<>();
+        messageEgFields.put("OnBehalfOfCompID", onBehalfOfCompID);
+        messageEgFields.put("TestReqID", testReqID);
+
+        SINGLE_MESSAGE_EXAMPLE = new DataDictionary(singletonList(heartbeat), messageEgFields, emptyMap());
     }
 }
