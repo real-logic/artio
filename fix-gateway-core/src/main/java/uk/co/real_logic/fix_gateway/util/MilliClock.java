@@ -13,9 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session_management;
+package uk.co.real_logic.fix_gateway.util;
 
-public final class OutboundSession
+/**
+ * Functional interface for return the current time as system wide monotonic tick of 1 millisecond precision.
+ */
+@FunctionalInterface
+public interface MilliClock
 {
-    private SessionInformation info;
+    /**
+     * The number of ticks in millisecond the clock has advanced since starting.
+     *
+     * @return number of ticks in millisecond the clock has advanced since starting.
+     */
+    long time();
 }

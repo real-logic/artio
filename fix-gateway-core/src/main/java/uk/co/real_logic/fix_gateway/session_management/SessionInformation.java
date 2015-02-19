@@ -20,62 +20,81 @@ package uk.co.real_logic.fix_gateway.session_management;
  */
 public final class SessionInformation
 {
-    private long lastMessageTime;
+    public static final long UNKNOWN = -1;
+
+    private long heartbeatInterval;
+    private long nextRequiredMessageTime;
     private long connectionId;
     private long sequenceNumber;
+    private SessionState state;
 
-    /**
-     * <h1>Transitions</h1>
-     *
-     * Successful Login: CONNECTION_ESTABLISHED -> AUTHENTICATED
-     * Login with high sequence number: CONNECTION_ESTABLISHED -> AWAITING_RESEND
-     * Login with low sequence number: CONNECTION_ESTABLISHED -> DISCONNECTED
-     *
-     * Successful Hijack: * -> AUTHENTICATED
-     * Hijack with high sequence number: TODO: what's the right behaviour?
-     * Hijack with low sequence number: TODO: what's the right behaviour - disconnect hijack or disconnect everything?
-     *
-     * Successful resend: AWAITING_RESEND -> AUTHENTICATED
-     *
-     * Send test request: AUTHENTICATED -> AUTHENTICATED - but alter the timeout for the next expected heartbeat.
-     * Successful Heartbeat: AUTHENTICATED -> AUTHENTICATED.
-     * Heartbeat Timeout: AUTHENTICATED -> DISCONNECTED
-     *
-     * Logout request: AUTHENTICATED -> LINGER
-     * Logout acknowledgement: LINGER -> DISCONNECTED
-     */
-    private enum State
+    public SessionInformation(
+        final long heartbeatInterval,
+        final long nextRequiredMessageTime,
+        final long connectionId,
+        final long sequenceNumber,
+        final SessionState state)
     {
-        /**
-         * Initial state for an outbound session.
-         */
-        CONNECTING,
+        this.heartbeatInterval = heartbeatInterval;
+        this.nextRequiredMessageTime = nextRequiredMessageTime;
+        this.connectionId = connectionId;
+        this.sequenceNumber = sequenceNumber;
+        this.state = state;
+    }
 
-        /**
-         * A machine has connected to the gateway, but hasn't logged in yet. Initial state of an inbound session.
-         */
-        CONNECTION_ESTABLISHED,
+    public long heartbeatInterval()
+    {
+        return this.heartbeatInterval;
+    }
 
-        /**
-         * Session is fully authenticated and ready to execute.
-         */
-        AUTHENTICATED,
+    public long nextRequiredMessageTime()
+    {
+        return this.nextRequiredMessageTime;
+    }
 
-        /**
-         * Login had too high a sequence number and a resend or gap fill is required.
-         */
-        AWAITING_RESEND,
+    public long connectionId()
+    {
+        return this.connectionId;
+    }
 
-        /**
-         * Linger between logout request and a logout acknowledgement. You can do resend processing at this point, but
-         * no other messages.
-         */
-        LINGER,
+    public long sequenceNumber()
+    {
+        return this.sequenceNumber;
+    }
 
-        /**
-         * Session has been disconnected and can't send messages.
-         */
-        DISCONNECTED,
+    public SessionState state()
+    {
+        return this.state;
+    }
+
+    public SessionInformation heartbeatInterval(final long heartbeatInterval)
+    {
+        this.heartbeatInterval = heartbeatInterval;
+        return this;
+    }
+
+    public SessionInformation nextRequiredMessageTime(final long nextRequiredMessageTime)
+    {
+        this.nextRequiredMessageTime = nextRequiredMessageTime;
+        return this;
+    }
+
+    public SessionInformation connectionId(final long connectionId)
+    {
+        this.connectionId = connectionId;
+        return this;
+    }
+
+    public SessionInformation sequenceNumber(final long sequenceNumber)
+    {
+        this.sequenceNumber = sequenceNumber;
+        return this;
+    }
+
+    public SessionInformation state(final SessionState state)
+    {
+        this.state = state;
+        return this;
     }
 
 }
