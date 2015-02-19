@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.agrona.generation.OutputManager;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -60,7 +61,7 @@ public final class EnumGenerator
             out.append(generateEnumValues(field.values()));
 
             out.append(generateEnumBody(enumName));
-            out.append(generateEnumLookupMethod());
+            out.append(generateEnumLookupMethod(enumName, field.values()));
 
             out.append("}\n");
         }
@@ -76,7 +77,7 @@ public final class EnumGenerator
         return "public enum " + name + "\n{\n";
     }
 
-    private String generateEnumValues(final List<Field.Value> allValues)
+    private String generateEnumValues(final List<Value> allValues)
     {
         return allValues.stream()
                         .map(value -> format("%s%s('%s')", INDENT, value.description(), value.representation()))
@@ -93,9 +94,22 @@ public final class EnumGenerator
                representation.getter();
     }
 
-    private String generateEnumLookupMethod()
+    private String generateEnumLookupMethod(final String name, final List<Value> allValues)
     {
-        return "";
+        final Var representation = new Var("int", "representation");
+
+        final String cases = allValues
+                .stream()
+                .map(value -> format("        case '%s': return %s;\n", value.representation(), value.description()))
+                .collect(joining());
+
+        return method("valueOf", name, representation) +
+               format("        switch(representation)\n" +
+                      "        {\n" +
+                      cases +
+                      "        default: throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
+                      "        }\n" +
+                      "    }\n");
     }
 
 }

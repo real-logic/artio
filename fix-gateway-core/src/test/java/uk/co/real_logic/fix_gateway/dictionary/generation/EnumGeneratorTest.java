@@ -20,9 +20,9 @@ import org.junit.Test;
 import uk.co.real_logic.agrona.generation.CompilerUtil;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.hasKey;
-import static org.hamcrest.Matchers.not;
+import java.lang.reflect.Method;
+
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.EG_ENUM;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.FIELD_EXAMPLE;
@@ -42,23 +42,58 @@ public class EnumGeneratorTest
     @Test
     public void generatesEnumClass() throws Exception
     {
-        Class<?> clazz = CompilerUtil.compileInMemory(EG_ENUM, outputManager.getSources());
+        Class<?> clazz = compileEgEnum();
 
         assertNotNull("Failed to generate a class", clazz);
         assertTrue("Generated class isn't an enum", clazz.isEnum());
+    }
 
+    @Test
+    public void generatesEnumConstants() throws Exception
+    {
+        Class<?> clazz = compileEgEnum();
         Enum<?>[] values = (Enum<?>[]) clazz.getEnumConstants();
 
         assertThat(values, arrayWithSize(2));
 
         assertEquals("AnEntry", values[0].name());
+        assertRepresentation('a', values[0]);
         assertEquals("AnotherEntry", values[1].name());
+        assertRepresentation('b', values[1]);
+    }
+
+    @Test
+    public void generatesLookupTable() throws Exception
+    {
+        Class<?> clazz = compileEgEnum();
+        Enum<?>[] values = (Enum<?>[]) clazz.getEnumConstants();
+
+        Method valueOf = clazz.getMethod("valueOf", int.class);
+
+        assertEquals(values[0], valueOf.invoke(null, 'a'));
+        assertEquals(values[1], valueOf.invoke(null, 'b'));
     }
 
     @Test
     public void doesNotGenerateClassForNonEnumFields()
     {
         assertThat(outputManager.getSources(), not(hasKey("EgNotEnum")));
+    }
+
+    private Class<?> compileEgEnum() throws Exception
+    {
+        //System.out.println(outputManager.getSources());
+        return CompilerUtil.compileInMemory(EG_ENUM, outputManager.getSources());
+    }
+
+    private void assertRepresentation(final int expected, final Enum<?> enumElement) throws Exception
+    {
+        final int representation = (int) enumElement
+                .getDeclaringClass()
+                .getMethod("representation")
+                .invoke(enumElement);
+
+        assertEquals(expected, representation);
     }
 
 }

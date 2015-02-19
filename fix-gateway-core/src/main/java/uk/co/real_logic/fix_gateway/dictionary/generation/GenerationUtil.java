@@ -69,15 +69,25 @@ public final class GenerationUtil
 
     public static String constructor(final String name, final Var ... parameters)
     {
-        final String paramDeclaration = Stream.of(parameters)
-                                              .map(Var::declaration)
-                                              .collect(joining(", "));
 
         final String binding = Stream.of(parameters)
                                      .map(var -> String.format("%1$s%1$s this.%2$s = %2$s;", INDENT, var.name))
                                      .collect(joining("\n"));
 
-        return String.format("%s%s(%s)\n%1$s{\n%s\n%1$s}\n\n", INDENT, name, paramDeclaration, binding);
+        return String.format("%s%s(%s)\n%1$s{\n%s\n%1$s}\n\n", INDENT, name, paramDeclaration(parameters), binding);
+    }
+
+    public static String method(final String name, final String returnType, final Var ... parameters)
+    {
+        return String.format("%spublic static %s %s(%s)\n%1$s{\n",
+                             INDENT, returnType, name, paramDeclaration(parameters));
+    }
+
+    private static String paramDeclaration(final Var[] parameters)
+    {
+        return Stream.of(parameters)
+                .map(Var::declaration)
+                .collect(joining(", "));
     }
 
 }
