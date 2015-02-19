@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.session_management;
 
-/**
- * Stores information about the current state of a connection that's associated with a session.
- */
-public final class ConnectedSession
+public class InboundSession
 {
-    private long lastReceivedMessageTime;
+    private SessionInformation info;
 }
