@@ -179,6 +179,82 @@ public class IntHashSetTest
         assertThat(other, contains(1, 2));
     }
 
+    @Test
+    public void twoEmptySetsAreEqual()
+    {
+        final IntHashSet other = new IntHashSet(100, -1);
+        assertEquals(obj, other);
+    }
+
+    @Test
+    public void equalityRequiresTheSameMissingValue()
+    {
+        final IntHashSet other = new IntHashSet(100, 1);
+        assertNotEquals(obj, other);
+    }
+
+    @Test
+    public void setsWithTheSameValuesAreEqual()
+    {
+        final IntHashSet other = new IntHashSet(100, -1);
+
+        obj.add(1);
+        obj.add(1001);
+
+        other.add(1);
+        other.add(1001);
+
+        assertEquals(obj, other);
+    }
+
+    @Test
+    public void setsWithTheDifferentSizesAreNotEqual()
+    {
+        final IntHashSet other = new IntHashSet(100, -1);
+
+        obj.add(1);
+        obj.add(1001);
+
+        other.add(1001);
+
+        assertNotEquals(obj, other);
+    }
+
+    @Test
+    public void setsWithTheDifferentValuesAreNotEqual()
+    {
+        final IntHashSet other = new IntHashSet(100, -1);
+
+        obj.add(1);
+        obj.add(1001);
+
+        other.add(2);
+        other.add(1001);
+
+        assertNotEquals(obj, other);
+    }
+
+    @Test
+    public void twoEmptySetsHaveTheSameHashcode()
+    {
+        final IntHashSet other = new IntHashSet(100, -1);
+        assertEquals(obj.hashCode(), other.hashCode());
+    }
+
+    @Test
+    public void setsWithTheSameValuesHaveTheSameHashcode()
+    {
+        final IntHashSet other = new IntHashSet(100, -1);
+
+        obj.add(1);
+        obj.add(1001);
+
+        other.add(1);
+        other.add(1001);
+
+        assertEquals(obj.hashCode(), other.hashCode());
+    }
+
     private void assertIteratorHasElements()
     {
         final Iterator<Integer> iter = obj.iterator();
@@ -188,4 +264,5 @@ public class IntHashSetTest
         assertEquals(Integer.valueOf(2), iter.next());
         assertFalse(iter.hasNext());
     }
+
 }

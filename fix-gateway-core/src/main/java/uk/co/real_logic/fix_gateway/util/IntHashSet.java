@@ -47,6 +47,9 @@ public final class IntHashSet implements Set<Integer>
         iterator = new IntIterator(missingValue, values);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public boolean add(final Integer value)
     {
         return add(value.intValue());
@@ -78,11 +81,17 @@ public final class IntHashSet implements Set<Integer>
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public boolean remove(final Object value)
     {
         return value instanceof Integer && remove(((Integer)value).intValue());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public boolean remove(final int value)
     {
         int index = hash(value);
@@ -101,11 +110,17 @@ public final class IntHashSet implements Set<Integer>
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public boolean contains(final Object value)
     {
-        return value instanceof Integer && contains(((Integer)value).intValue());
+        return value instanceof Integer && contains(((Integer) value).intValue());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public boolean contains(final int value)
     {
         int index = hash(value);
@@ -123,22 +138,34 @@ public final class IntHashSet implements Set<Integer>
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     private int hash(final int value)
     {
         final int hash = (value << 1) - (value << 8);
         return hash & mask;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public int size()
     {
         return size;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public boolean isEmpty()
     {
         return size() == 0;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void clear()
     {
         final int[] values = this.values;
@@ -150,20 +177,45 @@ public final class IntHashSet implements Set<Integer>
         size = 0;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @SuppressWarnings("unchecked")
     public <T> T[] toArray(final T[] ignore)
     {
         return (T[])(Object)Arrays.copyOf(values, values.length);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public boolean addAll(final Collection<? extends Integer> coll)
     {
         return conjunction(coll, (x) -> add(x));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public boolean containsAll(final Collection<?> coll)
     {
         return conjunction(coll, this::contains);
+    }
+
+    /**
+     * IntHashSet specialised variant of {this#containsAll(Collection)}.
+     */
+    public boolean containsAll(final IntHashSet other)
+    {
+        final IntIterator iterator = other.iterator();
+        while (iterator.hasNext())
+        {
+            if (!contains(iterator.nextValue()))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -199,6 +251,9 @@ public final class IntHashSet implements Set<Integer>
         return difference;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public boolean removeAll(final Collection<?> coll)
     {
         return conjunction(coll, this::remove);
@@ -218,12 +273,18 @@ public final class IntHashSet implements Set<Integer>
         return acc;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public IntIterator iterator()
     {
         iterator.reset();
         return iterator;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void copy(final IntHashSet obj)
     {
         // NB: mask also implies the length is the same
@@ -241,6 +302,9 @@ public final class IntHashSet implements Set<Integer>
         this.size = obj.size;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public String toString()
     {
         return stream()
@@ -248,15 +312,59 @@ public final class IntHashSet implements Set<Integer>
             .collect(joining(",", "{", "}"));
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public Object[] toArray()
+    {
+        final int[] values = this.values;
+        final Object[] array = new Object[values.length];
+        for (int i = 0; i < values.length; i++)
+        {
+            array[i] = values[i];
+        }
+        return array;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public boolean equals(final Object other)
+    {
+        if (other == this)
+        {
+            return true;
+        }
+
+        if (other instanceof IntHashSet)
+        {
+            final IntHashSet otherSet = (IntHashSet) other;
+            return otherSet.missingValue == missingValue
+                && otherSet.size() == size()
+                && containsAll(otherSet);
+        }
+
+        return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public int hashCode()
+    {
+        final IntIterator iterator = iterator();
+        int total = 0;
+        while (iterator.hasNext())
+        {
+            total += iterator.nextValue();
+        }
+        return total;
+    }
+
     // --- Unimplemented below here
 
     public boolean retainAll(final Collection<?> coll)
     {
         throw new UnsupportedOperationException("Not implemented");
-    }
-
-    public Object[] toArray()
-    {
-        throw new UnsupportedOperationException("Not Implemented");
     }
 }
