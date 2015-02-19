@@ -53,12 +53,12 @@ public final class GenerationUtil
 
         public String field()
         {
-            return String.format("%spublic final %s %s;\n", INDENT, type, name);
+            return String.format("%sprivate final %s %s;\n\n", INDENT, type, name);
         }
 
         public String getter()
         {
-            return String.format("%spublic final %s %s() { return %$2s; }\n\n", INDENT, type, name);
+            return String.format("%spublic final %s %s() { return %3$s; }\n\n", INDENT, type, name);
         }
 
         public String declaration()
@@ -74,10 +74,10 @@ public final class GenerationUtil
                                               .collect(joining(", "));
 
         final String binding = Stream.of(parameters)
-                                     .map(var -> String.format("%1$2s%1$2s this. %2$2s = %2$2s", INDENT, var.name))
+                                     .map(var -> String.format("%1$s%1$s this.%2$s = %2$s;", INDENT, var.name))
                                      .collect(joining("\n"));
 
-        return String.format("%s%s(%s)\n{\n%s\n}\n", INDENT, name, paramDeclaration, binding);
+        return String.format("%s%s(%s)\n%1$s{\n%s\n%1$s}\n\n", INDENT, name, paramDeclaration, binding);
     }
 
 }

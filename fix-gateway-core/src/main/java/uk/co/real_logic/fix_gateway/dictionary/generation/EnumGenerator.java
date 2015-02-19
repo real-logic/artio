@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
-import uk.co.real_logic.sbe.generation.OutputManager;
+import uk.co.real_logic.agrona.generation.OutputManager;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -79,7 +79,7 @@ public final class EnumGenerator
     private String generateEnumValues(final List<Field.Value> allValues)
     {
         return allValues.stream()
-                        .map(value -> format("%s%s(%s)", INDENT, value.description(), value.representation()))
+                        .map(value -> format("%s%s('%s')", INDENT, value.description(), value.representation()))
                         .collect(joining(",\n"));
     }
 

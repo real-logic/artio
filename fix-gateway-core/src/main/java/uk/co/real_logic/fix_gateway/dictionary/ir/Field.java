@@ -56,6 +56,12 @@ public final class Field implements Element
         return values;
     }
 
+    public Field addValue(final char representation, final String description)
+    {
+        values().add(new Value(representation, description));
+        return this;
+    }
+
     public boolean isEnum()
     {
         return !values.isEmpty();
