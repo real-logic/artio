@@ -140,6 +140,7 @@ project(':fix-gateway-core') {
         compile 'uk.co.real-logic:Agrona:0.2-SNAPSHOT'
         compile 'uk.co.real-logic:aeron-client:0.1-SNAPSHOT'
         compile 'uk.co.real-logic:aeron-common:0.1-SNAPSHOT'
+        compile 'uk.co.real-logic:sbe:1.0.3-RC2'
     }
 
     run {
