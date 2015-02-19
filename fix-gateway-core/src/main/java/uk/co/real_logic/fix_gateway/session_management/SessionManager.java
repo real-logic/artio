@@ -13,16 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway;
+package uk.co.real_logic.fix_gateway.session_management;
 
-import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
+import uk.co.real_logic.aeron.common.Agent;
 
-/**
- * Public API class for users to control a session with.
- */
-public final class Session
+public final class SessionManager implements Agent
 {
-    public void send(final OrderSingleEncoder orderSingleEncoder)
+
+    public int doWork() throws Exception
     {
+        // Ability to check heartbeats
+        return 0;
+    }
+
+    public void onClose()
+    {
+
+    }
+
+    public String roleName()
+    {
+        return "Session Manager";
     }
 }

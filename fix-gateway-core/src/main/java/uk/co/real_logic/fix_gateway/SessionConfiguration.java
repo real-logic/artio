@@ -15,18 +15,84 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import java.util.Objects;
+
 /**
- * .
+ * Immutable Configuration class.
  */
 public final class SessionConfiguration
 {
-    public SessionConfiguration credentials(final String username, final String password)
+    private final String host;
+    private final int port;
+    private final String username;
+    private final String password;
+
+    public static Builder builder()
     {
-        return this;
+        return new Builder();
     }
 
-    public SessionConfiguration address(final String host, final int port)
+    private SessionConfiguration(final String host, final int port, final String username, final String password)
     {
-        return this;
+        Objects.requireNonNull(host);
+        Objects.requireNonNull(username);
+        Objects.requireNonNull(password);
+
+        this.host = host;
+        this.port = port;
+        this.username = username;
+        this.password = password;
     }
+
+    public String host()
+    {
+        return host;
+    }
+
+    public int port()
+    {
+        return port;
+    }
+
+    public String username()
+    {
+        return username;
+    }
+
+    public String password()
+    {
+        return password;
+    }
+
+    public static final class Builder
+    {
+        private String username;
+        private String password;
+        private String host;
+        private int port;
+
+        private Builder()
+        {
+        }
+
+        public Builder credentials(final String username, final String password)
+        {
+            this.username = username;
+            this.password = password;
+            return this;
+        }
+
+        public Builder address(final String host, final int port)
+        {
+            this.host = host;
+            this.port = port;
+            return this;
+        }
+
+        public SessionConfiguration build()
+        {
+            return new SessionConfiguration(host, port, username, password);
+        }
+    }
+
 }

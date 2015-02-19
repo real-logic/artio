@@ -50,9 +50,10 @@ public class SampleOtfMain
             // Each outbound session with an Exchange or broker is represented by
             // a Session object. Each session object can be configured with connection
             // details and credentials.
-            final SessionConfiguration sessionConfig = new SessionConfiguration()
+            final SessionConfiguration sessionConfig = SessionConfiguration.builder()
                 .address("broker.example.com", 9999)
-                .credentials("username", "password");
+                .credentials("username", "password")
+                .build();
 
             final Session session = gateway.initiate(sessionConfig, dictionary);
 

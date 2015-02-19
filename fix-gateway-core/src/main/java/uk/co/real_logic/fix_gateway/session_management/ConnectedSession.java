@@ -13,16 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway;
-
-import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
+package uk.co.real_logic.fix_gateway.session_management;
 
 /**
- * Public API class for users to control a session with.
+ * Stores information about the current state of a connection that's associated with a session.
  */
-public final class Session
+public final class ConnectedSession
 {
-    public void send(final OrderSingleEncoder orderSingleEncoder)
-    {
-    }
+    private long lastReceivedMessageTime;
 }

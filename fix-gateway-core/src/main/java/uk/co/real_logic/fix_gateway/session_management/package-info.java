@@ -13,16 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway;
-
-import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
 
 /**
- * Public API class for users to control a session with.
+ * Session Management covers:
+ *
+ * <ul>
+ *     <li>Authentication - login/logout</li>
+ *     <li>Handling Heartbeats & Test Requests</li>
+ *     <li>Admin aspects of session management - ability to disconnect clients etc</li>
+ *     <li>Connection Hijacking</li>
+ * </ul>
  */
-public final class Session
-{
-    public void send(final OrderSingleEncoder orderSingleEncoder)
-    {
-    }
-}
+package uk.co.real_logic.fix_gateway.session_management;
