@@ -31,6 +31,10 @@ import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.MESSAGE_
 
 public class EncoderGeneratorTest
 {
+    private static final String VALUE = "abc";
+    private static final String TEST_REQ_ID = "testReqID";
+    private static final String HAS_TEST_REQ_ID = "hasTestReqID";
+
     private StringWriterOutputManager outputManager = new StringWriterOutputManager();
     private EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, outputManager);
 
@@ -56,24 +60,62 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void generatesSetters() throws Exception
+    public void generatesSetters() throws NoSuchMethodException
+    {
+        clazz.getMethod("onBehalfOfCompID", String.class);
+    }
+
+    @Test
+    public void settersWriteToFields() throws Exception
     {
         final Object encoder = clazz.newInstance();
 
-        clazz.getMethod("onBehalfOfCompID", String.class);
+        setTestReqId(encoder);
 
-        final String value = "abc";
-        final String testReqID = "testReqID";
-
-        clazz.getMethod(testReqID, String.class)
-             .invoke(encoder, value);
-
-        final Field field = clazz.getDeclaredField(testReqID);
-        field.setAccessible(true);
-        assertEquals(value, field.get(encoder));
+        assertEquals(VALUE, getField(encoder, TEST_REQ_ID));
     }
 
-    // optional fields
-    // clazz.getField("hasTestReqID");
+    @Test
+    public void flagsForOptionalFieldsInitiallyUnset() throws Exception
+    {
+        final Object encoder = clazz.newInstance();
+        assertFalse("hasTestReqId initially true", hasTestReqId(encoder));
+    }
+
+    @Test
+    public void flagsForOptionalFieldsUpdated() throws Exception
+    {
+        final Object encoder = clazz.newInstance();
+
+        setTestReqId(encoder);
+
+        assertTrue("hasTestReqId not updated", hasTestReqId(encoder));
+    }
+
+    // TODO: encode method
+    // TODO: common header and footer
+    // TODO: primitive fields
+    // TODO: complex encoding data types - eg dates/float/etc
+    // TODO: encoding Strings from direct buffers
+    // TODO: encoding Strings from a char[]?
+    // TODO: encoding Strings from an ascii flyweight?
+
+    private boolean hasTestReqId(final Object encoder) throws Exception
+    {
+        return (boolean) getField(encoder, HAS_TEST_REQ_ID);
+    }
+
+    private void setTestReqId(final Object encoder) throws Exception
+    {
+        clazz.getMethod(TEST_REQ_ID, String.class)
+             .invoke(encoder, VALUE);
+    }
+
+    private Object getField(final Object encoder, final String fieldName) throws Exception
+    {
+        final Field field = clazz.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(encoder);
+    }
 
 }

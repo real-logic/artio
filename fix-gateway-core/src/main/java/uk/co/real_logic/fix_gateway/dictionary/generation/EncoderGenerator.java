@@ -80,23 +80,43 @@ public class EncoderGenerator
     private String generateSetter(final String className, final Entry entry)
     {
         final Field element = (Field) entry.element();
-        final String name = JavaUtil.formatPropertyName(element.name());
+        final String name = element.name();
+        final String fieldName = JavaUtil.formatPropertyName(name);
+
+        String optionalField;
+        String optionalAssign;
+
+        if (entry.required())
+        {
+            optionalField = "";
+            optionalAssign = "";
+        }
+        else
+        {
+            optionalField = String.format("    private boolean has%s;\n\n", name);
+            optionalAssign = String.format("        has%s = true;\n", name);
+        }
 
         switch (element.type())
         {
             // TODO: other string encoding cases: bytebuffer, etc.
             // TODO: other type cases
-            // TODO: how do we reset optional fields
+            // TODO: how do we reset optional fields - clear method?
             case STRING:
+
                 return String.format(
                     "    private String %s;\n\n" +
+                    "%s" +
                     "    public %s %1$s(String value)\n" +
                     "    {\n" +
-                    "        this.%1$s = value;\n" +
+                    "        %1$s = value;\n" +
+                    "%s" +
                     "        return this;\n" +
                     "    }\n\n",
-                    name,
-                    className);
+                    fieldName,
+                    optionalField,
+                    className,
+                    optionalAssign);
             default: throw new UnsupportedOperationException("Unknown type: " + element.type());
         }
     }
