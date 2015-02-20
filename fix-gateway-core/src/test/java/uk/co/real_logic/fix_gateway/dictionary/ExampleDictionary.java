@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static java.util.Collections.*;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.BUILDER_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 
@@ -30,7 +31,7 @@ public final class ExampleDictionary
 {
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
 
-    public static final String HEARTBEAT = PARENT_PACKAGE + "." + "Hearbeat";
+    public static final String HEARTBEAT = BUILDER_PACKAGE + "." + "Hearbeat";
 
     public static final DataDictionary FIELD_EXAMPLE;
 

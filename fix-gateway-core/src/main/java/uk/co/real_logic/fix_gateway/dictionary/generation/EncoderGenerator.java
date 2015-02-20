@@ -17,6 +17,13 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
+
+import java.io.IOException;
+import java.io.Writer;
+
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.BUILDER_PACKAGE;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
 
 public class EncoderGenerator
 {
@@ -31,6 +38,49 @@ public class EncoderGenerator
 
     public void generate()
     {
+        dictionary.messages()
+                  .forEach(this::generateMessage);
+    }
 
+    private void generateMessage(final Message message)
+    {
+
+        final String className = message.name();
+
+        try (final Writer out = outputManager.createOutput(className))
+        {
+            out.append(fileHeader(BUILDER_PACKAGE));
+            out.append(generateClassDeclaration(className));
+            out.append(generateEncodeMethod());
+            out.append("}\n");
+        }
+        catch (IOException e)
+        {
+            // TODO: logging
+            e.printStackTrace();
+        }
+
+        message.category();
+        message.type();
+    }
+
+    private String generateEncodeMethod()
+    {
+        return String.format(
+            "    public int encode(final MutableDirectBuffer buffer, final int offset)\n" +
+            "    {\n" +
+            "        return 0;" +
+            "    }\n\n");
+    }
+
+    private String generateClassDeclaration(final String className)
+    {
+        return String.format(
+            "import %s.Encoder;\n" +
+            "import uk.co.real_logic.agrona.MutableDirectBuffer;\n\n" +
+            "public class %s implements Encoder\n" +
+            "{\n\n",
+            BUILDER_PACKAGE,
+            className);
     }
 }

@@ -16,11 +16,14 @@
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.generation.CompilerUtil;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
+import uk.co.real_logic.fix_gateway.builder.Encoder;
 
+import static java.lang.reflect.Modifier.isAbstract;
+import static java.lang.reflect.Modifier.isPublic;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.HEARTBEAT;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.SINGLE_MESSAGE_EXAMPLE;
 
@@ -35,11 +38,17 @@ public class EncoderGeneratorTest
         encoderGenerator.generate();
     }
 
-    @Ignore
     @Test
-    public void generatesEncoderClass()
+    public void generatesEncoderClass() throws Exception
     {
+        Class<?> clazz = compileHeartbeat();
 
+        assertNotNull("Not generated anything", clazz);
+        assertTrue(Encoder.class.isAssignableFrom(clazz));
+
+        int modifiers = clazz.getModifiers();
+        assertFalse("Not instantiable", isAbstract(modifiers));
+        assertTrue("Not public", isPublic(modifiers));
     }
 
     private Class<?> compileHeartbeat() throws Exception
