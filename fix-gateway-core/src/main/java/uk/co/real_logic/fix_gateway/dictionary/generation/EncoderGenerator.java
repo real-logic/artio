@@ -17,10 +17,14 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
+import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.List;
 
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.BUILDER_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
@@ -51,6 +55,7 @@ public class EncoderGenerator
         {
             out.append(fileHeader(BUILDER_PACKAGE));
             out.append(generateClassDeclaration(className));
+            generateSetters(out, className, message.entries());
             out.append(generateEncodeMethod());
             out.append("}\n");
         }
@@ -64,12 +69,44 @@ public class EncoderGenerator
         message.type();
     }
 
+    private void generateSetters(final Writer out, final String className, final List<Entry> entries) throws IOException
+    {
+        for (Entry entry : entries)
+        {
+            out.append(generateSetter(className, entry));
+        }
+    }
+
+    private String generateSetter(final String className, final Entry entry)
+    {
+        final Field element = (Field) entry.element();
+        final String name = JavaUtil.formatPropertyName(element.name());
+
+        switch (element.type())
+        {
+            // TODO: other string encoding cases: bytebuffer, etc.
+            // TODO: other type cases
+            // TODO: how do we reset optional fields
+            case STRING:
+                return String.format(
+                    "    private String %s;\n\n" +
+                    "    public %s %1$s(String value)\n" +
+                    "    {\n" +
+                    "        this.%1$s = value;\n" +
+                    "        return this;\n" +
+                    "    }\n\n",
+                    name,
+                    className);
+            default: throw new UnsupportedOperationException("Unknown type: " + element.type());
+        }
+    }
+
     private String generateEncodeMethod()
     {
         return String.format(
             "    public int encode(final MutableDirectBuffer buffer, final int offset)\n" +
             "    {\n" +
-            "        return 0;" +
+            "        return 0;\n" +
             "    }\n\n");
     }
 
@@ -78,7 +115,7 @@ public class EncoderGenerator
         return String.format(
             "import %s.Encoder;\n" +
             "import uk.co.real_logic.agrona.MutableDirectBuffer;\n\n" +
-            "public class %s implements Encoder\n" +
+            "public final class %s implements Encoder\n" +
             "{\n\n",
             BUILDER_PACKAGE,
             className);

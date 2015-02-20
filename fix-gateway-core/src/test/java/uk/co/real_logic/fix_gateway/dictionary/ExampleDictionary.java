@@ -35,7 +35,7 @@ public final class ExampleDictionary
 
     public static final DataDictionary FIELD_EXAMPLE;
 
-    public static final DataDictionary SINGLE_MESSAGE_EXAMPLE;
+    public static final DataDictionary MESSAGE_EXAMPLE;
 
     static
     {
@@ -60,6 +60,6 @@ public final class ExampleDictionary
         messageEgFields.put("OnBehalfOfCompID", onBehalfOfCompID);
         messageEgFields.put("TestReqID", testReqID);
 
-        SINGLE_MESSAGE_EXAMPLE = new DataDictionary(singletonList(heartbeat), messageEgFields, emptyMap());
+        MESSAGE_EXAMPLE = new DataDictionary(singletonList(heartbeat), messageEgFields, emptyMap());
     }
 }
