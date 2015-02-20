@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 
@@ -46,6 +47,15 @@ public class EncoderGeneratorTest
         encoderGenerator.generate();
         //System.out.println(outputManager.getSources());
         clazz = compileInMemory(HEARTBEAT, outputManager.getSources());
+    }
+
+    class Bar implements Encoder
+    {
+
+        public int encode(final MutableDirectBuffer buffer, final int offset)
+        {
+            return 0;
+        }
     }
 
     @Test
