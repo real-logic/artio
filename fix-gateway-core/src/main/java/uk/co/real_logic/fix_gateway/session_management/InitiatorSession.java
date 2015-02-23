@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.session_management;
 
-public final class OutboundSession
+public final class InitiatorSession
 {
-    private SessionInformation info;
+    private Session info;
 }

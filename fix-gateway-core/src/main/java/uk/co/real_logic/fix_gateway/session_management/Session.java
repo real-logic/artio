@@ -18,7 +18,8 @@ package uk.co.real_logic.fix_gateway.session_management;
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound
  */
-public final class SessionInformation
+// TODO: refactor to class hierachy
+public final class Session
 {
     public static final long UNKNOWN = -1;
 
@@ -28,12 +29,12 @@ public final class SessionInformation
     private long sequenceNumber;
     private SessionState state;
 
-    public SessionInformation(
-        final long heartbeatInterval,
-        final long nextRequiredMessageTime,
-        final long connectionId,
-        final long sequenceNumber,
-        final SessionState state)
+    public Session(
+            final long heartbeatInterval,
+            final long nextRequiredMessageTime,
+            final long connectionId,
+            final long sequenceNumber,
+            final SessionState state)
     {
         this.heartbeatInterval = heartbeatInterval;
         this.nextRequiredMessageTime = nextRequiredMessageTime;
@@ -67,31 +68,31 @@ public final class SessionInformation
         return this.state;
     }
 
-    public SessionInformation heartbeatInterval(final long heartbeatInterval)
+    public Session heartbeatInterval(final long heartbeatInterval)
     {
         this.heartbeatInterval = heartbeatInterval;
         return this;
     }
 
-    public SessionInformation nextRequiredMessageTime(final long nextRequiredMessageTime)
+    public Session nextRequiredMessageTime(final long nextRequiredMessageTime)
     {
         this.nextRequiredMessageTime = nextRequiredMessageTime;
         return this;
     }
 
-    public SessionInformation connectionId(final long connectionId)
+    public Session connectionId(final long connectionId)
     {
         this.connectionId = connectionId;
         return this;
     }
 
-    public SessionInformation sequenceNumber(final long sequenceNumber)
+    public Session sequenceNumber(final long sequenceNumber)
     {
         this.sequenceNumber = sequenceNumber;
         return this;
     }
 
-    public SessionInformation state(final SessionState state)
+    public Session state(final SessionState state)
     {
         this.state = state;
         return this;

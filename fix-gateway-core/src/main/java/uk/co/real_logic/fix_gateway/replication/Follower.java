@@ -17,4 +17,5 @@ package uk.co.real_logic.fix_gateway.replication;
 
 public class Follower
 {
+    // TODO: add batchPoll(BatchMessageHandler) on Subscription class with the endPosition/buffer/offset/length
 }

@@ -18,22 +18,27 @@ package uk.co.real_logic.fix_gateway.session_management;
 /**
  * <h1>Transitions</h1>
  *
- * Successful Login: CONNECTION_ESTABLISHED -> AUTHENTICATED
- * Login with high sequence number: CONNECTION_ESTABLISHED -> AWAITING_RESEND
- * Login with low sequence number: CONNECTION_ESTABLISHED -> DISCONNECTED
+ * Successful Login: CONNECTED -> ACTIVE
+ * Login with high sequence number: CONNECTED -> AWAITING_RESEND
+ * Login with low sequence number: CONNECTED -> DISCONNECTED
+ * Login with wrong credentials: CONNECTED -> DISCONNECTED or CONNECTED -> DISABLED
+ * depending on authentication plugin
  *
- * Successful Hijack: * -> AUTHENTICATED
- * Hijack with high sequence number: TODO: what's the right behaviour?
- * Hijack with low sequence number: TODO: what's the right behaviour - disconnect hijack or disconnect everything?
+ * Successful Hijack: * -> ACTIVE (same as regular login)
+ * Hijack with high sequence number: * -> AWAITING_RESEND (same as regular login)
+ * Hijack with low sequence number: disconnect the hijacker and leave main system ACTIVE
+ * Hijack with wrong credentials: disconnect the hijacker and leave main system ACTIVE
  *
- * Successful resend: AWAITING_RESEND -> AUTHENTICATED
+ * Successful resend: AWAITING_RESEND -> ACTIVE
  *
- * Send test request: AUTHENTICATED -> AUTHENTICATED - but alter the timeout for the next expected heartbeat.
- * Successful Heartbeat: AUTHENTICATED -> AUTHENTICATED.
- * Heartbeat Timeout: AUTHENTICATED -> DISCONNECTED
+ * Send test request: ACTIVE -> ACTIVE - but alter the timeout for the next expected heartbeat.
+ * Successful Heartbeat: ACTIVE -> ACTIVE - updates the timeout time.
+ * Heartbeat Timeout: ACTIVE -> DISCONNECTED
  *
- * Logout request: AUTHENTICATED -> LINGER
+ * Logout request: ACTIVE -> LINGER
  * Logout acknowledgement: LINGER -> DISCONNECTED
+ *
+ * Manual disable: * -> DISABLED
  */
 public enum SessionState
 {
@@ -45,12 +50,12 @@ public enum SessionState
     /**
      * A machine has connected to the gateway, but hasn't logged in yet. Initial state of an inbound session.
      */
-    CONNECTION_ESTABLISHED,
+    CONNECTED,
 
     /**
      * Session is fully authenticated and ready to execute.
      */
-    AUTHENTICATED,
+    ACTIVE,
 
     /**
      * Login had too high a sequence number and a resend or gap fill is required.
@@ -67,4 +72,9 @@ public enum SessionState
      * Session has been disconnected and can't send messages.
      */
     DISCONNECTED,
+
+    /**
+     * DISCONNECTED and unable to reconnect.
+     */
+    DISABLED
 }

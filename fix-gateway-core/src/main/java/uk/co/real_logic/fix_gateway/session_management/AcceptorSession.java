@@ -17,20 +17,20 @@ package uk.co.real_logic.fix_gateway.session_management;
 
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
-import static uk.co.real_logic.fix_gateway.session_management.SessionInformation.UNKNOWN;
-import static uk.co.real_logic.fix_gateway.session_management.SessionState.CONNECTION_ESTABLISHED;
+import static uk.co.real_logic.fix_gateway.session_management.Session.UNKNOWN;
+import static uk.co.real_logic.fix_gateway.session_management.SessionState.CONNECTED;
 
-public final class InboundSession
+public final class AcceptorSession
 {
     private final MilliClock clock;
 
-    private SessionInformation info;
+    private Session info;
 
-    public InboundSession(final long defaultInterval, final long connectionId, final MilliClock clock)
+    public AcceptorSession(final long defaultInterval, final long connectionId, final MilliClock clock)
     {
         this.clock = clock;
-        info = new SessionInformation(defaultInterval, clock.time() + defaultInterval,
-                                      connectionId, UNKNOWN, CONNECTION_ESTABLISHED);
+        info = new Session(defaultInterval, clock.time() + defaultInterval,
+                                      connectionId, UNKNOWN, CONNECTED);
     }
 
     public void onLogin(final long heartbeatInterval, final long sequenceNumber)

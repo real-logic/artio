@@ -82,6 +82,10 @@ public class Coordinator implements Agent
     {
         if (followers.contains(sessionId))
         {
+            // TODO: update to be a sessionId -> max position map - Long2LongHashMap
+            // TODO: apply strategy to get the new acknowledged term id
+            // TODO: read from data stream up to acknowledged term id
+            // TODO: add pollToPosition(termId);
 
             if (termId < acknowledgedTermId)
             {
@@ -137,7 +141,9 @@ public class Coordinator implements Agent
 
     public int doWork() throws Exception
     {
-        return dataSubscription.poll(1);
+        // TODO: some batch
+        return controlSubscription.poll(10);
+        //return dataSubscription.poll(1);
     }
 
     public void onClose()
