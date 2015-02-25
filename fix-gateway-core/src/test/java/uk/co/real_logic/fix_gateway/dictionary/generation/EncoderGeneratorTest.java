@@ -89,6 +89,17 @@ public class EncoderGeneratorTest
     }
 
     @Test
+    public void stringSettersResizeByteArray() throws Exception
+    {
+        final Object encoder = clazz.newInstance();
+
+        setTestReqIdTo(encoder, "abcd");
+
+        assertArrayEquals(new byte[]{97,98,99,100}, (byte[]) getField(encoder, TEST_REQ_ID));
+        assertEquals(4, getField(encoder, TEST_REQ_ID_LENGTH));
+    }
+
+    @Test
     public void flagsForOptionalFieldsInitiallyUnset() throws Exception
     {
         final Object encoder = clazz.newInstance();
@@ -112,8 +123,13 @@ public class EncoderGeneratorTest
 
     private void setTestReqId(final Object encoder) throws Exception
     {
+        setTestReqIdTo(encoder, VALUE);
+    }
+
+    private void setTestReqIdTo(final Object encoder, final String value) throws Exception
+    {
         clazz.getMethod(TEST_REQ_ID, CharSequence.class)
-             .invoke(encoder, VALUE);
+                .invoke(encoder, value);
     }
 
     private Object getField(final Object encoder, final String fieldName) throws Exception
