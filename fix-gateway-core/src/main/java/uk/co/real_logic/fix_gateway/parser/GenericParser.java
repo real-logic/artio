@@ -60,7 +60,7 @@ public final class GenericParser implements MessageHandler
         this.groupToField = groupToField;
     }
 
-    public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long connectionId)
+    public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long sessionId)
     {
         string.wrap(buffer);
         acceptor.onNext();

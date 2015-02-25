@@ -45,9 +45,9 @@ public class Multiplexer implements MessageHandler
     /**
      * Receive a message from a message source buffer.
      */
-    public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long connectionId)
+    public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long sessionId)
     {
-        final SenderEndPoint endPoint = endpoints.get(connectionId);
+        final SenderEndPoint endPoint = endpoints.get(sessionId);
         if (endPoint != null)
         {
             endPoint.onFramedMessage(buffer, offset, length);

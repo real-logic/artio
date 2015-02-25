@@ -33,7 +33,7 @@ public final class ReplicationPublisher implements MessageHandler
         this.dataPublication = dataPublication;
     }
 
-    public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long connectionId)
+    public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long sessionId)
     {
         while (!dataPublication.offer(buffer, offset, length))
         {

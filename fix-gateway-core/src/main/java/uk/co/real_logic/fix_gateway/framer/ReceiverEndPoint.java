@@ -109,6 +109,7 @@ public class ReceiverEndPoint
                 }
 
                 final int length = (indexOfLastByteOfMessage + 1) - offset;
+                // TODO: mapping from connections to sessions
                 handler.onMessage(buffer, offset, length, connectionId);
 
                 offset += length;

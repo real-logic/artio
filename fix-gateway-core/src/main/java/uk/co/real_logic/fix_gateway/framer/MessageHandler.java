@@ -23,5 +23,5 @@ import uk.co.real_logic.agrona.DirectBuffer;
 @FunctionalInterface
 public interface MessageHandler
 {
-    void onMessage(DirectBuffer buffer, int offset, int length, long connectionId);
+    void onMessage(DirectBuffer buffer, int offset, int length, long sessionId);
 }

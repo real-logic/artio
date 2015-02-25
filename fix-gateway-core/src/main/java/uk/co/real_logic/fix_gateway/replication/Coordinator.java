@@ -64,9 +64,9 @@ public class Coordinator implements Agent
         }
 
         // TODO: parse from framing message
-        final int connectionId = -1;
+        final int sessionId = -1;
 
-        delegate.onMessage(buffer, offset, length, connectionId);
+        delegate.onMessage(buffer, offset, length, sessionId);
 
         // TODO: broadcast to followers that the message was committed to the delegate
     }
