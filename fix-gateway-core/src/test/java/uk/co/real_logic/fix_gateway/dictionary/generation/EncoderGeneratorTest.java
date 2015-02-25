@@ -84,8 +84,7 @@ public class EncoderGeneratorTest
 
         setTestReqId(encoder);
 
-        assertArrayEquals(VALUE_IN_BYTES, (byte[]) getField(encoder, TEST_REQ_ID));
-        assertEquals(3, getField(encoder, TEST_REQ_ID_LENGTH));
+        assertTestReqIsValue(encoder);
     }
 
     @Test
@@ -97,6 +96,18 @@ public class EncoderGeneratorTest
 
         assertArrayEquals(new byte[]{97,98,99,100}, (byte[]) getField(encoder, TEST_REQ_ID));
         assertEquals(4, getField(encoder, TEST_REQ_ID_LENGTH));
+    }
+
+    @Test
+    public void charArraySettersWriteToFields() throws Exception
+    {
+        final Object encoder = clazz.newInstance();
+
+        final Object value = new char[] {'a', 'b', 'c'};
+        clazz.getMethod(TEST_REQ_ID, char[].class)
+             .invoke(encoder, value);
+
+        assertTestReqIsValue(encoder);
     }
 
     @Test
@@ -114,6 +125,12 @@ public class EncoderGeneratorTest
         setTestReqId(encoder);
 
         assertTrue("hasTestReqId not updated", hasTestReqId(encoder));
+    }
+
+    private void assertTestReqIsValue(final Object encoder) throws Exception
+    {
+        assertArrayEquals(VALUE_IN_BYTES, (byte[]) getField(encoder, TEST_REQ_ID));
+        assertEquals(3, getField(encoder, TEST_REQ_ID_LENGTH));
     }
 
     private boolean hasTestReqId(final Object encoder) throws Exception

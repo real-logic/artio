@@ -37,4 +37,21 @@ public final class EncodingUtil
         }
         return buffer;
     }
+
+    /**
+     * NB: only valid for ASCII bytes.
+     *
+     * @param value
+     * @return
+     */
+    public static byte[] toBytes(final char[] value, final byte[] oldBuffer)
+    {
+        final int length = value.length;
+        final byte[] buffer = (oldBuffer.length < length) ? new byte[length] : oldBuffer;
+        for (int i = 0; i < length; i++)
+        {
+            buffer[i] = (byte) value[i];
+        }
+        return buffer;
+    }
 }
