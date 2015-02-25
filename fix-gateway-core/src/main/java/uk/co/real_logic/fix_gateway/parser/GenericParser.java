@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.parser;
 
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
@@ -27,11 +26,21 @@ import uk.co.real_logic.fix_gateway.util.IntHashSet;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+import static uk.co.real_logic.fix_gateway.ValidationError.INVALID_CHECKSUM;
 import static uk.co.real_logic.fix_gateway.ValidationError.PARSE_ERROR;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.*;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
 // TODO: what should we do if the callbacks throw an exception?
+
+/**
+ * Zero allocation generic parser for fix messages.
+ *
+ * Take care when refactoring:
+ *
+ * There are a lot of places where values are passed as parameters and not assigned to fields in order to
+ * allow stack allocated primitives and avoid allocation.
+ */
 public final class GenericParser implements MessageHandler
 {
     private static final int NO_CHECKSUM = 0;
@@ -44,7 +53,10 @@ public final class GenericParser implements MessageHandler
     private final OtfMessageAcceptor acceptor;
     private final IntDictionary groupToField;
 
-    private GroupInformation currentGroup = new GroupInformation();
+    private int checksum;
+    private int checksumOffset;
+    private int messageType;
+    private int tag;
 
     public GenericParser(final OtfMessageAcceptor acceptor, final IntDictionary groupToField)
     {
@@ -58,14 +70,35 @@ public final class GenericParser implements MessageHandler
         acceptor.onNext();
 
         final int end = offset + length;
-        int position = offset;
 
-        int checksum = NO_CHECKSUM;
-        int checksumOffset = 0;
-        int messageType = UNKNOWN;
-        int tag = UNKNOWN;
+        parseMessage(buffer, offset, end, new GroupInformation());
+    }
+
+    private void parseMessage(final DirectBuffer buffer, final int offset, final int end, GroupInformation currentGroup)
+    {
+        tag = UNKNOWN;
+        messageType = UNKNOWN;
+        checksum = NO_CHECKSUM;
+        checksumOffset = 0;
+
+        parseFields(buffer, offset, end, currentGroup);
+
+        if (validChecksum(buffer, offset, checksumOffset, checksum))
+        {
+            acceptor.onComplete();
+        }
+        else
+        {
+            onInvalidChecksum(messageType);
+        }
+    }
+
+    private void parseFields(final DirectBuffer buffer, final int offset, final int end, GroupInformation currentGroup)
+    {
         try
         {
+            int position = offset;
+
             while (position < end)
             {
                 final int equalsPosition = string.scan(position, end, '=');
@@ -87,7 +120,7 @@ public final class GenericParser implements MessageHandler
                 final IntHashSet newGroupFields = groupToField.values(tag);
                 if (newGroupFields == null)
                 {
-                    checkGroup(tag);
+                    currentGroup = checkGroup(tag, currentGroup);
 
                     acceptor.onField(tag, buffer, valueOffset, valueLength);
 
@@ -103,93 +136,81 @@ public final class GenericParser implements MessageHandler
                 }
                 else
                 {
-                    groupHeader(tag, valueOffset, endOfField, newGroupFields);
+                    currentGroup = groupHeader(tag, valueOffset, endOfField, newGroupFields, currentGroup);
                 }
 
                 position = endOfField + 1;
             }
 
             // While due to the possibility of nested groups all ending at the end of the message
-            while (insideAGroup())
+            while (insideAGroup(currentGroup.groupTag))
             {
-                endRepeatingGroupBlock();
-            }
-
-            if (validateChecksum(buffer, offset, checksumOffset, checksum))
-            {
-                acceptor.onComplete();
-            }
-            else
-            {
-                acceptor.onError(ValidationError.INVALID_CHECKSUM, messageType, CHECKSUM, stringField);
+                endRepeatingGroupBlock(currentGroup);
             }
         }
         catch (final IllegalArgumentException ex)
         {
             // Error parsing the message
             //ex.printStackTrace();
-            acceptor.onError(PARSE_ERROR, messageType, tag, stringField);
+            onParseError(messageType, tag);
         }
+        return;
     }
 
-    private void checkGroup(final int tag)
+    private GroupInformation checkGroup(final int tag, final GroupInformation currentGroup)
     {
-        if (insideAGroup())
+        if (insideAGroup(currentGroup.groupTag))
         {
             // Non-group field means end of group
-            if (!currentGroup.fields.contains(tag))
+            if (!currentGroup.groupFields.contains(tag))
             {
-                if (endRepeatingGroupBlock())
+                final GroupInformation newGroup = endRepeatingGroupBlock(currentGroup);
+                if (newGroup != currentGroup)
                 {
-                    checkGroup(tag);
+                    return checkGroup(tag, newGroup);
                 }
             }
             else
             {
                 // First field first iteration
-                if (currentGroup.firstField == UNKNOWN)
+                if (currentGroup.firstFieldInGroup == UNKNOWN)
                 {
-                    currentGroup.firstField = tag;
+                    currentGroup.firstFieldInGroup = tag;
                 }
                 // We've seen the first field again - its a new group iteration
-                else if(tag == currentGroup.firstField)
+                else if(tag == currentGroup.firstFieldInGroup)
                 {
-                    onGroupEnd();
-                    currentGroup.index++;
-                    onGroupBegin();
+                    onGroupEnd(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
+                    currentGroup.indexOfGroupElement++;
+                    onGroupBegin(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
                 }
             }
         }
+        return currentGroup;
     }
 
-    private boolean insideAGroup()
+    private GroupInformation endRepeatingGroupBlock(final GroupInformation currentGroup)
     {
-        return this.currentGroup.tag != UNKNOWN;
-    }
+        onGroupEnd(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
 
-    private boolean endRepeatingGroupBlock()
-    {
-        onGroupEnd();
-
-        final boolean wasNested = !groups.isEmpty();
-        if (wasNested)
+        if (!groups.isEmpty())
         {
-            currentGroup = groups.pop();
+            return groups.pop();
         }
         else
         {
-            currentGroup.tag = UNKNOWN;
+            currentGroup.groupTag = UNKNOWN;
         }
 
-        return wasNested;
+        return currentGroup;
     }
 
-    private void onGroupEnd()
-    {
-        acceptor.onGroupEnd(currentGroup.tag, currentGroup.numberOfElements, currentGroup.index);
-    }
-
-    private void groupHeader(final int tag, final int valueOffset, final int endOfField, final IntHashSet newGroupFields)
+    private GroupInformation groupHeader(
+            final int tag,
+            final int valueOffset,
+            final int endOfField,
+            final IntHashSet newGroupFields,
+            GroupInformation currentGroup)
     {
         final int numberOfElements = string.getInt(valueOffset, endOfField);
 
@@ -197,25 +218,47 @@ public final class GenericParser implements MessageHandler
 
         if (numberOfElements > 0)
         {
-            if (insideAGroup())
+            if (insideAGroup(currentGroup.groupTag))
             {
                 groups.push(currentGroup);
                 currentGroup = new GroupInformation();
             }
 
-            currentGroup.tag = tag;
-            currentGroup.fields = newGroupFields;
-            currentGroup.firstField = UNKNOWN;
-            currentGroup.numberOfElements = numberOfElements;
-            currentGroup.index = 0;
+            currentGroup.groupTag = tag;
+            currentGroup.groupFields = newGroupFields;
+            currentGroup.firstFieldInGroup = UNKNOWN;
+            currentGroup.numberOfElementsInGroup = numberOfElements;
+            currentGroup.indexOfGroupElement = 0;
 
-            onGroupBegin();
+            onGroupBegin(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
         }
+
+        return currentGroup;
     }
 
-    private void onGroupBegin()
+    private boolean insideAGroup(final int tag)
     {
-        acceptor.onGroupBegin(currentGroup.tag, currentGroup.numberOfElements, currentGroup.index);
+        return tag != UNKNOWN;
+    }
+
+    private void onGroupBegin(final int tag, final int numberOfElements, final int index)
+    {
+        acceptor.onGroupBegin(tag, numberOfElements, index);
+    }
+
+    private void onGroupEnd(final int tag, final int numberOfElements, final int index)
+    {
+        acceptor.onGroupEnd(tag, numberOfElements, index);
+    }
+
+    private void onParseError(final int messageType, final int tag)
+    {
+        acceptor.onError(PARSE_ERROR, messageType, tag, stringField);
+    }
+
+    private void onInvalidChecksum(final int messageType)
+    {
+        acceptor.onError(INVALID_CHECKSUM, messageType, CHECKSUM, stringField);
     }
 
     private boolean validatePosition(final int position, final OtfMessageAcceptor acceptor, final int messageType, final int tag)
@@ -231,7 +274,7 @@ public final class GenericParser implements MessageHandler
         return true;
     }
 
-    private boolean validateChecksum(final DirectBuffer buffer, final int offset, final int length, final int checksum)
+    private boolean validChecksum(final DirectBuffer buffer, final int offset, final int length, final int checksum)
     {
         if (checksum == NO_CHECKSUM)
         {
@@ -251,10 +294,10 @@ public final class GenericParser implements MessageHandler
 
     private static class GroupInformation
     {
-        int tag = UNKNOWN;
-        IntHashSet fields = null;
-        int firstField;
-        int numberOfElements;
-        int index;
+        int groupTag = UNKNOWN;
+        IntHashSet groupFields = null;
+        int firstFieldInGroup;
+        int numberOfElementsInGroup;
+        int indexOfGroupElement;
     }
 }
