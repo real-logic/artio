@@ -13,15 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package uk.co.real_logic.fix_gateway.framer;
 
-/**
- * Session Management covers:
- *
- * <ul>
- *     <li>Authentication - login/logout</li>
- *     <li>Handling Heartbeats & Test Requests</li>
- *     <li>Admin aspects of session management - ability to disconnect clients etc</li>
- *     <li>Connection Hijacking</li>
- * </ul>
- */
-package uk.co.real_logic.fix_gateway.session_management;
+import uk.co.real_logic.aeron.common.Agent;
+
+public final class SessionManager implements Agent
+{
+
+    public int doWork() throws Exception
+    {
+        // Ability to check heartbeats
+        return 0;
+    }
+
+    public void onClose()
+    {
+
+    }
+
+    public String roleName()
+    {
+        return "Session Manager";
+    }
+}

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session_management;
+package uk.co.real_logic.fix_gateway.framer;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound

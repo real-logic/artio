@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session_management;
+package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
-import static uk.co.real_logic.fix_gateway.session_management.Session.UNKNOWN;
-import static uk.co.real_logic.fix_gateway.session_management.SessionState.CONNECTED;
+import static uk.co.real_logic.fix_gateway.framer.Session.UNKNOWN;
+import static uk.co.real_logic.fix_gateway.framer.SessionState.CONNECTED;
 
 public final class AcceptorSession
 {
