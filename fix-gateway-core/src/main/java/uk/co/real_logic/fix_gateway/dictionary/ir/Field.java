@@ -88,7 +88,7 @@ public final class Field implements Element
         STRING,
 
         // float types
-        PRICE, // TODO: check price isn't formatted in the dictionary, 5DP?
+        PRICE,
         PRICEOFFSET,
         QTY,
 

@@ -50,7 +50,7 @@ public class EncoderGeneratorTest
     public void generate() throws Exception
     {
         encoderGenerator.generate();
-        System.out.println(outputManager.getSources());
+        //System.out.println(outputManager.getSources());
         clazz = compileInMemory(HEARTBEAT, outputManager.getSources());
     }
 
@@ -97,7 +97,7 @@ public class EncoderGeneratorTest
 
         setTestReqIdTo(encoder, "abcd");
 
-        assertArrayEquals(new byte[]{97,98,99,100}, (byte[]) getField(encoder, TEST_REQ_ID));
+        assertArrayEquals(new byte[]{97, 98, 99, 100}, (byte[]) getField(encoder, TEST_REQ_ID));
         assertEquals(4, getField(encoder, TEST_REQ_ID_LENGTH));
     }
 
@@ -185,7 +185,6 @@ public class EncoderGeneratorTest
 
     // TODO: encode method
     // TODO: common header and footer
-    // TODO: primitive fields
-    // TODO: complex encoding data types - eg dates/float/etc
+    // TODO: complex encoding data types - eg dates/etc
 
 }

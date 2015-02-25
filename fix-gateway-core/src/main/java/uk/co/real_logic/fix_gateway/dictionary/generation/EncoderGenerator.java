@@ -150,7 +150,12 @@ public class EncoderGenerator
         }
     }
 
-    private String generateSetter(final String type, final String fieldName, final String optionalField, final String className, final String optionalAssign)
+    private String generateSetter(
+        final String type,
+        final String fieldName,
+        final String optionalField,
+        final String className,
+        final String optionalAssign)
     {
         return String.format(
             "    private %s %s;\n\n" +
