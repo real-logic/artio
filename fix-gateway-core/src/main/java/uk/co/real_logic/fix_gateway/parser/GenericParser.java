@@ -67,18 +67,14 @@ public final class GenericParser implements MessageHandler
 
         final int end = offset + length;
 
-        parseMessage(buffer, offset, end, new GroupInformation());
-    }
-
-    private void parseMessage(final DirectBuffer buffer, final int offset, final int end, final GroupInformation currentGroup)
-    {
         tag = UNKNOWN;
         messageType = UNKNOWN;
         checksum = NO_CHECKSUM;
         checksumOffset = 0;
+
         try
         {
-            parseFields(buffer, offset, end, currentGroup);
+            parseFields(buffer, offset, end, UNKNOWN, null, 0);
         }
         catch (final IllegalArgumentException ex)
         {
@@ -97,8 +93,17 @@ public final class GenericParser implements MessageHandler
         }
     }
 
-    private int parseFields(final DirectBuffer buffer, final int offset, final int end, GroupInformation currentGroup)
+    private int parseFields(
+        final DirectBuffer buffer,
+        final int offset,
+        final int end,
+        final int groupTag,
+        final IntHashSet groupFields,
+        final int numberOfElementsInGroup)
     {
+        int firstFieldInGroup = UNKNOWN;
+        int indexOfGroupElement = 0;
+
         int position = offset;
 
         while (position < end)
@@ -123,27 +128,27 @@ public final class GenericParser implements MessageHandler
             final IntHashSet newGroupFields = groupToField.values(tag);
             if (newGroupFields == null)
             {
-                if (insideAGroup(currentGroup.groupTag))
+                if (insideAGroup(groupTag))
                 {
                     // Non-group field means end of group
-                    if (!currentGroup.groupFields.contains(tag))
+                    if (!groupFields.contains(tag))
                     {
-                        onGroupEnd(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
+                        onGroupEnd(groupTag, numberOfElementsInGroup, indexOfGroupElement);
                         return beginningOfField;
                     }
                     else
                     {
                         // First field first iteration
-                        if (currentGroup.firstFieldInGroup == UNKNOWN)
+                        if (firstFieldInGroup == UNKNOWN)
                         {
-                            currentGroup.firstFieldInGroup = tag;
+                            firstFieldInGroup = tag;
                         }
                         // We've seen the first field again - its a new group iteration
-                        else if(tag == currentGroup.firstFieldInGroup)
+                        else if(tag == firstFieldInGroup)
                         {
-                            onGroupEnd(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
-                            currentGroup.indexOfGroupElement++;
-                            onGroupBegin(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
+                            onGroupEnd(groupTag, numberOfElementsInGroup, indexOfGroupElement);
+                            indexOfGroupElement++;
+                            onGroupBegin(groupTag, numberOfElementsInGroup, indexOfGroupElement);
                         }
                     }
                 }
@@ -182,7 +187,7 @@ public final class GenericParser implements MessageHandler
             final int valueOffset,
             final int endOfField,
             final int end,
-            final IntHashSet newGroupFields)
+            final IntHashSet groupFields)
     {
         final int numberOfElements = string.getInt(valueOffset, endOfField);
 
@@ -191,13 +196,7 @@ public final class GenericParser implements MessageHandler
         if (numberOfElements > 0)
         {
             onGroupBegin(tag, numberOfElements, 0);
-            final GroupInformation info = new GroupInformation();
-            info.groupTag = tag;
-            info.firstFieldInGroup = UNKNOWN;
-            info.groupFields = newGroupFields;
-            info.numberOfElementsInGroup = numberOfElements;
-            info.indexOfGroupElement = 0;
-            final int position = parseFields(buffer, endOfField + 1, end, info);
+            final int position = parseFields(buffer, endOfField + 1, end, tag, groupFields, numberOfElements);
             if (position == end)
             {
                 onGroupEnd(tag, numberOfElements, numberOfElements - 1);
@@ -264,12 +263,4 @@ public final class GenericParser implements MessageHandler
         return (total % 256) == checksum;
     }
 
-    private static class GroupInformation
-    {
-        int groupTag = UNKNOWN;
-        IntHashSet groupFields = null;
-        int firstFieldInGroup;
-        int numberOfElementsInGroup;
-        int indexOfGroupElement;
-    }
 }
