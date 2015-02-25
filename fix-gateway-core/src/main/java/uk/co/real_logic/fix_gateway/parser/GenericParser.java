@@ -65,31 +65,30 @@ public final class GenericParser implements MessageHandler
         string.wrap(buffer);
         acceptor.onNext();
 
-        final int end = offset + length;
-
         tag = UNKNOWN;
         messageType = UNKNOWN;
+
         checksum = NO_CHECKSUM;
         checksumOffset = 0;
 
         try
         {
-            parseFields(buffer, offset, end, UNKNOWN, null, 0);
+            parseFields(buffer, offset, offset + length, UNKNOWN, null, 0);
+
+            if (validChecksum(buffer, offset, checksumOffset, checksum))
+            {
+                acceptor.onComplete();
+            }
+            else
+            {
+                invalidChecksum(messageType);
+            }
         }
         catch (final IllegalArgumentException ex)
         {
             // Error parsing the message
             // ex.printStackTrace();
-            onParseError(messageType, tag);
-        }
-
-        if (validChecksum(buffer, offset, checksumOffset, checksum))
-        {
-            acceptor.onComplete();
-        }
-        else
-        {
-            onInvalidChecksum(messageType);
+            parseError(messageType, tag);
         }
     }
 
@@ -108,19 +107,18 @@ public final class GenericParser implements MessageHandler
 
         while (position < end)
         {
-            final int beginningOfField = position;
             final int equalsPosition = string.scan(position, end, '=');
-            if (!validatePosition(equalsPosition, acceptor, messageType, tag))
+            if (!validatePosition(equalsPosition, acceptor))
             {
-                return beginningOfField;
+                return position;
             }
 
             tag = string.getInt(position, equalsPosition);
             final int valueOffset = equalsPosition + 1;
             final int endOfField = string.scan(valueOffset, end, START_OF_HEADER);
-            if (!validatePosition(endOfField, acceptor, messageType, tag))
+            if (!validatePosition(endOfField, acceptor))
             {
-                return beginningOfField;
+                return position;
             }
 
             final int valueLength = endOfField - valueOffset;
@@ -130,11 +128,10 @@ public final class GenericParser implements MessageHandler
             {
                 if (insideAGroup(groupTag))
                 {
-                    // Non-group field means end of group
-                    if (!groupFields.contains(tag))
+                    if (isEndOfGroup(groupFields))
                     {
-                        onGroupEnd(groupTag, numberOfElementsInGroup, indexOfGroupElement);
-                        return beginningOfField;
+                        groupEnd(groupTag, numberOfElementsInGroup, indexOfGroupElement);
+                        return position;
                     }
                     else
                     {
@@ -146,16 +143,16 @@ public final class GenericParser implements MessageHandler
                         // We've seen the first field again - its a new group iteration
                         else if(tag == firstFieldInGroup)
                         {
-                            onGroupEnd(groupTag, numberOfElementsInGroup, indexOfGroupElement);
+                            groupEnd(groupTag, numberOfElementsInGroup, indexOfGroupElement);
                             indexOfGroupElement++;
-                            onGroupBegin(groupTag, numberOfElementsInGroup, indexOfGroupElement);
+                            groupBegin(groupTag, numberOfElementsInGroup, indexOfGroupElement);
                         }
                     }
                 }
 
                 acceptor.onField(tag, buffer, valueOffset, valueLength);
 
-                storeImportantFields(equalsPosition, valueOffset, endOfField, valueLength);
+                collectImportantFields(equalsPosition, valueOffset, endOfField, valueLength);
 
                 position = endOfField + 1;
             }
@@ -166,19 +163,6 @@ public final class GenericParser implements MessageHandler
         }
 
         return position;
-    }
-
-    private void storeImportantFields(final int equalsPosition, final int valueOffset, final int endOfField, final int valueLength)
-    {
-        if (tag == CHECKSUM)
-        {
-            checksum = string.getInt(valueOffset, endOfField);
-            checksumOffset = equalsPosition - 2;
-        }
-        else if(tag == MESSAGE_TYPE)
-        {
-            messageType = string.getMessageType(valueOffset, valueLength);
-        }
     }
 
     private int parseGroup(
@@ -195,11 +179,11 @@ public final class GenericParser implements MessageHandler
 
         if (numberOfElements > 0)
         {
-            onGroupBegin(tag, numberOfElements, 0);
+            groupBegin(tag, numberOfElements, 0);
             final int position = parseFields(buffer, endOfField + 1, end, tag, groupFields, numberOfElements);
             if (position == end)
             {
-                onGroupEnd(tag, numberOfElements, numberOfElements - 1);
+                groupEnd(tag, numberOfElements, numberOfElements - 1);
             }
             return position;
         }
@@ -207,32 +191,50 @@ public final class GenericParser implements MessageHandler
         return endOfField;
     }
 
+    private boolean isEndOfGroup(final IntHashSet groupFields)
+    {
+        return !groupFields.contains(tag);
+    }
+
+    private void collectImportantFields(final int equalsPosition, final int valueOffset, final int endOfField, final int valueLength)
+    {
+        if (tag == CHECKSUM)
+        {
+            checksum = string.getInt(valueOffset, endOfField);
+            checksumOffset = equalsPosition - 2;
+        }
+        else if(tag == MESSAGE_TYPE)
+        {
+            messageType = string.getMessageType(valueOffset, valueLength);
+        }
+    }
+
     private boolean insideAGroup(final int tag)
     {
         return tag != UNKNOWN;
     }
 
-    private void onGroupBegin(final int tag, final int numberOfElements, final int index)
+    private void groupBegin(final int tag, final int numberOfElements, final int index)
     {
         acceptor.onGroupBegin(tag, numberOfElements, index);
     }
 
-    private void onGroupEnd(final int tag, final int numberOfElements, final int index)
+    private void groupEnd(final int tag, final int numberOfElements, final int index)
     {
         acceptor.onGroupEnd(tag, numberOfElements, index);
     }
 
-    private void onParseError(final int messageType, final int tag)
+    private void parseError(final int messageType, final int tag)
     {
         acceptor.onError(PARSE_ERROR, messageType, tag, stringField);
     }
 
-    private void onInvalidChecksum(final int messageType)
+    private void invalidChecksum(final int messageType)
     {
         acceptor.onError(INVALID_CHECKSUM, messageType, CHECKSUM, stringField);
     }
 
-    private boolean validatePosition(final int position, final OtfMessageAcceptor acceptor, final int messageType, final int tag)
+    private boolean validatePosition(final int position, final OtfMessageAcceptor acceptor)
     {
         if (position == UNKNOWN_INDEX)
         {
