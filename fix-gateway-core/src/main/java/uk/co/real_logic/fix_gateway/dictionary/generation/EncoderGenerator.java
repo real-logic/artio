@@ -15,11 +15,13 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
+import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
 import java.io.IOException;
@@ -28,6 +30,7 @@ import java.util.List;
 
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.BUILDER_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 
 public class EncoderGenerator
 {
@@ -104,7 +107,6 @@ public class EncoderGenerator
 
         switch (element.type())
         {
-            // TODO: other string encoding cases: bytebuffer, etc.
             // TODO: other type cases
             // TODO: how do we reset optional fields - clear method?
             case STRING:
@@ -133,8 +135,37 @@ public class EncoderGenerator
                     optionalField,
                     className,
                     optionalAssign);
+
+            case INT:
+            case LENGTH:
+            case SEQNUM:
+                return generateSetter("int", fieldName, optionalField, className, optionalAssign);
+
+            case QTY:
+            case PRICE:
+            case PRICEOFFSET:
+                return generateSetter("DecimalFloat", fieldName, optionalField, className, optionalAssign);
+
             default: throw new UnsupportedOperationException("Unknown type: " + element.type());
         }
+    }
+
+    private String generateSetter(final String type, final String fieldName, final String optionalField, final String className, final String optionalAssign)
+    {
+        return String.format(
+            "    private %s %s;\n\n" +
+            "%s" +
+            "    public %s %2$s(%1$s value)\n" +
+            "    {\n" +
+            "        %2$s = value;\n" +
+            "%s" +
+            "        return this;\n" +
+            "    }\n",
+            type,
+            fieldName,
+            optionalField,
+            className,
+            optionalAssign);
     }
 
     private String generateEncodeMethod()
@@ -150,8 +181,9 @@ public class EncoderGenerator
     {
         return String.format(
             "import %s.Encoder;\n" +
-            "import static uk.co.real_logic.fix_gateway.dictionary.generation.EncodingUtil.*;\n\n" +
-            "import uk.co.real_logic.agrona.MutableDirectBuffer;\n\n" +
+            "import static uk.co.real_logic.fix_gateway.dictionary.generation.EncodingUtil.*;\n" +
+            importFor(DecimalFloat.class) +
+            importFor(MutableDirectBuffer.class) +
             "public final class %s implements Encoder\n" +
             "{\n\n",
             BUILDER_PACKAGE,

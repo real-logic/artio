@@ -20,6 +20,7 @@ import org.junit.Test;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
+import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 
 import java.lang.reflect.Field;
 
@@ -35,6 +36,8 @@ public class EncoderGeneratorTest
     private static final String VALUE = "abc";
     private static final byte[] VALUE_IN_BYTES = {97, 98, 99};
     private static final String TEST_REQ_ID = "testReqID";
+    private static final String INT_FIELD = "intField";
+    private static final String FLOAT_FIELD = "floatField";
     private static final String TEST_REQ_ID_LENGTH = "testReqIDLength";
     private static final String HAS_TEST_REQ_ID = "hasTestReqID";
 
@@ -111,6 +114,30 @@ public class EncoderGeneratorTest
     }
 
     @Test
+    public void intSettersWriteToFields() throws Exception
+    {
+        final Object encoder = clazz.newInstance();
+
+        clazz.getMethod(INT_FIELD, int.class)
+                .invoke(encoder, 1);
+
+        assertEquals(1, getField(encoder, INT_FIELD));
+    }
+
+    @Test
+    public void floatSettersWriteToFields() throws Exception
+    {
+        final Object encoder = clazz.newInstance();
+
+        DecimalFloat value = new DecimalFloat(1, 2);
+
+        clazz.getMethod(FLOAT_FIELD, DecimalFloat.class)
+                .invoke(encoder, value);
+
+        assertEquals(value, getField(encoder, FLOAT_FIELD));
+    }
+
+    @Test
     public void flagsForOptionalFieldsInitiallyUnset() throws Exception
     {
         final Object encoder = clazz.newInstance();
@@ -160,8 +187,5 @@ public class EncoderGeneratorTest
     // TODO: common header and footer
     // TODO: primitive fields
     // TODO: complex encoding data types - eg dates/float/etc
-    // TODO: encoding Strings from direct buffers
-    // TODO: encoding Strings from a char[]?
-    // TODO: encoding Strings from an ascii flyweight?
 
 }

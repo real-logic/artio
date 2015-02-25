@@ -90,4 +90,9 @@ public final class GenerationUtil
                 .collect(joining(", "));
     }
 
+    public static String importFor(Class<?> cls)
+    {
+        return String.format("import %s;\n", cls.getCanonicalName());
+    }
+
 }

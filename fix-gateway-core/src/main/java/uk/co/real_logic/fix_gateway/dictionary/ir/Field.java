@@ -80,21 +80,27 @@ public final class Field implements Element
 
     public static enum Type
     {
-        STRING,
-        NUMINGROUP,
+        // int types
         INT,
-        LOCALMKTDATE,
-        CHAR,
         LENGTH,
-        AMT,
-        QTY,
-        CURRENCY,
         SEQNUM,
+
+        STRING,
+
+        // float types
+        PRICE, // TODO: check price isn't formatted in the dictionary, 5DP?
+        PRICEOFFSET,
+        QTY,
+
+        CHAR,
+        LOCALMKTDATE,
+        AMT, // AlternativeMinimumTax, boolean
+
+        CURRENCY,
+        NUMINGROUP,
         MULTIPLEVALUESTRING,
         DATA,
-        UTCTIMESTAMP,
-        PRICE, // TODO: check price isn't formatted in the dictionary, 5DP?
-        PRICEOFFSET
+        UTCTIMESTAMP
     }
 
     public static class Value

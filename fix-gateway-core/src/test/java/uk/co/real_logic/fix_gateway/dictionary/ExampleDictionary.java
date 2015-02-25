@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary;
 
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
 
 import java.util.HashMap;
@@ -31,7 +32,7 @@ public final class ExampleDictionary
 {
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
 
-    public static final String HEARTBEAT = BUILDER_PACKAGE + "." + "Hearbeat";
+    public static final String HEARTBEAT = BUILDER_PACKAGE + "." + "Heartbeat";
 
     public static final DataDictionary FIELD_EXAMPLE;
 
@@ -39,26 +40,32 @@ public final class ExampleDictionary
 
     static
     {
-        final Field egEnum = new Field(123, "EgEnum", Field.Type.CHAR);
+        final Field egEnum = new Field(123, "EgEnum", Type.CHAR);
         egEnum.addValue('a', "AnEntry");
         egEnum.addValue('b', "AnotherEntry");
 
         final Map<String, Field> fieldEgFields = new HashMap<>();
         fieldEgFields.put("EgEnum", egEnum);
-        fieldEgFields.put("egNotEnum", new Field(123, "EgNotEnum", Field.Type.CHAR));
+        fieldEgFields.put("egNotEnum", new Field(123, "EgNotEnum", Type.CHAR));
 
         FIELD_EXAMPLE = new DataDictionary(emptyList(), fieldEgFields, emptyMap());
 
-        final Field onBehalfOfCompID = new Field(115, "OnBehalfOfCompID", Field.Type.STRING);
-        final Field testReqID = new Field(112, "TestReqID", Field.Type.STRING);
+        final Field onBehalfOfCompID = new Field(115, "OnBehalfOfCompID", Type.STRING);
+        final Field testReqID = new Field(112, "TestReqID", Type.STRING);
+        final Field intField = new Field(116, "IntField", Type.LENGTH);
+        final Field floatField = new Field(116, "FloatField", Type.PRICE);
 
-        final Message heartbeat = new Message("Hearbeat", '0', ADMIN);
+        final Message heartbeat = new Message("Heartbeat", '0', ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);
         heartbeat.optionalEntry(testReqID);
+        heartbeat.requiredEntry(intField);
+        heartbeat.requiredEntry(floatField);
 
         final Map<String, Field> messageEgFields = new HashMap<>();
         messageEgFields.put("OnBehalfOfCompID", onBehalfOfCompID);
         messageEgFields.put("TestReqID", testReqID);
+        messageEgFields.put("IntField", intField);
+        messageEgFields.put("FloatField", floatField);
 
         MESSAGE_EXAMPLE = new DataDictionary(singletonList(heartbeat), messageEgFields, emptyMap());
     }
