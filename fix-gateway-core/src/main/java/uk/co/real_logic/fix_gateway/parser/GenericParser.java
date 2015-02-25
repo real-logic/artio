@@ -23,9 +23,6 @@ import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 import static uk.co.real_logic.fix_gateway.ValidationError.INVALID_CHECKSUM;
 import static uk.co.real_logic.fix_gateway.ValidationError.PARSE_ERROR;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.*;
@@ -48,7 +45,6 @@ public final class GenericParser implements MessageHandler
 
     private final AsciiFlyweight string = new AsciiFlyweight(null);
     private final AsciiFieldFlyweight stringField = new AsciiFieldFlyweight();
-    private final Deque<GroupInformation> groups = new ArrayDeque<>();
 
     private final OtfMessageAcceptor acceptor;
     private final IntDictionary groupToField;
@@ -74,14 +70,22 @@ public final class GenericParser implements MessageHandler
         parseMessage(buffer, offset, end, new GroupInformation());
     }
 
-    private void parseMessage(final DirectBuffer buffer, final int offset, final int end, GroupInformation currentGroup)
+    private void parseMessage(final DirectBuffer buffer, final int offset, final int end, final GroupInformation currentGroup)
     {
         tag = UNKNOWN;
         messageType = UNKNOWN;
         checksum = NO_CHECKSUM;
         checksumOffset = 0;
-
-        parseFields(buffer, offset, end, currentGroup);
+        try
+        {
+            parseFields(buffer, offset, end, currentGroup);
+        }
+        catch (final IllegalArgumentException ex)
+        {
+            // Error parsing the message
+            // ex.printStackTrace();
+            onParseError(messageType, tag);
+        }
 
         if (validChecksum(buffer, offset, checksumOffset, checksum))
         {
@@ -93,124 +97,92 @@ public final class GenericParser implements MessageHandler
         }
     }
 
-    private void parseFields(final DirectBuffer buffer, final int offset, final int end, GroupInformation currentGroup)
+    private int parseFields(final DirectBuffer buffer, final int offset, final int end, GroupInformation currentGroup)
     {
-        try
+        int position = offset;
+
+        while (position < end)
         {
-            int position = offset;
-
-            while (position < end)
+            final int beginningOfField = position;
+            final int equalsPosition = string.scan(position, end, '=');
+            if (!validatePosition(equalsPosition, acceptor, messageType, tag))
             {
-                final int equalsPosition = string.scan(position, end, '=');
-                if (!validatePosition(equalsPosition, acceptor, messageType, tag))
+                return beginningOfField;
+            }
+
+            tag = string.getInt(position, equalsPosition);
+            final int valueOffset = equalsPosition + 1;
+            final int endOfField = string.scan(valueOffset, end, START_OF_HEADER);
+            if (!validatePosition(endOfField, acceptor, messageType, tag))
+            {
+                return beginningOfField;
+            }
+
+            final int valueLength = endOfField - valueOffset;
+
+            final IntHashSet newGroupFields = groupToField.values(tag);
+            if (newGroupFields == null)
+            {
+                if (insideAGroup(currentGroup.groupTag))
                 {
-                    return;
-                }
-
-                tag = string.getInt(position, equalsPosition);
-                final int valueOffset = equalsPosition + 1;
-                final int endOfField = string.scan(valueOffset, end, START_OF_HEADER);
-                if (!validatePosition(endOfField, acceptor, messageType, tag))
-                {
-                    return;
-                }
-
-                final int valueLength = endOfField - valueOffset;
-
-                final IntHashSet newGroupFields = groupToField.values(tag);
-                if (newGroupFields == null)
-                {
-                    currentGroup = checkGroup(tag, currentGroup);
-
-                    acceptor.onField(tag, buffer, valueOffset, valueLength);
-
-                    if (tag == CHECKSUM)
+                    // Non-group field means end of group
+                    if (!currentGroup.groupFields.contains(tag))
                     {
-                        checksum = string.getInt(valueOffset, endOfField);
-                        checksumOffset = equalsPosition - 2;
+                        onGroupEnd(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
+                        return beginningOfField;
                     }
-                    else if(tag == MESSAGE_TYPE)
+                    else
                     {
-                        messageType = string.getMessageType(valueOffset, valueLength);
+                        // First field first iteration
+                        if (currentGroup.firstFieldInGroup == UNKNOWN)
+                        {
+                            currentGroup.firstFieldInGroup = tag;
+                        }
+                        // We've seen the first field again - its a new group iteration
+                        else if(tag == currentGroup.firstFieldInGroup)
+                        {
+                            onGroupEnd(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
+                            currentGroup.indexOfGroupElement++;
+                            onGroupBegin(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
+                        }
                     }
                 }
-                else
-                {
-                    currentGroup = groupHeader(tag, valueOffset, endOfField, newGroupFields, currentGroup);
-                }
+
+                acceptor.onField(tag, buffer, valueOffset, valueLength);
+
+                storeImportantFields(equalsPosition, valueOffset, endOfField, valueLength);
 
                 position = endOfField + 1;
             }
-
-            // While due to the possibility of nested groups all ending at the end of the message
-            while (insideAGroup(currentGroup.groupTag))
-            {
-                endRepeatingGroupBlock(currentGroup);
-            }
-        }
-        catch (final IllegalArgumentException ex)
-        {
-            // Error parsing the message
-            //ex.printStackTrace();
-            onParseError(messageType, tag);
-        }
-        return;
-    }
-
-    private GroupInformation checkGroup(final int tag, final GroupInformation currentGroup)
-    {
-        if (insideAGroup(currentGroup.groupTag))
-        {
-            // Non-group field means end of group
-            if (!currentGroup.groupFields.contains(tag))
-            {
-                final GroupInformation newGroup = endRepeatingGroupBlock(currentGroup);
-                if (newGroup != currentGroup)
-                {
-                    return checkGroup(tag, newGroup);
-                }
-            }
             else
             {
-                // First field first iteration
-                if (currentGroup.firstFieldInGroup == UNKNOWN)
-                {
-                    currentGroup.firstFieldInGroup = tag;
-                }
-                // We've seen the first field again - its a new group iteration
-                else if(tag == currentGroup.firstFieldInGroup)
-                {
-                    onGroupEnd(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
-                    currentGroup.indexOfGroupElement++;
-                    onGroupBegin(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
-                }
+                position = parseGroup(buffer, tag, valueOffset, endOfField, end, newGroupFields);
             }
         }
-        return currentGroup;
+
+        return position;
     }
 
-    private GroupInformation endRepeatingGroupBlock(final GroupInformation currentGroup)
+    private void storeImportantFields(final int equalsPosition, final int valueOffset, final int endOfField, final int valueLength)
     {
-        onGroupEnd(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
-
-        if (!groups.isEmpty())
+        if (tag == CHECKSUM)
         {
-            return groups.pop();
+            checksum = string.getInt(valueOffset, endOfField);
+            checksumOffset = equalsPosition - 2;
         }
-        else
+        else if(tag == MESSAGE_TYPE)
         {
-            currentGroup.groupTag = UNKNOWN;
+            messageType = string.getMessageType(valueOffset, valueLength);
         }
-
-        return currentGroup;
     }
 
-    private GroupInformation groupHeader(
+    private int parseGroup(
+            final DirectBuffer buffer,
             final int tag,
             final int valueOffset,
             final int endOfField,
-            final IntHashSet newGroupFields,
-            GroupInformation currentGroup)
+            final int end,
+            final IntHashSet newGroupFields)
     {
         final int numberOfElements = string.getInt(valueOffset, endOfField);
 
@@ -218,22 +190,22 @@ public final class GenericParser implements MessageHandler
 
         if (numberOfElements > 0)
         {
-            if (insideAGroup(currentGroup.groupTag))
+            onGroupBegin(tag, numberOfElements, 0);
+            final GroupInformation info = new GroupInformation();
+            info.groupTag = tag;
+            info.firstFieldInGroup = UNKNOWN;
+            info.groupFields = newGroupFields;
+            info.numberOfElementsInGroup = numberOfElements;
+            info.indexOfGroupElement = 0;
+            final int position = parseFields(buffer, endOfField + 1, end, info);
+            if (position == end)
             {
-                groups.push(currentGroup);
-                currentGroup = new GroupInformation();
+                onGroupEnd(tag, numberOfElements, numberOfElements - 1);
             }
-
-            currentGroup.groupTag = tag;
-            currentGroup.groupFields = newGroupFields;
-            currentGroup.firstFieldInGroup = UNKNOWN;
-            currentGroup.numberOfElementsInGroup = numberOfElements;
-            currentGroup.indexOfGroupElement = 0;
-
-            onGroupBegin(currentGroup.groupTag, currentGroup.numberOfElementsInGroup, currentGroup.indexOfGroupElement);
+            return position;
         }
 
-        return currentGroup;
+        return endOfField;
     }
 
     private boolean insideAGroup(final int tag)
