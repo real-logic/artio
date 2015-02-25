@@ -33,11 +33,13 @@ import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.MESSAGE_
 public class EncoderGeneratorTest
 {
     private static final String VALUE = "abc";
+    private static final byte[] VALUE_IN_BYTES = {97, 98, 99};
     private static final String TEST_REQ_ID = "testReqID";
+    private static final String TEST_REQ_ID_LENGTH = "testReqIDLength";
     private static final String HAS_TEST_REQ_ID = "hasTestReqID";
 
     private StringWriterOutputManager outputManager = new StringWriterOutputManager();
-    private EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, outputManager);
+    private EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, 3, outputManager);
 
     private Class<?> clazz;
 
@@ -45,7 +47,7 @@ public class EncoderGeneratorTest
     public void generate() throws Exception
     {
         encoderGenerator.generate();
-        //System.out.println(outputManager.getSources());
+        System.out.println(outputManager.getSources());
         clazz = compileInMemory(HEARTBEAT, outputManager.getSources());
     }
 
@@ -72,17 +74,18 @@ public class EncoderGeneratorTest
     @Test
     public void generatesSetters() throws NoSuchMethodException
     {
-        clazz.getMethod("onBehalfOfCompID", String.class);
+        clazz.getMethod("onBehalfOfCompID", CharSequence.class);
     }
 
     @Test
-    public void settersWriteToFields() throws Exception
+    public void stringSettersWriteToFields() throws Exception
     {
         final Object encoder = clazz.newInstance();
 
         setTestReqId(encoder);
 
-        assertEquals(VALUE, getField(encoder, TEST_REQ_ID));
+        assertArrayEquals(VALUE_IN_BYTES, (byte[]) getField(encoder, TEST_REQ_ID));
+        assertEquals(3, getField(encoder, TEST_REQ_ID_LENGTH));
     }
 
     @Test
@@ -102,14 +105,6 @@ public class EncoderGeneratorTest
         assertTrue("hasTestReqId not updated", hasTestReqId(encoder));
     }
 
-    // TODO: encode method
-    // TODO: common header and footer
-    // TODO: primitive fields
-    // TODO: complex encoding data types - eg dates/float/etc
-    // TODO: encoding Strings from direct buffers
-    // TODO: encoding Strings from a char[]?
-    // TODO: encoding Strings from an ascii flyweight?
-
     private boolean hasTestReqId(final Object encoder) throws Exception
     {
         return (boolean) getField(encoder, HAS_TEST_REQ_ID);
@@ -117,7 +112,7 @@ public class EncoderGeneratorTest
 
     private void setTestReqId(final Object encoder) throws Exception
     {
-        clazz.getMethod(TEST_REQ_ID, String.class)
+        clazz.getMethod(TEST_REQ_ID, CharSequence.class)
              .invoke(encoder, VALUE);
     }
 
@@ -127,5 +122,13 @@ public class EncoderGeneratorTest
         field.setAccessible(true);
         return field.get(encoder);
     }
+
+    // TODO: encode method
+    // TODO: common header and footer
+    // TODO: primitive fields
+    // TODO: complex encoding data types - eg dates/float/etc
+    // TODO: encoding Strings from direct buffers
+    // TODO: encoding Strings from a char[]?
+    // TODO: encoding Strings from an ascii flyweight?
 
 }

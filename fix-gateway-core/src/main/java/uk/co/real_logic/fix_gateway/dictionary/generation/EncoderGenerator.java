@@ -32,11 +32,16 @@ import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.
 public class EncoderGenerator
 {
     private final DataDictionary dictionary;
+    private final int initialArraySize;
     private final StringWriterOutputManager outputManager;
 
-    public EncoderGenerator(final DataDictionary dictionary, final StringWriterOutputManager outputManager)
+    public EncoderGenerator(
+        final DataDictionary dictionary,
+        final int initialArraySize,
+        final StringWriterOutputManager outputManager)
     {
         this.dictionary = dictionary;
+        this.initialArraySize = initialArraySize;
         this.outputManager = outputManager;
     }
 
@@ -105,15 +110,18 @@ public class EncoderGenerator
             case STRING:
 
                 return String.format(
-                    "    private String %s;\n\n" +
+                    "    private byte[] %s = new byte[%d];\n\n" +
+                    "    private int %1$sLength = 0;\n\n" +
                     "%s" +
-                    "    public %s %1$s(String value)\n" +
+                    "    public %s %1$s(CharSequence value)\n" +
                     "    {\n" +
-                    "        %1$s = value;\n" +
+                    "        %1$s = toBytes(value, %1$s);\n" +
+                    "        %1$sLength = value.length();\n" +
                     "%s" +
                     "        return this;\n" +
                     "    }\n\n",
                     fieldName,
+                    initialArraySize,
                     optionalField,
                     className,
                     optionalAssign);
@@ -134,6 +142,7 @@ public class EncoderGenerator
     {
         return String.format(
             "import %s.Encoder;\n" +
+            "import static uk.co.real_logic.fix_gateway.dictionary.generation.EncodingUtil.*;\n\n" +
             "import uk.co.real_logic.agrona.MutableDirectBuffer;\n\n" +
             "public final class %s implements Encoder\n" +
             "{\n\n",
