@@ -15,15 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import uk.co.real_logic.fix_gateway.util.MilliClock;
+
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound
  */
-// TODO: refactor to class hierachy
-public final class Session
+public class Session
 {
     public static final long UNKNOWN = -1;
 
     private long heartbeatInterval;
+    private final MilliClock clock;
     private long nextRequiredMessageTime;
     private long connectionId;
     private long sequenceNumber;
@@ -31,13 +33,14 @@ public final class Session
 
     public Session(
             final long heartbeatInterval,
-            final long nextRequiredMessageTime,
+            final MilliClock clock,
             final long connectionId,
             final long sequenceNumber,
             final SessionState state)
     {
         this.heartbeatInterval = heartbeatInterval;
-        this.nextRequiredMessageTime = nextRequiredMessageTime;
+        this.clock = clock;
+        this.nextRequiredMessageTime = clock.time() + heartbeatInterval;
         this.connectionId = connectionId;
         this.sequenceNumber = sequenceNumber;
         this.state = state;

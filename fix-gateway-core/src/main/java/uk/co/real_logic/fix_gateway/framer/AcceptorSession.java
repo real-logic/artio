@@ -17,20 +17,14 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
-import static uk.co.real_logic.fix_gateway.framer.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.framer.SessionState.CONNECTED;
 
-public final class AcceptorSession
+public final class AcceptorSession extends Session
 {
-    private final MilliClock clock;
 
-    private Session info;
-
-    public AcceptorSession(final long defaultInterval, final long connectionId, final MilliClock clock)
+    public AcceptorSession(final long defaultInterval, final MilliClock clock, final long connectionId)
     {
-        this.clock = clock;
-        info = new Session(defaultInterval, clock.time() + defaultInterval,
-                                      connectionId, UNKNOWN, CONNECTED);
+        super(defaultInterval, clock, connectionId, UNKNOWN, CONNECTED);
     }
 
     public void onLogin(final long heartbeatInterval, final long sequenceNumber)

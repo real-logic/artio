@@ -15,7 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
-public final class InitiatorSession
+public final class InitiatorSession extends Session
 {
     private Session info;
+
+    public InitiatorSession(final long heartbeatInterval, final long nextRequiredMessageTime, final long connectionId, final long sequenceNumber, final SessionState state)
+    {
+        super(heartbeatInterval, nextRequiredMessageTime, connectionId, sequenceNumber, state);
+    }
 }
