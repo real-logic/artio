@@ -196,7 +196,11 @@ public final class GenericParser implements MessageHandler
         return !groupFields.contains(tag);
     }
 
-    private void collectImportantFields(final int equalsPosition, final int valueOffset, final int endOfField, final int valueLength)
+    private void collectImportantFields(
+        final int equalsPosition,
+        final int valueOffset,
+        final int endOfField,
+        final int valueLength)
     {
         if (tag == CHECKSUM)
         {

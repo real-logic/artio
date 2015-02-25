@@ -15,12 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import uk.co.real_logic.fix_gateway.util.MilliClock;
+
+import static uk.co.real_logic.fix_gateway.framer.SessionState.CONNECTING;
+
 public final class InitiatorSession extends Session
 {
-    private Session info;
-
-    public InitiatorSession(final long heartbeatInterval, final long nextRequiredMessageTime, final long connectionId, final long sequenceNumber, final SessionState state)
+    public InitiatorSession(
+        final long heartbeatInterval,
+        final MilliClock clock,
+        final long connectionId)
     {
-        super(heartbeatInterval, nextRequiredMessageTime, connectionId, sequenceNumber, state);
+        super(heartbeatInterval, clock, connectionId, UNKNOWN, CONNECTING);
     }
 }

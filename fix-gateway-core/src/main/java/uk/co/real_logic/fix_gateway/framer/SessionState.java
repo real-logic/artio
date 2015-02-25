@@ -43,12 +43,12 @@ package uk.co.real_logic.fix_gateway.framer;
 public enum SessionState
 {
     /**
-     * Initial state for an outbound session.
+     * Initial state for an initiator session.
      */
     CONNECTING,
 
     /**
-     * A machine has connected to the gateway, but hasn't logged in yet. Initial state of an inbound session.
+     * A machine has connected to the gateway, but hasn't logged in yet. Initial state of an acceptor session.
      */
     CONNECTED,
 
