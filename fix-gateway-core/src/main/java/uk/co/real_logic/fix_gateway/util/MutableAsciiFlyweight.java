@@ -56,6 +56,9 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
             remainder = remainder / 10;
         }
 
-        // if remainder != 0 then something is wrong
+        if (remainder != 0)
+        {
+            throw new IllegalArgumentException(String.format("Cannot write %d in %d bytes", value, length));
+        }
     }
 }

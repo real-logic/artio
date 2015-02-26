@@ -21,12 +21,24 @@ import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.*;
 
 public final class UtcTimestampEncoder
 {
+
+    public static final long MIN_EPOCH_MILLIS = UtcTimestampDecoder.MIN_EPOCH_MILLIS;
+    public static final long MAX_EPOCH_MILLIS = UtcTimestampDecoder.MAX_EPOCH_MILLIS;
+
+    public static final int LENGTH_WITH_MILLISECONDS = 21;
+    public static final int LENGTH_WITHOUT_MILLISECONDS = 17;
+
     private UtcTimestampEncoder()
     {
     }
 
     public static int encode(final long epochMillis, final MutableAsciiFlyweight string, final int offset)
     {
+        if (epochMillis < MIN_EPOCH_MILLIS || epochMillis > MAX_EPOCH_MILLIS)
+        {
+            throw new IllegalArgumentException(epochMillis + " is outside of the valid range for this encoder");
+        }
+
         final long localSecond = Math.floorDiv(epochMillis, MILLIS_IN_SECOND);
         final long epochDay = Math.floorDiv(localSecond, SECONDS_IN_DAY);
         final int fractionOfSecond = (int) (Math.floorMod(epochMillis, MILLIS_IN_SECOND));
@@ -35,40 +47,31 @@ public final class UtcTimestampEncoder
         string.putChar(8, '-');
         encodeTime(localSecond, fractionOfSecond, string, offset + 9);
 
-        return fractionOfSecond > 0 ? 21 : 17;
+        return fractionOfSecond > 0 ? LENGTH_WITH_MILLISECONDS : LENGTH_WITHOUT_MILLISECONDS;
     }
 
     // Based on:
     // https://github.com/ThreeTen/threetenbp/blob/master/src/main/java/org/threeten/bp/LocalDate.java#L281
+    // Simplified to unnecessary remove negative year case.
     private static void encodeDate(final long epochDay, final MutableAsciiFlyweight string, final int offset)
     {
-        long zeroDay = epochDay + DAYS_UNTIL_START_OF_UNIX_EPOCH;
-        // find the march-based year
-        zeroDay -= 60;  // adjust to 0000-03-01 so leap day is at end of four year cycle
-        long adjust = 0;
-        if (zeroDay < 0)
-        {
-            // adjust negative years to positive for calculation
-            long adjustCycles = (zeroDay + 1) / DAYS_IN_400_YEAR_CYCLE - 1;
-            adjust = adjustCycles * 400;
-            zeroDay += -adjustCycles * DAYS_IN_400_YEAR_CYCLE;
-        }
-        long yearEst = (400 * zeroDay + 591) / DAYS_IN_400_YEAR_CYCLE;
-        long doyEst = estimateDayOfYear(zeroDay, yearEst);
-        if (doyEst < 0)
+        // adjust to 0000-03-01 so leap day is at end of four year cycle
+        long zeroDay = epochDay + DAYS_UNTIL_START_OF_UNIX_EPOCH - 60;
+        long yearEstimate = (400 * zeroDay + 591) / DAYS_IN_400_YEAR_CYCLE;
+        long dayEstimate = estimateDayOfYear(zeroDay, yearEstimate);
+        if (dayEstimate < 0)
         {
             // fix estimate
-            yearEst--;
-            doyEst = estimateDayOfYear(zeroDay, yearEst);
+            yearEstimate--;
+            dayEstimate = estimateDayOfYear(zeroDay, yearEstimate);
         }
-        yearEst += adjust;  // reset any negative year
-        int marchDoy0 = (int) doyEst;
+        int marchDay0 = (int) dayEstimate;
 
         // convert march-based values back to january-based
-        int marchMonth0 = (marchDoy0 * 5 + 2) / 153;
+        int marchMonth0 = (marchDay0 * 5 + 2) / 153;
         int month = (marchMonth0 + 2) % 12 + 1;
-        int day = marchDoy0 - (marchMonth0 * 306 + 5) / 10 + 1;
-        int year = (int) (yearEst + marchMonth0 / 10);
+        int day = marchDay0 - (marchMonth0 * 306 + 5) / 10 + 1;
+        int year = (int) (yearEstimate + marchMonth0 / 10);
 
         string.putNatural(offset, 4, year);
         string.putNatural(offset + 4, 2, month);
@@ -82,9 +85,9 @@ public final class UtcTimestampEncoder
         final int offset)
     {
         int secondOfDay = (int) Math.floorMod(epochSecond, SECONDS_IN_DAY);
-        int hours = (int) (secondOfDay / SECONDS_IN_HOUR);
+        int hours = secondOfDay / SECONDS_IN_HOUR;
         secondOfDay -= hours * SECONDS_IN_HOUR;
-        int minutes = (int) (secondOfDay / SECONDS_IN_MINUTE);
+        int minutes = secondOfDay / SECONDS_IN_MINUTE;
         secondOfDay -= minutes * SECONDS_IN_MINUTE;
 
         string.putNatural(offset, 2, hours);

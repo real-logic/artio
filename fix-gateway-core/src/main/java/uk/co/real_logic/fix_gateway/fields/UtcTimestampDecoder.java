@@ -29,6 +29,9 @@ import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.toEpochDay;
  */
 public final class UtcTimestampDecoder
 {
+    public static final long MIN_EPOCH_MILLIS = -62135596800000L;
+    public static final long MAX_EPOCH_MILLIS = 253402300799999L;
+
     private UtcTimestampDecoder()
     {
     }
