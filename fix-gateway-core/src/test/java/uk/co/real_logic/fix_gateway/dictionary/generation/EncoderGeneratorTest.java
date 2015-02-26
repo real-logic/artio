@@ -56,7 +56,6 @@ public class EncoderGeneratorTest
 
     class Bar implements Encoder
     {
-
         public int encode(final MutableDirectBuffer buffer, final int offset)
         {
             return 0;
