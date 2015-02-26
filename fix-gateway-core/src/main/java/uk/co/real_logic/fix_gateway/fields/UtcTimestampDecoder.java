@@ -17,8 +17,7 @@ package uk.co.real_logic.fix_gateway.fields;
 
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
-import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.getValidInt;
-import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.toEpochDay;
+import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.*;
 
 /**
  * Parser for Fix's UTC timestamps - see http://fixwiki.org/fixwiki/UTCTimestampDataType for details
@@ -69,11 +68,11 @@ public final class UtcTimestampDecoder
         final int second = getValidInt(timestamp, startSecond, endSecond, 0, 60);
         final int millisecond = length > endSecond ? timestamp.getInt(startMillisecond, endMillisecond) : 0;
 
-        final int secondOfDay = hour * CalendricalUtil.SECONDS_IN_HOUR + minute * CalendricalUtil.SECONDS_IN_MINUTE + second;
+        final int secondOfDay = hour * SECONDS_IN_HOUR + minute * SECONDS_IN_MINUTE + second;
 
         final long epochDay = toEpochDay(year, month, day);
-        final long secs = epochDay * CalendricalUtil.SECONDS_IN_DAY + secondOfDay;
-        return secs * CalendricalUtil.MILLIS_IN_SECOND + millisecond;
+        final long secs = epochDay * SECONDS_IN_DAY + secondOfDay;
+        return secs * MILLIS_IN_SECOND + millisecond;
     }
 
 }

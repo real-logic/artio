@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.fields;
 
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import static java.lang.String.format;
 import static java.time.Year.isLeap;
@@ -39,6 +40,8 @@ final class CalendricalUtil
     static final int MONTHS_IN_YEAR = 12;
     static final int DAYS_IN_400_YEAR_CYCLE = 146097;
     static final int DAYS_UNTIL_START_OF_UNIX_EPOCH = 719528;
+
+    // ------------ Decoding ------------
 
     static int getValidInt(
             final AsciiFlyweight timestamp,
@@ -90,5 +93,40 @@ final class CalendricalUtil
     {
         // All divisions by a statically known constant, so are really multiplications
         return MAX_DAYS_IN_YEAR * years + (years + 3) / 4 - (years + 99) / 100 + (years + 399) / 400;
+    }
+
+    // ------------ Encoding ------------
+
+    // Based on:
+    // https://github.com/ThreeTen/threetenbp/blob/master/src/main/java/org/threeten/bp/LocalDate.java#L281
+    // Simplified to unnecessary remove negative year case.
+    static void encodeDate(final long epochDay, final MutableAsciiFlyweight string, final int offset)
+    {
+        // adjust to 0000-03-01 so leap day is at end of four year cycle
+        long zeroDay = epochDay + DAYS_UNTIL_START_OF_UNIX_EPOCH - 60;
+        long yearEstimate = (400 * zeroDay + 591) / DAYS_IN_400_YEAR_CYCLE;
+        long dayEstimate = estimateDayOfYear(zeroDay, yearEstimate);
+        if (dayEstimate < 0)
+        {
+            // fix estimate
+            yearEstimate--;
+            dayEstimate = estimateDayOfYear(zeroDay, yearEstimate);
+        }
+        int marchDay0 = (int) dayEstimate;
+
+        // convert march-based values back to january-based
+        int marchMonth0 = (marchDay0 * 5 + 2) / 153;
+        int month = (marchMonth0 + 2) % 12 + 1;
+        int day = marchDay0 - (marchMonth0 * 306 + 5) / 10 + 1;
+        int year = (int) (yearEstimate + marchMonth0 / 10);
+
+        string.putNatural(offset, 4, year);
+        string.putNatural(offset + 4, 2, month);
+        string.putNatural(offset + 6, 2, day);
+    }
+
+    private static long estimateDayOfYear(final long zeroDay, final long yearEst)
+    {
+        return zeroDay - (365 * yearEst + yearEst / 4 - yearEst / 100 + yearEst / 400);
     }
 }

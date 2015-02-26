@@ -35,17 +35,23 @@ public class LocalMktDateDecoderValidCasesTest
 {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
 
+    static int toLocalDay(final String timestamp)
+    {
+        final LocalDate parsedDate = LocalDate.parse(timestamp, FORMATTER);
+        return (int) parsedDate.getLong(ChronoField.EPOCH_DAY);
+    }
+
     private final String timestamp;
 
     @Parameters
     public static Iterable<Object> data()
     {
         return Arrays.asList(
-            new String[] {"00010101"},
-            new String[] {"20150225"},
-            new String[] {"00010101"},
-            new String[] {"20150225"},
-            new String[] {"99991231"}
+                new String[]{"00010101"},
+                new String[]{"20150225"},
+                new String[]{"00010101"},
+                new String[]{"20150225"},
+                new String[]{"99991231"}
         );
     }
 
@@ -57,11 +63,10 @@ public class LocalMktDateDecoderValidCasesTest
     @Test
     public void canParseTimestamp()
     {
-        final LocalDate parsedDate = LocalDate.parse(timestamp, FORMATTER);
-        final long expected = parsedDate.getLong(ChronoField.EPOCH_DAY);
+        final int expected = toLocalDay(timestamp);
 
         final AsciiFlyweight timestampBytes = new AsciiFlyweight(new UnsafeBuffer(timestamp.getBytes(US_ASCII)));
-        final long epochDay = LocalMktDateDecoder.decode(timestampBytes, 0, timestamp.length());
+        final int epochDay = LocalMktDateDecoder.decode(timestampBytes, 0, timestamp.length());
         assertEquals("Failed testcase for: " + timestamp, expected, epochDay);
     }
 }

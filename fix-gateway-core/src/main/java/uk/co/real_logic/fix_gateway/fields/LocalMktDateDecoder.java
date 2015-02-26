@@ -25,6 +25,9 @@ import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.toEpochDay;
  */
 public final class LocalMktDateDecoder
 {
+    public static final int MIN_EPOCH_DAYS = -719162;
+    public static final int MAX_EPOCH_DAYS = 2932896;
+
     private LocalMktDateDecoder()
     {
     }
