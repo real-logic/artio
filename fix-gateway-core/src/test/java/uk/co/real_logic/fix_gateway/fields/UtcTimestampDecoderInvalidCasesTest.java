@@ -22,51 +22,39 @@ import org.junit.runners.Parameterized.Parameters;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.time.temporal.ChronoField.MILLI_OF_SECOND;
-import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
-public class UtcTimestampParserValidCasesTest
+public class UtcTimestampDecoderInvalidCasesTest
 {
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HH:mm:ss[.SSS]");
-
     private final String timestamp;
 
     @Parameters
     public static Iterable<Object> data()
     {
         return Arrays.asList(
-            new String[] {"00010101-00:00:00"},
-            new String[] {"20150225-17:51:32"},
-            new String[] {"00010101-00:00:00.000"},
-            new String[] {"20150225-17:51:32.123"},
-            new String[] {"99991231-23:59:59.999"}
+            new String[] {"-0010101-00:00:00"},
+            new String[] {"00000001-00:00:00"},
+            new String[] {"00000100-00:00:00"},
+            new String[] {"00001301-00:00:00"},
+            new String[] {"00000132-00:00:00"},
+            new String[] {"00000101-24:00:00"},
+            new String[] {"00000101-00:60:00"},
+            new String[] {"00000101-00:00:61"}
         );
     }
 
-    public UtcTimestampParserValidCasesTest(final String timestamp)
+    public UtcTimestampDecoderInvalidCasesTest(final String timestamp)
     {
         this.timestamp = timestamp;
     }
 
-    @Test
-    public void canParseTimestamp()
+    @Test(expected = IllegalArgumentException.class)
+    public void cannotParseTimestamp()
     {
-        final LocalDateTime parsedDate = LocalDateTime.parse(timestamp, FORMATTER);
-        final ZonedDateTime utc = ZonedDateTime.of(parsedDate, ZoneId.of("UTC"));
-        final long expected = utc.toEpochSecond() * 1000 + utc.getLong(MILLI_OF_SECOND);
-
         final AsciiFlyweight timestampBytes = new AsciiFlyweight(new UnsafeBuffer(timestamp.getBytes(US_ASCII)));
-        final long epochMillis = UtcTimestampParser.parse(timestampBytes, 0, timestamp.length());
-        assertEquals("Failed testcase for: " + timestamp, expected, epochMillis);
+        UtcTimestampDecoder.decode(timestampBytes, 0, timestamp.length());
     }
-
-    // TODO: test leap second conversion 60
 }

@@ -44,6 +44,8 @@ public final class SessionConfiguration
         this.password = password;
     }
 
+    // TODO: add a timezone configuration option
+
     public String host()
     {
         return host;

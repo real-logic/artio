@@ -63,7 +63,7 @@ public class Coordinator implements Agent
             }
         }
 
-        // TODO: parse from framing message
+        // TODO: decode from framing message
         final int sessionId = -1;
 
         delegate.onMessage(buffer, offset, length, sessionId);
@@ -73,7 +73,7 @@ public class Coordinator implements Agent
 
     private void onControlMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        // TODO: parse message
+        // TODO: decode message
         int termId = -1;
         onMessageAcknowledgement(termId, header.sessionId());
     }

@@ -27,7 +27,7 @@ import java.util.Arrays;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
 @RunWith(Parameterized.class)
-public class UtcTimestampParserInvalidCasesTest
+public class LocalMktDateDecoderInvalidCasesTest
 {
     private final String timestamp;
 
@@ -35,18 +35,15 @@ public class UtcTimestampParserInvalidCasesTest
     public static Iterable<Object> data()
     {
         return Arrays.asList(
-            new String[] {"-0010101-00:00:00"},
-            new String[] {"00000001-00:00:00"},
-            new String[] {"00000100-00:00:00"},
-            new String[] {"00001301-00:00:00"},
-            new String[] {"00000132-00:00:00"},
-            new String[] {"00000101-24:00:00"},
-            new String[] {"00000101-00:60:00"},
-            new String[] {"00000101-00:00:61"}
+            new String[] {"-0010101"},
+            new String[] {"00000001"},
+            new String[] {"00000100"},
+            new String[] {"00001301"},
+            new String[] {"00000132"}
         );
     }
 
-    public UtcTimestampParserInvalidCasesTest(final String timestamp)
+    public LocalMktDateDecoderInvalidCasesTest(final String timestamp)
     {
         this.timestamp = timestamp;
     }
@@ -55,6 +52,6 @@ public class UtcTimestampParserInvalidCasesTest
     public void cannotParseTimestamp()
     {
         final AsciiFlyweight timestampBytes = new AsciiFlyweight(new UnsafeBuffer(timestamp.getBytes(US_ASCII)));
-        UtcTimestampParser.parse(timestampBytes, 0, timestamp.length());
+        LocalMktDateDecoder.decode(timestampBytes, 0, timestamp.length());
     }
 }
