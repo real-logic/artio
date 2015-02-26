@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway.fields;
 
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
-import static uk.co.real_logic.fix_gateway.fields.DateDecoderUtil.getValidInt;
-import static uk.co.real_logic.fix_gateway.fields.DateDecoderUtil.toEpochDay;
+import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.getValidInt;
+import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.toEpochDay;
 
 /**
  * Equivalent to parsing a Java format string of "yyyyMMdd", allocation free.

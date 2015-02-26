@@ -21,6 +21,8 @@ import java.nio.charset.StandardCharsets;
 
 public final class MutableAsciiFlyweight extends AsciiFlyweight
 {
+    private static final int ZERO = '0';
+
     private final MutableDirectBuffer buffer;
 
     public MutableAsciiFlyweight(final MutableDirectBuffer buffer)
@@ -35,5 +37,25 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
         buffer.putBytes(index, bytes);
 
         return bytes.length;
+    }
+
+    public void putChar(final int index, final char value)
+    {
+        buffer.putByte(index, (byte) value);
+    }
+
+    public void putNatural(final int offset, final int length, final int value)
+    {
+        final int end = offset + length;
+        int remainder = value;
+        for (int index = end - 1; index >= offset; index--)
+        {
+            // TODO: figure out if there's a cleaner way of doing this
+            final int digit = remainder % 10;
+            buffer.putByte(index, (byte) (ZERO + digit));
+            remainder = remainder / 10;
+        }
+
+        // if remainder != 0 then something is wrong
     }
 }

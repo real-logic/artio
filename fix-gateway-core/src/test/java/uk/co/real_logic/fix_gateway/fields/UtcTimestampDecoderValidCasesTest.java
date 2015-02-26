@@ -37,6 +37,13 @@ public class UtcTimestampDecoderValidCasesTest
 {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HH:mm:ss[.SSS]");
 
+    public static long toEpochMillis(final String timestamp)
+    {
+        final LocalDateTime parsedDate = LocalDateTime.parse(timestamp, FORMATTER);
+        final ZonedDateTime utc = ZonedDateTime.of(parsedDate, ZoneId.of("UTC"));
+        return utc.toEpochSecond() * 1000 + utc.getLong(MILLI_OF_SECOND);
+    }
+
     private final String timestamp;
 
     @Parameters
@@ -45,7 +52,7 @@ public class UtcTimestampDecoderValidCasesTest
         return Arrays.asList(
             new String[] {"00010101-00:00:00"},
             new String[] {"20150225-17:51:32"},
-            new String[] {"00010101-00:00:00.000"},
+            new String[] {"00010101-00:00:00.001"},
             new String[] {"20150225-17:51:32.123"},
             new String[] {"99991231-23:59:59.999"}
         );
@@ -59,9 +66,7 @@ public class UtcTimestampDecoderValidCasesTest
     @Test
     public void canParseTimestamp()
     {
-        final LocalDateTime parsedDate = LocalDateTime.parse(timestamp, FORMATTER);
-        final ZonedDateTime utc = ZonedDateTime.of(parsedDate, ZoneId.of("UTC"));
-        final long expected = utc.toEpochSecond() * 1000 + utc.getLong(MILLI_OF_SECOND);
+        final long expected = toEpochMillis(timestamp);
 
         final AsciiFlyweight timestampBytes = new AsciiFlyweight(new UnsafeBuffer(timestamp.getBytes(US_ASCII)));
         final long epochMillis = UtcTimestampDecoder.decode(timestampBytes, 0, timestamp.length());

@@ -20,17 +20,24 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import static java.lang.String.format;
 import static java.time.Year.isLeap;
 
-final class DateDecoderUtil
+final class CalendricalUtil
 {
-    private DateDecoderUtil()
+    // ------------ Time Constants ------------
+    static final int SECONDS_IN_MINUTE = 60;
+    static final int SECONDS_IN_HOUR = SECONDS_IN_MINUTE * 60;
+    static final int SECONDS_IN_DAY = SECONDS_IN_HOUR * 24;
+    static final long MILLIS_IN_SECOND = 1000;
+
+    private CalendricalUtil()
     {
     }
 
     // ------------ Date Constants ------------
 
-    private static final int MAX_DAYS_IN_YEAR = 365;
-    private static final int MONTHS_IN_YEAR = 12;
-    private static final int DAYS_UNTIL_START_OF_UNIX_EPOCH = 719528;
+    static final int MAX_DAYS_IN_YEAR = 365;
+    static final int MONTHS_IN_YEAR = 12;
+    static final int DAYS_IN_400_YEAR_CYCLE = 146097;
+    static final int DAYS_UNTIL_START_OF_UNIX_EPOCH = 719528;
 
     static int getValidInt(
             final AsciiFlyweight timestamp,

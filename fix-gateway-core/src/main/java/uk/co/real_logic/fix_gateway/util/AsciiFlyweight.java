@@ -18,6 +18,8 @@ package uk.co.real_logic.fix_gateway.util;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
+
 /**
  * Mutable String class that flyweights a data buffer. This assumes a US-ASCII encoding
  * and should only be used for performance sensitive decoding/encoding tasks.
@@ -119,9 +121,21 @@ public class AsciiFlyweight
     // TODO: improve debug logging
     public void log(final int offset, final int length)
     {
+        System.out.println(getRangeAsString(offset, length));
+    }
+
+    /**
+     * Not at all a performant conversion: don't use this on a critical application path.
+     *
+     * @param offset
+     * @param length
+     * @return a String
+     */
+    public String getRangeAsString(final int offset, final int length)
+    {
         final byte[] buff = new byte[length];
         buffer.getBytes(offset, buff);
-        System.out.println(new String(buff, 0, length));
+        return new String(buff, 0, length, US_ASCII);
     }
 
     public int getMessageType(final int offset, final int length)
