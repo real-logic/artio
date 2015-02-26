@@ -27,10 +27,9 @@ import uk.co.real_logic.sbe.generation.java.JavaUtil;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
+import java.util.function.Function;
 
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.BUILDER_PACKAGE;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.*;
 
 public class EncoderGenerator
 {
@@ -105,6 +104,9 @@ public class EncoderGenerator
             optionalAssign = String.format("        has%s = true;\n", name);
         }
 
+        Function<String, String> generateSetter =
+            type -> generateSetter(type, fieldName, optionalField, className, optionalAssign);
+
         switch (element.type())
         {
             // TODO: other type cases
@@ -139,12 +141,16 @@ public class EncoderGenerator
             case INT:
             case LENGTH:
             case SEQNUM:
-                return generateSetter("int", fieldName, optionalField, className, optionalAssign);
+            case LOCALMKTDATE:
+                return generateSetter.apply("int");
+
+            case UTCTIMESTAMP:
+                return generateSetter.apply("long");
 
             case QTY:
             case PRICE:
             case PRICEOFFSET:
-                return generateSetter("DecimalFloat", fieldName, optionalField, className, optionalAssign);
+                return generateSetter.apply("DecimalFloat");
 
             default: throw new UnsupportedOperationException("Unknown type: " + element.type());
         }
