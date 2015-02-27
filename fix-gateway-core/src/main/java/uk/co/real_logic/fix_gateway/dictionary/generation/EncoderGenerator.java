@@ -300,7 +300,7 @@ public class EncoderGenerator
 
             out.append(String.format(
                 "    private static final int %sHeaderLength = %d;\n" +
-                        "    private static final byte[] %1$sHeader = new byte[] {%s};\n\n",
+                "    private static final byte[] %1$sHeader = new byte[] {%s};\n\n",
                 fieldName,
                 length + 1,
                 bytes));

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.util;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -24,42 +25,34 @@ import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 
 import java.util.Arrays;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
 
+@Ignore
 @RunWith(Parameterized.class)
-public class DecimalFloatParsingTest
+public class DecimalFloatEncodingTest
 {
     @Parameters(name = "{index}: {0} => {1},{2}")
     public static Iterable<Object[]> data1()
     {
         return Arrays.asList(new Object[][]
-            {
-                {"55.36", 5536L, 2},
-                {"55.3600", 5536L, 2},
-                {"0055.36", 5536L, 2},
-                {"0055.3600", 5536L, 2},
-                {"  55.36 ", 5536L, 2},
-                {"  55.3600", 5536L, 2},
-                {" 0055.36 ", 5536L, 2},
-                {"  0055.3600 ", 5536L, 2},
-                {".995", 995L, 0},
-                {"0.9950", 995L, 0},
-                {"25", 25L, 2},
-                {"-55.36", -5536L, 2},
-                {"-0055.3600", -5536L, 2},
-                {"-55.3600", -5536L, 2},
-                {"-.995", -995L, 0},
-                {"-0.9950", -995L, 0},
-                {"-25", -25L, 2},
-            });
+        {
+            {"55.36", 5536L, 2},
+            {"55.3600", 5536L, 2},
+            {".995", 995L, 0},
+            {"25", 25L, 2},
+            {"-55.36", -5536L, 2},
+            {"-.995", -995L, 0},
+            {"-25", -25L, 2},
+        });
     }
 
     private final String input;
     private final long value;
     private final int scale;
 
-    public DecimalFloatParsingTest(final String input, final long value, final int scale)
+    public DecimalFloatEncodingTest(final String input, final long value, final int scale)
     {
         this.input = input;
         this.value = value;
@@ -67,15 +60,16 @@ public class DecimalFloatParsingTest
     }
 
     @Test
-    public void parseTestData()
+    public void canEncodeDecimalFloat()
     {
-        final UnsafeBuffer buffer = new UnsafeBuffer(input.getBytes(US_ASCII));
-        final AsciiFlyweight string = new AsciiFlyweight(buffer);
-        final DecimalFloat price = new DecimalFloat();
+        final int length = input.length();
+        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[length]);
+        final MutableAsciiFlyweight string = new MutableAsciiFlyweight(buffer);
+        final DecimalFloat price = new DecimalFloat(value, scale);
 
-        string.parseFloat(0, buffer.capacity(), price);
+        final int encodedLength = string.encodeFloat(price, 0);
 
-        assertEquals("Incorrect Value", value, price.value());
-        assertEquals("Incorrect Scale", scale, price.scale());
+        assertThat(string, containsAscii(input, 0, length));
+        assertEquals(length, encodedLength);
     }
 }

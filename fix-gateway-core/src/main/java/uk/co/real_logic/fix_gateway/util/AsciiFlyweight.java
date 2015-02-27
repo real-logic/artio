@@ -151,7 +151,7 @@ public class AsciiFlyweight
         return messageType;
     }
 
-    public void parseFloat(int offset, int length, final DecimalFloat number)
+    public void decodeFloat(int offset, int length, final DecimalFloat number)
     {
         // Throw away trailing zeros
         int end = offset + length;

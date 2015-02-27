@@ -53,7 +53,7 @@ public class EncoderGeneratorTest
     public void generate() throws Exception
     {
         encoderGenerator.generate();
-        System.out.println(outputManager.getSources());
+        //System.out.println(outputManager.getSources());
         clazz = compileInMemory(HEARTBEAT, outputManager.getSources());
     }
 

@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.util;
 
 import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 
 import java.nio.charset.StandardCharsets;
 
@@ -78,9 +79,8 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
 
     public int putInt(final int offset, final int value)
     {
-        if (value == 0)
+        if (zero(offset, value))
         {
-            buffer.putByte(offset, ZERO);
             return 1;
         }
 
@@ -116,28 +116,53 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
 
     public int putLong(final int offset, final long value)
     {
-        if (value == 0)
+        if (zero(offset, value))
         {
-            buffer.putByte(offset, ZERO);
             return 1;
         }
 
-        int start = offset;
-        long remainder = value;
-        int length = 0;
+        final long remainder = calculateRemainder(offset, value);
+        final int minusAdj = value < 0 ? 1 : 0;
+        final int start = offset + minusAdj;
+
+        final int end = start + LONGEST_LONG_LENGTH;
+        final int index = putLong(remainder, end);
+        final int length = minusAdj + end - index;
+        buffer.putBytes(start, buffer, index + 1, length);
+        return length;
+    }
+
+    public int encodeFloat(final DecimalFloat price, final int offset)
+    {
+       return 0;
+    }
+
+    private boolean zero(final int offset, final long value)
+    {
+        if (value == 0)
+        {
+            buffer.putByte(offset, ZERO);
+            return true;
+        }
+        return false;
+    }
+
+    private long calculateRemainder(final int offset, final long value)
+    {
         if (value < 0)
         {
             putChar(offset, '-');
-            start++;
-            length++;
+            return value;
         }
         else
         {
             // Deal with negatives to avoid overflow for Integer.MAX_VALUE
-            remainder = -1L * remainder;
+            return -1L * value;
         }
+    }
 
-        final int end = start + LONGEST_LONG_LENGTH;
+    private int putLong(long remainder, final int end)
+    {
         int index = end;
         while (remainder < 0)
         {
@@ -146,10 +171,7 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
             index--;
             remainder = remainder / 10;
         }
-
-        length += end - index;
-        buffer.putBytes(start, buffer, index + 1, length);
-        return length;
+        return index;
     }
 
 }
