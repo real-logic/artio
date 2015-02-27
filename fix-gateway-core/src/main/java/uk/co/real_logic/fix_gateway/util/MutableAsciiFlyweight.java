@@ -21,10 +21,11 @@ import java.nio.charset.StandardCharsets;
 
 public final class MutableAsciiFlyweight extends AsciiFlyweight
 {
-    private static final int LONGEST_INT = String.valueOf(Integer.MIN_VALUE).length();
-    private static final int LONGEST_LONG = String.valueOf(Long.MIN_VALUE).length();
+    public static final int LONGEST_INT_LENGTH = String.valueOf(Integer.MIN_VALUE).length();
+    public static final int LONGEST_LONG_LENGTH = String.valueOf(Long.MIN_VALUE).length();
 
     private static final byte ZERO = '0';
+    private static final byte SEPARATOR = (byte) '\001';
 
     private final MutableDirectBuffer buffer;
 
@@ -40,6 +41,16 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
         buffer.putBytes(index, bytes);
 
         return bytes.length;
+    }
+
+    public void putSeparator(final int index)
+    {
+        buffer.putByte(index, SEPARATOR);
+    }
+
+    public void putBytes(final int index, final byte[] src, final int srcOffset, final int srcLength)
+    {
+        buffer.putBytes(index, src, srcOffset, srcLength);
     }
 
     public void putChar(final int index, final char value)
@@ -88,7 +99,7 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
             remainder = -1 * remainder;
         }
 
-        final int end = start + LONGEST_INT;
+        final int end = start + LONGEST_INT_LENGTH;
         int index = end;
         while (remainder < 0)
         {
@@ -126,7 +137,7 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
             remainder = -1L * remainder;
         }
 
-        final int end = start + LONGEST_LONG;
+        final int end = start + LONGEST_LONG_LENGTH;
         int index = end;
         while (remainder < 0)
         {

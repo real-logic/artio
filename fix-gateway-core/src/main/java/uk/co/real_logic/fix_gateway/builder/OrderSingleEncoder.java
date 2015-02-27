@@ -16,9 +16,9 @@
 package uk.co.real_logic.fix_gateway.builder;
 
 import sun.nio.ch.DirectBuffer;
-import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.fix_gateway.flyweight_api.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.util.Currency;
 
@@ -181,7 +181,7 @@ public class OrderSingleEncoder implements Encoder
     {
     }
 
-    public int encode(final MutableDirectBuffer buffer, final int offset)
+    public int encode(final MutableAsciiFlyweight buffer, final int offset)
     {
         return 0;
     }

@@ -36,7 +36,7 @@ public final class CustomMatchers
     /**
      * Assert that a range of an ascii flyweight equals a String.
      */
-    public static Matcher<AsciiFlyweight> asciiString(final String expectedValue, final int offset, final int length)
+    public static Matcher<AsciiFlyweight> containsAscii(final String expectedValue, final int offset, final int length)
     {
         Objects.requireNonNull(expectedValue);
 
@@ -67,7 +67,7 @@ public final class CustomMatchers
 
         return new TypeSafeMatcher<DirectBuffer>()
         {
-            private final Matcher<AsciiFlyweight> flyweightMatcher = asciiString(expectedValue, offset, length);
+            private final Matcher<AsciiFlyweight> flyweightMatcher = containsAscii(expectedValue, offset, length);
 
             protected boolean matchesSafely(final DirectBuffer item)
             {

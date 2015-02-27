@@ -16,26 +16,37 @@
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.*;
+import static uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight.LONGEST_INT_LENGTH;
 
 public class EncoderGenerator
 {
-    private final DataDictionary dictionary;
+    private static final String PUT_SEPARATOR =
+        "        buffer.putSeparator(position);\n" +
+        "        position++;\n";
+
+    private final byte[] buffer = new byte[LONGEST_INT_LENGTH + 1];
+    private final MutableAsciiFlyweight string = new MutableAsciiFlyweight(new UnsafeBuffer(buffer));
+
     private final int initialArraySize;
+    private final DataDictionary dictionary;
     private final StringWriterOutputManager outputManager;
 
     public EncoderGenerator(
@@ -63,6 +74,7 @@ public class EncoderGenerator
         {
             out.append(fileHeader(BUILDER_PACKAGE));
             out.append(generateClassDeclaration(className));
+            generatePrecomputedHeaders(out, message.entries());
             generateSetters(out, className, message.entries());
             out.append(generateEncodeMethod(message.entries()));
             out.append("}\n");
@@ -87,8 +99,8 @@ public class EncoderGenerator
 
     private String generateSetter(final String className, final Entry entry)
     {
-        final Field element = (Field) entry.element();
-        final String name = element.name();
+        final Field field = (Field) entry.element();
+        final String name = field.name();
         final String fieldName = JavaUtil.formatPropertyName(name);
 
         String optionalField;
@@ -108,36 +120,12 @@ public class EncoderGenerator
         Function<String, String> generateSetter =
             type -> generateSetter(type, fieldName, optionalField, className, optionalAssign);
 
-        switch (element.type())
+        switch (field.type())
         {
             // TODO: other type cases
             // TODO: how do we reset optional fields - clear method?
             case STRING:
-
-                return String.format(
-                    "    private byte[] %s = new byte[%d];\n\n" +
-                    "    private int %1$sLength = 0;\n\n" +
-                    "%s" +
-                    "    public %s %1$s(CharSequence value)\n" +
-                    "    {\n" +
-                    "        %1$s = toBytes(value, %1$s);\n" +
-                    "        %1$sLength = value.length();\n" +
-                    "%s" +
-                    "        return this;\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public %4$s %1$s(char[] value)\n" +
-                    "    {\n" +
-                    "        %1$s = toBytes(value, %1$s);\n" +
-                    "        %1$sLength = value.length;\n" +
-                    "%5$s" +
-                    "        return this;\n" +
-                    "    }\n\n",
-                    fieldName,
-                    initialArraySize,
-                    optionalField,
-                    className,
-                    optionalAssign);
+                return generateStringSetter(className, fieldName, optionalField, optionalAssign);
 
             case INT:
             case LENGTH:
@@ -153,8 +141,40 @@ public class EncoderGenerator
             case PRICEOFFSET:
                 return generateSetter.apply("DecimalFloat");
 
-            default: throw new UnsupportedOperationException("Unknown type: " + element.type());
+            default: throw new UnsupportedOperationException("Unknown type: " + field.type());
         }
+    }
+
+    private String generateStringSetter(
+        final String className,
+        final String fieldName,
+        final String optionalField,
+        final String optionalAssign)
+    {
+        return String.format(
+            "    private byte[] %s = new byte[%d];\n\n" +
+            "    private int %1$sLength = 0;\n\n" +
+            "%s" +
+            "    public %s %1$s(CharSequence value)\n" +
+            "    {\n" +
+            "        %1$s = toBytes(value, %1$s);\n" +
+            "        %1$sLength = value.length();\n" +
+            "%s" +
+            "        return this;\n" +
+            "    }\n" +
+            "\n" +
+            "    public %4$s %1$s(char[] value)\n" +
+            "    {\n" +
+            "        %1$s = toBytes(value, %1$s);\n" +
+            "        %1$sLength = value.length;\n" +
+            "%5$s" +
+            "        return this;\n" +
+            "    }\n\n",
+            fieldName,
+            initialArraySize,
+            optionalField,
+            className,
+            optionalAssign);
     }
 
     private String generateSetter(
@@ -172,7 +192,7 @@ public class EncoderGenerator
             "        %2$s = value;\n" +
             "%s" +
             "        return this;\n" +
-            "    }\n",
+            "    }\n\n",
             type,
             fieldName,
             optionalField,
@@ -183,16 +203,16 @@ public class EncoderGenerator
     private String generateEncodeMethod(final List<Entry> entries)
     {
         String header =
-            "    public int encode(final MutableDirectBuffer buffer, final int offset)\n" +
+            "    public int encode(final MutableAsciiFlyweight buffer, final int offset)\n" +
             "    {\n"+
-            "        int length = 0;\n";
+            "        int position = offset;\n\n";
 
         String body = entries.stream()
                              .map(this::encodeField)
-                             .collect(joining(";\n"));
+                             .collect(joining("\n"));
 
         String footer =
-            "        return length;\n" +
+            "        return position - offset;\n" +
             "    }\n\n";
 
         return header + body + footer;
@@ -200,19 +220,91 @@ public class EncoderGenerator
 
     private String encodeField(final Entry entry)
     {
+        final Field field = (Field) entry.element();
+        final String name = field.name();
+        final String fieldName = JavaUtil.formatPropertyName(name);
+
+        if (entry.required())
+        {
+
+        }
+
+        final String tag = String.format(
+            "        buffer.putBytes(position, %sHeader, 0, %1$sHeaderLength);\n" +
+            "        position += %1$sHeaderLength;\n",
+            fieldName);
+
+        switch (field.type())
+        {
+            case STRING:
+                return String.format(
+                    "%s" +
+                            "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
+                            "        position += %2$sLength;\n" +
+                            PUT_SEPARATOR,
+                    tag,
+                    fieldName);
+
+            case INT:
+            case LENGTH:
+            case SEQNUM:
+                return String.format(
+                    "%s" +
+                            "        position += buffer.putInt(position, %s);\n" +
+                            PUT_SEPARATOR,
+                    tag,
+                    fieldName);
+
+            case QTY:
+            case PRICE:
+            case PRICEOFFSET:
+
+            case LOCALMKTDATE:
+            case UTCTIMESTAMP:
+
+                //default: throw new UnsupportedOperationException("Unknown type: " + field.type());
+        }
+
         return "";
     }
 
     private String generateClassDeclaration(final String className)
     {
         return String.format(
-            "import %s.Encoder;\n" +
-            "import static uk.co.real_logic.fix_gateway.dictionary.generation.EncodingUtil.*;\n" +
-            importFor(DecimalFloat.class) +
             importFor(MutableDirectBuffer.class) +
+            "import static uk.co.real_logic.fix_gateway.dictionary.generation.EncodingUtil.*;\n" +
+            "import %s.Encoder;\n" +
+            importFor(DecimalFloat.class) +
+            importFor(MutableAsciiFlyweight.class) +
+            "\n" +
             "public final class %s implements Encoder\n" +
             "{\n\n",
             BUILDER_PACKAGE,
             className);
     }
+
+    private void generatePrecomputedHeaders(
+        final Writer out,
+        final List<Entry> entries) throws IOException
+    {
+        for (Entry entry : entries)
+        {
+            final Field field = (Field) entry.element();
+            final String name = field.name();
+            final String fieldName = JavaUtil.formatPropertyName(name);
+            // TODO: tags aren't always ints
+            final int length = string.putInt(0, field.number());
+            final String bytes = IntStream.range(0, length)
+                                          .mapToObj(i -> String.valueOf(buffer[i]))
+                                          .collect(joining(", ", "", ", (byte) '='"));
+
+            out.append(String.format(
+                "    private static final int %sHeaderLength = %d;\n" +
+                        "    private static final byte[] %1$sHeader = new byte[] {%s};\n\n",
+                fieldName,
+                length + 1,
+                bytes));
+        }
+    }
+
 }

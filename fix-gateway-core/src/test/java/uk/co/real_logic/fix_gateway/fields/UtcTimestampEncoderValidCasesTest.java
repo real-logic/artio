@@ -25,7 +25,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoderValidCasesTest.toEpochMillis;
-import static uk.co.real_logic.fix_gateway.util.CustomMatchers.asciiString;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
 
 @RunWith(Parameterized.class)
 public class UtcTimestampEncoderValidCasesTest
@@ -54,7 +54,7 @@ public class UtcTimestampEncoderValidCasesTest
         final int length = UtcTimestampEncoder.encode(epochMillis, string, 0);
 
         assertEquals("encoded wrong length", expectedLength, length);
-        assertThat(string, asciiString(timestamp, 0, length));
+        assertThat(string, containsAscii(timestamp, 0, length));
     }
 
 }

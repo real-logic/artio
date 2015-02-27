@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.builder;
 
-import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 public interface Encoder
 {
-    int encode(final MutableDirectBuffer buffer, final int offset);
+    int encode(final MutableAsciiFlyweight buffer, final int offset);
 }

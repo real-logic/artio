@@ -20,7 +20,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static uk.co.real_logic.fix_gateway.util.CustomMatchers.asciiString;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
 
 public class MutableAsciiFlyweightTest
 {
@@ -34,7 +34,7 @@ public class MutableAsciiFlyweightTest
         final int length = string.putInt(0, 0);
 
         assertEquals(1, length);
-        assertThat(string, asciiString("0", 0, 1));
+        assertThat(string, containsAscii("0", 0, 1));
     }
 
     @Test
@@ -43,7 +43,7 @@ public class MutableAsciiFlyweightTest
         final int length = string.putInt(0, 123);
 
         assertEquals(3, length);
-        assertThat(string, asciiString("123", 0, 3));
+        assertThat(string, containsAscii("123", 0, 3));
     }
 
     @Test
@@ -52,7 +52,7 @@ public class MutableAsciiFlyweightTest
         final int length = string.putInt(0, -123);
 
         assertEquals(4, length);
-        assertThat(string, asciiString("-123", 0, 4));
+        assertThat(string, containsAscii("-123", 0, 4));
     }
 
     @Test
@@ -60,7 +60,7 @@ public class MutableAsciiFlyweightTest
     {
         final int length = string.putInt(0, Integer.MAX_VALUE);
 
-        assertThat(string, asciiString(String.valueOf(Integer.MAX_VALUE), 0, length));
+        assertThat(string, containsAscii(String.valueOf(Integer.MAX_VALUE), 0, length));
     }
 
     @Test
@@ -68,7 +68,7 @@ public class MutableAsciiFlyweightTest
     {
         final int length = string.putInt(0, Integer.MIN_VALUE);
 
-        assertThat(string, asciiString(String.valueOf(Integer.MIN_VALUE), 0, length));
+        assertThat(string, containsAscii(String.valueOf(Integer.MIN_VALUE), 0, length));
     }
 
     @Test
@@ -77,7 +77,7 @@ public class MutableAsciiFlyweightTest
         final int length = string.putLong(0, 0L);
 
         assertEquals(1, length);
-        assertThat(string, asciiString("0", 0, 1));
+        assertThat(string, containsAscii("0", 0, 1));
     }
 
     @Test
@@ -86,7 +86,7 @@ public class MutableAsciiFlyweightTest
         final int length = string.putLong(0, 123L);
 
         assertEquals(3, length);
-        assertThat(string, asciiString("123", 0, 3));
+        assertThat(string, containsAscii("123", 0, 3));
     }
 
     @Test
@@ -95,7 +95,7 @@ public class MutableAsciiFlyweightTest
         final int length = string.putLong(0, -123L);
 
         assertEquals(4, length);
-        assertThat(string, asciiString("-123", 0, 4));
+        assertThat(string, containsAscii("-123", 0, 4));
     }
 
     @Test
@@ -103,7 +103,7 @@ public class MutableAsciiFlyweightTest
     {
         final int length = string.putLong(0, Long.MAX_VALUE);
 
-        assertThat(string, asciiString(String.valueOf(Long.MAX_VALUE), 0, length));
+        assertThat(string, containsAscii(String.valueOf(Long.MAX_VALUE), 0, length));
     }
 
     @Test
@@ -111,7 +111,7 @@ public class MutableAsciiFlyweightTest
     {
         final int length = string.putLong(0, Long.MIN_VALUE);
 
-        assertThat(string, asciiString(String.valueOf(Long.MIN_VALUE), 0, length));
+        assertThat(string, containsAscii(String.valueOf(Long.MIN_VALUE), 0, length));
     }
 
 }

@@ -25,7 +25,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.fields.LocalMktDateDecoderValidCasesTest.toLocalDay;
 import static uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder.LENGTH;
-import static uk.co.real_logic.fix_gateway.util.CustomMatchers.asciiString;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
 
 @RunWith(Parameterized.class)
 public class LocalMktDateEncoderValidCasesTest
@@ -52,6 +52,6 @@ public class LocalMktDateEncoderValidCasesTest
         final MutableAsciiFlyweight timestampBytes = new MutableAsciiFlyweight(buffer);
         LocalMktDateEncoder.encode(localDays, timestampBytes, 0);
 
-        assertThat(timestampBytes, asciiString(timestamp, 0, LENGTH));
+        assertThat(timestampBytes, containsAscii(timestamp, 0, LENGTH));
     }
 }

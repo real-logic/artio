@@ -18,11 +18,11 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.lang.reflect.Field;
 
@@ -31,7 +31,7 @@ import static java.lang.reflect.Modifier.isPublic;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
-import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsString;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
 import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class EncoderGeneratorTest
@@ -53,13 +53,13 @@ public class EncoderGeneratorTest
     public void generate() throws Exception
     {
         encoderGenerator.generate();
-        //System.out.println(outputManager.getSources());
+        System.out.println(outputManager.getSources());
         clazz = compileInMemory(HEARTBEAT, outputManager.getSources());
     }
 
     class Bar implements Encoder
     {
-        public int encode(final MutableDirectBuffer buffer, final int offset)
+        public int encode(final MutableAsciiFlyweight buffer, final int offset)
         {
             return 0;
         }
@@ -158,19 +158,23 @@ public class EncoderGeneratorTest
     @Test
     public void encodesRequiredValues() throws Exception
     {
-        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
+        final int length = ENCODED_MESSAGE_EXAMPLE.length();
+
+        final MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[length + 1]));
         final Encoder encoder = (Encoder) clazz.newInstance();
 
-        setTestReqIdTo(encoder, "abc");
         setCharSequence(encoder, "onBehalfOfCompID", "abc");
         setInt(encoder, INT_FIELD, 2);
-        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(1, 1));
+        // TODO:
+        //setFloat(encoder, FLOAT_FIELD, new DecimalFloat(1, 1));
 
-        encoder.encode(buffer, 1);
+        final int encodedLength = encoder.encode(buffer, 1);
 
-        assertThat(buffer, containsString(ENCODED_MESSAGE_EXAMPLE, 1, ENCODED_MESSAGE_EXAMPLE.length()));
+        assertThat(buffer, containsAscii(ENCODED_MESSAGE_EXAMPLE, 1, length));
+        assertEquals(length, encodedLength);
     }
 
+    // TODO: optional fields: setTestReqIdTo(encoder, "abc");
     // TODO: encode method
     // TODO: common header and footer
     // TODO: pre-computed header
