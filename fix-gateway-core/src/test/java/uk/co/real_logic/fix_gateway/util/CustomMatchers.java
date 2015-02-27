@@ -19,6 +19,7 @@ package uk.co.real_logic.fix_gateway.util;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
+import uk.co.real_logic.agrona.DirectBuffer;
 
 import java.util.Objects;
 
@@ -35,7 +36,7 @@ public final class CustomMatchers
     /**
      * Assert that a range of an ascii flyweight equals a String.
      */
-    public static Matcher<AsciiFlyweight> equalsString(final String expectedValue, final int offset, final int length)
+    public static Matcher<AsciiFlyweight> asciiString(final String expectedValue, final int offset, final int length)
     {
         Objects.requireNonNull(expectedValue);
 
@@ -56,6 +57,26 @@ public final class CustomMatchers
                 description.appendValue(expectedValue);
                 description.appendText("But actually was: ");
                 description.appendValue(string);
+            }
+        };
+    }
+
+    public static Matcher<DirectBuffer> containsString(final String expectedValue, final int offset, final int length)
+    {
+        Objects.requireNonNull(expectedValue);
+
+        return new TypeSafeMatcher<DirectBuffer>()
+        {
+            private final Matcher<AsciiFlyweight> flyweightMatcher = asciiString(expectedValue, offset, length);
+
+            protected boolean matchesSafely(final DirectBuffer item)
+            {
+                return flyweightMatcher.matches(new AsciiFlyweight(item));
+            }
+
+            public void describeTo(final Description description)
+            {
+                flyweightMatcher.describeTo(description);
             }
         };
     }

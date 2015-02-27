@@ -29,6 +29,7 @@ import java.io.Writer;
 import java.util.List;
 import java.util.function.Function;
 
+import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.*;
 
 public class EncoderGenerator
@@ -63,7 +64,7 @@ public class EncoderGenerator
             out.append(fileHeader(BUILDER_PACKAGE));
             out.append(generateClassDeclaration(className));
             generateSetters(out, className, message.entries());
-            out.append(generateEncodeMethod());
+            out.append(generateEncodeMethod(message.entries()));
             out.append("}\n");
         }
         catch (IOException e)
@@ -179,13 +180,27 @@ public class EncoderGenerator
             optionalAssign);
     }
 
-    private String generateEncodeMethod()
+    private String generateEncodeMethod(final List<Entry> entries)
     {
-        return String.format(
+        String header =
             "    public int encode(final MutableDirectBuffer buffer, final int offset)\n" +
-            "    {\n" +
-            "        return 0;\n" +
-            "    }\n\n");
+            "    {\n"+
+            "        int length = 0;\n";
+
+        String body = entries.stream()
+                             .map(this::encodeField)
+                             .collect(joining(";\n"));
+
+        String footer =
+            "        return length;\n" +
+            "    }\n\n";
+
+        return header + body + footer;
+    }
+
+    private String encodeField(final Entry entry)
+    {
+        return "";
     }
 
     private String generateClassDeclaration(final String className)

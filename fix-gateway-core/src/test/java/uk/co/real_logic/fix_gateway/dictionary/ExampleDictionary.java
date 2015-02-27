@@ -38,6 +38,13 @@ public final class ExampleDictionary
 
     public static final DataDictionary MESSAGE_EXAMPLE;
 
+    /*"8=FIX.4.2\0019=145\00135=D\00134=4\00149=ABC_DEFG01\001" +
+            "52=20090323-15:40:29\00156=CCG\001115=XYZ\00111=NF 0542/03232009\00154=1\00138=100\00155=CVS\00140=1" +
+            "\00159=0\00147=A\00160=20090323-15:40:29\00121=1\001207=N\00110=194\001"*/
+
+    // Just the message body - no header and no checksum
+    public static final String ENCODED_MESSAGE_EXAMPLE = "115=abc\001112=abc\001116=2\001117=1.1\001";
+
     static
     {
         final Field egEnum = new Field(123, "EgEnum", Type.CHAR);
@@ -53,7 +60,7 @@ public final class ExampleDictionary
         final Field onBehalfOfCompID = new Field(115, "OnBehalfOfCompID", Type.STRING);
         final Field testReqID = new Field(112, "TestReqID", Type.STRING);
         final Field intField = new Field(116, "IntField", Type.LENGTH);
-        final Field floatField = new Field(116, "FloatField", Type.PRICE);
+        final Field floatField = new Field(117, "FloatField", Type.PRICE);
 
         final Message heartbeat = new Message("Heartbeat", '0', ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);

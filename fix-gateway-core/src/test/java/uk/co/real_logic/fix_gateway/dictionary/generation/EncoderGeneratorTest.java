@@ -16,8 +16,10 @@
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
@@ -28,8 +30,9 @@ import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
-import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.HEARTBEAT;
-import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.MESSAGE_EXAMPLE;
+import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsString;
+import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class EncoderGeneratorTest
 {
@@ -117,8 +120,7 @@ public class EncoderGeneratorTest
     {
         final Object encoder = clazz.newInstance();
 
-        clazz.getMethod(INT_FIELD, int.class)
-                .invoke(encoder, 1);
+        setInt(encoder, INT_FIELD, 1);
 
         assertEquals(1, getField(encoder, INT_FIELD));
     }
@@ -130,8 +132,7 @@ public class EncoderGeneratorTest
 
         DecimalFloat value = new DecimalFloat(1, 2);
 
-        clazz.getMethod(FLOAT_FIELD, DecimalFloat.class)
-                .invoke(encoder, value);
+        setFloat(encoder, FLOAT_FIELD, value);
 
         assertEquals(value, getField(encoder, FLOAT_FIELD));
     }
@@ -153,6 +154,31 @@ public class EncoderGeneratorTest
         assertTrue("hasTestReqId not updated", hasTestReqId(encoder));
     }
 
+    @Ignore
+    @Test
+    public void encodesRequiredValues() throws Exception
+    {
+        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
+        final Encoder encoder = (Encoder) clazz.newInstance();
+
+        setTestReqIdTo(encoder, "abc");
+        setCharSequence(encoder, "onBehalfOfCompID", "abc");
+        setInt(encoder, INT_FIELD, 2);
+        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(1, 1));
+
+        encoder.encode(buffer, 1);
+
+        assertThat(buffer, containsString(ENCODED_MESSAGE_EXAMPLE, 1, ENCODED_MESSAGE_EXAMPLE.length()));
+    }
+
+    // TODO: encode method
+    // TODO: common header and footer
+    // TODO: pre-computed header
+    // TODO: checksum of encoded message
+    // TODO: composite types
+    // TODO: groups
+    // TODO: nested groups
+
     private void assertTestReqIsValue(final Object encoder) throws Exception
     {
         assertArrayEquals(VALUE_IN_BYTES, (byte[]) getField(encoder, TEST_REQ_ID));
@@ -171,8 +197,7 @@ public class EncoderGeneratorTest
 
     private void setTestReqIdTo(final Object encoder, final String value) throws Exception
     {
-        clazz.getMethod(TEST_REQ_ID, CharSequence.class)
-                .invoke(encoder, value);
+        setCharSequence(encoder, TEST_REQ_ID, value);
     }
 
     private Object getField(final Object encoder, final String fieldName) throws Exception
@@ -181,9 +206,5 @@ public class EncoderGeneratorTest
         field.setAccessible(true);
         return field.get(encoder);
     }
-
-    // TODO: encode method
-    // TODO: common header and footer
-    // TODO: complex encoding data types - eg dates/etc
 
 }
