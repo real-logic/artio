@@ -21,7 +21,10 @@ import java.nio.charset.StandardCharsets;
 
 public final class MutableAsciiFlyweight extends AsciiFlyweight
 {
-    private static final int ZERO = '0';
+    private static final int LONGEST_INT = String.valueOf(Integer.MIN_VALUE).length();
+    private static final int LONGEST_LONG = String.valueOf(Long.MIN_VALUE).length();
+
+    private static final byte ZERO = '0';
 
     private final MutableDirectBuffer buffer;
 
@@ -61,4 +64,81 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
             throw new IllegalArgumentException(String.format("Cannot write %d in %d bytes", value, length));
         }
     }
+
+    public int putInt(final int offset, final int value)
+    {
+        if (value == 0)
+        {
+            buffer.putByte(offset, ZERO);
+            return 1;
+        }
+
+        int start = offset;
+        int remainder = value;
+        int length = 0;
+        if (value < 0)
+        {
+            putChar(offset, '-');
+            start++;
+            length++;
+        }
+        else
+        {
+            // Deal with negatives to avoid overflow for Integer.MAX_VALUE
+            remainder = -1 * remainder;
+        }
+
+        final int end = start + LONGEST_INT;
+        int index = end;
+        while (remainder < 0)
+        {
+            final int digit = remainder % 10;
+            buffer.putByte(index, (byte) (ZERO + (-1 * digit)));
+            index--;
+            remainder = remainder / 10;
+        }
+
+        length += end - index;
+        buffer.putBytes(start, buffer, index + 1, length);
+        return length;
+    }
+
+    public int putLong(final int offset, final long value)
+    {
+        if (value == 0)
+        {
+            buffer.putByte(offset, ZERO);
+            return 1;
+        }
+
+        int start = offset;
+        long remainder = value;
+        int length = 0;
+        if (value < 0)
+        {
+            putChar(offset, '-');
+            start++;
+            length++;
+        }
+        else
+        {
+            // Deal with negatives to avoid overflow for Integer.MAX_VALUE
+            remainder = -1L * remainder;
+        }
+
+        final int end = start + LONGEST_LONG;
+        int index = end;
+        while (remainder < 0)
+        {
+            final long digit = remainder % 10;
+            buffer.putByte(index, (byte) (ZERO + (-1L * digit)));
+            index--;
+            remainder = remainder / 10;
+        }
+
+        length += end - index;
+        buffer.putBytes(start, buffer, index + 1, length);
+        return length;
+    }
+
 }

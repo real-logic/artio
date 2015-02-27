@@ -30,7 +30,8 @@ public class AsciiFlyweightTest
     private static final byte[] BYTES = "8=FIX.4.2A 9=145A ".getBytes(US_ASCII);
 
     private final AtomicBuffer buffer = new UnsafeBuffer(new byte[1024 * 16]);
-    private final MutableAsciiFlyweight string = new MutableAsciiFlyweight(buffer);
+
+    private final AsciiFlyweight string = new AsciiFlyweight(buffer);
 
     private int value;
 
@@ -92,7 +93,7 @@ public class AsciiFlyweightTest
     public void shouldDecodeSimpleMessageTypes()
     {
         given:
-        string.putAscii(0, "0");
+        putAscii("0");
 
         when:
         value = string.getMessageType(0, 1);
@@ -105,12 +106,17 @@ public class AsciiFlyweightTest
     public void shouldDecodeTwoCharMessageTypes()
     {
         given:
-        string.putAscii(0, "AO");
+        putAscii("AO");
 
         when:
         value = string.getMessageType(0, 2);
 
         then:
         assertEquals(103, value);
+    }
+
+    private void putAscii(final String value)
+    {
+        buffer.putBytes(0, value.getBytes(US_ASCII));
     }
 }
