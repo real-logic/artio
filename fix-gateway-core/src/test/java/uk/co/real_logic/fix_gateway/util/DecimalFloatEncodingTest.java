@@ -43,6 +43,7 @@ public class DecimalFloatEncodingTest
             {"-55.36", -5536L, 2},
             {"-.995", -995L, 0},
             {"-25", -25L, 2},
+            {"1.1", 11L, 1},
         });
     }
 
@@ -65,7 +66,7 @@ public class DecimalFloatEncodingTest
         final MutableAsciiFlyweight string = new MutableAsciiFlyweight(buffer);
         final DecimalFloat price = new DecimalFloat(value, scale);
 
-        final int encodedLength = string.encodeFloat(price, 0);
+        final int encodedLength = string.putFloat(0, price);
 
         assertThat(string, containsAscii(input, 0, length));
         assertEquals(length, encodedLength);

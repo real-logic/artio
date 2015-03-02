@@ -134,7 +134,7 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
         return length;
     }
 
-    public int encodeFloat(final DecimalFloat price, final int offset)
+    public int putFloat(final int offset, final DecimalFloat price)
     {
         final long value = price.value();
         final int scale = price.scale();

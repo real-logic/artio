@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
@@ -146,19 +145,18 @@ public class EncoderGeneratorTest
         assertTrue("hasTestReqId not updated", hasTestReqId(encoder));
     }
 
-    @Ignore
     @Test
     public void encodesRequiredValues() throws Exception
     {
         final int length = ENCODED_MESSAGE_EXAMPLE.length();
 
-        final MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[length + 1]));
+        final MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
         final Encoder encoder = (Encoder) clazz.newInstance();
 
         setCharSequence(encoder, "onBehalfOfCompID", "abc");
+        setTestReqIdTo(encoder, VALUE);
         setInt(encoder, INT_FIELD, 2);
-        // TODO:
-        //setFloat(encoder, FLOAT_FIELD, new DecimalFloat(1, 1));
+        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
 
         final int encodedLength = encoder.encode(buffer, 1);
 

@@ -246,25 +246,21 @@ public class EncoderGenerator
             case STRING:
                 return String.format(
                     "%s" +
-                            "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
-                            "        position += %2$sLength;\n" +
-                            PUT_SEPARATOR,
+                    "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
+                    "        position += %2$sLength;\n" +
+                    PUT_SEPARATOR,
                     tag,
                     fieldName);
 
             case INT:
             case LENGTH:
             case SEQNUM:
-                return String.format(
-                    "%s" +
-                            "        position += buffer.putInt(position, %s);\n" +
-                            PUT_SEPARATOR,
-                    tag,
-                    fieldName);
+                return generatePut(fieldName, tag, "Int");
 
             case QTY:
             case PRICE:
             case PRICEOFFSET:
+                return generatePut(fieldName, tag, "Float");
 
             case LOCALMKTDATE:
             case UTCTIMESTAMP:
@@ -273,6 +269,17 @@ public class EncoderGenerator
         }
 
         return "";
+    }
+
+    private String generatePut(final String fieldName, final String tag, final String type)
+    {
+        return String.format(
+            "%s" +
+            "        position += buffer.put%s(position, %s);\n" +
+            PUT_SEPARATOR,
+            tag,
+            type,
+            fieldName);
     }
 
     private String generateClassDeclaration(final String className)
