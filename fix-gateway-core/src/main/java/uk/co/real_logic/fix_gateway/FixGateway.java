@@ -30,7 +30,7 @@ public final class FixGateway implements AutoCloseable
 
     public Session initiate(final SessionConfiguration host, final DataDictionary port)
     {
-        return null;
+        return new Session();
     }
 
     public void close() throws Exception

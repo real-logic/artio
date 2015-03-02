@@ -15,14 +15,21 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
+import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.builder.Encoder;
 
 /**
  * Public API class for users to control a session with.
  */
 public final class Session
 {
-    public void send(final OrderSingleEncoder orderSingleEncoder)
+    public void send(final Encoder encoder)
     {
+
+    }
+
+    public void send(final DirectBuffer buffer, final int offset, final int length)
+    {
+
     }
 }

@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.builder;
 
 import sun.nio.ch.DirectBuffer;
+import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.flyweight_api.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
@@ -132,14 +133,14 @@ public class OrderSingleEncoder implements Encoder
     private boolean hasLocateReqd;
     private boolean locateReqd;
 
-    private boolean hasOrderQty;
-    private Qty orderQty;
+    private boolean orderQtyIsPresent;
+    private DecimalFloat orderQty;
 
     private boolean hasCashOrderQty;
-    private Qty cashOrderQty;
+    private DecimalFloat cashOrderQty;
 
-    private boolean hasPrice;
-    private long price;
+    private boolean priceIsPresent;
+    private DecimalFloat price;
 
     private boolean hasStopPx;
     private long stopPx;
@@ -186,42 +187,72 @@ public class OrderSingleEncoder implements Encoder
         return 0;
     }
 
-    public void clOrdID(final String clOrdID)
+    public OrderSingleEncoder clOrdID(final String clOrdID)
     {
         // TODO
+        return this;
     }
 
-    public void clOrdID(final AsciiFlyweight clOrdID)
+    public OrderSingleEncoder clOrdID(final AsciiFlyweight clOrdID)
     {
         // TODO
+        return this;
     }
 
-    public void clOrdID(final DirectBuffer clOrdID, final int offset, final int length)
+    public OrderSingleEncoder clOrdID(final DirectBuffer clOrdID, final int offset, final int length)
     {
-        // TODO
+
+       // TODO
+        return this;
     }
 
-    public void handlInst(final char handlInst)
+    public OrderSingleEncoder handlInst(final char handlInst)
     {
         this.handlInst = handlInst;
+        return this;
     }
 
-    public void side(final Side side)
+    public OrderSingleEncoder side(final Side side)
     {
         this.side = side;
+        return this;
     }
 
-    public void ordType(final OrdType ordType)
+    public OrderSingleEncoder ordType(final OrdType ordType)
     {
         this.ordType = ordType;
+        return this;
     }
 
-    public void transactTime(final long transactTime)
+    public OrderSingleEncoder transactTime(final long transactTime)
     {
         this.transactTime = transactTime;
+        return this;
     }
 
-    public void symbol(final String symbol)
+    public OrderSingleEncoder symbol(final String symbol)
     {
+        return this;
+    }
+
+    public OrderSingleEncoder price(final DecimalFloat price)
+    {
+        this.priceIsPresent = true;
+        this.price = price;
+        return this;
+    }
+
+    public OrderSingleEncoder resetPrice()
+    {
+        this.priceIsPresent = false;
+        this.price = null;
+        return this;
+    }
+
+    public OrderSingleEncoder orderQty(final DecimalFloat orderQty)
+    {
+        this.orderQtyIsPresent = true;
+        this.orderQty = orderQty;
+        return this;
     }
 }

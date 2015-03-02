@@ -21,9 +21,9 @@ import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.builder.DataDictionary;
 import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
+import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 
 import static uk.co.real_logic.fix_gateway.flyweight_api.OrdType.Market;
-import static uk.co.real_logic.fix_gateway.flyweight_api.Side.Buy;
 import static uk.co.real_logic.fix_gateway.flyweight_api.Side.Sell;
 import static uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor.NEW_ORDER_SINGLE;
 
@@ -59,14 +59,19 @@ public class SampleOtfMain
 
             // Specific encoders are generated for each type of message
             // from the same dictionary as the decoders.
+            final DecimalFloat price = new DecimalFloat(2000, 2);
+            final DecimalFloat quantity = new DecimalFloat(10, 0);
+
             final OrderSingleEncoder orderSingle = dictionary.newOrderSingleEncoder();
-            orderSingle.clOrdID("1");
-            orderSingle.handlInst('1');
-            orderSingle.ordType(Market);
-            // The API would follow a fluent style for setting up the different FIX message fields.
-            orderSingle.side(Buy);
-            orderSingle.symbol("MSFT");
-            orderSingle.transactTime(System.currentTimeMillis());
+            orderSingle.clOrdID("1")
+                       .handlInst('1')
+                       .ordType(Market)
+                        // The API would follow a fluent style for setting up the different FIX message fields.
+                       .side(Sell)
+                       .symbol("MSFT")
+                       .price(price)
+                       .orderQty(quantity)
+                       .transactTime(System.currentTimeMillis());
 
             // Having encoded the message, you can send it to the exchange via the session object.
             session.send(orderSingle);
@@ -74,7 +79,14 @@ public class SampleOtfMain
             // If you want to produce multiple messages and rapidly fire them off then you just
             // need to update the fields in question and the other remain the side as your previous
             // usage.
-            orderSingle.side(Sell);
+            orderSingle.price(price.value(2010))
+                       .orderQty(quantity.value(20));
+
+            session.send(orderSingle);
+
+            orderSingle.price(price.value(2020))
+                       .orderQty(quantity.value(30));
+
             session.send(orderSingle);
         }
     }

@@ -104,9 +104,9 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
         while (remainder < 0)
         {
             final int digit = remainder % 10;
+            remainder = remainder / 10;
             buffer.putByte(index, (byte) (ZERO + (-1 * digit)));
             index--;
-            remainder = remainder / 10;
         }
 
         length += end - index;
@@ -167,9 +167,9 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
         while (remainder < 0)
         {
             final long digit = remainder % 10;
+            remainder = remainder / 10;
             buffer.putByte(index, (byte) (ZERO + (-1L * digit)));
             index--;
-            remainder = remainder / 10;
         }
         return index;
     }
