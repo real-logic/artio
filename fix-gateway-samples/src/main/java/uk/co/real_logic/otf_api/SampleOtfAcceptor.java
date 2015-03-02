@@ -17,8 +17,8 @@ package uk.co.real_logic.otf_api;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.ValidationError;
-import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 
 public class SampleOtfAcceptor implements OtfMessageAcceptor
 {

@@ -17,9 +17,7 @@ package uk.co.real_logic.fix_gateway.fields;
 
 import org.junit.Test;
 
-import static org.hamcrest.Matchers.comparesEqualTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
 public class DecimalFloatTest

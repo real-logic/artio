@@ -17,7 +17,10 @@ package uk.co.real_logic.fix_gateway.util;
 
 import uk.co.real_logic.agrona.BitUtil;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Predicate;
 
 import static java.util.stream.Collectors.joining;

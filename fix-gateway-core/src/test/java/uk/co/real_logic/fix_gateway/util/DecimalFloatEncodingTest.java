@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.util;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -28,8 +27,8 @@ import java.util.Arrays;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
+import static uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight.LONGEST_FLOAT_LENGTH;
 
-@Ignore
 @RunWith(Parameterized.class)
 public class DecimalFloatEncodingTest
 {
@@ -39,7 +38,6 @@ public class DecimalFloatEncodingTest
         return Arrays.asList(new Object[][]
         {
             {"55.36", 5536L, 2},
-            {"55.3600", 5536L, 2},
             {".995", 995L, 0},
             {"25", 25L, 2},
             {"-55.36", -5536L, 2},
@@ -63,7 +61,7 @@ public class DecimalFloatEncodingTest
     public void canEncodeDecimalFloat()
     {
         final int length = input.length();
-        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[length]);
+        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LONGEST_FLOAT_LENGTH]);
         final MutableAsciiFlyweight string = new MutableAsciiFlyweight(buffer);
         final DecimalFloat price = new DecimalFloat(value, scale);
 

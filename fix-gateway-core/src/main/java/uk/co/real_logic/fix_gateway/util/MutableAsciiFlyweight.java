@@ -24,9 +24,11 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
 {
     public static final int LONGEST_INT_LENGTH = String.valueOf(Integer.MIN_VALUE).length();
     public static final int LONGEST_LONG_LENGTH = String.valueOf(Long.MIN_VALUE).length();
+    public static final int LONGEST_FLOAT_LENGTH = LONGEST_LONG_LENGTH + 3;
 
     private static final byte ZERO = '0';
     private static final byte SEPARATOR = (byte) '\001';
+    private static final byte DOT = (byte) '.';
 
     private final MutableDirectBuffer buffer;
 
@@ -134,7 +136,34 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
 
     public int encodeFloat(final DecimalFloat price, final int offset)
     {
-       return 0;
+        final long value = price.value();
+        final int scale = price.scale();
+        if (zero(offset, value))
+        {
+            return 1;
+        }
+
+        final long remainder = calculateRemainder(offset, value);
+        final int minusAdj = value < 0 ? 1 : 0;
+        final int start = offset + minusAdj;
+
+        final int end = start + LONGEST_LONG_LENGTH;
+        int index = putLong(remainder, end);
+        final int length = minusAdj + end - index;
+        index++;
+        if (scale < (length - minusAdj))
+        {
+            final int split = start + scale;
+            buffer.putBytes(start, buffer, index, scale);
+            buffer.putByte(split, DOT);
+            buffer.putBytes(split + 1, buffer, index + scale, length - scale);
+            return length + 1;
+        }
+        else
+        {
+            buffer.putBytes(start, buffer, index, length);
+            return length;
+        }
     }
 
     private boolean zero(final int offset, final long value)

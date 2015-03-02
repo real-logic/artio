@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
-import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 
 import java.io.IOException;
