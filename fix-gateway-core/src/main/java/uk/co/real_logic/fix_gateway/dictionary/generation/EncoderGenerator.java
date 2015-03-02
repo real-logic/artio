@@ -77,6 +77,7 @@ public class EncoderGenerator
             generatePrecomputedHeaders(out, message.entries());
             generateSetters(out, className, message.entries());
             out.append(generateEncodeMethod(message.entries()));
+            out.append(generateResetMethod(message.entries()));
             out.append("}\n");
         }
         catch (IOException e)
@@ -87,6 +88,12 @@ public class EncoderGenerator
 
         message.category();
         message.type();
+    }
+
+    private String generateResetMethod(List<Entry> entries)
+    {
+        return "    public void reset() {\n" +
+               "    }\n\n";
     }
 
     private void generateSetters(final Writer out, final String className, final List<Entry> entries) throws IOException

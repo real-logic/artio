@@ -187,6 +187,11 @@ public class OrderSingleEncoder implements Encoder
         return 0;
     }
 
+    public void reset()
+    {
+
+    }
+
     public OrderSingleEncoder clOrdID(final String clOrdID)
     {
         // TODO

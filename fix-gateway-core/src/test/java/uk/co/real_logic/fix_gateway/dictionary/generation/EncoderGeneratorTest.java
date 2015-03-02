@@ -57,14 +57,6 @@ public class EncoderGeneratorTest
         clazz = compileInMemory(HEARTBEAT, outputManager.getSources());
     }
 
-    class Bar implements Encoder
-    {
-        public int encode(final MutableAsciiFlyweight buffer, final int offset)
-        {
-            return 0;
-        }
-    }
-
     @Test
     public void generatesEncoderClass() throws Exception
     {

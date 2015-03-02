@@ -20,4 +20,6 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 public interface Encoder
 {
     int encode(final MutableAsciiFlyweight buffer, final int offset);
+
+    void reset();
 }
