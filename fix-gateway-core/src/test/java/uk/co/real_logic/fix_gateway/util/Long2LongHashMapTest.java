@@ -16,9 +16,13 @@
 package uk.co.real_logic.fix_gateway.util;
 
 import org.junit.Test;
+import org.mockito.InOrder;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 
 public class Long2LongHashMapTest
 {
@@ -85,6 +89,35 @@ public class Long2LongHashMapTest
 
         assertEquals(MISSING_VALUE, map.get(1L));
         assertEquals(MISSING_VALUE, map.get(100L));
+    }
+
+    @Test
+    public void forEachShouldLoopOverEveryElement()
+    {
+        map.put(1L, 1L);
+        map.put(100L, 100L);
+
+        final LongLongConsumer mockConsumer = mock(LongLongConsumer.class);
+        map.longForEach(mockConsumer);
+
+        final InOrder inOrder = inOrder(mockConsumer);
+        inOrder.verify(mockConsumer).accept(1L, 1L);
+        inOrder.verify(mockConsumer).accept(100L, 100L);
+        inOrder.verifyNoMoreInteractions();
+    }
+
+    @Test
+    public void shouldNotContainKeyOfAMissingKey()
+    {
+        assertFalse(map.containsKey(1L));
+    }
+
+    @Test
+    public void shouldContainKeyOfAPresentKey()
+    {
+        map.put(1L, 1L);
+
+        assertTrue(map.containsKey(1L));
     }
 
     // TODO: resize

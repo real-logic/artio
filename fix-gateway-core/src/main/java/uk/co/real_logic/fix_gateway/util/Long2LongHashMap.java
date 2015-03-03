@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
 
 /**
  * .
@@ -31,17 +32,17 @@ public class Long2LongHashMap implements Map<Long, Long>
     private final int capacity;
     private final int mask;
     private final long[] entries;
-    private final long missingValue;
+    private final long tombstone;
 
     private int size = 0;
 
-    public Long2LongHashMap(final int initialCapacity, final long missingValue)
+    public Long2LongHashMap(final int initialCapacity, final long tombstone)
     {
-        this.missingValue = missingValue;
+        this.tombstone = tombstone;
         capacity = BitUtil.findNextPositivePowerOfTwo(initialCapacity);
         mask = capacity - 1;
         entries = new long[capacity * 2];
-        Arrays.fill(entries, missingValue);
+        Arrays.fill(entries, tombstone);
     }
 
     /**
@@ -67,7 +68,7 @@ public class Long2LongHashMap implements Map<Long, Long>
         int index = hash(key);
 
         long candidateKey;
-        while ((candidateKey = entries[index]) != missingValue)
+        while ((candidateKey = entries[index]) != tombstone)
         {
             if (candidateKey == key)
             {
@@ -77,16 +78,16 @@ public class Long2LongHashMap implements Map<Long, Long>
             index = (index + 2) & mask;
         }
 
-        return missingValue;
+        return tombstone;
     }
 
     public long put(final long key, final long value)
     {
-        long oldValue = missingValue;
+        long oldValue = tombstone;
         int index = hash(key);
 
         long candidateKey;
-        while ((candidateKey = entries[index]) != missingValue)
+        while ((candidateKey = entries[index]) != tombstone)
         {
             if (candidateKey == key)
             {
@@ -97,7 +98,7 @@ public class Long2LongHashMap implements Map<Long, Long>
             index = (index + 2) & mask;
         }
 
-        if (oldValue == missingValue)
+        if (oldValue == tombstone)
         {
             ++size;
             entries[index] = key;
@@ -115,9 +116,36 @@ public class Long2LongHashMap implements Map<Long, Long>
         return (hash & mask) * 2;
     }
 
-    public void forEach(final LongLongConsumer consumer)
+    /**
+     * Primitive specialised forEach implementation.
+     *
+     * NB: Renamed from forEach to avoid overloading on parameter types of lambda
+     * expression, which doesn't interplay well with type inference in lambda expressions.
+     *
+     * @param consumer
+     */
+    public void longForEach(final LongLongConsumer consumer)
     {
-        throw new UnsupportedOperationException("Not implemented");
+        final long[] entries = this.entries;
+        for (int i = 0; i < entries.length; i += 2)
+        {
+            final long key = entries[i];
+            if (key != tombstone)
+            {
+                consumer.accept(entries[i], entries[i + 1]);
+            }
+        }
+    }
+
+    /**
+     * Long primitive specialised containsKey.
+     *
+     * @param key
+     * @return
+     */
+    public boolean containsKey(long key)
+    {
+        return get(key) != tombstone;
     }
 
     // ---------------- Boxed Versions Below ----------------
@@ -138,6 +166,22 @@ public class Long2LongHashMap implements Map<Long, Long>
         return put(key.longValue(), value.longValue());
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public void forEach(BiConsumer<? super Long, ? super Long> action)
+    {
+       longForEach(action::accept);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public boolean containsKey(Object key)
+    {
+        return containsKey((long) key);
+    }
+
     // ---------------- Unimplemented Versions Below ----------------
 
     /**
@@ -151,14 +195,6 @@ public class Long2LongHashMap implements Map<Long, Long>
     public long remove(final long key)
     {
         return 0;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public boolean containsKey(Object key)
-    {
-        return false;
     }
 
     /**
@@ -182,7 +218,7 @@ public class Long2LongHashMap implements Map<Long, Long>
      */
     public void clear()
     {
-        Arrays.fill(entries, missingValue);
+        Arrays.fill(entries, tombstone);
         size = 0;
     }
 

@@ -28,6 +28,7 @@ import static java.util.stream.Collectors.joining;
 /**
  * Simple fixed-size int hashset for validating tags.
  */
+// TODO: compact on a remove.
 public final class IntHashSet implements Set<Integer>
 {
     private final int[] values;
