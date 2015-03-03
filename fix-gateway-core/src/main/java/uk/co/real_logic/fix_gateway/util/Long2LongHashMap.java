@@ -17,10 +17,7 @@ package uk.co.real_logic.fix_gateway.util;
 
 import uk.co.real_logic.agrona.BitUtil;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiConsumer;
 
 /**
@@ -32,17 +29,32 @@ public class Long2LongHashMap implements Map<Long, Long>
     private final int capacity;
     private final int mask;
     private final long[] entries;
-    private final long tombstone;
+    private final long missingValue;
+
+    private final Set<Long> keySet;
+    private final Collection<Long> values;
+    private final Set<Entry<Long, Long>> entrySet;
 
     private int size = 0;
 
-    public Long2LongHashMap(final int initialCapacity, final long tombstone)
+    @SuppressWarnings("unchecked")
+    public Long2LongHashMap(final int initialCapacity, final long missingValue)
     {
-        this.tombstone = tombstone;
+        this.missingValue = missingValue;
         capacity = BitUtil.findNextPositivePowerOfTwo(initialCapacity);
         mask = capacity - 1;
         entries = new long[capacity * 2];
-        Arrays.fill(entries, tombstone);
+        Arrays.fill(entries, missingValue);
+
+        final LongIterator keyIterator = new LongIterator(0);
+        keySet = new MapDelegatingSet<>(this, keyIterator::reset, this::containsValue);
+
+        final LongIterator valueIterator = new LongIterator(1);
+        values = new MapDelegatingSet<>(this, valueIterator::reset, this::containsKey);
+
+        final EntryIterator entryIterator = new EntryIterator();
+        entrySet = new MapDelegatingSet<>(this, entryIterator::reset,
+                                          e -> containsKey(((Entry<Long, Long>) e).getKey()));
     }
 
     /**
@@ -68,7 +80,7 @@ public class Long2LongHashMap implements Map<Long, Long>
         int index = hash(key);
 
         long candidateKey;
-        while ((candidateKey = entries[index]) != tombstone)
+        while ((candidateKey = entries[index]) != missingValue)
         {
             if (candidateKey == key)
             {
@@ -78,16 +90,16 @@ public class Long2LongHashMap implements Map<Long, Long>
             index = (index + 2) & mask;
         }
 
-        return tombstone;
+        return missingValue;
     }
 
     public long put(final long key, final long value)
     {
-        long oldValue = tombstone;
+        long oldValue = missingValue;
         int index = hash(key);
 
         long candidateKey;
-        while ((candidateKey = entries[index]) != tombstone)
+        while ((candidateKey = entries[index]) != missingValue)
         {
             if (candidateKey == key)
             {
@@ -98,7 +110,7 @@ public class Long2LongHashMap implements Map<Long, Long>
             index = (index + 2) & mask;
         }
 
-        if (oldValue == tombstone)
+        if (oldValue == missingValue)
         {
             ++size;
             entries[index] = key;
@@ -130,7 +142,7 @@ public class Long2LongHashMap implements Map<Long, Long>
         for (int i = 0; i < entries.length; i += 2)
         {
             final long key = entries[i];
-            if (key != tombstone)
+            if (key != missingValue)
             {
                 consumer.accept(entries[i], entries[i + 1]);
             }
@@ -145,7 +157,7 @@ public class Long2LongHashMap implements Map<Long, Long>
      */
     public boolean containsKey(final long key)
     {
-        return get(key) != tombstone;
+        return get(key) != missingValue;
     }
 
     public boolean containsValue(final long value)
@@ -160,6 +172,15 @@ public class Long2LongHashMap implements Map<Long, Long>
             }
         }
         return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void clear()
+    {
+        Arrays.fill(entries, missingValue);
+        size = 0;
     }
 
     // ---------------- Boxed Versions Below ----------------
@@ -183,7 +204,7 @@ public class Long2LongHashMap implements Map<Long, Long>
     /**
      * {@inheritDoc}
      */
-    public void forEach(BiConsumer<? super Long, ? super Long> action)
+    public void forEach(final BiConsumer<? super Long, ? super Long> action)
     {
        longForEach(action::accept);
     }
@@ -191,7 +212,7 @@ public class Long2LongHashMap implements Map<Long, Long>
     /**
      * {@inheritDoc}
      */
-    public boolean containsKey(Object key)
+    public boolean containsKey(final Object key)
     {
         return containsKey((long) key);
     }
@@ -199,12 +220,44 @@ public class Long2LongHashMap implements Map<Long, Long>
     /**
      * {@inheritDoc}
      */
-    public boolean containsValue(Object value)
+    public boolean containsValue(final Object value)
     {
         return containsValue((long) value);
     }
 
-    // ---------------- Unimplemented Versions Below ----------------
+    /**
+     * {@inheritDoc}
+     */
+    public void putAll(final Map<? extends Long, ? extends Long> map)
+    {
+        map.forEach(this::put);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public Set<Long> keySet()
+    {
+        return keySet;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public Collection<Long> values()
+    {
+        return values;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public Set<Entry<Long, Long>> entrySet()
+    {
+        return entrySet;
+    }
+
+    // ---------------- Unimplemented Methods ----------------
 
     /**
      * {@inheritDoc}
@@ -219,44 +272,100 @@ public class Long2LongHashMap implements Map<Long, Long>
         return 0;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public void putAll(Map<? extends Long, ? extends Long> map)
+    // ---------------- Utility Classes ----------------
+
+    private abstract class AbstractIterator
     {
+
+        protected final int startIndex;
+
+        protected int index;
+
+        protected AbstractIterator(final int startIndex)
+        {
+            this.startIndex = startIndex;
+            index = startIndex;
+        }
+
+        public boolean hasNext()
+        {
+            while (entries[index] == missingValue)
+            {
+                nextIndex();
+                if(index == startIndex)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        protected void nextIndex()
+        {
+            index = (index + 2) & mask;
+        }
 
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public void clear()
+    private final class LongIterator extends AbstractIterator implements Iterator<Long>
     {
-        Arrays.fill(entries, tombstone);
-        size = 0;
+        private LongIterator(final int startIndex)
+        {
+            super(startIndex);
+        }
+
+        private LongIterator reset()
+        {
+            index = startIndex;
+            return this;
+        }
+
+        public Long next()
+        {
+            final long entry = entries[index];
+            nextIndex();
+            return entry;
+        }
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public Set<Long> keySet()
+    private final class EntryIterator extends AbstractIterator implements Iterator<Entry<Long, Long>>, Entry<Long, Long>
     {
-        throw new UnsupportedOperationException("Not implemented");
-    }
+        private long key;
+        private long value;
 
-    /**
-     * {@inheritDoc}
-     */
-    public Collection<Long> values()
-    {
-        throw new UnsupportedOperationException("Not implemented");
-    }
+        private EntryIterator()
+        {
+            super(0);
+        }
 
-    /**
-     * {@inheritDoc}
-     */
-    public Set<Entry<Long, Long>> entrySet()
-    {
-        throw new UnsupportedOperationException("Not implemented");
+        private EntryIterator reset()
+        {
+            index = startIndex;
+            return this;
+        }
+
+        public Long getKey()
+        {
+            return key;
+        }
+
+        public Long getValue()
+        {
+            return value;
+        }
+
+        public Long setValue(final Long value)
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        public Entry<Long, Long> next()
+        {
+            key = entries[index];
+            value = entries[index + 1];
+            nextIndex();
+            return this;
+        }
     }
 }

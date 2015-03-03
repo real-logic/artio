@@ -18,9 +18,11 @@ package uk.co.real_logic.fix_gateway.util;
 import org.junit.Test;
 import org.mockito.InOrder;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import java.util.*;
+import java.util.Map.Entry;
+
+import static org.hamcrest.Matchers.hasItems;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 
@@ -132,6 +134,79 @@ public class Long2LongHashMapTest
         map.put(1L, 1L);
 
         assertTrue(map.containsValue(1L));
+    }
+
+    @Test
+    public void shouldExposeValidKeySet()
+    {
+        map.put(1L, 1L);
+        map.put(2L, 2L);
+
+        assertCollectionContainsElements(map.keySet());
+    }
+
+    @Test
+    public void shouldExposeValidValueSet()
+    {
+        map.put(1L, 1L);
+        map.put(2L, 2L);
+
+        assertCollectionContainsElements(map.values());
+    }
+
+    @Test
+    public void shouldPutAllMembersOfAnotherHashMap()
+    {
+        map.put(1L, 1L);
+        map.put(2L, 3L);
+
+        final Map<Long, Long> other = new HashMap<>();
+        other.put(1L, 2L);
+        other.put(3L, 4L);
+
+        map.putAll(other);
+
+        assertEquals(3, map.size());
+
+        assertEquals(2, map.get(1L));
+        assertEquals(3, map.get(2L));
+        assertEquals(4, map.get(3L));
+    }
+
+    @Test
+    public void entrySetShouldContainEntries()
+    {
+        map.put(1L, 1L);
+        map.put(2L, 3L);
+
+        final Set<Entry<Long, Long>> entrySet = map.entrySet();
+        assertEquals(2, entrySet.size());
+        assertFalse(entrySet.isEmpty());
+
+        final Iterator<Entry<Long, Long>> it = entrySet.iterator();
+        assertTrue(it.hasNext());
+        assertEntryIs(it.next(), 1L, 1L);
+        assertTrue(it.hasNext());
+        assertEntryIs(it.next(), 2L, 3L);
+        assertFalse(it.hasNext());
+    }
+
+    private void assertEntryIs(final Entry<Long, Long> entry, final long expectedKey, final long expectedValue)
+    {
+        assertEquals(expectedKey, entry.getKey().longValue());
+        assertEquals(expectedValue, entry.getValue().longValue());
+    }
+
+    private void assertCollectionContainsElements(final Collection<Long> keys)
+    {
+        assertEquals(2, keys.size());
+        assertFalse(keys.isEmpty());
+        assertTrue(keys.contains(1L));
+        assertTrue(keys.contains(2L));
+        assertFalse(keys.contains(3L));
+        assertThat(keys, hasItems(1L, 2L));
+
+        assertThat("iterator has failed to be reset", keys, hasItems(1L, 2L));
     }
 
     // TODO: resize
