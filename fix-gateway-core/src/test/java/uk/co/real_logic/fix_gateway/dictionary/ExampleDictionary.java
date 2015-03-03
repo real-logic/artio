@@ -41,6 +41,8 @@ public final class ExampleDictionary
     // Just the message body - no header and no checksum
     public static final String ENCODED_MESSAGE_EXAMPLE = "115=abc\001112=abc\001116=2\001117=1.1\001";
 
+    public static final String NO_OPTIONAL_MESSAGE_EXAMPLE = "115=abc\001116=2\001117=1.1\001";
+
     static
     {
         final Field egEnum = new Field(123, "EgEnum", Type.CHAR);
@@ -65,6 +67,7 @@ public final class ExampleDictionary
         heartbeat.requiredEntry(floatField);
 
         final Map<String, Field> messageEgFields = new HashMap<>();
+
         messageEgFields.put("OnBehalfOfCompID", onBehalfOfCompID);
         messageEgFields.put("TestReqID", testReqID);
         messageEgFields.put("IntField", intField);

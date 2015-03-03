@@ -146,7 +146,7 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void encodesRequiredValues() throws Exception
+    public void encodesValues() throws Exception
     {
         final int length = ENCODED_MESSAGE_EXAMPLE.length();
 
@@ -164,10 +164,25 @@ public class EncoderGeneratorTest
         assertEquals(length, encodedLength);
     }
 
-    // TODO: optional fields: setTestReqIdTo(encoder, "abc");
-    // TODO: encode method
+    @Test
+    public void ignoresMissingOptionalValues() throws Exception
+    {
+        final int length = NO_OPTIONAL_MESSAGE_EXAMPLE.length();
+
+        final MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
+        final Encoder encoder = (Encoder) clazz.newInstance();
+
+        setCharSequence(encoder, "onBehalfOfCompID", "abc");
+        setInt(encoder, INT_FIELD, 2);
+        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+
+        final int encodedLength = encoder.encode(buffer, 1);
+
+        assertThat(buffer, containsAscii(NO_OPTIONAL_MESSAGE_EXAMPLE, 1, length));
+        assertEquals(length, encodedLength);
+    }
+
     // TODO: common header and footer
-    // TODO: pre-computed header
     // TODO: checksum of encoded message
     // TODO: composite types
     // TODO: groups

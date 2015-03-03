@@ -23,6 +23,8 @@ import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
+import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
@@ -38,9 +40,10 @@ import static uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight.LONGEST_IN
 
 public class EncoderGenerator
 {
-    private static final String PUT_SEPARATOR =
+    private static final String SUFFIX =
         "        buffer.putSeparator(position);\n" +
-        "        position++;\n";
+        "        position++;\n" +
+        "%s";
 
     private final byte[] buffer = new byte[LONGEST_INT_LENGTH + 1];
     private final MutableAsciiFlyweight string = new MutableAsciiFlyweight(new UnsafeBuffer(buffer));
@@ -231,14 +234,14 @@ public class EncoderGenerator
         final String name = field.name();
         final String fieldName = JavaUtil.formatPropertyName(name);
 
-        if (entry.required())
-        {
-
-        }
+        final String optionalPrefix = entry.required() ? "" : String.format("        if (has%s) {\n", name);
+        final String optionalSuffix = entry.required() ? "" : "}\n";
 
         final String tag = String.format(
-            "        buffer.putBytes(position, %sHeader, 0, %1$sHeaderLength);\n" +
-            "        position += %1$sHeaderLength;\n",
+            "%s" +
+            "        buffer.putBytes(position, %sHeader, 0, %2$sHeaderLength);\n" +
+            "        position += %2$sHeaderLength;\n",
+            optionalPrefix,
             fieldName);
 
         switch (field.type())
@@ -248,38 +251,53 @@ public class EncoderGenerator
                     "%s" +
                     "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
                     "        position += %2$sLength;\n" +
-                    PUT_SEPARATOR,
+                    SUFFIX,
                     tag,
-                    fieldName);
+                    fieldName,
+                    optionalSuffix);
 
             case INT:
             case LENGTH:
             case SEQNUM:
-                return generatePut(fieldName, tag, "Int");
+                return generatePut(fieldName, tag, "Int", optionalSuffix);
 
             case QTY:
             case PRICE:
             case PRICEOFFSET:
-                return generatePut(fieldName, tag, "Float");
+                return generatePut(fieldName, tag, "Float", optionalSuffix);
 
             case LOCALMKTDATE:
+                return String.format(
+                    "%s" +
+                    "        position += LocalMktDateEncoder.encode(%s, buffer, position);\n" +
+                    SUFFIX,
+                    tag,
+                    fieldName,
+                    optionalSuffix);
+
             case UTCTIMESTAMP:
+                return String.format(
+                    "%s" +
+                    "        position += UtcTimestampEncoder.encode(%s, buffer, position);\n" +
+                    SUFFIX,
+                    tag,
+                    fieldName,
+                    optionalSuffix);
 
-                //default: throw new UnsupportedOperationException("Unknown type: " + field.type());
+            default: throw new UnsupportedOperationException("Unknown type: " + field.type());
         }
-
-        return "";
     }
 
-    private String generatePut(final String fieldName, final String tag, final String type)
+    private String generatePut(final String fieldName, final String tag, final String type, String optionalSuffix)
     {
         return String.format(
             "%s" +
             "        position += buffer.put%s(position, %s);\n" +
-            PUT_SEPARATOR,
+            SUFFIX,
             tag,
             type,
-            fieldName);
+            fieldName,
+            optionalSuffix);
     }
 
     private String generateClassDeclaration(final String className)
@@ -290,6 +308,8 @@ public class EncoderGenerator
             "import %s.Encoder;\n" +
             importFor(DecimalFloat.class) +
             importFor(MutableAsciiFlyweight.class) +
+            importFor(LocalMktDateEncoder.class) +
+            importFor(UtcTimestampEncoder.class) +
             "\n" +
             "public final class %s implements Encoder\n" +
             "{\n\n",
