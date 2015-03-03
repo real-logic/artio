@@ -143,9 +143,23 @@ public class Long2LongHashMap implements Map<Long, Long>
      * @param key
      * @return
      */
-    public boolean containsKey(long key)
+    public boolean containsKey(final long key)
     {
         return get(key) != tombstone;
+    }
+
+    public boolean containsValue(final long value)
+    {
+        final long[] entries = this.entries;
+        for (int i = 1; i < entries.length; i += 2)
+        {
+            final long entryValue = entries[i];
+            if (entryValue == value)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ---------------- Boxed Versions Below ----------------
@@ -182,6 +196,14 @@ public class Long2LongHashMap implements Map<Long, Long>
         return containsKey((long) key);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public boolean containsValue(Object value)
+    {
+        return containsValue((long) value);
+    }
+
     // ---------------- Unimplemented Versions Below ----------------
 
     /**
@@ -195,14 +217,6 @@ public class Long2LongHashMap implements Map<Long, Long>
     public long remove(final long key)
     {
         return 0;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public boolean containsValue(Object value)
-    {
-        return false;
     }
 
     /**

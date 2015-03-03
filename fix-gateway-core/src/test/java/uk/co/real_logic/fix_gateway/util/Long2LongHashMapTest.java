@@ -120,5 +120,19 @@ public class Long2LongHashMapTest
         assertTrue(map.containsKey(1L));
     }
 
+    @Test
+    public void shouldNotContainValueForAMissingEntry()
+    {
+        assertFalse(map.containsValue(1L));
+    }
+
+    @Test
+    public void shouldContainValueForAPresentEntry()
+    {
+        map.put(1L, 1L);
+
+        assertTrue(map.containsValue(1L));
+    }
+
     // TODO: resize
 }
