@@ -87,7 +87,7 @@ public class Long2LongHashMap implements Map<Long, Long>
                 return entries[index + 1];
             }
 
-            index = (index + 2) & mask;
+            index = next(index);
         }
 
         return missingValue;
@@ -107,7 +107,7 @@ public class Long2LongHashMap implements Map<Long, Long>
                 break;
             }
 
-            index = (index + 2) & mask;
+            index = next(index);
         }
 
         if (oldValue == missingValue)
@@ -257,8 +257,6 @@ public class Long2LongHashMap implements Map<Long, Long>
         return entrySet;
     }
 
-    // ---------------- Unimplemented Methods ----------------
-
     /**
      * {@inheritDoc}
      */
@@ -269,7 +267,58 @@ public class Long2LongHashMap implements Map<Long, Long>
 
     public long remove(final long key)
     {
-        return 0;
+        final long[] entries = this.entries;
+
+        int index = hash(key);
+
+        long candidateKey;
+        while ((candidateKey = entries[index]) != missingValue)
+        {
+            if (candidateKey == key)
+            {
+                final int valueIndex = index + 1;
+                final long oldValue = entries[valueIndex];
+                entries[index] = missingValue;
+                entries[valueIndex] = missingValue;
+                size--;
+
+                compactChain(index);
+
+                return oldValue;
+            }
+
+            index = next(index);
+        }
+
+        return missingValue;
+    }
+
+    private void compactChain(int deleteIndex)
+    {
+        final long[] entries = this.entries;
+
+        int index = deleteIndex;
+        while (true)
+        {
+            index = next(index);
+            if (entries[index] == missingValue)
+            {
+                return;
+            }
+
+            final int hash = hash(entries[index]);
+
+            if ((index < hash && (hash <= deleteIndex || deleteIndex <= index)) ||
+                    (hash <= deleteIndex && deleteIndex <= index))
+            {
+                entries[deleteIndex] = entries[index];
+                entries[deleteIndex + 1] = entries[index + 1];
+
+                entries[index] = missingValue;
+                entries[index + 1] = missingValue;
+                deleteIndex = index;
+            }
+        }
     }
 
     // ---------------- Utility Classes ----------------
@@ -303,7 +352,7 @@ public class Long2LongHashMap implements Map<Long, Long>
 
         protected void nextIndex()
         {
-            index = (index + 2) & mask;
+            index = next(index);
         }
 
     }
@@ -367,5 +416,10 @@ public class Long2LongHashMap implements Map<Long, Long>
             nextIndex();
             return this;
         }
+    }
+
+    private int next(final int index)
+    {
+        return (index + 2) & mask;
     }
 }

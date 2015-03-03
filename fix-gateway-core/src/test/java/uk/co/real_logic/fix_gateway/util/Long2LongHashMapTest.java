@@ -20,6 +20,7 @@ import org.mockito.InOrder;
 
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.stream.IntStream;
 
 import static org.hamcrest.Matchers.hasItems;
 import static org.junit.Assert.*;
@@ -189,6 +190,49 @@ public class Long2LongHashMapTest
         assertTrue(it.hasNext());
         assertEntryIs(it.next(), 2L, 3L);
         assertFalse(it.hasNext());
+    }
+
+    @Test
+    public void removeShouldReturnMissing()
+    {
+        assertEquals(MISSING_VALUE, map.remove(1L));
+    }
+
+    @Test
+    public void removeShouldReturnValueRemoved()
+    {
+        map.put(1L, 2L);
+
+        assertEquals(2L, map.remove(1L));
+    }
+
+    @Test
+    public void removeShouldRemoveEntry()
+    {
+        map.put(1L, 2L);
+
+        map.remove(1L);
+
+        assertTrue(map.isEmpty());
+        assertFalse(map.containsKey(1L));
+        assertFalse(map.containsValue(2L));
+    }
+
+    @Test
+    public void removeShouldOnlyRemoveEntry()
+    {
+        IntStream.range(0, 10).forEach(i -> map.put(i, i * 2));
+
+        map.remove(5L);
+
+        IntStream.range(0, 10)
+                 .filter(i -> i != 5L)
+                 .forEach(i ->
+        {
+            assertTrue(map.containsKey(i));
+            assertTrue(map.containsValue(2 * i));
+        });
+
     }
 
     private void assertEntryIs(final Entry<Long, Long> entry, final long expectedKey, final long expectedValue)
