@@ -134,6 +134,17 @@ subprojects {
 project(':fix-gateway-core') {
     apply plugin: 'application'
 
+    apply plugin: "java"
+    task generateSources {
+        def generatedDir = file("$buildDir/generated-src")
+        outputs.dir generatedDir
+        doFirst {
+            generatedDir.exists() || generatedDir.mkdirs()
+            new File(generatedDir, "Generated.java").write("public class Generated {}")
+        }
+    }
+    compileJava.source generateSources.outputs.files, sourceSets.main.java
+
     mainClassName = 'uk.co.real_logic.fix_gateway.FixEngine'
 
     dependencies {
