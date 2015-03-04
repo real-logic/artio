@@ -53,7 +53,7 @@ public final class ExampleDictionary
         fieldEgFields.put("EgEnum", egEnum);
         fieldEgFields.put("egNotEnum", new Field(123, "EgNotEnum", Type.CHAR));
 
-        FIELD_EXAMPLE = new DataDictionary(emptyList(), fieldEgFields, emptyMap());
+        FIELD_EXAMPLE = new DataDictionary(emptyList(), fieldEgFields, emptyMap(), null, null);
 
         final Field onBehalfOfCompID = new Field(115, "OnBehalfOfCompID", Type.STRING);
         final Field testReqID = new Field(112, "TestReqID", Type.STRING);
@@ -73,6 +73,6 @@ public final class ExampleDictionary
         messageEgFields.put("IntField", intField);
         messageEgFields.put("FloatField", floatField);
 
-        MESSAGE_EXAMPLE = new DataDictionary(singletonList(heartbeat), messageEgFields, emptyMap());
+        MESSAGE_EXAMPLE = new DataDictionary(singletonList(heartbeat), messageEgFields, emptyMap(), null, null);
     }
 }

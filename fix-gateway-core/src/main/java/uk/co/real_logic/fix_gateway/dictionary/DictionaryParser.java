@@ -32,11 +32,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static javax.xml.xpath.XPathConstants.NODESET;
 
+/**
+ * Parses XML format dictionary files and into instances of
+ * {@link uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary}.
+ */
 public final class DictionaryParser
 {
     private static final String FIELD_EXPR = "/fix/fields/field";
@@ -77,10 +80,10 @@ public final class DictionaryParser
         final Map<String, Field> fields = parseFields(document);
         final Map<String, Component> components = parseComponents(document, fields);
         final List<Message> messages = parseMessages(document, fields, components);
+        final Component header = extractComponent(document, fields, findHeader, "Header", components);
+        final Component trailer = extractComponent(document, fields, findTrailer, "Trailer", components);
 
-        extractCommonEntries(document, messages, fields, components);
-
-        return new DataDictionary(messages, fields, components);
+        return new DataDictionary(messages, fields, components, header, trailer);
     }
 
     private Map<String, Component> parseComponents(final Document document, final Map<String, Field> fields)
@@ -204,30 +207,18 @@ public final class DictionaryParser
             });
     }
 
-    private void extractCommonEntries(
-        final Document document,
-        final List<Message> messages,
-        final Map<String, Field> fields,
-        final Map<String, Component> components)
-
+    private Component extractComponent(
+            final Document document,
+            final Map<String, Field> fields,
+            final XPathExpression expression,
+            final String name,
+            final Map<String, Component> components)
         throws XPathExpressionException
     {
-        addEntries(document, messages, fields, (left, right) -> left.addAll(0, right), findHeader, components);
-        addEntries(document, messages, fields, List::addAll, findTrailer, components);
-    }
-
-    private void addEntries(
-        final Document document,
-        final List<Message> messages,
-        final Map<String, Field> fields,
-        final BiConsumer<List<Entry>, List<Entry>> merge,
-        final XPathExpression expression,
-        final Map<String, Component> components)
-        throws XPathExpressionException
-    {
-        final List<Entry> entries = new ArrayList<>();
-        extractEntries(evaluate(document, expression), fields, entries, components);
-        messages.forEach((message) -> merge.accept(message.entries(), entries));
+        final Component component = new Component(name);
+        final NodeList nodes = evaluate(document, expression);
+        extractEntries(nodes, fields, component.entries(), components);
+        return component;
     }
 
     private String name(final NamedNodeMap attributes)

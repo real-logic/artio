@@ -53,4 +53,12 @@ public abstract class Aggregate
         entries().add(Entry.required(element));
         return this;
     }
+
+    public String toString()
+    {
+        return getClass().getSimpleName() + "{" +
+                "name='" + name + '\'' +
+                ", entries=" + entries +
+                '}';
+    }
 }

@@ -21,6 +21,7 @@ import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import uk.co.real_logic.agrona.DirectBuffer;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Objects;
 
 /**
@@ -77,6 +78,44 @@ public final class CustomMatchers
             public void describeTo(final Description description)
             {
                 flyweightMatcher.describeTo(description);
+            }
+        };
+    }
+
+    /**
+     * Doesn't use getters for properties, like hamcrest.
+     */
+    public static <T> Matcher<T> hasProperty(final String name, final Matcher<?> valueMatcher)
+    {
+        return new TypeSafeMatcher<T>()
+        {
+            public String error = null;
+
+            protected boolean matchesSafely(final T item)
+            {
+                try
+                {
+                    final Object value = item.getClass().getMethod(name).invoke(item);
+                    return valueMatcher.matches(value);
+                }
+                catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e)
+                {
+                    error = e.getMessage();
+                    return false;
+                }
+            }
+
+            public void describeTo(final Description description)
+            {
+                if (error != null)
+                {
+                    description.appendText(error);
+                }
+                else
+                {
+                    description.appendText("A method called " + name + " with ");
+                    valueMatcher.describeTo(description);
+                }
             }
         };
     }

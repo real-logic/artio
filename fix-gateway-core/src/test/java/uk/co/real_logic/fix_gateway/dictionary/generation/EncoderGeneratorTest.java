@@ -182,7 +182,7 @@ public class EncoderGeneratorTest
         assertEquals(length, encodedLength);
     }
 
-    // TODO: common header and footer
+    // TODO: common header and trailer
     // TODO: checksum of encoded message
     // TODO: composite types
     // TODO: groups

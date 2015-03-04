@@ -23,15 +23,21 @@ public final class DataDictionary
     private final List<Message> messages;
     private final Map<String, Field> fields;
     private final Map<String, Component> components;
+    private final Component header;
+    private final Component trailer;
 
     public DataDictionary(
         final List<Message> messages,
         final Map<String, Field> fields,
-        final Map<String, Component> components)
+        final Map<String, Component> components,
+        final Component header,
+        final Component trailer)
     {
         this.messages = messages;
         this.fields = fields;
         this.components = components;
+        this.header = header;
+        this.trailer = trailer;
     }
 
     public List<Message> messages()
@@ -49,12 +55,24 @@ public final class DataDictionary
         return components;
     }
 
-    @Override
+    public Component header()
+    {
+        return header;
+    }
+
+    public Component trailer()
+    {
+        return trailer;
+    }
+
     public String toString()
     {
         return "DataDictionary{" +
-            "messages=" + messages +
-            ", fields=" + fields +
-            '}';
+                "messages=" + messages +
+                ", fields=" + fields +
+                ", components=" + components +
+                ", header=" + header +
+                ", trailer=" + trailer +
+                '}';
     }
 }

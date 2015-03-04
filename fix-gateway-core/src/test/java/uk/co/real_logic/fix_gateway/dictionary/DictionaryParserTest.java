@@ -15,20 +15,20 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary;
 
+import org.hamcrest.Matcher;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 
 import java.util.List;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasProperty;
 
 public class DictionaryParserTest
 {
@@ -60,6 +60,16 @@ public class DictionaryParserTest
         assertEquals("BodyLength", bodyLength.name());
         assertEquals(9, bodyLength.number());
         assertEquals(Type.INT, bodyLength.type());
+    }
+
+    @Test
+    public void shouldParseTestReqID()
+    {
+        Field field = field("TestReqID");
+        assertEquals("TestReqID", field.name());
+        assertEquals(112, field.number());
+        assertFalse(field.isEnum());
+        assertEquals(STRING, field.type());
     }
 
     @Test
@@ -100,14 +110,8 @@ public class DictionaryParserTest
         assertEquals('0', heartbeat.type());
         assertEquals(ADMIN, heartbeat.category());
 
-        final Entry entry = heartbeat.entries().get(3);
-        assertFalse(entry.required());
-
-        final Field field = (Field)entry.element();
-        assertEquals("TestReqID", field.name());
-        assertEquals(112, field.number());
-        assertFalse(field.isEnum());
-        assertEquals(STRING, field.type());
+        final Entry entry = heartbeat.entries().get(0);
+        assertThat(entry, isRequiredField("TestReqID", false));
     }
 
     @Test
@@ -117,25 +121,22 @@ public class DictionaryParserTest
     }
 
     @Test
-    public void messagesShouldHaveCommonFields()
+    public void shouldHaveHeader()
     {
-        final Message heartbeat = dictionary.messages().get(0);
+        final List<Entry> entries = dictionary.header().entries();
 
-        final List<Entry> fields = heartbeat.entries();
-
-        assertRequiredField("BeginString", fields.get(0));
-        assertRequiredField("BodyLength", fields.get(1));
-        assertRequiredField("MsgType", fields.get(2));
-        assertRequiredField("CheckSum", fields.get(4));
+        assertThat(entries, hasSize(3));
+        assertThat(entries, hasItem(isRequiredField("BeginString", true)));
+        assertThat(entries, hasItem(isRequiredField("BodyLength", true)));
+        assertThat(entries, hasItem(isRequiredField("MsgType", true)));
     }
 
-    private void assertRequiredField(final String name, final Entry entry)
+    @Test
+    public void shouldHaveTrailer()
     {
-        assertTrue(entry.required());
+        final List<Entry> entries = dictionary.trailer().entries();
 
-        final Element element = entry.element();
-        assertThat(element, instanceOf(Field.class));
-        assertEquals(name, ((Field)element).name());
+        assertThat(entries, hasItems(isRequiredField("CheckSum", true)));
     }
 
     @Test
@@ -144,23 +145,18 @@ public class DictionaryParserTest
         final Message newOrderSingle = newOrderSingle();
         final List<Entry> entries = newOrderSingle.entries();
 
-        final Entry entry = entries.get(6);
-        final Group noTradingSessions = (Group)entry.element();
-        assertEquals("NoTradingSessions", noTradingSessions.name());
-
-        final List<Entry> groupEntries = noTradingSessions.entries();
-        assertThat(groupEntries, hasSize(1));
-        assertEquals(field("TradingSessionID"), groupEntries.get(0).element());
+        assertThat(entries,
+            hasItem(withElement(isGroup("NoTradingSessions",
+                    withEntries(hasItems(isField("TradingSessionID")))))));
     }
 
     @Test
     public void shouldParseComponents()
     {
         final Message newOrderSingle = newOrderSingle();
-        final Entry noMemberIDs = newOrderSingle.entries().get(7);
 
-        assertFalse(noMemberIDs.required());
-        assertEquals(component("Members"), noMemberIDs.element());
+        assertThat(newOrderSingle.entries(),
+            hasItem(isRequiredComponent("Members")));
     }
 
     @Test
@@ -203,4 +199,50 @@ public class DictionaryParserTest
     {
         return new DictionaryParser().parse(DictionaryParserTest.class.getResourceAsStream(EXAMPLE_FILE));
     }
+
+    private <T> Matcher<T> withElement(final Matcher<?> valueMatcher)
+    {
+        return hasProperty("element", valueMatcher);
+    }
+
+    private <T> Matcher<T> withName(final Matcher<?> valueMatcher)
+    {
+        return hasProperty("name", valueMatcher);
+    }
+
+    private <T> Matcher<T> isRequired(final boolean required)
+    {
+        return hasProperty("required", equalTo(required));
+    }
+
+    private <T> Matcher<T> withEntries(final Matcher<?> valueMatcher)
+    {
+        return hasProperty("entries", valueMatcher);
+    }
+
+    private <T> Matcher<T> isField(final String name)
+    {
+        return withElement(equalTo(field(name)));
+    }
+
+    private <T> Matcher<T> isRequiredField(final String name, final boolean required)
+    {
+        return allOf(isRequired(required), isField(name));
+    }
+
+    private <T> Matcher<T> isComponent(final String name)
+    {
+        return withElement(equalTo(component(name)));
+    }
+
+    private <T> Matcher<T> isRequiredComponent(final String name)
+    {
+        return allOf(isRequired(false), isComponent(name));
+    }
+
+    private <T> Matcher<T> isGroup(final String name, final Matcher<T> valueMatcher)
+    {
+        return allOf(instanceOf(Group.class), withName(equalTo(name)), valueMatcher);
+    }
+
 }
