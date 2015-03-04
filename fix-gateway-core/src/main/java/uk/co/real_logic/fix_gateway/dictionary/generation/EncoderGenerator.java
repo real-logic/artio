@@ -17,8 +17,11 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
-import uk.co.real_logic.fix_gateway.dictionary.ir.*;
+import uk.co.real_logic.agrona.generation.OutputManager;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
+import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
@@ -62,12 +65,12 @@ public class EncoderGenerator
 
     private final int initialArraySize;
     private final DataDictionary dictionary;
-    private final StringWriterOutputManager outputManager;
+    private final OutputManager outputManager;
 
     public EncoderGenerator(
         final DataDictionary dictionary,
         final int initialArraySize,
-        final StringWriterOutputManager outputManager)
+        final OutputManager outputManager)
     {
         this.dictionary = dictionary;
         this.initialArraySize = initialArraySize;

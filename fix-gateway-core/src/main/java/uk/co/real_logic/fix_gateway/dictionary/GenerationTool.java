@@ -15,20 +15,33 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary;
 
+import uk.co.real_logic.agrona.generation.OutputManager;
+import uk.co.real_logic.agrona.generation.PackageOutputManager;
+import uk.co.real_logic.fix_gateway.dictionary.generation.EncoderGenerator;
+import uk.co.real_logic.fix_gateway.dictionary.generation.EnumGenerator;
+import uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 
+import java.io.File;
 import java.io.FileInputStream;
 
-public class GenerationTool
+public final class GenerationTool
 {
     public static void main(String[] args) throws Exception
     {
+        System.out.println(new File(".").getAbsolutePath());
         final String outputPath = args[0];
         final String xmlPath = args[1];
         final DictionaryParser parser = new DictionaryParser();
         try (final FileInputStream input = new FileInputStream(xmlPath))
         {
             final DataDictionary dictionary = parser.parse(input);
+            final OutputManager outputManager = new PackageOutputManager(outputPath, GenerationUtil.BUILDER_PACKAGE);
+            final EnumGenerator enumGenerator = new EnumGenerator(dictionary, outputManager);
+            final EncoderGenerator encoderGenerator = new EncoderGenerator(dictionary, 20, outputManager);
+
+            enumGenerator.generate();
+            encoderGenerator.generate();
         }
     }
 }
