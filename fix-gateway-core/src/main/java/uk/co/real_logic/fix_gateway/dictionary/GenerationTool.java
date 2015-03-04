@@ -29,7 +29,6 @@ public class GenerationTool
         try (final FileInputStream input = new FileInputStream(xmlPath))
         {
             final DataDictionary dictionary = parser.parse(input);
-            
         }
     }
 }
