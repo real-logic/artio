@@ -42,6 +42,8 @@ public class EncoderGeneratorTest
     private static final String TEST_REQ_ID = "testReqID";
     private static final String INT_FIELD = "intField";
     private static final String FLOAT_FIELD = "floatField";
+    private static final String BOOLEAN_FIELD = "booleanField";
+    private static final String DATA_FIELD = "dataField";
     private static final String TEST_REQ_ID_LENGTH = "testReqIDLength";
     private static final String HAS_TEST_REQ_ID = "hasTestReqID";
 
@@ -187,6 +189,8 @@ public class EncoderGeneratorTest
         setTestReqIdTo(encoder, VALUE);
         setInt(encoder, INT_FIELD, 2);
         setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+        setBoolean(encoder, BOOLEAN_FIELD, true);
+        setByteArray(encoder, DATA_FIELD, new byte[]{'1', '2', '3'});
         setupHeader(encoder);
         setupTrailer(encoder);
 
@@ -207,9 +211,15 @@ public class EncoderGeneratorTest
         assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE_EXAMPLE);
     }
 
-    // TODO: checksum of encoded message
+    // Requirements for session management:
+    // TODO: derived fields:
+    //  * fix version
+    //  * checksum of encoded message
+    //  * messageType
+    //  * bodyLength
+
     // TODO: compound types
-    // TODO: groups
+    // TODO: groups (RefMsgType used in session management)
     // TODO: nested groups
 
     private void setupHeader(final Encoder encoder) throws Exception

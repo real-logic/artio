@@ -30,6 +30,9 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
     private static final byte SEPARATOR = (byte) '\001';
     private static final byte DOT = (byte) '.';
 
+    private static final byte Y = (byte) 'Y';
+    private static final byte N = (byte) 'N';
+
     private final MutableDirectBuffer buffer;
 
     public MutableAsciiFlyweight(final MutableDirectBuffer buffer)
@@ -51,9 +54,21 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
         buffer.putByte(index, SEPARATOR);
     }
 
+    public int putBytes(final int index, final byte[] src)
+    {
+        buffer.putBytes(index, src);
+        return src.length;
+    }
+
     public void putBytes(final int index, final byte[] src, final int srcOffset, final int srcLength)
     {
         buffer.putBytes(index, src, srcOffset, srcLength);
+    }
+
+    public int putBoolean(final int offset, final boolean value)
+    {
+        buffer.putByte(offset, value ? Y : N);
+        return 1;
     }
 
     public void putChar(final int index, final char value)

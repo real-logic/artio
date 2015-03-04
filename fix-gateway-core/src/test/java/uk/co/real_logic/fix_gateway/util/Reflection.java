@@ -38,6 +38,16 @@ public final class Reflection
         set(object, setter, CharSequence.class, value);
     }
 
+    public static void setBoolean(final Object object, final String setter, final boolean value) throws Exception
+    {
+        set(object, setter, boolean.class, value);
+    }
+
+    public static void setByteArray(final Object object, final String setter, final byte[] value) throws Exception
+    {
+        set(object, setter, byte[].class, value);
+    }
+
     private static void set(
         final Object object,
         final String setter,

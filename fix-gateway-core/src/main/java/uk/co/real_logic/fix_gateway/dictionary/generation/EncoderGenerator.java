@@ -152,6 +152,12 @@ public class EncoderGenerator
             case STRING:
                 return generateStringSetter(className, fieldName, optionalField, optionalAssign);
 
+            case BOOLEAN:
+                return generateSetter.apply("boolean");
+
+            case DATA:
+                return generateSetter.apply("byte[]");
+
             case INT:
             case LENGTH:
             case SEQNUM:
@@ -272,6 +278,12 @@ public class EncoderGenerator
                     tag,
                     fieldName,
                     optionalSuffix);
+
+            case BOOLEAN:
+                return generatePut(fieldName, tag, "Boolean", optionalSuffix);
+
+            case DATA:
+                return generatePut(fieldName, tag, "Bytes", optionalSuffix);
 
             case INT:
             case LENGTH:

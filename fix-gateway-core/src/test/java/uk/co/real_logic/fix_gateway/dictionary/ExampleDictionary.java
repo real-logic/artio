@@ -41,7 +41,7 @@ public final class ExampleDictionary
     public static final DataDictionary MESSAGE_EXAMPLE;
 
     public static final String ENCODED_MESSAGE_EXAMPLE =
-        "35=abc\0019=5\001115=abc\001112=abc\001116=2\001117=1.1\00110=12\001";
+        "35=abc\0019=5\001115=abc\001112=abc\001116=2\001117=1.1\001118=Y\001119=123\00110=12\001";
 
     public static final String NO_OPTIONAL_MESSAGE_EXAMPLE =
         "35=abc\0019=5\001115=abc\001116=2\001117=1.1\00110=12\001";
@@ -67,19 +67,30 @@ public final class ExampleDictionary
         final Field testReqID = new Field(112, "TestReqID", Type.STRING);
         final Field intField = new Field(116, "IntField", Type.LENGTH);
         final Field floatField = new Field(117, "FloatField", Type.PRICE);
+        final Field booleanField = new Field(118, "BooleanField", Type.BOOLEAN);
+        final Field dataField = new Field(119, "DataField", Type.DATA);
 
         final Message heartbeat = new Message("Heartbeat", '0', ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);
         heartbeat.optionalEntry(testReqID);
         heartbeat.requiredEntry(intField);
         heartbeat.requiredEntry(floatField);
+        heartbeat.optionalEntry(booleanField);
+        heartbeat.optionalEntry(dataField);
 
         final Map<String, Field> messageEgFields = new HashMap<>();
+
+        messageEgFields.put("MsgType", msgType);
+        messageEgFields.put("BodyLength", bodyLength);
+
+        messageEgFields.put("CheckSum", checkSum);
 
         messageEgFields.put("OnBehalfOfCompID", onBehalfOfCompID);
         messageEgFields.put("TestReqID", testReqID);
         messageEgFields.put("IntField", intField);
         messageEgFields.put("FloatField", floatField);
+        messageEgFields.put("BooleanField", booleanField);
+        messageEgFields.put("DataField", dataField);
 
         final Component header = new Component("Header");
         header.requiredEntry(msgType)

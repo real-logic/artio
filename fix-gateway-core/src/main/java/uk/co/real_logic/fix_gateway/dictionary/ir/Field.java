@@ -96,10 +96,12 @@ public final class Field implements Element
         LOCALMKTDATE,
         AMT, // AlternativeMinimumTax, boolean
 
+        DATA,
+        BOOLEAN,
+
         CURRENCY,
         NUMINGROUP,
         MULTIPLEVALUESTRING,
-        DATA,
         UTCTIMESTAMP
     }
 
