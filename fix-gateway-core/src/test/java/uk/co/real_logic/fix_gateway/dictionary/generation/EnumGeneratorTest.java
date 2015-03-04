@@ -27,6 +27,7 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.EG_ENUM;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.FIELD_EXAMPLE;
 
+// TODO: support enums whose values has multiple characters
 public class EnumGeneratorTest
 {
 

@@ -30,6 +30,7 @@ import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasProperty;
 
+@SuppressWarnings("unchecked")
 public class DictionaryParserTest
 {
     private static final String EXAMPLE_FILE = "example_dictionary.xml";
