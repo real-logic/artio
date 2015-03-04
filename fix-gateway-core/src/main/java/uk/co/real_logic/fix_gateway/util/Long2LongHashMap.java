@@ -26,25 +26,31 @@ import java.util.function.BiConsumer;
 public class Long2LongHashMap implements Map<Long, Long>
 {
 
-    private final int capacity;
-    private final int mask;
-    private final long[] entries;
+    private final double loadFactor;
     private final long missingValue;
-
     private final Set<Long> keySet;
     private final Collection<Long> values;
     private final Set<Entry<Long, Long>> entrySet;
+    private final LongLongConsumer putFunc = this::put;
 
+    private int capacity;
+    private int mask;
+    private long[] entries;
+    private int resizeThreshold;
     private int size = 0;
 
-    @SuppressWarnings("unchecked")
-    public Long2LongHashMap(final int initialCapacity, final long missingValue)
+    public Long2LongHashMap(final long missingValue)
     {
+        this(16, 0.8, missingValue);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Long2LongHashMap(final int initialCapacity, final double loadFactor, final long missingValue)
+    {
+        this.loadFactor = loadFactor;
         this.missingValue = missingValue;
-        capacity = BitUtil.findNextPositivePowerOfTwo(initialCapacity);
-        mask = capacity - 1;
-        entries = new long[capacity * 2];
-        Arrays.fill(entries, missingValue);
+
+        capacity(BitUtil.findNextPositivePowerOfTwo(initialCapacity));
 
         final LongIterator keyIterator = new LongIterator(0);
         keySet = new MapDelegatingSet<>(this, keyIterator::reset, this::containsValue);
@@ -118,14 +124,46 @@ public class Long2LongHashMap implements Map<Long, Long>
 
         entries[index + 1] = value;
 
+        checkResize();
+
         return oldValue;
+    }
+
+    private void checkResize()
+    {
+        if (size > resizeThreshold)
+        {
+            final int newCapacity = capacity << 1;
+            if (newCapacity < 0)
+            {
+                throw new IllegalStateException("Max capacity reached at size=" + size);
+            }
+
+            rehash(newCapacity);
+        }
+    }
+
+    private void rehash(final int newCapacity)
+    {
+        final long[] oldEntries = entries;
+
+        capacity(newCapacity);
+
+        for (int i = 0; i < oldEntries.length; i += 2)
+        {
+            final long key = oldEntries[i];
+            if (key != missingValue)
+            {
+                put(key, oldEntries[i + 1]);
+            }
+        }
     }
 
     private int hash(final long key)
     {
         int hash = (int)key ^ (int)(key >>> 32);
         hash = (hash << 1) - (hash << 8);
-        return (hash & mask) * 2;
+        return hash & mask;
     }
 
     /**
@@ -422,4 +460,14 @@ public class Long2LongHashMap implements Map<Long, Long>
     {
         return (index + 2) & mask;
     }
+
+    private void capacity(final int newCapacity)
+    {
+        capacity = newCapacity;
+        resizeThreshold = (int)(newCapacity * loadFactor);
+        mask = (newCapacity * 2) - 1;
+        entries = new long[newCapacity * 2];
+        Arrays.fill(entries, missingValue);
+    }
+
 }

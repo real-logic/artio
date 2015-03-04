@@ -31,7 +31,7 @@ public class Long2LongHashMapTest
 {
     public static final long MISSING_VALUE = -1L;
 
-    private Long2LongHashMap map = new Long2LongHashMap(10, MISSING_VALUE);
+    private Long2LongHashMap map = new Long2LongHashMap(MISSING_VALUE);
 
     @Test
     public void shouldInitiallyBeEmpty()
@@ -219,20 +219,31 @@ public class Long2LongHashMapTest
     }
 
     @Test
-    public void removeShouldOnlyRemoveEntry()
+    public void shouldOnlyRemoveTheSpecifiedEntry()
     {
-        IntStream.range(0, 10).forEach(i -> map.put(i, i * 2));
+        IntStream.range(0, 8).forEach(i -> map.put(i, i * 2));
 
         map.remove(5L);
 
-        IntStream.range(0, 10)
+        IntStream.range(0, 8)
                  .filter(i -> i != 5L)
                  .forEach(i ->
-        {
-            assertTrue(map.containsKey(i));
-            assertTrue(map.containsValue(2 * i));
-        });
+                 {
+                     assertTrue(map.containsKey(i));
+                     assertTrue(map.containsValue(2 * i));
+                 });
+    }
 
+    @Test
+    public void shouldResizeWhenMoreElementsAreAdded()
+    {
+        IntStream.range(0, 100)
+                 .forEach(key ->
+                 {
+                     final int value = key * 2;
+                     assertEquals(MISSING_VALUE, map.put(key, value));
+                     assertEquals(value, map.get(key));
+                 });
     }
 
     private void assertEntryIs(final Entry<Long, Long> entry, final long expectedKey, final long expectedValue)
@@ -252,6 +263,4 @@ public class Long2LongHashMapTest
 
         assertThat("iterator has failed to be reset", keys, hasItems(1L, 2L));
     }
-
-    // TODO: resize
 }
