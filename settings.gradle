@@ -1,1 +1,1 @@
-include 'fix-gateway-core', 'fix-gateway-samples', 'fix-gateway-system-tests'
+include 'fix-gateway-core', 'fix-gateway-samples', 'fix-gateway-system-tests', 'fix-gateway-codecs'
