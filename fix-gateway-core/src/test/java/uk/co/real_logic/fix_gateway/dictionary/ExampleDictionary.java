@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary;
 
+import uk.co.real_logic.fix_gateway.dictionary.ir.Component;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
@@ -31,17 +32,19 @@ import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 public final class ExampleDictionary
 {
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
-
     public static final String HEARTBEAT = BUILDER_PACKAGE + "." + "Heartbeat";
+    public static final String HEADER = BUILDER_PACKAGE + "." + "Header";
+    public static final String TRAILER = BUILDER_PACKAGE + "." + "Trailer";
 
     public static final DataDictionary FIELD_EXAMPLE;
 
     public static final DataDictionary MESSAGE_EXAMPLE;
 
-    // Just the message body - no header and no checksum
-    public static final String ENCODED_MESSAGE_EXAMPLE = "115=abc\001112=abc\001116=2\001117=1.1\001";
+    public static final String ENCODED_MESSAGE_EXAMPLE =
+        "35=abc\0019=5\001115=abc\001112=abc\001116=2\001117=1.1\00110=12\001";
 
-    public static final String NO_OPTIONAL_MESSAGE_EXAMPLE = "115=abc\001116=2\001117=1.1\001";
+    public static final String NO_OPTIONAL_MESSAGE_EXAMPLE =
+        "35=abc\0019=5\001115=abc\001116=2\001117=1.1\00110=12\001";
 
     static
     {
@@ -54,6 +57,11 @@ public final class ExampleDictionary
         fieldEgFields.put("egNotEnum", new Field(123, "EgNotEnum", Type.CHAR));
 
         FIELD_EXAMPLE = new DataDictionary(emptyList(), fieldEgFields, emptyMap(), null, null);
+
+        final Field msgType = new Field(35, "MsgType", Type.STRING);
+        final Field bodyLength = new Field(9, "BodyLength", Type.INT);
+
+        final Field checkSum = new Field(10, "CheckSum", Type.STRING);
 
         final Field onBehalfOfCompID = new Field(115, "OnBehalfOfCompID", Type.STRING);
         final Field testReqID = new Field(112, "TestReqID", Type.STRING);
@@ -73,6 +81,13 @@ public final class ExampleDictionary
         messageEgFields.put("IntField", intField);
         messageEgFields.put("FloatField", floatField);
 
-        MESSAGE_EXAMPLE = new DataDictionary(singletonList(heartbeat), messageEgFields, emptyMap(), null, null);
+        final Component header = new Component("Header");
+        header.requiredEntry(msgType)
+              .requiredEntry(bodyLength);
+
+        final Component trailer = new Component("Trailer");
+        trailer.requiredEntry(checkSum);
+
+        MESSAGE_EXAMPLE = new DataDictionary(singletonList(heartbeat), messageEgFields, emptyMap(), header, trailer);
     }
 }

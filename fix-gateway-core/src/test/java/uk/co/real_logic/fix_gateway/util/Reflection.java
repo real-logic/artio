@@ -48,4 +48,11 @@ public final class Reflection
               .getMethod(setter, type)
               .invoke(object, value);
     }
+
+    public static Object get(final Object value, final String name) throws Exception
+    {
+        return value.getClass()
+                    .getMethod(name)
+                    .invoke(value);
+    }
 }

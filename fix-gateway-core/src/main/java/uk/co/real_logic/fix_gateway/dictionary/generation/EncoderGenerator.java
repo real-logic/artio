@@ -18,10 +18,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
-import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
+import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
@@ -45,6 +42,21 @@ public class EncoderGenerator
         "        position++;\n" +
         "%s";
 
+    private static final String COMMON_COMPOUNDS =
+        "    private Header header = new Header();\n\n" +
+        "    public Header header() {\n" +
+        "        return header;\n" +
+        "    }\n\n" +
+
+        "    private Trailer trailer = new Trailer();\n\n" +
+        "    public Trailer trailer() {\n" +
+        "        return trailer;\n" +
+        "    }\n\n";
+
+    private static final String COMMON_COMPOUND_IMPORTS =
+        "import %1$s.Header;\n" +
+        "import %1$s.Trailer;\n";
+
     private final byte[] buffer = new byte[LONGEST_INT_LENGTH + 1];
     private final MutableAsciiFlyweight string = new MutableAsciiFlyweight(new UnsafeBuffer(buffer));
 
@@ -64,22 +76,28 @@ public class EncoderGenerator
 
     public void generate()
     {
+        generateAggregate(dictionary.header(), false);
+        generateAggregate(dictionary.trailer(), false);
+
         dictionary.messages()
-                  .forEach(this::generateMessage);
+                  .forEach(msg -> generateAggregate(msg, true));
     }
 
-    private void generateMessage(final Message message)
+    private void generateAggregate(final Aggregate message, final boolean hasCommonCompounds)
     {
-
         final String className = message.name();
 
         try (final Writer out = outputManager.createOutput(className))
         {
             out.append(fileHeader(BUILDER_PACKAGE));
-            out.append(generateClassDeclaration(className));
+            out.append(generateClassDeclaration(className, hasCommonCompounds));
+            if (hasCommonCompounds)
+            {
+                out.append(COMMON_COMPOUNDS);
+            }
             generatePrecomputedHeaders(out, message.entries());
             generateSetters(out, className, message.entries());
-            out.append(generateEncodeMethod(message.entries()));
+            out.append(generateEncodeMethod(message.entries(), hasCommonCompounds));
             out.append(generateResetMethod(message.entries()));
             out.append("}\n");
         }
@@ -88,9 +106,6 @@ public class EncoderGenerator
             // TODO: logging
             e.printStackTrace();
         }
-
-        message.category();
-        message.type();
     }
 
     private String generateResetMethod(List<Entry> entries)
@@ -210,18 +225,20 @@ public class EncoderGenerator
             optionalAssign);
     }
 
-    private String generateEncodeMethod(final List<Entry> entries)
+    private String generateEncodeMethod(final List<Entry> entries, final boolean hasCommonCompounds)
     {
         String header =
             "    public int encode(final MutableAsciiFlyweight buffer, final int offset)\n" +
             "    {\n"+
-            "        int position = offset;\n\n";
+            "        int position = offset;\n\n" +
+            (hasCommonCompounds ? "        position += header.encode(buffer, position);\n" : "");
 
         String body = entries.stream()
                              .map(this::encodeField)
                              .collect(joining("\n"));
 
         String footer =
+            (hasCommonCompounds ? "        position += trailer.encode(buffer, position);\n" : "") +
             "        return position - offset;\n" +
             "    }\n\n";
 
@@ -300,12 +317,14 @@ public class EncoderGenerator
             optionalSuffix);
     }
 
-    private String generateClassDeclaration(final String className)
+    private String generateClassDeclaration(final String className, final boolean hasCommonCompounds)
     {
+
         return String.format(
             importFor(MutableDirectBuffer.class) +
             "import static uk.co.real_logic.fix_gateway.dictionary.generation.EncodingUtil.*;\n" +
             "import %s.Encoder;\n" +
+            (hasCommonCompounds ? COMMON_COMPOUND_IMPORTS : "") +
             importFor(DecimalFloat.class) +
             importFor(MutableAsciiFlyweight.class) +
             importFor(LocalMktDateEncoder.class) +

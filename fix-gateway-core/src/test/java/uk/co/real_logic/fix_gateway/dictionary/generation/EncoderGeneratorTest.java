@@ -15,15 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.Reflection;
 
 import java.lang.reflect.Field;
+import java.util.Map;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
@@ -43,26 +45,32 @@ public class EncoderGeneratorTest
     private static final String TEST_REQ_ID_LENGTH = "testReqIDLength";
     private static final String HAS_TEST_REQ_ID = "hasTestReqID";
 
-    private StringWriterOutputManager outputManager = new StringWriterOutputManager();
-    private EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, 3, outputManager);
+    private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
+    private static EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, 3, outputManager);
+    private static Class<?> heartbeat;
+    private static Class<?> headerClass;
+    private static Class<?> trailerClass;
 
-    private Class<?> clazz;
+    private MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
 
-    @Before
-    public void generate() throws Exception
+    @BeforeClass
+    public static void generate() throws Exception
     {
         encoderGenerator.generate();
-        //System.out.println(outputManager.getSources());
-        clazz = compileInMemory(HEARTBEAT, outputManager.getSources());
+        final Map<String, CharSequence> sources = outputManager.getSources();
+        //System.out.println(sources);
+        heartbeat = compileInMemory(HEARTBEAT, sources);
+        headerClass = compileInMemory(HEADER, sources);
+        trailerClass = compileInMemory(TRAILER, sources);
     }
 
     @Test
     public void generatesEncoderClass() throws Exception
     {
-        assertNotNull("Not generated anything", clazz);
-        assertTrue(Encoder.class.isAssignableFrom(clazz));
+        assertNotNull("Not generated anything", heartbeat);
+        assertIsEncoder(heartbeat);
 
-        final int modifiers = clazz.getModifiers();
+        final int modifiers = heartbeat.getModifiers();
         assertFalse("Not instantiable", isAbstract(modifiers));
         assertTrue("Not public", isPublic(modifiers));
     }
@@ -70,13 +78,13 @@ public class EncoderGeneratorTest
     @Test
     public void generatesSetters() throws NoSuchMethodException
     {
-        clazz.getMethod("onBehalfOfCompID", CharSequence.class);
+        heartbeat.getMethod("onBehalfOfCompID", CharSequence.class);
     }
 
     @Test
     public void stringSettersWriteToFields() throws Exception
     {
-        final Object encoder = clazz.newInstance();
+        final Object encoder = heartbeat.newInstance();
 
         setTestReqId(encoder);
 
@@ -86,7 +94,7 @@ public class EncoderGeneratorTest
     @Test
     public void stringSettersResizeByteArray() throws Exception
     {
-        final Object encoder = clazz.newInstance();
+        final Object encoder = heartbeat.newInstance();
 
         setTestReqIdTo(encoder, "abcd");
 
@@ -97,10 +105,10 @@ public class EncoderGeneratorTest
     @Test
     public void charArraySettersWriteToFields() throws Exception
     {
-        final Object encoder = clazz.newInstance();
+        final Object encoder = heartbeat.newInstance();
 
         final Object value = new char[] {'a', 'b', 'c'};
-        clazz.getMethod(TEST_REQ_ID, char[].class)
+        heartbeat.getMethod(TEST_REQ_ID, char[].class)
              .invoke(encoder, value);
 
         assertTestReqIsValue(encoder);
@@ -109,7 +117,7 @@ public class EncoderGeneratorTest
     @Test
     public void intSettersWriteToFields() throws Exception
     {
-        final Object encoder = clazz.newInstance();
+        final Object encoder = heartbeat.newInstance();
 
         setInt(encoder, INT_FIELD, 1);
 
@@ -119,7 +127,7 @@ public class EncoderGeneratorTest
     @Test
     public void floatSettersWriteToFields() throws Exception
     {
-        final Object encoder = clazz.newInstance();
+        final Object encoder = heartbeat.newInstance();
 
         DecimalFloat value = new DecimalFloat(1, 2);
 
@@ -131,14 +139,14 @@ public class EncoderGeneratorTest
     @Test
     public void flagsForOptionalFieldsInitiallyUnset() throws Exception
     {
-        final Object encoder = clazz.newInstance();
+        final Object encoder = heartbeat.newInstance();
         assertFalse("hasTestReqId initially true", hasTestReqId(encoder));
     }
 
     @Test
     public void flagsForOptionalFieldsUpdated() throws Exception
     {
-        final Object encoder = clazz.newInstance();
+        final Object encoder = heartbeat.newInstance();
 
         setTestReqId(encoder);
 
@@ -146,47 +154,89 @@ public class EncoderGeneratorTest
     }
 
     @Test
+    public void shouldGenerateHeader() throws Exception
+    {
+        assertIsEncoder(headerClass);
+
+        final Encoder header = (Encoder) headerClass.newInstance();
+
+        setInt(header, "bodyLength", 5);
+        setCharSequence(header, "msgType", "abc");
+
+        assertEncodesTo(header, "35=abc\0019=5\001");
+    }
+
+    @Test
+    public void shouldGenerateTrailer() throws Exception
+    {
+        assertIsEncoder(trailerClass);
+
+        final Encoder trailer = (Encoder) trailerClass.newInstance();
+
+        setCharSequence(trailer, "checkSum", "12");
+
+        assertEncodesTo(trailer, "10=12\001");
+    }
+
+    @Test
     public void encodesValues() throws Exception
     {
-        final int length = ENCODED_MESSAGE_EXAMPLE.length();
-
-        final MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
-        final Encoder encoder = (Encoder) clazz.newInstance();
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
 
         setCharSequence(encoder, "onBehalfOfCompID", "abc");
         setTestReqIdTo(encoder, VALUE);
         setInt(encoder, INT_FIELD, 2);
         setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+        setupHeader(encoder);
+        setupTrailer(encoder);
 
-        final int encodedLength = encoder.encode(buffer, 1);
-
-        assertThat(buffer, containsAscii(ENCODED_MESSAGE_EXAMPLE, 1, length));
-        assertEquals(length, encodedLength);
+        assertEncodesTo(encoder, ENCODED_MESSAGE_EXAMPLE);
     }
 
     @Test
     public void ignoresMissingOptionalValues() throws Exception
     {
-        final int length = NO_OPTIONAL_MESSAGE_EXAMPLE.length();
-
-        final MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
-        final Encoder encoder = (Encoder) clazz.newInstance();
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
 
         setCharSequence(encoder, "onBehalfOfCompID", "abc");
         setInt(encoder, INT_FIELD, 2);
         setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+        setupHeader(encoder);
+        setupTrailer(encoder);
 
-        final int encodedLength = encoder.encode(buffer, 1);
-
-        assertThat(buffer, containsAscii(NO_OPTIONAL_MESSAGE_EXAMPLE, 1, length));
-        assertEquals(length, encodedLength);
+        assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE_EXAMPLE);
     }
 
-    // TODO: common header and trailer
     // TODO: checksum of encoded message
-    // TODO: composite types
+    // TODO: compound types
     // TODO: groups
     // TODO: nested groups
+
+    private void setupHeader(final Encoder encoder) throws Exception
+    {
+        final Object header = Reflection.get(encoder, "header");
+        setInt(header, "bodyLength", 5);
+        setCharSequence(header, "msgType", "abc");
+    }
+
+    private void setupTrailer(final Encoder encoder) throws Exception
+    {
+        final Object trailer = Reflection.get(encoder, "trailer");
+        setCharSequence(trailer, "checkSum", "12");
+    }
+
+    private void assertEncodesTo(final Encoder encoder, final String value)
+    {
+        final int length = encoder.encode(buffer, 1);
+        assertThat(buffer, containsAscii(value, 1, value.length()));
+        assertEquals(value.length(), length);
+    }
+
+    private void assertIsEncoder(final Class<?> cls)
+    {
+        assertNotNull(cls);
+        assertTrue(Encoder.class.isAssignableFrom(cls));
+    }
 
     private void assertTestReqIsValue(final Object encoder) throws Exception
     {
@@ -211,7 +261,7 @@ public class EncoderGeneratorTest
 
     private Object getField(final Object encoder, final String fieldName) throws Exception
     {
-        final Field field = clazz.getDeclaredField(fieldName);
+        final Field field = heartbeat.getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.get(encoder);
     }

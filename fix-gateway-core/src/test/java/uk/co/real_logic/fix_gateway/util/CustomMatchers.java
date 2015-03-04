@@ -62,6 +62,11 @@ public final class CustomMatchers
         };
     }
 
+    public static Matcher<AsciiFlyweight> startsWithAscii(final String expectedValue)
+    {
+        return containsAscii(expectedValue, 0, expectedValue.length());
+    }
+
     public static Matcher<DirectBuffer> containsString(final String expectedValue, final int offset, final int length)
     {
         Objects.requireNonNull(expectedValue);
