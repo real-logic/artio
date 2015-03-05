@@ -44,6 +44,13 @@ public class DictionaryParserTest
     }
 
     @Test
+    public void shouldParseVersionNumbers()
+    {
+        assertEquals(7, dictionary.majorVersion());
+        assertEquals(2, dictionary.minorVersion());
+    }
+
+    @Test
     public void shouldParseExampleDictionary()
     {
         assertNotNull("Missing dictionary", dictionary);

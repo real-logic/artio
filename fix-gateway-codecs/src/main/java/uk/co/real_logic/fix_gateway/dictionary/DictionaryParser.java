@@ -83,7 +83,11 @@ public final class DictionaryParser
         final Component header = extractComponent(document, fields, findHeader, "Header", components);
         final Component trailer = extractComponent(document, fields, findTrailer, "Trailer", components);
 
-        return new DataDictionary(messages, fields, components, header, trailer);
+        final NamedNodeMap fixAttributes = document.getElementsByTagName("fix").item(0).getAttributes();
+        final int majorVersion = getInt(fixAttributes, "major");
+        final int minorVersion = getInt(fixAttributes, "minor");
+
+        return new DataDictionary(messages, fields, components, header, trailer, majorVersion, minorVersion);
     }
 
     private Map<String, Component> parseComponents(final Document document, final Map<String, Field> fields)
@@ -114,7 +118,7 @@ public final class DictionaryParser
                 final NamedNodeMap attributes = node.getAttributes();
 
                 final String name = name(attributes);
-                final int number = Integer.parseInt(getValue(attributes, "number"));
+                final int number = getInt(attributes, "number");
                 final Type type = Type.valueOf(getValue(attributes, "type"));
                 final Field field = new Field(number, name, type);
 
@@ -123,6 +127,11 @@ public final class DictionaryParser
             });
 
         return fields;
+    }
+
+    private int getInt(final NamedNodeMap attributes, final String attributeName)
+    {
+        return Integer.parseInt(getValue(attributes, attributeName));
     }
 
     private void extractEnumValues(final List<Value> values, final NodeList childNodes)

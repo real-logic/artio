@@ -22,6 +22,7 @@ import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static java.util.Collections.*;
@@ -60,7 +61,7 @@ public final class ExampleDictionary
         fieldEgFields.put("EgEnum", egEnum);
         fieldEgFields.put("egNotEnum", new Field(123, "EgNotEnum", Type.CHAR));
 
-        FIELD_EXAMPLE = new DataDictionary(emptyList(), fieldEgFields, emptyMap(), null, null);
+        FIELD_EXAMPLE = new DataDictionary(emptyList(), fieldEgFields, emptyMap(), null, null, 4, 4);
 
         final Field msgType = new Field(35, "MsgType", Type.STRING);
         final Field bodyLength = new Field(9, "BodyLength", Type.INT);
@@ -103,6 +104,8 @@ public final class ExampleDictionary
         final Component trailer = new Component("Trailer");
         trailer.requiredEntry(checkSum);
 
-        MESSAGE_EXAMPLE = new DataDictionary(singletonList(heartbeat), messageEgFields, emptyMap(), header, trailer);
+        final List<Message> messages = singletonList(heartbeat);
+
+        MESSAGE_EXAMPLE = new DataDictionary(messages, messageEgFields, emptyMap(), header, trailer, 4, 4);
     }
 }

@@ -25,19 +25,25 @@ public final class DataDictionary
     private final Map<String, Component> components;
     private final Component header;
     private final Component trailer;
+    private final int majorVersion;
+    private final int minorVersion;
 
     public DataDictionary(
         final List<Message> messages,
         final Map<String, Field> fields,
         final Map<String, Component> components,
         final Component header,
-        final Component trailer)
+        final Component trailer,
+        final int majorVersion,
+        final int minorVersion)
     {
         this.messages = messages;
         this.fields = fields;
         this.components = components;
         this.header = header;
         this.trailer = trailer;
+        this.majorVersion = majorVersion;
+        this.minorVersion = minorVersion;
     }
 
     public List<Message> messages()
@@ -63,6 +69,16 @@ public final class DataDictionary
     public Component trailer()
     {
         return trailer;
+    }
+
+    public int minorVersion()
+    {
+        return minorVersion;
+    }
+
+    public int majorVersion()
+    {
+        return majorVersion;
     }
 
     public String toString()
