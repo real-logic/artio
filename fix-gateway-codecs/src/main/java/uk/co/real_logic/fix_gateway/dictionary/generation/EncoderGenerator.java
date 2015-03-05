@@ -18,10 +18,8 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.OutputManager;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
-import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
+import uk.co.real_logic.fix_gateway.builder.Encoder;
+import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
@@ -65,15 +63,18 @@ public class EncoderGenerator
 
     private final int initialArraySize;
     private final DataDictionary dictionary;
+    private final String builderPackage;
     private final OutputManager outputManager;
 
     public EncoderGenerator(
         final DataDictionary dictionary,
         final int initialArraySize,
+        final String builderPackage,
         final OutputManager outputManager)
     {
         this.dictionary = dictionary;
         this.initialArraySize = initialArraySize;
+        this.builderPackage = builderPackage;
         this.outputManager = outputManager;
     }
 
@@ -92,8 +93,9 @@ public class EncoderGenerator
 
         try (final Writer out = outputManager.createOutput(className))
         {
-            out.append(fileHeader(BUILDER_PACKAGE));
+            out.append(fileHeader(builderPackage));
             out.append(generateClassDeclaration(className, hasCommonCompounds));
+            out.append(generateConstructor(message, dictionary.header()));
             if (hasCommonCompounds)
             {
                 out.append(COMMON_COMPOUNDS);
@@ -109,6 +111,27 @@ public class EncoderGenerator
             // TODO: logging
             e.printStackTrace();
         }
+    }
+
+    private String generateConstructor(final Aggregate aggregate, final Component header)
+    {
+        if (!(aggregate instanceof Message))
+        {
+            return "";
+        }
+
+        final Message message = (Message) aggregate;
+        final String msgType = header.hasField("MsgType")
+                             ? String.format("        header.msgType(\"%s\");\n", (char) message.type()) : "";
+
+        return String.format(
+            "    public %s()\n" +
+            "    {\n" +
+            "%s" +
+            "    }\n\n",
+            message.name(),
+            msgType
+        );
     }
 
     private String generateResetMethod(List<Entry> entries)
@@ -334,20 +357,19 @@ public class EncoderGenerator
 
     private String generateClassDeclaration(final String className, final boolean hasCommonCompounds)
     {
-
         return String.format(
             importFor(MutableDirectBuffer.class) +
             "import static uk.co.real_logic.fix_gateway.dictionary.generation.EncodingUtil.*;\n" +
-            "import %s.Encoder;\n" +
+            importFor(Encoder.class) +
             (hasCommonCompounds ? COMMON_COMPOUND_IMPORTS : "") +
             importFor(DecimalFloat.class) +
             importFor(MutableAsciiFlyweight.class) +
             importFor(LocalMktDateEncoder.class) +
             importFor(UtcTimestampEncoder.class) +
             "\n" +
-            "public final class %s implements Encoder\n" +
+            "public final class %2$s implements Encoder\n" +
             "{\n\n",
-            BUILDER_PACKAGE,
+            builderPackage,
             className);
     }
 

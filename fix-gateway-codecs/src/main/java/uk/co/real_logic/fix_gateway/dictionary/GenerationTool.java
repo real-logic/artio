@@ -19,10 +19,11 @@ import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.agrona.generation.PackageOutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.generation.EncoderGenerator;
 import uk.co.real_logic.fix_gateway.dictionary.generation.EnumGenerator;
-import uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 
 import java.io.FileInputStream;
+
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.BUILDER_PACKAGE;
 
 public final class GenerationTool
 {
@@ -34,9 +35,9 @@ public final class GenerationTool
         try (final FileInputStream input = new FileInputStream(xmlPath))
         {
             final DataDictionary dictionary = parser.parse(input);
-            final OutputManager outputManager = new PackageOutputManager(outputPath, GenerationUtil.BUILDER_PACKAGE);
+            final OutputManager outputManager = new PackageOutputManager(outputPath, BUILDER_PACKAGE);
             final EnumGenerator enumGenerator = new EnumGenerator(dictionary, outputManager);
-            final EncoderGenerator encoderGenerator = new EncoderGenerator(dictionary, 20, outputManager);
+            final EncoderGenerator encoderGenerator = new EncoderGenerator(dictionary, 20, BUILDER_PACKAGE, outputManager);
 
             enumGenerator.generate();
             encoderGenerator.generate();

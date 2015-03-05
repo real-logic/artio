@@ -32,9 +32,10 @@ import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 public final class ExampleDictionary
 {
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
-    public static final String HEARTBEAT = BUILDER_PACKAGE + "." + "Heartbeat";
-    public static final String HEADER = BUILDER_PACKAGE + "." + "Header";
-    public static final String TRAILER = BUILDER_PACKAGE + "." + "Trailer";
+    public static final String TEST_PACKAGE = BUILDER_PACKAGE + ".test";
+    public static final String HEARTBEAT = TEST_PACKAGE + ".Heartbeat";
+    public static final String HEADER = TEST_PACKAGE + ".Header";
+    public static final String TRAILER = TEST_PACKAGE + ".Trailer";
 
     public static final DataDictionary FIELD_EXAMPLE;
 
@@ -45,6 +46,9 @@ public final class ExampleDictionary
 
     public static final String NO_OPTIONAL_MESSAGE_EXAMPLE =
         "35=abc\0019=5\001115=abc\001116=2\001117=1.1\00110=12\001";
+
+    public static final String DERIVED_FIELDS_EXAMPLE =
+        "35=0\0019=5\001115=abc\001116=2\001117=1.1\00110=12\001";
 
     static
     {

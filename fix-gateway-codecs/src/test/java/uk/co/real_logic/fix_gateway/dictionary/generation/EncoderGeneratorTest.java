@@ -49,7 +49,7 @@ public class EncoderGeneratorTest
     private static final String HAS_TEST_REQ_ID = "hasTestReqID";
 
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
-    private static EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, 3, outputManager);
+    private static EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, 3, TEST_PACKAGE, outputManager);
     private static Class<?> heartbeat;
     private static Class<?> headerClass;
     private static Class<?> trailerClass;
@@ -212,12 +212,26 @@ public class EncoderGeneratorTest
         assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE_EXAMPLE);
     }
 
-    // Requirements for session management:
-    // TODO: derived fields:
-    //  * fix version
-    //  * checksum of encoded message
-    //  * messageType
-    //  * bodyLength
+    @Test
+    public void automaticallyComputesDerivedFields() throws Exception
+    {
+        // TODO: fix version
+        // TODO: checksum of encoded message
+        // TODO: bodyLength
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+
+        setCharSequence(encoder, "onBehalfOfCompID", "abc");
+        setInt(encoder, INT_FIELD, 2);
+        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+
+        final Object header = Reflection.get(encoder, "header");
+        setInt(header, "bodyLength", 5);
+
+        final Object trailer = Reflection.get(encoder, "trailer");
+        setCharSequence(trailer, "checkSum", "12");
+
+        assertEncodesTo(encoder, DERIVED_FIELDS_EXAMPLE);
+    }
 
     // TODO: compound types
     // TODO: groups (RefMsgType used in session management)

@@ -61,4 +61,9 @@ public abstract class Aggregate
                 ", entries=" + entries +
                 '}';
     }
+
+    public boolean hasField(final String msgType)
+    {
+        return entries().stream().anyMatch(e -> msgType.equals(e.element().name()));
+    }
 }
