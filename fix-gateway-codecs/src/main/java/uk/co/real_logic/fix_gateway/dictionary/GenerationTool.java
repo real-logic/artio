@@ -22,14 +22,12 @@ import uk.co.real_logic.fix_gateway.dictionary.generation.EnumGenerator;
 import uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 
-import java.io.File;
 import java.io.FileInputStream;
 
 public final class GenerationTool
 {
     public static void main(String[] args) throws Exception
     {
-        System.out.println(new File(".").getAbsolutePath());
         final String outputPath = args[0];
         final String xmlPath = args[1];
         final DictionaryParser parser = new DictionaryParser();
