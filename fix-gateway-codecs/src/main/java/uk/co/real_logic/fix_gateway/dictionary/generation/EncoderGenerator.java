@@ -95,7 +95,7 @@ public class EncoderGenerator
         {
             out.append(fileHeader(builderPackage));
             out.append(generateClassDeclaration(className, hasCommonCompounds));
-            out.append(generateConstructor(message, dictionary.header()));
+            out.append(generateConstructor(message, dictionary));
             if (hasCommonCompounds)
             {
                 out.append(COMMON_COMPOUNDS);
@@ -113,24 +113,31 @@ public class EncoderGenerator
         }
     }
 
-    private String generateConstructor(final Aggregate aggregate, final Component header)
+    private String generateConstructor(final Aggregate aggregate, final DataDictionary dictionary)
     {
         if (!(aggregate instanceof Message))
         {
             return "";
         }
 
+        final Component header = dictionary.header();
         final Message message = (Message) aggregate;
         final String msgType = header.hasField("MsgType")
                              ? String.format("        header.msgType(\"%s\");\n", (char) message.type()) : "";
+
+        final String beginString = header.hasField("BeginString")
+                                 ? String.format("        header.beginString(\"FIX%d.%d\");\n",
+                                                 dictionary.majorVersion(), dictionary.minorVersion()) : "";
 
         return String.format(
             "    public %s()\n" +
             "    {\n" +
             "%s" +
+            "%s" +
             "    }\n\n",
             message.name(),
-            msgType
+            msgType,
+            beginString
         );
     }
 
