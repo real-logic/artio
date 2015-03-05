@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.util;
 
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -25,7 +26,6 @@ import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import java.util.Arrays;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class DecimalFloatDecodingTest
@@ -75,8 +75,8 @@ public class DecimalFloatDecodingTest
 
         string.decodeFloat(0, buffer.capacity(), price);
 
-        assertEquals("Incorrect Value", value, price.value());
-        assertEquals("Incorrect Scale", scale, price.scale());
+        Assert.assertEquals("Incorrect Value", value, price.value());
+        Assert.assertEquals("Incorrect Scale", scale, price.scale());
     }
 
 }

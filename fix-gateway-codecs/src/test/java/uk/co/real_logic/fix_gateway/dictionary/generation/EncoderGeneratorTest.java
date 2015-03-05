@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -135,7 +136,7 @@ public class EncoderGeneratorTest
 
         setFloat(encoder, FLOAT_FIELD, value);
 
-        assertEquals(value, getField(encoder, FLOAT_FIELD));
+        Assert.assertEquals(value, getField(encoder, FLOAT_FIELD));
     }
 
     @Test

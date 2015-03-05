@@ -24,8 +24,6 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.util.Arrays;
 
-import static uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder.LENGTH_WITH_MILLISECONDS;
-
 @RunWith(Parameterized.class)
 public class UtcTimestampEncoderInvalidCasesTest
 {
@@ -48,7 +46,7 @@ public class UtcTimestampEncoderInvalidCasesTest
     @Test(expected = IllegalArgumentException.class)
     public void cannotParseTimestamp()
     {
-        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LENGTH_WITH_MILLISECONDS]);
+        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[UtcTimestampEncoder.LENGTH_WITH_MILLISECONDS]);
         final MutableAsciiFlyweight timestampBytes = new MutableAsciiFlyweight(buffer);
         UtcTimestampEncoder.encode(timestamp, timestampBytes, 0);
     }

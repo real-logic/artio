@@ -35,5 +35,6 @@ public final class FixGateway implements AutoCloseable
 
     public void close() throws Exception
     {
+        uk.co.real_logic.fix_gateway.builder.Heartbeat hb;
     }
 }

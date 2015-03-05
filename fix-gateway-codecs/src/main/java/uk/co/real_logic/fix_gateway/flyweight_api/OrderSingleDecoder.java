@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.flyweight_api;
 
-import sun.nio.ch.DirectBuffer;
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.util.Currency;
