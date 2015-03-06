@@ -27,6 +27,7 @@ import static uk.co.real_logic.fix_gateway.ValidationError.INVALID_CHECKSUM;
 import static uk.co.real_logic.fix_gateway.ValidationError.PARSE_ERROR;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.*;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
+import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.computeChecksum;
 
 // TODO: what should we do if the callbacks throw an exception?
 
@@ -251,22 +252,16 @@ public final class GenericParser implements MessageHandler
         return true;
     }
 
-    private boolean validChecksum(final DirectBuffer buffer, final int offset, final int length, final int checksum)
+    private boolean validChecksum(final DirectBuffer buffer, final int offset, final int length, final int expectedChecksum)
     {
-        if (checksum == NO_CHECKSUM)
+        if (expectedChecksum == NO_CHECKSUM)
         {
             return false;
         }
 
         final int end = offset + length;
 
-        long total = 0L;
-        for (int index = offset; index < end; index++)
-        {
-            total += (int) buffer.getByte(index);
-        }
-
-        return (total % 256) == checksum;
+        return computeChecksum(buffer, offset, end) == expectedChecksum;
     }
 
 }

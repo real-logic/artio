@@ -28,6 +28,17 @@ public class AsciiFlyweight
 {
     public static final int UNKNOWN_INDEX = -1;
 
+    public static long computeChecksum(final DirectBuffer buffer, final int offset, final int end)
+    {
+        long total = 0L;
+        for (int index = offset; index < end; index++)
+        {
+            total += (int) buffer.getByte(index);
+        }
+
+        return total % 256;
+    }
+
     private DirectBuffer buffer;
 
     public AsciiFlyweight()
@@ -192,6 +203,11 @@ public class AsciiFlyweight
 
         number.value(negative ? -1 * value : value);
         number.scale(scale);
+    }
+
+    public long computeChecksum(final int offset, final int end)
+    {
+        return computeChecksum(buffer, offset, end);
     }
 
     private boolean isDispensableCharacter(final int index)

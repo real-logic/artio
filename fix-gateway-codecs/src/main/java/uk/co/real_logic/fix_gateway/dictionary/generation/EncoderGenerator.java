@@ -94,7 +94,7 @@ public class EncoderGenerator
         HEADER,
         TRAILER,
         MESSAGE
-    };
+    }
 
     public void generate()
     {
@@ -328,7 +328,11 @@ public class EncoderGenerator
         {
             return "        final int bodyLength = position - bodyStart;\n" +
                    "        buffer.putNatural(bodyStart - BODY_LENGTH_SIZE, BODY_LENGTH_GAP, bodyLength);\n" +
-                   encodeRegularField(entry);
+                   formatTag("checkSum", "") +
+                   "        final long checkSum = buffer.computeChecksum(bodyStart, position);\n" +
+                   "        position += buffer.putLong(position, checkSum);\n" +
+                   "        buffer.putSeparator(position);\n" +
+                   "        position++;\n";
         }
 
         return encodeRegularField(entry);

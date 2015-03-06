@@ -43,13 +43,13 @@ public final class ExampleDictionary
     public static final DataDictionary MESSAGE_EXAMPLE;
 
     public static final String ENCODED_MESSAGE_EXAMPLE =
-        "8=abc\0019=0051\00135=abc\001115=abc\001112=abc\001116=2\001117=1.1\001118=Y\001119=123\00110=12\001";
+        "8=abc\0019=0051\00135=abc\001115=abc\001112=abc\001116=2\001117=1.1\001118=Y\001119=123\00110=108\001";
 
     public static final String NO_OPTIONAL_MESSAGE_EXAMPLE =
-        "8=abc\0019=0029\00135=abc\001115=abc\001116=2\001117=1.1\00110=12\001";
+        "8=abc\0019=0029\00135=abc\001115=abc\001116=2\001117=1.1\00110=212\001";
 
     public static final String DERIVED_FIELDS_EXAMPLE =
-        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=12\001";
+        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=222\001";
 
     static
     {

@@ -52,7 +52,6 @@ public class EncoderGeneratorTest
     private static EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, 3, TEST_PACKAGE, outputManager);
     private static Class<?> heartbeat;
     private static Class<?> headerClass;
-    private static Class<?> trailerClass;
 
     private MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
 
@@ -61,10 +60,9 @@ public class EncoderGeneratorTest
     {
         encoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
-        System.out.println(sources);
+        //System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT, sources);
         headerClass = compileInMemory(HEADER, sources);
-        trailerClass = compileInMemory(TRAILER, sources);
     }
 
     @Test
@@ -203,16 +201,11 @@ public class EncoderGeneratorTest
     @Test
     public void automaticallyComputesDerivedHeaderAndTrailerFields() throws Exception
     {
-        // TODO: checksum of encoded message
-        // TODO: bodyLength
         final Encoder encoder = (Encoder) heartbeat.newInstance();
 
         setCharSequence(encoder, "onBehalfOfCompID", "abc");
         setInt(encoder, INT_FIELD, 2);
         setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
-
-        final Object trailer = Reflection.get(encoder, "trailer");
-        setCharSequence(trailer, "checkSum", "12");
 
         assertEncodesTo(encoder, DERIVED_FIELDS_EXAMPLE);
     }
