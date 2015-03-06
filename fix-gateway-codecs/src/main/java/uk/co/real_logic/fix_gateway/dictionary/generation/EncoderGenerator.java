@@ -33,11 +33,13 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.joining;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.*;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight.LONGEST_INT_LENGTH;
 
 public class EncoderGenerator
 {
+
     private static final String SUFFIX =
         "        buffer.putSeparator(position);\n" +
         "        position++;\n" +
@@ -57,6 +59,15 @@ public class EncoderGenerator
     private static final String COMMON_COMPOUND_IMPORTS =
         "import %1$s.Header;\n" +
         "import %1$s.Trailer;\n";
+
+    private static final String TRAILER_PREFIX =
+        "    public int encode(final MutableAsciiFlyweight buffer, final int offset)\n" +
+        "    {\n"+
+        "        throw new UnsupportedOperationException();\n" +
+        "    }\n\n" +
+        "    public int encode(final MutableAsciiFlyweight buffer, final int offset, final int bodyStart)\n" +
+        "    {\n"+
+        "        int position = offset;\n\n";
 
     private final byte[] buffer = new byte[LONGEST_INT_LENGTH + 1];
     private final MutableAsciiFlyweight string = new MutableAsciiFlyweight(new UnsafeBuffer(buffer));
@@ -78,18 +89,26 @@ public class EncoderGenerator
         this.outputManager = outputManager;
     }
 
+    private enum AggregateType
+    {
+        HEADER,
+        TRAILER,
+        MESSAGE
+    };
+
     public void generate()
     {
-        generateAggregate(dictionary.header(), false);
-        generateAggregate(dictionary.trailer(), false);
+        generateAggregate(dictionary.header(), AggregateType.HEADER);
+        generateAggregate(dictionary.trailer(), AggregateType.TRAILER);
 
         dictionary.messages()
-                  .forEach(msg -> generateAggregate(msg, true));
+                  .forEach(msg -> generateAggregate(msg, AggregateType.MESSAGE));
     }
 
-    private void generateAggregate(final Aggregate message, final boolean hasCommonCompounds)
+    private void generateAggregate(final Aggregate message, final AggregateType aggregateType)
     {
         final String className = message.name();
+        final boolean hasCommonCompounds = aggregateType == AggregateType.MESSAGE;
 
         try (final Writer out = outputManager.createOutput(className))
         {
@@ -102,7 +121,7 @@ public class EncoderGenerator
             }
             generatePrecomputedHeaders(out, message.entries());
             generateSetters(out, className, message.entries());
-            out.append(generateEncodeMethod(message.entries(), hasCommonCompounds));
+            out.append(generateEncodeMethod(message.entries(), aggregateType));
             out.append(generateResetMethod(message.entries()));
             out.append("}\n");
         }
@@ -126,7 +145,7 @@ public class EncoderGenerator
                              ? String.format("        header.msgType(\"%s\");\n", (char) message.type()) : "";
 
         final String beginString = header.hasField("BeginString")
-                                 ? String.format("        header.beginString(\"FIX%d.%d\");\n",
+                                 ? String.format("        header.beginString(\"FIX.%d.%d\");\n",
                                                  dictionary.majorVersion(), dictionary.minorVersion()) : "";
 
         return String.format(
@@ -159,6 +178,7 @@ public class EncoderGenerator
     {
         final Field field = (Field) entry.element();
         final String name = field.name();
+
         final String fieldName = JavaUtil.formatPropertyName(name);
 
         String optionalField;
@@ -176,7 +196,7 @@ public class EncoderGenerator
         }
 
         Function<String, String> generateSetter =
-            type -> generateSetter(type, fieldName, optionalField, className, optionalAssign);
+            type -> generateSetter(name, type, fieldName, optionalField, className, optionalAssign);
 
         switch (field.type())
         {
@@ -207,6 +227,11 @@ public class EncoderGenerator
 
             default: throw new UnsupportedOperationException("Unknown type: " + field.type());
         }
+    }
+
+    private boolean isBodyLength(final String name)
+    {
+        return "BodyLength".equals(name);
     }
 
     private String generateStringSetter(
@@ -242,21 +267,23 @@ public class EncoderGenerator
     }
 
     private String generateSetter(
-        final String type,
-        final String fieldName,
-        final String optionalField,
-        final String className,
-        final String optionalAssign)
+            final String name,
+            final String type,
+            final String fieldName,
+            final String optionalField,
+            final String className,
+            final String optionalAssign)
     {
         return String.format(
-            "    private %s %s;\n\n" +
+            "    %s %s %s;\n\n" +
             "%s" +
-            "    public %s %2$s(%1$s value)\n" +
+            "    public %s %3$s(%2$s value)\n" +
             "    {\n" +
-            "        %2$s = value;\n" +
+            "        %3$s = value;\n" +
             "%s" +
             "        return this;\n" +
             "    }\n\n",
+            isBodyLength(name) ? "public" : "private",
             type,
             fieldName,
             optionalField,
@@ -264,41 +291,69 @@ public class EncoderGenerator
             optionalAssign);
     }
 
-    private String generateEncodeMethod(final List<Entry> entries, final boolean hasCommonCompounds)
+    private String generateEncodeMethod(final List<Entry> entries, final AggregateType aggregateType)
     {
-        String header =
-            "    public int encode(final MutableAsciiFlyweight buffer, final int offset)\n" +
+        final boolean hasCommonCompounds = aggregateType == AggregateType.MESSAGE;
+
+        final String prefix =
+            aggregateType == AggregateType.TRAILER ?
+            TRAILER_PREFIX :
+            ("    public int encode(final MutableAsciiFlyweight buffer, final int offset)\n" +
             "    {\n"+
             "        int position = offset;\n\n" +
-            (hasCommonCompounds ? "        position += header.encode(buffer, position);\n" : "");
+            (hasCommonCompounds ? "        position += header.encode(buffer, position);\n" : ""));
 
-        String body = entries.stream()
-                             .map(this::encodeField)
-                             .collect(joining("\n"));
+        final String body =
+            entries.stream()
+                   .map(this::encodeField)
+                   .collect(joining("\n"));
 
-        String footer =
-            (hasCommonCompounds ? "        position += trailer.encode(buffer, position);\n" : "") +
+        final String suffix =
+            (hasCommonCompounds ? "        position += trailer.encode(buffer, position, header.bodyLength);\n" : "") +
             "        return position - offset;\n" +
             "    }\n\n";
 
-        return header + body + footer;
+        return prefix + body + suffix;
     }
 
     private String encodeField(final Entry entry)
+    {
+        if (isBodyLength(entry))
+        {
+            return "        position += buffer.putBytes(position, BODY_LENGTH);\n" +
+                   "        bodyLength(position);\n";
+        }
+
+        if (isCheckSum(entry))
+        {
+            return "        final int bodyLength = position - bodyStart;\n" +
+                   "        buffer.putNatural(bodyStart - BODY_LENGTH_SIZE, BODY_LENGTH_GAP, bodyLength);\n" +
+                   encodeRegularField(entry);
+        }
+
+        return encodeRegularField(entry);
+    }
+
+    private boolean isCheckSum(final Entry entry)
+    {
+        return "CheckSum".equals(entry.name());
+    }
+
+    private boolean isBodyLength(final Entry entry)
+    {
+        return isBodyLength(entry.name());
+    }
+
+    private String encodeRegularField(final Entry entry)
     {
         final Field field = (Field) entry.element();
         final String name = field.name();
         final String fieldName = JavaUtil.formatPropertyName(name);
 
         final String optionalPrefix = entry.required() ? "" : String.format("        if (has%s) {\n", name);
-        final String optionalSuffix = entry.required() ? "" : "}\n";
+        final String optionalSuffix = entry.required() ? "" : "        }\n";
 
-        final String tag = String.format(
-            "%s" +
-            "        buffer.putBytes(position, %sHeader, 0, %2$sHeaderLength);\n" +
-            "        position += %2$sHeaderLength;\n",
-            optionalPrefix,
-            fieldName);
+        final String tag = formatTag(fieldName, optionalPrefix);
 
         switch (field.type())
         {
@@ -348,6 +403,16 @@ public class EncoderGenerator
 
             default: throw new UnsupportedOperationException("Unknown type: " + field.type());
         }
+    }
+
+    private String formatTag(final String fieldName, final String optionalPrefix)
+    {
+        return String.format(
+            "%s" +
+            "        buffer.putBytes(position, %sHeader, 0, %2$sHeaderLength);\n" +
+            "        position += %2$sHeaderLength;\n",
+            optionalPrefix,
+            fieldName);
     }
 
     private String generatePut(final String fieldName, final String tag, final String type, String optionalSuffix)

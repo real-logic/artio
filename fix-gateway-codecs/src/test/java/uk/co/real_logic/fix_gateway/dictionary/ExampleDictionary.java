@@ -43,13 +43,13 @@ public final class ExampleDictionary
     public static final DataDictionary MESSAGE_EXAMPLE;
 
     public static final String ENCODED_MESSAGE_EXAMPLE =
-        "35=abc\0019=5\001115=abc\001112=abc\001116=2\001117=1.1\001118=Y\001119=123\00110=12\001";
+        "8=abc\0019=0051\00135=abc\001115=abc\001112=abc\001116=2\001117=1.1\001118=Y\001119=123\00110=12\001";
 
     public static final String NO_OPTIONAL_MESSAGE_EXAMPLE =
-        "35=abc\0019=5\001115=abc\001116=2\001117=1.1\00110=12\001";
+        "8=abc\0019=0029\00135=abc\001115=abc\001116=2\001117=1.1\00110=12\001";
 
     public static final String DERIVED_FIELDS_EXAMPLE =
-        "35=0\0019=5\001115=abc\001116=2\001117=1.1\00110=12\001";
+        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=12\001";
 
     static
     {
@@ -63,17 +63,20 @@ public final class ExampleDictionary
 
         FIELD_EXAMPLE = new DataDictionary(emptyList(), fieldEgFields, emptyMap(), null, null, 4, 4);
 
-        final Field msgType = new Field(35, "MsgType", Type.STRING);
-        final Field bodyLength = new Field(9, "BodyLength", Type.INT);
+        final Map<String, Field> messageEgFields = new HashMap<>();
 
-        final Field checkSum = new Field(10, "CheckSum", Type.STRING);
+        final Field beginString = Field.register(messageEgFields, 8, "BeginString", Type.STRING);
+        final Field bodyLength = Field.register(messageEgFields, 9, "BodyLength", Type.INT);
+        final Field msgType = Field.register(messageEgFields, 35, "MsgType", Type.STRING);
 
-        final Field onBehalfOfCompID = new Field(115, "OnBehalfOfCompID", Type.STRING);
-        final Field testReqID = new Field(112, "TestReqID", Type.STRING);
-        final Field intField = new Field(116, "IntField", Type.LENGTH);
-        final Field floatField = new Field(117, "FloatField", Type.PRICE);
-        final Field booleanField = new Field(118, "BooleanField", Type.BOOLEAN);
-        final Field dataField = new Field(119, "DataField", Type.DATA);
+        final Field checkSum = Field.register(messageEgFields, 10, "CheckSum", Type.STRING);
+
+        final Field onBehalfOfCompID = Field.register(messageEgFields, 115, "OnBehalfOfCompID", Type.STRING);
+        final Field testReqID = Field.register(messageEgFields, 112, "TestReqID", Type.STRING);
+        final Field intField = Field.register(messageEgFields, 116, "IntField", Type.LENGTH);
+        final Field floatField = Field.register(messageEgFields, 117, "FloatField", Type.PRICE);
+        final Field booleanField = Field.register(messageEgFields, 118, "BooleanField", Type.BOOLEAN);
+        final Field dataField = Field.register(messageEgFields, 119, "DataField", Type.DATA);
 
         final Message heartbeat = new Message("Heartbeat", '0', ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);
@@ -83,23 +86,10 @@ public final class ExampleDictionary
         heartbeat.optionalEntry(booleanField);
         heartbeat.optionalEntry(dataField);
 
-        final Map<String, Field> messageEgFields = new HashMap<>();
-
-        messageEgFields.put("MsgType", msgType);
-        messageEgFields.put("BodyLength", bodyLength);
-
-        messageEgFields.put("CheckSum", checkSum);
-
-        messageEgFields.put("OnBehalfOfCompID", onBehalfOfCompID);
-        messageEgFields.put("TestReqID", testReqID);
-        messageEgFields.put("IntField", intField);
-        messageEgFields.put("FloatField", floatField);
-        messageEgFields.put("BooleanField", booleanField);
-        messageEgFields.put("DataField", dataField);
-
         final Component header = new Component("Header");
-        header.requiredEntry(msgType)
-              .requiredEntry(bodyLength);
+        header.requiredEntry(beginString)
+              .requiredEntry(bodyLength)
+              .requiredEntry(msgType);
 
         final Component trailer = new Component("Trailer");
         trailer.requiredEntry(checkSum);

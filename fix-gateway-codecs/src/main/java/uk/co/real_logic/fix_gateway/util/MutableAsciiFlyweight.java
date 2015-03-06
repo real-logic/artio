@@ -82,10 +82,9 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
         int remainder = value;
         for (int index = end - 1; index >= offset; index--)
         {
-            // TODO: figure out if there's a cleaner way of doing this
             final int digit = remainder % 10;
-            buffer.putByte(index, (byte) (ZERO + digit));
             remainder = remainder / 10;
+            buffer.putByte(index, (byte) (ZERO + digit));
         }
 
         if (remainder != 0)

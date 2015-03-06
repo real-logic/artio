@@ -15,11 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
+
 public final class EncodingUtil
 {
     private EncodingUtil()
     {
     }
+
+    public static final int BODY_LENGTH_GAP = 4;
+    public static final int BODY_LENGTH_SIZE = BODY_LENGTH_GAP + 1;
+    public static final byte[] BODY_LENGTH = "9=0000\001".getBytes(US_ASCII);
 
     /**
      * NB: only valid for ASCII bytes.

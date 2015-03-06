@@ -61,7 +61,7 @@ public class EncoderGeneratorTest
     {
         encoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
-        //System.out.println(sources);
+        System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT, sources);
         headerClass = compileInMemory(HEADER, sources);
         trailerClass = compileInMemory(TRAILER, sources);
@@ -163,22 +163,10 @@ public class EncoderGeneratorTest
 
         final Encoder header = (Encoder) headerClass.newInstance();
 
-        setInt(header, "bodyLength", 5);
+        setCharSequence(header, "beginString", "abc");
         setCharSequence(header, "msgType", "abc");
 
-        assertEncodesTo(header, "35=abc\0019=5\001");
-    }
-
-    @Test
-    public void shouldGenerateTrailer() throws Exception
-    {
-        assertIsEncoder(trailerClass);
-
-        final Encoder trailer = (Encoder) trailerClass.newInstance();
-
-        setCharSequence(trailer, "checkSum", "12");
-
-        assertEncodesTo(trailer, "10=12\001");
+        assertEncodesTo(header, "8=abc\0019=0000\00135=abc\001");
     }
 
     @Test
@@ -213,9 +201,8 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void automaticallyComputesDerivedFields() throws Exception
+    public void automaticallyComputesDerivedHeaderAndTrailerFields() throws Exception
     {
-        // TODO: fix version
         // TODO: checksum of encoded message
         // TODO: bodyLength
         final Encoder encoder = (Encoder) heartbeat.newInstance();
@@ -223,9 +210,6 @@ public class EncoderGeneratorTest
         setCharSequence(encoder, "onBehalfOfCompID", "abc");
         setInt(encoder, INT_FIELD, 2);
         setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
-
-        final Object header = Reflection.get(encoder, "header");
-        setInt(header, "bodyLength", 5);
 
         final Object trailer = Reflection.get(encoder, "trailer");
         setCharSequence(trailer, "checkSum", "12");
@@ -240,7 +224,7 @@ public class EncoderGeneratorTest
     private void setupHeader(final Encoder encoder) throws Exception
     {
         final Object header = Reflection.get(encoder, "header");
-        setInt(header, "bodyLength", 5);
+        setCharSequence(header, "beginString", "abc");
         setCharSequence(header, "msgType", "abc");
     }
 

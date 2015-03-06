@@ -19,6 +19,7 @@ import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public final class Field implements Element
@@ -27,6 +28,17 @@ public final class Field implements Element
     private final String name;
     private final Type type;
     private final List<Value> values;
+
+    public static Field register(
+        final Map<String, Field> nameToField,
+        final int number,
+        final String name,
+        final Type type)
+    {
+        final Field field = new Field(number, name, type);
+        nameToField.put(name, field);
+        return field;
+    }
 
     public Field(final int number, final String name, final Type type)
     {

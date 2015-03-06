@@ -55,6 +55,11 @@ public final class Entry
                 '}';
     }
 
+    public String name()
+    {
+        return element().name();
+    }
+
     public interface Element
     {
         String name();
