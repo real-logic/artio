@@ -119,7 +119,7 @@ public class Session
         return this;
     }
 
-    public int expectedMsgSeqNo()
+    public int expectedSeqNo()
     {
         return lastMsgSeqNo() + 1;
     }

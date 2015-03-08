@@ -32,27 +32,20 @@ public final class AcceptorSession extends Session
     {
         id(sessionId);
 
-        final int expectedSeqNo = expectedMsgSeqNo();
+        final int expectedSeqNo = expectedSeqNo();
         if (expectedSeqNo == msgSeqNo)
         {
             heartbeatInterval(heartbeatInterval);
             state(ACTIVE);
-            onMessage(msgSeqNo);
             proxy.logon(heartbeatInterval, msgSeqNo + 1, sessionId);
         }
         else if (expectedSeqNo < msgSeqNo)
         {
-            heartbeatInterval(heartbeatInterval);
             state(AWAITING_RESEND);
-            proxy.resendRequest(expectedSeqNo, msgSeqNo - 1);
-        }
-        else if (expectedSeqNo > msgSeqNo)
-        {
-            disconnect();
         }
     }
 
-    public void onMessage(final int msgSeqNum)
+    public void onMessage(final int msgSeqNo)
     {
         if (state() == CONNECTED)
         {
@@ -60,8 +53,21 @@ public final class AcceptorSession extends Session
         }
         else
         {
-            nextRequiredMessageTime(time() + heartbeatInterval());
-            lastMsgSeqNum(msgSeqNum);
+            final int expectedSeqNo = expectedSeqNo();
+            if (expectedSeqNo == msgSeqNo)
+            {
+                nextRequiredMessageTime(time() + heartbeatInterval());
+                lastMsgSeqNum(msgSeqNo);
+            }
+            else if (expectedSeqNo < msgSeqNo)
+            {
+                state(AWAITING_RESEND);
+                proxy.resendRequest(expectedSeqNo, msgSeqNo - 1);
+            }
+            else if (expectedSeqNo > msgSeqNo)
+            {
+                disconnect();
+            }
         }
     }
 
@@ -100,7 +106,7 @@ public final class AcceptorSession extends Session
 
     private void sequenceReset(final int msgSeqNo, final int newSeqNo)
     {
-        final int expectedMsgSeqNo = expectedMsgSeqNo();
+        final int expectedMsgSeqNo = expectedSeqNo();
         if (newSeqNo > expectedMsgSeqNo)
         {
             lastMsgSeqNum(newSeqNo - 1);
@@ -113,7 +119,7 @@ public final class AcceptorSession extends Session
 
     private void gapFill(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
     {
-        final int expectedMsgSeqNo = expectedMsgSeqNo();
+        final int expectedMsgSeqNo = expectedSeqNo();
         if (msgSeqNo > expectedMsgSeqNo)
         {
             proxy.resendRequest(expectedMsgSeqNo, msgSeqNo - 1);

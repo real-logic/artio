@@ -46,7 +46,7 @@ public class AcceptorSessionTest
     @Test
     public void shouldBeActivatedBySuccessfulLogin()
     {
-        onLogin(1);
+        onLogon(1);
 
         verify(mockProxy).logon(HEARTBEAT_INTERVAL, 2, SESSION_ID);
         assertState(ACTIVE);
@@ -55,7 +55,7 @@ public class AcceptorSessionTest
     @Test
     public void shouldRequestResendIfHighSeqNoLogon()
     {
-        onLogin(3);
+        onLogon(3);
 
         verify(mockProxy).resendRequest(1, 2);
         assertState(AWAITING_RESEND);
@@ -66,7 +66,7 @@ public class AcceptorSessionTest
     {
         session.lastMsgSeqNum(2);
 
-        onLogin(1);
+        onLogon(1);
         verifyDisconnect();
     }
 
@@ -131,7 +131,7 @@ public class AcceptorSessionTest
     {
         session.onSequenceReset(1, 4, false);
 
-        assertEquals(4, session.expectedMsgSeqNo());
+        assertEquals(4, session.expectedSeqNo());
         verifyNoMessages();
     }
 
@@ -140,7 +140,7 @@ public class AcceptorSessionTest
     {
         session.onSequenceReset(4, 4, false);
 
-        assertEquals(4, session.expectedMsgSeqNo());
+        assertEquals(4, session.expectedSeqNo());
         verifyNoMessages();
     }
 
@@ -151,7 +151,7 @@ public class AcceptorSessionTest
 
         session.onSequenceReset(4, 4, false);
 
-        assertEquals(4, session.expectedMsgSeqNo());
+        assertEquals(4, session.expectedSeqNo());
         verifyNoMessages();
     }
 
@@ -162,7 +162,7 @@ public class AcceptorSessionTest
 
         session.onSequenceReset(2, 1, false);
 
-        assertEquals(4, session.expectedMsgSeqNo());
+        assertEquals(4, session.expectedSeqNo());
         verify(mockProxy).reject(2);
     }
 
@@ -171,6 +171,8 @@ public class AcceptorSessionTest
     public void shouldDisconnectUponTimeout()
     {
         session.state(ACTIVE);
+        session.lastMsgSeqNum(9);
+
         session.onMessage(10);
 
         currentTime += HEARTBEAT_INTERVAL * 2;
@@ -184,6 +186,8 @@ public class AcceptorSessionTest
     public void shouldSuppressTimeout()
     {
         session.state(ACTIVE);
+        session.lastMsgSeqNum(9);
+
         session.onMessage(10);
 
         currentTime += 1;
@@ -196,6 +200,26 @@ public class AcceptorSessionTest
         session.poll();
 
         verifyNoMessages();
+    }
+
+    @Test
+    public void shouldRequestResendIfHighSeqNo()
+    {
+        session.state(ACTIVE);
+        session.onMessage(3);
+
+        verify(mockProxy).resendRequest(1, 2);
+        assertState(AWAITING_RESEND);
+    }
+
+    @Test
+    public void shouldLogoutIfLowSeqNo()
+    {
+        session.state(ACTIVE);
+        session.lastMsgSeqNum(2);
+
+        session.onMessage(1);
+        verifyDisconnect();
     }
 
     private void verifyNoMessages()
@@ -214,8 +238,9 @@ public class AcceptorSessionTest
         assertEquals(state, session.state());
     }
 
-    private void onLogin(final int msgSeqNum)
+    private void onLogon(final int msgSeqNo)
     {
-        session.onLogon(HEARTBEAT_INTERVAL, msgSeqNum, SESSION_ID);
+        session.onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID);
+        session.onMessage(msgSeqNo);
     }
 }
