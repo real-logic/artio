@@ -45,6 +45,7 @@ public class AcceptorSessionTest
     {
         onLogin(1);
 
+        verify(mockProxy).logon(HEARTBEAT_INTERVAL, 2, SESSION_ID);
         assertState(ACTIVE);
     }
 

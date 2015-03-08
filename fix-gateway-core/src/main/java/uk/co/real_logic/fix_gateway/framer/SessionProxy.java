@@ -29,4 +29,9 @@ public class SessionProxy
     {
 
     }
+
+    public void logon(final long heartbeatInterval, final int msgSeqNo, final long sessionId)
+    {
+
+    }
 }

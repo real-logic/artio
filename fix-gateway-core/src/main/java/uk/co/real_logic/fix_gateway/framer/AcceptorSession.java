@@ -38,6 +38,7 @@ public final class AcceptorSession extends Session
             heartbeatInterval(heartbeatInterval);
             state(ACTIVE);
             onMessage(msgSeqNum);
+            proxy.logon(heartbeatInterval, msgSeqNum + 1, sessionId);
         }
         else if (expectedSeqNo < msgSeqNum)
         {
