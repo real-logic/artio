@@ -24,7 +24,8 @@ public class Session
 {
     public static final long UNKNOWN = -1;
 
-    protected final MilliClock clock;
+    private final MilliClock clock;
+
     protected final SessionProxy proxy;
     protected final long connectionId;
 
@@ -121,5 +122,10 @@ public class Session
     public int expectedMsgSeqNo()
     {
         return lastMsgSeqNo() + 1;
+    }
+
+    protected long time()
+    {
+        return clock.time();
     }
 }

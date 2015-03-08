@@ -60,6 +60,7 @@ public final class AcceptorSession extends Session
         }
         else
         {
+            nextRequiredMessageTime(time() + heartbeatInterval());
             lastMsgSeqNum(msgSeqNum);
         }
     }
@@ -130,4 +131,11 @@ public final class AcceptorSession extends Session
         }
     }
 
+    public void poll()
+    {
+        if (nextRequiredMessageTime() < time())
+        {
+            disconnect();
+        }
+    }
 }

@@ -28,10 +28,12 @@ public class AcceptorSessionTest
 {
     private static final long CONNECTION_ID = 3L;
     private static final long SESSION_ID = 2L;
-    private static final long HEARTBEAT_INTERVAL = 1L;
+    private static final long HEARTBEAT_INTERVAL = 2L;
 
     private SessionProxy mockProxy = mock(SessionProxy.class);
-    private MilliClock mockClock = mock(MilliClock.class);
+
+    private long currentTime = 0;
+    private MilliClock mockClock = () -> currentTime;
 
     private AcceptorSession session = new AcceptorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, mockClock, mockProxy);
 
@@ -111,7 +113,7 @@ public class AcceptorSessionTest
 
         session.onSequenceReset(1, 4, true);
 
-        verifyNoMoreInteractions(mockProxy);
+        verifyNoMessages();
     }
 
     @Test
@@ -130,7 +132,7 @@ public class AcceptorSessionTest
         session.onSequenceReset(1, 4, false);
 
         assertEquals(4, session.expectedMsgSeqNo());
-        verifyNoMoreInteractions(mockProxy);
+        verifyNoMessages();
     }
 
     @Test
@@ -139,7 +141,7 @@ public class AcceptorSessionTest
         session.onSequenceReset(4, 4, false);
 
         assertEquals(4, session.expectedMsgSeqNo());
-        verifyNoMoreInteractions(mockProxy);
+        verifyNoMessages();
     }
 
     @Test
@@ -150,7 +152,7 @@ public class AcceptorSessionTest
         session.onSequenceReset(4, 4, false);
 
         assertEquals(4, session.expectedMsgSeqNo());
-        verifyNoMoreInteractions(mockProxy);
+        verifyNoMessages();
     }
 
     @Test
@@ -162,6 +164,43 @@ public class AcceptorSessionTest
 
         assertEquals(4, session.expectedMsgSeqNo());
         verify(mockProxy).reject(2);
+    }
+
+    // NB: differs from the spec to disconnect, rather than test request.
+    @Test
+    public void shouldDisconnectUponTimeout()
+    {
+        session.state(ACTIVE);
+        session.onMessage(10);
+
+        currentTime += HEARTBEAT_INTERVAL * 2;
+
+        session.poll();
+
+        verifyDisconnect();
+    }
+
+    @Test
+    public void shouldSuppressTimeout()
+    {
+        session.state(ACTIVE);
+        session.onMessage(10);
+
+        currentTime += 1;
+
+        session.poll();
+        session.onMessage(11);
+
+        currentTime += 1;
+
+        session.poll();
+
+        verifyNoMessages();
+    }
+
+    private void verifyNoMessages()
+    {
+        verifyNoMoreInteractions(mockProxy);
     }
 
     private void verifyDisconnect()
