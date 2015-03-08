@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.util.MilliClock;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static uk.co.real_logic.fix_gateway.framer.SessionState.*;
 
 public class AcceptorSessionTest
@@ -95,50 +96,73 @@ public class AcceptorSessionTest
         verify(mockProxy).heartbeat("ABC");
     }
 
-    /*Receive Sequence Reset (Gap Fill) message with NewSeqNo > MsgSeqNum
+    @Test
+    public void shouldResendRequestForUnexpectedGapFill()
+    {
+        session.onSequenceReset(3, 4, false);
 
-    MsgSeqNum > than expect sequence number
+        verify(mockProxy).resendRequest(1, 2);
+    }
 
-    MsgSeqNum = to expected sequence number
+    @Test
+    public void shouldIgnoreDuplicateGapFill()
+    {
+        session.lastMsgSeqNum(2);
 
-    MsgSeqNum < than expected sequence number
-    1. If MsgSeqNum > expected
-    Issue Resend Request to fill gap between expected MsgSeqNum & MsgSeqNum.
+        session.onSequenceReset(1, 4, true);
 
-    2. If MsgSeqNum < expected sequence number & PossDupFlag = “Y”
-    Ignore message
+        verifyNoMoreInteractions(mockProxy);
+    }
 
-    3. If MsgSeqNum < expected sequence number & without PossDupFlag = “Y”
-    Disconnect without sending a message
-    Generate an "error" condition in test output
+    @Test
+    public void shouldDisconnectOnInvalidGapFill()
+    {
+        session.lastMsgSeqNum(2);
 
-    4. if MsgSeqNum = expected sequence number.
-    Set next expected sequence number = NewSeqNo
+        session.onSequenceReset(1, 4, false);
 
-    Receive Resend Request message
-    Mandatory
-    Valid Resend Request
-    Respond with application level messages and SequenceReset-Gap Fill for admin messages in requested range according
-     to "Message Recovery" rules.
+        verifyDisconnect();
+    }
 
-    Receive Sequence Reset (Reset)
-    Mandatory
-    a. Receive Sequence Reset (reset) message with NewSeqNo > than expected sequence number
-    1) Accept the Sequence Reset (Reset) message without regards its MsgSeqNum
-    2) Set expected sequence number equal to NewSeqNo
+    @Test
+    public void shouldUpdateSequenceNumberOnValidGapFill()
+    {
+        session.onSequenceReset(1, 4, false);
 
-    b. Receive Sequence Reset (reset) message with NewSeqNo = to expected sequence number
-    1) Accept the Sequence Reset (Reset) message without regards its MsgSeqNum
-    2) Generate a "warning" condition in test output.
+        assertEquals(4, session.expectedMsgSeqNo());
+        verifyNoMoreInteractions(mockProxy);
+    }
 
-    c. Receive Sequence Reset (reset) message with NewSeqNo < than expected sequence number
-    1) Accept the Sequence Reset (Reset) message without regards its MsgSeqNum
-    2) Send Reject (session-level) message referencing invalid MsgType (>= FIX 4.2: SessionRejectReason = "Value is
-     incorrect (out of range) for this tag")
-        3) Do NOT Increment inbound MsgSeqNum
-    4) Generate an "error" condition in test output
-    5) Do NOT lower expected sequence number.
-    */
+    @Test
+    public void shouldUpdateSequenceNumberOnSequenceReset()
+    {
+        session.onSequenceReset(4, 4, false);
+
+        assertEquals(4, session.expectedMsgSeqNo());
+        verifyNoMoreInteractions(mockProxy);
+    }
+
+    @Test
+    public void shouldAcceptUnnecessarySequenceReset()
+    {
+        session.lastMsgSeqNum(3);
+
+        session.onSequenceReset(4, 4, false);
+
+        assertEquals(4, session.expectedMsgSeqNo());
+        verifyNoMoreInteractions(mockProxy);
+    }
+
+    @Test
+    public void shouldRejectLowSequenceReset()
+    {
+        session.lastMsgSeqNum(3);
+
+        session.onSequenceReset(2, 1, false);
+
+        assertEquals(4, session.expectedMsgSeqNo());
+        verify(mockProxy).reject(2);
+    }
 
     private void verifyDisconnect()
     {

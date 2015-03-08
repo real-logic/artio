@@ -107,7 +107,7 @@ public class Session
         return this;
     }
 
-    public int lastMsgSeqNum()
+    public int lastMsgSeqNo()
     {
         return lastMsgSeqNum;
     }
@@ -116,5 +116,10 @@ public class Session
     {
         this.lastMsgSeqNum = lastMsgSeqNum;
         return this;
+    }
+
+    public int expectedMsgSeqNo()
+    {
+        return lastMsgSeqNo() + 1;
     }
 }

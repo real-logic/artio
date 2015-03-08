@@ -44,4 +44,9 @@ public class SessionProxy
     {
 
     }
+
+    public void reject(final int msgSeqNo)
+    {
+
+    }
 }
