@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -50,7 +51,7 @@ public class AcceptorSessionTest
     }
 
     @Test
-    public void shouldRequestResendIfHighSequenceNumber()
+    public void shouldRequestResendIfHighSeqNoLogon()
     {
         onLogin(3);
 
@@ -59,7 +60,7 @@ public class AcceptorSessionTest
     }
 
     @Test
-    public void shouldLogoutIfLowSequenceNumber()
+    public void shouldLogoutIfLowSeqNoLogon()
     {
         session.lastMsgSeqNum(2);
 
@@ -67,6 +68,79 @@ public class AcceptorSessionTest
         verify(mockProxy).disconnect(CONNECTION_ID);
         assertState(DISCONNECTED);
     }
+
+    @Ignore
+    @Test
+    public void shouldDisconnectOnValidLogout()
+    {
+
+    }
+
+    @Ignore
+    @Test
+    public void shouldRequestResendIfHighSeqNoLogout()
+    {
+
+    }
+
+    @Ignore
+    @Test
+    public void shouldDisconnectIfFirstMessageNotALogon()
+    {
+
+    }
+
+    @Ignore
+    @Test
+    public void shouldReplyToTestRequestsWithAHeartbeat()
+    {
+
+    }
+
+    /*Receive Sequence Reset (Gap Fill) message with NewSeqNo > MsgSeqNum
+
+    MsgSeqNum > than expect sequence number
+
+    MsgSeqNum = to expected sequence number
+
+    MsgSeqNum < than expected sequence number
+    1. If MsgSeqNum > expected
+    Issue Resend Request to fill gap between expected MsgSeqNum & MsgSeqNum.
+
+    2. If MsgSeqNum < expected sequence number & PossDupFlag = “Y”
+    Ignore message
+
+    3. If MsgSeqNum < expected sequence number & without PossDupFlag = “Y”
+    Disconnect without sending a message
+    Generate an "error" condition in test output
+
+    4. if MsgSeqNum = expected sequence number.
+    Set next expected sequence number = NewSeqNo
+
+    Receive Resend Request message
+    Mandatory
+    Valid Resend Request
+    Respond with application level messages and SequenceReset-Gap Fill for admin messages in requested range according to "Message Recovery" rules.
+
+    Receive Sequence Reset (Reset)
+    Mandatory
+    a. Receive Sequence Reset (reset) message with NewSeqNo > than expected sequence number
+    1) Accept the Sequence Reset (Reset) message without regards its MsgSeqNum
+    2) Set expected sequence number equal to NewSeqNo
+
+    b. Receive Sequence Reset (reset) message with NewSeqNo = to expected sequence number
+    1) Accept the Sequence Reset (Reset) message without regards its MsgSeqNum
+    2) Generate a "warning" condition in test output.
+
+    c. Receive Sequence Reset (reset) message with NewSeqNo < than expected sequence number
+    1) Accept the Sequence Reset (Reset) message without regards its MsgSeqNum
+    2) Send Reject (session-level) message referencing invalid MsgType (>= FIX 4.2: SessionRejectReason = "Value is incorrect (out of range) for this tag")
+        3) Do NOT Increment inbound MsgSeqNum
+    4) Generate an "error" condition in test output
+    5) Do NOT lower expected sequence number.
+    */
+
+
 
     private void assertState(final SessionState state)
     {
