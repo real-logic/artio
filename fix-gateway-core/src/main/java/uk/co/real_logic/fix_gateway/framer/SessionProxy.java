@@ -13,28 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway;
+package uk.co.real_logic.fix_gateway.framer;
 
-import uk.co.real_logic.fix_gateway.builder.DataDictionary;
-
-public final class FixGateway implements AutoCloseable
+/**
+ * Encapsulates sending messages relating to sessions
+ */
+public class SessionProxy
 {
-    FixGateway()
+    public void resendRequest(final int beginSeqNo, final int endSeqNo)
     {
+
     }
 
-    public static FixGateway launch(final StaticConfiguration configuration)
+    public void disconnect(final long connectionId)
     {
-        return new FixGateway();
-    }
 
-    public Session initiate(final SessionConfiguration host, final DataDictionary port)
-    {
-        return new Session();
-    }
-
-    public void close() throws Exception
-    {
-        //uk.co.real_logic.fix_gateway.builder.Heartbeat hb;
     }
 }

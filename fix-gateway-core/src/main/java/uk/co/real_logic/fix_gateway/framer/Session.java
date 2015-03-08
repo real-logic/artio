@@ -24,22 +24,28 @@ public class Session
 {
     public static final long UNKNOWN = -1;
 
+    protected final MilliClock clock;
+    protected final SessionProxy proxy;
+
     private long heartbeatInterval;
-    private final MilliClock clock;
     private long nextRequiredMessageTime;
     private long connectionId;
     private long sequenceNumber;
     private SessionState state;
+    private long id = UNKNOWN;
+    private int lastMsgSeqNum = 0;
 
     public Session(
             final long heartbeatInterval,
             final MilliClock clock,
             final long connectionId,
             final long sequenceNumber,
-            final SessionState state)
+            final SessionState state,
+            final SessionProxy proxy)
     {
         this.heartbeatInterval = heartbeatInterval;
         this.clock = clock;
+        this.proxy = proxy;
         this.nextRequiredMessageTime = clock.time() + heartbeatInterval;
         this.connectionId = connectionId;
         this.sequenceNumber = sequenceNumber;
@@ -101,4 +107,25 @@ public class Session
         return this;
     }
 
+    public long id()
+    {
+        return id;
+    }
+
+    public Session id(final long id)
+    {
+        this.id = id;
+        return this;
+    }
+
+    public int lastMsgSeqNum()
+    {
+        return lastMsgSeqNum;
+    }
+
+    public Session lastMsgSeqNum(final int lastMsgSeqNum)
+    {
+        this.lastMsgSeqNum = lastMsgSeqNum;
+        return this;
+    }
 }

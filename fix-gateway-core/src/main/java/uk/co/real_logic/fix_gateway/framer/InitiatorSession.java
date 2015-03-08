@@ -24,8 +24,19 @@ public final class InitiatorSession extends Session
     public InitiatorSession(
         final long heartbeatInterval,
         final MilliClock clock,
-        final long connectionId)
+        final long connectionId,
+        final SessionProxy proxy)
     {
-        super(heartbeatInterval, clock, connectionId, UNKNOWN, CONNECTING);
+        super(heartbeatInterval, clock, connectionId, UNKNOWN, CONNECTING, proxy);
+    }
+
+    public void onResendRequest()
+    {
+
+    }
+
+    public void onLogin()
+    {
+
     }
 }
