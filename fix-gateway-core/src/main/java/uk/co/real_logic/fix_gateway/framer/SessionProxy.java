@@ -34,4 +34,14 @@ public class SessionProxy
     {
 
     }
+
+    public void logout(final int msgSeqNo, final long sessionId)
+    {
+
+    }
+
+    public void heartbeat(final String testReqId)
+    {
+
+    }
 }

@@ -26,10 +26,10 @@ public class Session
 
     protected final MilliClock clock;
     protected final SessionProxy proxy;
+    protected final long connectionId;
 
     private long heartbeatInterval;
     private long nextRequiredMessageTime;
-    private long connectionId;
     private long sequenceNumber;
     private SessionState state;
     private long id = UNKNOWN;
@@ -62,11 +62,6 @@ public class Session
         return this.nextRequiredMessageTime;
     }
 
-    public long connectionId()
-    {
-        return this.connectionId;
-    }
-
     public long sequenceNumber()
     {
         return this.sequenceNumber;
@@ -86,12 +81,6 @@ public class Session
     public Session nextRequiredMessageTime(final long nextRequiredMessageTime)
     {
         this.nextRequiredMessageTime = nextRequiredMessageTime;
-        return this;
-    }
-
-    public Session connectionId(final long connectionId)
-    {
-        this.connectionId = connectionId;
         return this;
     }
 

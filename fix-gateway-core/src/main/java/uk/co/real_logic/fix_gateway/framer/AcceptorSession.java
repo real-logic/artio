@@ -28,44 +28,61 @@ public final class AcceptorSession extends Session
         super(defaultInterval, clock, connectionId, UNKNOWN, CONNECTED, proxy);
     }
 
-    public void onLogin(final long heartbeatInterval, final int msgSeqNum, final long sessionId)
+    public void onLogon(final long heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
         id(sessionId);
 
         final int expectedSeqNo = lastMsgSeqNum() + 1;
-        if (expectedSeqNo == msgSeqNum)
+        if (expectedSeqNo == msgSeqNo)
         {
             heartbeatInterval(heartbeatInterval);
             state(ACTIVE);
-            onMessage(msgSeqNum);
-            proxy.logon(heartbeatInterval, msgSeqNum + 1, sessionId);
+            onMessage(msgSeqNo);
+            proxy.logon(heartbeatInterval, msgSeqNo + 1, sessionId);
         }
-        else if (expectedSeqNo < msgSeqNum)
+        else if (expectedSeqNo < msgSeqNo)
         {
             heartbeatInterval(heartbeatInterval);
             state(AWAITING_RESEND);
-            proxy.resendRequest(expectedSeqNo, msgSeqNum - 1);
+            proxy.resendRequest(expectedSeqNo, msgSeqNo - 1);
         }
-        else if (expectedSeqNo > msgSeqNum)
+        else if (expectedSeqNo > msgSeqNo)
         {
-            proxy.disconnect(connectionId());
-            state(DISCONNECTED);
+            disconnect();
         }
     }
 
     public void onMessage(final int msgSeqNum)
     {
-        lastMsgSeqNum(msgSeqNum);
+        if (state() == CONNECTED)
+        {
+            disconnect();
+        }
+        else
+        {
+            lastMsgSeqNum(msgSeqNum);
+        }
     }
 
-    public void onLogoutRequest()
+    public void onLogout(final int msgSeqNo, final long sessionId)
     {
 
+        final int replySeqNo = msgSeqNo + 1;
+        proxy.logout(replySeqNo, sessionId);
+        lastMsgSeqNum(replySeqNo);
+
+        disconnect();
     }
 
-    public void testRequest()
+    public void onTestRequest(final String testReqId)
     {
+        proxy.heartbeat(testReqId);
+    }
 
+    private void disconnect()
+    {
+        proxy.disconnect(connectionId);
+        state(DISCONNECTED);
     }
 
 }

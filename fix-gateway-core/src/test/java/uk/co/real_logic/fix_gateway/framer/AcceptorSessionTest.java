@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -65,36 +64,35 @@ public class AcceptorSessionTest
         session.lastMsgSeqNum(2);
 
         onLogin(1);
-        verify(mockProxy).disconnect(CONNECTION_ID);
-        assertState(DISCONNECTED);
+        verifyDisconnect();
     }
 
-    @Ignore
     @Test
-    public void shouldDisconnectOnValidLogout()
+    public void shouldReplyToValidLogout()
     {
+        session.state(ACTIVE);
 
+        session.onLogout(1, SESSION_ID);
+
+        verify(mockProxy).logout(2, SESSION_ID);
+        verifyDisconnect();
     }
 
-    @Ignore
-    @Test
-    public void shouldRequestResendIfHighSeqNoLogout()
-    {
-
-    }
-
-    @Ignore
     @Test
     public void shouldDisconnectIfFirstMessageNotALogon()
     {
+        session.onMessage(1);
 
+        verifyDisconnect();
     }
 
-    @Ignore
     @Test
     public void shouldReplyToTestRequestsWithAHeartbeat()
     {
+        // TODO: figure out the correct String type here
+        session.onTestRequest("ABC");
 
+        verify(mockProxy).heartbeat("ABC");
     }
 
     /*Receive Sequence Reset (Gap Fill) message with NewSeqNo > MsgSeqNum
@@ -120,7 +118,8 @@ public class AcceptorSessionTest
     Receive Resend Request message
     Mandatory
     Valid Resend Request
-    Respond with application level messages and SequenceReset-Gap Fill for admin messages in requested range according to "Message Recovery" rules.
+    Respond with application level messages and SequenceReset-Gap Fill for admin messages in requested range according
+     to "Message Recovery" rules.
 
     Receive Sequence Reset (Reset)
     Mandatory
@@ -134,13 +133,18 @@ public class AcceptorSessionTest
 
     c. Receive Sequence Reset (reset) message with NewSeqNo < than expected sequence number
     1) Accept the Sequence Reset (Reset) message without regards its MsgSeqNum
-    2) Send Reject (session-level) message referencing invalid MsgType (>= FIX 4.2: SessionRejectReason = "Value is incorrect (out of range) for this tag")
+    2) Send Reject (session-level) message referencing invalid MsgType (>= FIX 4.2: SessionRejectReason = "Value is
+     incorrect (out of range) for this tag")
         3) Do NOT Increment inbound MsgSeqNum
     4) Generate an "error" condition in test output
     5) Do NOT lower expected sequence number.
     */
 
-
+    private void verifyDisconnect()
+    {
+        verify(mockProxy).disconnect(CONNECTION_ID);
+        assertState(DISCONNECTED);
+    }
 
     private void assertState(final SessionState state)
     {
@@ -149,6 +153,6 @@ public class AcceptorSessionTest
 
     private void onLogin(final int msgSeqNum)
     {
-        session.onLogin(HEARTBEAT_INTERVAL, msgSeqNum, SESSION_ID);
+        session.onLogon(HEARTBEAT_INTERVAL, msgSeqNum, SESSION_ID);
     }
 }
