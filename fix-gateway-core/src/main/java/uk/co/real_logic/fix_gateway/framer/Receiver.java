@@ -93,9 +93,9 @@ public final class Receiver implements Agent
                 channel.configureBlocking(false);
                 channel.setOption(TCP_NODELAY, false);
 
-                final Connection connection = connectionHandler.createConnection(channel);
-                register(channel, connection.receiverEndPoint());
-                sender.newConnection(connection);
+                final long connectionId = connectionHandler.onConnection();
+                register(channel, connectionHandler.receiverEndPoint(channel, connectionId));
+                sender.newAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
             }
             else if (key.isReadable())
             {
@@ -108,11 +108,10 @@ public final class Receiver implements Agent
         return count;
     }
 
-    public void onNewConnection(final Connection connection)
+    public void onNewInitiatedConnection(final ReceiverEndPoint receiverEndPoint)
     {
         try
         {
-            final ReceiverEndPoint receiverEndPoint = connection.receiverEndPoint();
             register(receiverEndPoint.channel(), receiverEndPoint);
         }
         catch (final ClosedChannelException ex)

@@ -23,10 +23,12 @@ import java.nio.channels.SocketChannel;
 
 public class SenderEndPoint
 {
+    private final long connectionId;
     private final SocketChannel channel;
 
-    public SenderEndPoint(SocketChannel channel)
+    public SenderEndPoint(final long connectionId, final SocketChannel channel)
     {
+        this.connectionId = connectionId;
         this.channel = channel;
     }
 
@@ -50,5 +52,10 @@ public class SenderEndPoint
             // TODO
             ex.printStackTrace();
         }
+    }
+
+    public long connectionId()
+    {
+        return connectionId;
     }
 }

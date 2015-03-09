@@ -40,10 +40,10 @@ public class ReceiverTest
     private SocketChannel client;
     private ByteBuffer clientBuffer = ByteBuffer.allocate(1024);
 
-    private OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
-    private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
-    private Connection mockConnection = mock(Connection.class);
+    private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
     private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
+    private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
+    private OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private SenderProxy mockSender = mock(SenderProxy.class);
 
     private Receiver receiver = new Receiver(ADDRESS, mockConnectionHandler, commandQueue, mockSender);
@@ -53,10 +53,8 @@ public class ReceiverTest
     {
         clientBuffer.putInt(10, 5);
 
-        when(mockConnectionHandler.createConnection(any(SocketChannel.class)))
-            .thenReturn(mockConnection);
-
-        when(mockConnection.receiverEndPoint()).thenReturn(mockReceiverEndPoint);
+        when(mockConnectionHandler.receiverEndPoint(any(SocketChannel.class), anyLong())).thenReturn(mockReceiverEndPoint);
+        when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong())).thenReturn(mockSenderEndPoint);
     }
 
     @After
@@ -85,7 +83,7 @@ public class ReceiverTest
         receiver.doWork();
 
         then:
-        verify(mockConnectionHandler).createConnection(notNull(SocketChannel.class));
+        verify(mockConnectionHandler).receiverEndPoint(notNull(SocketChannel.class), anyLong());
     }
 
     @Test
@@ -98,7 +96,7 @@ public class ReceiverTest
         receiver.doWork();
 
         then:
-        verify(mockSender).newConnection(mockConnection);
+        verify(mockSender).newAcceptedConnection(mockSenderEndPoint);
     }
 
     @Test

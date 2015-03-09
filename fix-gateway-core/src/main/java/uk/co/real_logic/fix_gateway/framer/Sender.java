@@ -67,9 +67,9 @@ public final class Sender implements Agent
             channel.connect(address);
             channel.configureBlocking(false);
 
-            final Connection connection = connectionHandler.createConnection(channel);
-            onNewConnection(connection);
-            receiver.newConnection(connection);
+            final long connectionId = connectionHandler.onConnection();
+            onNewAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
+            receiver.newInitiatedConnection(connectionHandler.receiverEndPoint(channel, connectionId));
         }
         catch (final IOException ex)
         {
@@ -78,9 +78,9 @@ public final class Sender implements Agent
         }
     }
 
-    public void onNewConnection(final Connection connection)
+    public void onNewAcceptedConnection(final SenderEndPoint senderEndPoint)
     {
-        multiplexer.onNewConnection(connection.connectionId(), connection.senderEndPoint());
+        multiplexer.onNewConnection(senderEndPoint);
     }
 
     public void onClose()

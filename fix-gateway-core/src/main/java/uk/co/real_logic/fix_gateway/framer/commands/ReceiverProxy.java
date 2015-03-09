@@ -1,7 +1,7 @@
 package uk.co.real_logic.fix_gateway.framer.commands;
 
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
-import uk.co.real_logic.fix_gateway.framer.Connection;
+import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
 
 public class ReceiverProxy
 {
@@ -12,9 +12,9 @@ public class ReceiverProxy
         this.commandQueue = commandQueue;
     }
 
-    public void newConnection(final Connection connection)
+    public void newInitiatedConnection(final ReceiverEndPoint receiverEndPoint)
     {
-        offer(new NewConnection(connection));
+        offer(new NewInitiatedConnection(receiverEndPoint));
     }
 
     private void offer(final ReceiverCommand command)

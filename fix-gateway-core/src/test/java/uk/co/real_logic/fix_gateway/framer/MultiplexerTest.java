@@ -35,18 +35,24 @@ public class MultiplexerTest
     public void setUp()
     {
         doAnswer(
-            (inv) ->
-            {
-                multiplexer.onMessage(buffer, 1, 1, 1L);
-                return 1;
-            }).when(mockSource).drainTo(multiplexer);
+                (inv) ->
+                {
+                    multiplexer.onMessage(buffer, 1, 1, 1L);
+                    return 1;
+                }).when(mockSource).drainTo(multiplexer);
+    }
+
+    private void connectedId(final long connectionId)
+    {
+        when(mockSenderEndPoint.connectionId()).thenReturn(connectionId);
     }
 
     @Test
     public void messagesAreSentToCorrectEndPoint()
     {
         given:
-        multiplexer.onNewConnection(1L, mockSenderEndPoint);
+        connectedId(1L);
+        multiplexer.onNewConnection(mockSenderEndPoint);
 
         when:
         messagesSent = multiplexer.scanBuffers();
@@ -60,7 +66,8 @@ public class MultiplexerTest
     public void messagesAreNotSentToOtherEndPoints()
     {
         given:
-        multiplexer.onNewConnection(2L, mockSenderEndPoint);
+        connectedId(2L);
+        multiplexer.onNewConnection(mockSenderEndPoint);
 
         when:
         multiplexer.scanBuffers();

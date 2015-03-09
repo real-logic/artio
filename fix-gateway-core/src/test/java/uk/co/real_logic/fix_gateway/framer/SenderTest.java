@@ -35,8 +35,9 @@ public class SenderTest
 {
     private static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", 9999);
 
+    private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
+    private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
-    private Connection mockConnection = mock(Connection.class);
     private OneToOneConcurrentArrayQueue<SenderCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private SenderProxy proxy = new SenderProxy(commandQueue);
     private ReceiverProxy mockReceiver = mock(ReceiverProxy.class);
@@ -52,8 +53,8 @@ public class SenderTest
         server = ServerSocketChannel.open().bind(ADDRESS);
         server.configureBlocking(false);
 
-        when(mockConnectionHandler.createConnection(any(SocketChannel.class)))
-            .thenReturn(mockConnection);
+        when(mockConnectionHandler.receiverEndPoint(any(SocketChannel.class), anyLong())).thenReturn(mockReceiverEndPoint);
+        when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong())).thenReturn(mockSenderEndPoint);
     }
 
     @After
@@ -85,6 +86,6 @@ public class SenderTest
         sender.doWork();
 
         then:
-        verify(mockReceiver).newConnection(mockConnection);
+        verify(mockReceiver).newInitiatedConnection(mockReceiverEndPoint);
     }
 }

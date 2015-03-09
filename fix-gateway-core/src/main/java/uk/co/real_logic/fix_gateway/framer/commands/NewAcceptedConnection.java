@@ -15,28 +15,21 @@
  */
 package uk.co.real_logic.fix_gateway.framer.commands;
 
-import uk.co.real_logic.fix_gateway.framer.Connection;
-import uk.co.real_logic.fix_gateway.framer.Receiver;
 import uk.co.real_logic.fix_gateway.framer.Sender;
+import uk.co.real_logic.fix_gateway.framer.SenderEndPoint;
 
-final class NewConnection implements SenderCommand, ReceiverCommand
+final class NewAcceptedConnection implements SenderCommand
 {
-    private final Connection connection;
+    private final SenderEndPoint senderEndPoint;
 
-    NewConnection(final Connection connection)
+    NewAcceptedConnection(final SenderEndPoint senderEndPoint)
     {
-        this.connection = connection;
+        this.senderEndPoint = senderEndPoint;
     }
 
     @Override
     public void execute(final Sender sender)
     {
-        sender.onNewConnection(connection);
-    }
-
-    @Override
-    public void execute(final Receiver receiver)
-    {
-        receiver.onNewConnection(connection);
+        sender.onNewAcceptedConnection(senderEndPoint);
     }
 }

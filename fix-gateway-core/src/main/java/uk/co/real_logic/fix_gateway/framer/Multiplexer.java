@@ -32,9 +32,9 @@ public class Multiplexer implements MessageHandler
         this.source = source;
     }
 
-    public void onNewConnection(final long connectionId, final SenderEndPoint senderEndPoint)
+    public void onNewConnection(final SenderEndPoint senderEndPoint)
     {
-        endpoints.put(connectionId, senderEndPoint);
+        endpoints.put(senderEndPoint.connectionId(), senderEndPoint);
     }
 
     public int scanBuffers()
