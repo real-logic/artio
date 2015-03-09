@@ -118,7 +118,7 @@ public abstract class Session
         }
         else if (newSeqNo < expectedMsgSeqNo)
         {
-            proxy.reject(msgSeqNo);
+            proxy.reject(expectedMsgSeqNo, msgSeqNo);
         }
     }
 

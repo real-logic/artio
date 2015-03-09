@@ -15,18 +15,25 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
-import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
+import uk.co.real_logic.fix_gateway.builder.*;
 
 /**
  * Encapsulates sending messages relating to sessions
  */
+// TODO: conversion from session id to sender id/comp id
+// TODO: buffer
 public class SessionProxy
 {
     private final LogonEncoder logon = new LogonEncoder();
+    private final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
+    private final LogoutEncoder logout = new LogoutEncoder();
+    private final HeartbeatEncoder heartbeat = new HeartbeatEncoder();
+    private final RejectEncoder reject = new RejectEncoder();
 
     public void resendRequest(final int beginSeqNo, final int endSeqNo)
     {
-
+        resendRequest.beginSeqNo(beginSeqNo)
+                     .endSeqNo(endSeqNo);
     }
 
     public void disconnect(final long connectionId)
@@ -42,16 +49,18 @@ public class SessionProxy
 
     public void logout(final int msgSeqNo, final long sessionId)
     {
-
+        logout.header().msgSeqNum(msgSeqNo);
     }
 
     public void heartbeat(final String testReqId)
     {
-
+        heartbeat.testReqID(testReqId);
     }
 
-    public void reject(final int msgSeqNo)
+    public void reject(final int msgSeqNo, final int refSeqNum)
     {
-
+        reject.header().msgSeqNum(msgSeqNo);
+        reject.refSeqNum(refSeqNum);
+        // TODO: decide on other ref fields
     }
 }

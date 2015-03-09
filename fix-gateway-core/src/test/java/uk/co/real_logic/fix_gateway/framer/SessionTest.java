@@ -115,7 +115,7 @@ public class SessionTest extends AbstractSessionTest
         session.onSequenceReset(2, 1, false);
 
         assertEquals(4, session.expectedSeqNo());
-        verify(mockProxy).reject(2);
+        verify(mockProxy).reject(4, 2);
     }
 
     // NB: differs from the spec to disconnect, rather than test request.
