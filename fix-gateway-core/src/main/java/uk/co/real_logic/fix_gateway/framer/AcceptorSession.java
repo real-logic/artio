@@ -25,7 +25,7 @@ public final class AcceptorSession extends Session
     public AcceptorSession(
         final long defaultInterval, final long connectionId, final MilliClock clock, final SessionProxy proxy)
     {
-        super(defaultInterval, clock, connectionId, UNKNOWN, CONNECTED, proxy);
+        super(defaultInterval, connectionId, clock, CONNECTED, proxy);
     }
 
     public void onLogon(final long heartbeatInterval, final int msgSeqNo, final long sessionId)
@@ -45,103 +45,6 @@ public final class AcceptorSession extends Session
         }
     }
 
-    public void onMessage(final int msgSeqNo)
-    {
-        if (state() == CONNECTED)
-        {
-            disconnect();
-        }
-        else
-        {
-            final int expectedSeqNo = expectedSeqNo();
-            if (expectedSeqNo == msgSeqNo)
-            {
-                nextRequiredMessageTime(time() + heartbeatInterval());
-                lastMsgSeqNum(msgSeqNo);
-            }
-            else if (expectedSeqNo < msgSeqNo)
-            {
-                state(AWAITING_RESEND);
-                proxy.resendRequest(expectedSeqNo, msgSeqNo - 1);
-            }
-            else if (expectedSeqNo > msgSeqNo)
-            {
-                disconnect();
-            }
-        }
-    }
 
-    public void onLogout(final int msgSeqNo, final long sessionId)
-    {
 
-        final int replySeqNo = msgSeqNo + 1;
-        proxy.logout(replySeqNo, sessionId);
-        lastMsgSeqNum(replySeqNo);
-
-        disconnect();
-    }
-
-    public void onTestRequest(final String testReqId)
-    {
-        proxy.heartbeat(testReqId);
-    }
-
-    private void disconnect()
-    {
-        proxy.disconnect(connectionId);
-        state(DISCONNECTED);
-    }
-
-    public void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
-    {
-        if (newSeqNo > msgSeqNo)
-        {
-            gapFill(msgSeqNo, newSeqNo, possDupFlag);
-        }
-        else
-        {
-            sequenceReset(msgSeqNo, newSeqNo);
-        }
-    }
-
-    private void sequenceReset(final int msgSeqNo, final int newSeqNo)
-    {
-        final int expectedMsgSeqNo = expectedSeqNo();
-        if (newSeqNo > expectedMsgSeqNo)
-        {
-            lastMsgSeqNum(newSeqNo - 1);
-        }
-        else if (newSeqNo < expectedMsgSeqNo)
-        {
-            proxy.reject(msgSeqNo);
-        }
-    }
-
-    private void gapFill(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
-    {
-        final int expectedMsgSeqNo = expectedSeqNo();
-        if (msgSeqNo > expectedMsgSeqNo)
-        {
-            proxy.resendRequest(expectedMsgSeqNo, msgSeqNo - 1);
-        }
-        else if(msgSeqNo < expectedMsgSeqNo)
-        {
-            if (!possDupFlag)
-            {
-                disconnect();
-            }
-        }
-        else
-        {
-            lastMsgSeqNum(newSeqNo - 1);
-        }
-    }
-
-    public void poll()
-    {
-        if (nextRequiredMessageTime() < time())
-        {
-            disconnect();
-        }
-    }
 }

@@ -17,6 +17,10 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
+import static uk.co.real_logic.fix_gateway.framer.SessionState.AWAITING_RESEND;
+import static uk.co.real_logic.fix_gateway.framer.SessionState.CONNECTED;
+import static uk.co.real_logic.fix_gateway.framer.SessionState.DISCONNECTED;
+
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound
  */
@@ -31,16 +35,14 @@ public class Session
 
     private long heartbeatInterval;
     private long nextRequiredMessageTime;
-    private long sequenceNumber;
     private SessionState state;
     private long id = UNKNOWN;
     private int lastMsgSeqNum = 0;
 
     public Session(
             final long heartbeatInterval,
-            final MilliClock clock,
             final long connectionId,
-            final long sequenceNumber,
+            final MilliClock clock,
             final SessionState state,
             final SessionProxy proxy)
     {
@@ -49,8 +51,107 @@ public class Session
         this.proxy = proxy;
         this.nextRequiredMessageTime = clock.time() + heartbeatInterval;
         this.connectionId = connectionId;
-        this.sequenceNumber = sequenceNumber;
         this.state = state;
+    }
+
+    public void onMessage(final int msgSeqNo)
+    {
+        if (state() == CONNECTED)
+        {
+            disconnect();
+        }
+        else
+        {
+            final int expectedSeqNo = expectedSeqNo();
+            if (expectedSeqNo == msgSeqNo)
+            {
+                nextRequiredMessageTime(time() + heartbeatInterval());
+                lastMsgSeqNum(msgSeqNo);
+            }
+            else if (expectedSeqNo < msgSeqNo)
+            {
+                state(AWAITING_RESEND);
+                proxy.resendRequest(expectedSeqNo, msgSeqNo - 1);
+            }
+            else if (expectedSeqNo > msgSeqNo)
+            {
+                disconnect();
+            }
+        }
+    }
+
+    public void onLogout(final int msgSeqNo, final long sessionId)
+    {
+
+        final int replySeqNo = msgSeqNo + 1;
+        proxy.logout(replySeqNo, sessionId);
+        lastMsgSeqNum(replySeqNo);
+
+        disconnect();
+    }
+
+    public void onTestRequest(final String testReqId)
+    {
+        proxy.heartbeat(testReqId);
+    }
+
+    public void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
+    {
+        if (newSeqNo > msgSeqNo)
+        {
+            gapFill(msgSeqNo, newSeqNo, possDupFlag);
+        }
+        else
+        {
+            sequenceReset(msgSeqNo, newSeqNo);
+        }
+    }
+
+    private void sequenceReset(final int msgSeqNo, final int newSeqNo)
+    {
+        final int expectedMsgSeqNo = expectedSeqNo();
+        if (newSeqNo > expectedMsgSeqNo)
+        {
+            lastMsgSeqNum(newSeqNo - 1);
+        }
+        else if (newSeqNo < expectedMsgSeqNo)
+        {
+            proxy.reject(msgSeqNo);
+        }
+    }
+
+    private void gapFill(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
+    {
+        final int expectedMsgSeqNo = expectedSeqNo();
+        if (msgSeqNo > expectedMsgSeqNo)
+        {
+            proxy.resendRequest(expectedMsgSeqNo, msgSeqNo - 1);
+        }
+        else if(msgSeqNo < expectedMsgSeqNo)
+        {
+            if (!possDupFlag)
+            {
+                disconnect();
+            }
+        }
+        else
+        {
+            lastMsgSeqNum(newSeqNo - 1);
+        }
+    }
+
+    public void poll()
+    {
+        if (nextRequiredMessageTime() < time())
+        {
+            disconnect();
+        }
+    }
+
+    protected void disconnect()
+    {
+        proxy.disconnect(connectionId);
+        state(DISCONNECTED);
     }
 
     public long heartbeatInterval()
@@ -61,11 +162,6 @@ public class Session
     public long nextRequiredMessageTime()
     {
         return this.nextRequiredMessageTime;
-    }
-
-    public long sequenceNumber()
-    {
-        return this.sequenceNumber;
     }
 
     public SessionState state()
@@ -82,12 +178,6 @@ public class Session
     public Session nextRequiredMessageTime(final long nextRequiredMessageTime)
     {
         this.nextRequiredMessageTime = nextRequiredMessageTime;
-        return this;
-    }
-
-    public Session sequenceNumber(final long sequenceNumber)
-    {
-        this.sequenceNumber = sequenceNumber;
         return this;
     }
 

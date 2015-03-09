@@ -15,28 +15,23 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
-import uk.co.real_logic.fix_gateway.util.MilliClock;
+import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.fix_gateway.framer.SessionState.CONNECTING;
 
-public final class InitiatorSession extends Session
+public class InitiatorSessionTest extends AbstractSessionTest
 {
-    public InitiatorSession(
-        final long heartbeatInterval,
-        final long connectionId,
-        final MilliClock clock,
-        final SessionProxy proxy)
+    private InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, mockClock, mockProxy);
+
+    @Test
+    public void shouldInitiallyBeConnecting()
     {
-        super(heartbeatInterval, connectionId, clock, CONNECTING, proxy);
+        assertEquals(CONNECTING, session.state());
     }
 
-    public void onResendRequest()
+    protected Session session()
     {
-
-    }
-
-    public void onLogin()
-    {
-
+        return session;
     }
 }
