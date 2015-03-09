@@ -19,6 +19,7 @@ import uk.co.real_logic.aeron.common.Agent;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.framer.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.framer.commands.SenderCommand;
+import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -69,7 +70,8 @@ public final class Sender implements Agent
 
             final long connectionId = connectionHandler.onConnection();
             onNewAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
-            receiver.newInitiatedConnection(connectionHandler.receiverEndPoint(channel, connectionId));
+            final InitiatorSession session = connectionHandler.initiatorSession(connectionId);
+            receiver.newInitiatedConnection(connectionHandler.receiverEndPoint(channel, connectionId, session));
         }
         catch (final IOException ex)
         {

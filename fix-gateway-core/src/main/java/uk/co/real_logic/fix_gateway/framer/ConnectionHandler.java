@@ -15,6 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import uk.co.real_logic.fix_gateway.framer.session.AcceptorSession;
+import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
+import uk.co.real_logic.fix_gateway.framer.session.Session;
+import uk.co.real_logic.fix_gateway.framer.session.SessionProxy;
+import uk.co.real_logic.fix_gateway.util.MilliClock;
+
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicLong;
@@ -28,12 +34,23 @@ public class ConnectionHandler
 {
     private final AtomicLong idSource = new AtomicLong(0);
 
+    private final MilliClock clock;
+    private final SessionProxy sessionProxy;
     private final int bufferSize;
+    private final int defaultInterval;
     private final MessageHandler messageHandler;
 
-    public ConnectionHandler(final int bufferSize, final MessageHandler messageHandler)
+    public ConnectionHandler(
+        final MilliClock clock,
+        final SessionProxy sessionProxy,
+        final int bufferSize,
+        final int defaultInterval,
+        final MessageHandler messageHandler)
     {
+        this.clock = clock;
+        this.sessionProxy = sessionProxy;
         this.bufferSize = bufferSize;
+        this.defaultInterval = defaultInterval;
         this.messageHandler = messageHandler;
     }
 
@@ -42,13 +59,24 @@ public class ConnectionHandler
         return idSource.getAndIncrement();
     }
 
-    public ReceiverEndPoint receiverEndPoint(final SocketChannel channel, final long connectionId)
+    public ReceiverEndPoint receiverEndPoint(
+        final SocketChannel channel, final long connectionId, final Session session)
     {
-        return new ReceiverEndPoint(channel, bufferSize, messageHandler, connectionId);
+        return new ReceiverEndPoint(channel, bufferSize, messageHandler, connectionId, session);
     }
 
     public SenderEndPoint senderEndPoint(final SocketChannel channel, final long connectionId)
     {
         return new SenderEndPoint(connectionId, channel);
+    }
+
+    public AcceptorSession acceptorSession(final long connectionId)
+    {
+        return new AcceptorSession(defaultInterval, connectionId, clock, sessionProxy);
+    }
+
+    public InitiatorSession initiatorSession(final long connectionId)
+    {
+        return new InitiatorSession(defaultInterval, connectionId, clock, sessionProxy);
     }
 }

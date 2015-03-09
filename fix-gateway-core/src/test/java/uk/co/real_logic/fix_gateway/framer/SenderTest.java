@@ -22,6 +22,7 @@ import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.framer.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.framer.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.framer.commands.SenderProxy;
+import uk.co.real_logic.fix_gateway.framer.session.Session;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -53,8 +54,11 @@ public class SenderTest
         server = ServerSocketChannel.open().bind(ADDRESS);
         server.configureBlocking(false);
 
-        when(mockConnectionHandler.receiverEndPoint(any(SocketChannel.class), anyLong())).thenReturn(mockReceiverEndPoint);
-        when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong())).thenReturn(mockSenderEndPoint);
+        when(mockConnectionHandler.receiverEndPoint(any(SocketChannel.class), anyLong(), any(Session.class)))
+            .thenReturn(mockReceiverEndPoint);
+
+        when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong()))
+            .thenReturn(mockSenderEndPoint);
     }
 
     @After

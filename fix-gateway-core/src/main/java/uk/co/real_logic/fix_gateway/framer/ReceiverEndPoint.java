@@ -18,6 +18,8 @@ package uk.co.real_logic.fix_gateway.framer;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
+import uk.co.real_logic.fix_gateway.framer.session.Session;
+import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.io.IOException;
@@ -41,17 +43,20 @@ public class ReceiverEndPoint
     private final SocketChannel channel;
     private final MessageHandler handler;
     private final long connectionId;
+    private final SessionParser session;
     private final AtomicBuffer buffer;
     private final AsciiFlyweight string;
 
     private int usedBufferData = 0;
 
     public ReceiverEndPoint(
-        final SocketChannel channel, final int bufferSize, final MessageHandler handler, final long connectionId)
+        final SocketChannel channel, final int bufferSize, final MessageHandler handler, final long connectionId,
+        final Session session)
     {
         this.channel = channel;
         this.handler = handler;
         this.connectionId = connectionId;
+        this.session = new SessionParser(session);
 
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new AsciiFlyweight(buffer);
@@ -109,8 +114,8 @@ public class ReceiverEndPoint
                 }
 
                 final int length = (indexOfLastByteOfMessage + 1) - offset;
-                // TODO: mapping from connections to sessions
-                handler.onMessage(buffer, offset, length, connectionId);
+                final long sessionId = session.onMessage(buffer, offset, length, connectionId);
+                handler.onMessage(buffer, offset, length, sessionId);
 
                 offset += length;
             }
@@ -141,7 +146,7 @@ public class ReceiverEndPoint
     private boolean validateBodyLengthTag(final int offset)
     {
         return string.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD ||
-            string.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
+               string.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
     }
 
     private void moveRemainingDataToBufferStart(final int offset)

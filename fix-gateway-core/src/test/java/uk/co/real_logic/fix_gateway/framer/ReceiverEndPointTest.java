@@ -19,6 +19,7 @@ import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.fix_gateway.framer.session.Session;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -37,7 +38,8 @@ public class ReceiverEndPointTest
 
     private SocketChannel mockChannel = mock(SocketChannel.class);
     private MessageHandler mockHandler = mock(MessageHandler.class);
-    private ReceiverEndPoint endPoint = new ReceiverEndPoint(mockChannel, 16 * 1024, mockHandler, ID);
+    private Session mockSession = mock(Session.class);
+    private ReceiverEndPoint endPoint = new ReceiverEndPoint(mockChannel, 16 * 1024, mockHandler, ID, mockSession);
 
     @Test
     public void shouldHandleValidFixMessageInOneGo()
