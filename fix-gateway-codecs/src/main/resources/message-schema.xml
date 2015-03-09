@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sbe:messageSchema xmlns:sbe="http://www.fixprotocol.org/ns/simple/1.0"
+                   package="uk.co.real_logic.fix_gateway.messages"
+                   id="666"
+                   version="0"
+                   semanticVersion="0.1"
+                   description="Internal messaging format used by the FIX Gateway"
+                   byteOrder="littleEndian">
+    <types>
+        <composite name="messageHeader" description="Message identifiers and length of message root">
+            <type name="blockLength" primitiveType="uint16"/>
+            <type name="templateId" primitiveType="uint16"/>
+            <type name="schemaId" primitiveType="uint16"/>
+            <type name="version" primitiveType="uint16"/>
+        </composite>
+        <composite name="varDataEncoding">
+            <type name="length" primitiveType="uint8"/>
+            <type name="varData" primitiveType="uint8" length="0"/>
+        </composite>
+    </types>
+    <types>
+        <type name="SessionId" primitiveType="int64"/>
+        <type name="TermId" primitiveType="int64"/>
+        <type name="MessageType" primitiveType="int32"/>
+        <type name="Timestamp" primitiveType="int64"/>
+    </types>
+    <sbe:message name="FixMessage" id="1" description="A framed FIX message">
+        <field name="messageType" id="1" type="MessageType"/>
+        <field name="session" id="2" type="SessionId"/>
+        <field name="timestamp" id="3" type="Timestamp"/>
+        <data name="body" id="4" type="varDataEncoding"/>
+    </sbe:message>
+    <sbe:message name="MessageAcknowledgement" id="2" description="An acknowledgement of a received FIX Message">
+        <field name="term" id="5" type="TermId"/>
+    </sbe:message>
+</sbe:messageSchema>

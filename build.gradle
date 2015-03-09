@@ -137,7 +137,7 @@ project(':fix-gateway-codecs') {
 
     dependencies {
         compile 'uk.co.real-logic:Agrona:0.2.1-SNAPSHOT'
-        compile 'uk.co.real-logic:sbe:1.0.3-RC2'
+        compile 'uk.co.real-logic:sbe:1.0.4-RC2-SNAPSHOT'
     }
 
     def generatedDir = file("$buildDir/generated-src")
@@ -147,6 +147,7 @@ project(':fix-gateway-codecs') {
 
     // Code Generation Configuration
     compileGeneratedJava.dependsOn 'generateCodecs'
+    compileGeneratedJava.dependsOn 'generateMessages'
     compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
 
     task (generateCodecs, type: JavaExec) {
@@ -154,6 +155,16 @@ project(':fix-gateway-codecs') {
         classpath = sourceSets.main.runtimeClasspath
         args generatedDir, 'src/main/resources/session_dictionary.xml'
         outputs.dir generatedDir
+    }
+
+    // TODO
+    task (generateMessages, type: JavaExec) {
+        main = 'uk.co.real_logic.sbe.SbeTool'
+        classpath = sourceSets.main.runtimeClasspath
+        systemProperties('sbe.output.dir': generatedDir,
+                'sbe.target.language': 'Java',
+                'sbe.validation.stop.on.error': 'true')
+        args 'src/main/resources/message-schema.xml'
     }
 
     jar {
