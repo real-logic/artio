@@ -22,53 +22,50 @@ import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
+import uk.co.real_logic.fix_gateway.util.Long2LongHashMap;
 
 public class Coordinator implements Agent
 {
     // TODO: size appropriately
     private static final int MAX_UNACKNOWLEDGED_TERMS = 10;
+    public static final int NO_SESSION_ID = -1;
 
     private final MessageHandler delegate;
-    private final IntHashSet followers;
+    private final TermAcknowledgementStrategy termAcknowledgementStrategy;
 
     private final Subscription dataSubscription;
     private final Publication controlPublication;
     private final Subscription controlSubscription;
 
+    private final Long2LongHashMap sessionToAckedTerms = new Long2LongHashMap(NO_SESSION_ID);
+    private long acknowledgedTerm = 0;
+
     // Counts of how many acknowledgements
-    private final int[] acknowledgementCounts = new int[MAX_UNACKNOWLEDGED_TERMS];
-    private int acknowledgedTermId = 0;
 
     public Coordinator(
         final ReplicationStreams replicationStreams,
         final MessageHandler delegate,
-        final IntHashSet followers)
+        final IntHashSet followers,
+        final TermAcknowledgementStrategy termAcknowledgementStrategy)
     {
         this.delegate = delegate;
-        this.followers = followers;
+        this.termAcknowledgementStrategy = termAcknowledgementStrategy;
 
         dataSubscription = replicationStreams.dataSubscription(this::onDataMessage);
         controlPublication = replicationStreams.controlPublication();
         controlSubscription = replicationStreams.controlSubscription(this::onControlMessage);
+
+        followers.forEach(follower -> sessionToAckedTerms.put(follower, 0));
     }
 
     private void onDataMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         final int termId = header.termId();
-        while (acknowledgedTermId < termId)
-        {
-            if (controlSubscription.poll(1) != 1)
-            {
-                // TODO: backoff
-            }
-        }
 
         // TODO: decode from framing message
         final int sessionId = -1;
 
         delegate.onMessage(buffer, offset, length, sessionId);
-
-        // TODO: broadcast to followers that the message was committed to the delegate
     }
 
     private void onControlMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
@@ -78,44 +75,22 @@ public class Coordinator implements Agent
         onMessageAcknowledgement(termId, header.sessionId());
     }
 
-    private void onMessageAcknowledgement(final int termId, final int sessionId)
+    public void onMessageAcknowledgement(final int newAckedterm, final int session)
     {
-        if (followers.contains(sessionId))
+        final long lastAckedTerm = sessionToAckedTerms.get(session);
+        if (lastAckedTerm != NO_SESSION_ID)
         {
-            // TODO: update to be a sessionId -> max position map - Long2LongHashMap
-            // TODO: apply strategy to get the new acknowledged term id
-            // TODO: read from data stream up to acknowledged term id
-            // TODO: add pollToPosition(termId);
-
-            if (termId < acknowledgedTermId)
+            if (newAckedterm > lastAckedTerm)
             {
-                // their vote was too slow to matter.
-                return;
-            }
+                sessionToAckedTerms.put(session, newAckedterm);
 
-            if (termId > acknowledgedTermId + MAX_UNACKNOWLEDGED_TERMS)
-            {
-                // TODO: error - we've fallen behind, the cluster is running too slowly.
-            }
-
-            // TODO: figure out if the message should be a batch update, or a single acknowledgement
-            acknowledgementCounts[index(termId)]++;
-
-            // scan and update the acknowledgedTermId
-            while (true)
-            {
-                final int termIermIndex = index(acknowledgedTermId + 1);
-                final int countAtNextTermId = acknowledgementCounts[termIermIndex];
-                // TODO: strategy
-                final boolean sufficientAcknowledgements = countAtNextTermId == followers.size();
-                if (sufficientAcknowledgements)
+                final long newAcknowledgedTerm = termAcknowledgementStrategy.findAckedTerm(sessionToAckedTerms);
+                if (newAcknowledgedTerm > acknowledgedTerm)
                 {
-                    acknowledgedTermId++;
-                    acknowledgementCounts[termIermIndex] = 0;
-                }
-                else
-                {
-                    break;
+                    // TODO: dataSubscription.pollToPosition(newAcknowledgedTerm);
+                    acknowledgedTerm = newAcknowledgedTerm;
+
+                    // TODO: broadcast to followers that the message was committed to the delegate
                 }
             }
         }
@@ -125,25 +100,10 @@ public class Coordinator implements Agent
         }
     }
 
-    private boolean acknowledgedNextTerm()
-    {
-        final int termIermIndex = index(acknowledgedTermId + 1);
-        final int countAtNextTermId = acknowledgementCounts[termIermIndex];
-        // TODO: strategy
-        final boolean haveUpdated = countAtNextTermId == followers.size();
-        return haveUpdated;
-    }
-
-    private int index(final int termId)
-    {
-        return termId % MAX_UNACKNOWLEDGED_TERMS;
-    }
-
     public int doWork() throws Exception
     {
         // TODO: some batch
         return controlSubscription.poll(10);
-        //return dataSubscription.poll(1);
     }
 
     public void onClose()
