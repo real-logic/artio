@@ -50,5 +50,11 @@ public abstract class AbstractSessionTest
         assertEquals(state, session().state());
     }
 
+    public void onLogon(final int msgSeqNo)
+    {
+        session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID);
+        session().onMessage(msgSeqNo);
+    }
+
     protected abstract Session session();
 }

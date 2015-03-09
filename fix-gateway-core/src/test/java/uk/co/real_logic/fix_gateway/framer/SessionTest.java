@@ -24,7 +24,11 @@ import static uk.co.real_logic.fix_gateway.framer.SessionState.AWAITING_RESEND;
 
 public class SessionTest extends AbstractSessionTest
 {
-    private Session session = new Session(HEARTBEAT_INTERVAL, CONNECTION_ID, mockClock, ACTIVE, mockProxy);
+    private Session session = new Session(HEARTBEAT_INTERVAL, CONNECTION_ID, mockClock, ACTIVE, mockProxy) {
+        public void onLogon(final long heartbeatInterval, final int msgSeqNo, final long sessionId)
+        {
+        }
+    };
 
     @Test
     public void shouldReplyToValidLogout()

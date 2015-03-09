@@ -66,12 +66,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
         verifyDisconnect();
     }
 
-    public void onLogon(final int msgSeqNo)
-    {
-        session.onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID);
-        session.onMessage(msgSeqNo);
-    }
-
     protected Session session()
     {
         return session;

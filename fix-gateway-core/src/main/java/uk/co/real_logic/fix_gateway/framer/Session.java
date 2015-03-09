@@ -24,7 +24,7 @@ import static uk.co.real_logic.fix_gateway.framer.SessionState.DISCONNECTED;
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound
  */
-public class Session
+public abstract class Session
 {
     public static final long UNKNOWN = -1;
 
@@ -79,6 +79,8 @@ public class Session
             }
         }
     }
+
+    public abstract void onLogon(final long heartbeatInterval, final int msgSeqNo, final long sessionId);
 
     public void onLogout(final int msgSeqNo, final long sessionId)
     {
@@ -138,6 +140,11 @@ public class Session
         {
             lastMsgSeqNum(newSeqNo - 1);
         }
+    }
+
+    public void onResendRequest(final int beginSeqNo, final int endSeqNo)
+    {
+        // TODO: decide how to resend messages once logging is figured out
     }
 
     public void poll()

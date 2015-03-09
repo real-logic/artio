@@ -17,6 +17,8 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
+import static uk.co.real_logic.fix_gateway.framer.SessionState.ACTIVE;
+import static uk.co.real_logic.fix_gateway.framer.SessionState.CONNECTED;
 import static uk.co.real_logic.fix_gateway.framer.SessionState.CONNECTING;
 
 public final class InitiatorSession extends Session
@@ -30,13 +32,16 @@ public final class InitiatorSession extends Session
         super(heartbeatInterval, connectionId, clock, CONNECTING, proxy);
     }
 
-    public void onResendRequest()
+    public void onLogon(final long heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
-
+        if (msgSeqNo == expectedSeqNo())
+        {
+            state(ACTIVE);
+        }
     }
 
-    public void onLogin()
+    public void connected()
     {
-
+        state(CONNECTED);
     }
 }

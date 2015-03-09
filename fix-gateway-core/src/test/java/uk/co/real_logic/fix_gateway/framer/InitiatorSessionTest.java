@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.framer;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static uk.co.real_logic.fix_gateway.framer.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.framer.SessionState.CONNECTING;
 
 public class InitiatorSessionTest extends AbstractSessionTest
@@ -28,6 +29,27 @@ public class InitiatorSessionTest extends AbstractSessionTest
     public void shouldInitiallyBeConnecting()
     {
         assertEquals(CONNECTING, session.state());
+    }
+
+    @Test
+    public void shouldActivateUponLogonResponse()
+    {
+        session.connected();
+
+        onLogon(1);
+
+        assertState(ACTIVE);
+    }
+
+    @Test
+    public void shouldDisconnectIfLowSeqNo()
+    {
+        session.connected();
+        session.lastMsgSeqNum(5);
+
+        onLogon(1);
+
+        verifyDisconnect();
     }
 
     protected Session session()
