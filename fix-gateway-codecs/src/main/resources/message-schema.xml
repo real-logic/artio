@@ -19,14 +19,14 @@
         </composite>
     </types>
     <types>
-        <type name="SessionId" primitiveType="int64"/>
-        <type name="TermId" primitiveType="int64"/>
+        <type name="FixSessionId" primitiveType="int64"/>
+        <type name="TermId" primitiveType="int32"/>
         <type name="MessageType" primitiveType="int32"/>
         <type name="Timestamp" primitiveType="int64"/>
     </types>
     <sbe:message name="FixMessage" id="1" description="A framed FIX message">
         <field name="messageType" id="1" type="MessageType"/>
-        <field name="session" id="2" type="SessionId"/>
+        <field name="session" id="2" type="FixSessionId"/>
         <field name="timestamp" id="3" type="Timestamp"/>
         <data name="body" id="4" type="varDataEncoding"/>
     </sbe:message>

@@ -20,15 +20,23 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.Agent;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
+import uk.co.real_logic.fix_gateway.messages.FixMessage;
+import uk.co.real_logic.fix_gateway.messages.MessageAcknowledgement;
+import uk.co.real_logic.fix_gateway.messages.MessageHeader;
 import uk.co.real_logic.fix_gateway.util.IntHashSet;
 import uk.co.real_logic.fix_gateway.util.Long2LongHashMap;
 
+import static uk.co.real_logic.fix_gateway.messages.MessageAcknowledgement.SCHEMA_VERSION;
+
 public class Coordinator implements Agent
 {
-    // TODO: size appropriately
-    private static final int MAX_UNACKNOWLEDGED_TERMS = 10;
     public static final int NO_SESSION_ID = -1;
+
+    private final MessageHeader messageHeader = new MessageHeader();
+    private final MessageAcknowledgement messageAcknowledgement = new MessageAcknowledgement();
+    private final FixMessage fixMessage = new FixMessage();
 
     private final MessageHandler delegate;
     private final TermAcknowledgementStrategy termAcknowledgementStrategy;
@@ -60,19 +68,27 @@ public class Coordinator implements Agent
 
     private void onDataMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        final int termId = header.termId();
+        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) buffer;
+        fixMessage.wrapForDecode(unsafeBuffer, offset, length, SCHEMA_VERSION);
 
-        // TODO: decode from framing message
-        final int sessionId = -1;
-
-        delegate.onMessage(buffer, offset, length, sessionId);
+        final long fixSessionId = fixMessage.session();
+        delegate.onMessage(buffer, offset, length, fixSessionId);
     }
 
     private void onControlMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        // TODO: decode message
-        int termId = -1;
-        onMessageAcknowledgement(termId, header.sessionId());
+        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) buffer;
+        if (isTemplate(offset, unsafeBuffer, MessageAcknowledgement.TEMPLATE_ID))
+        {
+            messageAcknowledgement.wrapForDecode(unsafeBuffer, offset, length, SCHEMA_VERSION);
+            onMessageAcknowledgement(messageAcknowledgement.term(), header.sessionId());
+        }
+    }
+
+    private boolean isTemplate(final int offset, final UnsafeBuffer unsafeBuffer, final int templateId)
+    {
+        messageHeader.wrap(unsafeBuffer, offset, 0);
+        return messageHeader.templateId() == templateId;
     }
 
     public void onMessageAcknowledgement(final int newAckedterm, final int session)
