@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer;
+package uk.co.real_logic.fix_gateway.framer.session;
 
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import static uk.co.real_logic.fix_gateway.framer.SessionState.ACTIVE;
-import static uk.co.real_logic.fix_gateway.framer.SessionState.CONNECTING;
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.CONNECTING;
 
 public class InitiatorSessionTest extends AbstractSessionTest
 {

@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer;
+package uk.co.real_logic.fix_gateway.framer.session;
 
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
-import static uk.co.real_logic.fix_gateway.framer.SessionState.AWAITING_RESEND;
-import static uk.co.real_logic.fix_gateway.framer.SessionState.CONNECTED;
-import static uk.co.real_logic.fix_gateway.framer.SessionState.DISCONNECTED;
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.AWAITING_RESEND;
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.CONNECTED;
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.DISCONNECTED;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound

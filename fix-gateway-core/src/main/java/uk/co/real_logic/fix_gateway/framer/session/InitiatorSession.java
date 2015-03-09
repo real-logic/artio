@@ -13,13 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer;
+package uk.co.real_logic.fix_gateway.framer.session;
 
 import uk.co.real_logic.fix_gateway.util.MilliClock;
-
-import static uk.co.real_logic.fix_gateway.framer.SessionState.ACTIVE;
-import static uk.co.real_logic.fix_gateway.framer.SessionState.CONNECTED;
-import static uk.co.real_logic.fix_gateway.framer.SessionState.CONNECTING;
 
 public final class InitiatorSession extends Session
 {
@@ -29,19 +25,19 @@ public final class InitiatorSession extends Session
         final MilliClock clock,
         final SessionProxy proxy)
     {
-        super(heartbeatInterval, connectionId, clock, CONNECTING, proxy);
+        super(heartbeatInterval, connectionId, clock, SessionState.CONNECTING, proxy);
     }
 
     public void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
         if (msgSeqNo == expectedSeqNo())
         {
-            state(ACTIVE);
+            state(SessionState.ACTIVE);
         }
     }
 
     public void connected()
     {
-        state(CONNECTED);
+        state(SessionState.CONNECTED);
     }
 }

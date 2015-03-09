@@ -13,11 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer;
+package uk.co.real_logic.fix_gateway.framer.session;
+
+import uk.co.real_logic.fix_gateway.framer.FakeMilliClock;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.framer.SessionState.DISCONNECTED;
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.DISCONNECTED;
 
 public abstract class AbstractSessionTest
 {
