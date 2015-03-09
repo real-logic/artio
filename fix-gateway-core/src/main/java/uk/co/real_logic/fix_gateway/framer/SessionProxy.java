@@ -15,11 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
+
 /**
  * Encapsulates sending messages relating to sessions
  */
 public class SessionProxy
 {
+    private final LogonEncoder logon = new LogonEncoder();
+
     public void resendRequest(final int beginSeqNo, final int endSeqNo)
     {
 
@@ -30,9 +34,10 @@ public class SessionProxy
 
     }
 
-    public void logon(final long heartbeatInterval, final int msgSeqNo, final long sessionId)
+    public void logon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
-
+        logon.header().msgSeqNum(msgSeqNo);
+        logon.heartBtInt(heartbeatInterval);
     }
 
     public void logout(final int msgSeqNo, final long sessionId)

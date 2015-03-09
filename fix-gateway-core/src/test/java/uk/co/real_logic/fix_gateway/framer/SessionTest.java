@@ -25,7 +25,7 @@ import static uk.co.real_logic.fix_gateway.framer.SessionState.AWAITING_RESEND;
 public class SessionTest extends AbstractSessionTest
 {
     private Session session = new Session(HEARTBEAT_INTERVAL, CONNECTION_ID, mockClock, ACTIVE, mockProxy) {
-        public void onLogon(final long heartbeatInterval, final int msgSeqNo, final long sessionId)
+        public void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
         {
         }
     };
@@ -127,7 +127,7 @@ public class SessionTest extends AbstractSessionTest
 
         session.onMessage(10);
 
-        currentTime += HEARTBEAT_INTERVAL * 2;
+        mockClock.advanceSeconds(HEARTBEAT_INTERVAL * 2);
 
         session.poll();
 
@@ -142,12 +142,12 @@ public class SessionTest extends AbstractSessionTest
 
         session.onMessage(10);
 
-        currentTime += 1;
+        mockClock.advanceSeconds(1);
 
         session.poll();
         session.onMessage(11);
 
-        currentTime += 1;
+        mockClock.advanceSeconds(1);
 
         session.poll();
 

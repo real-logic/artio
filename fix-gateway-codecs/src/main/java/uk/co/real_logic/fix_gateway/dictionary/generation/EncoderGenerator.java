@@ -46,19 +46,19 @@ public class EncoderGenerator
         "%s";
 
     private static final String COMMON_COMPOUNDS =
-        "    private Header header = new Header();\n\n" +
-        "    public Header header() {\n" +
+        "    private HeaderEncoder header = new HeaderEncoder();\n\n" +
+        "    public HeaderEncoder header() {\n" +
         "        return header;\n" +
         "    }\n\n" +
 
-        "    private Trailer trailer = new Trailer();\n\n" +
-        "    public Trailer trailer() {\n" +
+        "    private TrailerEncoder trailer = new TrailerEncoder();\n\n" +
+        "    public TrailerEncoder trailer() {\n" +
         "        return trailer;\n" +
         "    }\n\n";
 
     private static final String COMMON_COMPOUND_IMPORTS =
-        "import %1$s.Header;\n" +
-        "import %1$s.Trailer;\n";
+        "import %1$s.HeaderEncoder;\n" +
+        "import %1$s.TrailerEncoder;\n";
 
     private static final String TRAILER_PREFIX =
         "    public int encode(final MutableAsciiFlyweight buffer, final int offset)\n" +
@@ -107,7 +107,7 @@ public class EncoderGenerator
 
     private void generateAggregate(final Aggregate message, final AggregateType aggregateType)
     {
-        final String className = message.name();
+        final String className = message.name() + "Encoder";
         final boolean hasCommonCompounds = aggregateType == AggregateType.MESSAGE;
 
         try (final Writer out = outputManager.createOutput(className))
@@ -149,7 +149,7 @@ public class EncoderGenerator
                                                  dictionary.majorVersion(), dictionary.minorVersion()) : "";
 
         return String.format(
-            "    public %s()\n" +
+            "    public %sEncoder()\n" +
             "    {\n" +
             "%s" +
             "%s" +

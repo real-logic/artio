@@ -34,9 +34,9 @@ public final class ExampleDictionary
 {
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
     public static final String TEST_PACKAGE = BUILDER_PACKAGE + ".test";
-    public static final String HEARTBEAT = TEST_PACKAGE + ".Heartbeat";
-    public static final String HEADER = TEST_PACKAGE + ".Header";
-    public static final String TRAILER = TEST_PACKAGE + ".Trailer";
+    public static final String HEARTBEAT = TEST_PACKAGE + ".HeartbeatEncoder";
+    public static final String HEADER = TEST_PACKAGE + ".HeaderEncoder";
+    public static final String TRAILER = TEST_PACKAGE + ".TrailerEncoder";
 
     public static final DataDictionary FIELD_EXAMPLE;
 

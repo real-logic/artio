@@ -23,19 +23,19 @@ public final class AcceptorSession extends Session
 {
 
     public AcceptorSession(
-        final long defaultInterval, final long connectionId, final MilliClock clock, final SessionProxy proxy)
+        final int defaultInterval, final long connectionId, final MilliClock clock, final SessionProxy proxy)
     {
         super(defaultInterval, connectionId, clock, CONNECTED, proxy);
     }
 
-    public void onLogon(final long heartbeatInterval, final int msgSeqNo, final long sessionId)
+    public void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
         id(sessionId);
 
         final int expectedSeqNo = expectedSeqNo();
         if (expectedSeqNo == msgSeqNo)
         {
-            heartbeatInterval(heartbeatInterval);
+            heartbeatIntervalInMs(heartbeatInterval);
             state(ACTIVE);
             proxy.logon(heartbeatInterval, msgSeqNo + 1, sessionId);
         }

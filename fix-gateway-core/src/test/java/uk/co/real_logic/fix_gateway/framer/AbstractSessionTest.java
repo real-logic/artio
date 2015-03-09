@@ -15,24 +15,19 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
-import uk.co.real_logic.fix_gateway.util.MilliClock;
-
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.framer.SessionState.DISCONNECTED;
 
 public abstract class AbstractSessionTest
 {
     public static final long CONNECTION_ID = 3L;
     public static final long SESSION_ID = 2L;
-    public static final long HEARTBEAT_INTERVAL = 2L;
+    public static final int HEARTBEAT_INTERVAL = 2;
 
     protected SessionProxy mockProxy = mock(SessionProxy.class);
 
-    protected long currentTime = 0;
-    protected MilliClock mockClock = () -> currentTime;
+    protected FakeMilliClock mockClock = new FakeMilliClock();
 
     public void verifyNoMessages()
     {

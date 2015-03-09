@@ -33,23 +33,23 @@ public abstract class Session
     protected final SessionProxy proxy;
     protected final long connectionId;
 
-    private long heartbeatInterval;
+    private long heartbeatIntervalInMs;
     private long nextRequiredMessageTime;
     private SessionState state;
     private long id = UNKNOWN;
     private int lastMsgSeqNum = 0;
 
     public Session(
-            final long heartbeatInterval,
+            final int heartbeatIntervalInS,
             final long connectionId,
             final MilliClock clock,
             final SessionState state,
             final SessionProxy proxy)
     {
-        this.heartbeatInterval = heartbeatInterval;
+        heartbeatIntervalInMs(heartbeatIntervalInS);
         this.clock = clock;
         this.proxy = proxy;
-        this.nextRequiredMessageTime = clock.time() + heartbeatInterval;
+        this.nextRequiredMessageTime = clock.time() + heartbeatIntervalInMs;
         this.connectionId = connectionId;
         this.state = state;
     }
@@ -65,7 +65,7 @@ public abstract class Session
             final int expectedSeqNo = expectedSeqNo();
             if (expectedSeqNo == msgSeqNo)
             {
-                nextRequiredMessageTime(time() + heartbeatInterval());
+                nextRequiredMessageTime(time() + heartbeatIntervalInMs());
                 lastMsgSeqNum(msgSeqNo);
             }
             else if (expectedSeqNo < msgSeqNo)
@@ -80,7 +80,7 @@ public abstract class Session
         }
     }
 
-    public abstract void onLogon(final long heartbeatInterval, final int msgSeqNo, final long sessionId);
+    public abstract void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId);
 
     public void onLogout(final int msgSeqNo, final long sessionId)
     {
@@ -161,9 +161,9 @@ public abstract class Session
         state(DISCONNECTED);
     }
 
-    public long heartbeatInterval()
+    public long heartbeatIntervalInMs()
     {
-        return this.heartbeatInterval;
+        return this.heartbeatIntervalInMs;
     }
 
     public long nextRequiredMessageTime()
@@ -176,9 +176,9 @@ public abstract class Session
         return this.state;
     }
 
-    public Session heartbeatInterval(final long heartbeatInterval)
+    public Session heartbeatIntervalInMs(final int heartbeatIntervalInS)
     {
-        this.heartbeatInterval = heartbeatInterval;
+        this.heartbeatIntervalInMs = MilliClock.fromSeconds(heartbeatIntervalInS);
         return this;
     }
 

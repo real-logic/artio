@@ -13,23 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.util;
+package uk.co.real_logic.fix_gateway.framer;
 
-/**
- * Functional interface for return the current time as system wide monotonic tick of 1 millisecond precision.
- */
-@FunctionalInterface
-public interface MilliClock
+import uk.co.real_logic.fix_gateway.util.MilliClock;
+
+public class FakeMilliClock implements MilliClock
 {
-    static long fromSeconds(long timeInSeconds)
+    private long time;
+
+    public FakeMilliClock()
     {
-        return timeInSeconds * 1000;
+        time = 0;
     }
 
-    /**
-     * The number of ticks in millisecond the clock has advanced since starting.
-     *
-     * @return number of ticks in millisecond the clock has advanced since starting.
-     */
-    long time();
+    public void advanceSeconds(final int timeInSeconds)
+    {
+        advanceMilliSeconds(MilliClock.fromSeconds(timeInSeconds));
+    }
+
+    public void advanceMilliSeconds(final long duration)
+    {
+        time += duration;
+    }
+
+    public long time()
+    {
+        return time;
+    }
 }

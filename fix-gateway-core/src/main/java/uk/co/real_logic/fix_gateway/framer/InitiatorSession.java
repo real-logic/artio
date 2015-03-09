@@ -24,7 +24,7 @@ import static uk.co.real_logic.fix_gateway.framer.SessionState.CONNECTING;
 public final class InitiatorSession extends Session
 {
     public InitiatorSession(
-        final long heartbeatInterval,
+        final int heartbeatInterval,
         final long connectionId,
         final MilliClock clock,
         final SessionProxy proxy)
@@ -32,7 +32,7 @@ public final class InitiatorSession extends Session
         super(heartbeatInterval, connectionId, clock, CONNECTING, proxy);
     }
 
-    public void onLogon(final long heartbeatInterval, final int msgSeqNo, final long sessionId)
+    public void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
         if (msgSeqNo == expectedSeqNo())
         {
