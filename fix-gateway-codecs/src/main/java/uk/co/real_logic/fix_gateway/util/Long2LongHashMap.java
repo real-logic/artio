@@ -28,7 +28,9 @@ public class Long2LongHashMap implements Map<Long, Long>
 
     private final double loadFactor;
     private final long missingValue;
+    private final LongIterator keyIterator = new LongIterator(0);
     private final Set<Long> keySet;
+    private final LongIterator valueIterator = new LongIterator(1);
     private final Collection<Long> values;
     private final Set<Entry<Long, Long>> entrySet;
     private final LongLongConsumer putFunc = this::put;
@@ -52,10 +54,7 @@ public class Long2LongHashMap implements Map<Long, Long>
 
         capacity(BitUtil.findNextPositivePowerOfTwo(initialCapacity));
 
-        final LongIterator keyIterator = new LongIterator(0);
         keySet = new MapDelegatingSet<>(this, keyIterator::reset, this::containsValue);
-
-        final LongIterator valueIterator = new LongIterator(1);
         values = new MapDelegatingSet<>(this, valueIterator::reset, this::containsKey);
 
         final EntryIterator entryIterator = new EntryIterator();
@@ -359,6 +358,18 @@ public class Long2LongHashMap implements Map<Long, Long>
         }
     }
 
+    public long minValue()
+    {
+        long min = Long.MAX_VALUE;
+
+        final LongIterator iterator = valueIterator.reset();
+        while (iterator.hasNext())
+        {
+            min = Math.min(min, iterator.nextValue());
+        }
+        return min;
+    }
+
     // ---------------- Utility Classes ----------------
 
     private abstract class AbstractIterator
@@ -409,6 +420,11 @@ public class Long2LongHashMap implements Map<Long, Long>
         }
 
         public Long next()
+        {
+            return Long.valueOf(nextValue());
+        }
+
+        public long nextValue()
         {
             final long entry = entries[index];
             nextIndex();

@@ -22,6 +22,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.IntStream;
 
+import static java.lang.Long.MAX_VALUE;
 import static org.hamcrest.Matchers.hasItems;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.inOrder;
@@ -246,6 +247,22 @@ public class Long2LongHashMapTest
                  });
     }
 
+    @Test
+    public void shouldHaveNoMinValueForEmptyCollection()
+    {
+        assertEquals(MAX_VALUE, map.minValue());
+    }
+
+    @Test
+    public void shouldFindMinValue()
+    {
+        map.put(1, 2);
+        map.put(2, 10);
+        map.put(3, -5);
+
+        assertEquals(-5, map.minValue());
+    }
+
     private void assertEntryIs(final Entry<Long, Long> entry, final long expectedKey, final long expectedValue)
     {
         assertEquals(expectedKey, entry.getKey().longValue());
@@ -263,4 +280,5 @@ public class Long2LongHashMapTest
 
         assertThat("iterator has failed to be reset", keys, hasItems(1L, 2L));
     }
+
 }
