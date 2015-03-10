@@ -38,15 +38,6 @@ import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class EncoderGeneratorTest
 {
-    private static final String VALUE = "abc";
-    private static final byte[] VALUE_IN_BYTES = {97, 98, 99};
-    private static final String TEST_REQ_ID = "testReqID";
-    private static final String INT_FIELD = "intField";
-    private static final String FLOAT_FIELD = "floatField";
-    private static final String BOOLEAN_FIELD = "booleanField";
-    private static final String DATA_FIELD = "dataField";
-    private static final String TEST_REQ_ID_LENGTH = "testReqIDLength";
-    private static final String HAS_TEST_REQ_ID = "hasTestReqID";
 
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
     private static EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, 3, TEST_PACKAGE, outputManager);
@@ -61,8 +52,8 @@ public class EncoderGeneratorTest
         encoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
         //System.out.println(sources);
-        heartbeat = compileInMemory(HEARTBEAT, sources);
-        headerClass = compileInMemory(HEADER, sources);
+        heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
+        headerClass = compileInMemory(HEADER_ENCODER, sources);
     }
 
     @Test

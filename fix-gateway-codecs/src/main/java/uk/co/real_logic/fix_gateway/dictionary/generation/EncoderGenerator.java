@@ -15,14 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
-import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
-import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
-import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
-import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
@@ -34,10 +30,9 @@ import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight.LONGEST_INT_LENGTH;
 
-public class EncoderGenerator
+public class EncoderGenerator extends Generator
 {
 
     private static final String SUFFIX =
@@ -56,10 +51,6 @@ public class EncoderGenerator
         "        return trailer;\n" +
         "    }\n\n";
 
-    private static final String COMMON_COMPOUND_IMPORTS =
-        "import %1$s.HeaderEncoder;\n" +
-        "import %1$s.TrailerEncoder;\n";
-
     private static final String TRAILER_PREFIX =
         "    public int encode(final MutableAsciiFlyweight buffer, final int offset)\n" +
         "    {\n"+
@@ -73,9 +64,6 @@ public class EncoderGenerator
     private final MutableAsciiFlyweight string = new MutableAsciiFlyweight(new UnsafeBuffer(buffer));
 
     private final int initialArraySize;
-    private final DataDictionary dictionary;
-    private final String builderPackage;
-    private final OutputManager outputManager;
 
     public EncoderGenerator(
         final DataDictionary dictionary,
@@ -83,29 +71,11 @@ public class EncoderGenerator
         final String builderPackage,
         final OutputManager outputManager)
     {
-        this.dictionary = dictionary;
+        super(dictionary, builderPackage, outputManager);
         this.initialArraySize = initialArraySize;
-        this.builderPackage = builderPackage;
-        this.outputManager = outputManager;
     }
 
-    private enum AggregateType
-    {
-        HEADER,
-        TRAILER,
-        MESSAGE
-    }
-
-    public void generate()
-    {
-        generateAggregate(dictionary.header(), AggregateType.HEADER);
-        generateAggregate(dictionary.trailer(), AggregateType.TRAILER);
-
-        dictionary.messages()
-                  .forEach(msg -> generateAggregate(msg, AggregateType.MESSAGE));
-    }
-
-    private void generateAggregate(final Aggregate message, final AggregateType aggregateType)
+    protected void generateAggregate(final Aggregate message, final AggregateType aggregateType)
     {
         final String className = message.name() + "Encoder";
         final boolean hasCommonCompounds = aggregateType == AggregateType.MESSAGE;
@@ -113,7 +83,7 @@ public class EncoderGenerator
         try (final Writer out = outputManager.createOutput(className))
         {
             out.append(fileHeader(builderPackage));
-            out.append(generateClassDeclaration(className, hasCommonCompounds));
+            out.append(generateClassDeclaration(className, hasCommonCompounds, Encoder.class));
             out.append(generateConstructor(message, dictionary));
             if (hasCommonCompounds)
             {
@@ -429,24 +399,6 @@ public class EncoderGenerator
             type,
             fieldName,
             optionalSuffix);
-    }
-
-    private String generateClassDeclaration(final String className, final boolean hasCommonCompounds)
-    {
-        return String.format(
-            importFor(MutableDirectBuffer.class) +
-            "import static uk.co.real_logic.fix_gateway.dictionary.generation.EncodingUtil.*;\n" +
-            importFor(Encoder.class) +
-            (hasCommonCompounds ? COMMON_COMPOUND_IMPORTS : "") +
-            importFor(DecimalFloat.class) +
-            importFor(MutableAsciiFlyweight.class) +
-            importFor(LocalMktDateEncoder.class) +
-            importFor(UtcTimestampEncoder.class) +
-            "\n" +
-            "public final class %2$s implements Encoder\n" +
-            "{\n\n",
-            builderPackage,
-            className);
     }
 
     private void generatePrecomputedHeaders(

@@ -26,17 +26,30 @@ import java.util.List;
 import java.util.Map;
 
 import static java.util.Collections.*;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.BUILDER_PACKAGE;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.ENCODER_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 
 public final class ExampleDictionary
 {
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
-    public static final String TEST_PACKAGE = BUILDER_PACKAGE + ".test";
-    public static final String HEARTBEAT = TEST_PACKAGE + ".HeartbeatEncoder";
-    public static final String HEADER = TEST_PACKAGE + ".HeaderEncoder";
-    public static final String TRAILER = TEST_PACKAGE + ".TrailerEncoder";
+    public static final String TEST_PACKAGE = ENCODER_PACKAGE + ".test";
+
+    public static final String HEARTBEAT_ENCODER = TEST_PACKAGE + ".HeartbeatEncoder";
+    public static final String HEADER_ENCODER = TEST_PACKAGE + ".HeaderEncoder";
+
+    public static final String HEARTBEAT_DECODER = TEST_PACKAGE + ".HeartbeatDecoder";
+    public static final String HEADER_DECODER = TEST_PACKAGE + ".HeaderDecoder";
+
+    public static final String VALUE = "abc";
+    public static final byte[] VALUE_IN_BYTES = {97, 98, 99};
+    public static final String TEST_REQ_ID = "testReqID";
+    public static final String INT_FIELD = "intField";
+    public static final String FLOAT_FIELD = "floatField";
+    public static final String BOOLEAN_FIELD = "booleanField";
+    public static final String DATA_FIELD = "dataField";
+    public static final String TEST_REQ_ID_LENGTH = "testReqIDLength";
+    public static final String HAS_TEST_REQ_ID = "hasTestReqID";
 
     public static final DataDictionary FIELD_EXAMPLE;
 
