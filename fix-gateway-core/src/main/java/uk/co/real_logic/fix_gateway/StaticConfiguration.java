@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
 import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 
+import java.net.InetSocketAddress;
 import java.util.stream.IntStream;
 
 /**
@@ -26,7 +27,13 @@ import java.util.stream.IntStream;
  */
 public final class StaticConfiguration
 {
+    private static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
+    private static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
+
     private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
+
+    private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
+    private int receiverBufferSize = DEFAULT_RECEIVER_BUFFER_SIZE;
 
     private String host;
     private int port;
@@ -62,4 +69,35 @@ public final class StaticConfiguration
         return this;
     }
 
+    /**
+     * The default interval for heartbeats if not exchanged upon logon. Specified in seconds.
+     *
+     * @return this
+     */
+    public StaticConfiguration defaultHeartbeatInterval(final int value)
+    {
+        defaultHeartbeatInterval = value;
+        return this;
+    }
+
+    int defaultHeartbeatInterval()
+    {
+        return defaultHeartbeatInterval;
+    }
+
+    public StaticConfiguration receiverBufferSize(final int value)
+    {
+        receiverBufferSize = value;
+        return this;
+    }
+
+    int receiverBufferSize()
+    {
+        return receiverBufferSize;
+    }
+
+    InetSocketAddress bindAddress()
+    {
+        return new InetSocketAddress(host, port);
+    }
 }

@@ -1,13 +1,14 @@
 package uk.co.real_logic.fix_gateway.framer.commands;
 
-import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
+
+import java.util.Queue;
 
 public class ReceiverProxy
 {
-    private final OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue;
+    private final Queue<ReceiverCommand> commandQueue;
 
-    public ReceiverProxy(final OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue)
+    public ReceiverProxy(final Queue<ReceiverCommand> commandQueue)
     {
         this.commandQueue = commandQueue;
     }
