@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import uk.co.real_logic.aeron.common.AgentRunner;
+import uk.co.real_logic.aeron.common.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.framer.*;
 import uk.co.real_logic.fix_gateway.framer.commands.ReceiverCommand;
@@ -30,6 +32,8 @@ public final class FixGateway implements AutoCloseable
     private final ReceiverProxy receiverProxy;
     private final Sender sender;
     private final Receiver receiver;
+    private final AgentRunner senderRunner;
+    private final AgentRunner receiverRunner;
 
     private InitiatorSession addedSession;
 
@@ -59,11 +63,32 @@ public final class FixGateway implements AutoCloseable
 
         sender = new Sender(senderCommands, handler, receiverProxy, multiplexer);
         receiver = new Receiver(configuration.bindAddress(), handler, receiverCommands, senderProxy);
+
+        senderRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sender);
+        receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, receiver);
+    }
+
+    private BackoffIdleStrategy backoffIdleStrategy()
+    {
+        return new BackoffIdleStrategy(0, 0, 1, 1000);
     }
 
     public static FixGateway launch(final StaticConfiguration configuration)
     {
-        return new FixGateway(configuration);
+        return new FixGateway(configuration).start();
+    }
+
+    private FixGateway start()
+    {
+        start(senderRunner);
+        return this;
+    }
+
+    private void start(final AgentRunner runner)
+    {
+        Thread thread = new Thread(runner);
+        thread.setName(runner.agent().roleName());
+        thread.start();
     }
 
     // TODO: figure out correct type for dictionary
@@ -74,6 +99,11 @@ public final class FixGateway implements AutoCloseable
 
     public synchronized void close() throws Exception
     {
+        senderRunner.close();
+        receiverRunner.close();
+
+        sender.onClose();
+        receiver.onClose();
     }
 
     public void onInitiatorSessionConnected(final InitiatorSession session)
