@@ -17,8 +17,9 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.aeron.common.Agent;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
-import uk.co.real_logic.fix_gateway.framer.commands.ReceiverProxy;
-import uk.co.real_logic.fix_gateway.framer.commands.SenderCommand;
+import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
+import uk.co.real_logic.fix_gateway.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
 import java.io.IOException;
@@ -36,17 +37,20 @@ public final class Sender implements Agent
     private final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue;
     private final ConnectionHandler connectionHandler;
     private final ReceiverProxy receiver;
+    private final FixGateway gateway;
     private final Multiplexer multiplexer;
 
     public Sender(
         final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue,
         final ConnectionHandler connectionHandler,
         final ReceiverProxy receiver,
+        final FixGateway gateway,
         final Multiplexer multiplexer)
     {
         this.commandQueue = commandQueue;
         this.connectionHandler = connectionHandler;
         this.receiver = receiver;
+        this.gateway = gateway;
         this.multiplexer = multiplexer;
     }
 
@@ -72,6 +76,7 @@ public final class Sender implements Agent
             onNewAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
             final InitiatorSession session = connectionHandler.initiatorSession(connectionId);
             receiver.newInitiatedConnection(connectionHandler.receiverEndPoint(channel, connectionId, session));
+            gateway.onInitiatorSessionConnected(session);
         }
         catch (final IOException ex)
         {

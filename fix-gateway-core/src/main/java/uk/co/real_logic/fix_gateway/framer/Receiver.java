@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.aeron.common.Agent;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
-import uk.co.real_logic.fix_gateway.framer.commands.ReceiverCommand;
-import uk.co.real_logic.fix_gateway.framer.commands.SenderProxy;
+import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
+import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.framer.session.AcceptorSession;
 
 import java.io.IOException;

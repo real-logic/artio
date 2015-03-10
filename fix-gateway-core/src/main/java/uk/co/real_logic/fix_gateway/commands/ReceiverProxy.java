@@ -1,4 +1,4 @@
-package uk.co.real_logic.fix_gateway.framer.commands;
+package uk.co.real_logic.fix_gateway.commands;
 
 import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
 

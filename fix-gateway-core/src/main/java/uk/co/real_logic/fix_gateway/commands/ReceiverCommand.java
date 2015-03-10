@@ -13,22 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer.commands;
+package uk.co.real_logic.fix_gateway.commands;
 
-import uk.co.real_logic.fix_gateway.FixGateway;
-import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
+import uk.co.real_logic.fix_gateway.framer.Receiver;
 
-class InitiatedSessionConnected implements FixGatewayCommand
+public interface ReceiverCommand
 {
-    private final InitiatorSession session;
-
-    InitiatedSessionConnected(final InitiatorSession session)
-    {
-        this.session = session;
-    }
-
-    public void execute(final FixGateway gateway)
-    {
-        gateway.onInitiatorSessionConnected(session);
-    }
+    void execute(Receiver receiver);
 }

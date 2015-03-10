@@ -21,7 +21,7 @@ import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.CONNECTING;
 
-public final class InitiatorSession extends Session
+public class InitiatorSession extends Session
 {
     public InitiatorSession(
         final int heartbeatInterval,

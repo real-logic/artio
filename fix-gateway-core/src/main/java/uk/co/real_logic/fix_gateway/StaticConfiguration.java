@@ -29,11 +29,13 @@ public final class StaticConfiguration
 {
     private static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
     private static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
+    private static final long DEFAULT_CONNECTION_TIMEOUT = 1000;
 
     private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
 
     private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
     private int receiverBufferSize = DEFAULT_RECEIVER_BUFFER_SIZE;
+    private long connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
 
     private String host;
     private int port;
@@ -99,5 +101,10 @@ public final class StaticConfiguration
     InetSocketAddress bindAddress()
     {
         return new InetSocketAddress(host, port);
+    }
+
+    long connectionTimeout()
+    {
+        return connectionTimeout;
     }
 }

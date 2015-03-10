@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer.commands;
+package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.fix_gateway.framer.Sender;
-
-public interface SenderCommand
+public class ConnectionTimeoutException extends RuntimeException
 {
-    void execute(Sender sender);
+    public ConnectionTimeoutException(final String message)
+    {
+        super(message);
+    }
 }

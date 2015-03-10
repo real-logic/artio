@@ -13,23 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer.commands;
+package uk.co.real_logic.fix_gateway.commands;
 
-import uk.co.real_logic.fix_gateway.framer.Receiver;
-import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
+import uk.co.real_logic.fix_gateway.framer.Sender;
+import uk.co.real_logic.fix_gateway.framer.SenderEndPoint;
 
-final class NewInitiatedConnection implements ReceiverCommand
+final class NewAcceptedConnection implements SenderCommand
 {
-    private final ReceiverEndPoint endPoint;
+    private final SenderEndPoint senderEndPoint;
 
-    NewInitiatedConnection(final ReceiverEndPoint endPoint)
+    NewAcceptedConnection(final SenderEndPoint senderEndPoint)
     {
-        this.endPoint = endPoint;
+        this.senderEndPoint = senderEndPoint;
     }
 
     @Override
-    public void execute(final Receiver receiver)
+    public void execute(final Sender sender)
     {
-        receiver.onNewInitiatedConnection(endPoint);
+        sender.onNewAcceptedConnection(senderEndPoint);
     }
 }

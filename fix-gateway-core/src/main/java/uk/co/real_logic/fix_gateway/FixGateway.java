@@ -18,15 +18,18 @@ package uk.co.real_logic.fix_gateway;
 import uk.co.real_logic.aeron.common.AgentRunner;
 import uk.co.real_logic.aeron.common.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
+import uk.co.real_logic.agrona.concurrent.Signal;
 import uk.co.real_logic.fix_gateway.framer.*;
-import uk.co.real_logic.fix_gateway.framer.commands.ReceiverCommand;
-import uk.co.real_logic.fix_gateway.framer.commands.ReceiverProxy;
-import uk.co.real_logic.fix_gateway.framer.commands.SenderCommand;
-import uk.co.real_logic.fix_gateway.framer.commands.SenderProxy;
+import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
+import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
+import uk.co.real_logic.fix_gateway.commands.SenderCommand;
+import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.SessionProxy;
 
-public final class FixGateway implements AutoCloseable
+import java.net.InetSocketAddress;
+
+public class FixGateway implements AutoCloseable
 {
     private final SenderProxy senderProxy;
     private final ReceiverProxy receiverProxy;
@@ -34,12 +37,16 @@ public final class FixGateway implements AutoCloseable
     private final Receiver receiver;
     private final AgentRunner senderRunner;
     private final AgentRunner receiverRunner;
+    private final Signal signal = new Signal();
+    private final long connectionTimeout;
 
     private InitiatorSession addedSession;
 
-    private FixGateway(final StaticConfiguration configuration)
+    FixGateway(final StaticConfiguration configuration)
     {
-        // TODO: do we really need to make this an MPSC queue?
+        connectionTimeout = configuration.connectionTimeout();
+
+        // TODO: MPSC queue?
         final OneToOneConcurrentArrayQueue<SenderCommand> senderCommands = new OneToOneConcurrentArrayQueue<>(10);
         final OneToOneConcurrentArrayQueue<ReceiverCommand> receiverCommands = new OneToOneConcurrentArrayQueue<>(10);
 
@@ -61,7 +68,7 @@ public final class FixGateway implements AutoCloseable
             configuration.defaultHeartbeatInterval(),
             messageHandler);
 
-        sender = new Sender(senderCommands, handler, receiverProxy, multiplexer);
+        sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer);
         receiver = new Receiver(configuration.bindAddress(), handler, receiverCommands, senderProxy);
 
         senderRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sender);
@@ -92,9 +99,16 @@ public final class FixGateway implements AutoCloseable
     }
 
     // TODO: figure out correct type for dictionary
-    public synchronized InitiatorSession initiate(final SessionConfiguration host, final Object dictionary)
+    public synchronized InitiatorSession initiate(final SessionConfiguration configuration, final Object dictionary)
     {
-        return null;
+        final InetSocketAddress address = new InetSocketAddress(configuration.host(), configuration.port());
+        senderProxy.connect(address);
+        signal.await(connectionTimeout);
+        if (addedSession == null)
+        {
+            throw new ConnectionTimeoutException("Connection timed out whilst connecting to: " + address);
+        }
+        return addedSession;
     }
 
     public synchronized void close() throws Exception
@@ -108,7 +122,7 @@ public final class FixGateway implements AutoCloseable
 
     public void onInitiatorSessionConnected(final InitiatorSession session)
     {
-        // TODO: signal
         addedSession = session;
+        signal.signal();
     }
 }
