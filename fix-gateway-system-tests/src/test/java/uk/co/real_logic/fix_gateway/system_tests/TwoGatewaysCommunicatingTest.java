@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
@@ -25,6 +26,7 @@ import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 
 public class TwoGatewaysCommunicatingTest
 {
@@ -58,6 +60,13 @@ public class TwoGatewaysCommunicatingTest
     public void initiatorCanConnectToAcceptor() throws InterruptedException
     {
         assertEventuallyTrue("Session has failed to connect", session::isConnected);
+    }
+
+    @Ignore
+    @Test
+    public void initiatorCanLogon() throws InterruptedException
+    {
+        assertEventuallyTrue("Session has failed to logon", () -> session.state() == ACTIVE);
     }
 
     @After

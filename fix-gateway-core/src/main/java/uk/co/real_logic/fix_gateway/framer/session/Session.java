@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.framer.session;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.*;
-import static uk.co.real_logic.fix_gateway.framer.session.SessionState.DISABLED;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound
@@ -51,6 +50,16 @@ public abstract class Session
         this.nextRequiredMessageTime = clock.time() + heartbeatIntervalInMs;
         this.connectionId = connectionId;
         this.state = state;
+    }
+
+    public boolean isConnected()
+    {
+        return state() != CONNECTING && state() != DISCONNECTED && state() != DISABLED;
+    }
+
+    public SessionState state()
+    {
+        return this.state;
     }
 
     void onMessage(final int msgSeqNo)
@@ -170,11 +179,6 @@ public abstract class Session
         return this.nextRequiredMessageTime;
     }
 
-    SessionState state()
-    {
-        return this.state;
-    }
-
     Session heartbeatIntervalInMs(final int heartbeatIntervalInS)
     {
         this.heartbeatIntervalInMs = MilliClock.fromSeconds(heartbeatIntervalInS);
@@ -223,11 +227,6 @@ public abstract class Session
     protected long time()
     {
         return clock.time();
-    }
-
-    public boolean isConnected()
-    {
-        return state() != CONNECTING && state() != DISCONNECTED && state() != DISABLED;
     }
 
 }
