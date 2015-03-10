@@ -75,24 +75,24 @@ public class EncoderGenerator extends Generator
         this.initialArraySize = initialArraySize;
     }
 
-    protected void generateAggregate(final Aggregate message, final AggregateType aggregateType)
+    protected void generateAggregate(final Aggregate aggregate, final AggregateType aggregateType)
     {
-        final String className = message.name() + "Encoder";
+        final String className = aggregate.name() + "Encoder";
         final boolean hasCommonCompounds = aggregateType == AggregateType.MESSAGE;
 
         try (final Writer out = outputManager.createOutput(className))
         {
             out.append(fileHeader(builderPackage));
             out.append(generateClassDeclaration(className, hasCommonCompounds, Encoder.class));
-            out.append(generateConstructor(message, dictionary));
+            out.append(generateConstructor(aggregate, dictionary));
             if (hasCommonCompounds)
             {
                 out.append(COMMON_COMPOUNDS);
             }
-            generatePrecomputedHeaders(out, message.entries());
-            generateSetters(out, className, message.entries());
-            out.append(generateEncodeMethod(message.entries(), aggregateType));
-            out.append(generateResetMethod(message.entries()));
+            generatePrecomputedHeaders(out, aggregate.entries());
+            generateSetters(out, className, aggregate.entries());
+            out.append(generateEncodeMethod(aggregate.entries(), aggregateType));
+            out.append(generateResetMethod(aggregate.entries()));
             out.append("}\n");
         }
         catch (IOException e)
@@ -128,12 +128,6 @@ public class EncoderGenerator extends Generator
             msgType,
             beginString
         );
-    }
-
-    private String generateResetMethod(List<Entry> entries)
-    {
-        return "    public void reset() {\n" +
-               "    }\n\n";
     }
 
     private void generateSetters(final Writer out, final String className, final List<Entry> entries) throws IOException

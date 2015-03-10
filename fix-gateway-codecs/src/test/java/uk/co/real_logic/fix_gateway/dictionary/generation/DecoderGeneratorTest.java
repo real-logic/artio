@@ -50,8 +50,8 @@ public class DecoderGeneratorTest
         decoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
         //System.out.println(sources);
-        heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
-        headerClass = compileInMemory(HEADER_ENCODER, sources);
+        heartbeat = compileInMemory(HEARTBEAT_DECODER, sources);
+        headerClass = compileInMemory(HEADER_DECODER, sources);
     }
 
     @Test

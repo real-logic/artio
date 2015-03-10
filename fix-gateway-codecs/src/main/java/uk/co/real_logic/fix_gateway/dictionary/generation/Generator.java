@@ -19,10 +19,13 @@ import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+
+import java.util.List;
 
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 
@@ -75,5 +78,11 @@ public abstract class Generator
             builderPackage,
             className,
             parent.getSimpleName());
+    }
+
+    protected String generateResetMethod(List<Entry> entries)
+    {
+        return "    public void reset() {\n" +
+               "    }\n\n";
     }
 }
