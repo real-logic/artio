@@ -43,12 +43,12 @@ package uk.co.real_logic.fix_gateway.framer.session;
 public enum SessionState
 {
     /**
-     * Initial state for an initiator session.
+     * The session is connecting or reconnecting.
      */
     CONNECTING,
 
     /**
-     * A machine has connected to the gateway, but hasn't logged in yet. Initial state of an acceptor session.
+     * A machine has connected to the gateway, but hasn't logged in yet. Initial state of a session.
      */
     CONNECTED,
 

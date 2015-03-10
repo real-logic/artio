@@ -19,23 +19,21 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
-import static uk.co.real_logic.fix_gateway.framer.session.SessionState.CONNECTING;
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.CONNECTED;
 
 public class InitiatorSessionTest extends AbstractSessionTest
 {
     private InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, mockClock, mockProxy);
 
     @Test
-    public void shouldInitiallyBeConnecting()
+    public void shouldInitiallyBeConnected()
     {
-        assertEquals(CONNECTING, session.state());
+        assertEquals(CONNECTED, session.state());
     }
 
     @Test
     public void shouldActivateUponLogonResponse()
     {
-        session.connected();
-
         onLogon(1);
 
         assertState(ACTIVE);
@@ -44,7 +42,6 @@ public class InitiatorSessionTest extends AbstractSessionTest
     @Test
     public void shouldDisconnectIfLowSeqNo()
     {
-        session.connected();
         session.lastMsgSeqNum(5);
 
         onLogon(1);

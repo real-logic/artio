@@ -133,9 +133,12 @@ public final class Receiver implements Agent
     {
         try
         {
-            // JDK on Windows - sigh
-            selector.selectNow();
-            selector.close();
+            if (selector.isOpen())
+            {
+                // JDK on Windows - sigh
+                selector.selectNow();
+                selector.close();
+            }
             listeningChannel.close();
         }
         catch (final IOException ex)

@@ -17,14 +17,15 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.*;
+import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.SessionConfiguration;
+import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
+import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 
-@Ignore
 public class TwoGatewaysCommunicatingTest
 {
 
@@ -35,14 +36,15 @@ public class TwoGatewaysCommunicatingTest
     @Before
     public void launch()
     {
-        final int port = TestFixtures.unusedPort();
+        final int port = unusedPort();
 
         final StaticConfiguration acceptingConfig = new StaticConfiguration()
                 .registerFallbackAcceptor(new FakeOtfAcceptor())
                 .bind("localhost", port);
         acceptingGateway = FixGateway.launch(acceptingConfig);
 
-        final StaticConfiguration initiatingConfig = new StaticConfiguration();
+        final StaticConfiguration initiatingConfig = new StaticConfiguration()
+                .bind("localhost", unusedPort());
         initiatingGateway = FixGateway.launch(initiatingConfig);
 
         final SessionConfiguration config = SessionConfiguration.builder()
@@ -61,8 +63,15 @@ public class TwoGatewaysCommunicatingTest
     @After
     public void close() throws Exception
     {
-        acceptingGateway.close();
-        initiatingGateway.close();
+        if (acceptingGateway != null)
+        {
+            acceptingGateway.close();
+        }
+
+        if (initiatingGateway != null)
+        {
+            initiatingGateway.close();
+        }
     }
 
 }
