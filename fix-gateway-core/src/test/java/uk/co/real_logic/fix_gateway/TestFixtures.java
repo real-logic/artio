@@ -15,21 +15,20 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.builder.Encoder;
-
-/**
- * Public API class for users to control a session with.
- */
-public final class Session
+public class TestFixtures
 {
-    public void send(final Encoder encoder)
+    private static final int LOW_PORT = 9999;
+    private static final int HIGH_PORT = 99999;
+
+    private static int port = LOW_PORT;
+
+    public static int unusedPort()
     {
+        if (port < HIGH_PORT)
+        {
+            return port++;
+        }
 
-    }
-
-    public void send(final DirectBuffer buffer, final int offset, final int length)
-    {
-
+        throw new IllegalStateException("The test framework has run out of ports");
     }
 }

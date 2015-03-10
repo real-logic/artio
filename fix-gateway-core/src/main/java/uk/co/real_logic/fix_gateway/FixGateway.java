@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.fix_gateway.builder.DataDictionary;
+import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
 public final class FixGateway implements AutoCloseable
 {
@@ -28,13 +28,12 @@ public final class FixGateway implements AutoCloseable
         return new FixGateway();
     }
 
-    public Session initiate(final SessionConfiguration host, final DataDictionary port)
+    public InitiatorSession initiate(final SessionConfiguration host, final Object dictionary)
     {
-        return new Session();
+        return null;
     }
 
     public void close() throws Exception
     {
-        //uk.co.real_logic.fix_gateway.builder.Heartbeat hb;
     }
 }

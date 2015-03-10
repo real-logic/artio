@@ -17,9 +17,8 @@ package uk.co.real_logic.fix_gateway.framer.session;
 
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
-import static uk.co.real_logic.fix_gateway.framer.session.SessionState.AWAITING_RESEND;
-import static uk.co.real_logic.fix_gateway.framer.session.SessionState.CONNECTED;
-import static uk.co.real_logic.fix_gateway.framer.session.SessionState.DISCONNECTED;
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.*;
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.DISABLED;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound
@@ -54,7 +53,7 @@ public abstract class Session
         this.state = state;
     }
 
-    public void onMessage(final int msgSeqNo)
+    void onMessage(final int msgSeqNo)
     {
         if (state() == CONNECTED)
         {
@@ -80,9 +79,9 @@ public abstract class Session
         }
     }
 
-    public abstract void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId);
+    abstract void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId);
 
-    public void onLogout(final int msgSeqNo, final long sessionId)
+    void onLogout(final int msgSeqNo, final long sessionId)
     {
 
         final int replySeqNo = msgSeqNo + 1;
@@ -92,12 +91,12 @@ public abstract class Session
         disconnect();
     }
 
-    public void onTestRequest(final String testReqId)
+    void onTestRequest(final String testReqId)
     {
         proxy.heartbeat(testReqId);
     }
 
-    public void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
+    void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
     {
         if (newSeqNo > msgSeqNo)
         {
@@ -142,12 +141,12 @@ public abstract class Session
         }
     }
 
-    public void onResendRequest(final int beginSeqNo, final int endSeqNo)
+    void onResendRequest(final int beginSeqNo, final int endSeqNo)
     {
         // TODO: decide how to resend messages once logging is figured out
     }
 
-    public void poll()
+    void poll()
     {
         if (nextRequiredMessageTime() < time())
         {
@@ -161,45 +160,45 @@ public abstract class Session
         state(DISCONNECTED);
     }
 
-    public long heartbeatIntervalInMs()
+    long heartbeatIntervalInMs()
     {
         return this.heartbeatIntervalInMs;
     }
 
-    public long nextRequiredMessageTime()
+    long nextRequiredMessageTime()
     {
         return this.nextRequiredMessageTime;
     }
 
-    public SessionState state()
+    SessionState state()
     {
         return this.state;
     }
 
-    public Session heartbeatIntervalInMs(final int heartbeatIntervalInS)
+    Session heartbeatIntervalInMs(final int heartbeatIntervalInS)
     {
         this.heartbeatIntervalInMs = MilliClock.fromSeconds(heartbeatIntervalInS);
         return this;
     }
 
-    public Session nextRequiredMessageTime(final long nextRequiredMessageTime)
+    Session nextRequiredMessageTime(final long nextRequiredMessageTime)
     {
         this.nextRequiredMessageTime = nextRequiredMessageTime;
         return this;
     }
 
-    public Session state(final SessionState state)
+    Session state(final SessionState state)
     {
         this.state = state;
         return this;
     }
 
-    public long id()
+    long id()
     {
         return id;
     }
 
-    public Session id(final long id)
+    Session id(final long id)
     {
         this.id = id;
         return this;
@@ -210,13 +209,13 @@ public abstract class Session
         return lastMsgSeqNum;
     }
 
-    public Session lastMsgSeqNum(final int lastMsgSeqNum)
+    Session lastMsgSeqNum(final int lastMsgSeqNum)
     {
         this.lastMsgSeqNum = lastMsgSeqNum;
         return this;
     }
 
-    public int expectedSeqNo()
+    int expectedSeqNo()
     {
         return lastMsgSeqNo() + 1;
     }
@@ -224,6 +223,11 @@ public abstract class Session
     protected long time()
     {
         return clock.time();
+    }
+
+    public boolean isConnected()
+    {
+        return state() != CONNECTING && state() != DISCONNECTED && state() != DISABLED;
     }
 
 }

@@ -15,7 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.framer.session;
 
+import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
+
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.CONNECTING;
 
 public final class InitiatorSession extends Session
 {
@@ -25,10 +29,10 @@ public final class InitiatorSession extends Session
         final MilliClock clock,
         final SessionProxy proxy)
     {
-        super(heartbeatInterval, connectionId, clock, SessionState.CONNECTING, proxy);
+        super(heartbeatInterval, connectionId, clock, CONNECTING, proxy);
     }
 
-    public void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
+    void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
         if (msgSeqNo == expectedSeqNo())
         {
@@ -36,8 +40,18 @@ public final class InitiatorSession extends Session
         }
     }
 
-    public void connected()
+    void connected()
     {
         state(SessionState.CONNECTED);
+    }
+
+    public void send(final Encoder encoder)
+    {
+
+    }
+
+    public void send(final DirectBuffer buffer, final int offset, final int length)
+    {
+
     }
 }

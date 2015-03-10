@@ -15,14 +15,23 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
 import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 
+import java.util.stream.IntStream;
+
 /**
- * .
+ * Configuration that exists for the entire duration of a fix gateway
  */
 public final class StaticConfiguration
 {
+    private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
+
+    private String host;
+    private int port;
+    private OtfMessageAcceptor fallbackAcceptor;
+
     public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
     {
     }
@@ -31,7 +40,26 @@ public final class StaticConfiguration
     {
     }
 
-    public void registerAcceptor(final OtfMessageAcceptor messageAcceptor, final int... tag)
+    public StaticConfiguration registerAcceptor(
+        final OtfMessageAcceptor messageAcceptor, int firstTag, final int... tags)
     {
+        otfAcceptors.put(firstTag, messageAcceptor);
+        IntStream.of(tags).forEach(tag -> otfAcceptors.put(tag, messageAcceptor));
+        return this;
     }
+
+    public StaticConfiguration registerFallbackAcceptor(
+            final OtfMessageAcceptor fallbackAcceptor)
+    {
+        this.fallbackAcceptor = fallbackAcceptor;
+        return this;
+    }
+
+    public StaticConfiguration bind(final String host, final int port)
+    {
+        this.host = host;
+        this.port = port;
+        return this;
+    }
+
 }

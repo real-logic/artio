@@ -157,7 +157,6 @@ project(':fix-gateway-codecs') {
         outputs.dir generatedDir
     }
 
-    // TODO
     task (generateMessages, type: JavaExec) {
         main = 'uk.co.real_logic.sbe.SbeTool'
         classpath = sourceSets.main.runtimeClasspath
@@ -211,6 +210,7 @@ project(':fix-gateway-core') {
 project(':fix-gateway-system-tests') {
     dependencies {
         testCompile project(path: ':fix-gateway-core', configuration: 'tests')
+        compile project(path: ':fix-gateway-core')
     }
 
     test {
