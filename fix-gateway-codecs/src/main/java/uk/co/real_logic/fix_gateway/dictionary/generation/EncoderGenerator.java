@@ -40,7 +40,7 @@ public class EncoderGenerator extends Generator
         "        position++;\n" +
         "%s";
 
-    private static final String COMMON_COMPOUNDS =
+    protected static final String COMMON_COMPOUNDS =
         "    private HeaderEncoder header = new HeaderEncoder();\n\n" +
         "    public HeaderEncoder header() {\n" +
         "        return header;\n" +

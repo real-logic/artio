@@ -19,7 +19,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 public interface Decoder
 {
-    int decode(final MutableAsciiFlyweight buffer, final int offset);
+    void decode(final MutableAsciiFlyweight buffer, final int offset, final int length);
 
     void reset();
 }

@@ -28,12 +28,10 @@ import java.util.Map;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 
-@Ignore
 public class DecoderGeneratorTest
 {
 
@@ -49,7 +47,7 @@ public class DecoderGeneratorTest
     {
         decoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
-        //System.out.println(sources);
+        System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sources);
         headerClass = compileInMemory(HEADER_DECODER, sources);
     }
@@ -65,12 +63,14 @@ public class DecoderGeneratorTest
         assertTrue("Not public", isPublic(modifiers));
     }
 
+    @Ignore
     @Test
     public void generatesGetters() throws NoSuchMethodException
     {
         heartbeat.getMethod("onBehalfOfCompID");
     }
 
+    @Ignore
     @Test
     public void stringGettersReadFromFields() throws Exception
     {
@@ -82,6 +82,7 @@ public class DecoderGeneratorTest
         //assertTestReqIsValue(decoder);
     }
 
+    @Ignore
     @Test
     public void flagsForOptionalFieldsInitiallyUnset() throws Exception
     {
@@ -89,6 +90,7 @@ public class DecoderGeneratorTest
         assertFalse("hasTestReqId initially true", hasTestReqId(decoder));
     }
 
+    @Ignore
     @Test
     public void flagsForOptionalFieldsUpdated() throws Exception
     {
@@ -99,12 +101,14 @@ public class DecoderGeneratorTest
         assertTrue("hasTestReqId not updated", hasTestReqId(decoder));
     }
 
+    @Ignore
     @Test
     public void decodesValues() throws Exception
     {
         // TODO
     }
 
+    @Ignore
     @Test
     public void ignoresMissingOptionalValues() throws Exception
     {
@@ -118,8 +122,7 @@ public class DecoderGeneratorTest
 
     private void assertIsDecoder(final Class<?> cls)
     {
-        assertNotNull(cls);
-        assertThat(cls, instanceOf(Decoder.class));
+        assertTrue("Isn't a decoder", Decoder.class.isAssignableFrom(cls));
     }
 
     private boolean hasTestReqId(final Object encoder) throws Exception
