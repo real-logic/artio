@@ -20,6 +20,9 @@ import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
+import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -48,6 +51,7 @@ public class DecoderGenerator extends Generator
         {
             out.append(fileHeader(builderPackage));
             out.append(generateClassDeclaration(className, hasCommonCompounds, Decoder.class));
+            generateGetters(out, className, aggregate.entries());
             out.append(generateDecodeMethod(aggregate.entries(), hasCommonCompounds));
             out.append(generateResetMethod(aggregate.entries()));
             out.append("}\n");
@@ -56,6 +60,62 @@ public class DecoderGenerator extends Generator
         {
             // TODO: logging
             e.printStackTrace();
+        }
+    }
+
+    private void generateGetters(final Writer out, final String className, final List<Entry> entries) throws IOException
+    {
+        for (Entry entry : entries)
+        {
+            out.append(generateGetter(className, entry));
+        }
+    }
+
+    private String generateGetter(final String className, final Entry entry) throws IOException
+    {
+        final Field field = (Field) entry.element();
+        final String name = entry.name();
+        final String fieldName = JavaUtil.formatPropertyName(name);
+
+        return String.format(
+            "    private %s %s;\n\n" +
+            "    public %1$s %2$s()\n" +
+            "    {\n" +
+            "        return %2$s;\n" +
+            "    }\n\n",
+            javaTypeOf(field.type()),
+            fieldName
+        );
+    }
+
+    private String javaTypeOf(final Type type)
+    {
+        switch (type)
+        {
+            case STRING:
+                return "char[]";
+
+            case BOOLEAN:
+                return "boolean";
+
+            case DATA:
+                return "byte[]";
+
+            case INT:
+            case LENGTH:
+            case SEQNUM:
+            case LOCALMKTDATE:
+                return "int";
+
+            case UTCTIMESTAMP:
+                return "long";
+
+            case QTY:
+            case PRICE:
+            case PRICEOFFSET:
+                return "DecimalFloat";
+
+            default: throw new UnsupportedOperationException("Unknown type: " + type);
         }
     }
 

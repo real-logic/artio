@@ -53,7 +53,7 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void generatesEncoderClass() throws Exception
+    public void generatesDecoderClass() throws Exception
     {
         assertNotNull("Not generated anything", heartbeat);
         assertIsDecoder(heartbeat);
@@ -63,7 +63,6 @@ public class DecoderGeneratorTest
         assertTrue("Not public", isPublic(modifiers));
     }
 
-    @Ignore
     @Test
     public void generatesGetters() throws NoSuchMethodException
     {

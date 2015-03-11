@@ -85,4 +85,14 @@ public abstract class Generator
         return "    public void reset() {\n" +
                "    }\n\n";
     }
+
+    protected String optionalAssign(final Entry entry, final String name)
+    {
+        return entry.required() ? "" : String.format("        has%s = true;\n", name);
+    }
+
+    protected String optionalField(final Entry entry, final String name)
+    {
+        return entry.required() ? "" : String.format("    private boolean has%s;\n\n", name);
+    }
 }
