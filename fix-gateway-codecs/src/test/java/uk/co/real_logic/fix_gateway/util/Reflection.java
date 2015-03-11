@@ -17,6 +17,8 @@ package uk.co.real_logic.fix_gateway.util;
 
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 
+import java.lang.reflect.Field;
+
 public final class Reflection
 {
     private Reflection()
@@ -50,13 +52,21 @@ public final class Reflection
 
     private static void set(
         final Object object,
-        final String setter,
+        final String setterName,
         final Class<?> type,
         final Object value) throws Exception
     {
         object.getClass()
-              .getMethod(setter, type)
+              .getMethod(setterName, type)
               .invoke(object, value);
+    }
+
+    public static void setField(
+            final Object object,
+            final String fieldName,
+            final Object value) throws Exception
+    {
+        field(object, fieldName).set(object, value);
     }
 
     public static Object get(final Object value, final String name) throws Exception
@@ -65,4 +75,17 @@ public final class Reflection
                     .getMethod(name)
                     .invoke(value);
     }
+
+    public static Object getField(final Object object, final String fieldName) throws Exception
+    {
+        return field(object, fieldName).get(object);
+    }
+
+    private static Field field(Object object, String fieldName) throws NoSuchFieldException
+    {
+        final Field field = object.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field;
+    }
+
 }

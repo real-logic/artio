@@ -22,8 +22,10 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.Reflection;
 
-import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Map;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -31,9 +33,13 @@ import static java.lang.reflect.Modifier.isPublic;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
+import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class DecoderGeneratorTest
 {
+
+    public static final char[] ABC = "abc".toCharArray();
+    public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
 
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
     private static DecoderGenerator decoderGenerator = new DecoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
@@ -66,22 +72,21 @@ public class DecoderGeneratorTest
     @Test
     public void generatesGetters() throws NoSuchMethodException
     {
-        heartbeat.getMethod("onBehalfOfCompID");
+        Method onBehalfOfCompID = heartbeat.getMethod(ON_BEHALF_OF_COMP_ID);
+        assertEquals(char[].class, onBehalfOfCompID.getReturnType());
     }
 
-    @Ignore
     @Test
     public void stringGettersReadFromFields() throws Exception
     {
         final Object decoder = heartbeat.newInstance();
+        setField(decoder, ON_BEHALF_OF_COMP_ID, ABC);
 
-        // TODO
-        //setTestReqId(decoder);
+        char[] value = (char[]) get(decoder, ON_BEHALF_OF_COMP_ID);
 
-        //assertTestReqIsValue(decoder);
+        assertArrayEquals(ABC, value);
     }
 
-    @Ignore
     @Test
     public void flagsForOptionalFieldsInitiallyUnset() throws Exception
     {
@@ -89,15 +94,12 @@ public class DecoderGeneratorTest
         assertFalse("hasTestReqId initially true", hasTestReqId(decoder));
     }
 
-    @Ignore
-    @Test
-    public void flagsForOptionalFieldsUpdated() throws Exception
+    @Test(expected = InvocationTargetException.class)
+    public void missingOptionalFieldCausesGetterToThrow() throws Exception
     {
         final Object decoder = heartbeat.newInstance();
 
-        // TODO
-
-        assertTrue("hasTestReqId not updated", hasTestReqId(decoder));
+        Reflection.get(decoder, TEST_REQ_ID);
     }
 
     @Ignore
@@ -127,13 +129,6 @@ public class DecoderGeneratorTest
     private boolean hasTestReqId(final Object encoder) throws Exception
     {
         return (boolean) getField(encoder, HAS_TEST_REQ_ID);
-    }
-
-    private Object getField(final Object encoder, final String fieldName) throws Exception
-    {
-        final Field field = heartbeat.getDeclaredField(fieldName);
-        field.setAccessible(true);
-        return field.get(encoder);
     }
 
 }

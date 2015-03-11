@@ -79,13 +79,39 @@ public class DecoderGenerator extends Generator
 
         return String.format(
             "    private %s %s;\n\n" +
+            "%s" +
             "    public %1$s %2$s()\n" +
             "    {\n" +
+            "%s" +
             "        return %2$s;\n" +
-            "    }\n\n",
+            "    }\n\n" +
+            "%s",
             javaTypeOf(field.type()),
-            fieldName
+            fieldName,
+            optionalField(entry),
+            optionalCheck(entry),
+            optionalGetter(entry)
         );
+    }
+
+    private String optionalGetter(final Entry entry)
+    {
+        return entry.required() ? "" : String.format(
+            "    public boolean has%s()\n" +
+            "    {\n" +
+            "        return has%1$s;\n" +
+            "    }\n\n",
+            entry.name());
+    }
+
+    private String optionalCheck(final Entry entry)
+    {
+        return entry.required() ? "" : String.format(
+            "        if (!has%s)\n" +
+            "        {\n" +
+            "            throw new IllegalArgumentException(\"No value for optional field: %1$s\");\n" +
+            "        }\n\n",
+            entry.name());
     }
 
     private String javaTypeOf(final Type type)

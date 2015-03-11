@@ -143,8 +143,8 @@ public class EncoderGenerator extends Generator
         final Field field = (Field) entry.element();
         final String name = field.name();
         final String fieldName = JavaUtil.formatPropertyName(name);
-        final String optionalField = optionalField(entry, name);
-        final String optionalAssign = optionalAssign(entry, name);
+        final String optionalField = optionalField(entry);
+        final String optionalAssign = optionalAssign(entry);
 
         Function<String, String> generateSetter =
             type -> generateSetter(name, type, fieldName, optionalField, className, optionalAssign);
