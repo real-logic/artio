@@ -15,11 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.builder;
 
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 public interface Decoder
 {
-    void decode(final MutableAsciiFlyweight buffer, final int offset, final int length);
+    void decode(final AsciiFlyweight buffer, final int offset, final int length);
 
     void reset();
 }

@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.util.List;
@@ -73,6 +74,7 @@ public abstract class Generator
             (hasCommonCompounds ? COMMON_COMPOUND_IMPORTS : "") +
             importFor(DecimalFloat.class) +
             importFor(MutableAsciiFlyweight.class) +
+            importFor(AsciiFlyweight.class) +
             importFor(LocalMktDateEncoder.class) +
             importFor(UtcTimestampEncoder.class) +
             "\n" +

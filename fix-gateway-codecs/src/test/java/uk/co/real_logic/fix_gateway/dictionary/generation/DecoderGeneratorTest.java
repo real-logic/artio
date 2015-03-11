@@ -134,6 +134,14 @@ public class DecoderGeneratorTest
         assertArrayEquals(new byte[]{'1', '2', '3'}, getDataField(decoder));
     }
 
+    @Test
+    public void hasMessageTypeFlag() throws Exception
+    {
+        final int messageType = (int) heartbeat.getField("MESSAGE_TYPE").get(null);
+
+        assertEquals(HEARTBEAT_TYPE, messageType);
+    }
+
     private Decoder decodeHeartbeat(final String example) throws InstantiationException, IllegalAccessException
     {
         final Decoder decoder = (Decoder) heartbeat.newInstance();

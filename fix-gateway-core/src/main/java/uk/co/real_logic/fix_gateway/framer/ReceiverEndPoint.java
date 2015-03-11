@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
@@ -26,11 +25,13 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
+import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
 /**
  * Handles incoming data from sockets
  */
+// TODO: should this refer to a MessageHandler or just pass it onto the session or session parser?
 public class ReceiverEndPoint
 {
     private static final byte BODY_LENGTH_FIELD = 9;
@@ -100,21 +101,23 @@ public class ReceiverEndPoint
 
             try
             {
-                if (validateBodyLengthTag(offset))
+                if (invalidBodyLengthTag(offset))
                 {
                     invalidateMessage();
                     return;
                 }
 
-                final int indexOfLastByteOfMessage = findIndexOfLastByteOfMessage(offset, startOfBodyLength);
+                final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData, START_OF_HEADER);
+                final int indexOfLastByteOfMessage = findIndexOfLastByteOfMessage(offset, endOfBodyLength);
                 if (indexOfLastByteOfMessage == UNKNOWN_INDEX)
                 {
                     // Need more data
                     break;
                 }
 
+                final int messageType = getMessageType(endOfBodyLength, indexOfLastByteOfMessage);
                 final int length = (indexOfLastByteOfMessage + 1) - offset;
-                final long sessionId = session.onMessage(buffer, offset, length, connectionId);
+                final long sessionId = session.onMessage(buffer, offset, length, connectionId, messageType);
                 handler.onMessage(buffer, offset, length, sessionId);
 
                 offset += length;
@@ -130,12 +133,20 @@ public class ReceiverEndPoint
         moveRemainingDataToBufferStart(offset);
     }
 
-    private int findIndexOfLastByteOfMessage(int offset, int startOfBodyLength)
+    private int getMessageType(final int endOfBodyLength, final int indexOfLastByteOfMessage)
     {
-        final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData, StandardFixConstants.START_OF_HEADER);
-        final int earliestChecksumEnd = endOfBodyLength + getBodyLength(offset, endOfBodyLength) + MIN_CHECKSUM_SIZE;
+        final int start = string.scan(endOfBodyLength, indexOfLastByteOfMessage, '=');
+        if (string.getByte(start + 2) == START_OF_HEADER)
+        {
+            string.getByte(start + 1);
+        }
+        return string.getMessageType(start + 1, 2);
+    }
 
-        return string.scan(earliestChecksumEnd, usedBufferData, StandardFixConstants.START_OF_HEADER);
+    private int findIndexOfLastByteOfMessage(int offset, int endOfBodyLength)
+    {
+        final int earliestChecksumEnd = endOfBodyLength + getBodyLength(offset, endOfBodyLength) + MIN_CHECKSUM_SIZE;
+        return string.scan(earliestChecksumEnd, usedBufferData, START_OF_HEADER);
     }
 
     private int getBodyLength(final int offset, final int endOfBodyLength)
@@ -143,7 +154,7 @@ public class ReceiverEndPoint
         return string.getInt(offset + START_OF_BODY_LENGTH, endOfBodyLength);
     }
 
-    private boolean validateBodyLengthTag(final int offset)
+    private boolean invalidBodyLengthTag(final int offset)
     {
         return string.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD ||
                string.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';

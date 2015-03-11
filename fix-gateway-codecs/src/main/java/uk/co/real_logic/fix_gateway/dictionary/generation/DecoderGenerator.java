@@ -17,10 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
-import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
+import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
@@ -48,14 +45,19 @@ public class DecoderGenerator extends Generator
     protected void generateAggregate(final Aggregate aggregate, final AggregateType type)
     {
         final String className = aggregate.name() + "Decoder";
-        final boolean hasCommonCompounds = type == MESSAGE;
+        final boolean isMessage = type == MESSAGE;
 
         try (final Writer out = outputManager.createOutput(className))
         {
             out.append(fileHeader(builderPackage));
-            out.append(generateClassDeclaration(className, hasCommonCompounds, Decoder.class));
+            out.append(generateClassDeclaration(className, isMessage, Decoder.class));
+            if (isMessage)
+            {
+                Message message = (Message) aggregate;
+                out.append(generateMessageType(message.type()));
+            }
             generateGetters(out, className, aggregate.entries());
-            out.append(generateDecodeMethod(aggregate.entries(), hasCommonCompounds));
+            out.append(generateDecodeMethod(aggregate.entries(), isMessage));
             out.append(generateResetMethod(aggregate.entries()));
             out.append("}\n");
         }
@@ -64,6 +66,13 @@ public class DecoderGenerator extends Generator
             // TODO: logging
             e.printStackTrace();
         }
+    }
+
+    private String generateMessageType(final int type)
+    {
+        return String.format(
+            "    public static final int MESSAGE_TYPE = %d;\n\n",
+            type);
     }
 
     private void generateGetters(final Writer out, final String className, final List<Entry> entries) throws IOException
@@ -179,7 +188,7 @@ public class DecoderGenerator extends Generator
     private String generateDecodeMethod(final List<Entry> entries, final boolean hasCommonCompounds)
     {
         final String prefix =
-            "    public void decode(final MutableAsciiFlyweight buffer, final int offset, final int length)\n" +
+            "    public void decode(final AsciiFlyweight buffer, final int offset, final int length)\n" +
             "    {\n"+
             "        final int end = offset + length;\n" +
             "        int position = offset;\n" +

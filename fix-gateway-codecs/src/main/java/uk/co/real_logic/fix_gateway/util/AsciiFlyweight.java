@@ -86,6 +86,11 @@ public class AsciiFlyweight
         return value - 0x30;
     }
 
+    public byte getByte(final int index)
+    {
+        return buffer.getByte(index);
+    }
+
     public char getChar(final int index)
     {
         return (char)buffer.getByte(index);

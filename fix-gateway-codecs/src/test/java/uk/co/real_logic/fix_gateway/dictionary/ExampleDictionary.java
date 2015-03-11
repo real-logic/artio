@@ -54,6 +54,8 @@ public final class ExampleDictionary
     public static final String HAS_BOOLEAN_FIELD = "hasBooleanField";
     public static final String HAS_DATA_FIELD = "hasDataField";
 
+    public static final int HEARTBEAT_TYPE = '0';
+
     public static final DataDictionary FIELD_EXAMPLE;
 
     public static final DataDictionary MESSAGE_EXAMPLE;
@@ -94,7 +96,7 @@ public final class ExampleDictionary
         final Field booleanField = Field.register(messageEgFields, 118, "BooleanField", Type.BOOLEAN);
         final Field dataField = Field.register(messageEgFields, 119, "DataField", Type.DATA);
 
-        final Message heartbeat = new Message("Heartbeat", '0', ADMIN);
+        final Message heartbeat = new Message("Heartbeat", HEARTBEAT_TYPE, ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);
         heartbeat.optionalEntry(testReqID);
         heartbeat.requiredEntry(intField);
