@@ -73,7 +73,7 @@ public class DecimalFloatDecodingTest
         final AsciiFlyweight string = new AsciiFlyweight(buffer);
         final DecimalFloat price = new DecimalFloat();
 
-        string.decodeFloat(0, buffer.capacity(), price);
+        string.getFloat(price, 0, buffer.capacity());
 
         Assert.assertEquals("Incorrect Value", value, price.value());
         Assert.assertEquals("Incorrect Scale", scale, price.scale());

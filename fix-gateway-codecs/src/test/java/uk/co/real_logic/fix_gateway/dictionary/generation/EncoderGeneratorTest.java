@@ -163,8 +163,8 @@ public class EncoderGeneratorTest
     {
         final Encoder encoder = (Encoder) heartbeat.newInstance();
 
-        setCharSequence(encoder, "onBehalfOfCompID", "abc");
-        setTestReqIdTo(encoder, VALUE);
+        setCharSequence(encoder, "onBehalfOfCompID", ABC);
+        setTestReqIdTo(encoder, ABC);
         setInt(encoder, INT_FIELD, 2);
         setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
         setBoolean(encoder, BOOLEAN_FIELD, true);
@@ -244,7 +244,7 @@ public class EncoderGeneratorTest
 
     private void setTestReqId(final Object encoder) throws Exception
     {
-        setTestReqIdTo(encoder, VALUE);
+        setTestReqIdTo(encoder, ABC);
     }
 
     private void setTestReqIdTo(final Object encoder, final String value) throws Exception

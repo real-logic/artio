@@ -27,6 +27,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 public class AsciiFlyweight
 {
     public static final int UNKNOWN_INDEX = -1;
+    public static final byte YES = 'Y';
 
     public static long computeChecksum(final DirectBuffer buffer, final int offset, final int end)
     {
@@ -88,6 +89,99 @@ public class AsciiFlyweight
         return (char)buffer.getByte(index);
     }
 
+    public boolean getBoolean(final int index)
+    {
+        return YES == buffer.getByte(index);
+    }
+
+    public byte[] getBytes(final byte[] oldBuffer, final int offset, final int length)
+    {
+        final byte[] resultBuffer = oldBuffer.length < length ? new byte[length] : oldBuffer;
+        buffer.getBytes(offset, resultBuffer, 0, length);
+        return resultBuffer;
+    }
+
+    public char[] getChars(final char[] oldBuffer, final int offset, final int length)
+    {
+        final char[] resultBuffer = oldBuffer.length < length ? new char[length] : oldBuffer;
+        for (int i = 0; i < length; i++)
+        {
+            resultBuffer[i] = getChar(i + offset);
+        }
+        return resultBuffer;
+    }
+
+    /**
+     * Not at all a performant conversion: don't use this on a critical application path.
+     *
+     * @param offset
+     * @param length
+     * @return a String
+     */
+    public String getRangeAsString(final int offset, final int length)
+    {
+        final byte[] buff = new byte[length];
+        buffer.getBytes(offset, buff);
+        return new String(buff, 0, length, US_ASCII);
+    }
+
+    public int getMessageType(final int offset, final int length)
+    {
+        // message types can only be 1 or 2 bytes in size
+        int messageType = buffer.getByte(offset);
+
+        if (length == 2)
+        {
+            messageType |= buffer.getByte(offset + 1) >> 1;
+        }
+
+        return messageType;
+    }
+
+    public DecimalFloat getFloat(final DecimalFloat number, int offset, int length)
+    {
+        // Throw away trailing zeros
+        int end = offset + length;
+        for (int index = end - 1; isDispensableCharacter(index) && index > offset; index--)
+        {
+            end--;
+        }
+
+        // Is it negative?
+        final boolean negative = buffer.getByte(offset) == '-';
+        if (negative)
+        {
+            offset++;
+            length--;
+        }
+
+        // Throw away leading zeros
+        for (int index = offset; isDispensableCharacter(index) && index < end; index++)
+        {
+            offset++;
+        }
+
+        int scale = length;
+        long value = 0;
+        for (int index = offset; index < end; index++)
+        {
+            final byte byteValue = buffer.getByte(index);
+            if (byteValue == '.')
+            {
+                scale = index - offset;
+            }
+            else
+            {
+                final int digit = getDigit(index);
+                value = value * 10 + digit;
+            }
+        }
+
+        number.value(negative ? -1 * value : value);
+        number.scale(scale);
+        return number;
+    }
+
     public int scanBack(final int startInclusive, final int endExclusive, final char terminatingCharacter)
     {
         return scanBack(startInclusive, endExclusive, (byte)terminatingCharacter);
@@ -133,76 +227,6 @@ public class AsciiFlyweight
     public void log(final int offset, final int length)
     {
         System.out.println(getRangeAsString(offset, length));
-    }
-
-    /**
-     * Not at all a performant conversion: don't use this on a critical application path.
-     *
-     * @param offset
-     * @param length
-     * @return a String
-     */
-    public String getRangeAsString(final int offset, final int length)
-    {
-        final byte[] buff = new byte[length];
-        buffer.getBytes(offset, buff);
-        return new String(buff, 0, length, US_ASCII);
-    }
-
-    public int getMessageType(final int offset, final int length)
-    {
-        // message types can only be 1 or 2 bytes in size
-        int messageType = buffer.getByte(offset);
-
-        if (length == 2)
-        {
-            messageType |= buffer.getByte(offset + 1) >> 1;
-        }
-
-        return messageType;
-    }
-
-    public void decodeFloat(int offset, int length, final DecimalFloat number)
-    {
-        // Throw away trailing zeros
-        int end = offset + length;
-        for (int index = end - 1; isDispensableCharacter(index) && index > offset; index--)
-        {
-            end--;
-        }
-
-        // Is it negative?
-        final boolean negative = buffer.getByte(offset) == '-';
-        if (negative)
-        {
-            offset++;
-            length--;
-        }
-
-        // Throw away leading zeros
-        for (int index = offset; isDispensableCharacter(index) && index < end; index++)
-        {
-            offset++;
-        }
-
-        int scale = length;
-        long value = 0;
-        for (int index = offset; index < end; index++)
-        {
-            final byte byteValue = buffer.getByte(index);
-            if (byteValue == '.')
-            {
-                scale = index - offset;
-            }
-            else
-            {
-                final int digit = getDigit(index);
-                value = value * 10 + digit;
-            }
-        }
-
-        number.value(negative ? -1 * value : value);
-        number.scale(scale);
     }
 
     public long computeChecksum(final int offset, final int end)

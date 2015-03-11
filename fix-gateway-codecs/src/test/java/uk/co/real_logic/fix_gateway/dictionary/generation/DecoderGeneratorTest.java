@@ -42,7 +42,7 @@ public class DecoderGeneratorTest
     public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
 
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
-    private static DecoderGenerator decoderGenerator = new DecoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
+    private static DecoderGenerator decoderGenerator = new DecoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, 3, outputManager);
     private static Class<?> heartbeat;
     private static Class<?> headerClass;
 
@@ -102,12 +102,26 @@ public class DecoderGeneratorTest
         Reflection.get(decoder, TEST_REQ_ID);
     }
 
-    @Ignore
     @Test
     public void decodesValues() throws Exception
     {
-        // TODO
+        final Decoder decoder = (Decoder) heartbeat.newInstance();
+        final int length = DERIVED_FIELDS_EXAMPLE.length();
+        buffer.putAscii(1, DERIVED_FIELDS_EXAMPLE);
+
+        decoder.decode(buffer, 1, length);
+
+        assertArrayEquals(ABC, (char[]) get(decoder, ON_BEHALF_OF_COMP_ID));
+        assertEquals(2, get(decoder, INT_FIELD));
+        // TODO:
+        //assertEquals(new DecimalFloat(11, 1), get(decoder, FLOAT_FIELD));
     }
+
+    // TODO: optional fields
+
+    //assertEquals(ABC, get(decoder, TEST_REQ_ID));
+    //assertEquals(true, get(decoder, BOOLEAN_FIELD));
+    //assertEquals(new byte[]{'1', '2', '3'}, get(decoder, DATA_FIELD));
 
     @Ignore
     @Test

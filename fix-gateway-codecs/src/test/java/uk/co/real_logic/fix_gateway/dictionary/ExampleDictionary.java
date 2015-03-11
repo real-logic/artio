@@ -41,7 +41,7 @@ public final class ExampleDictionary
     public static final String HEARTBEAT_DECODER = TEST_PACKAGE + ".HeartbeatDecoder";
     public static final String HEADER_DECODER = TEST_PACKAGE + ".HeaderDecoder";
 
-    public static final String VALUE = "abc";
+    public static final String ABC = "abc";
     public static final byte[] VALUE_IN_BYTES = {97, 98, 99};
     public static final String TEST_REQ_ID = "testReqID";
     public static final String INT_FIELD = "intField";

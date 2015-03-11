@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.generation.OutputManager;
+import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
@@ -28,6 +29,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 import java.util.List;
 
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importStaticFor;
 
 public abstract class Generator
 {
@@ -65,7 +67,8 @@ public abstract class Generator
     {
         return String.format(
             importFor(MutableDirectBuffer.class) +
-            "import static uk.co.real_logic.fix_gateway.dictionary.generation.EncodingUtil.*;\n" +
+            importStaticFor(CodecUtil.class) +
+            importStaticFor(StandardFixConstants.class) +
             importFor(parent) +
             (hasCommonCompounds ? COMMON_COMPOUND_IMPORTS : "") +
             importFor(DecimalFloat.class) +

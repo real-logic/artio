@@ -146,6 +146,7 @@ public class EncoderGenerator extends Generator
         final String optionalField = optionalField(entry);
         final String optionalAssign = optionalAssign(entry);
 
+        // TODO: make encoding generation more regular and delegate to library calls more
         Function<String, String> generateSetter =
             type -> generateSetter(name, type, fieldName, optionalField, className, optionalAssign);
 

@@ -95,4 +95,9 @@ public final class GenerationUtil
         return String.format("import %s;\n", cls.getCanonicalName());
     }
 
+    public static String importStaticFor(Class<?> cls)
+    {
+        return String.format("import static %s.*;\n", cls.getCanonicalName());
+    }
+
 }

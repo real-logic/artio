@@ -17,9 +17,9 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
-public final class EncodingUtil
+public final class CodecUtil
 {
-    private EncodingUtil()
+    private CodecUtil()
     {
     }
 
@@ -60,4 +60,5 @@ public final class EncodingUtil
         }
         return buffer;
     }
+
 }
