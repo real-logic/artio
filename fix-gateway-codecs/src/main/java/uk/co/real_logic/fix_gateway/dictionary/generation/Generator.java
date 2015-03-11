@@ -89,11 +89,6 @@ public abstract class Generator
                "    }\n\n";
     }
 
-    protected String optionalAssign(final Entry entry)
-    {
-        return entry.required() ? "" : String.format("        has%s = true;\n", entry.name());
-    }
-
     protected String optionalField(final Entry entry)
     {
         return entry.required() ? "" : String.format("    private boolean has%s;\n\n", entry.name());

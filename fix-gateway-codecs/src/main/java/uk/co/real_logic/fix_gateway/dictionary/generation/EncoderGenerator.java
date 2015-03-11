@@ -407,4 +407,9 @@ public class EncoderGenerator extends Generator
         }
     }
 
+    private String optionalAssign(final Entry entry)
+    {
+        return entry.required() ? "" : String.format("        has%s = true;\n", entry.name());
+    }
+
 }

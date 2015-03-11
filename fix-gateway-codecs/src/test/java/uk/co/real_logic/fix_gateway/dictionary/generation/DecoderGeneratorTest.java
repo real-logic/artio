@@ -16,11 +16,11 @@
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
+import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.Reflection;
 
@@ -79,12 +79,10 @@ public class DecoderGeneratorTest
     @Test
     public void stringGettersReadFromFields() throws Exception
     {
-        final Object decoder = heartbeat.newInstance();
+        final Decoder decoder = (Decoder) heartbeat.newInstance();
         setField(decoder, ON_BEHALF_OF_COMP_ID, ABC);
 
-        char[] value = (char[]) get(decoder, ON_BEHALF_OF_COMP_ID);
-
-        assertArrayEquals(ABC, value);
+        assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
     }
 
     @Test
@@ -105,29 +103,44 @@ public class DecoderGeneratorTest
     @Test
     public void decodesValues() throws Exception
     {
-        final Decoder decoder = (Decoder) heartbeat.newInstance();
-        final int length = DERIVED_FIELDS_EXAMPLE.length();
-        buffer.putAscii(1, DERIVED_FIELDS_EXAMPLE);
+        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_EXAMPLE);
 
-        decoder.decode(buffer, 1, length);
-
-        assertArrayEquals(ABC, (char[]) get(decoder, ON_BEHALF_OF_COMP_ID));
-        assertEquals(2, get(decoder, INT_FIELD));
-        // TODO:
-        //assertEquals(new DecimalFloat(11, 1), get(decoder, FLOAT_FIELD));
+        assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
+        assertEquals(2, getIntField(decoder));
+        assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
     }
 
-    // TODO: optional fields
-
-    //assertEquals(ABC, get(decoder, TEST_REQ_ID));
-    //assertEquals(true, get(decoder, BOOLEAN_FIELD));
-    //assertEquals(new byte[]{'1', '2', '3'}, get(decoder, DATA_FIELD));
-
-    @Ignore
     @Test
     public void ignoresMissingOptionalValues() throws Exception
     {
-        // TODO
+        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_EXAMPLE);
+
+        assertFalse(hasTestReqId(decoder));
+        assertFalse(hasBooleanField(decoder));
+        assertFalse(hasDataField(decoder));
+    }
+
+    @Test
+    public void setsMissingOptionalValues() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE_EXAMPLE);
+
+        assertTrue(hasTestReqId(decoder));
+        assertTrue(hasBooleanField(decoder));
+        assertTrue(hasDataField(decoder));
+
+        assertArrayEquals(ABC, getTestReqId(decoder));
+        assertEquals(true, getBooleanField(decoder));
+        assertArrayEquals(new byte[]{'1', '2', '3'}, getDataField(decoder));
+    }
+
+    private Decoder decodeHeartbeat(final String example) throws InstantiationException, IllegalAccessException
+    {
+        final Decoder decoder = (Decoder) heartbeat.newInstance();
+        buffer.putAscii(1, example);
+
+        decoder.decode(buffer, 1, example.length());
+        return decoder;
     }
 
     // TODO: compound types
@@ -143,6 +156,46 @@ public class DecoderGeneratorTest
     private boolean hasTestReqId(final Object encoder) throws Exception
     {
         return (boolean) getField(encoder, HAS_TEST_REQ_ID);
+    }
+
+    private boolean hasDataField(Decoder decoder) throws Exception
+    {
+        return (boolean) getField(decoder, HAS_DATA_FIELD);
+    }
+
+    private boolean hasBooleanField(Decoder decoder) throws Exception
+    {
+        return (boolean) getField(decoder, HAS_BOOLEAN_FIELD);
+    }
+
+    private Object getFloatField(Decoder decoder) throws Exception
+    {
+        return get(decoder, FLOAT_FIELD);
+    }
+
+    private Object getIntField(Decoder decoder) throws Exception
+    {
+        return get(decoder, INT_FIELD);
+    }
+
+    private char[] getOnBehalfOfCompId(Decoder decoder) throws Exception
+    {
+        return (char[]) get(decoder, ON_BEHALF_OF_COMP_ID);
+    }
+
+    private byte[] getDataField(Decoder decoder) throws Exception
+    {
+        return (byte[]) get(decoder, DATA_FIELD);
+    }
+
+    private Object getBooleanField(Decoder decoder) throws Exception
+    {
+        return get(decoder, BOOLEAN_FIELD);
+    }
+
+    private char[] getTestReqId(Decoder decoder) throws Exception
+    {
+        return (char[]) get(decoder, TEST_REQ_ID);
     }
 
 }

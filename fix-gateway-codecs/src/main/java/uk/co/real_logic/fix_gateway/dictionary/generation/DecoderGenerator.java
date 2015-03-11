@@ -227,12 +227,19 @@ public class DecoderGenerator extends Generator
 
         return String.format(
             "            case %d:\n" +
+            "%s" +
             "                %s = buffer.%s);\n" +
             "                break;\n\n",
             tag,
+            optionalAssign(entry),
             fieldName,
             decodeMethod(field.type(), fieldName)
         );
+    }
+
+    private String optionalAssign(final Entry entry)
+    {
+        return entry.required() ? "" : String.format("                has%s = true;\n", entry.name());
     }
 
     private String decodeMethod(final Type type, String fieldName)
