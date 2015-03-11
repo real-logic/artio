@@ -42,7 +42,7 @@ public class DecoderGeneratorTest
     public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
 
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
-    private static DecoderGenerator decoderGenerator = new DecoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, 3, outputManager);
+    private static DecoderGenerator decoderGenerator = new DecoderGenerator(MESSAGE_EXAMPLE, 3, TEST_PACKAGE, outputManager);
     private static Class<?> heartbeat;
     private static Class<?> headerClass;
 

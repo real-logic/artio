@@ -38,8 +38,7 @@ public class DecoderGenerator extends Generator
 
     public DecoderGenerator(
             final DataDictionary dictionary,
-            final String builderPackage,
-            final int initialBufferSize,
+            final int initialBufferSize, final String builderPackage,
             final OutputManager outputManager)
     {
         super(dictionary, builderPackage, outputManager);
@@ -266,7 +265,11 @@ public class DecoderGenerator extends Generator
                 return String.format("getFloat(%s, valueOffset, valueLength", fieldName);
 
             case LOCALMKTDATE:
+                return "getLocalMktDate(valueOffset, valueLength";
+
             case UTCTIMESTAMP:
+                return "getUtcTimestamp(valueOffset, valueLength";
+
             default: throw new UnsupportedOperationException("Unknown type: " + type);
         }
     }

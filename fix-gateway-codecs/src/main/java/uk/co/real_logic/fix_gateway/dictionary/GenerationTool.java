@@ -15,15 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary;
 
-import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.agrona.generation.PackageOutputManager;
+import uk.co.real_logic.fix_gateway.dictionary.generation.DecoderGenerator;
 import uk.co.real_logic.fix_gateway.dictionary.generation.EncoderGenerator;
 import uk.co.real_logic.fix_gateway.dictionary.generation.EnumGenerator;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 
 import java.io.FileInputStream;
 
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.DECODER_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.ENCODER_PACKAGE;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 
 public final class GenerationTool
 {
@@ -35,12 +37,19 @@ public final class GenerationTool
         try (final FileInputStream input = new FileInputStream(xmlPath))
         {
             final DataDictionary dictionary = parser.parse(input);
-            final OutputManager outputManager = new PackageOutputManager(outputPath, ENCODER_PACKAGE);
-            final EnumGenerator enumGenerator = new EnumGenerator(dictionary, outputManager);
-            final EncoderGenerator encoderGenerator = new EncoderGenerator(dictionary, 20, ENCODER_PACKAGE, outputManager);
+
+            final EnumGenerator enumGenerator = new EnumGenerator(dictionary,
+                new PackageOutputManager(outputPath, PARENT_PACKAGE));
+
+            final EncoderGenerator encoderGenerator = new EncoderGenerator(dictionary, 20, ENCODER_PACKAGE,
+                new PackageOutputManager(outputPath, ENCODER_PACKAGE));
+
+            final DecoderGenerator decoderGenerator = new DecoderGenerator(dictionary, 20, DECODER_PACKAGE,
+                    new PackageOutputManager(outputPath, DECODER_PACKAGE));
 
             enumGenerator.generate();
             encoderGenerator.generate();
+            decoderGenerator.generate();
         }
     }
 }
