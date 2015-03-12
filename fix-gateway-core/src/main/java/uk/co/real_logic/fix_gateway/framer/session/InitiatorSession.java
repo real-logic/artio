@@ -54,4 +54,9 @@ public class InitiatorSession extends Session
     {
 
     }
+
+    public void login()
+    {
+
+    }
 }
