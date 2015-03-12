@@ -19,7 +19,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
-// TODO: optionally validate sessions, etc.
+// TODO: optionally validate session on every message?
 public class SessionParser
 {
     public static final long UNKNOWN_SESSION_ID = -1;

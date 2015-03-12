@@ -16,14 +16,21 @@
 package uk.co.real_logic.fix_gateway.framer.session;
 
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.FixGateway;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.CONNECTED;
 
 public class InitiatorSessionTest extends AbstractSessionTest
 {
-    private InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, mockClock, mockProxy);
+    private final FixGateway mockGateway = mock(FixGateway.class);
+
+    private InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, mockClock, mockProxy,
+        mockGateway);
 
     @Test
     public void shouldInitiallyBeConnected()
@@ -47,6 +54,39 @@ public class InitiatorSessionTest extends AbstractSessionTest
         onLogon(1);
 
         verifyDisconnect();
+    }
+
+    @Test
+    public void shouldAttemptLogonWhenConnected()
+    {
+        session.poll();
+
+        verifyLogon();
+    }
+
+    @Test
+    public void shouldAttemptLogonOnlyOnce()
+    {
+        session.poll();
+
+        session.poll();
+
+        session.poll();
+
+        verifyLogon();
+    }
+
+    @Test
+    public void shouldNotifyGatewayWhenLoggedIn()
+    {
+        onLogon(1);
+
+        verify(mockGateway).onInitiatorSessionActive(session);
+    }
+
+    private void verifyLogon()
+    {
+        verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1, CONNECTION_ID);
     }
 
     protected Session session()

@@ -28,6 +28,7 @@ import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 
+@Ignore
 public class GatewayIntegrationTest
 {
 
@@ -62,7 +63,6 @@ public class GatewayIntegrationTest
         assertTrue("Session has failed to connect", session.isConnected());
     }
 
-    @Ignore
     @Test
     public void initiatedSessionIsActive() throws InterruptedException
     {

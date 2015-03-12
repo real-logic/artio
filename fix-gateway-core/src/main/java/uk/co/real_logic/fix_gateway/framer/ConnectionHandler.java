@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.framer.session.*;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -76,8 +77,8 @@ public class ConnectionHandler
         return new AcceptorSession(defaultInterval, connectionId, clock, sessionProxy);
     }
 
-    public InitiatorSession initiatorSession(final long connectionId)
+    public InitiatorSession initiatorSession(final long connectionId, final FixGateway gateway)
     {
-        return new InitiatorSession(defaultInterval, connectionId, clock, sessionProxy);
+        return new InitiatorSession(defaultInterval, connectionId, clock, sessionProxy, gateway);
     }
 }

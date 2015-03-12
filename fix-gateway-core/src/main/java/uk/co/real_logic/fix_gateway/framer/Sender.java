@@ -20,6 +20,7 @@ import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.commands.SenderCommand;
+import uk.co.real_logic.fix_gateway.commands.SessionManagerProxy;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
 import java.io.IOException;
@@ -37,6 +38,7 @@ public final class Sender implements Agent
     private final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue;
     private final ConnectionHandler connectionHandler;
     private final ReceiverProxy receiver;
+    private final SessionManagerProxy sessionManager;
     private final FixGateway gateway;
     private final Multiplexer multiplexer;
 
@@ -44,12 +46,14 @@ public final class Sender implements Agent
         final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue,
         final ConnectionHandler connectionHandler,
         final ReceiverProxy receiver,
+        final SessionManagerProxy sessionManager,
         final FixGateway gateway,
         final Multiplexer multiplexer)
     {
         this.commandQueue = commandQueue;
         this.connectionHandler = connectionHandler;
         this.receiver = receiver;
+        this.sessionManager = sessionManager;
         this.gateway = gateway;
         this.multiplexer = multiplexer;
     }
@@ -74,9 +78,9 @@ public final class Sender implements Agent
 
             final long connectionId = connectionHandler.onConnection();
             onNewAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
-            final InitiatorSession session = connectionHandler.initiatorSession(connectionId);
+            final InitiatorSession session = connectionHandler.initiatorSession(connectionId, gateway);
             receiver.newInitiatedConnection(connectionHandler.receiverEndPoint(channel, connectionId, session));
-            gateway.onInitiatorSessionConnected(session);
+            sessionManager.newSession(session);
         }
         catch (final IOException ex)
         {

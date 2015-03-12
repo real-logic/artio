@@ -46,6 +46,7 @@ public class SessionProxy
     {
         logon.header().msgSeqNum(msgSeqNo);
         logon.heartBtInt(heartbeatInterval);
+        System.out.println("logon");
     }
 
     public void logout(final int msgSeqNo, final long sessionId)

@@ -16,23 +16,58 @@
 package uk.co.real_logic.fix_gateway.framer.session;
 
 import uk.co.real_logic.aeron.common.Agent;
+import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
+import uk.co.real_logic.fix_gateway.commands.SessionManagerCommand;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 public final class SessionManager implements Agent
 {
 
+    private final Consumer<SessionManagerCommand> onCommandFunc = this::onCommand;
+    private final List<Session> sessions = new ArrayList<>();
+
+    private final OneToOneConcurrentArrayQueue<SessionManagerCommand> commandQueue;
+
+    public SessionManager(final OneToOneConcurrentArrayQueue<SessionManagerCommand> commandQueue)
+    {
+        this.commandQueue = commandQueue;
+    }
+
     public int doWork() throws Exception
     {
-        // Ability to check heartbeats
-        return 0;
+        return commandQueue.drain(onCommandFunc) + pollSessions();
+    }
+
+    private int pollSessions()
+    {
+        for (final Session session: sessions)
+        {
+            session.poll();
+        }
+        return sessions.size();
+    }
+
+    private void onCommand(final SessionManagerCommand command)
+    {
+        command.execute(this);
     }
 
     public void onClose()
     {
+        sessions.forEach(Session::disconnect);
+    }
 
+    public void onNewSession(final Session session)
+    {
+        sessions.add(session);
     }
 
     public String roleName()
     {
         return "Session Manager";
     }
+
 }

@@ -53,6 +53,11 @@ public enum SessionState
     CONNECTED,
 
     /**
+     * Initiator only state - sent logon message but it hasn't received the reply yet.
+     */
+    SENT_LOGON,
+
+    /**
      * Session is fully authenticated and ready to execute.
      */
     ACTIVE,

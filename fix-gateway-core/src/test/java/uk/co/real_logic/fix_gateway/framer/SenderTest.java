@@ -23,6 +23,7 @@ import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
+import uk.co.real_logic.fix_gateway.commands.SessionManagerProxy;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 
@@ -32,6 +33,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 
 public class SenderTest
@@ -42,6 +44,7 @@ public class SenderTest
     private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private ReceiverProxy mockReceiver = mock(ReceiverProxy.class);
+    private SessionManagerProxy mockSessionManager = mock(SessionManagerProxy.class);
     private FixGateway mockGateway = mock(FixGateway.class);
     private Multiplexer mockMultiplexer = mock(Multiplexer.class);
     private InitiatorSession mockSession = mock(InitiatorSession.class);
@@ -49,7 +52,8 @@ public class SenderTest
     private OneToOneConcurrentArrayQueue<SenderCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private SenderProxy proxy = new SenderProxy(commandQueue);
 
-    private Sender sender = new Sender(commandQueue, mockConnectionHandler, mockReceiver, mockGateway, mockMultiplexer);
+    private Sender sender = new Sender(commandQueue, mockConnectionHandler, mockReceiver, mockSessionManager,
+        mockGateway, mockMultiplexer);
 
     private ServerSocketChannel server;
 
@@ -65,7 +69,7 @@ public class SenderTest
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong()))
             .thenReturn(mockSenderEndPoint);
 
-        when(mockConnectionHandler.initiatorSession(anyLong())).thenReturn(mockSession);
+        when(mockConnectionHandler.initiatorSession(anyLong(), eq(mockGateway))).thenReturn(mockSession);
     }
 
     @After
@@ -77,11 +81,7 @@ public class SenderTest
     @Test
     public void shouldConnectToAddress() throws Exception
     {
-        given:
-        proxy.connect(ADDRESS);
-
-        when:
-        sender.doWork();
+        connect();
 
         then:
         assertNotNull("Sender hasn't connected to server", server.accept());
@@ -90,26 +90,27 @@ public class SenderTest
     @Test
     public void shouldNotifyReceiverWhenConnectionEstablished() throws Exception
     {
-        given:
-        proxy.connect(ADDRESS);
-
-        when:
-        sender.doWork();
+        connect();
 
         then:
         verify(mockReceiver).newInitiatedConnection(mockReceiverEndPoint);
     }
 
     @Test
-    public void shouldNotifyFixGatewayWhenConnectionEstablished() throws Exception
+    public void shouldNotifySessionManagerWhenConnectionEstablished() throws Exception
+    {
+        connect();
+
+        then:
+        verify(mockSessionManager).newSession(mockSession);
+    }
+
+    private void connect() throws Exception
     {
         given:
         proxy.connect(ADDRESS);
 
         when:
         sender.doWork();
-
-        then:
-        verify(mockGateway).onInitiatorSessionConnected(mockSession);
     }
 }
