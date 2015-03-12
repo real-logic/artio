@@ -32,6 +32,7 @@ import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.
 // TODO: optimisations
 // skip decoding the msg type, since its known
 // skip decoding the body string, since its known
+// use ordering of fields to reduce branching
 public class DecoderGenerator extends Generator
 {
     private final int initialBufferSize;
@@ -221,7 +222,7 @@ public class DecoderGenerator extends Generator
             "            position = endOfField + 1;\n" +
             "        }\n\n" +
             (hasCommonCompounds ? "        position += trailer.decode(buffer, position, end - position);\n" : "") +
-            "    return position - offset;" +
+            "        return position - offset;\n" +
             "    }\n\n";
 
         return prefix + body + suffix;

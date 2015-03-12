@@ -25,8 +25,8 @@ public class SessionParser
     private final LogonDecoder logon = new LogonDecoder();
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
     private final LogoutDecoder logout = new LogoutDecoder();
-    private final HeartbeatDecoder heartbeat = new HeartbeatDecoder();
     private final RejectDecoder reject = new RejectDecoder();
+    private final HeaderDecoder header = new HeaderDecoder();
 
     private final Session session;
     private long sessionId;
@@ -45,36 +45,47 @@ public class SessionParser
     {
         string.wrap(buffer);
 
-        // TODO: headers
         // TODO: session id lookup
         final long sessionId = connectionId;
-        final int msgSeqNo = 0;
+        int msgSeqNo = 0;
 
         switch (messageType)
         {
             case LogonDecoder.MESSAGE_TYPE:
                 logon.decode(string, offset, length);
+                msgSeqNo = logon.header().msgSeqNum();
+
                 session.onLogon(logon.heartBtInt(), msgSeqNo, sessionId);
                 break;
 
             case ResendRequestDecoder.MESSAGE_TYPE:
                 resendRequest.decode(string, offset, length);
+                msgSeqNo = resendRequest.header().msgSeqNum();
+
                 session.onResendRequest(resendRequest.beginSeqNo(), resendRequest.endSeqNo());
                 break;
 
             case LogoutDecoder.MESSAGE_TYPE:
                 logout.decode(string, offset, length);
+                msgSeqNo = logout.header().msgSeqNum();
+
                 session.onLogout(msgSeqNo, sessionId);
                 break;
 
-            case HeartbeatDecoder.MESSAGE_TYPE:
-                heartbeat.decode(string, offset, length);
+            case RejectDecoder.MESSAGE_TYPE:
+                reject.decode(string, offset, length);
+                msgSeqNo = reject.header().msgSeqNum();
+                // TODO: what do we on a reject?
+                break;
 
+            default:
+                header.decode(string, offset, length);
+                msgSeqNo = header.msgSeqNum();
                 break;
         }
 
         session.onMessage(msgSeqNo);
-        return connectionId;
+        return sessionId;
     }
 
 }
