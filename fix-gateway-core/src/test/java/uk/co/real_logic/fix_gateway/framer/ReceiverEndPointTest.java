@@ -15,11 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.fix_gateway.framer.session.Session;
+import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -29,17 +30,25 @@ import java.util.function.ToIntFunction;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.framer.session.SessionParser.UNKNOWN_SESSION_ID;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.EG_MESSAGE;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.MSG_LEN;
 
 public class ReceiverEndPointTest
 {
-    private static final long ID = 20L;
+    private static final long CONNECTION_ID = 20L;
+    private static final long SESSION_ID = 4L;
 
     private SocketChannel mockChannel = mock(SocketChannel.class);
     private MessageHandler mockHandler = mock(MessageHandler.class);
-    private Session mockSession = mock(Session.class);
-    private ReceiverEndPoint endPoint = new ReceiverEndPoint(mockChannel, 16 * 1024, mockHandler, ID, mockSession);
+    private SessionParser mockSession = mock(SessionParser.class);
+    private ReceiverEndPoint endPoint = new ReceiverEndPoint(mockChannel, 16 * 1024, mockHandler, CONNECTION_ID, mockSession);
+
+    @Before
+    public void setUp()
+    {
+        when(mockSession.onMessage(any(), anyInt(), anyInt(), anyLong(), anyInt())).thenReturn(SESSION_ID);
+    }
 
     @Test
     public void shouldHandleValidFixMessageInOneGo()
@@ -123,6 +132,20 @@ public class ReceiverEndPointTest
         handlerReceivesFramedMessages(2);
     }
 
+    @Test
+    public void shouldOnlyFrameMessagesWhenConnected()
+    {
+        given:
+        when(mockSession.onMessage(any(), anyInt(), anyInt(), anyLong(), anyInt())).thenReturn(UNKNOWN_SESSION_ID);
+        theEndpointReceivesACompleteMessage();
+
+        when:
+        endPoint.receiveData();
+
+        then:
+        handlerNotCalled();
+    }
+
     private void handlerReceivesAFramedMessage()
     {
         handlerReceivesFramedMessages(1);
@@ -130,20 +153,20 @@ public class ReceiverEndPointTest
 
     private void handlerReceivesFramedMessages(int numberOfMessages)
     {
-        verify(mockHandler, times(numberOfMessages)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(ID));
+        verify(mockHandler, times(numberOfMessages)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(SESSION_ID));
     }
 
     private void handlerReceivesTwoFramedMessages()
     {
         InOrder inOrder = Mockito.inOrder(mockHandler);
-        inOrder.verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(ID));
-        inOrder.verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(ID));
+        inOrder.verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(SESSION_ID));
+        inOrder.verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(SESSION_ID));
         inOrder.verifyNoMoreInteractions();
     }
 
     private void handlerNotCalled()
     {
-        verify(mockHandler, never()).onMessage(any(AtomicBuffer.class), anyInt(), anyInt(), eq(ID));
+        verifyNoMoreInteractions(mockHandler);
     }
 
     private void theEndpointReceivesACompleteMessage()

@@ -21,6 +21,8 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 public class SessionParser
 {
+    public static final long UNKNOWN_SESSION_ID = -1;
+
     private final AsciiFlyweight string = new AsciiFlyweight();
     private final LogonDecoder logon = new LogonDecoder();
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
@@ -45,8 +47,6 @@ public class SessionParser
     {
         string.wrap(buffer);
 
-        // TODO: session id lookup
-        final long sessionId = connectionId;
         int msgSeqNo = 0;
 
         switch (messageType)
@@ -54,7 +54,8 @@ public class SessionParser
             case LogonDecoder.MESSAGE_TYPE:
                 logon.decode(string, offset, length);
                 msgSeqNo = logon.header().msgSeqNum();
-
+                // TODO: session id lookup
+                sessionId = connectionId;
                 session.onLogon(logon.heartBtInt(), msgSeqNo, sessionId);
                 break;
 
@@ -75,7 +76,7 @@ public class SessionParser
             case RejectDecoder.MESSAGE_TYPE:
                 reject.decode(string, offset, length);
                 msgSeqNo = reject.header().msgSeqNum();
-                // TODO: what do we on a reject?
+                session.onReject();
                 break;
 
             default:
@@ -85,7 +86,14 @@ public class SessionParser
         }
 
         session.onMessage(msgSeqNo);
-        return sessionId;
+        if (session.isConnected())
+        {
+            return sessionId;
+        }
+        else
+        {
+            return UNKNOWN_SESSION_ID;
+        }
     }
 
 }

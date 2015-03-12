@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
-import uk.co.real_logic.fix_gateway.framer.session.AcceptorSession;
-import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
-import uk.co.real_logic.fix_gateway.framer.session.Session;
-import uk.co.real_logic.fix_gateway.framer.session.SessionProxy;
+import uk.co.real_logic.fix_gateway.framer.session.*;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
@@ -62,7 +59,8 @@ public class ConnectionHandler
     public ReceiverEndPoint receiverEndPoint(
         final SocketChannel channel, final long connectionId, final Session session)
     {
-        return new ReceiverEndPoint(channel, bufferSize, messageHandler, connectionId, session);
+        final SessionParser sessionParser = new SessionParser(session);
+        return new ReceiverEndPoint(channel, bufferSize, messageHandler, connectionId, sessionParser);
     }
 
     public SenderEndPoint senderEndPoint(final SocketChannel channel, final long connectionId)

@@ -229,4 +229,8 @@ public abstract class Session
         return clock.time();
     }
 
+    public void onReject()
+    {
+        // TODO
+    }
 }

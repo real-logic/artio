@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
@@ -52,12 +51,12 @@ public class ReceiverEndPoint
 
     public ReceiverEndPoint(
         final SocketChannel channel, final int bufferSize, final MessageHandler handler, final long connectionId,
-        final Session session)
+        final SessionParser session)
     {
         this.channel = channel;
         this.handler = handler;
         this.connectionId = connectionId;
-        this.session = new SessionParser(session);
+        this.session = session;
 
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new AsciiFlyweight(buffer);
@@ -118,7 +117,10 @@ public class ReceiverEndPoint
                 final int messageType = getMessageType(endOfBodyLength, indexOfLastByteOfMessage);
                 final int length = (indexOfLastByteOfMessage + 1) - offset;
                 final long sessionId = session.onMessage(buffer, offset, length, connectionId, messageType);
-                handler.onMessage(buffer, offset, length, sessionId);
+                if (sessionId != SessionParser.UNKNOWN_SESSION_ID)
+                {
+                    handler.onMessage(buffer, offset, length, sessionId);
+                }
 
                 offset += length;
             }
