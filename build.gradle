@@ -192,6 +192,7 @@ project(':fix-gateway-core') {
         compile project(path: ':fix-gateway-codecs')
         compile 'uk.co.real-logic:aeron-client:0.1-SNAPSHOT'
         compile 'uk.co.real-logic:aeron-common:0.1-SNAPSHOT'
+        compile 'uk.co.real-logic:aeron-driver:0.1-SNAPSHOT'
     }
 
     run {

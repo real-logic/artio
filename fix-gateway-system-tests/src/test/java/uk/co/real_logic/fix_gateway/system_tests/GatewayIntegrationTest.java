@@ -19,12 +19,14 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
 import static org.junit.Assert.assertTrue;
+import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 
@@ -32,6 +34,7 @@ import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 public class GatewayIntegrationTest
 {
 
+    private MediaDriver mediaDriver;
     private FixGateway acceptingGateway;
     private FixGateway initiatingGateway;
     private InitiatorSession session;
@@ -40,6 +43,8 @@ public class GatewayIntegrationTest
     public void launch()
     {
         final int port = unusedPort();
+
+        mediaDriver = MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
 
         final StaticConfiguration acceptingConfig = new StaticConfiguration()
                 .registerFallbackAcceptor(new FakeOtfAcceptor())
@@ -80,6 +85,11 @@ public class GatewayIntegrationTest
         if (initiatingGateway != null)
         {
             initiatingGateway.close();
+        }
+
+        if (mediaDriver != null)
+        {
+            mediaDriver.close();
         }
     }
 

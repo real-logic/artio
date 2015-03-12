@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.common.AgentRunner;
 import uk.co.real_logic.aeron.common.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
@@ -24,11 +25,15 @@ import uk.co.real_logic.fix_gateway.framer.*;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.SessionManager;
 import uk.co.real_logic.fix_gateway.framer.session.SessionProxy;
+import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
 import java.net.InetSocketAddress;
 
 public class FixGateway implements AutoCloseable
 {
+    private final Aeron aeron;
+    private final ReplicationStreams streams;
+
     private final SenderProxy senderProxy;
     private final ReceiverProxy receiverProxy;
     private final SessionManagerProxy sessionManagerProxy;
@@ -50,6 +55,11 @@ public class FixGateway implements AutoCloseable
     {
         connectionTimeout = configuration.connectionTimeout();
 
+        Aeron.Context context = new Aeron.Context();
+        aeron = Aeron.connect(context);
+        // TODO: aeron channel configuration
+        streams = new ReplicationStreams("udp://localhost:9998", aeron);
+
         // TODO: MPSC queue?
         final OneToOneConcurrentArrayQueue<SenderCommand> senderCommands = new OneToOneConcurrentArrayQueue<>(10);
         final OneToOneConcurrentArrayQueue<ReceiverCommand> receiverCommands = new OneToOneConcurrentArrayQueue<>(10);
@@ -62,7 +72,7 @@ public class FixGateway implements AutoCloseable
 
         final MessageSource source = handler -> 0;
         final Multiplexer multiplexer = new Multiplexer(source);
-        final SessionProxy sessionProxy = new SessionProxy();
+        final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(), streams.dataPublication());
         final MessageHandler messageHandler = (buffer, offset, length, sessionId) ->
         {
             System.out.printf("Message received from %d\n", sessionId);
@@ -131,6 +141,10 @@ public class FixGateway implements AutoCloseable
 
         sender.onClose();
         receiver.onClose();
+
+        streams.dataPublication().close();
+        streams.controlPublication().close();
+        aeron.close();
     }
 
     public void onInitiatorSessionActive(final InitiatorSession session)

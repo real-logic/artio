@@ -32,12 +32,14 @@ public final class StaticConfiguration
     private static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
     private static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
     private static final long DEFAULT_CONNECTION_TIMEOUT = 1000;
+    private static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
 
     private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
 
     private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
     private int receiverBufferSize = DEFAULT_RECEIVER_BUFFER_SIZE;
     private long connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
+    private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
     private SessionIdStrategy sessionIdStrategy = new HashingSenderAndTargetSessionIdStrategy();
 
     private String host;
@@ -120,5 +122,10 @@ public final class StaticConfiguration
     long connectionTimeout()
     {
         return connectionTimeout;
+    }
+
+    int encoderBufferSize()
+    {
+        return encoderBufferSize;
     }
 }
