@@ -66,6 +66,7 @@ public class FixGateway implements AutoCloseable
             sessionProxy,
             configuration.receiverBufferSize(),
             configuration.defaultHeartbeatInterval(),
+            configuration.sessionIdStrategy(),
             messageHandler);
 
         sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer);

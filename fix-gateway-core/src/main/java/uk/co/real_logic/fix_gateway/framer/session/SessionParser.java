@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
+// TODO: optionally validate sessions, etc.
 public class SessionParser
 {
     public static final long UNKNOWN_SESSION_ID = -1;
@@ -31,11 +32,14 @@ public class SessionParser
     private final HeaderDecoder header = new HeaderDecoder();
 
     private final Session session;
+    private final SessionIdStrategy sessionIdStrategy;
+
     private long sessionId;
 
-    public SessionParser(final Session session)
+    public SessionParser(final Session session, final SessionIdStrategy sessionIdStrategy)
     {
         this.session = session;
+        this.sessionIdStrategy = sessionIdStrategy;
     }
 
     public long onMessage(
@@ -54,8 +58,7 @@ public class SessionParser
             case LogonDecoder.MESSAGE_TYPE:
                 logon.decode(string, offset, length);
                 msgSeqNo = logon.header().msgSeqNum();
-                // TODO: session id lookup
-                sessionId = connectionId;
+                sessionId = sessionIdStrategy.identify(header);
                 session.onLogon(logon.heartBtInt(), msgSeqNo, sessionId);
                 break;
 

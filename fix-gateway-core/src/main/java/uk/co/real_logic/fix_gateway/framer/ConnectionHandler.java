@@ -35,6 +35,7 @@ public class ConnectionHandler
     private final SessionProxy sessionProxy;
     private final int bufferSize;
     private final int defaultInterval;
+    private final SessionIdStrategy sessionIdStrategy;
     private final MessageHandler messageHandler;
 
     public ConnectionHandler(
@@ -42,12 +43,14 @@ public class ConnectionHandler
         final SessionProxy sessionProxy,
         final int bufferSize,
         final int defaultInterval,
+        final SessionIdStrategy sessionIdStrategy,
         final MessageHandler messageHandler)
     {
         this.clock = clock;
         this.sessionProxy = sessionProxy;
         this.bufferSize = bufferSize;
         this.defaultInterval = defaultInterval;
+        this.sessionIdStrategy = sessionIdStrategy;
         this.messageHandler = messageHandler;
     }
 
@@ -59,7 +62,7 @@ public class ConnectionHandler
     public ReceiverEndPoint receiverEndPoint(
         final SocketChannel channel, final long connectionId, final Session session)
     {
-        final SessionParser sessionParser = new SessionParser(session);
+        final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy);
         return new ReceiverEndPoint(channel, bufferSize, messageHandler, connectionId, sessionParser);
     }
 

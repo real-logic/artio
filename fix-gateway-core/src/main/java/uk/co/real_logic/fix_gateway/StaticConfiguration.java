@@ -17,6 +17,8 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
+import uk.co.real_logic.fix_gateway.framer.session.HashingSenderAndTargetSessionIdStrategy;
+import uk.co.real_logic.fix_gateway.framer.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 
 import java.net.InetSocketAddress;
@@ -36,6 +38,7 @@ public final class StaticConfiguration
     private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
     private int receiverBufferSize = DEFAULT_RECEIVER_BUFFER_SIZE;
     private long connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
+    private SessionIdStrategy sessionIdStrategy = new HashingSenderAndTargetSessionIdStrategy();
 
     private String host;
     private int port;
@@ -82,15 +85,26 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration receiverBufferSize(final int value)
+    {
+        receiverBufferSize = value;
+        return this;
+    }
+
+    public StaticConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
+    {
+        this.sessionIdStrategy = sessionIdStrategy;
+        return this;
+    }
+
     int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
     }
 
-    public StaticConfiguration receiverBufferSize(final int value)
+    SessionIdStrategy sessionIdStrategy()
     {
-        receiverBufferSize = value;
-        return this;
+        return sessionIdStrategy;
     }
 
     int receiverBufferSize()

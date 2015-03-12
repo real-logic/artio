@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.builder.*;
 // TODO: buffer
 public class SessionProxy
 {
+
     private final LogonEncoder logon = new LogonEncoder();
     private final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
     private final LogoutEncoder logout = new LogoutEncoder();
