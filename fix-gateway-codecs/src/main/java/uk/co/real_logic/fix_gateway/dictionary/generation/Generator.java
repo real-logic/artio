@@ -35,6 +35,23 @@ import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.
 public abstract class Generator
 {
 
+    protected static final String MSG_TYPE = "MsgType";
+
+    protected String commonCompoundImports(final String form)
+    {
+        return String.format(
+            "    private Header%s header = new Header%1$s();\n\n" +
+            "    public Header%1$s header() {\n" +
+            "        return header;\n" +
+            "    }\n\n" +
+
+            "    private Trailer%1$s trailer = new Trailer%1$s();\n\n" +
+            "    public Trailer%1$s trailer() {\n" +
+            "        return trailer;\n" +
+            "    }\n\n",
+            form);
+    }
+
     private static final String COMMON_COMPOUND_IMPORTS =
             "import %1$s.Header%3$s;\n" +
             "import %1$s.Trailer%3$s;\n";

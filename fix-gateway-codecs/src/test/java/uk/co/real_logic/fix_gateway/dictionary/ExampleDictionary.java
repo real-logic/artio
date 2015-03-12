@@ -54,6 +54,9 @@ public final class ExampleDictionary
     public static final String HAS_BOOLEAN_FIELD = "hasBooleanField";
     public static final String HAS_DATA_FIELD = "hasDataField";
 
+    public static final String MSG_TYPE = "msgType";
+    public static final String BODY_LENGTH = "bodyLength";
+
     public static final int HEARTBEAT_TYPE = '0';
 
     public static final DataDictionary FIELD_EXAMPLE;
@@ -61,10 +64,10 @@ public final class ExampleDictionary
     public static final DataDictionary MESSAGE_EXAMPLE;
 
     public static final String ENCODED_MESSAGE_EXAMPLE =
-        "8=abc\0019=0051\00135=abc\001115=abc\001112=abc\001116=2\001117=1.1\001118=Y\001119=123\00110=108\001";
+        "8=abc\0019=0049\00135=0\001115=abc\001112=abc\001116=2\001117=1.1\001118=Y\001119=123\00110=118\001";
 
     public static final String NO_OPTIONAL_MESSAGE_EXAMPLE =
-        "8=abc\0019=0029\00135=abc\001115=abc\001116=2\001117=1.1\00110=212\001";
+        "8=abc\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=222\001";
 
     public static final String DERIVED_FIELDS_EXAMPLE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=222\001";

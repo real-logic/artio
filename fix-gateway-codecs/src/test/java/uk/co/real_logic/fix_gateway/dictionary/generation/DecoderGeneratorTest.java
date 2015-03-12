@@ -142,6 +142,26 @@ public class DecoderGeneratorTest
         assertEquals(HEARTBEAT_TYPE, messageType);
     }
 
+    @Test
+    public void decodesCommonComponents() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE_EXAMPLE);
+
+        final Decoder header = getHeader(decoder);
+
+        assertEquals(49, getBodyLength(header));
+    }
+
+    private int getBodyLength(final Decoder header) throws Exception
+    {
+        return (int) get(header, BODY_LENGTH);
+    }
+
+    private Decoder getHeader(final Decoder decoder) throws Exception
+    {
+        return (Decoder) get(decoder, "header");
+    }
+
     private Decoder decodeHeartbeat(final String example) throws InstantiationException, IllegalAccessException
     {
         final Decoder decoder = (Decoder) heartbeat.newInstance();

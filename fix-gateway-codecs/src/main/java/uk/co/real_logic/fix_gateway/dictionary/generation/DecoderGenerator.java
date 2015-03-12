@@ -29,6 +29,9 @@ import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.MESSAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
 
+// TODO: optimisations
+// skip decoding the msg type, since its known
+// skip decoding the body string, since its known
 public class DecoderGenerator extends Generator
 {
     private final int initialBufferSize;
@@ -55,6 +58,7 @@ public class DecoderGenerator extends Generator
             {
                 Message message = (Message) aggregate;
                 out.append(generateMessageType(message.type()));
+                out.append(commonCompoundImports("Decoder"));
             }
             generateGetters(out, className, aggregate.entries());
             out.append(generateDecodeMethod(aggregate.entries(), isMessage));
@@ -98,16 +102,16 @@ public class DecoderGenerator extends Generator
             "        return %2$s;\n" +
             "    }\n\n" +
             "%s",
-            javaTypeOf(field.type()),
+            javaTypeOf(field.type(), name),
             fieldName,
-            fieldInitialisation(field.type()),
+            fieldInitialisation(field.type(), name),
             optionalField(entry),
             optionalCheck(entry),
             optionalGetter(entry)
         );
     }
 
-    private String fieldInitialisation(Type type)
+    private String fieldInitialisation(Type type, final String name)
     {
         switch (type)
         {
@@ -154,7 +158,7 @@ public class DecoderGenerator extends Generator
             entry.name());
     }
 
-    private String javaTypeOf(final Type type)
+    private String javaTypeOf(final Type type, final String name)
     {
         switch (type)
         {
@@ -188,10 +192,11 @@ public class DecoderGenerator extends Generator
     private String generateDecodeMethod(final List<Entry> entries, final boolean hasCommonCompounds)
     {
         final String prefix =
-            "    public void decode(final AsciiFlyweight buffer, final int offset, final int length)\n" +
+            "    public int decode(final AsciiFlyweight buffer, final int offset, final int length)\n" +
             "    {\n"+
             "        final int end = offset + length;\n" +
             "        int position = offset;\n" +
+            (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
             "        int tag;\n\n" +
             "        while (position < end)\n" +
             "        {\n" +
@@ -203,18 +208,20 @@ public class DecoderGenerator extends Generator
             "            switch (tag)\n" +
             "            {\n\n";
 
-            //(hasCommonCompounds ? "        position += header.decode(buffer, position);\n" : "");
-
         final String body =
             entries.stream()
                    .map(this::decodeField)
-                   .collect(joining("\n"));
+                   .collect(joining("\n", "", "\n"));
 
         final String suffix =
-            //(hasCommonCompounds ? "        position += trailer.encode(buffer, position, header.bodyLength);\n" : "") +
+            "            default:\n" +
+            "                return position - offset;\n\n" +
+
             "            }\n\n" +
             "            position = endOfField + 1;\n" +
             "        }\n\n" +
+            (hasCommonCompounds ? "        position += trailer.decode(buffer, position, end - position);\n" : "") +
+            "    return position - offset;" +
             "    }\n\n";
 
         return prefix + body + suffix;
@@ -237,7 +244,7 @@ public class DecoderGenerator extends Generator
             "            case %d:\n" +
             "%s" +
             "                %s = buffer.%s);\n" +
-            "                break;\n\n",
+            "                break;\n",
             tag,
             optionalAssign(entry),
             fieldName,

@@ -209,7 +209,7 @@ public class EncoderGeneratorTest
     {
         final Object header = Reflection.get(encoder, "header");
         setCharSequence(header, "beginString", "abc");
-        setCharSequence(header, "msgType", "abc");
+        setCharSequence(header, "msgType", "0");
     }
 
     private void setupTrailer(final Encoder encoder) throws Exception

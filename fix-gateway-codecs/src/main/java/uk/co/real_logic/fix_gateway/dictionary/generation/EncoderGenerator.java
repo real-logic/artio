@@ -40,17 +40,6 @@ public class EncoderGenerator extends Generator
         "        position++;\n" +
         "%s";
 
-    protected static final String COMMON_COMPOUNDS =
-        "    private HeaderEncoder header = new HeaderEncoder();\n\n" +
-        "    public HeaderEncoder header() {\n" +
-        "        return header;\n" +
-        "    }\n\n" +
-
-        "    private TrailerEncoder trailer = new TrailerEncoder();\n\n" +
-        "    public TrailerEncoder trailer() {\n" +
-        "        return trailer;\n" +
-        "    }\n\n";
-
     private static final String TRAILER_PREFIX =
         "    public int encode(final MutableAsciiFlyweight buffer, final int offset)\n" +
         "    {\n"+
@@ -87,7 +76,7 @@ public class EncoderGenerator extends Generator
             out.append(generateConstructor(aggregate, dictionary));
             if (hasCommonCompounds)
             {
-                out.append(COMMON_COMPOUNDS);
+                out.append(commonCompoundImports("Encoder"));
             }
             generatePrecomputedHeaders(out, aggregate.entries());
             generateSetters(out, className, aggregate.entries());
@@ -111,7 +100,7 @@ public class EncoderGenerator extends Generator
 
         final Component header = dictionary.header();
         final Message message = (Message) aggregate;
-        final String msgType = header.hasField("MsgType")
+        final String msgType = header.hasField(MSG_TYPE)
                              ? String.format("        header.msgType(\"%s\");\n", (char) message.type()) : "";
 
         final String beginString = header.hasField("BeginString")
@@ -194,23 +183,23 @@ public class EncoderGenerator extends Generator
     {
         return String.format(
             "    private byte[] %s = new byte[%d];\n\n" +
-            "    private int %1$sLength = 0;\n\n" +
-            "%s" +
-            "    public %s %1$s(CharSequence value)\n" +
-            "    {\n" +
-            "        %1$s = toBytes(value, %1$s);\n" +
-            "        %1$sLength = value.length();\n" +
-            "%s" +
-            "        return this;\n" +
-            "    }\n" +
-            "\n" +
-            "    public %4$s %1$s(char[] value)\n" +
-            "    {\n" +
-            "        %1$s = toBytes(value, %1$s);\n" +
-            "        %1$sLength = value.length;\n" +
-            "%5$s" +
-            "        return this;\n" +
-            "    }\n\n",
+                "    private int %1$sLength = 0;\n\n" +
+                "%s" +
+                "    public %s %1$s(CharSequence value)\n" +
+                "    {\n" +
+                "        %1$s = toBytes(value, %1$s);\n" +
+                "        %1$sLength = value.length();\n" +
+                "%s" +
+                "        return this;\n" +
+                "    }\n" +
+                "\n" +
+                "    public %4$s %1$s(char[] value)\n" +
+                "    {\n" +
+                "        %1$s = toBytes(value, %1$s);\n" +
+                "        %1$sLength = value.length;\n" +
+                "%5$s" +
+                "        return this;\n" +
+                "    }\n\n",
             fieldName,
             initialArraySize,
             optionalField,
