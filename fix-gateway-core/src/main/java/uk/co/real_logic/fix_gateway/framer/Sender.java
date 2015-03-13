@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.Agent;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.FixGateway;
@@ -42,6 +43,7 @@ public final class Sender implements Agent
     private final SessionManagerProxy sessionManager;
     private final FixGateway gateway;
     private final Multiplexer multiplexer;
+    private final Subscription dataSubscription;
 
     public Sender(
         final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue,
@@ -49,7 +51,8 @@ public final class Sender implements Agent
         final ReceiverProxy receiver,
         final SessionManagerProxy sessionManager,
         final FixGateway gateway,
-        final Multiplexer multiplexer)
+        final Multiplexer multiplexer,
+        final Subscription dataSubscription)
     {
         this.commandQueue = commandQueue;
         this.connectionHandler = connectionHandler;
@@ -57,11 +60,12 @@ public final class Sender implements Agent
         this.sessionManager = sessionManager;
         this.gateway = gateway;
         this.multiplexer = multiplexer;
+        this.dataSubscription = dataSubscription;
     }
 
     public int doWork() throws Exception
     {
-        return commandQueue.drain(onCommandFunc) + multiplexer.scanBuffers();
+        return commandQueue.drain(onCommandFunc) + dataSubscription.poll(5);
     }
 
     private void onCommand(final SenderCommand command)

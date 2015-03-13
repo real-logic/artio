@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.framer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
@@ -41,7 +42,7 @@ public class SenderTest
 {
     private static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", 9999);
 
-    private static final SessionConfiguration configuration = SessionConfiguration
+    private static final SessionConfiguration CONFIGURATION = SessionConfiguration
         .builder()
         .address(ADDRESS.getHostName(), ADDRESS.getPort())
         .senderCompId("LEH_LZJ02")
@@ -56,12 +57,13 @@ public class SenderTest
     private FixGateway mockGateway = mock(FixGateway.class);
     private Multiplexer mockMultiplexer = mock(Multiplexer.class);
     private InitiatorSession mockSession = mock(InitiatorSession.class);
+    private Subscription mockDataSubscription = mock(Subscription.class);
 
     private OneToOneConcurrentArrayQueue<SenderCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private SenderProxy proxy = new SenderProxy(commandQueue);
 
     private Sender sender = new Sender(commandQueue, mockConnectionHandler, mockReceiver, mockSessionManager,
-        mockGateway, mockMultiplexer);
+        mockGateway, mockMultiplexer, mockDataSubscription);
 
     private ServerSocketChannel server;
 
@@ -77,7 +79,7 @@ public class SenderTest
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong()))
             .thenReturn(mockSenderEndPoint);
 
-        when(mockConnectionHandler.initiateSession(anyLong(), eq(mockGateway), configuration)).thenReturn(mockSession);
+        when(mockConnectionHandler.initiateSession(anyLong(), eq(mockGateway), eq(CONFIGURATION))).thenReturn(mockSession);
     }
 
     @After
@@ -116,7 +118,7 @@ public class SenderTest
     private void connect() throws Exception
     {
         given:
-        proxy.connect(ADDRESS, configuration);
+        proxy.connect(ADDRESS, CONFIGURATION);
 
         when:
         sender.doWork();

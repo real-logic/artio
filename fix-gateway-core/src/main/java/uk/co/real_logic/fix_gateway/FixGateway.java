@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.AgentRunner;
 import uk.co.real_logic.aeron.common.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
@@ -70,8 +71,8 @@ public class FixGateway implements AutoCloseable
         receiverProxy = new ReceiverProxy(receiverCommands);
         sessionManagerProxy = new SessionManagerProxy(sessionManagerCommands);
 
-        final MessageSource source = handler -> 0;
-        final Multiplexer multiplexer = new Multiplexer(source);
+        final Multiplexer multiplexer = new Multiplexer();
+        final Subscription dataSubscription = streams.dataSubscription(multiplexer);
         final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(),
             streams.dataPublication(), configuration.sessionIdStrategy());
         final MessageHandler messageHandler = (buffer, offset, length, sessionId) ->
@@ -87,7 +88,9 @@ public class FixGateway implements AutoCloseable
             configuration.sessionIdStrategy(),
             messageHandler);
 
-        sender = new Sender(senderCommands, handler, receiverProxy, sessionManagerProxy, this, multiplexer);
+        sender = new Sender(senderCommands, handler, receiverProxy, sessionManagerProxy, this, multiplexer,
+            dataSubscription);
+
         receiver = new Receiver(configuration.bindAddress(), handler, receiverCommands, senderProxy);
         sessionManager = new SessionManager(sessionManagerCommands);
 

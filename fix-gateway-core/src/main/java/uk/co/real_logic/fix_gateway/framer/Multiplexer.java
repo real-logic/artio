@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
+import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 
@@ -22,28 +24,17 @@ import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
  * Responsible for splitting the data coming out of the replication
  * buffers and pushing it out to the sender end points.
  */
-public class Multiplexer implements MessageHandler
+public class Multiplexer implements DataHandler
 {
     private final Long2ObjectHashMap<SenderEndPoint> endpoints = new Long2ObjectHashMap<>();
-    private final MessageSource source;
-
-    public Multiplexer(final MessageSource source)
-    {
-        this.source = source;
-    }
 
     public void onNewConnection(final SenderEndPoint senderEndPoint)
     {
         endpoints.put(senderEndPoint.connectionId(), senderEndPoint);
     }
 
-    public int scanBuffers()
-    {
-        return source.drainTo(this);
-    }
-
     /**
-     * Receive a message from a message source buffer.
+     * Receive a message from a message subscription buffer.
      */
     public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long sessionId)
     {
@@ -52,5 +43,10 @@ public class Multiplexer implements MessageHandler
         {
             endPoint.onFramedMessage(buffer, offset, length);
         }
+    }
+
+    public void onData(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    {
+        // TODO: read framed fix message out of buffer
     }
 }

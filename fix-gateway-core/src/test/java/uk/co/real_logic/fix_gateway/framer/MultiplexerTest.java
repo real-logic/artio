@@ -15,32 +15,18 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
-import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.DirectBuffer;
 
-import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
 public class MultiplexerTest
 {
     private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
-    private MessageSource mockSource = mock(MessageSource.class);
-    private Multiplexer multiplexer = new Multiplexer(mockSource);
+    private Multiplexer multiplexer = new Multiplexer();
     private DirectBuffer buffer = mock(DirectBuffer.class);
 
     private int messagesSent;
-
-    @Before
-    public void setUp()
-    {
-        doAnswer(
-                (inv) ->
-                {
-                    multiplexer.onMessage(buffer, 1, 1, 1L);
-                    return 1;
-                }).when(mockSource).drainTo(multiplexer);
-    }
 
     private void connectedId(final long connectionId)
     {
@@ -55,10 +41,9 @@ public class MultiplexerTest
         multiplexer.onNewConnection(mockSenderEndPoint);
 
         when:
-        messagesSent = multiplexer.scanBuffers();
+        multiplexer.onMessage(buffer, 1, 1, 1L);
 
         then:
-        assertEquals(1, messagesSent);
         verify(mockSenderEndPoint).onFramedMessage(buffer, 1, 1);
     }
 
@@ -70,7 +55,7 @@ public class MultiplexerTest
         multiplexer.onNewConnection(mockSenderEndPoint);
 
         when:
-        multiplexer.scanBuffers();
+        multiplexer.onMessage(buffer, 1, 1, 1L);
 
         then:
         verify(mockSenderEndPoint, never()).onFramedMessage(any(), anyInt(), anyInt());

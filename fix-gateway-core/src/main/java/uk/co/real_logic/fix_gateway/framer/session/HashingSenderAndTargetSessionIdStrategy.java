@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.framer.session;
 
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
-import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
 import java.util.Arrays;
 import java.util.HashMap;
