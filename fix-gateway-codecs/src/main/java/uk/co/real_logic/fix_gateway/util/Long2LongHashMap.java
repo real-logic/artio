@@ -21,7 +21,7 @@ import java.util.*;
 import java.util.function.BiConsumer;
 
 /**
- * .
+ * A Probing hashmap specialised for long key and value pairs.
  */
 public class Long2LongHashMap implements Map<Long, Long>
 {
@@ -33,7 +33,6 @@ public class Long2LongHashMap implements Map<Long, Long>
     private final LongIterator valueIterator = new LongIterator(1);
     private final Collection<Long> values;
     private final Set<Entry<Long, Long>> entrySet;
-    private final LongLongConsumer putFunc = this::put;
 
     private int capacity;
     private int mask;

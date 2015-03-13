@@ -28,7 +28,6 @@ import static java.util.stream.Collectors.joining;
 /**
  * Simple fixed-size int hashset for validating tags.
  */
-// TODO: compact on a remove.
 public final class IntHashSet implements Set<Integer>
 {
     private final int[] values;
@@ -76,7 +75,7 @@ public final class IntHashSet implements Set<Integer>
                 return false;
             }
 
-            index = ++index & mask;
+            index = next(index);
         }
 
         values[index] = value;
@@ -94,7 +93,7 @@ public final class IntHashSet implements Set<Integer>
     }
 
     /**
-     * {@inheritDoc}
+     * An int specialised version of {@link }this#remove(Object)}.
      */
     public boolean remove(final int value)
     {
@@ -105,13 +104,39 @@ public final class IntHashSet implements Set<Integer>
             if (values[index] == value)
             {
                 values[index] = missingValue;
+                compactChain(index);
                 return true;
             }
 
-            index = ++index & mask;
+            index = next(index);
         }
 
         return false;
+    }
+
+    private int next(int index)
+    {
+        index = ++index & mask;
+        return index;
+    }
+
+    private void compactChain(final int deleteIndex)
+    {
+        final int[] values = this.values;
+
+        int index = deleteIndex;
+        while (true)
+        {
+            final int previousIndex = index;
+            index = next(index);
+            if (values[index] == missingValue)
+            {
+                return;
+            }
+
+            values[previousIndex] = values[index];
+            values[index] = missingValue;
+        }
     }
 
     /**
@@ -136,7 +161,7 @@ public final class IntHashSet implements Set<Integer>
                 return true;
             }
 
-            index = ++index & mask;
+            index = next(index);
         }
 
         return false;
