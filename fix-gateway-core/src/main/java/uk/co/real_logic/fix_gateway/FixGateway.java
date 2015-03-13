@@ -28,8 +28,6 @@ import uk.co.real_logic.fix_gateway.framer.session.SessionManager;
 import uk.co.real_logic.fix_gateway.framer.session.SessionProxy;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
-import java.net.InetSocketAddress;
-
 public class FixGateway implements AutoCloseable
 {
     private final Aeron aeron;
@@ -127,12 +125,12 @@ public class FixGateway implements AutoCloseable
     // TODO: figure out correct type for dictionary
     public synchronized InitiatorSession initiate(final SessionConfiguration configuration, final Object dictionary)
     {
-        final InetSocketAddress address = new InetSocketAddress(configuration.host(), configuration.port());
-        senderProxy.connect(address, configuration);
+        senderProxy.connect(configuration);
         signal.await(connectionTimeout);
         if (addedSession == null)
         {
-            throw new ConnectionTimeoutException("Connection timed out whilst connecting to: " + address);
+            throw new ConnectionTimeoutException(
+                "Connection timed out connecting to: " + configuration.host() + ":" + configuration.port());
         }
         return addedSession;
     }

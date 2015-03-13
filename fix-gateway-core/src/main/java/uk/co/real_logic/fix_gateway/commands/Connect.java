@@ -18,22 +18,18 @@ package uk.co.real_logic.fix_gateway.commands;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.framer.Sender;
 
-import java.net.InetSocketAddress;
-
 final class Connect implements SenderCommand
 {
-    private InetSocketAddress address;
     private final SessionConfiguration configuration;
 
-    Connect(final InetSocketAddress address, final SessionConfiguration configuration)
+    Connect(final SessionConfiguration configuration)
     {
-        this.address = address;
         this.configuration = configuration;
     }
 
     @Override
     public void execute(final Sender sender)
     {
-        sender.onConnect(address, configuration);
+        sender.onConnect(configuration);
     }
 }

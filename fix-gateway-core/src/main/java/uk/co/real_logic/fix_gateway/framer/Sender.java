@@ -73,10 +73,11 @@ public final class Sender implements Agent
         command.execute(this);
     }
 
-    public void onConnect(final InetSocketAddress address, final SessionConfiguration configuration)
+    public void onConnect(final SessionConfiguration configuration)
     {
         try
         {
+            final InetSocketAddress address = new InetSocketAddress(configuration.host(), configuration.port());
             final SocketChannel channel = SocketChannel.open();
             channel.connect(address);
             channel.configureBlocking(false);

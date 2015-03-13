@@ -118,7 +118,7 @@ public class SenderTest
     private void connect() throws Exception
     {
         given:
-        proxy.connect(ADDRESS, CONFIGURATION);
+        proxy.connect(CONFIGURATION);
 
         when:
         sender.doWork();
