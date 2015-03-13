@@ -16,10 +16,10 @@
 package uk.co.real_logic.fix_gateway.dictionary;
 
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
+import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
-import uk.co.real_logic.fix_gateway.util.IntHashSet;
 
 import java.util.function.Predicate;
 

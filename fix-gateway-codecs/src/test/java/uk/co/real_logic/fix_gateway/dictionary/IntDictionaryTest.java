@@ -17,11 +17,11 @@ package uk.co.real_logic.fix_gateway.dictionary;
 
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
-import uk.co.real_logic.fix_gateway.util.IntHashSet;
 
 import java.util.Arrays;
 import java.util.List;

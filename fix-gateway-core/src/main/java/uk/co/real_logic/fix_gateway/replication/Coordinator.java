@@ -20,12 +20,12 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.Agent;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
 import uk.co.real_logic.fix_gateway.messages.FixMessage;
 import uk.co.real_logic.fix_gateway.messages.MessageAcknowledgement;
 import uk.co.real_logic.fix_gateway.messages.MessageHeader;
-import uk.co.real_logic.fix_gateway.util.IntHashSet;
 import uk.co.real_logic.fix_gateway.util.Long2LongHashMap;
 
 import static uk.co.real_logic.fix_gateway.messages.MessageAcknowledgement.SCHEMA_VERSION;
