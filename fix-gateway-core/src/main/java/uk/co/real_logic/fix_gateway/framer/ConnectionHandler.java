@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.framer.session.*;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -72,13 +73,17 @@ public class ConnectionHandler
         return new SenderEndPoint(connectionId, channel);
     }
 
-    public AcceptorSession acceptorSession(final long connectionId)
+    public AcceptorSession acceptSession(final long connectionId)
     {
         return new AcceptorSession(defaultInterval, connectionId, clock, sessionProxy);
     }
 
-    public InitiatorSession initiatorSession(final long connectionId, final FixGateway gateway)
+    public InitiatorSession initiateSession(
+        final long connectionId, final FixGateway gateway, final SessionConfiguration configuration)
     {
+        sessionIdStrategy.decode(
+            configuration.senderCompId().toCharArray(), configuration.targetCompId().toCharArray());
+
         return new InitiatorSession(defaultInterval, connectionId, clock, sessionProxy, gateway);
     }
 }

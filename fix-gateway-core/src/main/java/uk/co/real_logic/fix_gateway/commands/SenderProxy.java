@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.commands;
 
+import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.framer.SenderEndPoint;
 
 import java.net.InetSocketAddress;
@@ -29,9 +30,9 @@ public class SenderProxy
         this.commandQueue = commandQueue;
     }
 
-    public void connect(final InetSocketAddress address)
+    public void connect(final InetSocketAddress address, final SessionConfiguration configuration)
     {
-        offer(new Connect(address));
+        offer(new Connect(address, configuration));
     }
 
     public void newAcceptedConnection(final SenderEndPoint senderEndPoint)

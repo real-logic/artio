@@ -27,6 +27,7 @@ import java.util.stream.IntStream;
 /**
  * Configuration that exists for the entire duration of a fix gateway
  */
+// TODO: add optional comp id for gateway and validate if present
 public final class StaticConfiguration
 {
     private static final int DEFAULT_HEARTBEAT_INTERVAL = 10;

@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.framer;
 import uk.co.real_logic.aeron.common.Agent;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.commands.SessionManagerProxy;
@@ -68,7 +69,7 @@ public final class Sender implements Agent
         command.execute(this);
     }
 
-    public void onConnect(final InetSocketAddress address)
+    public void onConnect(final InetSocketAddress address, final SessionConfiguration configuration)
     {
         try
         {
@@ -78,7 +79,7 @@ public final class Sender implements Agent
 
             final long connectionId = connectionHandler.onConnection();
             onNewAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
-            final InitiatorSession session = connectionHandler.initiatorSession(connectionId, gateway);
+            final InitiatorSession session = connectionHandler.initiateSession(connectionId, gateway, configuration);
             receiver.newInitiatedConnection(connectionHandler.receiverEndPoint(channel, connectionId, session));
             sessionManager.newSession(session);
         }

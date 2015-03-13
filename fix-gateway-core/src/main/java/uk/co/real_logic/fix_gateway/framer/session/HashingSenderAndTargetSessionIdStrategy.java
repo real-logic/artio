@@ -36,11 +36,6 @@ public class HashingSenderAndTargetSessionIdStrategy implements SessionIdStrateg
 
     private long counter = 0;
 
-    public long decode(final HeaderDecoder header)
-    {
-        return decode(header.senderCompID(), header.targetCompID());
-    }
-
     public void encode(final long sessionId, final HeaderEncoder encoder)
     {
         final CompositeKey compositeKey = surrogateToComposite.get(sessionId);

@@ -20,6 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
@@ -39,6 +40,13 @@ import static org.mockito.Mockito.*;
 public class SenderTest
 {
     private static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", 9999);
+
+    private static final SessionConfiguration configuration = SessionConfiguration
+        .builder()
+        .address(ADDRESS.getHostName(), ADDRESS.getPort())
+        .senderCompId("LEH_LZJ02")
+        .targetCompId("CCG")
+        .build();
 
     private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
     private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
@@ -69,7 +77,7 @@ public class SenderTest
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong()))
             .thenReturn(mockSenderEndPoint);
 
-        when(mockConnectionHandler.initiatorSession(anyLong(), eq(mockGateway))).thenReturn(mockSession);
+        when(mockConnectionHandler.initiateSession(anyLong(), eq(mockGateway), configuration)).thenReturn(mockSession);
     }
 
     @After
@@ -108,7 +116,7 @@ public class SenderTest
     private void connect() throws Exception
     {
         given:
-        proxy.connect(ADDRESS);
+        proxy.connect(ADDRESS, configuration);
 
         when:
         sender.doWork();

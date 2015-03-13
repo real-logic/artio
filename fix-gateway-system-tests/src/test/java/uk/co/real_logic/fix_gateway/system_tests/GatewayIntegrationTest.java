@@ -58,6 +58,8 @@ public class GatewayIntegrationTest
         final SessionConfiguration config = SessionConfiguration.builder()
                 .address("localhost", port)
                 .credentials("bob", "Uv1aegoh")
+                .senderCompId("LEH_LZJ02")
+                .targetCompId("CCG")
                 .build();
         session = initiatingGateway.initiate(config, null);
     }

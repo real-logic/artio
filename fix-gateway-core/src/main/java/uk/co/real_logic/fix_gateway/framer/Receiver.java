@@ -95,7 +95,7 @@ public final class Receiver implements Agent
                 channel.setOption(TCP_NODELAY, false);
 
                 final long connectionId = connectionHandler.onConnection();
-                final AcceptorSession session = connectionHandler.acceptorSession(connectionId);
+                final AcceptorSession session = connectionHandler.acceptSession(connectionId);
                 register(channel, connectionHandler.receiverEndPoint(channel, connectionId, session));
                 sender.newAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
             }

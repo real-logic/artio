@@ -72,7 +72,8 @@ public class FixGateway implements AutoCloseable
 
         final MessageSource source = handler -> 0;
         final Multiplexer multiplexer = new Multiplexer(source);
-        final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(), streams.dataPublication());
+        final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(),
+            streams.dataPublication(), configuration.sessionIdStrategy());
         final MessageHandler messageHandler = (buffer, offset, length, sessionId) ->
         {
             System.out.printf("Message received from %d\n", sessionId);
@@ -124,7 +125,7 @@ public class FixGateway implements AutoCloseable
     public synchronized InitiatorSession initiate(final SessionConfiguration configuration, final Object dictionary)
     {
         final InetSocketAddress address = new InetSocketAddress(configuration.host(), configuration.port());
-        senderProxy.connect(address);
+        senderProxy.connect(address, configuration);
         signal.await(connectionTimeout);
         if (addedSession == null)
         {

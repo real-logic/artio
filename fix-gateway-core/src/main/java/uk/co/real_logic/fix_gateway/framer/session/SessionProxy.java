@@ -23,7 +23,6 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 /**
  * Encapsulates sending messages relating to sessions
  */
-// TODO: conversion from session id to sender id/comp id
 public class SessionProxy
 {
 
@@ -36,9 +35,12 @@ public class SessionProxy
     private final UnsafeBuffer buffer;
     private final MutableAsciiFlyweight string;
     private final Publication dataPublication;
+    private final SessionIdStrategy sessionIdStrategy;
 
-    public SessionProxy(final int bufferSize, final Publication dataPublication)
+    public SessionProxy(
+        final int bufferSize, final Publication dataPublication, final SessionIdStrategy sessionIdStrategy)
     {
+        this.sessionIdStrategy = sessionIdStrategy;
         buffer = new UnsafeBuffer(new byte[bufferSize]);
         string = new MutableAsciiFlyweight(buffer);
         this.dataPublication = dataPublication;
@@ -58,13 +60,19 @@ public class SessionProxy
 
     public void logon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
-        logon.header().msgSeqNum(msgSeqNo);
+        final HeaderEncoder header = logon.header();
+        sessionIdStrategy.encode(sessionId, header);
+        header.msgSeqNum(msgSeqNo);
+
         logon.heartBtInt(heartbeatInterval);
         send(logon.encode(string, 0));
     }
 
     public void logout(final int msgSeqNo, final long sessionId)
     {
+        final HeaderEncoder header = logout.header();
+        sessionIdStrategy.encode(sessionId, header);
+
         logout.header().msgSeqNum(msgSeqNo);
         send(logout.encode(string, 0));
     }
@@ -89,6 +97,6 @@ public class SessionProxy
         {
             // TODO: backoff.
         }
-        System.out.println("sent");
+        System.out.println("buffered");
     }
 }

@@ -26,25 +26,29 @@ public final class SessionConfiguration
     private final int port;
     private final String username;
     private final String password;
+    private final String senderCompId;
+    private final String targetCompId;
 
     public static Builder builder()
     {
         return new Builder();
     }
 
-    private SessionConfiguration(final String host, final int port, final String username, final String password)
+    private SessionConfiguration(
+        final String host, final int port, final String username, final String password, final String senderCompId,
+        final String targetCompId)
     {
         Objects.requireNonNull(host);
-        Objects.requireNonNull(username);
-        Objects.requireNonNull(password);
+        Objects.requireNonNull(senderCompId);
+        Objects.requireNonNull(targetCompId);
 
+        this.senderCompId = senderCompId;
+        this.targetCompId = targetCompId;
         this.host = host;
         this.port = port;
         this.username = username;
         this.password = password;
     }
-
-    // TODO: add a timezone configuration option
 
     public String host()
     {
@@ -66,12 +70,24 @@ public final class SessionConfiguration
         return password;
     }
 
+    public String senderCompId()
+    {
+        return senderCompId;
+    }
+
+    public String targetCompId()
+    {
+        return targetCompId;
+    }
+
     public static final class Builder
     {
         private String username;
         private String password;
         private String host;
         private int port;
+        private String senderCompId;
+        private String targetCompId;
 
         private Builder()
         {
@@ -91,9 +107,21 @@ public final class SessionConfiguration
             return this;
         }
 
+        public Builder senderCompId(final String senderCompId)
+        {
+            this.senderCompId = senderCompId;
+            return this;
+        }
+
+        public Builder targetCompId(final String targetCompId)
+        {
+            this.targetCompId = targetCompId;
+            return this;
+        }
+
         public SessionConfiguration build()
         {
-            return new SessionConfiguration(host, port, username, password);
+            return new SessionConfiguration(host, port, username, password, senderCompId, targetCompId);
         }
     }
 

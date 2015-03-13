@@ -60,6 +60,7 @@ public class SessionParser
                 msgSeqNo = logon.header().msgSeqNum();
                 sessionId = sessionIdStrategy.decode(header);
                 session.onLogon(logon.heartBtInt(), msgSeqNo, sessionId);
+                System.out.println("received logon");
                 break;
 
             case ResendRequestDecoder.MESSAGE_TYPE:
