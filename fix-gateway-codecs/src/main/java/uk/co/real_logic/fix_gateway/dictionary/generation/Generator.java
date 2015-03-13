@@ -95,7 +95,7 @@ public abstract class Generator
             importFor(LocalMktDateEncoder.class) +
             importFor(UtcTimestampEncoder.class) +
             "\n" +
-            "public final class %2$s implements %3$s\n" +
+            "public class %2$s implements %3$s\n" +
             "{\n\n",
             builderPackage,
             className,

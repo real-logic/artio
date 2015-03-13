@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.framer.session;
 
+import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
 import java.util.Arrays;
@@ -29,38 +31,48 @@ import java.util.Map;
  */
 public class HashingSenderAndTargetSessionIdStrategy implements SessionIdStrategy
 {
-    private final Map<Entry, Long> identifiers = new HashMap<>();
+    private final Map<CompositeKey, Long> compositeToSurrogate = new HashMap<>();
+    private final Long2ObjectHashMap<CompositeKey> surrogateToComposite = new Long2ObjectHashMap<>();
 
     private long counter = 0;
 
-    public long identify(final HeaderDecoder header)
+    public long decode(final HeaderDecoder header)
     {
-        return identify(header.senderCompID(), header.targetCompID());
+        return decode(header.senderCompID(), header.targetCompID());
     }
 
-    public long identify(final char[] senderCompID, final char[] targetCompID)
+    public void encode(final long sessionId, final HeaderEncoder encoder)
     {
-        final Entry entry = new Entry(senderCompID, targetCompID);
-        Long identifier = identifiers.putIfAbsent(entry, counter);
+        final CompositeKey compositeKey = surrogateToComposite.get(sessionId);
+        encoder.senderCompID(compositeKey.senderCompID);
+        encoder.targetCompID(compositeKey.targetCompID);
+    }
+
+    public long decode(final char[] senderCompID, final char[] targetCompID)
+    {
+        final CompositeKey compositeKey = new CompositeKey(senderCompID, targetCompID);
+        Long identifier = compositeToSurrogate.putIfAbsent(compositeKey, counter);
         if (identifier == null)
         {
             identifier = counter;
+            surrogateToComposite.put(identifier.longValue(), compositeKey);
         }
 
         if (identifier == counter)
         {
             counter++;
         }
+
         return identifier;
     }
 
-    private static final class Entry
+    private static final class CompositeKey
     {
         private final char[] senderCompID;
         private final char[] targetCompID;
         private final int hashCode;
 
-        private Entry(final char[] senderCompID, final char[] targetCompID)
+        private CompositeKey(final char[] senderCompID, final char[] targetCompID)
         {
             this.senderCompID = senderCompID;
             this.targetCompID = targetCompID;
@@ -82,11 +94,11 @@ public class HashingSenderAndTargetSessionIdStrategy implements SessionIdStrateg
 
         public boolean equals(final Object obj)
         {
-            if (obj instanceof Entry)
+            if (obj instanceof CompositeKey)
             {
-                Entry entry = (Entry) obj;
-                return Arrays.equals(entry.senderCompID, senderCompID)
-                    && Arrays.equals(entry.targetCompID, targetCompID);
+                CompositeKey compositeKey = (CompositeKey) obj;
+                return Arrays.equals(compositeKey.senderCompID, senderCompID)
+                    && Arrays.equals(compositeKey.targetCompID, targetCompID);
             }
 
             return false;

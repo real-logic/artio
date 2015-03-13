@@ -36,7 +36,7 @@ public class SampleOtfAcceptor implements OtfMessageAcceptor
     {
         switch (tag)
         {
-            // You switch on the tag in order to identify what field data has arrived.
+            // You switch on the tag in order to decode what field data has arrived.
             case SIDE:
                 wantsToSell = buffer.getByte(offset) == SELL;
                 break;

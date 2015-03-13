@@ -58,7 +58,7 @@ public class SessionParser
             case LogonDecoder.MESSAGE_TYPE:
                 logon.decode(string, offset, length);
                 msgSeqNo = logon.header().msgSeqNum();
-                sessionId = sessionIdStrategy.identify(header);
+                sessionId = sessionIdStrategy.decode(header);
                 session.onLogon(logon.heartBtInt(), msgSeqNo, sessionId);
                 break;
 

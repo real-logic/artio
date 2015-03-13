@@ -17,12 +17,14 @@ package uk.co.real_logic.fix_gateway.framer.session;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 
 import java.util.*;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.*;
 
 public class HashingSenderAndTargetSessionIdStrategyTest
 {
@@ -47,7 +49,7 @@ public class HashingSenderAndTargetSessionIdStrategyTest
     @Test
     public void differentSessionsGenerateDifferentIds()
     {
-        List<Long> ids = generateIds();
+        List<Long> ids = decodeIds();
 
         new HashSet<>(ids).forEach(ids::remove);
 
@@ -57,18 +59,36 @@ public class HashingSenderAndTargetSessionIdStrategyTest
     @Test
     public void theSameSessionGeneratesTheSameId()
     {
-        List<Long> firstIds = generateIds();
-        List<Long> secondIds = generateIds();
+        List<Long> firstIds = decodeIds();
+        List<Long> secondIds = decodeIds();
 
         assertEquals("The ids aren't generated equally on future runs", firstIds, secondIds);
     }
 
-    private List<Long> generateIds()
+    @Test
+    public void shouldEncodeTheSameFieldsAsAKeyWasDecodedFrom()
+    {
+        final List<Long> ids = decodeIds();
+
+        final int size = identifiers.size();
+        for (int i = 0; i < size; i++)
+        {
+            for (int j = 0; j < size; j++)
+            {
+                final HeaderEncoder mockHeader = mock(HeaderEncoder.class);
+                strategy.encode(ids.get(i * size+ j), mockHeader);
+                verify(mockHeader).senderCompID(identifiers.get(i));
+                verify(mockHeader).targetCompID(identifiers.get(j));
+            }
+        }
+    }
+
+    private List<Long> decodeIds()
     {
         return identifiers.stream()
-            .flatMap(senderId -> identifiers.stream()
-                .map(targetId -> strategy.identify(senderId, targetId)))
-            .collect(toList());
+                          .flatMap(senderId -> identifiers.stream()
+                              .map(targetId -> strategy.decode(senderId, targetId)))
+                          .collect(toList());
     }
 
 }

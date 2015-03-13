@@ -15,9 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.framer.session;
 
+import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
 public interface SessionIdStrategy
 {
-    long identify(final HeaderDecoder header);
+    long decode(final HeaderDecoder header);
+
+    void encode(final long sessionId, final HeaderEncoder encoder);
 }
