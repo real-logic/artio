@@ -63,14 +63,9 @@ public class GatewayIntegrationTest
     }
 
     @Test
-    public void initiatedSessionIsConnected() throws InterruptedException
+    public void sessionHasBeenInitiated() throws InterruptedException
     {
         assertTrue("Session has failed to connect", session.isConnected());
-    }
-
-    @Test
-    public void initiatedSessionIsActive() throws InterruptedException
-    {
         assertTrue("Session has failed to logon", session.state() == ACTIVE);
     }
 

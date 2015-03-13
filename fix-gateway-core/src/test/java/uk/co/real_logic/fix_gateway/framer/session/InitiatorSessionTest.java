@@ -19,9 +19,7 @@ import org.junit.Test;
 import uk.co.real_logic.fix_gateway.FixGateway;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.CONNECTED;
 
@@ -30,7 +28,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
     private final FixGateway mockGateway = mock(FixGateway.class);
 
     private InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, mockClock, mockProxy,
-        mockGateway);
+        mockGateway, SESSION_ID);
 
     @Test
     public void shouldInitiallyBeConnected()
@@ -86,7 +84,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
     private void verifyLogon()
     {
-        verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1, CONNECTION_ID);
+        verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1, SESSION_ID);
     }
 
     protected Session session()

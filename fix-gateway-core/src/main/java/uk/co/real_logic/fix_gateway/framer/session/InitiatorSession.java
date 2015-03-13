@@ -32,9 +32,11 @@ public class InitiatorSession extends Session
         final long connectionId,
         final MilliClock clock,
         final SessionProxy proxy,
-        final FixGateway gateway)
+        final FixGateway gateway,
+        final long sessionId)
     {
         super(heartbeatInterval, connectionId, clock, CONNECTED, proxy);
+        id(sessionId);
         this.gateway = gateway;
     }
 
