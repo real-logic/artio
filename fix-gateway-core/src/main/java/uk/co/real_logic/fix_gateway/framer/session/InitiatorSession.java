@@ -51,7 +51,7 @@ public class InitiatorSession extends Session
     {
         if (state() == CONNECTED)
         {
-            proxy.logon((int) (heartbeatIntervalInMs() / 1000), expectedSeqNo(), connectionId);
+            proxy.logon((int) (heartbeatIntervalInMs() / 1000), expectedSeqNo(), id());
             state(SENT_LOGON);
         }
         super.poll();

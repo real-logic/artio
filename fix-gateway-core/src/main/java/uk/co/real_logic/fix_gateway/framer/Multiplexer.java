@@ -19,6 +19,7 @@ import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.fix_gateway.messages.FixMessage;
 
 /**
  * Responsible for splitting the data coming out of the replication
@@ -27,6 +28,7 @@ import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 public class Multiplexer implements DataHandler
 {
     private final Long2ObjectHashMap<SenderEndPoint> endpoints = new Long2ObjectHashMap<>();
+    private final FixMessage messageFrame = new FixMessage();
 
     public void onNewConnection(final SenderEndPoint senderEndPoint)
     {
@@ -36,9 +38,9 @@ public class Multiplexer implements DataHandler
     /**
      * Receive a message from a message subscription buffer.
      */
-    public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long sessionId)
+    public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long connectionId)
     {
-        final SenderEndPoint endPoint = endpoints.get(sessionId);
+        final SenderEndPoint endPoint = endpoints.get(connectionId);
         if (endPoint != null)
         {
             endPoint.onFramedMessage(buffer, offset, length);
@@ -47,6 +49,11 @@ public class Multiplexer implements DataHandler
 
     public void onData(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        // TODO: read framed fix message out of buffer
+        // TODO: read framed connection id from fix:
+        //messageFrame.wrapForDecode((UnsafeBuffer) buffer, offset, length, 0);
+        //messageFrame.session();
+        //messageFrame.getBody();
+
+        onMessage(buffer, offset, length, 0L);
     }
 }

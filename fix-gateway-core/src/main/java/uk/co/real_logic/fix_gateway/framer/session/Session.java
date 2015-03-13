@@ -202,7 +202,7 @@ public abstract class Session
         return id;
     }
 
-    Session id(final long id)
+    public Session id(final long id)
     {
         this.id = id;
         return this;

@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.framer.session;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.builder.*;
+import uk.co.real_logic.fix_gateway.messages.FixMessage;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 /**
@@ -31,6 +32,7 @@ public class SessionProxy
     private final LogoutEncoder logout = new LogoutEncoder();
     private final HeartbeatEncoder heartbeat = new HeartbeatEncoder();
     private final RejectEncoder reject = new RejectEncoder();
+    private final FixMessage messageFrame = new FixMessage();
 
     private final UnsafeBuffer buffer;
     private final MutableAsciiFlyweight string;
@@ -60,6 +62,12 @@ public class SessionProxy
 
     public void logon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
+        // TODO: re-enable the framing once the optimal use of SBE is decided upon.
+        /*messageFrame
+            .messageType(ResendRequestDecoder.MESSAGE_TYPE)
+            .session(sessionId)
+            .connection(0L);*/
+
         final HeaderEncoder header = logon.header();
         sessionIdStrategy.encode(sessionId, header);
         header.msgSeqNum(msgSeqNo);

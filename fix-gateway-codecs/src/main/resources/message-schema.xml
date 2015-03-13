@@ -20,6 +20,7 @@
     </types>
     <types>
         <type name="FixSessionId" primitiveType="int64"/>
+        <type name="ConnectionId" primitiveType="int64"/>
         <type name="TermId" primitiveType="int32"/>
         <type name="MessageType" primitiveType="int32"/>
         <type name="Timestamp" primitiveType="int64"/>
@@ -27,8 +28,9 @@
     <sbe:message name="FixMessage" id="1" description="A framed FIX message">
         <field name="messageType" id="1" type="MessageType"/>
         <field name="session" id="2" type="FixSessionId"/>
-        <field name="timestamp" id="3" type="Timestamp"/>
-        <data name="body" id="4" type="varDataEncoding"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="timestamp" id="4" type="Timestamp"/>
+        <data name="body" id="5" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="MessageAcknowledgement" id="2" description="An acknowledgement of a received FIX Message">
         <field name="term" id="5" type="TermId"/>
