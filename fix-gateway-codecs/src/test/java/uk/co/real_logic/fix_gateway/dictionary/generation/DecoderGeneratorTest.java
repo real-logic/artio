@@ -152,6 +152,22 @@ public class DecoderGeneratorTest
         assertEquals(49, getBodyLength(header));
     }
 
+    @Test
+    public void shouldGenerateHumanReadableToString() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NO_OPTIONAL_MESSAGE_EXAMPLE);
+
+        assertEquals(STRING_NO_OPTIONAL_MESSAGE_EXAMPLE, decoder.toString());
+    }
+
+    @Test
+    public void shouldIncludeOptionalFieldsInToString() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE_EXAMPLE);
+
+        assertEquals(STRING_ENCODED_MESSAGE_EXAMPLE, decoder.toString());
+    }
+
     private int getBodyLength(final Decoder header) throws Exception
     {
         return (int) get(header, BODY_LENGTH);

@@ -64,6 +64,7 @@ public class DecoderGenerator extends Generator
             generateGetters(out, className, aggregate.entries());
             out.append(generateDecodeMethod(aggregate.entries(), isMessage));
             out.append(generateResetMethod(aggregate.entries()));
+            out.append(generateToString(aggregate));
             out.append("}\n");
         }
         catch (IOException e)
@@ -289,6 +290,11 @@ public class DecoderGenerator extends Generator
 
             default: throw new UnsupportedOperationException("Unknown type: " + type);
         }
+    }
+
+    protected String generateStringToString(String fieldName)
+    {
+        return String.format("new String(%s)", fieldName);
     }
 
 }

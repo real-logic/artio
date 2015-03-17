@@ -92,57 +92,6 @@ public class EncoderGenerator extends Generator
         }
     }
 
-    private String generateToString(Aggregate aggregate)
-    {
-        final String entriesToString =
-            aggregate.entries()
-                     .stream()
-                     .map(this::generateEntryToString)
-                     .collect(joining(" + \n"));
-        return String.format(
-            "    public String toString()\n" +
-            "    {\n" +
-            "        final String entries =\n" +
-            "%s;\n" +
-            "        return \"{\\n  \\\"MsgType\\\": \\\"%s\\\",\\n\" + entries + \"}\";\n" +
-            "    }\n\n",
-            entriesToString,
-            aggregate.name());
-    }
-
-    private String generateEntryToString(final Entry entry)
-    {
-        //"  \"OnBehalfOfCompID\": \"abc\",\n" +
-
-        final Field field = (Field) entry.element();
-        final String name = entry.name();
-        final String value = getValueToString(field);
-
-        final String formatter = String.format(
-            "String.format(\"  \\\"%s\\\": \\\"%%s\\\",\\n\", %s)",
-            name,
-            value
-        );
-
-        return "            " + (entry.required() ? formatter : String.format("(has%s ? %s : \"\")", name, formatter));
-    }
-
-    private String getValueToString(Field field)
-    {
-        final String fieldName = JavaUtil.formatPropertyName(field.name());
-        switch (field.type())
-        {
-            case STRING:
-                return String.format("new String(%s, StandardCharsets.US_ASCII)", fieldName);
-
-            case DATA:
-                return String.format("Arrays.toString(%s)", fieldName);
-
-            default:
-                return fieldName;
-        }
-    }
-
     private String generateConstructor(final Aggregate aggregate, final DataDictionary dictionary)
     {
         if (!(aggregate instanceof Message))
@@ -451,6 +400,11 @@ public class EncoderGenerator extends Generator
     private String optionalAssign(final Entry entry)
     {
         return entry.required() ? "" : String.format("        has%s = true;\n", entry.name());
+    }
+
+    protected String generateStringToString(String fieldName)
+    {
+        return String.format("new String(%s, StandardCharsets.US_ASCII)", fieldName);
     }
 
 }

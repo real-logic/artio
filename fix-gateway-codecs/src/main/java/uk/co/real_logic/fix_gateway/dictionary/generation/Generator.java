@@ -21,16 +21,19 @@ import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
+import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importStaticFor;
 
@@ -116,4 +119,59 @@ public abstract class Generator
     {
         return entry.required() ? "" : String.format("    private boolean has%s;\n\n", entry.name());
     }
+
+
+    protected String generateToString(Aggregate aggregate)
+    {
+        final String entriesToString =
+                aggregate.entries()
+                        .stream()
+                        .map(this::generateEntryToString)
+                        .collect(joining(" + \n"));
+        return String.format(
+                "    public String toString()\n" +
+                        "    {\n" +
+                        "        final String entries =\n" +
+                        "%s;\n" +
+                        "        return \"{\\n  \\\"MsgType\\\": \\\"%s\\\",\\n\" + entries + \"}\";\n" +
+                        "    }\n\n",
+                entriesToString,
+                aggregate.name());
+    }
+
+    protected String generateEntryToString(final Entry entry)
+    {
+        //"  \"OnBehalfOfCompID\": \"abc\",\n" +
+
+        final Field field = (Field) entry.element();
+        final String name = entry.name();
+        final String value = generateValueToString(field);
+
+        final String formatter = String.format(
+                "String.format(\"  \\\"%s\\\": \\\"%%s\\\",\\n\", %s)",
+                name,
+                value
+        );
+
+        return "            " + (entry.required() ? formatter : String.format("(has%s ? %s : \"\")", name, formatter));
+    }
+
+    protected String generateValueToString(Field field)
+    {
+        final String fieldName = JavaUtil.formatPropertyName(field.name());
+        switch (field.type())
+        {
+            case STRING:
+                return generateStringToString(fieldName);
+
+            case DATA:
+                return String.format("Arrays.toString(%s)", fieldName);
+
+            default:
+                return fieldName;
+        }
+    }
+
+    protected abstract String generateStringToString(String fieldName);
+
 }
