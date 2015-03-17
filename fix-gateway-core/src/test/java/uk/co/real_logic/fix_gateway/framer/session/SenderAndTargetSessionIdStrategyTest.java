@@ -26,11 +26,11 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 
-public class HashingSenderAndTargetSessionIdStrategyTest
+public class SenderAndTargetSessionIdStrategyTest
 {
     private static List<char[]> identifiers = new ArrayList<>();
 
-    private HashingSenderAndTargetSessionIdStrategy strategy = new HashingSenderAndTargetSessionIdStrategy();
+    private SenderAndTargetSessionIdStrategy strategy = new SenderAndTargetSessionIdStrategy();
 
     @BeforeClass
     public static void generateIdentifiers()

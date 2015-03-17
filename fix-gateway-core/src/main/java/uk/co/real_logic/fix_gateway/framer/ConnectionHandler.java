@@ -81,8 +81,7 @@ public class ConnectionHandler
     public InitiatorSession initiateSession(
         final long connectionId, final FixGateway gateway, final SessionConfiguration configuration)
     {
-        final long sessionId = sessionIdStrategy.decode(
-            configuration.senderCompId().toCharArray(), configuration.targetCompId().toCharArray());
+        final long sessionId = sessionIdStrategy.register(configuration);
 
         return new InitiatorSession(defaultInterval, connectionId, clock, sessionProxy, gateway, sessionId);
     }

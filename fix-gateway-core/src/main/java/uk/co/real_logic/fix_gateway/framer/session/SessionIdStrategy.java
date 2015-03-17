@@ -15,18 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.framer.session;
 
+import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
 public interface SessionIdStrategy
 {
-    default long decode(final HeaderDecoder header)
-    {
-        return decode(header.senderCompID(), header.targetCompID());
-    }
+    long decode(final HeaderDecoder header);
 
-    // TODO: location/sub?
-    long decode(final char[] senderCompID, final char[] targetCompID);
+    long register(final SessionConfiguration configuration);
 
     void encode(final long sessionId, final HeaderEncoder encoder);
 }

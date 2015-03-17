@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
-import uk.co.real_logic.fix_gateway.framer.session.HashingSenderAndTargetSessionIdStrategy;
+import uk.co.real_logic.fix_gateway.framer.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.framer.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 
@@ -41,7 +41,7 @@ public final class StaticConfiguration
     private int receiverBufferSize = DEFAULT_RECEIVER_BUFFER_SIZE;
     private long connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
     private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
-    private SessionIdStrategy sessionIdStrategy = new HashingSenderAndTargetSessionIdStrategy();
+    private SessionIdStrategy sessionIdStrategy = new SenderAndTargetSessionIdStrategy();
 
     private String host;
     private int port;

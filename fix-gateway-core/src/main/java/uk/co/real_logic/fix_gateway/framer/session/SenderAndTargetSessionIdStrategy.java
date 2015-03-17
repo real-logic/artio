@@ -16,7 +16,9 @@
 package uk.co.real_logic.fix_gateway.framer.session;
 
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
+import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -28,7 +30,7 @@ import java.util.Map;
  *
  * Should be used sparingly.
  */
-public class HashingSenderAndTargetSessionIdStrategy implements SessionIdStrategy
+public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 {
     private final Map<CompositeKey, Long> compositeToSurrogate = new HashMap<>();
     private final Long2ObjectHashMap<CompositeKey> surrogateToComposite = new Long2ObjectHashMap<>();
@@ -42,7 +44,17 @@ public class HashingSenderAndTargetSessionIdStrategy implements SessionIdStrateg
         encoder.targetCompID(compositeKey.targetCompID);
     }
 
-    public long decode(final char[] senderCompID, final char[] targetCompID)
+    public long decode(final HeaderDecoder header)
+    {
+        return decode(header.senderCompID(), header.targetCompID());
+    }
+
+    public long register(final SessionConfiguration config)
+    {
+        return decode(config.senderCompId().toCharArray(), config.targetCompId().toCharArray());
+    }
+
+    long decode(final char[] senderCompID, final char[] targetCompID)
     {
         final CompositeKey compositeKey = new CompositeKey(senderCompID, targetCompID);
         Long identifier = compositeToSurrogate.putIfAbsent(compositeKey, counter);
