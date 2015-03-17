@@ -22,7 +22,6 @@ import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.commands.SenderCommand;
-import uk.co.real_logic.fix_gateway.commands.SessionManagerProxy;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
 import java.io.IOException;
@@ -40,24 +39,21 @@ public final class Sender implements Agent
     private final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue;
     private final ConnectionHandler connectionHandler;
     private final ReceiverProxy receiver;
-    private final SessionManagerProxy sessionManager;
     private final FixGateway gateway;
     private final Multiplexer multiplexer;
     private final Subscription dataSubscription;
 
     public Sender(
-        final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue,
-        final ConnectionHandler connectionHandler,
-        final ReceiverProxy receiver,
-        final SessionManagerProxy sessionManager,
-        final FixGateway gateway,
-        final Multiplexer multiplexer,
-        final Subscription dataSubscription)
+            final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue,
+            final ConnectionHandler connectionHandler,
+            final ReceiverProxy receiver,
+            final FixGateway gateway,
+            final Multiplexer multiplexer,
+            final Subscription dataSubscription)
     {
         this.commandQueue = commandQueue;
         this.connectionHandler = connectionHandler;
         this.receiver = receiver;
-        this.sessionManager = sessionManager;
         this.gateway = gateway;
         this.multiplexer = multiplexer;
         this.dataSubscription = dataSubscription;
@@ -86,7 +82,6 @@ public final class Sender implements Agent
             onNewAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
             final InitiatorSession session = connectionHandler.initiateSession(connectionId, gateway, configuration);
             receiver.newInitiatedConnection(connectionHandler.receiverEndPoint(channel, connectionId, session));
-            sessionManager.newSession(session);
         }
         catch (final IOException ex)
         {

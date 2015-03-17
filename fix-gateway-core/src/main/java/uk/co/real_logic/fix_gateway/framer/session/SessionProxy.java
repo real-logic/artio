@@ -104,6 +104,7 @@ public class SessionProxy
         while (!dataPublication.offer(buffer, 0, length))
         {
             // TODO: backoff.
+            // TODO: count failed retries similar to Aeron
         }
         System.out.println("buffered");
     }

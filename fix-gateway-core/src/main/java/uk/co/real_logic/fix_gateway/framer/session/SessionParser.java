@@ -100,4 +100,8 @@ public class SessionParser
         }
     }
 
+    public Session session()
+    {
+        return session;
+    }
 }

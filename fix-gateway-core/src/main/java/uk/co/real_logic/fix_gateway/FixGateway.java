@@ -24,7 +24,6 @@ import uk.co.real_logic.agrona.concurrent.Signal;
 import uk.co.real_logic.fix_gateway.commands.*;
 import uk.co.real_logic.fix_gateway.framer.*;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
-import uk.co.real_logic.fix_gateway.framer.session.SessionManager;
 import uk.co.real_logic.fix_gateway.framer.session.SessionProxy;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
@@ -35,15 +34,12 @@ public class FixGateway implements AutoCloseable
 
     private final SenderProxy senderProxy;
     private final ReceiverProxy receiverProxy;
-    private final SessionManagerProxy sessionManagerProxy;
 
     private final Sender sender;
     private final Receiver receiver;
-    private final SessionManager sessionManager;
 
     private final AgentRunner senderRunner;
     private final AgentRunner receiverRunner;
-    private final AgentRunner sessionManagerRunner;
 
     private final Signal signal = new Signal();
     private final long connectionTimeout;
@@ -62,12 +58,9 @@ public class FixGateway implements AutoCloseable
         // TODO: MPSC queue?
         final OneToOneConcurrentArrayQueue<SenderCommand> senderCommands = new OneToOneConcurrentArrayQueue<>(10);
         final OneToOneConcurrentArrayQueue<ReceiverCommand> receiverCommands = new OneToOneConcurrentArrayQueue<>(10);
-        final OneToOneConcurrentArrayQueue<SessionManagerCommand> sessionManagerCommands =
-            new OneToOneConcurrentArrayQueue<>(10);
 
         senderProxy = new SenderProxy(senderCommands);
         receiverProxy = new ReceiverProxy(receiverCommands);
-        sessionManagerProxy = new SessionManagerProxy(sessionManagerCommands);
 
         final Multiplexer multiplexer = new Multiplexer();
         final Subscription dataSubscription = streams.dataSubscription(multiplexer);
@@ -86,20 +79,18 @@ public class FixGateway implements AutoCloseable
             configuration.sessionIdStrategy(),
             messageHandler);
 
-        sender = new Sender(senderCommands, handler, receiverProxy, sessionManagerProxy, this, multiplexer,
+        sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer,
             dataSubscription);
 
         receiver = new Receiver(configuration.bindAddress(), handler, receiverCommands, senderProxy);
-        sessionManager = new SessionManager(sessionManagerCommands);
 
         senderRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sender);
         receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, receiver);
-        sessionManagerRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sessionManager);
     }
 
     private BackoffIdleStrategy backoffIdleStrategy()
     {
-        return new BackoffIdleStrategy(0, 0, 1, 1000);
+        return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
     }
 
     public static FixGateway launch(final StaticConfiguration configuration)
@@ -111,7 +102,6 @@ public class FixGateway implements AutoCloseable
     {
         start(senderRunner);
         start(receiverRunner);
-        start(sessionManagerRunner);
         return this;
     }
 
@@ -139,7 +129,6 @@ public class FixGateway implements AutoCloseable
     {
         senderRunner.close();
         receiverRunner.close();
-        sessionManagerRunner.close();
 
         sender.onClose();
         receiver.onClose();
@@ -149,7 +138,7 @@ public class FixGateway implements AutoCloseable
         aeron.close();
     }
 
-    public void onInitiatorSessionActive(final InitiatorSession session)
+    public synchronized void onInitiatorSessionActive(final InitiatorSession session)
     {
         addedSession = session;
         signal.signal();

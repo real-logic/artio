@@ -72,6 +72,7 @@ public class Coordinator implements Agent
         fixMessage.wrapForDecode(unsafeBuffer, offset, length, SCHEMA_VERSION);
 
         final long fixSessionId = fixMessage.session();
+        // SBE Message offset: offset + fixMessage.sbeBlockLength() + fixMessage.bodyHeaderSize();
         delegate.onMessage(buffer, offset, length, fixSessionId);
     }
 

@@ -20,11 +20,14 @@ import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.framer.session.AcceptorSession;
+import uk.co.real_logic.fix_gateway.framer.session.Session;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.*;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -37,6 +40,7 @@ import static java.nio.channels.SelectionKey.OP_READ;
 public final class Receiver implements Agent
 {
     private final Consumer<ReceiverCommand> onCommandFunc = this::onCommand;
+    private final List<Session> sessions = new ArrayList<>();
 
     private final ServerSocketChannel listeningChannel;
     private final ConnectionHandler connectionHandler;
@@ -72,7 +76,7 @@ public final class Receiver implements Agent
     @Override
     public int doWork() throws Exception
     {
-        return commandQueue.drain(onCommandFunc) + pollSockets();
+        return commandQueue.drain(onCommandFunc) + pollSockets() + pollSessions();
     }
 
     private void onCommand(final ReceiverCommand command)
@@ -110,6 +114,17 @@ public final class Receiver implements Agent
         return count;
     }
 
+    private int pollSessions()
+    {
+        // TODO: pass in time as a parameter
+        // TODO: return number of state changes to allow backoff
+        for (final Session session: sessions)
+        {
+            session.poll();
+        }
+        return sessions.size();
+    }
+
     public void onNewInitiatedConnection(final ReceiverEndPoint receiverEndPoint)
     {
         try
@@ -125,6 +140,7 @@ public final class Receiver implements Agent
 
     private void register(final SocketChannel channel, final ReceiverEndPoint receiverEndPoint) throws ClosedChannelException
     {
+        sessions.add(receiverEndPoint.session());
         channel.register(selector, OP_READ, receiverEndPoint);
     }
 
@@ -133,6 +149,7 @@ public final class Receiver implements Agent
     {
         try
         {
+            sessions.forEach(Session::disconnect);
             if (selector.isOpen())
             {
                 // JDK on Windows - sigh

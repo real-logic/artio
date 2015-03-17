@@ -22,6 +22,7 @@ import static uk.co.real_logic.fix_gateway.framer.session.SessionState.*;
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound
  */
+// TODO: check heartbeating timeouts on the acceptor
 public abstract class Session
 {
     public static final long UNKNOWN = -1;
@@ -155,7 +156,7 @@ public abstract class Session
         // TODO: decide how to resend messages once logging is figured out
     }
 
-    void poll()
+    public void poll()
     {
         if (nextRequiredMessageTime() < time())
         {
@@ -163,7 +164,7 @@ public abstract class Session
         }
     }
 
-    protected void disconnect()
+    public void disconnect()
     {
         proxy.disconnect(connectionId);
         state(DISCONNECTED);

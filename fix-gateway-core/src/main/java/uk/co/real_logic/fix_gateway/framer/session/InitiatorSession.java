@@ -49,7 +49,7 @@ public class InitiatorSession extends Session
         }
     }
 
-    void poll()
+    public void poll()
     {
         if (state() == CONNECTED)
         {

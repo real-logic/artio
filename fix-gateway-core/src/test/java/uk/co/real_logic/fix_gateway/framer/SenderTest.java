@@ -25,7 +25,6 @@ import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
-import uk.co.real_logic.fix_gateway.commands.SessionManagerProxy;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 
@@ -53,7 +52,6 @@ public class SenderTest
     private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private ReceiverProxy mockReceiver = mock(ReceiverProxy.class);
-    private SessionManagerProxy mockSessionManager = mock(SessionManagerProxy.class);
     private FixGateway mockGateway = mock(FixGateway.class);
     private Multiplexer mockMultiplexer = mock(Multiplexer.class);
     private InitiatorSession mockSession = mock(InitiatorSession.class);
@@ -62,8 +60,8 @@ public class SenderTest
     private OneToOneConcurrentArrayQueue<SenderCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private SenderProxy proxy = new SenderProxy(commandQueue);
 
-    private Sender sender = new Sender(commandQueue, mockConnectionHandler, mockReceiver, mockSessionManager,
-        mockGateway, mockMultiplexer, mockDataSubscription);
+    private Sender sender = new Sender(commandQueue, mockConnectionHandler, mockReceiver,
+            mockGateway, mockMultiplexer, mockDataSubscription);
 
     private ServerSocketChannel server;
 
@@ -104,15 +102,6 @@ public class SenderTest
 
         then:
         verify(mockReceiver).newInitiatedConnection(mockReceiverEndPoint);
-    }
-
-    @Test
-    public void shouldNotifySessionManagerWhenConnectionEstablished() throws Exception
-    {
-        connect();
-
-        then:
-        verify(mockSessionManager).newSession(mockSession);
     }
 
     private void connect() throws Exception

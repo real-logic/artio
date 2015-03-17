@@ -25,6 +25,7 @@ public interface SessionIdStrategy
         return decode(header.senderCompID(), header.targetCompID());
     }
 
+    // TODO: location/sub?
     long decode(final char[] senderCompID, final char[] targetCompID);
 
     void encode(final long sessionId, final HeaderEncoder encoder);

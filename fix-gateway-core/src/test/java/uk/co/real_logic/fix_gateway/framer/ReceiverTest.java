@@ -46,6 +46,7 @@ public class ReceiverTest
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private SenderProxy mockSender = mock(SenderProxy.class);
+    private Session mockSession = mock(Session.class);
 
     private Receiver receiver = new Receiver(ADDRESS, mockConnectionHandler, commandQueue, mockSender);
 
@@ -59,6 +60,8 @@ public class ReceiverTest
 
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong()))
             .thenReturn(mockSenderEndPoint);
+
+        when(mockReceiverEndPoint.session()).thenReturn(mockSession);
     }
 
     @After
@@ -101,6 +104,19 @@ public class ReceiverTest
 
         then:
         verify(mockSender).newAcceptedConnection(mockSenderEndPoint);
+    }
+
+    @Test
+    public void shouldPollSessionOfConnectedClient() throws Exception
+    {
+        given:
+        aClientConnects();
+
+        when:
+        receiver.doWork();
+
+        then:
+        verify(mockSession).poll();
     }
 
     @Test
