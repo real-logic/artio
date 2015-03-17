@@ -15,14 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.util.function.BooleanSupplier;
 
 import static org.junit.Assert.fail;
 
 public final class Timing
 {
-    // TODO: disable in debug mode
-    private static final long DEFAULT_TIMEOUT = 200;
+    private static final long DEFAULT_TIMEOUT = hasDebuggerAttached() ? Long.MAX_VALUE : 200;
 
     public static void assertEventuallyTrue(
             final String message,
@@ -49,6 +50,13 @@ public final class Timing
         }
 
         fail(message);
+    }
+
+    private static boolean hasDebuggerAttached()
+    {
+        RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
+        String jvmArguments = runtimeMXBean.getInputArguments().toString();
+        return jvmArguments.contains("-agentlib:jdwp");
     }
 
 }
