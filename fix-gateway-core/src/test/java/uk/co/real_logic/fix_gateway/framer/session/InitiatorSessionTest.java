@@ -57,7 +57,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
     @Test
     public void shouldAttemptLogonWhenConnected()
     {
-        session.poll();
+        session.poll(0);
 
         verifyLogon();
     }
@@ -65,11 +65,11 @@ public class InitiatorSessionTest extends AbstractSessionTest
     @Test
     public void shouldAttemptLogonOnlyOnce()
     {
-        session.poll();
+        session.poll(0);
 
-        session.poll();
+        session.poll(10);
 
-        session.poll();
+        session.poll(20);
 
         verifyLogon();
     }

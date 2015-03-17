@@ -49,14 +49,16 @@ public class InitiatorSession extends Session
         }
     }
 
-    public void poll()
+    public int poll(final long time)
     {
+        int actions = 0;
         if (state() == CONNECTED)
         {
             proxy.logon((int) (heartbeatIntervalInMs() / 1000), expectedSeqNo(), id());
             state(SENT_LOGON);
+            actions++;
         }
-        super.poll();
+        return actions + super.poll(time);
     }
 
     public void send(final Encoder encoder)

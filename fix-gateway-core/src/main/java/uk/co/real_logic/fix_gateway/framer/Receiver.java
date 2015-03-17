@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.framer.session.AcceptorSession;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
+import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -43,6 +44,7 @@ public final class Receiver implements Agent
     private final List<Session> sessions = new ArrayList<>();
 
     private final ServerSocketChannel listeningChannel;
+    private final MilliClock clock;
     private final ConnectionHandler connectionHandler;
     private final SequencedContainerQueue<ReceiverCommand> commandQueue;
     private final SenderProxy sender;
@@ -50,11 +52,13 @@ public final class Receiver implements Agent
 
     // TODO: add hooks for receive and send buffer sizes
     public Receiver(
+        final MilliClock clock,
         final SocketAddress address,
         final ConnectionHandler connectionHandler,
         final SequencedContainerQueue<ReceiverCommand> commandQueue,
         final SenderProxy sender)
     {
+        this.clock = clock;
         this.connectionHandler = connectionHandler;
         this.commandQueue = commandQueue;
         this.sender = sender;
@@ -116,13 +120,13 @@ public final class Receiver implements Agent
 
     private int pollSessions()
     {
-        // TODO: pass in time as a parameter
-        // TODO: return number of state changes to allow backoff
+        final long time = clock.time();
+        int stateChanges = 0;
         for (final Session session: sessions)
         {
-            session.poll();
+            stateChanges += session.poll(time);
         }
-        return sessions.size();
+        return stateChanges;
     }
 
     public void onNewInitiatedConnection(final ReceiverEndPoint receiverEndPoint)

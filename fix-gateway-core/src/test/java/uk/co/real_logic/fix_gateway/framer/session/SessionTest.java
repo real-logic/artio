@@ -129,7 +129,7 @@ public class SessionTest extends AbstractSessionTest
 
         mockClock.advanceSeconds(HEARTBEAT_INTERVAL * 2);
 
-        session.poll();
+        session.poll(mockClock.time());
 
         verifyDisconnect();
     }
@@ -144,12 +144,12 @@ public class SessionTest extends AbstractSessionTest
 
         mockClock.advanceSeconds(1);
 
-        session.poll();
+        session.poll(mockClock.time());
         session.onMessage(11);
 
         mockClock.advanceSeconds(1);
 
-        session.poll();
+        session.poll(mockClock.time());
 
         verifyNoMessages();
     }

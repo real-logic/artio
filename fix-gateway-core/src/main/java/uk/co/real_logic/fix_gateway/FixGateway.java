@@ -30,6 +30,7 @@ import uk.co.real_logic.fix_gateway.framer.*;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.SessionProxy;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
+import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 public class FixGateway implements AutoCloseable
 {
@@ -74,8 +75,9 @@ public class FixGateway implements AutoCloseable
             System.out.printf("Message received from %d\n", sessionId);
         };
 
+        final MilliClock systemClock = System::currentTimeMillis;
         final ConnectionHandler handler = new ConnectionHandler(
-            System::currentTimeMillis,
+            systemClock,
             sessionProxy,
             configuration.receiverBufferSize(),
             configuration.defaultHeartbeatInterval(),
@@ -85,7 +87,7 @@ public class FixGateway implements AutoCloseable
         sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer,
             dataSubscription);
 
-        receiver = new Receiver(configuration.bindAddress(), handler, receiverCommands, senderProxy);
+        receiver = new Receiver(systemClock, configuration.bindAddress(), handler, receiverCommands, senderProxy);
 
         senderRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sender);
         receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, receiver);

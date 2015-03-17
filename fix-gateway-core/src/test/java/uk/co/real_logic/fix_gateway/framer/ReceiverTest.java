@@ -22,6 +22,7 @@ import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
+import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -47,8 +48,9 @@ public class ReceiverTest
     private OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private SenderProxy mockSender = mock(SenderProxy.class);
     private Session mockSession = mock(Session.class);
+    private MilliClock mockClock = mock(MilliClock.class);
 
-    private Receiver receiver = new Receiver(ADDRESS, mockConnectionHandler, commandQueue, mockSender);
+    private Receiver receiver = new Receiver(mockClock, ADDRESS, mockConnectionHandler, commandQueue, mockSender);
 
     @Before
     public void setUp() throws IOException
@@ -116,7 +118,7 @@ public class ReceiverTest
         receiver.doWork();
 
         then:
-        verify(mockSession).poll();
+        verify(mockSession).poll(0);
     }
 
     @Test

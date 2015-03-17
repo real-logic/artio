@@ -156,12 +156,15 @@ public abstract class Session
         // TODO: decide how to resend messages once logging is figured out
     }
 
-    public void poll()
+    public int poll(final long time)
     {
-        if (nextRequiredMessageTime() < time())
+        if (nextRequiredMessageTime() < time)
         {
             disconnect();
+            return 1;
         }
+
+        return 0;
     }
 
     public void disconnect()
