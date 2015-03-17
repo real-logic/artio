@@ -51,7 +51,7 @@ public class EncoderGeneratorTest
     {
         encoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
-        //System.out.println(sources);
+        System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
         headerClass = compileInMemory(HEADER_ENCODER, sources);
     }
@@ -164,9 +164,10 @@ public class EncoderGeneratorTest
         final Encoder encoder = (Encoder) heartbeat.newInstance();
 
         setCharSequence(encoder, "onBehalfOfCompID", ABC);
-        setTestReqIdTo(encoder, ABC);
         setInt(encoder, INT_FIELD, 2);
         setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+
+        setTestReqIdTo(encoder, ABC);
         setBoolean(encoder, BOOLEAN_FIELD, true);
         setByteArray(encoder, DATA_FIELD, new byte[]{'1', '2', '3'});
         setupHeader(encoder);
@@ -180,13 +181,18 @@ public class EncoderGeneratorTest
     {
         final Encoder encoder = (Encoder) heartbeat.newInstance();
 
-        setCharSequence(encoder, "onBehalfOfCompID", "abc");
-        setInt(encoder, INT_FIELD, 2);
-        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+        setRequiredFields(encoder);
         setupHeader(encoder);
         setupTrailer(encoder);
 
         assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE_EXAMPLE);
+    }
+
+    private void setRequiredFields(Encoder encoder) throws Exception
+    {
+        setCharSequence(encoder, "onBehalfOfCompID", "abc");
+        setInt(encoder, INT_FIELD, 2);
+        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
     }
 
     @Test
@@ -194,11 +200,19 @@ public class EncoderGeneratorTest
     {
         final Encoder encoder = (Encoder) heartbeat.newInstance();
 
-        setCharSequence(encoder, "onBehalfOfCompID", "abc");
-        setInt(encoder, INT_FIELD, 2);
-        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+        setRequiredFields(encoder);
 
         assertEncodesTo(encoder, DERIVED_FIELDS_EXAMPLE);
+    }
+
+    @Test
+    public void shouldGenerateHumanReadableToString() throws Exception
+    {
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+
+        setRequiredFields(encoder);
+
+        assertEquals(STRING_NO_OPTIONAL_MESSAGE_EXAMPLE, encoder.toString());
     }
 
     // TODO: compound types

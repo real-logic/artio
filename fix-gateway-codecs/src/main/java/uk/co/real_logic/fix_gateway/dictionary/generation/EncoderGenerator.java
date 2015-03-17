@@ -82,12 +82,60 @@ public class EncoderGenerator extends Generator
             generateSetters(out, className, aggregate.entries());
             out.append(generateEncodeMethod(aggregate.entries(), aggregateType));
             out.append(generateResetMethod(aggregate.entries()));
+            out.append(generateToString(aggregate));
             out.append("}\n");
         }
         catch (IOException e)
         {
             // TODO: logging
             e.printStackTrace();
+        }
+    }
+
+    private String generateToString(Aggregate aggregate)
+    {
+        final String entriesToString =
+            aggregate.entries()
+                     .stream()
+                     .map(this::generateEntryToString)
+                     .collect(joining(" + \n"));
+        return String.format(
+            "    public String toString()\n" +
+            "    {\n" +
+            "        final String entries =\n" +
+            "%s;\n" +
+            "        return \"{\\n  \\\"MsgType\\\": \\\"%s\\\",\\n\" + entries + \"}\";\n" +
+            "    }\n\n",
+            entriesToString,
+            aggregate.name());
+    }
+
+    private String generateEntryToString(final Entry entry)
+    {
+        //"  \"OnBehalfOfCompID\": \"abc\",\n" +
+
+        final Field field = (Field) entry.element();
+        final String name = entry.name();
+        final String value = getValue(field);
+
+        final String formatter = String.format(
+            "String.format(\"  \\\"%s\\\": \\\"%%s\\\",\\n\", %s)",
+            name,
+            value
+        );
+
+        return "            " + (entry.required() ? formatter : String.format("(has%s ? %s : \"\")", name, formatter));
+    }
+
+    private String getValue(Field field)
+    {
+        final String fieldName = JavaUtil.formatPropertyName(field.name());
+        switch (field.type())
+        {
+            case STRING:
+                return String.format("new String(%s, StandardCharsets.US_ASCII)", fieldName);
+            default:
+                return fieldName;
         }
     }
 
