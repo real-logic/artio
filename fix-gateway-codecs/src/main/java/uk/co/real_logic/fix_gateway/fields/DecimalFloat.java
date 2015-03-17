@@ -35,11 +35,12 @@ package uk.co.real_logic.fix_gateway.fields;
  * -.995
  * -0.9950
  * -25
- *
- * TODO: document range of valid values
  */
 public final class DecimalFloat implements Comparable<DecimalFloat>
 {
+    public static final DecimalFloat MIN_VALUE = new DecimalFloat(Long.MIN_VALUE, 0);
+    public static final DecimalFloat MAX_VALUE = new DecimalFloat(Long.MAX_VALUE, 0);
+
     private long value;
     private int scale;
 
