@@ -116,7 +116,7 @@ public class EncoderGenerator extends Generator
 
         final Field field = (Field) entry.element();
         final String name = entry.name();
-        final String value = getValue(field);
+        final String value = getValueToString(field);
 
         final String formatter = String.format(
             "String.format(\"  \\\"%s\\\": \\\"%%s\\\",\\n\", %s)",
@@ -127,13 +127,17 @@ public class EncoderGenerator extends Generator
         return "            " + (entry.required() ? formatter : String.format("(has%s ? %s : \"\")", name, formatter));
     }
 
-    private String getValue(Field field)
+    private String getValueToString(Field field)
     {
         final String fieldName = JavaUtil.formatPropertyName(field.name());
         switch (field.type())
         {
             case STRING:
                 return String.format("new String(%s, StandardCharsets.US_ASCII)", fieldName);
+
+            case DATA:
+                return String.format("Arrays.toString(%s)", fieldName);
+
             default:
                 return fieldName;
         }

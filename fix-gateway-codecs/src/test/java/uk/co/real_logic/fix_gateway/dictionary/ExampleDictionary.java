@@ -66,6 +66,17 @@ public final class ExampleDictionary
     public static final String ENCODED_MESSAGE_EXAMPLE =
         "8=abc\0019=0049\00135=0\001115=abc\001112=abc\001116=2\001117=1.1\001118=Y\001119=123\00110=118\001";
 
+    public static final String STRING_ENCODED_MESSAGE_EXAMPLE =
+            "{\n" +
+            "  \"MsgType\": \"Heartbeat\",\n" +
+            "  \"OnBehalfOfCompID\": \"abc\",\n" +
+            "  \"TestReqID\": \"abc\",\n" +
+            "  \"IntField\": \"2\",\n" +
+            "  \"FloatField\": \"1.1\",\n" +
+            "  \"BooleanField\": \"true\",\n" +
+            "  \"DataField\": \"[49, 50, 51]\",\n" +
+            "}";
+
     public static final String NO_OPTIONAL_MESSAGE_EXAMPLE =
         "8=abc\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=222\001";
 

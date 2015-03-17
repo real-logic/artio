@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
@@ -96,6 +97,7 @@ public abstract class Generator
             importFor(LocalMktDateEncoder.class) +
             importFor(UtcTimestampEncoder.class) +
             importFor(StandardCharsets.class) +
+            importFor(Arrays.class) +
             "\n" +
             "public class %2$s implements %3$s\n" +
             "{\n\n",

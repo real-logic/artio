@@ -163,13 +163,9 @@ public class EncoderGeneratorTest
     {
         final Encoder encoder = (Encoder) heartbeat.newInstance();
 
-        setCharSequence(encoder, "onBehalfOfCompID", ABC);
-        setInt(encoder, INT_FIELD, 2);
-        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+        setRequiredFields(encoder);
 
-        setTestReqIdTo(encoder, ABC);
-        setBoolean(encoder, BOOLEAN_FIELD, true);
-        setByteArray(encoder, DATA_FIELD, new byte[]{'1', '2', '3'});
+        setOptionalFields(encoder);
         setupHeader(encoder);
         setupTrailer(encoder);
 
@@ -186,13 +182,6 @@ public class EncoderGeneratorTest
         setupTrailer(encoder);
 
         assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE_EXAMPLE);
-    }
-
-    private void setRequiredFields(Encoder encoder) throws Exception
-    {
-        setCharSequence(encoder, "onBehalfOfCompID", "abc");
-        setInt(encoder, INT_FIELD, 2);
-        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
     }
 
     @Test
@@ -215,6 +204,17 @@ public class EncoderGeneratorTest
         assertEquals(STRING_NO_OPTIONAL_MESSAGE_EXAMPLE, encoder.toString());
     }
 
+    @Test
+    public void shouldIncludeOptionalFieldsInToString() throws Exception
+    {
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+
+        setRequiredFields(encoder);
+        setOptionalFields(encoder);
+
+        assertEquals(STRING_ENCODED_MESSAGE_EXAMPLE, encoder.toString());
+    }
+
     // TODO: compound types
     // TODO: groups (RefMsgType used in session management)
     // TODO: nested groups
@@ -224,6 +224,20 @@ public class EncoderGeneratorTest
         final Object header = Reflection.get(encoder, "header");
         setCharSequence(header, "beginString", "abc");
         setCharSequence(header, "msgType", "0");
+    }
+
+    private void setRequiredFields(Encoder encoder) throws Exception
+    {
+        setCharSequence(encoder, "onBehalfOfCompID", "abc");
+        setInt(encoder, INT_FIELD, 2);
+        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+    }
+
+    private void setOptionalFields(Encoder encoder) throws Exception
+    {
+        setTestReqIdTo(encoder, ABC);
+        setBoolean(encoder, BOOLEAN_FIELD, true);
+        setByteArray(encoder, DATA_FIELD, new byte[]{'1', '2', '3'});
     }
 
     private void setupTrailer(final Encoder encoder) throws Exception
