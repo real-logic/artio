@@ -19,9 +19,13 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.AgentRunner;
 import uk.co.real_logic.aeron.common.BackoffIdleStrategy;
-import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
+import uk.co.real_logic.agrona.concurrent.ManyToOneConcurrentArrayQueue;
+import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
 import uk.co.real_logic.agrona.concurrent.Signal;
-import uk.co.real_logic.fix_gateway.commands.*;
+import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
+import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
+import uk.co.real_logic.fix_gateway.commands.SenderCommand;
+import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.framer.*;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.SessionProxy;
@@ -55,9 +59,8 @@ public class FixGateway implements AutoCloseable
         // TODO: aeron channel configuration
         streams = new ReplicationStreams("udp://localhost:9998", aeron);
 
-        // TODO: MPSC queue?
-        final OneToOneConcurrentArrayQueue<SenderCommand> senderCommands = new OneToOneConcurrentArrayQueue<>(10);
-        final OneToOneConcurrentArrayQueue<ReceiverCommand> receiverCommands = new OneToOneConcurrentArrayQueue<>(10);
+        final SequencedContainerQueue<SenderCommand> senderCommands = new ManyToOneConcurrentArrayQueue<>(10);
+        final SequencedContainerQueue<ReceiverCommand> receiverCommands = new ManyToOneConcurrentArrayQueue<>(10);
 
         senderProxy = new SenderProxy(senderCommands);
         receiverProxy = new ReceiverProxy(receiverCommands);
@@ -138,7 +141,7 @@ public class FixGateway implements AutoCloseable
         aeron.close();
     }
 
-    public synchronized void onInitiatorSessionActive(final InitiatorSession session)
+    public void onInitiatorSessionActive(final InitiatorSession session)
     {
         addedSession = session;
         signal.signal();

@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.aeron.common.Agent;
-import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
+import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
 import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.framer.session.AcceptorSession;
@@ -44,7 +44,7 @@ public final class Receiver implements Agent
 
     private final ServerSocketChannel listeningChannel;
     private final ConnectionHandler connectionHandler;
-    private final OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue;
+    private final SequencedContainerQueue<ReceiverCommand> commandQueue;
     private final SenderProxy sender;
     private final Selector selector;
 
@@ -52,7 +52,7 @@ public final class Receiver implements Agent
     public Receiver(
         final SocketAddress address,
         final ConnectionHandler connectionHandler,
-        final OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue,
+        final SequencedContainerQueue<ReceiverCommand> commandQueue,
         final SenderProxy sender)
     {
         this.connectionHandler = connectionHandler;

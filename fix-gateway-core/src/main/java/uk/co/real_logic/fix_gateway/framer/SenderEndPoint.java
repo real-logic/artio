@@ -35,8 +35,8 @@ public class SenderEndPoint
     public void onFramedMessage(final DirectBuffer directBuffer, final int offset, final int length)
     {
         final ByteBuffer buffer = directBuffer.byteBuffer();
-        buffer.position(offset);
         buffer.limit(offset + length);
+        buffer.position(offset);
 
         try
         {

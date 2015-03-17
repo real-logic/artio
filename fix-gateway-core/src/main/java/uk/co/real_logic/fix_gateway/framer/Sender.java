@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.Agent;
-import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
+import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
@@ -36,7 +36,7 @@ public final class Sender implements Agent
 {
     private final Consumer<SenderCommand> onCommandFunc = this::onCommand;
 
-    private final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue;
+    private final SequencedContainerQueue<SenderCommand> commandQueue;
     private final ConnectionHandler connectionHandler;
     private final ReceiverProxy receiver;
     private final FixGateway gateway;
@@ -44,7 +44,7 @@ public final class Sender implements Agent
     private final Subscription dataSubscription;
 
     public Sender(
-            final OneToOneConcurrentArrayQueue<SenderCommand> commandQueue,
+            final SequencedContainerQueue<SenderCommand> commandQueue,
             final ConnectionHandler connectionHandler,
             final ReceiverProxy receiver,
             final FixGateway gateway,
