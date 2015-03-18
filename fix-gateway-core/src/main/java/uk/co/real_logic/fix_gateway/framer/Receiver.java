@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
-import uk.co.real_logic.aeron.common.Agent;
+import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
 import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
