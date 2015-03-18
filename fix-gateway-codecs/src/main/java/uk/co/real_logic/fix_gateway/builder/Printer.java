@@ -13,20 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.dictionary.generation;
+package uk.co.real_logic.fix_gateway.builder;
 
-import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
-import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
-public class PrettyPrintGenerator
+public interface Printer
 {
-    public PrettyPrintGenerator(DataDictionary messageExample, String testPackage, StringWriterOutputManager outputManager)
-    {
-
-    }
-
-    public void generate()
-    {
-
-    }
+    String toString(final AsciiFlyweight input, final int offset, final int length, final int messageType);
 }

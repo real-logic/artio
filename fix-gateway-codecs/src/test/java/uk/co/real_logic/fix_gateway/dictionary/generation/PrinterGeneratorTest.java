@@ -16,34 +16,53 @@
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.BeforeClass;
+import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
+import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.util.Map;
 
+import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 
-public class PrettyPrintGeneratorTest
+public class PrinterGeneratorTest
 {
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
-    private static PrettyPrintGenerator prettyPrintGenerator =
-        new PrettyPrintGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
-    private static Class<?> heartbeat;
-    private static Class<?> headerClass;
+    private static PrinterGenerator printerGenerator =
+        new PrinterGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
+    private static DecoderGenerator decoderGenerator =
+        new DecoderGenerator(MESSAGE_EXAMPLE, 3, TEST_PACKAGE, outputManager);
+    private static Class<?> printer;
 
     private MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
 
     @BeforeClass
     public static void generate() throws Exception
     {
-        prettyPrintGenerator.generate();
+        printerGenerator.generate();
+        decoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
-        System.out.println(sources);
-        heartbeat = compileInMemory(HEARTBEAT_DECODER, sources);
-        headerClass = compileInMemory(HEADER_DECODER, sources);
+        //System.out.println(sources);
+        printer = compileInMemory(PRINTER, sources);
     }
 
+    @Test
+    public void shouldPrettyPrintAMessage() throws Exception
+    {
+        final Printer printer = printer();
+        buffer.putAscii(1, ENCODED_MESSAGE_EXAMPLE);
+
+        final String string = printer.toString(buffer, 1, ENCODED_MESSAGE_EXAMPLE.length(), HEARTBEAT_TYPE);
+
+        assertEquals(STRING_ENCODED_MESSAGE_EXAMPLE, string);
+    }
+
+    private Printer printer() throws InstantiationException, IllegalAccessException
+    {
+        return (Printer) PrinterGeneratorTest.printer.newInstance();
+    }
 
 }

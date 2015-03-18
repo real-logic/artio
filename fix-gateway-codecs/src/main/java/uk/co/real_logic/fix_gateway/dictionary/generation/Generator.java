@@ -101,8 +101,7 @@ public abstract class Generator
             importFor(UtcTimestampEncoder.class) +
             importFor(StandardCharsets.class) +
             importFor(Arrays.class) +
-            "\n" +
-            "public class %2$s implements %3$s\n" +
+            "\npublic class %2$s implements %3$s\n" +
             "{\n\n",
             builderPackage,
             className,

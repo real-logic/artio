@@ -35,12 +35,18 @@ import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.
 // use ordering of fields to reduce branching
 public class DecoderGenerator extends Generator
 {
+    public static String decoderClassName(final Aggregate aggregate)
+    {
+        return aggregate.name() + "Decoder";
+    }
+
     private final int initialBufferSize;
 
     public DecoderGenerator(
-            final DataDictionary dictionary,
-            final int initialBufferSize, final String builderPackage,
-            final OutputManager outputManager)
+        final DataDictionary dictionary,
+        final int initialBufferSize,
+        final String builderPackage,
+        final OutputManager outputManager)
     {
         super(dictionary, builderPackage, outputManager);
         this.initialBufferSize = initialBufferSize;
@@ -48,7 +54,7 @@ public class DecoderGenerator extends Generator
 
     protected void generateAggregate(final Aggregate aggregate, final AggregateType type)
     {
-        final String className = aggregate.name() + "Decoder";
+        final String className = decoderClassName(aggregate);
         final boolean isMessage = type == MESSAGE;
 
         try (final Writer out = outputManager.createOutput(className))

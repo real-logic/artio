@@ -40,6 +40,7 @@ public final class ExampleDictionary
 
     public static final String HEARTBEAT_DECODER = TEST_PACKAGE + ".HeartbeatDecoder";
     public static final String HEADER_DECODER = TEST_PACKAGE + ".HeaderDecoder";
+    public static final String PRINTER = TEST_PACKAGE + ".PrinterImpl";
 
     public static final String ABC = "abc";
     public static final byte[] VALUE_IN_BYTES = {97, 98, 99};
