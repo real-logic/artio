@@ -19,7 +19,10 @@ import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.FixMessage;
+
+import static uk.co.real_logic.fix_gateway.FixPublication.FRAME_SIZE;
 
 /**
  * Responsible for splitting the data coming out of the replication
@@ -27,6 +30,7 @@ import uk.co.real_logic.fix_gateway.messages.FixMessage;
  */
 public class Multiplexer implements DataHandler
 {
+
     private final Long2ObjectHashMap<SenderEndPoint> endpoints = new Long2ObjectHashMap<>();
     private final FixMessage messageFrame = new FixMessage();
 
@@ -49,11 +53,8 @@ public class Multiplexer implements DataHandler
 
     public void onData(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        // TODO: read framed connection id from fix:
-        //messageFrame.wrapForDecode((UnsafeBuffer) buffer, offset, length, 0);
-        //messageFrame.session();
-        //messageFrame.getBody();
-
-        onMessage(buffer, offset, length, 0L);
+        messageFrame.wrapForDecode((UnsafeBuffer) buffer, offset, length, 0);
+        final long connectionId = messageFrame.connection();
+        onMessage(buffer, offset + FRAME_SIZE, length - FRAME_SIZE, connectionId);
     }
 }

@@ -25,7 +25,7 @@ import static uk.co.real_logic.fix_gateway.framer.session.SessionState.*;
 // TODO: check heartbeating timeouts on the acceptor
 public abstract class Session
 {
-    public static final long UNKNOWN = -1;
+    public static final long UNKNOWN_ID = -1;
 
     private final MilliClock clock;
 
@@ -35,7 +35,7 @@ public abstract class Session
     private long heartbeatIntervalInMs;
     private long nextRequiredMessageTime;
     private SessionState state;
-    private long id = UNKNOWN;
+    private long id = UNKNOWN_ID;
     private int lastMsgSeqNum = 0;
 
     public Session(

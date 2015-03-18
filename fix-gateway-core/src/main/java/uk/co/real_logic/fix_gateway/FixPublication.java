@@ -17,7 +17,13 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
+import uk.co.real_logic.fix_gateway.messages.FixMessage;
+import uk.co.real_logic.sbe.codec.java.CodecUtil;
+
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
+import static uk.co.real_logic.fix_gateway.messages.FixMessage.BLOCK_LENGTH;
 
 /**
  * A proxy for publishing messages fix related messages
@@ -25,6 +31,17 @@ import uk.co.real_logic.fix_gateway.framer.MessageHandler;
  */
 public final class FixPublication implements MessageHandler
 {
+    public static final int FRAME_SIZE = BLOCK_LENGTH + FixMessage.bodyHeaderSize();
+    // SBE Message offset: offset + fixMessage.sbeBlockLength() + fixMessage.bodyHeaderSize();
+
+    // TODO: get SBE to generate this code:
+    public static void putBodyLength(final UnsafeBuffer unsafeBuffer, final int offset, final int bodyLength)
+    {
+        CodecUtil.uint16Put(unsafeBuffer, offset + BLOCK_LENGTH, bodyLength, LITTLE_ENDIAN);
+    }
+
+    private final FixMessage messageFrame = new FixMessage();
+
     private final Publication dataPublication;
 
     public FixPublication(final Publication dataPublication)
@@ -32,14 +49,17 @@ public final class FixPublication implements MessageHandler
         this.dataPublication = dataPublication;
     }
 
+    // NB: assumes that whatever has called it has encoded the body at offset + FRAME_SIZE
     public void onMessage(
         final DirectBuffer buffer, final int offset, final int length, final long sessionId, final int messageType)
     {
-        // TODO: re-enable the framing once the optimal use of SBE is decided upon.
-        /*messageFrame
-            .messageType(ResendRequestDecoder.MESSAGE_TYPE)
+        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) buffer;
+        messageFrame
+            .wrapForEncode(unsafeBuffer, offset)
+            .messageType(messageType)
             .session(sessionId)
-            .connection(0L);*/
+            .connection(0L); // TODO
+        putBodyLength(unsafeBuffer, offset, length - FRAME_SIZE);
 
         while (!dataPublication.offer(buffer, offset, length))
         {

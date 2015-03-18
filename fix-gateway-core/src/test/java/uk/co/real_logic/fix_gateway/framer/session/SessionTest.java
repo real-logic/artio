@@ -44,6 +44,8 @@ public class SessionTest extends AbstractSessionTest
     @Test
     public void shouldReplyToTestRequestsWithAHeartbeat()
     {
+        session.id(SESSION_ID);
+
         // TODO: figure out the correct String type here
         session.onTestRequest("ABC");
 
@@ -53,6 +55,7 @@ public class SessionTest extends AbstractSessionTest
     @Test
     public void shouldResendRequestForUnexpectedGapFill()
     {
+        session.id(SESSION_ID);
         session.onSequenceReset(3, 4, false);
 
         verify(mockProxy).resendRequest(1, 2, SESSION_ID);
@@ -115,7 +118,7 @@ public class SessionTest extends AbstractSessionTest
         session.onSequenceReset(2, 1, false);
 
         assertEquals(4, session.expectedSeqNo());
-        verify(mockProxy).reject(4, 2, SESSION_ID);
+        verify(mockProxy).reject(4, 2, Session.UNKNOWN_ID);
     }
 
     // NB: differs from the spec to disconnect, rather than test request.
@@ -158,6 +161,8 @@ public class SessionTest extends AbstractSessionTest
     public void shouldRequestResendIfHighSeqNo()
     {
         session.state(ACTIVE);
+        session.id(SESSION_ID);
+
         session.onMessage(3);
 
         verify(mockProxy).resendRequest(1, 2, SESSION_ID);

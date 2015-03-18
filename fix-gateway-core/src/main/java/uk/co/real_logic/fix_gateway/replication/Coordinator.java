@@ -73,6 +73,7 @@ public class Coordinator implements Agent
 
         final long fixSessionId = fixMessage.session();
         final int messageType = 'A'; // TODO
+        // TODO: use FixPublication
         // SBE Message offset: offset + fixMessage.sbeBlockLength() + fixMessage.bodyHeaderSize();
         delegate.onMessage(buffer, offset, length, fixSessionId, messageType);
     }
