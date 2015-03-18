@@ -13,22 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.replication;
+package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
 
 /**
- * Publish data out
+ * A proxy for publishing messages fix related messages
  *
- * TODO: figure out if this class should exist or if we just directly write to Aeron
  */
-public final class ReplicationPublisher implements MessageHandler
+public final class FixPublication implements MessageHandler
 {
     private final Publication dataPublication;
 
-    public ReplicationPublisher(final Publication dataPublication)
+    public FixPublication(final Publication dataPublication)
     {
         this.dataPublication = dataPublication;
     }
@@ -36,9 +35,16 @@ public final class ReplicationPublisher implements MessageHandler
     public void onMessage(
         final DirectBuffer buffer, final int offset, final int length, final long sessionId, final int messageType)
     {
+        // TODO: re-enable the framing once the optimal use of SBE is decided upon.
+        /*messageFrame
+            .messageType(ResendRequestDecoder.MESSAGE_TYPE)
+            .session(sessionId)
+            .connection(0L);*/
+
         while (!dataPublication.offer(buffer, offset, length))
         {
             // TODO: backoff
+            // TODO: count failed retries similar to Aeron
         }
     }
 }

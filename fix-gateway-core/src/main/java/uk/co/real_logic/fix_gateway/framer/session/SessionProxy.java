@@ -15,9 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.framer.session;
 
-import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.FixPublication;
 import uk.co.real_logic.fix_gateway.builder.*;
+import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.messages.FixMessage;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
@@ -36,23 +37,23 @@ public class SessionProxy
 
     private final UnsafeBuffer buffer;
     private final MutableAsciiFlyweight string;
-    private final Publication dataPublication;
+    private final FixPublication fixPublication;
     private final SessionIdStrategy sessionIdStrategy;
 
     public SessionProxy(
-        final int bufferSize, final Publication dataPublication, final SessionIdStrategy sessionIdStrategy)
+        final int bufferSize, final FixPublication fixPublication, final SessionIdStrategy sessionIdStrategy)
     {
+        this.fixPublication = fixPublication;
         this.sessionIdStrategy = sessionIdStrategy;
         buffer = new UnsafeBuffer(new byte[bufferSize]);
         string = new MutableAsciiFlyweight(buffer);
-        this.dataPublication = dataPublication;
     }
 
-    public void resendRequest(final int beginSeqNo, final int endSeqNo)
+    public void resendRequest(final int beginSeqNo, final int endSeqNo, final long sessionId)
     {
         resendRequest.beginSeqNo(beginSeqNo)
                      .endSeqNo(endSeqNo);
-        send(resendRequest.encode(string, 0));
+        send(resendRequest.encode(string, 0), sessionId, ResendRequestDecoder.MESSAGE_TYPE);
     }
 
     public void disconnect(final long connectionId)
@@ -62,18 +63,12 @@ public class SessionProxy
 
     public void logon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
-        // TODO: re-enable the framing once the optimal use of SBE is decided upon.
-        /*messageFrame
-            .messageType(ResendRequestDecoder.MESSAGE_TYPE)
-            .session(sessionId)
-            .connection(0L);*/
-
         final HeaderEncoder header = logon.header();
         sessionIdStrategy.encode(sessionId, header);
         header.msgSeqNum(msgSeqNo);
 
         logon.heartBtInt(heartbeatInterval);
-        send(logon.encode(string, 0));
+        send(logon.encode(string, 0), sessionId, LogonDecoder.MESSAGE_TYPE);
     }
 
     public void logout(final int msgSeqNo, final long sessionId)
@@ -82,29 +77,25 @@ public class SessionProxy
         sessionIdStrategy.encode(sessionId, header);
 
         logout.header().msgSeqNum(msgSeqNo);
-        send(logout.encode(string, 0));
+        send(logout.encode(string, 0), sessionId, LogoutDecoder.MESSAGE_TYPE);
     }
 
-    public void heartbeat(final String testReqId)
+    public void heartbeat(final String testReqId, final long sessionId)
     {
         heartbeat.testReqID(testReqId);
-        send(heartbeat.encode(string, 0));
+        send(heartbeat.encode(string, 0), sessionId, HeartbeatDecoder.MESSAGE_TYPE);
     }
 
-    public void reject(final int msgSeqNo, final int refSeqNum)
+    public void reject(final int msgSeqNo, final int refSeqNum, final long sessionId)
     {
         reject.header().msgSeqNum(msgSeqNo);
         reject.refSeqNum(refSeqNum);
         // TODO: decide on other ref fields
-        send(reject.encode(string, 0));
+        send(reject.encode(string, 0), sessionId, RejectDecoder.MESSAGE_TYPE);
     }
 
-    private void send(final int length)
+    private void send(final int length, final long sessionId, final int messageType)
     {
-        while (!dataPublication.offer(buffer, 0, length))
-        {
-            // TODO: backoff.
-            // TODO: count failed retries similar to Aeron
-        }
+        fixPublication.onMessage(buffer, 0, length, sessionId, messageType);
     }
 }

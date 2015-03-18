@@ -27,6 +27,13 @@ public final class DebugMessageHandler implements MessageHandler
     private final Printer printer = new PrinterImpl();
     private final AsciiFlyweight string = new AsciiFlyweight();
 
+    private final MessageHandler delegate;
+
+    public DebugMessageHandler(final MessageHandler delegate)
+    {
+        this.delegate = delegate;
+    }
+
     public void onMessage(
         final DirectBuffer buffer, final int offset, final int length, final long sessionId, final int messageType)
     {
@@ -34,5 +41,6 @@ public final class DebugMessageHandler implements MessageHandler
         final String message = printer.toString(string, offset, length, messageType);
         System.out.printf("Received from %d", sessionId);
         System.out.println(message);
+        delegate.onMessage(buffer, offset, length, sessionId, messageType);
     }
 }

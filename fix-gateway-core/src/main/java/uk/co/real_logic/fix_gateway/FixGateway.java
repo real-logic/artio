@@ -71,13 +71,12 @@ public class FixGateway implements AutoCloseable
         final Multiplexer multiplexer = new Multiplexer();
         final Subscription dataSubscription = streams.dataSubscription(multiplexer);
         final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(),
-            streams.dataPublication(), configuration.sessionIdStrategy());
+            new FixPublication(streams.dataPublication()), configuration.sessionIdStrategy());
 
-        final MessageHandler messageHandler = configuration.debugPrintMessages() ?
-            new DebugMessageHandler() :
-            (buffer, offset, length, sessionId, messageType) -> {};
+        final MessageHandler messageHandler = messageHandler(configuration);
 
         final MilliClock systemClock = System::currentTimeMillis;
+
         final ConnectionHandler handler = new ConnectionHandler(
             systemClock,
             sessionProxy,
@@ -86,13 +85,18 @@ public class FixGateway implements AutoCloseable
             configuration.sessionIdStrategy(),
             messageHandler);
 
-        sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer,
-            dataSubscription);
+        sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer, dataSubscription);
 
         receiver = new Receiver(systemClock, configuration.bindAddress(), handler, receiverCommands, senderProxy);
 
         senderRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sender);
         receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, receiver);
+    }
+
+    private MessageHandler messageHandler(final StaticConfiguration configuration)
+    {
+        final MessageHandler emptyHandler = (buffer, offset, length, sessionId, messageType) -> {};
+        return configuration.debugPrintMessages() ? new DebugMessageHandler(emptyHandler) : emptyHandler;
     }
 
     private BackoffIdleStrategy backoffIdleStrategy()

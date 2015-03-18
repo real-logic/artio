@@ -80,7 +80,7 @@ public abstract class Session
             else if (expectedSeqNo < msgSeqNo)
             {
                 state(AWAITING_RESEND);
-                proxy.resendRequest(expectedSeqNo, msgSeqNo - 1);
+                proxy.resendRequest(expectedSeqNo, msgSeqNo - 1, id());
             }
             else if (expectedSeqNo > msgSeqNo)
             {
@@ -103,7 +103,7 @@ public abstract class Session
 
     void onTestRequest(final String testReqId)
     {
-        proxy.heartbeat(testReqId);
+        proxy.heartbeat(testReqId, id());
     }
 
     void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
@@ -127,7 +127,7 @@ public abstract class Session
         }
         else if (newSeqNo < expectedMsgSeqNo)
         {
-            proxy.reject(expectedMsgSeqNo, msgSeqNo);
+            proxy.reject(expectedMsgSeqNo, msgSeqNo, id());
         }
     }
 
@@ -136,7 +136,7 @@ public abstract class Session
         final int expectedMsgSeqNo = expectedSeqNo();
         if (msgSeqNo > expectedMsgSeqNo)
         {
-            proxy.resendRequest(expectedMsgSeqNo, msgSeqNo - 1);
+            proxy.resendRequest(expectedMsgSeqNo, msgSeqNo - 1, id());
         }
         else if(msgSeqNo < expectedMsgSeqNo)
         {
