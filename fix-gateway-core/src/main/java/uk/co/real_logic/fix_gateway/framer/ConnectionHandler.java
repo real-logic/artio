@@ -16,8 +16,10 @@
 package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.FixPublication;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.framer.session.*;
+import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
@@ -39,6 +41,7 @@ public class ConnectionHandler
     private final int defaultInterval;
     private final SessionIdStrategy sessionIdStrategy;
     private final MessageHandler messageHandler;
+    private final ReplicationStreams replicationStreams;
 
     public ConnectionHandler(
         final MilliClock clock,
@@ -46,7 +49,8 @@ public class ConnectionHandler
         final int bufferSize,
         final int defaultInterval,
         final SessionIdStrategy sessionIdStrategy,
-        final MessageHandler messageHandler)
+        final MessageHandler messageHandler,
+        final ReplicationStreams replicationStreams)
     {
         this.clock = clock;
         this.sessionProxy = sessionProxy;
@@ -54,6 +58,7 @@ public class ConnectionHandler
         this.defaultInterval = defaultInterval;
         this.sessionIdStrategy = sessionIdStrategy;
         this.messageHandler = messageHandler;
+        this.replicationStreams = replicationStreams;
     }
 
     public long onConnection() throws IOException
@@ -82,7 +87,9 @@ public class ConnectionHandler
         final long connectionId, final FixGateway gateway, final SessionConfiguration configuration)
     {
         final long sessionId = sessionIdStrategy.register(configuration);
+        final FixPublication fixPublication = replicationStreams.fixPublication();
 
-        return new InitiatorSession(defaultInterval, connectionId, clock, sessionProxy, gateway, sessionId);
+        return new InitiatorSession(defaultInterval, connectionId, clock, sessionProxy, gateway, fixPublication,
+            sessionId);
     }
 }

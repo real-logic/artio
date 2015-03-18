@@ -65,6 +65,7 @@ public final class StaticConfiguration
     private boolean debugPrintMessages = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
     private int counterBuffersLength = getInteger(COUNTER_BUFFERS_LENGTH_PROP_NAME, COUNTERS_BUFFER_LENGTH_DEFAULT);
     private String counterBuffersFile = System.getProperty(COUNTERS_FILE_PROP_NAME, COUNTERS_FILE_PROP_DEFAULT);
+    private String aeronChannel;
 
     public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
     {
@@ -131,6 +132,12 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration aeronChannel(final String aeronChannel)
+    {
+        this.aeronChannel = aeronChannel;
+        return this;
+    }
+
     int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -179,6 +186,11 @@ public final class StaticConfiguration
     StaticConfiguration conclude()
     {
         return this;
+    }
+
+    public String aeronChannel()
+    {
+        return aeronChannel;
     }
 
 }

@@ -86,7 +86,9 @@ public class ReceiverEndPoint
 
     private void readData() throws IOException
     {
-        usedBufferData += channel.read(byteBuffer);
+        final int dataRead = channel.read(byteBuffer);
+        //System.out.println("Data read: " + dataRead + " @ " + hashCode());
+        usedBufferData += dataRead;
     }
 
     private void frameMessages()

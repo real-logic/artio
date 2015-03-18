@@ -19,6 +19,8 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
+import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.fix_gateway.FixPublication;
 
 public final class ReplicationStreams
 {
@@ -27,16 +29,23 @@ public final class ReplicationStreams
 
     private final String channel;
     private final Aeron aeron;
+    private final AtomicCounter failedDataPublications;
 
-    public ReplicationStreams(final String channel, final Aeron aeron)
+    public ReplicationStreams(final String channel, final Aeron aeron, final AtomicCounter failedDataPublications)
     {
         this.channel = channel;
         this.aeron = aeron;
+        this.failedDataPublications = failedDataPublications;
     }
 
     public Publication dataPublication()
     {
         return aeron.addPublication(channel, DATA_STREAM);
+    }
+
+    public FixPublication fixPublication()
+    {
+        return new FixPublication(dataPublication(), failedDataPublications);
     }
 
     public Publication controlPublication()

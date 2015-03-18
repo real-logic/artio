@@ -17,15 +17,18 @@ package uk.co.real_logic.fix_gateway.framer.session;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.FixPublication;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.CONNECTED;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.SENT_LOGON;
 
 public class InitiatorSession extends Session
 {
     private final FixGateway gateway;
+    private final FixPublication publication;
 
     public InitiatorSession(
         final int heartbeatInterval,
@@ -33,18 +36,20 @@ public class InitiatorSession extends Session
         final MilliClock clock,
         final SessionProxy proxy,
         final FixGateway gateway,
+        final FixPublication publication,
         final long sessionId)
     {
         super(heartbeatInterval, connectionId, clock, CONNECTED, proxy);
+        this.publication = publication;
         id(sessionId);
         this.gateway = gateway;
     }
 
     void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
-        if (msgSeqNo == expectedSeqNo())
+        if (msgSeqNo == expectedSeqNo() && state() == SENT_LOGON)
         {
-            state(SessionState.ACTIVE);
+            state(ACTIVE);
             gateway.onInitiatorSessionActive(this);
         }
     }
@@ -54,8 +59,8 @@ public class InitiatorSession extends Session
         int actions = 0;
         if (state() == CONNECTED)
         {
-            proxy.logon((int) (heartbeatIntervalInMs() / 1000), expectedSeqNo(), id());
             state(SENT_LOGON);
+            proxy.logon((int) (heartbeatIntervalInMs() / 1000), expectedSeqNo(), id());
             actions++;
         }
         return actions + super.poll(time);
@@ -66,13 +71,9 @@ public class InitiatorSession extends Session
 
     }
 
-    public void send(final DirectBuffer buffer, final int offset, final int length)
+    public void send(final DirectBuffer buffer, final int offset, final int length, final int messageType)
     {
-
+        publication.onMessage(buffer, offset, length, id(), messageType);
     }
 
-    public void logon()
-    {
-
-    }
 }

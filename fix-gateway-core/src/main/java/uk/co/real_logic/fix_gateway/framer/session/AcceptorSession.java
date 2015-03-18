@@ -17,29 +17,35 @@ package uk.co.real_logic.fix_gateway.framer.session;
 
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.CONNECTED;
+
 public final class AcceptorSession extends Session
 {
 
     public AcceptorSession(
         final int defaultInterval, final long connectionId, final MilliClock clock, final SessionProxy proxy)
     {
-        super(defaultInterval, connectionId, clock, SessionState.CONNECTED, proxy);
+        super(defaultInterval, connectionId, clock, CONNECTED, proxy);
     }
 
     public void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
-        id(sessionId);
+        //System.out.printf("Received logon from %s, msgSeqNo = %s\n", sessionId, msgSeqNo);
+        if (state() == CONNECTED)
+        {
+            id(sessionId);
 
-        final int expectedSeqNo = expectedSeqNo();
-        if (expectedSeqNo == msgSeqNo)
-        {
-            heartbeatIntervalInS(heartbeatInterval);
-            state(SessionState.ACTIVE);
-            proxy.logon(heartbeatInterval, msgSeqNo + 1, sessionId);
-        }
-        else if (expectedSeqNo < msgSeqNo)
-        {
-            state(SessionState.AWAITING_RESEND);
+            final int expectedSeqNo = expectedSeqNo();
+            if (expectedSeqNo == msgSeqNo)
+            {
+                heartbeatIntervalInS(heartbeatInterval);
+                state(SessionState.ACTIVE);
+                proxy.logon(heartbeatInterval, msgSeqNo + 1, sessionId);
+            }
+            else if (expectedSeqNo < msgSeqNo)
+            {
+                state(SessionState.AWAITING_RESEND);
+            }
         }
     }
 

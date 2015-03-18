@@ -30,7 +30,7 @@ import static uk.co.real_logic.fix_gateway.messages.FixMessage.BLOCK_LENGTH;
  * A proxy for publishing messages fix related messages
  *
  */
-public final class FixPublication implements MessageHandler
+public class FixPublication implements MessageHandler
 {
     public static final int FRAME_SIZE = BLOCK_LENGTH + FixMessage.bodyHeaderSize();
     // SBE Message offset: offset + fixMessage.sbeBlockLength() + fixMessage.bodyHeaderSize();
@@ -68,6 +68,7 @@ public final class FixPublication implements MessageHandler
         {
             // TODO: backoff
             fails.increment();
+            System.out.println("FAIL!!!!!!!1");
         }
     }
 }

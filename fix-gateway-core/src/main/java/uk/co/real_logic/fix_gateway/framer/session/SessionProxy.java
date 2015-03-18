@@ -63,6 +63,7 @@ public class SessionProxy
 
     public void logon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
+        System.out.println("Sending logon to : " + sessionId);
         final HeaderEncoder header = logon.header();
         sessionIdStrategy.encode(sessionId, header);
         header.msgSeqNum(msgSeqNo);
@@ -82,7 +83,10 @@ public class SessionProxy
 
     public void heartbeat(final String testReqId, final long sessionId)
     {
-        heartbeat.testReqID(testReqId);
+        if (testReqId != null)
+        {
+            heartbeat.testReqID(testReqId);
+        }
         send(heartbeat.encode(string, FRAME_SIZE), sessionId, HeartbeatDecoder.MESSAGE_TYPE);
     }
 

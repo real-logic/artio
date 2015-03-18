@@ -19,12 +19,21 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * An otf acceptor used to accumulate/log/check acceptor interactions.
  */
 public class FakeOtfAcceptor implements OtfMessageAcceptor
 {
+    private final List<Integer> messageTypes = new ArrayList<>();
+    private final AsciiFlyweight string = new AsciiFlyweight();
+
+    private volatile boolean hasSeenMessage = false;
+
     public void onNext()
     {
 
@@ -32,12 +41,16 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
 
     public void onComplete()
     {
-
+        hasSeenMessage = true;
     }
 
     public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
     {
-
+        if (tag == 35)
+        {
+            string.wrap(buffer);
+            messageTypes.add(string.getMessageType(offset, length));
+        }
     }
 
     public void onGroupHeader(final int tag, final int numInGroup)
@@ -61,6 +74,17 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         final int tagNumber,
         final AsciiFieldFlyweight value)
     {
+        System.err.println(error);
         return false;
+    }
+
+    public List<Integer> messageTypes()
+    {
+        return messageTypes;
+    }
+
+    public boolean hasSeenMessage()
+    {
+        return hasSeenMessage;
     }
 }

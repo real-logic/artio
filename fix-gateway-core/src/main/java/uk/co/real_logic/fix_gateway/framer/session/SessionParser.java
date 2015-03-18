@@ -49,6 +49,7 @@ public class SessionParser
         final int messageType)
     {
         string.wrap(buffer);
+        string.log(offset, length);
 
         int msgSeqNo = 0;
 
