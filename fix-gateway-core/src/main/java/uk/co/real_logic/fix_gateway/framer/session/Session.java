@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.framer.session;
 
+import uk.co.real_logic.agrona.Verify;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.*;
@@ -30,35 +31,36 @@ public class Session
     public static final double HEARTBEAT_PAUSE_FACTOR = 0.8;
 
     private final MilliClock clock;
-    private final long sendingHeartbeatIntervalInMs;
 
     protected final SessionProxy proxy;
     protected final long connectionId;
 
-    private long heartbeatIntervalInMs;
-    private long nextRequiredMessageTimeInMs;
     private SessionState state;
     private long id = UNKNOWN_ID;
     private int lastMsgSeqNum = 0;
+
+    private long heartbeatIntervalInMs;
+    private long nextRequiredMessageTimeInMs;
+    private long sendingHeartbeatIntervalInMs;
     private long nextRequiredHeartbeatTimeInMs;
 
     public Session(
-            final int heartbeatIntervalInS,
-            final long connectionId,
-            final MilliClock clock,
-            final SessionState state,
-            final SessionProxy proxy)
+        final int heartbeatIntervalInS,
+        final long connectionId,
+        final MilliClock clock,
+        final SessionState state,
+        final SessionProxy proxy)
     {
-        heartbeatIntervalInMs(heartbeatIntervalInS);
+        Verify.notNull(clock, "clock");
+        Verify.notNull(state, "session state");
+        Verify.notNull(proxy, "session proxy");
+
         this.clock = clock;
         this.proxy = proxy;
         this.connectionId = connectionId;
         this.state = state;
 
-        final long time = time();
-        nextRequiredMessageTimeInMs = time + heartbeatIntervalInMs;
-        sendingHeartbeatIntervalInMs = (long) (heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
-        nextRequiredHeartbeatTimeInMs = time + sendingHeartbeatIntervalInMs;
+        heartbeatIntervalInS(heartbeatIntervalInS);
     }
 
     public boolean isConnected()
@@ -101,6 +103,7 @@ public class Session
     {
         lastMsgSeqNum(msgSeqNo);
         id(sessionId);
+        heartbeatIntervalInS(heartbeatInterval);
     }
 
     void onLogout(final int msgSeqNo, final long sessionId)
@@ -204,9 +207,14 @@ public class Session
         return this.nextRequiredMessageTimeInMs;
     }
 
-    Session heartbeatIntervalInMs(final int heartbeatIntervalInS)
+    Session heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
         this.heartbeatIntervalInMs = MilliClock.fromSeconds(heartbeatIntervalInS);
+
+        final long time = time();
+        nextRequiredMessageTimeInMs = time + heartbeatIntervalInMs;
+        sendingHeartbeatIntervalInMs = (long) (heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
+        nextRequiredHeartbeatTimeInMs = time + sendingHeartbeatIntervalInMs;
         return this;
     }
 

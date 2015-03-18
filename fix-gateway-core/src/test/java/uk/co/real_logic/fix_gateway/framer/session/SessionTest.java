@@ -189,6 +189,15 @@ public class SessionTest extends AbstractSessionTest
     }
 
     @Test
+    public void shouldSendHeartbeatAfterLogonSpecifiedInterval()
+    {
+        session().onLogon(1, 0, SESSION_ID);
+        session().onMessage(0);
+
+        heartbeatSentAfterInterval(1);
+    }
+
+    @Test
     public void shouldSendHeartbeatsAfterIntervalRepeatedly()
     {
         onLogon(0);
@@ -202,7 +211,12 @@ public class SessionTest extends AbstractSessionTest
 
     private void heartbeatSentAfterInterval()
     {
-        fakeClock.advanceSeconds(HEARTBEAT_INTERVAL);
+        heartbeatSentAfterInterval(HEARTBEAT_INTERVAL);
+    }
+
+    private void heartbeatSentAfterInterval(final int heartbeatInterval)
+    {
+        fakeClock.advanceSeconds(heartbeatInterval);
 
         session.poll(fakeClock.time());
 

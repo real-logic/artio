@@ -33,7 +33,7 @@ public final class AcceptorSession extends Session
         final int expectedSeqNo = expectedSeqNo();
         if (expectedSeqNo == msgSeqNo)
         {
-            heartbeatIntervalInMs(heartbeatInterval);
+            heartbeatIntervalInS(heartbeatInterval);
             state(SessionState.ACTIVE);
             proxy.logon(heartbeatInterval, msgSeqNo + 1, sessionId);
         }
