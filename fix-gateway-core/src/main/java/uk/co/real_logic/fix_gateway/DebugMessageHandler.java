@@ -13,32 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.replication;
+package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.builder.Printer;
+import uk.co.real_logic.fix_gateway.decoder.PrinterImpl;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
-/**
- * Publish data out
- *
- * TODO: figure out if this class should exist or if we just directly write to Aeron
- */
-public final class ReplicationPublisher implements MessageHandler
+public final class DebugMessageHandler implements MessageHandler
 {
-    private final Publication dataPublication;
 
-    public ReplicationPublisher(final Publication dataPublication)
-    {
-        this.dataPublication = dataPublication;
-    }
+    private final Printer printer = new PrinterImpl();
+    private final AsciiFlyweight string = new AsciiFlyweight();
 
     public void onMessage(
         final DirectBuffer buffer, final int offset, final int length, final long sessionId, final int messageType)
     {
-        while (!dataPublication.offer(buffer, offset, length))
-        {
-            // TODO: backoff
-        }
+        string.wrap(buffer);
+        final String message = printer.toString(string, offset, length, messageType);
+        System.out.printf("Received from %d", sessionId);
+        System.out.println(message);
     }
 }

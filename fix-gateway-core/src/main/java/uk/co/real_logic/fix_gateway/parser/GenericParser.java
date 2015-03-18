@@ -61,13 +61,14 @@ public final class GenericParser implements MessageHandler
         this.groupToField = groupToField;
     }
 
-    public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long sessionId)
+    public void onMessage(
+        final DirectBuffer buffer, final int offset, final int length, final long sessionId, final int messageType)
     {
         string.wrap(buffer);
         acceptor.onNext();
 
         tag = UNKNOWN;
-        messageType = UNKNOWN;
+        this.messageType = UNKNOWN;
 
         checksum = NO_CHECKSUM;
         checksumOffset = 0;
@@ -82,14 +83,14 @@ public final class GenericParser implements MessageHandler
             }
             else
             {
-                invalidChecksum(messageType);
+                invalidChecksum(this.messageType);
             }
         }
         catch (final IllegalArgumentException ex)
         {
             // Error parsing the message
             // ex.printStackTrace();
-            parseError(messageType, tag);
+            parseError(this.messageType, tag);
         }
     }
 

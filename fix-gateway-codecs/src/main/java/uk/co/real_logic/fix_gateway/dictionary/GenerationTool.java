@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.generation.PackageOutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.generation.DecoderGenerator;
 import uk.co.real_logic.fix_gateway.dictionary.generation.EncoderGenerator;
 import uk.co.real_logic.fix_gateway.dictionary.generation.EnumGenerator;
+import uk.co.real_logic.fix_gateway.dictionary.generation.PrinterGenerator;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 
 import java.io.FileInputStream;
@@ -47,9 +48,13 @@ public final class GenerationTool
             final DecoderGenerator decoderGenerator = new DecoderGenerator(dictionary, 20, DECODER_PACKAGE,
                     new PackageOutputManager(outputPath, DECODER_PACKAGE));
 
+            final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE,
+                new PackageOutputManager(outputPath, DECODER_PACKAGE));
+
             enumGenerator.generate();
             encoderGenerator.generate();
             decoderGenerator.generate();
+            printerGenerator.generate();
         }
     }
 }

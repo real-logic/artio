@@ -30,6 +30,8 @@ import java.util.stream.IntStream;
 // TODO: add optional comp id for gateway and validate if present
 public final class StaticConfiguration
 {
+    public static final String DEBUG_PRINT_MESSAGES_PROPERTY = "fix.core.debug";
+
     private static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
     private static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
     private static final long DEFAULT_CONNECTION_TIMEOUT = 1000;
@@ -46,6 +48,7 @@ public final class StaticConfiguration
     private String host;
     private int port;
     private OtfMessageAcceptor fallbackAcceptor;
+    private boolean debugPrintMessages = false;
 
     public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
     {
@@ -100,6 +103,12 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration debugPrintMessages(final boolean debugPrintMessages)
+    {
+        this.debugPrintMessages = debugPrintMessages;
+        return this;
+    }
+
     int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -128,5 +137,16 @@ public final class StaticConfiguration
     int encoderBufferSize()
     {
         return encoderBufferSize;
+    }
+
+    boolean debugPrintMessages()
+    {
+        return debugPrintMessages;
+    }
+
+    StaticConfiguration conclude()
+    {
+        debugPrintMessages(Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY));
+        return this;
     }
 }

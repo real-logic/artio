@@ -70,10 +70,10 @@ public class FixGateway implements AutoCloseable
         final Subscription dataSubscription = streams.dataSubscription(multiplexer);
         final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(),
             streams.dataPublication(), configuration.sessionIdStrategy());
-        final MessageHandler messageHandler = (buffer, offset, length, sessionId) ->
-        {
-            System.out.printf("Message received from %d\n", sessionId);
-        };
+
+        final MessageHandler messageHandler = configuration.debugPrintMessages() ?
+            new DebugMessageHandler() :
+            (buffer, offset, length, sessionId, messageType) -> {};
 
         final MilliClock systemClock = System::currentTimeMillis;
         final ConnectionHandler handler = new ConnectionHandler(
@@ -100,7 +100,7 @@ public class FixGateway implements AutoCloseable
 
     public static FixGateway launch(final StaticConfiguration configuration)
     {
-        return new FixGateway(configuration).start();
+        return new FixGateway(configuration.conclude()).start();
     }
 
     private FixGateway start()

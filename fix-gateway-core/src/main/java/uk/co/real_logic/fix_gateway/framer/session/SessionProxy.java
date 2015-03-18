@@ -106,6 +106,5 @@ public class SessionProxy
             // TODO: backoff.
             // TODO: count failed retries similar to Aeron
         }
-        System.out.println("buffered");
     }
 }

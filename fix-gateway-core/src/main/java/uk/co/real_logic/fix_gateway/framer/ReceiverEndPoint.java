@@ -120,7 +120,12 @@ public class ReceiverEndPoint
                 final long sessionId = session.onMessage(buffer, offset, length, connectionId, messageType);
                 if (sessionId != SessionParser.UNKNOWN_SESSION_ID)
                 {
-                    handler.onMessage(buffer, offset, length, sessionId);
+                    handler.onMessage(buffer, offset, length, sessionId, messageType);
+                }
+                else
+                {
+                    // TODO: proper logging
+                    System.err.printf("Message not authenticated %s", buffer.getStringUtf8(offset, length));
                 }
 
                 offset += length;

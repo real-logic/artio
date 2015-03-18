@@ -36,6 +36,7 @@ import static uk.co.real_logic.fix_gateway.util.TestMessages.MSG_LEN;
 
 public class ReceiverEndPointTest
 {
+    private static final int MESSAGE_TYPE = 'D';
     private static final long CONNECTION_ID = 20L;
     private static final long SESSION_ID = 4L;
 
@@ -153,14 +154,17 @@ public class ReceiverEndPointTest
 
     private void handlerReceivesFramedMessages(int numberOfMessages)
     {
-        verify(mockHandler, times(numberOfMessages)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(SESSION_ID));
+        verify(mockHandler, times(numberOfMessages))
+            .onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(SESSION_ID), eq(MESSAGE_TYPE));
     }
 
     private void handlerReceivesTwoFramedMessages()
     {
         InOrder inOrder = Mockito.inOrder(mockHandler);
-        inOrder.verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(SESSION_ID));
-        inOrder.verify(mockHandler, times(1)).onMessage(any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(SESSION_ID));
+        inOrder.verify(mockHandler, times(1))
+            .onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(SESSION_ID), eq(MESSAGE_TYPE));
+        inOrder.verify(mockHandler, times(1))
+            .onMessage(any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(SESSION_ID), eq(MESSAGE_TYPE));
         inOrder.verifyNoMoreInteractions();
     }
 

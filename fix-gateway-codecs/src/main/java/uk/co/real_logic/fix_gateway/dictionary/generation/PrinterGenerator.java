@@ -116,7 +116,7 @@ public class PrinterGenerator
             "        switch(messageType)\n" +
             "        {\n" +
             cases +
-            "            default:" +
+            "            default:\n" +
             "            throw new IllegalArgumentException(\"Unknown Message Type: \" + messageType);" +
             "        }\n" +
             "    }\n\n";

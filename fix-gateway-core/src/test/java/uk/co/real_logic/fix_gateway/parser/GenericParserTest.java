@@ -31,6 +31,8 @@ import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
 public class GenericParserTest
 {
+    private static final int MESSAGE_TYPE = 'D';
+
     public static final int LENGTH = 16 * 1024;
 
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[LENGTH]);
@@ -50,7 +52,7 @@ public class GenericParserTest
     public void notifiesAcceptorOfMessageStart()
     {
         when:
-        parser.onMessage(buffer, 0, MSG_LEN, 1L);
+        parser.onMessage(buffer, 0, MSG_LEN, 1L, MESSAGE_TYPE);
 
         then:
         verify(mockAcceptor).onNext();
@@ -60,7 +62,7 @@ public class GenericParserTest
     public void notifiesAcceptorOfValidMessageFields()
     {
         when:
-        parser.onMessage(buffer, 0, MSG_LEN, 1L);
+        parser.onMessage(buffer, 0, MSG_LEN, 1L, MESSAGE_TYPE);
 
         then:
         //8=FIX.4.2
@@ -79,7 +81,7 @@ public class GenericParserTest
     public void notifiesAcceptorOfValidMessageEnd()
     {
         when:
-        parser.onMessage(buffer, 0, MSG_LEN, 1L);
+        parser.onMessage(buffer, 0, MSG_LEN, 1L, MESSAGE_TYPE);
 
         then:
         verify(mockAcceptor).onComplete();
@@ -92,7 +94,7 @@ public class GenericParserTest
         buffer.putBytes(0, INVALID_CHECKSUM_MSG);
 
         when:
-        parser.onMessage(buffer, 0, INVALID_CHECKSUM_LEN, 1L);
+        parser.onMessage(buffer, 0, INVALID_CHECKSUM_LEN, 1L, MESSAGE_TYPE);
 
         then:
         verify(mockAcceptor).onError(eq(INVALID_CHECKSUM), eq((int) 'D'), eq(10), any(AsciiFieldFlyweight.class));
@@ -105,7 +107,7 @@ public class GenericParserTest
         buffer.putBytes(0, INVALID_MESSAGE);
 
         when:
-        parser.onMessage(buffer, 0, INVALID_LEN, 1L);
+        parser.onMessage(buffer, 0, INVALID_LEN, 1L, MESSAGE_TYPE);
 
         then:
         verify(mockAcceptor).onError(eq(PARSE_ERROR), eq((int) 'D'), eq(11), any(AsciiFieldFlyweight.class));
@@ -120,7 +122,7 @@ public class GenericParserTest
         buffer.putBytes(0, EXECUTION_REPORT);
 
         when:
-        parser.onMessage(buffer, 0, EXECUTION_REPORT.length, 1L);
+        parser.onMessage(buffer, 0, EXECUTION_REPORT.length, 1L, MESSAGE_TYPE);
 
         then:
         verifyGroupHeader(382, 1);
@@ -140,7 +142,7 @@ public class GenericParserTest
         buffer.putBytes(0, ZERO_REPEATING_GROUP);
 
         when:
-        parser.onMessage(buffer, 0, ZERO_REPEATING_GROUP.length, 1L);
+        parser.onMessage(buffer, 0, ZERO_REPEATING_GROUP.length, 1L, MESSAGE_TYPE);
 
         then:
         verifyGroupHeader(382, 0);
@@ -157,7 +159,7 @@ public class GenericParserTest
         buffer.putBytes(0, REPEATING_GROUP);
 
         when:
-        parser.onMessage(buffer, 0, REPEATING_GROUP.length, 1L);
+        parser.onMessage(buffer, 0, REPEATING_GROUP.length, 1L, MESSAGE_TYPE);
 
         then:
         verifyGroupHeader(NO_ORDERS, 2);
@@ -175,7 +177,7 @@ public class GenericParserTest
         buffer.putBytes(0, NESTED_REPEATING_GROUP);
 
         when:
-        parser.onMessage(buffer, 0, NESTED_REPEATING_GROUP.length, 1L);
+        parser.onMessage(buffer, 0, NESTED_REPEATING_GROUP.length, 1L, MESSAGE_TYPE);
 
         then:
         verifyGroupHeader(NO_ORDERS, 2);
