@@ -24,7 +24,6 @@ import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.function.Consumer;
@@ -83,10 +82,9 @@ public final class Sender implements Agent
             final InitiatorSession session = connectionHandler.initiateSession(connectionId, gateway, configuration);
             receiver.newInitiatedConnection(connectionHandler.receiverEndPoint(channel, connectionId, session));
         }
-        catch (final IOException ex)
+        catch (final Exception e)
         {
-            // TODO
-            ex.printStackTrace();
+            gateway.onInitiationError(e);
         }
     }
 

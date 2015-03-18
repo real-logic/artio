@@ -69,7 +69,7 @@ public class SenderTest
     public void setUp() throws IOException
     {
         server = ServerSocketChannel.open().bind(ADDRESS);
-        server.configureBlocking(false);
+        //server.configureBlocking(false);
 
         when(mockConnectionHandler.receiverEndPoint(any(SocketChannel.class), anyLong(), any(Session.class)))
             .thenReturn(mockReceiverEndPoint);
@@ -102,6 +102,16 @@ public class SenderTest
 
         then:
         verify(mockReceiver).newInitiatedConnection(mockReceiverEndPoint);
+    }
+
+    @Test
+    public void shouldReplyWithSocketConnectionError() throws Exception
+    {
+        server.close();
+
+        connect();
+
+        verify(mockGateway).onInitiationError(any(IOException.class));
     }
 
     private void connect() throws Exception

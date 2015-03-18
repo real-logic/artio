@@ -19,6 +19,7 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.AgentRunner;
 import uk.co.real_logic.aeron.common.BackoffIdleStrategy;
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.ManyToOneConcurrentArrayQueue;
 import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
 import uk.co.real_logic.agrona.concurrent.Signal;
@@ -50,6 +51,7 @@ public class FixGateway implements AutoCloseable
     private final long connectionTimeout;
 
     private InitiatorSession addedSession;
+    private Exception exception;
 
     FixGateway(final StaticConfiguration configuration)
     {
@@ -122,12 +124,19 @@ public class FixGateway implements AutoCloseable
     {
         senderProxy.connect(configuration);
         signal.await(connectionTimeout);
+        final InitiatorSession addedSession = this.addedSession;
         if (addedSession == null)
         {
-            throw new ConnectionTimeoutException(
-                "Connection timed out connecting to: " + configuration.host() + ":" + configuration.port());
+            LangUtil.rethrowUnchecked(this.exception != null ? this.exception : timeout(configuration));
         }
+        this.addedSession = null;
         return addedSession;
+    }
+
+    private ConnectionTimeoutException timeout(final SessionConfiguration configuration)
+    {
+        return new ConnectionTimeoutException(
+            "Connection timed out connecting to: " + configuration.host() + ":" + configuration.port());
     }
 
     public synchronized void close() throws Exception
@@ -146,6 +155,12 @@ public class FixGateway implements AutoCloseable
     public void onInitiatorSessionActive(final InitiatorSession session)
     {
         addedSession = session;
+        signal.signal();
+    }
+
+    public void onInitiationError(final Exception exception)
+    {
+        this.exception = exception;
         signal.signal();
     }
 }
