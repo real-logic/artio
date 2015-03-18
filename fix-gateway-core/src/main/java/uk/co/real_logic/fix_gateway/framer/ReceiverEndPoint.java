@@ -47,6 +47,7 @@ public class ReceiverEndPoint
     private final SessionParser session;
     private final AtomicBuffer buffer;
     private final AsciiFlyweight string;
+    private final ByteBuffer byteBuffer;
 
     private int usedBufferData = 0;
 
@@ -61,6 +62,7 @@ public class ReceiverEndPoint
 
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new AsciiFlyweight(buffer);
+        byteBuffer = buffer.byteBuffer();
     }
 
     public SocketChannel channel()
@@ -84,7 +86,7 @@ public class ReceiverEndPoint
 
     private void readData() throws IOException
     {
-        usedBufferData += channel.read(buffer.byteBuffer());
+        usedBufferData += channel.read(byteBuffer);
     }
 
     private void frameMessages()
@@ -172,7 +174,7 @@ public class ReceiverEndPoint
     {
         usedBufferData -= offset;
         buffer.putBytes(0, buffer, offset, usedBufferData);
-        buffer.byteBuffer().position(usedBufferData);
+        byteBuffer.position(usedBufferData);
     }
 
     private void invalidateMessage()
