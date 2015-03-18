@@ -32,6 +32,8 @@ import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 public class FixGateway implements AutoCloseable
 {
+    private final FixCounters fixCounters;
+
     private final Aeron aeron;
     private final ReplicationStreams streams;
 
@@ -54,6 +56,8 @@ public class FixGateway implements AutoCloseable
     {
         connectionTimeout = configuration.connectionTimeout();
 
+        fixCounters = new FixCounters(CountersFileDescriptor.createCountersManager(configuration));
+
         Aeron.Context context = new Aeron.Context();
         aeron = Aeron.connect(context);
         // TODO: aeron channel configuration
@@ -62,13 +66,15 @@ public class FixGateway implements AutoCloseable
         final SequencedContainerQueue<SenderCommand> senderCommands = new ManyToOneConcurrentArrayQueue<>(10);
         final SequencedContainerQueue<ReceiverCommand> receiverCommands = new ManyToOneConcurrentArrayQueue<>(10);
 
-        senderProxy = new SenderProxy(senderCommands);
-        receiverProxy = new ReceiverProxy(receiverCommands);
+        senderProxy = new SenderProxy(senderCommands, fixCounters.senderProxyFails());
+        receiverProxy = new ReceiverProxy(receiverCommands, fixCounters.receiverProxyFails());
 
         final Multiplexer multiplexer = new Multiplexer();
         final Subscription dataSubscription = streams.dataSubscription(multiplexer);
+        final FixPublication fixPublication = new FixPublication(
+            streams.dataPublication(), fixCounters.failedDataPublications());
         final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(),
-            new FixPublication(streams.dataPublication()), configuration.sessionIdStrategy());
+            fixPublication, configuration.sessionIdStrategy());
 
         final MessageHandler messageHandler = messageHandler(configuration);
 

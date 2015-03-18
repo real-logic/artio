@@ -15,14 +15,18 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
 import uk.co.real_logic.fix_gateway.framer.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.framer.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.stream.IntStream;
+
+import static java.lang.Integer.getInteger;
 
 /**
  * Configuration that exists for the entire duration of a fix gateway
@@ -37,6 +41,16 @@ public final class StaticConfiguration
     private static final long DEFAULT_CONNECTION_TIMEOUT = 1000;
     private static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
 
+    /** Property name for length of the memory mapped buffers for the counters file */
+    public static final String COUNTER_BUFFERS_LENGTH_PROP_NAME = "fix.counters.length";
+    /** Length of the memory mapped buffers for the counters file */
+    public static final int COUNTERS_BUFFER_LENGTH_DEFAULT = 64 * 1024 * 1024;
+
+    /** Directory of the conductor buffers */
+    public static final String COUNTERS_FILE_PROP_NAME = "fix.counters.file";
+    /** Default directory for conductor buffers */
+    public static final String COUNTERS_FILE_PROP_DEFAULT = IoUtil.tmpDirName() + "fix" + File.separator + "counters";
+
     private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
 
     private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
@@ -48,7 +62,9 @@ public final class StaticConfiguration
     private String host;
     private int port;
     private OtfMessageAcceptor fallbackAcceptor;
-    private boolean debugPrintMessages = false;
+    private boolean debugPrintMessages = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
+    private int counterBuffersLength = getInteger(COUNTER_BUFFERS_LENGTH_PROP_NAME, COUNTERS_BUFFER_LENGTH_DEFAULT);
+    private String counterBuffersFile = System.getProperty(COUNTERS_FILE_PROP_NAME, COUNTERS_FILE_PROP_DEFAULT);
 
     public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
     {
@@ -109,6 +125,12 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration counterBuffersLength(final Integer counterBuffersLength)
+    {
+        this.counterBuffersLength = counterBuffersLength;
+        return this;
+    }
+
     int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -144,9 +166,19 @@ public final class StaticConfiguration
         return debugPrintMessages;
     }
 
+    int counterBuffersLength()
+    {
+        return counterBuffersLength;
+    }
+
+    String counterBuffersFile()
+    {
+        return counterBuffersFile;
+    }
+
     StaticConfiguration conclude()
     {
-        debugPrintMessages(Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY));
         return this;
     }
+
 }

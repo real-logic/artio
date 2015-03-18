@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
 import uk.co.real_logic.fix_gateway.messages.FixMessage;
@@ -43,10 +44,12 @@ public final class FixPublication implements MessageHandler
     private final FixMessage messageFrame = new FixMessage();
 
     private final Publication dataPublication;
+    private final AtomicCounter fails;
 
-    public FixPublication(final Publication dataPublication)
+    public FixPublication(final Publication dataPublication, final AtomicCounter fails)
     {
         this.dataPublication = dataPublication;
+        this.fails = fails;
     }
 
     // NB: assumes that whatever has called it has encoded the body at offset + FRAME_SIZE
@@ -64,7 +67,7 @@ public final class FixPublication implements MessageHandler
         while (!dataPublication.offer(buffer, offset, length))
         {
             // TODO: backoff
-            // TODO: count failed retries similar to Aeron
+            fails.increment();
         }
     }
 }
