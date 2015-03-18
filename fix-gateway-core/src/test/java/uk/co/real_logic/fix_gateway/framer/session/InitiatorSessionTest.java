@@ -27,7 +27,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 {
     private final FixGateway mockGateway = mock(FixGateway.class);
 
-    private InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, mockClock, mockProxy,
+    private InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy,
         mockGateway, SESSION_ID);
 
     @Test

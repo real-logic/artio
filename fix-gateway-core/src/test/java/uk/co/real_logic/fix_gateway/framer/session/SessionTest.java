@@ -18,17 +18,13 @@ package uk.co.real_logic.fix_gateway.framer.session;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.AWAITING_RESEND;
 
 public class SessionTest extends AbstractSessionTest
 {
-    private Session session = new Session(HEARTBEAT_INTERVAL, CONNECTION_ID, mockClock, ACTIVE, mockProxy) {
-        public void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
-        {
-        }
-    };
+    private Session session = new Session(HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, ACTIVE, mockProxy);
 
     @Test
     public void shouldReplyToValidLogout()
@@ -130,9 +126,9 @@ public class SessionTest extends AbstractSessionTest
 
         session.onMessage(10);
 
-        mockClock.advanceSeconds(HEARTBEAT_INTERVAL * 2);
+        fakeClock.advanceSeconds(HEARTBEAT_INTERVAL * 2);
 
-        session.poll(mockClock.time());
+        session.poll(fakeClock.time());
 
         verifyDisconnect();
     }
@@ -145,16 +141,21 @@ public class SessionTest extends AbstractSessionTest
 
         session.onMessage(10);
 
-        mockClock.advanceSeconds(1);
+        fakeClock.advanceSeconds(1);
 
-        session.poll(mockClock.time());
+        session.poll(fakeClock.time());
         session.onMessage(11);
 
-        mockClock.advanceSeconds(1);
+        fakeClock.advanceSeconds(1);
 
-        session.poll(mockClock.time());
+        session.poll(fakeClock.time());
 
-        verifyNoMessages();
+        verifyConnected();
+    }
+
+    private void verifyConnected()
+    {
+        verify(mockProxy, never()).disconnect(anyLong());
     }
 
     @Test
@@ -178,6 +179,37 @@ public class SessionTest extends AbstractSessionTest
         session.onMessage(1);
         verifyDisconnect();
     }
+
+    @Test
+    public void shouldSendHeartbeatAfterInterval()
+    {
+        onLogon(0);
+
+        heartbeatSentAfterInterval();
+    }
+
+    @Test
+    public void shouldSendHeartbeatsAfterIntervalRepeatedly()
+    {
+        onLogon(0);
+
+        heartbeatSentAfterInterval();
+
+        heartbeatSentAfterInterval();
+
+        heartbeatSentAfterInterval();
+    }
+
+    private void heartbeatSentAfterInterval()
+    {
+        fakeClock.advanceSeconds(HEARTBEAT_INTERVAL);
+
+        session.poll(fakeClock.time());
+
+        verify(mockProxy).heartbeat(null, SESSION_ID);
+        reset(mockProxy);
+    }
+
 
     protected Session session()
     {

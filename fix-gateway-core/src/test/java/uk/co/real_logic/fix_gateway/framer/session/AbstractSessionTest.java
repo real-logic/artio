@@ -29,7 +29,7 @@ public abstract class AbstractSessionTest
 
     protected SessionProxy mockProxy = mock(SessionProxy.class);
 
-    protected FakeMilliClock mockClock = new FakeMilliClock();
+    protected FakeMilliClock fakeClock = new FakeMilliClock();
 
     public void verifyNoMessages()
     {

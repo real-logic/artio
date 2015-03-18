@@ -22,21 +22,25 @@ import static uk.co.real_logic.fix_gateway.framer.session.SessionState.*;
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound
  */
-// TODO: check heartbeating timeouts on the acceptor
-public abstract class Session
+public class Session
 {
     public static final long UNKNOWN_ID = -1;
 
+    /** The proportion of the maximum heartbeat interval before you send your heartbeat */
+    public static final double HEARTBEAT_PAUSE_FACTOR = 0.8;
+
     private final MilliClock clock;
+    private final long sendingHeartbeatIntervalInMs;
 
     protected final SessionProxy proxy;
     protected final long connectionId;
 
     private long heartbeatIntervalInMs;
-    private long nextRequiredMessageTime;
+    private long nextRequiredMessageTimeInMs;
     private SessionState state;
     private long id = UNKNOWN_ID;
     private int lastMsgSeqNum = 0;
+    private long nextRequiredHeartbeatTimeInMs;
 
     public Session(
             final int heartbeatIntervalInS,
@@ -48,9 +52,13 @@ public abstract class Session
         heartbeatIntervalInMs(heartbeatIntervalInS);
         this.clock = clock;
         this.proxy = proxy;
-        this.nextRequiredMessageTime = clock.time() + heartbeatIntervalInMs;
         this.connectionId = connectionId;
         this.state = state;
+
+        final long time = time();
+        nextRequiredMessageTimeInMs = time + heartbeatIntervalInMs;
+        sendingHeartbeatIntervalInMs = (long) (heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
+        nextRequiredHeartbeatTimeInMs = time + sendingHeartbeatIntervalInMs;
     }
 
     public boolean isConnected()
@@ -89,7 +97,11 @@ public abstract class Session
         }
     }
 
-    abstract void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId);
+    void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
+    {
+        lastMsgSeqNum(msgSeqNo);
+        id(sessionId);
+    }
 
     void onLogout(final int msgSeqNo, final long sessionId)
     {
@@ -158,13 +170,22 @@ public abstract class Session
 
     public int poll(final long time)
     {
-        if (nextRequiredMessageTime() < time)
+        int actions = 0;
+
+        if (time >= nextRequiredMessageTimeInMs)
         {
             disconnect();
-            return 1;
+            actions++;
         }
 
-        return 0;
+        if (time >= nextRequiredHeartbeatTimeInMs)
+        {
+            proxy.heartbeat(null, id());
+            nextRequiredHeartbeatTimeInMs += sendingHeartbeatIntervalInMs;
+            actions++;
+        }
+
+        return actions;
     }
 
     public void disconnect()
@@ -178,9 +199,9 @@ public abstract class Session
         return this.heartbeatIntervalInMs;
     }
 
-    long nextRequiredMessageTime()
+    long nextRequiredMessageTimeInMs()
     {
-        return this.nextRequiredMessageTime;
+        return this.nextRequiredMessageTimeInMs;
     }
 
     Session heartbeatIntervalInMs(final int heartbeatIntervalInS)
@@ -191,7 +212,7 @@ public abstract class Session
 
     Session nextRequiredMessageTime(final long nextRequiredMessageTime)
     {
-        this.nextRequiredMessageTime = nextRequiredMessageTime;
+        this.nextRequiredMessageTimeInMs = nextRequiredMessageTime;
         return this;
     }
 
