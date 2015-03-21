@@ -68,8 +68,12 @@ public class UtcTimestampDecoderValidCasesTest
     {
         final long expected = toEpochMillis(timestamp);
 
-        final AsciiFlyweight timestampBytes = new AsciiFlyweight(new UnsafeBuffer(timestamp.getBytes(US_ASCII)));
-        final long epochMillis = UtcTimestampDecoder.decode(timestampBytes, 0, timestamp.length());
+        final byte[] bytes = timestamp.getBytes(US_ASCII);
+        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[bytes.length + 2]);
+        buffer.putBytes(1, bytes);
+        final AsciiFlyweight timestampBytes = new AsciiFlyweight(buffer);
+
+        final long epochMillis = UtcTimestampDecoder.decode(timestampBytes, 1, timestamp.length());
         assertEquals("Failed testcase for: " + timestamp, expected, epochMillis);
     }
 
