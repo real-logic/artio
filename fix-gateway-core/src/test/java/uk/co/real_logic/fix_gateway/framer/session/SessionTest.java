@@ -64,7 +64,7 @@ public class SessionTest extends AbstractSessionTest
 
         session.onSequenceReset(1, 4, true);
 
-        verifyNoMessages();
+        verifyNoFurtherMessages();
     }
 
     @Test
@@ -83,7 +83,7 @@ public class SessionTest extends AbstractSessionTest
         session.onSequenceReset(1, 4, false);
 
         assertEquals(4, session.expectedSeqNo());
-        verifyNoMessages();
+        verifyNoFurtherMessages();
     }
 
     @Test
@@ -92,7 +92,7 @@ public class SessionTest extends AbstractSessionTest
         session.onSequenceReset(4, 4, false);
 
         assertEquals(4, session.expectedSeqNo());
-        verifyNoMessages();
+        verifyNoFurtherMessages();
     }
 
     @Test
@@ -103,7 +103,7 @@ public class SessionTest extends AbstractSessionTest
         session.onSequenceReset(4, 4, false);
 
         assertEquals(4, session.expectedSeqNo());
-        verifyNoMessages();
+        verifyNoFurtherMessages();
     }
 
     @Test

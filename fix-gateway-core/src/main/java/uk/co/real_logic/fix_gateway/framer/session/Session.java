@@ -101,7 +101,6 @@ public class Session
 
     void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
-        lastMsgSeqNum(msgSeqNo);
         id(sessionId);
         heartbeatIntervalInS(heartbeatInterval);
     }

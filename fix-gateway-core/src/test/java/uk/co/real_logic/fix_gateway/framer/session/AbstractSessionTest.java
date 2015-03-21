@@ -31,7 +31,7 @@ public abstract class AbstractSessionTest
 
     protected FakeMilliClock fakeClock = new FakeMilliClock();
 
-    public void verifyNoMessages()
+    public void verifyNoFurtherMessages()
     {
         verifyNoMoreInteractions(mockProxy);
     }

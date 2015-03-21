@@ -62,6 +62,7 @@ public class SessionProxy
     public void disconnect(final long connectionId)
     {
         // TODO
+        System.out.println("DISCONNECTING: " + connectionId);
     }
 
     public void logon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
