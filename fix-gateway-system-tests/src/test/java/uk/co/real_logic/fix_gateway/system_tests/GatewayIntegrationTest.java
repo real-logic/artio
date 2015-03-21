@@ -62,12 +62,12 @@ public class GatewayIntegrationTest
         final StaticConfiguration acceptingConfig = new StaticConfiguration()
                 .registerFallbackAcceptor(fakeOtfAcceptor)
                 .bind("localhost", port)
-                .aeronChannel("udp://localhost:9007");
+                .aeronChannel("udp://localhost:" + unusedPort());
         acceptingGateway = FixGateway.launch(acceptingConfig);
 
         final StaticConfiguration initiatingConfig = new StaticConfiguration()
                 .bind("localhost", unusedPort())
-                .aeronChannel("udp://localhost:9008");
+                .aeronChannel("udp://localhost:" + unusedPort());
         initiatingGateway = FixGateway.launch(initiatingConfig);
 
         final SessionConfiguration config = SessionConfiguration.builder()
