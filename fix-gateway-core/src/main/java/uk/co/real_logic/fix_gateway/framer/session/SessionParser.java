@@ -49,6 +49,7 @@ public class SessionParser
         final int messageType)
     {
         string.wrap(buffer);
+        System.out.println("Session Parser:");
         string.log(offset, length);
 
         int msgSeqNo = 0;
@@ -57,7 +58,8 @@ public class SessionParser
         {
             case LogonDecoder.MESSAGE_TYPE:
                 logon.decode(string, offset, length);
-                msgSeqNo = logon.header().msgSeqNum();
+                final HeaderDecoder header = logon.header();
+                msgSeqNo = header.msgSeqNum();
                 sessionId = sessionIdStrategy.decode(header);
                 session.onLogon(logon.heartBtInt(), msgSeqNo, sessionId);
                 break;
@@ -83,8 +85,8 @@ public class SessionParser
                 break;
 
             default:
-                header.decode(string, offset, length);
-                msgSeqNo = header.msgSeqNum();
+                this.header.decode(string, offset, length);
+                msgSeqNo = this.header.msgSeqNum();
                 break;
         }
 
