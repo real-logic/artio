@@ -26,7 +26,7 @@ import java.util.Currency;
 /**
  * .
  */
-public class OrderSingleEncoder implements Encoder
+public class OrderSingleEncoder implements MessageEncoder
 {
     private DirectBuffer buffer;
 
@@ -259,5 +259,15 @@ public class OrderSingleEncoder implements Encoder
         this.orderQtyIsPresent = true;
         this.orderQty = orderQty;
         return this;
+    }
+
+    public int messageType()
+    {
+        return 0;
+    }
+
+    public Object header()
+    {
+        return null;
     }
 }

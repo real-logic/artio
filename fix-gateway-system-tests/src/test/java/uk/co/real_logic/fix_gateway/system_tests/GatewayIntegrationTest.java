@@ -20,13 +20,13 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
@@ -38,10 +38,6 @@ import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 
 public class GatewayIntegrationTest
 {
-
-    public static final byte[] EG_MESSAGE = ("8=FIX.4.2\0019=145\00135=D\00134=4\00149=ABC_DEFG01\001" +
-        "52=20090323-15:40:29\00156=CCG\001115=XYZ\00111=NF 0542/03232009\00154=1\00138=100\00155=CVS\00140=1" +
-        "\00159=0\00147=A\00160=20090323-15:40:29\00121=1\001207=N\00110=194\001").getBytes(StandardCharsets.US_ASCII);
 
     private MediaDriver mediaDriver;
     private FixGateway acceptingGateway;
@@ -89,14 +85,13 @@ public class GatewayIntegrationTest
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptor() throws InterruptedException
     {
-        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
-        buffer.putBytes(0, EG_MESSAGE);
+        final TestRequestEncoder testRequest = new TestRequestEncoder();
+        testRequest.testReqID("hi");
 
-        session.send(buffer, 0, EG_MESSAGE.length, 'D');
-        System.out.println("SENDING");
+        session.send(testRequest);
 
         assertEventuallyTrue("Failed to receive a message", fakeOtfAcceptor::hasSeenMessage);
-        assertEquals(Arrays.asList((int) 'D'), fakeOtfAcceptor.messageTypes());
+        assertEquals(Arrays.asList(TestRequestDecoder.MESSAGE_TYPE), fakeOtfAcceptor.messageTypes());
     }
 
     // TODO: disconnect an initiating session and verify disconnect message

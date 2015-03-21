@@ -21,6 +21,7 @@ import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
+import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.Reflection;
@@ -63,7 +64,8 @@ public class EncoderGeneratorTest
     public void generatesEncoderClass() throws Exception
     {
         assertNotNull("Not generated anything", heartbeat);
-        assertIsEncoder(heartbeat);
+        assertNotNull(heartbeat);
+        assertTrue(MessageEncoder.class.isAssignableFrom(heartbeat));
 
         final int modifiers = heartbeat.getModifiers();
         assertFalse("Not instantiable", isAbstract(modifiers));
@@ -104,7 +106,7 @@ public class EncoderGeneratorTest
 
         final Object value = new char[] {'a', 'b', 'c'};
         heartbeat.getMethod(TEST_REQ_ID, char[].class)
-             .invoke(encoder, value);
+                 .invoke(encoder, value);
 
         assertTestReqIsValue(encoder);
     }
@@ -151,7 +153,8 @@ public class EncoderGeneratorTest
     @Test
     public void shouldGenerateHeader() throws Exception
     {
-        assertIsEncoder(headerClass);
+        assertNotNull(headerClass);
+        assertTrue(Encoder.class.isAssignableFrom(headerClass));
 
         final Encoder header = (Encoder) headerClass.newInstance();
 
@@ -283,12 +286,6 @@ public class EncoderGeneratorTest
         final int length = encoder.encode(buffer, 1);
         assertThat(buffer, containsAscii(value, 1, value.length()));
         assertEquals(value.length(), length);
-    }
-
-    private void assertIsEncoder(final Class<?> cls)
-    {
-        assertNotNull(cls);
-        assertTrue(Encoder.class.isAssignableFrom(cls));
     }
 
     private void assertTestReqIsValue(final Object encoder) throws Exception

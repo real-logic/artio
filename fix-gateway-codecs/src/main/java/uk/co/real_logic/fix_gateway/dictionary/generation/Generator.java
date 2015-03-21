@@ -58,8 +58,8 @@ public abstract class Generator
     }
 
     private static final String COMMON_COMPOUND_IMPORTS =
-            "import %1$s.Header%3$s;\n" +
-            "import %1$s.Trailer%3$s;\n";
+            "import %1$s.Header%4$s;\n" +
+            "import %1$s.Trailer%4$s;\n";
 
     protected final DataDictionary dictionary;
     protected final String builderPackage;
@@ -86,7 +86,8 @@ public abstract class Generator
     protected String generateClassDeclaration(
         final String className,
         final boolean hasCommonCompounds,
-        final Class<?> parent)
+        final Class<?> parent,
+        final Class<?> topType)
     {
         return String.format(
             importFor(MutableDirectBuffer.class) +
@@ -105,7 +106,8 @@ public abstract class Generator
             "{\n\n",
             builderPackage,
             className,
-            parent.getSimpleName());
+            parent.getSimpleName(),
+            topType.getSimpleName());
     }
 
     protected String generateResetMethod(List<Entry> entries)

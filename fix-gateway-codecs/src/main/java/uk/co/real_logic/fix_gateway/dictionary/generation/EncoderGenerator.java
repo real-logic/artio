@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
+import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 import uk.co.real_logic.sbe.generation.java.JavaUtil;
@@ -67,14 +68,15 @@ public class EncoderGenerator extends Generator
     protected void generateAggregate(final Aggregate aggregate, final AggregateType aggregateType)
     {
         final String className = aggregate.name() + "Encoder";
-        final boolean hasCommonCompounds = aggregateType == AggregateType.MESSAGE;
+        final boolean isMessage = aggregateType == AggregateType.MESSAGE;
 
         try (final Writer out = outputManager.createOutput(className))
         {
             out.append(fileHeader(builderPackage));
-            out.append(generateClassDeclaration(className, hasCommonCompounds, Encoder.class));
+            Class<?> type = isMessage ? MessageEncoder.class : Encoder.class;
+            out.append(generateClassDeclaration(className, isMessage, type, Encoder.class));
             out.append(generateConstructor(aggregate, dictionary));
-            if (hasCommonCompounds)
+            if (isMessage)
             {
                 out.append(commonCompoundImports("Encoder"));
             }
@@ -82,7 +84,7 @@ public class EncoderGenerator extends Generator
             generateSetters(out, className, aggregate.entries());
             out.append(generateEncodeMethod(aggregate.entries(), aggregateType));
             out.append(generateResetMethod(aggregate.entries()));
-            out.append(generateToString(aggregate, hasCommonCompounds));
+            out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         }
         catch (IOException e)
@@ -101,19 +103,25 @@ public class EncoderGenerator extends Generator
 
         final Component header = dictionary.header();
         final Message message = (Message) aggregate;
+        final int type = message.type();
         final String msgType = header.hasField(MSG_TYPE)
-                             ? String.format("        header.msgType(\"%s\");\n", (char) message.type()) : "";
+                             ? String.format("        header.msgType(\"%s\");\n", (char) type) : "";
 
         final String beginString = header.hasField("BeginString")
                                  ? String.format("        header.beginString(\"FIX.%d.%d\");\n",
                                                  dictionary.majorVersion(), dictionary.minorVersion()) : "";
 
         return String.format(
+            "    public int messageType()\n" +
+            "    {\n" +
+            "        return %s;\n" +
+            "    }\n\n" +
             "    public %sEncoder()\n" +
             "    {\n" +
             "%s" +
             "%s" +
             "    }\n\n",
+            type,
             message.name(),
             msgType,
             beginString

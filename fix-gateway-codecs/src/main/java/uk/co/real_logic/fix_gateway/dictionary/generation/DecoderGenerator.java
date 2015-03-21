@@ -62,7 +62,7 @@ public class DecoderGenerator extends Generator
         try (final Writer out = outputManager.createOutput(className))
         {
             out.append(fileHeader(builderPackage));
-            out.append(generateClassDeclaration(className, isMessage, Decoder.class));
+            out.append(generateClassDeclaration(className, isMessage, Decoder.class, Decoder.class));
             if (isMessage)
             {
                 Message message = (Message) aggregate;

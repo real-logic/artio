@@ -90,6 +90,6 @@ public class ConnectionHandler
         final FixPublication fixPublication = replicationStreams.fixPublication();
 
         return new InitiatorSession(defaultInterval, connectionId, clock, sessionProxy, gateway, fixPublication,
-            sessionId);
+            sessionId, sessionIdStrategy);
     }
 }

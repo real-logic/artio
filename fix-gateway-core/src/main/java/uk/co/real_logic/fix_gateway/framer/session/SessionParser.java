@@ -63,7 +63,6 @@ public class SessionParser
 
             case ResendRequestDecoder.MESSAGE_TYPE:
                 resendRequest.decode(string, offset, length);
-                // TODO: resendRequest.header().msgSeqNum()
                 session.onResendRequest(resendRequest.beginSeqNo(), resendRequest.endSeqNo());
                 break;
 
@@ -83,7 +82,6 @@ public class SessionParser
                 session.onMessage(this.header.msgSeqNum());
                 break;
         }
-
 
         if (session.isConnected())
         {
