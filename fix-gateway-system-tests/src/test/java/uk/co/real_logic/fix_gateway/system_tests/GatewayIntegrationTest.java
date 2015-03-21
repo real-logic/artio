@@ -78,7 +78,6 @@ public class GatewayIntegrationTest
         session = initiatingGateway.initiate(config, null);
     }
 
-    @Ignore
     @Test
     public void sessionHasBeenInitiated() throws InterruptedException
     {
