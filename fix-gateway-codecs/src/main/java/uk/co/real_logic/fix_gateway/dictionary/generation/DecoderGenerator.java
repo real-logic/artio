@@ -34,6 +34,7 @@ import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 // skip decoding the msg type, since its known
 // skip decoding the body string, since its known
 // use ordering of fields to reduce branching
+// skip decoding of unread header fields - eg: sender/target comp id.
 public class DecoderGenerator extends Generator
 {
     public static String decoderClassName(final Aggregate aggregate)

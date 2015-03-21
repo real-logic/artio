@@ -66,7 +66,7 @@ public class SenderAndTargetSessionIdStrategyTest
     }
 
     @Test
-    public void shouldEncodeSwappedFieldsAsAKeyWasDecodedFrom()
+    public void shouldEncodeFieldsAsRegisteredWith()
     {
         final List<Long> ids = decodeIds();
 
@@ -77,8 +77,8 @@ public class SenderAndTargetSessionIdStrategyTest
             {
                 final HeaderEncoder mockHeader = mock(HeaderEncoder.class);
                 strategy.encode(ids.get(i * size+ j), mockHeader);
-                verify(mockHeader).senderCompID(identifiers.get(j));
-                verify(mockHeader).targetCompID(identifiers.get(i));
+                verify(mockHeader).senderCompID(identifiers.get(i));
+                verify(mockHeader).targetCompID(identifiers.get(j));
             }
         }
     }
@@ -87,7 +87,7 @@ public class SenderAndTargetSessionIdStrategyTest
     {
         return identifiers.stream()
                           .flatMap(senderId -> identifiers.stream()
-                              .map(targetId -> strategy.decode(senderId, targetId)))
+                              .map(targetId -> strategy.register(senderId, targetId)))
                           .collect(toList());
     }
 

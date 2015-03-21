@@ -46,22 +46,22 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 
     public long decode(final HeaderDecoder header)
     {
-        return decode(header.senderCompID(), header.targetCompID());
+        return register(header.targetCompID(), header.senderCompID());
     }
 
     public long register(final SessionConfiguration config)
     {
-        return decode(config.senderCompId().toCharArray(), config.targetCompId().toCharArray());
+        return register(config.senderCompId().toCharArray(), config.targetCompId().toCharArray());
     }
 
-    long decode(final char[] senderCompID, final char[] targetCompID)
+    long register(final char[] senderCompID, final char[] targetCompID)
     {
-        final CompositeKey compositeKey = new CompositeKey(senderCompID, targetCompID);
+        final CompositeKey compositeKey = new CompositeKey(targetCompID, senderCompID);
         Long identifier = compositeToSurrogate.putIfAbsent(compositeKey, counter);
         if (identifier == null)
         {
             identifier = counter;
-            final CompositeKey flippedCompositeKey = new CompositeKey(targetCompID, senderCompID);
+            final CompositeKey flippedCompositeKey = new CompositeKey(senderCompID, targetCompID);
             surrogateToComposite.put(identifier.longValue(), flippedCompositeKey);
         }
 
