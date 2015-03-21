@@ -70,7 +70,7 @@ public class DecoderGenerator extends Generator
             generateGetters(out, className, aggregate.entries());
             out.append(generateDecodeMethod(aggregate.entries(), isMessage));
             out.append(generateResetMethod(aggregate.entries()));
-            out.append(generateToString(aggregate));
+            out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         }
         catch (IOException e)

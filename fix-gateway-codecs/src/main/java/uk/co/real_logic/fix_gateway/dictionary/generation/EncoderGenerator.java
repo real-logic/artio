@@ -82,7 +82,7 @@ public class EncoderGenerator extends Generator
             generateSetters(out, className, aggregate.entries());
             out.append(generateEncodeMethod(aggregate.entries(), aggregateType));
             out.append(generateResetMethod(aggregate.entries()));
-            out.append(generateToString(aggregate));
+            out.append(generateToString(aggregate, hasCommonCompounds));
             out.append("}\n");
         }
         catch (IOException e)

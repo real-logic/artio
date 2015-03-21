@@ -86,6 +86,7 @@ public class GatewayIntegrationTest
         assertTrue("Session has failed to logon", session.state() == ACTIVE);
     }
 
+    @Ignore
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptor() throws InterruptedException
     {

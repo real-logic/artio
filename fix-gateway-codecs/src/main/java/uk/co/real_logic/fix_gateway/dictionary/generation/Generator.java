@@ -120,20 +120,26 @@ public abstract class Generator
     }
 
 
-    protected String generateToString(Aggregate aggregate)
+    protected String generateToString(Aggregate aggregate, final boolean hasCommonCompounds)
     {
         final String entriesToString =
                 aggregate.entries()
                         .stream()
                         .map(this::generateEntryToString)
                         .collect(joining(" + \n"));
+
+        final String prefix = hasCommonCompounds
+                            ? "\"  \\\"header\\\": \" + header.toString().replace(\"\\n\", \"\\n  \") + \"\\n\" + "
+                            : "";
+
         return String.format(
                 "    public String toString()\n" +
                         "    {\n" +
-                        "        final String entries =\n" +
+                        "        final String entries =%s\n" +
                         "%s;\n" +
                         "        return \"{\\n  \\\"MsgType\\\": \\\"%s\\\",\\n\" + entries + \"}\";\n" +
                         "    }\n\n",
+                prefix,
                 entriesToString,
                 aggregate.name());
     }

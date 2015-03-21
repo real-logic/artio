@@ -30,6 +30,7 @@ import java.util.Map;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
+import static org.hamcrest.Matchers.endsWith;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
@@ -40,7 +41,7 @@ public class EncoderGeneratorTest
 {
 
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
-    private static EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, 3, TEST_PACKAGE, outputManager);
+    private static EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager);
     private static Class<?> heartbeat;
     private static Class<?> headerClass;
 
@@ -201,7 +202,7 @@ public class EncoderGeneratorTest
 
         setRequiredFields(encoder);
 
-        assertEquals(STRING_NO_OPTIONAL_MESSAGE_EXAMPLE, encoder.toString());
+        assertThat(encoder.toString(), endsWith(STRING_NO_OPTIONAL_MESSAGE_SUFFIX));
     }
 
     @Test
@@ -212,7 +213,7 @@ public class EncoderGeneratorTest
         setRequiredFields(encoder);
         setOptionalFields(encoder);
 
-        assertEquals(STRING_ENCODED_MESSAGE_EXAMPLE, encoder.toString());
+        assertThat(encoder.toString(), endsWith(STRING_ENCODED_MESSAGE_SUFFIX));
     }
 
     // TODO: compound types

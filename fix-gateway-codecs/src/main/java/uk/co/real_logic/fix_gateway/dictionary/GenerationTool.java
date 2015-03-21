@@ -42,10 +42,10 @@ public final class GenerationTool
             final EnumGenerator enumGenerator = new EnumGenerator(dictionary,
                 new PackageOutputManager(outputPath, PARENT_PACKAGE));
 
-            final EncoderGenerator encoderGenerator = new EncoderGenerator(dictionary, 20, ENCODER_PACKAGE,
+            final EncoderGenerator encoderGenerator = new EncoderGenerator(dictionary, 1, ENCODER_PACKAGE,
                 new PackageOutputManager(outputPath, ENCODER_PACKAGE));
 
-            final DecoderGenerator decoderGenerator = new DecoderGenerator(dictionary, 20, DECODER_PACKAGE,
+            final DecoderGenerator decoderGenerator = new DecoderGenerator(dictionary, 1, DECODER_PACKAGE,
                     new PackageOutputManager(outputPath, DECODER_PACKAGE));
 
             final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE,

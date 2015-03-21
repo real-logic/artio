@@ -68,7 +68,6 @@ public class FixPublication implements MessageHandler
         {
             // TODO: backoff
             fails.increment();
-            System.out.println("FAIL!!!!!!!1");
         }
     }
 }
