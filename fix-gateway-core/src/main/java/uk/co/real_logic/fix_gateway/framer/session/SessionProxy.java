@@ -49,8 +49,11 @@ public class SessionProxy
         string = new MutableAsciiFlyweight(buffer);
     }
 
-    public void resendRequest(final int beginSeqNo, final int endSeqNo, final long sessionId)
+    public void resendRequest(final int msgSeqNo, final int beginSeqNo, final int endSeqNo, final long sessionId)
     {
+        final HeaderEncoder header = resendRequest.header();
+        sessionIdStrategy.encode(sessionId, header);
+        header.msgSeqNum(msgSeqNo);
         resendRequest.beginSeqNo(beginSeqNo)
                      .endSeqNo(endSeqNo);
         send(resendRequest.encode(string, FRAME_SIZE), sessionId, ResendRequestDecoder.MESSAGE_TYPE);
@@ -76,13 +79,17 @@ public class SessionProxy
     {
         final HeaderEncoder header = logout.header();
         sessionIdStrategy.encode(sessionId, header);
+        header.msgSeqNum(msgSeqNo);
 
-        logout.header().msgSeqNum(msgSeqNo);
         send(logout.encode(string, FRAME_SIZE), sessionId, LogoutDecoder.MESSAGE_TYPE);
     }
 
     public void heartbeat(final String testReqId, final long sessionId)
     {
+        final HeaderEncoder header = heartbeat.header();
+        sessionIdStrategy.encode(sessionId, header);
+        // TODO: header.msgSeqNum(0);
+
         if (testReqId != null)
         {
             heartbeat.testReqID(testReqId);
@@ -92,7 +99,10 @@ public class SessionProxy
 
     public void reject(final int msgSeqNo, final int refSeqNum, final long sessionId)
     {
-        reject.header().msgSeqNum(msgSeqNo);
+        final HeaderEncoder header = reject.header();
+        sessionIdStrategy.encode(sessionId, header);
+        header.msgSeqNum(msgSeqNo);
+
         reject.refSeqNum(refSeqNum);
         // TODO: decide on other ref fields
         send(reject.encode(string, FRAME_SIZE), sessionId, RejectDecoder.MESSAGE_TYPE);
@@ -100,6 +110,8 @@ public class SessionProxy
 
     private void send(final int length, final long sessionId, final int messageType)
     {
+        System.out.println("Session Proxy: ");
+        string.log(FRAME_SIZE, length);
         fixPublication.onMessage(buffer, 0, length + FRAME_SIZE, sessionId, messageType);
     }
 }

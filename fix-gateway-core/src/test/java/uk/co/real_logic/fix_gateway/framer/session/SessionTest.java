@@ -54,7 +54,7 @@ public class SessionTest extends AbstractSessionTest
         session.id(SESSION_ID);
         session.onSequenceReset(3, 4, false);
 
-        verify(mockProxy).resendRequest(1, 2, SESSION_ID);
+        verify(mockProxy).resendRequest(5, 1, 2, SESSION_ID);
     }
 
     @Test
@@ -166,7 +166,7 @@ public class SessionTest extends AbstractSessionTest
 
         session.onMessage(3);
 
-        verify(mockProxy).resendRequest(1, 2, SESSION_ID);
+        verify(mockProxy).resendRequest(4, 1, 2, SESSION_ID);
         assertState(AWAITING_RESEND);
     }
 
