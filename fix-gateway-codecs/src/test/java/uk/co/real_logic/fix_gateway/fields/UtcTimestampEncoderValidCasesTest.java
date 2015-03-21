@@ -49,12 +49,12 @@ public class UtcTimestampEncoderValidCasesTest
     {
         final long epochMillis = toEpochMillis(timestamp);
         final int expectedLength = timestamp.length();
-        final MutableAsciiFlyweight string = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[expectedLength]));
+        final MutableAsciiFlyweight string = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[expectedLength + 2]));
 
-        final int length = UtcTimestampEncoder.encode(epochMillis, string, 0);
+        final int length = UtcTimestampEncoder.encode(epochMillis, string, 1);
 
         assertEquals("encoded wrong length", expectedLength, length);
-        assertThat(string, containsAscii(timestamp, 0, length));
+        assertThat(string, containsAscii(timestamp, 1, length));
     }
 
 }

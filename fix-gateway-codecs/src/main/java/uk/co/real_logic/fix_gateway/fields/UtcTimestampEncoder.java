@@ -44,7 +44,7 @@ public final class UtcTimestampEncoder
         final int fractionOfSecond = (int) (Math.floorMod(epochMillis, MILLIS_IN_SECOND));
 
         encodeDate(epochDay, string, offset);
-        string.putChar(8, '-');
+        string.putChar(offset + 8, '-');
         encodeTime(localSecond, fractionOfSecond, string, offset + 9);
 
         return fractionOfSecond > 0 ? LENGTH_WITH_MILLISECONDS : LENGTH_WITHOUT_MILLISECONDS;
