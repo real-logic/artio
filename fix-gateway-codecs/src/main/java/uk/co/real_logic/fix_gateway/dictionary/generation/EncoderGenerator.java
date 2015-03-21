@@ -200,11 +200,17 @@ public class EncoderGenerator extends Generator
                 "        %1$sLength = value.length();\n" +
                 "%s" +
                 "        return this;\n" +
-                "    }\n" +
-                "\n" +
+                "    }\n\n" +
                 "    public %4$s %1$s(char[] value)\n" +
                 "    {\n" +
                 "        %1$s = toBytes(value, %1$s);\n" +
+                "        %1$sLength = value.length;\n" +
+                "%5$s" +
+                "        return this;\n" +
+                "    }\n\n" +
+                "    public %4$s %1$s(byte[] value)\n" +
+                "    {\n" +
+                "        %1$s = value;\n" +
                 "        %1$sLength = value.length;\n" +
                 "%5$s" +
                 "        return this;\n" +
