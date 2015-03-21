@@ -47,6 +47,7 @@ public final class AcceptorSession extends Session
                 state(SessionState.AWAITING_RESEND);
             }
         }
+        onMessage(msgSeqNo);
     }
 
 }

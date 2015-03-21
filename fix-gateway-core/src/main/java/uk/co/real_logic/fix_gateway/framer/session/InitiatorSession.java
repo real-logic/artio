@@ -52,6 +52,7 @@ public class InitiatorSession extends Session
             state(ACTIVE);
             gateway.onInitiatorSessionActive(this);
         }
+        onMessage(msgSeqNo);
     }
 
     public int poll(final long time)
@@ -61,6 +62,7 @@ public class InitiatorSession extends Session
         {
             state(SENT_LOGON);
             proxy.logon((int) (heartbeatIntervalInMs() / 1000), expectedSeqNo(), id());
+            incrementSequenceNumber();
             actions++;
         }
         return actions + super.poll(time);
@@ -74,6 +76,7 @@ public class InitiatorSession extends Session
     public void send(final DirectBuffer buffer, final int offset, final int length, final int messageType)
     {
         publication.onMessage(buffer, offset, length, id(), messageType);
+        incrementSequenceNumber();
     }
 
 }

@@ -91,6 +91,7 @@ public class Session
             {
                 state(AWAITING_RESEND);
                 proxy.resendRequest(msgSeqNo + 1, expectedSeqNo, msgSeqNo - 1, id());
+                incrementSequenceNumber();
             }
             else if (expectedSeqNo > msgSeqNo)
             {
@@ -103,6 +104,7 @@ public class Session
     {
         id(sessionId);
         heartbeatIntervalInS(heartbeatInterval);
+        onMessage(msgSeqNo);
     }
 
     void onLogout(final int msgSeqNo, final long sessionId)
@@ -224,15 +226,15 @@ public class Session
         return this;
     }
 
+    long id()
+    {
+        return id;
+    }
+
     Session state(final SessionState state)
     {
         this.state = state;
         return this;
-    }
-
-    long id()
-    {
-        return id;
     }
 
     public Session id(final long id)
@@ -265,5 +267,10 @@ public class Session
     public void onReject()
     {
         // TODO
+    }
+
+    protected void incrementSequenceNumber()
+    {
+        lastMsgSeqNum(expectedSeqNo());
     }
 }

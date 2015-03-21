@@ -49,48 +49,42 @@ public class SessionParser
         final int messageType)
     {
         string.wrap(buffer);
-        System.out.println("Session Parser:");
+        System.out.println("Session Parser:" + session.expectedSeqNo());
         string.log(offset, length);
-
-        int msgSeqNo = 0;
 
         switch (messageType)
         {
             case LogonDecoder.MESSAGE_TYPE:
                 logon.decode(string, offset, length);
                 final HeaderDecoder header = logon.header();
-                msgSeqNo = header.msgSeqNum();
                 sessionId = sessionIdStrategy.decode(header);
-                session.onLogon(logon.heartBtInt(), msgSeqNo, sessionId);
+                session.onLogon(logon.heartBtInt(), header.msgSeqNum(), sessionId);
                 break;
 
             case ResendRequestDecoder.MESSAGE_TYPE:
                 resendRequest.decode(string, offset, length);
-                msgSeqNo = resendRequest.header().msgSeqNum();
-
+                // TODO: resendRequest.header().msgSeqNum()
                 session.onResendRequest(resendRequest.beginSeqNo(), resendRequest.endSeqNo());
                 break;
 
             case LogoutDecoder.MESSAGE_TYPE:
                 logout.decode(string, offset, length);
-                msgSeqNo = logout.header().msgSeqNum();
-
-                session.onLogout(msgSeqNo, sessionId);
+                session.onLogout(logout.header().msgSeqNum(), sessionId);
                 break;
 
             case RejectDecoder.MESSAGE_TYPE:
                 reject.decode(string, offset, length);
-                msgSeqNo = reject.header().msgSeqNum();
+                // TODO
                 session.onReject();
                 break;
 
             default:
                 this.header.decode(string, offset, length);
-                msgSeqNo = this.header.msgSeqNum();
+                session.onMessage(this.header.msgSeqNum());
                 break;
         }
 
-        session.onMessage(msgSeqNo);
+
         if (session.isConnected())
         {
             return sessionId;

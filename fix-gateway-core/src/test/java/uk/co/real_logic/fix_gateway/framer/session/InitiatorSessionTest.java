@@ -43,10 +43,12 @@ public class InitiatorSessionTest extends AbstractSessionTest
     public void shouldActivateUponLogonResponse()
     {
         session.state(SENT_LOGON);
+        session.lastMsgSeqNum(0);
 
         onLogon(1);
 
         assertState(ACTIVE);
+        verifyNoFurtherMessages();
     }
 
     @Test
@@ -66,6 +68,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
         session.poll(0);
 
         verifyLogon();
+
+        assertEquals(2, session.expectedSeqNo());
     }
 
     @Test
