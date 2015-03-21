@@ -93,7 +93,8 @@ public final class ExampleDictionary
     public static final String NO_OPTIONAL_MESSAGE_EXAMPLE =
         "8=abc\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=222\001";
 
-    public static final String STRING_NO_OPTIONAL_MESSAGE_SUFFIX = "  \"OnBehalfOfCompID\": \"abc\",\n" +
+    public static final String STRING_NO_OPTIONAL_MESSAGE_SUFFIX =
+        "  \"OnBehalfOfCompID\": \"abc\",\n" +
         "  \"IntField\": \"2\",\n" +
         "  \"FloatField\": \"1.1\",\n" +
         "}";
@@ -106,6 +107,9 @@ public final class ExampleDictionary
 
     public static final String DERIVED_FIELDS_EXAMPLE =
             "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=222\001";
+
+    public static final String SHORTER_STRING_EXAMPLE =
+        "8=FIX.4.4\0019=0026\00135=0\001115=ab\001116=2\001117=1.1\00110=123\001";
 
     static
     {

@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.util.Reflection;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Map;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -39,6 +40,7 @@ public class DecoderGeneratorTest
 {
 
     public static final char[] ABC = "abc".toCharArray();
+    public static final char[] AB = "ab".toCharArray();
     public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
 
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
@@ -81,6 +83,7 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = (Decoder) heartbeat.newInstance();
         setField(decoder, ON_BEHALF_OF_COMP_ID, ABC);
+        setField(decoder, ON_BEHALF_OF_COMP_ID + "Length", 3);
 
         assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
     }
@@ -168,6 +171,21 @@ public class DecoderGeneratorTest
         assertEquals(STRING_ENCODED_MESSAGE_EXAMPLE, decoder.toString());
     }
 
+    @Test
+    public void shouldEncodeShorterStringsAfterLongerStrings() throws Exception
+    {
+        final Decoder decoder = (Decoder) heartbeat.newInstance();
+        buffer.putAscii(1, DERIVED_FIELDS_EXAMPLE);
+        decoder.decode(buffer, 1, DERIVED_FIELDS_EXAMPLE.length());
+
+        assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
+
+        buffer.putAscii(1, SHORTER_STRING_EXAMPLE);
+        decoder.decode(buffer, 1, SHORTER_STRING_EXAMPLE.length());
+
+        assertArrayEquals(AB, getOnBehalfOfCompId(decoder));
+    }
+
     private int getBodyLength(final Decoder header) throws Exception
     {
         return (int) get(header, BODY_LENGTH);
@@ -224,7 +242,7 @@ public class DecoderGeneratorTest
 
     private char[] getOnBehalfOfCompId(Decoder decoder) throws Exception
     {
-        return (char[]) get(decoder, ON_BEHALF_OF_COMP_ID);
+        return getCharArray(decoder, ON_BEHALF_OF_COMP_ID);
     }
 
     private byte[] getDataField(Decoder decoder) throws Exception
@@ -239,7 +257,14 @@ public class DecoderGeneratorTest
 
     private char[] getTestReqId(Decoder decoder) throws Exception
     {
-        return (char[]) get(decoder, TEST_REQ_ID);
+        return getCharArray(decoder, TEST_REQ_ID);
+    }
+
+    private char[] getCharArray(final Decoder decoder, final String name) throws Exception
+    {
+        final char[] value = (char[]) get(decoder, name);
+        final int length = (int) get(decoder, name + "Length");
+        return Arrays.copyOf(value, length);
     }
 
 }

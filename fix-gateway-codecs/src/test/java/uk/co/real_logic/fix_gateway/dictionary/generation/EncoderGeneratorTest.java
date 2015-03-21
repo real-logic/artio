@@ -30,7 +30,9 @@ import java.util.Map;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
@@ -215,6 +217,35 @@ public class EncoderGeneratorTest
 
         assertThat(encoder.toString(), endsWith(STRING_ENCODED_MESSAGE_SUFFIX));
     }
+
+    @Test
+    public void shouldEncodeShorterStringsAfterLongerStrings() throws Exception
+    {
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+
+        setRequiredFields(encoder);
+
+        encoder.encode(buffer, 1);
+
+        setCharSequence(encoder, "onBehalfOfCompID", "ab");
+
+        assertEncodesTo(encoder, SHORTER_STRING_EXAMPLE);
+    }
+
+    @Test
+    public void shouldToStringShorterStringsAfterLongerStrings() throws Exception
+    {
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+
+        setRequiredFields(encoder);
+
+        setCharSequence(encoder, "onBehalfOfCompID", "ab");
+
+        assertThat(encoder.toString(), containsString("ab"));
+        assertThat(encoder.toString(), not(containsString("abc")));
+    }
+
+    // TODO: lengths get resized down from initial buffer length being too high.
 
     // TODO: compound types
     // TODO: groups (RefMsgType used in session management)

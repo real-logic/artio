@@ -404,7 +404,7 @@ public class EncoderGenerator extends Generator
 
     protected String generateStringToString(String fieldName)
     {
-        return String.format("new String(%s, StandardCharsets.US_ASCII)", fieldName);
+        return String.format("new String(%s, 0, %1$sLength, StandardCharsets.US_ASCII)", fieldName);
     }
 
 }

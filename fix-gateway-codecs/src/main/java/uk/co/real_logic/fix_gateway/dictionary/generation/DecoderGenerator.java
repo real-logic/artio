@@ -28,6 +28,7 @@ import java.util.List;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.MESSAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
+import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 
 // TODO: optimisations
 // skip decoding the msg type, since its known
@@ -91,15 +92,30 @@ public class DecoderGenerator extends Generator
     {
         for (Entry entry : entries)
         {
-            out.append(generateGetter(className, entry));
+            out.append(generateGetter(entry));
         }
     }
 
-    private String generateGetter(final String className, final Entry entry) throws IOException
+    private String generateGetter(final Entry entry) throws IOException
     {
         final Field field = (Field) entry.element();
         final String name = entry.name();
         final String fieldName = JavaUtil.formatPropertyName(name);
+        final Type type = field.type();
+        final String optionalCheck = optionalCheck(entry);
+
+        final String suffix = type == STRING
+            ? String.format(
+                "    private int %s;\n\n" +
+                "    public int %1$s()\n" +
+                "    {\n" +
+                "%s" +
+                "        return %1$s;\n" +
+                "    }\n",
+                fieldName + "Length",
+                optionalCheck
+            )
+            : "";
 
         return String.format(
             "    private %s %s%s;\n\n" +
@@ -109,13 +125,15 @@ public class DecoderGenerator extends Generator
             "%s" +
             "        return %2$s;\n" +
             "    }\n\n" +
+            "%s\n" +
             "%s",
-            javaTypeOf(field.type(), name),
+            javaTypeOf(type),
             fieldName,
-            fieldInitialisation(field.type(), name),
+            fieldInitialisation(type, name),
             optionalField(entry),
-            optionalCheck(entry),
-            optionalGetter(entry)
+            optionalCheck,
+            optionalGetter(entry),
+            suffix
         );
     }
 
@@ -166,7 +184,7 @@ public class DecoderGenerator extends Generator
             entry.name());
     }
 
-    private String javaTypeOf(final Type type, final String name)
+    private String javaTypeOf(final Type type)
     {
         switch (type)
         {
@@ -252,12 +270,21 @@ public class DecoderGenerator extends Generator
             "            case %d:\n" +
             "%s" +
             "                %s = buffer.%s);\n" +
+            "%s" +
             "                break;\n",
             tag,
             optionalAssign(entry),
             fieldName,
-            decodeMethod(field.type(), fieldName)
+            decodeMethod(field.type(), fieldName),
+            optionalStringAssignment(field.type(), fieldName)
         );
+    }
+
+    private String optionalStringAssignment(final Type type, final String fieldName)
+    {
+        return type == STRING
+             ? String.format("                %sLength = valueLength;\n", fieldName)
+             : "";
     }
 
     private String optionalAssign(final Entry entry)
