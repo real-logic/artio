@@ -66,7 +66,7 @@ public class SenderAndTargetSessionIdStrategyTest
     }
 
     @Test
-    public void shouldEncodeTheSameFieldsAsAKeyWasDecodedFrom()
+    public void shouldEncodeSwappedFieldsAsAKeyWasDecodedFrom()
     {
         final List<Long> ids = decodeIds();
 
@@ -77,8 +77,8 @@ public class SenderAndTargetSessionIdStrategyTest
             {
                 final HeaderEncoder mockHeader = mock(HeaderEncoder.class);
                 strategy.encode(ids.get(i * size+ j), mockHeader);
-                verify(mockHeader).senderCompID(identifiers.get(i));
-                verify(mockHeader).targetCompID(identifiers.get(j));
+                verify(mockHeader).senderCompID(identifiers.get(j));
+                verify(mockHeader).targetCompID(identifiers.get(i));
             }
         }
     }

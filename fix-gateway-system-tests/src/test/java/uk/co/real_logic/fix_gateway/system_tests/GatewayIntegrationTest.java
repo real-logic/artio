@@ -36,7 +36,6 @@ import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 
-@Ignore
 public class GatewayIntegrationTest
 {
 
@@ -79,6 +78,7 @@ public class GatewayIntegrationTest
         session = initiatingGateway.initiate(config, null);
     }
 
+    @Ignore
     @Test
     public void sessionHasBeenInitiated() throws InterruptedException
     {

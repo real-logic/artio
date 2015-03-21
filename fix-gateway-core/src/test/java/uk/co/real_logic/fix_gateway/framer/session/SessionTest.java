@@ -52,7 +52,10 @@ public class SessionTest extends AbstractSessionTest
     public void shouldResendRequestForUnexpectedGapFill()
     {
         session.id(SESSION_ID);
+        session.lastMsgSeqNum(0);
+
         session.onSequenceReset(3, 4, false);
+        session.onMessage(3);
 
         verify(mockProxy).resendRequest(5, 1, 2, SESSION_ID);
     }

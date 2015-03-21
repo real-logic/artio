@@ -150,7 +150,8 @@ public class Session
         final int expectedMsgSeqNo = expectedSeqNo();
         if (msgSeqNo > expectedMsgSeqNo)
         {
-            proxy.resendRequest(msgSeqNo, expectedMsgSeqNo, msgSeqNo - 1, id());
+            proxy.resendRequest(newSeqNo + 1, expectedMsgSeqNo, msgSeqNo - 1, id());
+            lastMsgSeqNum(newSeqNo - 1);
         }
         else if(msgSeqNo < expectedMsgSeqNo)
         {

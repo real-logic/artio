@@ -61,7 +61,8 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         if (identifier == null)
         {
             identifier = counter;
-            surrogateToComposite.put(identifier.longValue(), compositeKey);
+            final CompositeKey flippedCompositeKey = new CompositeKey(targetCompID, senderCompID);
+            surrogateToComposite.put(identifier.longValue(), flippedCompositeKey);
         }
 
         if (identifier == counter)
