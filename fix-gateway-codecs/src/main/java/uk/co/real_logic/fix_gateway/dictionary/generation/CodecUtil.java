@@ -61,4 +61,16 @@ public final class CodecUtil
         return buffer;
     }
 
+    public static boolean equals(final char[] value, final char[] expected, final int length)
+    {
+        for (int i = 0; i < length; i++)
+        {
+            if (value[i] != expected[i])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
 }

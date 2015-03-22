@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.framer.session;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.admin.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
@@ -32,13 +33,18 @@ public class SessionParser
 
     private final Session session;
     private final SessionIdStrategy sessionIdStrategy;
+    private final AuthenticationStrategy authenticationStrategy;
 
     private long sessionId;
 
-    public SessionParser(final Session session, final SessionIdStrategy sessionIdStrategy)
+    public SessionParser(
+        final Session session,
+        final SessionIdStrategy sessionIdStrategy,
+        final AuthenticationStrategy authenticationStrategy)
     {
         this.session = session;
         this.sessionIdStrategy = sessionIdStrategy;
+        this.authenticationStrategy = authenticationStrategy;
     }
 
     public long onMessage(
@@ -56,9 +62,16 @@ public class SessionParser
         {
             case LogonDecoder.MESSAGE_TYPE:
                 logon.decode(string, offset, length);
-                final HeaderDecoder header = logon.header();
-                sessionId = sessionIdStrategy.decode(header);
-                session.onLogon(logon.heartBtInt(), header.msgSeqNum(), sessionId);
+                if (authenticationStrategy.authenticate(logon))
+                {
+                    final HeaderDecoder header = logon.header();
+                    sessionId = sessionIdStrategy.decode(header);
+                    session.onLogon(logon.heartBtInt(), header.msgSeqNum(), sessionId);
+                }
+                else
+                {
+                    session.disconnect();
+                }
                 break;
 
             case ResendRequestDecoder.MESSAGE_TYPE:

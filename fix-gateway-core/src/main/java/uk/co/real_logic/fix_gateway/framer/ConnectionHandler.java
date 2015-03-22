@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.framer;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.FixPublication;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
+import uk.co.real_logic.fix_gateway.admin.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.framer.session.*;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
@@ -42,6 +43,7 @@ public class ConnectionHandler
     private final SessionIdStrategy sessionIdStrategy;
     private final MessageHandler messageHandler;
     private final ReplicationStreams replicationStreams;
+    private final AuthenticationStrategy authenticationStrategy;
 
     public ConnectionHandler(
         final MilliClock clock,
@@ -50,7 +52,8 @@ public class ConnectionHandler
         final int defaultInterval,
         final SessionIdStrategy sessionIdStrategy,
         final MessageHandler messageHandler,
-        final ReplicationStreams replicationStreams)
+        final ReplicationStreams replicationStreams,
+        final AuthenticationStrategy authenticationStrategy)
     {
         this.clock = clock;
         this.sessionProxy = sessionProxy;
@@ -59,6 +62,7 @@ public class ConnectionHandler
         this.sessionIdStrategy = sessionIdStrategy;
         this.messageHandler = messageHandler;
         this.replicationStreams = replicationStreams;
+        this.authenticationStrategy = authenticationStrategy;
     }
 
     public long onConnection() throws IOException
@@ -69,7 +73,7 @@ public class ConnectionHandler
     public ReceiverEndPoint receiverEndPoint(
         final SocketChannel channel, final long connectionId, final Session session)
     {
-        final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy);
+        final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy, authenticationStrategy);
         return new ReceiverEndPoint(channel, bufferSize, messageHandler, connectionId, sessionParser);
     }
 

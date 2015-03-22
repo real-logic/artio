@@ -15,28 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.admin;
 
-import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
-import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 
-public final class CompIdAuthenticationStrategy implements AuthenticationStrategy
+public final class NoAuthenticationStrategy implements AuthenticationStrategy
 {
-    private final char[] gatewayCompId;
-
-    public CompIdAuthenticationStrategy(final String gatewayCompId)
-    {
-        this(gatewayCompId.toCharArray());
-    }
-
-    public CompIdAuthenticationStrategy(final char[] gatewayCompId)
-    {
-        this.gatewayCompId = gatewayCompId;
-    }
-
     public boolean authenticate(final LogonDecoder logon)
     {
-        final HeaderDecoder header = logon.header();
-        return CodecUtil.equals(gatewayCompId, header.targetCompID(), header.targetCompIDLength());
+        return true;
     }
-
 }

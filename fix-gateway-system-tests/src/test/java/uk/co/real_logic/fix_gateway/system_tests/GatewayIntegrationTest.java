@@ -23,6 +23,7 @@ import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.admin.CompIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
@@ -57,7 +58,8 @@ public class GatewayIntegrationTest
         final StaticConfiguration acceptingConfig = new StaticConfiguration()
                 .registerFallbackAcceptor(fakeOtfAcceptor)
                 .bind("localhost", port)
-                .aeronChannel("udp://localhost:" + unusedPort());
+                .aeronChannel("udp://localhost:" + unusedPort())
+                .authenticationStrategy(new CompIdAuthenticationStrategy("CCG"));
         acceptingGateway = FixGateway.launch(acceptingConfig);
 
         final StaticConfiguration initiatingConfig = new StaticConfiguration()

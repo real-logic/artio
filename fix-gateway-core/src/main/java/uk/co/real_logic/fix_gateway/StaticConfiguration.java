@@ -17,6 +17,8 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
+import uk.co.real_logic.fix_gateway.admin.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.admin.NoAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
 import uk.co.real_logic.fix_gateway.framer.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.framer.session.SessionIdStrategy;
@@ -66,6 +68,7 @@ public final class StaticConfiguration
     private int counterBuffersLength = getInteger(COUNTER_BUFFERS_LENGTH_PROP_NAME, COUNTERS_BUFFER_LENGTH_DEFAULT);
     private String counterBuffersFile = System.getProperty(COUNTERS_FILE_PROP_NAME, COUNTERS_FILE_PROP_DEFAULT);
     private String aeronChannel;
+    private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
 
     public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
     {
@@ -138,6 +141,12 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration authenticationStrategy(final AuthenticationStrategy authenticationStrategy)
+    {
+        this.authenticationStrategy = authenticationStrategy;
+        return this;
+    }
+
     int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -188,9 +197,13 @@ public final class StaticConfiguration
         return this;
     }
 
-    public String aeronChannel()
+    String aeronChannel()
     {
         return aeronChannel;
     }
 
+    AuthenticationStrategy authenticationStrategy()
+    {
+        return authenticationStrategy;
+    }
 }
