@@ -63,6 +63,11 @@ public final class CodecUtil
 
     public static boolean equals(final char[] value, final char[] expected, final int length)
     {
+        if (value.length < length || expected.length < length)
+        {
+            return false;
+        }
+
         for (int i = 0; i < length; i++)
         {
             if (value[i] != expected[i])

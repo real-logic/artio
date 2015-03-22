@@ -30,7 +30,13 @@ public class CodecUtilTest
     }
 
     @Test
-    public void shouldFindMissingCharacters()
+    public void shouldSupportShortArrays()
+    {
+        assertFalse(CodecUtil.equals("abc".toCharArray(), "ab".toCharArray(), 3));
+    }
+
+    @Test
+    public void shouldFindDifferentCharacters()
     {
         assertFalse(CodecUtil.equals("abc".toCharArray(), "azc    ".toCharArray(), 3));
     }
