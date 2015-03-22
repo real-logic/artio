@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.FixPublication;
+import uk.co.real_logic.fix_gateway.MessageHandler;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.admin.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.framer.session.*;

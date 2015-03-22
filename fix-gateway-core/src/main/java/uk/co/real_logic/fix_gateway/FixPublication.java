@@ -19,7 +19,6 @@ import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.framer.MessageHandler;
 import uk.co.real_logic.fix_gateway.messages.FixMessage;
 import uk.co.real_logic.sbe.codec.java.CodecUtil;
 

@@ -25,11 +25,10 @@ import uk.co.real_logic.fix_gateway.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.framer.*;
-import uk.co.real_logic.fix_gateway.framer.MessageHandler;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.SessionProxy;
-import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
-import uk.co.real_logic.fix_gateway.parser.GenericParser;
+import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -107,7 +106,7 @@ public class FixGateway implements AutoCloseable
     {
         final MessageHandler handler = fallbackAcceptor  == null
                                      ? EMPTY_HANDLER
-                                     : new GenericParser(fallbackAcceptor, new IntDictionary());
+                                     : new OtfParser(fallbackAcceptor, new IntDictionary());
         return DEBUG_PRINT_MESSAGES ? new DebugMessageHandler(handler) : handler;
     }
 

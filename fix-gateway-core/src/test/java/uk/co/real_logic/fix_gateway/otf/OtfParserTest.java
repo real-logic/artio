@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.parser;
+package uk.co.real_logic.fix_gateway.otf;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -21,7 +21,6 @@ import org.mockito.InOrder;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
-import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.ValidationError.INVALID_CHECKSUM;
@@ -29,7 +28,7 @@ import static uk.co.real_logic.fix_gateway.ValidationError.PARSE_ERROR;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
 
-public class GenericParserTest
+public class OtfParserTest
 {
     private static final int MESSAGE_TYPE = 'D';
 
@@ -38,7 +37,7 @@ public class GenericParserTest
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[LENGTH]);
     private OtfMessageAcceptor mockAcceptor = mock(OtfMessageAcceptor.class);
     private IntDictionary groupToField = new IntDictionary();
-    private GenericParser parser = new GenericParser(mockAcceptor, groupToField);
+    private OtfParser parser = new OtfParser(mockAcceptor, groupToField);
 
     private InOrder inOrder = inOrder(mockAcceptor);
 

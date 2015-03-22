@@ -19,7 +19,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
-import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.util.ArrayList;

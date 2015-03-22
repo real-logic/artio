@@ -13,20 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.parser;
+package uk.co.real_logic.fix_gateway.otf;
 
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
-import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.ValidationError.*;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.MESSAGE_TYPE;
 
-public class GenericValidatorTest
+public class OtfValidatorTest
 {
     private OtfMessageAcceptor acceptor = mock(OtfMessageAcceptor.class);
 
@@ -35,7 +34,7 @@ public class GenericValidatorTest
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[16 * 1024]);
     private MutableAsciiFlyweight string = new MutableAsciiFlyweight(buffer);
 
-    private GenericValidator validator = new GenericValidator(acceptor, allFields, requiredFields);
+    private OtfValidator validator = new OtfValidator(acceptor, allFields, requiredFields);
 
     @Test
     public void validStartMessageDelegates()

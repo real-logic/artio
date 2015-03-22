@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.decoder.PrinterImpl;
-import uk.co.real_logic.fix_gateway.framer.MessageHandler;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 public final class DebugMessageHandler implements MessageHandler

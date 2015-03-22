@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import uk.co.real_logic.fix_gateway.MessageHandler;
+
 /**
  * A message source might be the replication buffer, or a directly plugged in message builder.
  */

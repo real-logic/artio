@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.parser;
+package uk.co.real_logic.fix_gateway.otf;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
-import uk.co.real_logic.fix_gateway.framer.MessageHandler;
-import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.MessageHandler;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.ValidationError.INVALID_CHECKSUM;
@@ -39,7 +38,7 @@ import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.computeChecksum;
  * There are a lot of places where values are passed as parameters and not assigned to fields in order to
  * allow stack allocated primitives and avoid allocation.
  */
-public final class GenericParser implements MessageHandler
+public final class OtfParser implements MessageHandler
 {
     private static final int NO_CHECKSUM = 0;
     private static final int UNKNOWN = -1;
@@ -55,7 +54,7 @@ public final class GenericParser implements MessageHandler
     private int messageType;
     private int tag;
 
-    public GenericParser(final OtfMessageAcceptor acceptor, final IntDictionary groupToField)
+    public OtfParser(final OtfMessageAcceptor acceptor, final IntDictionary groupToField)
     {
         this.acceptor = acceptor;
         this.groupToField = groupToField;

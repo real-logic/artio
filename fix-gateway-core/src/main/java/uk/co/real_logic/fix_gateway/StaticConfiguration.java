@@ -22,7 +22,7 @@ import uk.co.real_logic.fix_gateway.admin.NoAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
 import uk.co.real_logic.fix_gateway.framer.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.framer.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 
 import java.io.File;
 import java.net.InetSocketAddress;

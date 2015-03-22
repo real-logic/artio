@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.parser;
+package uk.co.real_logic.fix_gateway.otf;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
-import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.ValidationError.*;
@@ -29,7 +28,7 @@ import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.MESSA
 /**
  * Acceptor that validates messages according to a dictionary
  */
-public final class GenericValidator implements OtfMessageAcceptor
+public final class OtfValidator implements OtfMessageAcceptor
 {
     private static final int UNKNOWN = -1;
 
@@ -46,7 +45,7 @@ public final class GenericValidator implements OtfMessageAcceptor
     private int messageType;
     private IntHashSet allFieldsForMessageType;
 
-    public GenericValidator(
+    public OtfValidator(
         final OtfMessageAcceptor delegate,
         final IntDictionary allFields,
         final IntDictionary requiredFields)

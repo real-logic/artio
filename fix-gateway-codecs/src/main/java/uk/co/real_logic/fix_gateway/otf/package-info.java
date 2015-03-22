@@ -8,4 +8,4 @@
  * Pros: simple, generic and flexible
  * Cons: not semantic, nearly all call sites megamorphic in practice, potentially slower
  */
-package uk.co.real_logic.fix_gateway.otf_api;
+package uk.co.real_logic.fix_gateway.otf;

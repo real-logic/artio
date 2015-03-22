@@ -25,7 +25,7 @@ import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
 import static uk.co.real_logic.fix_gateway.flyweight_api.OrdType.Market;
 import static uk.co.real_logic.fix_gateway.flyweight_api.Side.Sell;
-import static uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor.NEW_ORDER_SINGLE;
+import static uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor.NEW_ORDER_SINGLE;
 
 /**
  * .

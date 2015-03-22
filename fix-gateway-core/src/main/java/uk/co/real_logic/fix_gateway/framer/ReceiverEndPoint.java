@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.framer;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.MessageHandler;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
