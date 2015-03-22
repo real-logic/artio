@@ -285,7 +285,9 @@ public class EncoderGenerator extends Generator
             return "        final int bodyLength = position - bodyStart;\n" +
                    "        buffer.putNatural(bodyStart - BODY_LENGTH_SIZE, BODY_LENGTH_GAP, bodyLength);\n" +
                    formatTag("checkSum", "") +
-                   "        final long checkSum = buffer.computeChecksum(bodyStart, position);\n" +
+                   // 17 to account for the common sized prefix size before bodyStart.
+                   // position - 2, to get back to the point before the checksum
+                   "        final long checkSum = buffer.computeChecksum(bodyStart - 17, position - 2);\n" +
                    "        position += buffer.putLong(position, checkSum);\n" +
                    "        buffer.putSeparator(position);\n" +
                    "        position++;\n";

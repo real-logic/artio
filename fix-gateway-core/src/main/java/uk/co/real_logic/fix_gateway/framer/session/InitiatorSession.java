@@ -80,7 +80,10 @@ public class InitiatorSession extends Session
     public void send(final MessageEncoder encoder)
     {
         final HeaderEncoder header = (HeaderEncoder) encoder.header();
-        header.msgSeqNum(expectedSeqNo());
+        header
+            .msgSeqNum(expectedSeqNo())
+            .sendingTime(0);
+
         sessionIdStrategy.encode(id(), header);
 
         final int length = encoder.encode(string, FRAME_SIZE);

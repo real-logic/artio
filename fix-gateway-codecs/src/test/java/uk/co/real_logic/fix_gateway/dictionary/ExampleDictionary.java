@@ -65,12 +65,12 @@ public final class ExampleDictionary
     public static final DataDictionary MESSAGE_EXAMPLE;
 
     public static final String ENCODED_MESSAGE_EXAMPLE =
-        "8=abc\0019=0049\00135=0\001115=abc\001112=abc\001116=2\001117=1.1\001118=Y\001119=123\00110=118\001";
+        "8=FIX.4.4\0019=0049\00135=0\001115=abc\001112=abc\001116=2\001117=1.1\001118=Y\001119=123\00110=110\001";
 
     public static final String HEADER_TO_STRING =
         "  \"header\": {\n" +
         "    \"MsgType\": \"Header\",\n" +
-        "    \"BeginString\": \"abc\",\n" +
+        "    \"BeginString\": \"FIX.4.4\",\n" +
         "    \"BodyLength\": \"%s\",\n" +
         "    \"MsgType\": \"0\",\n" +
         "  }\n";
@@ -91,7 +91,7 @@ public final class ExampleDictionary
         STRING_ENCODED_MESSAGE_SUFFIX;
 
     public static final String NO_OPTIONAL_MESSAGE_EXAMPLE =
-        "8=abc\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=222\001";
+        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=210\001";
 
     public static final String STRING_NO_OPTIONAL_MESSAGE_SUFFIX =
         "  \"OnBehalfOfCompID\": \"abc\",\n" +
@@ -106,10 +106,10 @@ public final class ExampleDictionary
         STRING_NO_OPTIONAL_MESSAGE_SUFFIX;
 
     public static final String DERIVED_FIELDS_EXAMPLE =
-            "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=222\001";
+            "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=210\001";
 
     public static final String SHORTER_STRING_EXAMPLE =
-        "8=FIX.4.4\0019=0026\00135=0\001115=ab\001116=2\001117=1.1\00110=123\001";
+        "8=FIX.4.4\0019=0026\00135=0\001115=ab\001116=2\001117=1.1\00110=110\001";
 
     static
     {
