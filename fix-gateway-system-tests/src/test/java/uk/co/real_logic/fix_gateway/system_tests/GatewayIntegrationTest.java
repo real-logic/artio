@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.FixGateway;
@@ -28,9 +27,8 @@ import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
-import java.util.Arrays;
-
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.Matchers.hasItem;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
@@ -83,7 +81,6 @@ public class GatewayIntegrationTest
         assertTrue("Session has failed to logon", session.state() == ACTIVE);
     }
 
-    @Ignore
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptor() throws InterruptedException
     {
@@ -93,7 +90,7 @@ public class GatewayIntegrationTest
         session.send(testRequest);
 
         assertEventuallyTrue("Failed to receive a message", fakeOtfAcceptor::hasSeenMessage);
-        assertEquals(Arrays.asList(TestRequestDecoder.MESSAGE_TYPE), fakeOtfAcceptor.messageTypes());
+        assertThat(fakeOtfAcceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
     }
 
     // TODO: disconnect an initiating session and verify disconnect message
