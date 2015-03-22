@@ -39,9 +39,10 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 
     public void encode(final long sessionId, final HeaderEncoder encoder)
     {
-        final CompositeKey compositeKey = surrogateToComposite.get(sessionId);
-        encoder.senderCompID(compositeKey.senderCompID);
-        encoder.targetCompID(compositeKey.targetCompID);
+        final CompositeKey composite = surrogateToComposite.get(sessionId);
+        //System.out.println(Arrays.toString(composite.senderCompID) + " " + Arrays.toString(composite.targetCompID));
+        encoder.senderCompID(composite.senderCompID);
+        encoder.targetCompID(composite.targetCompID);
     }
 
     public long decode(final HeaderDecoder header)

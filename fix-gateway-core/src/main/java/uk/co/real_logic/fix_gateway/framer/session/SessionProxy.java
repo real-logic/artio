@@ -111,8 +111,6 @@ public class SessionProxy
 
     private void send(final int length, final long sessionId, final int messageType)
     {
-        System.out.println("Session Proxy: ");
-        string.log(FRAME_SIZE, length);
         fixPublication.onMessage(buffer, 0, length + FRAME_SIZE, sessionId, messageType);
     }
 }

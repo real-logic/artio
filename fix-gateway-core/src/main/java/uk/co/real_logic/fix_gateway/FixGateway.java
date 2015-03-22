@@ -23,15 +23,22 @@ import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
 import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
+import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.framer.*;
 import uk.co.real_logic.fix_gateway.framer.MessageHandler;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.SessionProxy;
+import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.parser.GenericParser;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
+import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEBUG_PRINT_MESSAGES;
+
 public class FixGateway implements AutoCloseable
 {
+    private static final MessageHandler EMPTY_HANDLER = (buffer, offset, length, sessionId, messageType) -> {};
+
     private final FixCounters fixCounters;
 
     private final Aeron aeron;
@@ -74,7 +81,7 @@ public class FixGateway implements AutoCloseable
         final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(),
             streams.fixPublication(), configuration.sessionIdStrategy());
 
-        final MessageHandler messageHandler = messageHandler(configuration);
+        final MessageHandler messageHandler = messageHandler(configuration.fallbackAcceptor());
 
         final MilliClock systemClock = System::currentTimeMillis;
 
@@ -96,10 +103,12 @@ public class FixGateway implements AutoCloseable
         receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, receiver);
     }
 
-    private MessageHandler messageHandler(final StaticConfiguration configuration)
+    private MessageHandler messageHandler(final OtfMessageAcceptor fallbackAcceptor)
     {
-        final MessageHandler emptyHandler = (buffer, offset, length, sessionId, messageType) -> {};
-        return configuration.debugPrintMessages() ? new DebugMessageHandler(emptyHandler) : emptyHandler;
+        final MessageHandler handler = fallbackAcceptor  == null
+                                     ? EMPTY_HANDLER
+                                     : new GenericParser(fallbackAcceptor, new IntDictionary());
+        return DEBUG_PRINT_MESSAGES ? new DebugMessageHandler(handler) : handler;
     }
 
     private BackoffIdleStrategy backoffIdleStrategy()

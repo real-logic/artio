@@ -37,6 +37,8 @@ import static java.lang.Integer.getInteger;
 public final class StaticConfiguration
 {
     public static final String DEBUG_PRINT_MESSAGES_PROPERTY = "fix.core.debug";
+    /** This is static final field in order to give the optimiser scope to remove references to it. */
+    public static final boolean DEBUG_PRINT_MESSAGES = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
 
     private static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
     private static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
@@ -64,7 +66,6 @@ public final class StaticConfiguration
     private String host;
     private int port;
     private OtfMessageAcceptor fallbackAcceptor;
-    private boolean debugPrintMessages = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
     private int counterBuffersLength = getInteger(COUNTER_BUFFERS_LENGTH_PROP_NAME, COUNTERS_BUFFER_LENGTH_DEFAULT);
     private String counterBuffersFile = System.getProperty(COUNTERS_FILE_PROP_NAME, COUNTERS_FILE_PROP_DEFAULT);
     private String aeronChannel;
@@ -123,12 +124,6 @@ public final class StaticConfiguration
         return this;
     }
 
-    public StaticConfiguration debugPrintMessages(final boolean debugPrintMessages)
-    {
-        this.debugPrintMessages = debugPrintMessages;
-        return this;
-    }
-
     public StaticConfiguration counterBuffersLength(final Integer counterBuffersLength)
     {
         this.counterBuffersLength = counterBuffersLength;
@@ -177,11 +172,6 @@ public final class StaticConfiguration
         return encoderBufferSize;
     }
 
-    boolean debugPrintMessages()
-    {
-        return debugPrintMessages;
-    }
-
     int counterBuffersLength()
     {
         return counterBuffersLength;
@@ -205,5 +195,10 @@ public final class StaticConfiguration
     AuthenticationStrategy authenticationStrategy()
     {
         return authenticationStrategy;
+    }
+
+    OtfMessageAcceptor fallbackAcceptor()
+    {
+        return fallbackAcceptor;
     }
 }

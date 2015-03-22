@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.framer.session;
 
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.FixGateway;
@@ -25,6 +24,7 @@ import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
+import static uk.co.real_logic.fix_gateway.FixPublication.FRAME_SIZE;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.*;
 
 public class InitiatorSession extends Session
@@ -79,17 +79,13 @@ public class InitiatorSession extends Session
 
     public void send(final MessageEncoder encoder)
     {
-        final int length = encoder.encode(string, 0);
         final HeaderEncoder header = (HeaderEncoder) encoder.header();
         header.msgSeqNum(expectedSeqNo());
         sessionIdStrategy.encode(id(), header);
 
-        send(buffer, 0, length, encoder.messageType());
-    }
+        final int length = encoder.encode(string, FRAME_SIZE);
 
-    public void send(final DirectBuffer buffer, final int offset, final int length, final int messageType)
-    {
-        publication.onMessage(buffer, offset, length, id(), messageType);
+        publication.onMessage(buffer, 0, length + FRAME_SIZE, id(), encoder.messageType());
         incrementSequenceNumber();
     }
 

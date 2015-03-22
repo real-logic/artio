@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
@@ -87,7 +88,7 @@ public class ReceiverEndPoint
     private void readData() throws IOException
     {
         final int dataRead = channel.read(byteBuffer);
-        //System.out.println("Data read: " + dataRead + " @ " + hashCode());
+        DebugLogger.log("Read     %s\n", byteBuffer, dataRead);
         usedBufferData += dataRead;
     }
 
@@ -107,7 +108,7 @@ public class ReceiverEndPoint
             {
                 if (invalidBodyLengthTag(offset))
                 {
-                    invalidateMessage();
+                    invalidateMessage(offset);
                     return;
                 }
 
@@ -179,9 +180,9 @@ public class ReceiverEndPoint
         byteBuffer.position(usedBufferData);
     }
 
-    private void invalidateMessage()
+    private void invalidateMessage(final int offset)
     {
-        // TODO
+        string.log(offset, COMMON_PREFIX_LENGTH);
         System.err.println("Invalid message");
     }
 

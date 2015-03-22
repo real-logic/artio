@@ -23,7 +23,7 @@ import static org.junit.Assert.fail;
 
 public final class Timing
 {
-    private static final long DEFAULT_TIMEOUT = /*hasDebuggerAttached() ? Long.MAX_VALUE : */20;
+    private static final long DEFAULT_TIMEOUT = /*hasDebuggerAttached() ? Long.MAX_VALUE : */200;
 
     public static void assertEventuallyTrue(
             final String message,

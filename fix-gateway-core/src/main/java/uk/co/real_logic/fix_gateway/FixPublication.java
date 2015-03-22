@@ -69,5 +69,7 @@ public class FixPublication implements MessageHandler
             // TODO: backoff
             fails.increment();
         }
+
+        DebugLogger.log("Enqueued %s\n", buffer, offset, length);
     }
 }

@@ -55,8 +55,8 @@ public class SessionParser
         final int messageType)
     {
         string.wrap(buffer);
-        System.out.println("Session Parser:" + session.expectedSeqNo());
-        string.log(offset, length);
+        //System.out.println("Session Parser:" + session.expectedSeqNo());
+        //string.log(offset, length);
 
         switch (messageType)
         {

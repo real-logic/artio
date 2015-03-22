@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.otf_api.OtfMessageAcceptor;
@@ -36,16 +37,18 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
 
     public void onNext()
     {
-
+        DebugLogger.log("Next Message");
     }
 
     public void onComplete()
     {
         hasSeenMessage = true;
+        DebugLogger.log("Message Complete");
     }
 
     public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
     {
+        DebugLogger.log("Field: %s=%s\n", tag, buffer, offset, length);
         if (tag == 35)
         {
             string.wrap(buffer);
@@ -74,7 +77,7 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         final int tagNumber,
         final AsciiFieldFlyweight value)
     {
-        System.err.println(error);
+        System.err.printf("%s for %d @ %d", error, messageType, tagNumber);
         return false;
     }
 

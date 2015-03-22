@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -43,7 +44,9 @@ public class SenderEndPoint
             int bytesWritten = 0;
             while (bytesWritten < length)
             {
-                bytesWritten += channel.write(buffer);
+                final int written = channel.write(buffer);
+                DebugLogger.log("Written  %s\n", buffer, written);
+                bytesWritten += written;
                 // TODO: figure backoff strategy
             }
         }
