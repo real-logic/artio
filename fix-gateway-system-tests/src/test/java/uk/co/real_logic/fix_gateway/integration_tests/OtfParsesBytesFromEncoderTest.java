@@ -15,7 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.integration_tests;
 
-import org.junit.Test;
+import org.junit.experimental.theories.DataPoint;
+import org.junit.experimental.theories.Theories;
+import org.junit.experimental.theories.Theory;
+import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import uk.co.real_logic.agrona.DirectBuffer;
@@ -35,10 +38,16 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 
+@RunWith(Theories.class)
 public class OtfParsesBytesFromEncoderTest
 {
 
-    private static final int OFFSET = 1;
+    /*TODO: @DataPoint*/
+    public static int NO_OFFSET = 0;
+
+    @DataPoint
+    public static int OFFSET = 1;
+
     private static final int SESSION_ID = 0;
 
     private final UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
@@ -46,22 +55,38 @@ public class OtfParsesBytesFromEncoderTest
     private final OtfMessageAcceptor acceptor = mock(OtfMessageAcceptor.class);
     private final OtfParser parser = new OtfParser(acceptor, new IntDictionary());
 
-    @Test
-    public void shouldParseLogon()
+
+    @Theory
+    public void shouldParseLogon(final int offset)
     {
-        final LogonEncoder encoder = new LogonEncoder()
-            .heartBtInt(10)
-            .encryptMethod(0);
+        final int length = encodeLogon(offset);
 
-        encoder.header()
-            .senderCompID("abc")
-            .targetCompID("def")
-            .msgSeqNum(1)
-            .sendingTime(10);
+        DebugLogger.log("%s\n", buffer, offset, length);
 
-        final int length = encoder.encode(string, OFFSET);
-        DebugLogger.log("%s\n", buffer, OFFSET, length);
-        parser.onMessage(buffer, OFFSET, length, SESSION_ID, LogonDecoder.MESSAGE_TYPE);
+        parseLogon(length, offset);
+    }
+
+    @Theory
+    public void shouldParseTestRequest(final int offset)
+    {
+        final int length = encodeTestRequest(offset);
+
+        DebugLogger.log("%s\n", buffer, offset, length);
+
+        parseTestRequest(length, offset);
+    }
+
+    private void parseTestRequest(final int length, final int offset)
+    {
+        parser.onMessage(buffer, offset, length, SESSION_ID, LogonDecoder.MESSAGE_TYPE);
+
+        verify(acceptor, times(1)).onField(eq(35), anyBuffer(), anyInt(), anyInt());
+        verify(acceptor, times(1)).onComplete();
+    }
+
+    private void parseLogon(final int length, final int offset)
+    {
+        parser.onMessage(buffer, offset, length, SESSION_ID, LogonDecoder.MESSAGE_TYPE);
 
         final InOrder inOrder = inOrder(acceptor);
         // TODO: generate constants and use them.
@@ -80,23 +105,33 @@ public class OtfParsesBytesFromEncoderTest
         inOrder.verifyNoMoreInteractions();
     }
 
-    @Test
-    public void shouldParseTestRequestId()
+    private int encodeLogon(final int offset)
     {
+        final LogonEncoder encoder = new LogonEncoder()
+            .heartBtInt(10)
+            .encryptMethod(0);
+
+        encoder.header()
+            .senderCompID("abc")
+            .targetCompID("def")
+            .msgSeqNum(1)
+            .sendingTime(10);
+
+        return encoder.encode(string, offset);
+    }
+
+    private int encodeTestRequest(final int offset)
+    {
+        // 8=FIX.4.49=005835=149=LEH_LZJ0256=CCG34=352=19700101-00:00:00112=hi10=140
         final TestRequestEncoder testRequest = new TestRequestEncoder();
         testRequest.testReqID("hi");
 
         testRequest.header()
-            .msgSeqNum(1)
+            .msgSeqNum(3)
             .senderCompID("LEH_LZJ02")
             .targetCompID("CCG");
 
-        final int length = testRequest.encode(string, OFFSET);
-        DebugLogger.log("%s\n", buffer, OFFSET, length);
-        parser.onMessage(buffer, OFFSET, length, SESSION_ID, LogonDecoder.MESSAGE_TYPE);
-
-        verify(acceptor, times(1)).onField(eq(35), anyBuffer(), anyInt(), anyInt());
-        verify(acceptor, times(1)).onComplete();
+        return testRequest.encode(string, offset);
     }
 
     private void verifyField(final InOrder inOrder, final int tag, final String expectedValue)
