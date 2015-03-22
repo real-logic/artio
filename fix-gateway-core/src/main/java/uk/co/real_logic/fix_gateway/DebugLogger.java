@@ -34,7 +34,9 @@ public final class DebugLogger
     {
         if (DEBUG_PRINT_MESSAGES)
         {
-            System.out.printf(formatString, value, buffer.getStringUtf8(offset, length));
+            final byte[] data = new byte[length];
+            buffer.getBytes(offset, data);
+            System.out.printf(formatString, value, new String(data, US_ASCII));
         }
     }
 
