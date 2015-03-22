@@ -76,7 +76,7 @@ public final class OtfParser implements MessageHandler
         {
             parseFields(buffer, offset, offset + length, UNKNOWN, null, 0);
 
-            if (validChecksum(buffer, offset, checksumOffset, checksum))
+            if (validChecksum(buffer, offset, checksum))
             {
                 acceptor.onComplete();
             }
@@ -252,16 +252,19 @@ public final class OtfParser implements MessageHandler
         return true;
     }
 
-    private boolean validChecksum(final DirectBuffer buffer, final int offset, final int length, final int expectedChecksum)
+    private boolean validChecksum(final DirectBuffer buffer, final int offset, final int expectedChecksum)
     {
         if (expectedChecksum == NO_CHECKSUM)
         {
             return false;
         }
 
-        final int end = offset + length;
+        /*System.out.printf("Expected Checksum: %s, Actual: %s\n",
+            computeChecksum(buffer, offset, checksumOffset), expectedChecksum);
+        AsciiFlyweight string = new AsciiFlyweight(buffer);
+        string.log(offset, checksumOffset- offset);*/
 
-        return computeChecksum(buffer, offset, end) == expectedChecksum;
+        return computeChecksum(buffer, offset, checksumOffset) == expectedChecksum;
     }
 
 }
