@@ -42,11 +42,11 @@ import static org.mockito.Mockito.*;
 public class OtfParsesBytesFromEncoderTest
 {
 
-    /*TODO: @DataPoint*/
-    public static int NO_OFFSET = 0;
+    @DataPoint
+    public static final int NO_OFFSET = 0;
 
     @DataPoint
-    public static int OFFSET = 1;
+    public static final int OFFSET = 1;
 
     private static final int SESSION_ID = 0;
 

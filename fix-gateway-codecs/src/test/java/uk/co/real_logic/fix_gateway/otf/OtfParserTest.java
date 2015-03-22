@@ -34,10 +34,10 @@ import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 public class OtfParserTest
 {
     @DataPoint
-    public static int NO_OFFSET = 0;
+    public static final int NO_OFFSET = 0;
 
     @DataPoint
-    public static int OFFSET = 1;
+    public static final int OFFSET = 1;
 
     private static final int MESSAGE_TYPE = 'D';
 
