@@ -33,8 +33,6 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
     private final List<Integer> messageTypes = new ArrayList<>();
     private final AsciiFlyweight string = new AsciiFlyweight();
 
-    private volatile boolean hasSeenMessage = false;
-
     public void onNext()
     {
         DebugLogger.log("Next Message");
@@ -42,11 +40,10 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
 
     public void onComplete()
     {
-        hasSeenMessage = true;
         DebugLogger.log("Message Complete");
     }
 
-    public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
+    public synchronized void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
     {
         DebugLogger.log("Field: %s=%s\n", tag, buffer, offset, length);
         if (tag == 35)
@@ -81,13 +78,9 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         return false;
     }
 
-    public List<Integer> messageTypes()
+    public synchronized List<Integer> messageTypes()
     {
         return messageTypes;
     }
 
-    public boolean hasSeenMessage()
-    {
-        return hasSeenMessage;
-    }
 }

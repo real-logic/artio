@@ -89,7 +89,7 @@ public class GatewayIntegrationTest
 
         session.send(testRequest);
 
-        assertEventuallyTrue("Failed to receive a message", fakeOtfAcceptor::hasSeenMessage);
+        assertEventuallyTrue("Failed to receive a message", () -> fakeOtfAcceptor.messageTypes().size() == 2);
         assertThat(fakeOtfAcceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
     }
 
