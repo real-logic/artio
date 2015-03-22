@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.integration_tests;
 
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -28,6 +29,7 @@ import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
@@ -42,7 +44,6 @@ public class OtfParsesBytesFromEncoderTest
     private final UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
     private final MutableAsciiFlyweight string = new MutableAsciiFlyweight(buffer);
     private final OtfMessageAcceptor acceptor = mock(OtfMessageAcceptor.class);
-    // new FakeOtfAcceptor()
     private final OtfParser parser = new OtfParser(acceptor, new IntDictionary());
 
     @Test
@@ -65,15 +66,15 @@ public class OtfParsesBytesFromEncoderTest
         final InOrder inOrder = inOrder(acceptor);
         // TODO: generate constants and use them.
         once(inOrder).onNext();
-        verifyField(inOrder, 8);
+        verifyField(inOrder, 8, "FIX.4.4");
         verifyField(inOrder, 9);
-        verifyField(inOrder, 35);
-        verifyField(inOrder, 49);
-        verifyField(inOrder, 56);
-        verifyField(inOrder, 34);
-        verifyField(inOrder, 52);
-        verifyField(inOrder, 98);
-        verifyField(inOrder, 108);
+        verifyField(inOrder, 35, "A");
+        verifyField(inOrder, 49, "abc");
+        verifyField(inOrder, 56, "def");
+        verifyField(inOrder, 34, "1");
+        verifyField(inOrder, 52, "19700101-00:00:00.010");
+        verifyField(inOrder, 98, "0");
+        verifyField(inOrder, 108, "10");
         verifyField(inOrder, 10);
         once(inOrder).onComplete();
         inOrder.verifyNoMoreInteractions();
@@ -96,6 +97,16 @@ public class OtfParsesBytesFromEncoderTest
 
         verify(acceptor, times(1)).onField(eq(35), anyBuffer(), anyInt(), anyInt());
         verify(acceptor, times(1)).onComplete();
+    }
+
+    private void verifyField(final InOrder inOrder, final int tag, final String expectedValue)
+    {
+        ArgumentCaptor<Integer> offset = ArgumentCaptor.forClass(Integer.class);
+        ArgumentCaptor<Integer> length = ArgumentCaptor.forClass(Integer.class);
+        once(inOrder).onField(eq(tag), anyBuffer(), offset.capture(), length.capture());
+
+        final String value = string.getRangeAsString(offset.getValue(), length.getValue());
+        assertEquals(expectedValue, value);
     }
 
     private void verifyField(final InOrder inOrder, final int tag)
