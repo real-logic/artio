@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.FixGateway;
@@ -40,8 +39,8 @@ import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 
 public class GatewayIntegrationTest
 {
-    private static final char[] INITIATOR_COMP_ID = "LEH_LZJ02".toCharArray();
 
+    public static final long SESSION_ID = 0L;
     private MediaDriver mediaDriver;
     private FixGateway acceptingGateway;
     private FixGateway initiatingGateway;
@@ -97,7 +96,6 @@ public class GatewayIntegrationTest
         assertThat(fakeOtfAcceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
     }
 
-    @Ignore
     @Test
     public void initiatorSessionCanBeDisconnected() throws InterruptedException
     {
@@ -106,10 +104,9 @@ public class GatewayIntegrationTest
         assertFalse("Session is still connected", session.isConnected());
 
         assertEventuallyTrue("Failed to disconnect",
-            () -> verify(adminEventHandler).onDisconnect("localhost", INITIATOR_COMP_ID));
+            () -> verify(adminEventHandler).onDisconnect(SESSION_ID));
     }
 
-    // TODO Connect callback
     // TODO: shutdown a gateway and check logout
     // TODO: initiate/accept multiple sessions
 

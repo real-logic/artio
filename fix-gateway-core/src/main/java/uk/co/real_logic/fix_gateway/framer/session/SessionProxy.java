@@ -76,7 +76,6 @@ public class SessionProxy
 
     public void logon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
-        System.out.println("Sending logon to : " + sessionId);
         final HeaderEncoder header = logon.header();
         sessionIdStrategy.encode(sessionId, header);
         header.msgSeqNum(msgSeqNo);

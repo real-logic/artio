@@ -19,12 +19,14 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.MessageHandler;
+import uk.co.real_logic.fix_gateway.admin.AdminEventHandler;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
@@ -42,11 +44,13 @@ public class ReceiverEndPoint
     private static final int START_OF_BODY_LENGTH = COMMON_PREFIX_LENGTH + 2;
 
     private static final int MIN_CHECKSUM_SIZE = " 10=".length() + 1;
+    public static final int DISCONNECTED = -1;
 
     private final SocketChannel channel;
     private final MessageHandler handler;
     private final long connectionId;
     private final SessionParser session;
+    private final AdminEventHandler adminEventHandler;
     private final AtomicBuffer buffer;
     private final AsciiFlyweight string;
     private final ByteBuffer byteBuffer;
@@ -54,13 +58,18 @@ public class ReceiverEndPoint
     private int usedBufferData = 0;
 
     public ReceiverEndPoint(
-        final SocketChannel channel, final int bufferSize, final MessageHandler handler, final long connectionId,
-        final SessionParser session)
+        final SocketChannel channel,
+        final int bufferSize,
+        final MessageHandler handler,
+        final long connectionId,
+        final SessionParser session,
+        final AdminEventHandler adminEventHandler)
     {
         this.channel = channel;
         this.handler = handler;
         this.connectionId = connectionId;
         this.session = session;
+        this.adminEventHandler = adminEventHandler;
 
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new AsciiFlyweight(buffer);
@@ -84,9 +93,14 @@ public class ReceiverEndPoint
             readData();
             frameMessages();
         }
+        catch (final ClosedChannelException ex)
+        {
+            onDisconnect();
+            // TODO: log
+        }
         catch (final IOException ex)
         {
-            // TODO
+            // TODO: log
             ex.printStackTrace();
         }
     }
@@ -96,11 +110,23 @@ public class ReceiverEndPoint
         return session.session();
     }
 
+    private void onDisconnect()
+    {
+        session().disconnect();
+    }
+
     private void readData() throws IOException
     {
         final int dataRead = channel.read(byteBuffer);
-        DebugLogger.log("Read     %s\n", byteBuffer, dataRead);
-        usedBufferData += dataRead;
+        if (dataRead != DISCONNECTED)
+        {
+            DebugLogger.log("Read     %s\n", byteBuffer, dataRead);
+            usedBufferData += dataRead;
+        }
+        else
+        {
+            onDisconnect();
+        }
     }
 
     private void frameMessages()
@@ -207,6 +233,12 @@ public class ReceiverEndPoint
         {
             // TODO:
             e.printStackTrace();
+        }
+
+        // TODO: this event handler probably shouldn't be called on the receiver thread.
+        if (adminEventHandler != null)
+        {
+            adminEventHandler.onDisconnect(session.session().id());
         }
     }
 }

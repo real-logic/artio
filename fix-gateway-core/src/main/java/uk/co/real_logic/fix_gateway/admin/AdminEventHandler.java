@@ -17,5 +17,5 @@ package uk.co.real_logic.fix_gateway.admin;
 
 public interface AdminEventHandler
 {
-    void onDisconnect(final String remoteHost, final char[] compId);
+    void onDisconnect(final long sessionId);
 }

@@ -19,12 +19,16 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.MessageHandler;
+import uk.co.real_logic.fix_gateway.admin.AdminEventHandler;
+import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.util.function.ToIntFunction;
 
@@ -43,13 +47,18 @@ public class ReceiverEndPointTest
 
     private SocketChannel mockChannel = mock(SocketChannel.class);
     private MessageHandler mockHandler = mock(MessageHandler.class);
-    private SessionParser mockSession = mock(SessionParser.class);
-    private ReceiverEndPoint endPoint = new ReceiverEndPoint(mockChannel, 16 * 1024, mockHandler, CONNECTION_ID, mockSession);
+    private SessionParser mockSessionParser = mock(SessionParser.class);
+    private Session mockSession = mock(Session.class);
+    private AdminEventHandler mockAdminHandler = mock(AdminEventHandler.class);
+
+    private ReceiverEndPoint endPoint =
+        new ReceiverEndPoint(mockChannel, 16 * 1024, mockHandler, CONNECTION_ID, mockSessionParser, mockAdminHandler);
 
     @Before
     public void setUp()
     {
-        when(mockSession.onMessage(any(), anyInt(), anyInt(), anyLong(), anyInt())).thenReturn(SESSION_ID);
+        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyLong(), anyInt())).thenReturn(SESSION_ID);
+        when(mockSessionParser.session()).thenReturn(mockSession);
     }
 
     @Test
@@ -138,7 +147,7 @@ public class ReceiverEndPointTest
     public void shouldOnlyFrameMessagesWhenConnected()
     {
         given:
-        when(mockSession.onMessage(any(), anyInt(), anyInt(), anyLong(), anyInt())).thenReturn(UNKNOWN_SESSION_ID);
+        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyLong(), anyInt())).thenReturn(UNKNOWN_SESSION_ID);
         theEndpointReceivesACompleteMessage();
 
         when:
@@ -146,6 +155,42 @@ public class ReceiverEndPointTest
 
         then:
         handlerNotCalled();
+    }
+
+    @Test
+    public void aClosedSocketDisconnectsItsSession() throws IOException
+    {
+        given:
+        theChannelIsClosedByException();
+
+        when:
+        endPoint.receiveData();
+
+        then:
+        verify(mockSession).disconnect();
+    }
+
+    @Test
+    public void anUnreadableSocketDisconnectsItsSession() throws IOException
+    {
+        given:
+        theChannelIsClosed();
+
+        when:
+        endPoint.receiveData();
+
+        then:
+        verify(mockSession).disconnect();
+    }
+
+    private void theChannelIsClosed() throws IOException
+    {
+        when(mockChannel.read(any(ByteBuffer.class))).thenReturn(-1);
+    }
+
+    private void theChannelIsClosedByException() throws IOException
+    {
+        doThrow(new ClosedChannelException()).when(mockChannel).read(any(ByteBuffer.class));
     }
 
     private void handlerReceivesAFramedMessage()
@@ -231,7 +276,7 @@ public class ReceiverEndPointTest
         catch (final IOException ex)
         {
             // Should never happen, test in error
-            throw new RuntimeException(ex);
+            LangUtil.rethrowUnchecked(ex);
         }
     }
 }

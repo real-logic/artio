@@ -19,6 +19,7 @@ import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.FixPublication;
 import uk.co.real_logic.fix_gateway.MessageHandler;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
+import uk.co.real_logic.fix_gateway.admin.AdminEventHandler;
 import uk.co.real_logic.fix_gateway.admin.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.framer.session.*;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
@@ -45,6 +46,7 @@ public class ConnectionHandler
     private final MessageHandler messageHandler;
     private final ReplicationStreams replicationStreams;
     private final AuthenticationStrategy authenticationStrategy;
+    private final AdminEventHandler adminEventHandler;
 
     public ConnectionHandler(
         final MilliClock clock,
@@ -54,7 +56,8 @@ public class ConnectionHandler
         final SessionIdStrategy sessionIdStrategy,
         final MessageHandler messageHandler,
         final ReplicationStreams replicationStreams,
-        final AuthenticationStrategy authenticationStrategy)
+        final AuthenticationStrategy authenticationStrategy,
+        final AdminEventHandler adminEventHandler)
     {
         this.clock = clock;
         this.sessionProxy = sessionProxy;
@@ -64,6 +67,7 @@ public class ConnectionHandler
         this.messageHandler = messageHandler;
         this.replicationStreams = replicationStreams;
         this.authenticationStrategy = authenticationStrategy;
+        this.adminEventHandler = adminEventHandler;
     }
 
     public long onConnection() throws IOException
@@ -75,7 +79,8 @@ public class ConnectionHandler
         final SocketChannel channel, final long connectionId, final Session session)
     {
         final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy, authenticationStrategy);
-        return new ReceiverEndPoint(channel, bufferSize, messageHandler, connectionId, sessionParser);
+        return new ReceiverEndPoint(channel, bufferSize, messageHandler, connectionId, sessionParser,
+            adminEventHandler);
     }
 
     public SenderEndPoint senderEndPoint(final SocketChannel channel, final long connectionId)

@@ -228,7 +228,7 @@ public class Session
         return this;
     }
 
-    long id()
+    public long id()
     {
         return id;
     }
