@@ -72,6 +72,11 @@ public class ReceiverEndPoint
         return channel;
     }
 
+    public long connectionId()
+    {
+        return connectionId;
+    }
+
     public void receiveData()
     {
         try
@@ -84,6 +89,11 @@ public class ReceiverEndPoint
             // TODO
             ex.printStackTrace();
         }
+    }
+
+    public Session session()
+    {
+        return session.session();
     }
 
     private void readData() throws IOException
@@ -187,8 +197,16 @@ public class ReceiverEndPoint
         System.err.println("Invalid message");
     }
 
-    public Session session()
+    public void close()
     {
-        return session.session();
+        try
+        {
+            channel.close();
+        }
+        catch (IOException e)
+        {
+            // TODO:
+            e.printStackTrace();
+        }
     }
 }

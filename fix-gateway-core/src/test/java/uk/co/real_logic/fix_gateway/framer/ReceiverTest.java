@@ -18,8 +18,10 @@ package uk.co.real_logic.fix_gateway.framer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
+import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
@@ -38,6 +40,7 @@ import static org.mockito.Mockito.*;
 public class ReceiverTest
 {
     private static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", 9999);
+    private static final long CONNECTION_ID = 2L;
 
     private SocketChannel client;
     private ByteBuffer clientBuffer = ByteBuffer.allocate(1024);
@@ -50,6 +53,7 @@ public class ReceiverTest
     private Session mockSession = mock(Session.class);
     private MilliClock mockClock = mock(MilliClock.class);
 
+    private ReceiverProxy receiverProxy = new ReceiverProxy(commandQueue, mock(AtomicCounter.class));
     private Receiver receiver = new Receiver(mockClock, ADDRESS, mockConnectionHandler, commandQueue, mockSender);
 
     @Before
@@ -64,6 +68,7 @@ public class ReceiverTest
             .thenReturn(mockSenderEndPoint);
 
         when(mockReceiverEndPoint.session()).thenReturn(mockSession);
+        when(mockReceiverEndPoint.connectionId()).thenReturn(CONNECTION_ID);
     }
 
     @After
@@ -134,6 +139,21 @@ public class ReceiverTest
 
         then:
         verify(mockReceiverEndPoint).receiveData();
+    }
+
+    @Test
+    public void shouldCloseSocketUponDisconnect() throws Exception
+    {
+        given:
+        aClientConnects();
+        receiver.doWork();
+
+        when:
+        receiverProxy.disconnect(CONNECTION_ID);
+        receiver.doWork();
+
+        then:
+        verify(mockReceiverEndPoint).close();
     }
 
     private void aClientConnects() throws IOException

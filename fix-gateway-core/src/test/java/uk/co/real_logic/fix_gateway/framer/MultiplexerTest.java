@@ -22,29 +22,28 @@ import static org.mockito.Mockito.*;
 
 public class MultiplexerTest
 {
+    public static final long CONNECTION_ID = 1L;
     private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
     private Multiplexer multiplexer = new Multiplexer();
     private DirectBuffer buffer = mock(DirectBuffer.class);
 
-    private int messagesSent;
-
     private void connectedId(final long connectionId)
     {
         when(mockSenderEndPoint.connectionId()).thenReturn(connectionId);
+        multiplexer.onNewConnection(mockSenderEndPoint);
     }
 
     @Test
     public void messagesAreSentToCorrectEndPoint()
     {
         given:
-        connectedId(1L);
-        multiplexer.onNewConnection(mockSenderEndPoint);
+        connectedId(CONNECTION_ID);
 
         when:
-        multiplexer.onMessage(buffer, 1, 1, 1L);
+        aMessageArrives();
 
         then:
-        verify(mockSenderEndPoint).onFramedMessage(buffer, 1, 1);
+        messagePassedToEndpoint();
     }
 
     @Test
@@ -52,12 +51,41 @@ public class MultiplexerTest
     {
         given:
         connectedId(2L);
-        multiplexer.onNewConnection(mockSenderEndPoint);
 
         when:
-        multiplexer.onMessage(buffer, 1, 1, 1L);
+        aMessageArrives();
 
         then:
+        noFrameReceived();
+    }
+
+    @Test
+    public void messagesAreNotMultiplexedAfterDisconnect()
+    {
+        given:
+        connectedId(CONNECTION_ID);
+
+        multiplexer.unregister(CONNECTION_ID);
+
+        when:
+        aMessageArrives();
+
+        then:
+        noFrameReceived();
+    }
+
+    private void messagePassedToEndpoint()
+    {
+        verify(mockSenderEndPoint).onFramedMessage(buffer, 1, 1);
+    }
+
+    private void noFrameReceived()
+    {
         verify(mockSenderEndPoint, never()).onFramedMessage(any(), anyInt(), anyInt());
+    }
+
+    private void aMessageArrives()
+    {
+        multiplexer.onMessage(buffer, 1, 1, CONNECTION_ID);
     }
 }

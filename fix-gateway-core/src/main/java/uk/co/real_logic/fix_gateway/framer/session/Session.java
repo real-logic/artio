@@ -195,8 +195,10 @@ public class Session
 
     public void disconnect()
     {
+        // TODO: logoff case
         proxy.disconnect(connectionId);
         state(DISCONNECTED);
+        // TODO: await reply
     }
 
     long heartbeatIntervalInMs()
@@ -273,4 +275,5 @@ public class Session
     {
         lastMsgSeqNum(expectedSeqNo());
     }
+
 }

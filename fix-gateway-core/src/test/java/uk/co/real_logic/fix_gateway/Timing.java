@@ -23,13 +23,31 @@ import static org.junit.Assert.fail;
 
 public final class Timing
 {
-    private static final long DEFAULT_TIMEOUT = hasDebuggerAttached() ? Long.MAX_VALUE : 10_000;
+    private static final long DEFAULT_TIMEOUT = hasDebuggerAttached() ? Long.MAX_VALUE : 1_000;
 
     public static void assertEventuallyTrue(
             final String message,
             final BooleanSupplier condition) throws InterruptedException
     {
         assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT);
+    }
+
+    public static void assertEventuallyTrue(
+        final String message,
+        final Runnable runnable) throws InterruptedException
+    {
+        assertEventuallyTrue(message, () ->
+        {
+            try
+            {
+                runnable.run();
+                return true;
+            }
+            catch (Throwable e)
+            {
+                return false;
+            }
+        }, DEFAULT_TIMEOUT);
     }
 
     public static void assertEventuallyTrue(
@@ -46,7 +64,7 @@ public final class Timing
                 return;
             }
 
-            Thread.sleep(10);
+            Thread.sleep(20);
         }
 
         fail(message);

@@ -57,4 +57,9 @@ public class Multiplexer implements DataHandler
         final long connectionId = messageFrame.connection();
         onMessage(buffer, offset + FRAME_SIZE, length - FRAME_SIZE, connectionId);
     }
+
+    public void unregister(final long connectionId)
+    {
+        endpoints.remove(connectionId);
+    }
 }

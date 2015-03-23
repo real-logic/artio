@@ -66,7 +66,6 @@ public class FixGateway implements AutoCloseable
 
         Aeron.Context context = new Aeron.Context();
         aeron = Aeron.connect(context);
-        // TODO: aeron channel configuration
         streams = new ReplicationStreams(configuration.aeronChannel(), aeron, fixCounters.failedDataPublications());
 
         final SequencedContainerQueue<SenderCommand> senderCommands = new ManyToOneConcurrentArrayQueue<>(10);
@@ -77,8 +76,8 @@ public class FixGateway implements AutoCloseable
 
         final Multiplexer multiplexer = new Multiplexer();
         final Subscription dataSubscription = streams.dataSubscription(multiplexer);
-        final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(),
-            streams.fixPublication(), configuration.sessionIdStrategy());
+        final SessionProxy sesseionProxy = new SessionProxy(configuration.encoderBufferSize(),
+            streams.fixPublication(), configuration.sessionIdStrategy(), senderProxy);
 
         final MessageHandler messageHandler = messageHandler(configuration.fallbackAcceptor());
 
@@ -86,7 +85,7 @@ public class FixGateway implements AutoCloseable
 
         final ConnectionHandler handler = new ConnectionHandler(
             systemClock,
-            sessionProxy,
+            sesseionProxy,
             configuration.receiverBufferSize(),
             configuration.defaultHeartbeatInterval(),
             configuration.sessionIdStrategy(),

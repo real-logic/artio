@@ -43,12 +43,12 @@ public final class Sender implements Agent
     private final Subscription dataSubscription;
 
     public Sender(
-            final SequencedContainerQueue<SenderCommand> commandQueue,
-            final ConnectionHandler connectionHandler,
-            final ReceiverProxy receiver,
-            final FixGateway gateway,
-            final Multiplexer multiplexer,
-            final Subscription dataSubscription)
+        final SequencedContainerQueue<SenderCommand> commandQueue,
+        final ConnectionHandler connectionHandler,
+        final ReceiverProxy receiver,
+        final FixGateway gateway,
+        final Multiplexer multiplexer,
+        final Subscription dataSubscription)
     {
         this.commandQueue = commandQueue;
         this.connectionHandler = connectionHandler;
@@ -95,11 +95,16 @@ public final class Sender implements Agent
 
     public void onClose()
     {
-        // TODO: decide on whether the Connections should be closed from the sender or the receiver
     }
 
     public String roleName()
     {
         return "Sender";
+    }
+
+    public void onDisconnect(final long connectionId)
+    {
+        multiplexer.unregister(connectionId);
+        receiver.disconnect(connectionId);
     }
 }

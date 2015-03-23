@@ -17,19 +17,22 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.admin.AdminEventHandler;
 import uk.co.real_logic.fix_gateway.admin.CompIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
 import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -37,12 +40,14 @@ import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 
 public class GatewayIntegrationTest
 {
+    private static final char[] INITIATOR_COMP_ID = "LEH_LZJ02".toCharArray();
 
     private MediaDriver mediaDriver;
     private FixGateway acceptingGateway;
     private FixGateway initiatingGateway;
     private InitiatorSession session;
-    private FakeOtfAcceptor fakeOtfAcceptor;
+    private FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
+    private AdminEventHandler adminEventHandler = mock(AdminEventHandler.class);
 
     @Before
     public void launch()
@@ -51,13 +56,12 @@ public class GatewayIntegrationTest
 
         mediaDriver = MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
 
-        fakeOtfAcceptor = new FakeOtfAcceptor();
-
         final StaticConfiguration acceptingConfig = new StaticConfiguration()
                 .registerFallbackAcceptor(fakeOtfAcceptor)
                 .bind("localhost", port)
                 .aeronChannel("udp://localhost:" + unusedPort())
-                .authenticationStrategy(new CompIdAuthenticationStrategy("CCG"));
+                .authenticationStrategy(new CompIdAuthenticationStrategy("CCG"))
+                .adminEventHandler(adminEventHandler);
         acceptingGateway = FixGateway.launch(acceptingConfig);
 
         final StaticConfiguration initiatingConfig = new StaticConfiguration()
@@ -93,7 +97,19 @@ public class GatewayIntegrationTest
         assertThat(fakeOtfAcceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
     }
 
-    // TODO: disconnect an initiating session and verify disconnect message
+    @Ignore
+    @Test
+    public void initiatorSessionCanBeDisconnected() throws InterruptedException
+    {
+        session.disconnect();
+
+        assertFalse("Session is still connected", session.isConnected());
+
+        assertEventuallyTrue("Failed to disconnect",
+            () -> verify(adminEventHandler).onDisconnect("localhost", INITIATOR_COMP_ID));
+    }
+
+    // TODO Connect callback
     // TODO: shutdown a gateway and check logout
     // TODO: initiate/accept multiple sessions
 

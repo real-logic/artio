@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.framer.session;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.FixPublication;
 import uk.co.real_logic.fix_gateway.builder.*;
+import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
@@ -39,12 +40,15 @@ public class SessionProxy
     private final MutableAsciiFlyweight string;
     private final FixPublication fixPublication;
     private final SessionIdStrategy sessionIdStrategy;
+    private final SenderProxy senderProxy;
 
     public SessionProxy(
-        final int bufferSize, final FixPublication fixPublication, final SessionIdStrategy sessionIdStrategy)
+        final int bufferSize, final FixPublication fixPublication, final SessionIdStrategy sessionIdStrategy,
+        final SenderProxy senderProxy)
     {
         this.fixPublication = fixPublication;
         this.sessionIdStrategy = sessionIdStrategy;
+        this.senderProxy = senderProxy;
         buffer = new UnsafeBuffer(new byte[bufferSize]);
         string = new MutableAsciiFlyweight(buffer);
     }
@@ -59,10 +63,15 @@ public class SessionProxy
         send(resendRequest.encode(string, FRAME_SIZE), sessionId, ResendRequestDecoder.MESSAGE_TYPE);
     }
 
+    /**
+     * NB: Refers to a connectionId because the session may disconnect before a session id is associated
+     * with it.
+     *
+     * @param connectionId
+     */
     public void disconnect(final long connectionId)
     {
-        // TODO
-        System.out.println("DISCONNECTING: " + connectionId);
+        senderProxy.disconnect(connectionId);
     }
 
     public void logon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)

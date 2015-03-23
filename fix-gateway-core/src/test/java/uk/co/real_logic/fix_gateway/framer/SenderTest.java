@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.framer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
@@ -66,6 +67,8 @@ public class SenderTest
 
     private ServerSocketChannel server;
 
+    private ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);
+
     @Before
     public void setUp() throws IOException
     {
@@ -78,7 +81,8 @@ public class SenderTest
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong()))
             .thenReturn(mockSenderEndPoint);
 
-        when(mockConnectionHandler.initiateSession(anyLong(), eq(mockGateway), eq(CONFIGURATION))).thenReturn(mockSession);
+        when(mockConnectionHandler.initiateSession(connectionId.capture(), eq(mockGateway), eq(CONFIGURATION)))
+            .thenReturn(mockSession);
     }
 
     @After
@@ -102,7 +106,7 @@ public class SenderTest
         connect();
 
         then:
-        verify(mockReceiver).newInitiatedConnection(mockReceiverEndPoint);
+        receiverNotified();
     }
 
     @Test
@@ -113,6 +117,24 @@ public class SenderTest
         connect();
 
         verify(mockGateway).onInitiationError(any(IOException.class));
+    }
+
+    @Test
+    public void shouldNotifyReceiverUponDisconnect() throws Exception
+    {
+        connect();
+        final Long connectionId = this.connectionId.getValue();
+
+        proxy.disconnect(connectionId);
+        sender.doWork();
+
+        receiverNotified();
+        verify(mockReceiver).disconnect(connectionId);
+    }
+
+    private void receiverNotified()
+    {
+        verify(mockReceiver).newInitiatedConnection(mockReceiverEndPoint);
     }
 
     private void connect() throws Exception

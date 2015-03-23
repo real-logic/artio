@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
+import uk.co.real_logic.fix_gateway.admin.AdminEventHandler;
 import uk.co.real_logic.fix_gateway.admin.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.admin.NoAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
@@ -33,7 +34,6 @@ import static java.lang.Integer.getInteger;
 /**
  * Configuration that exists for the entire duration of a fix gateway
  */
-// TODO: add optional comp id for gateway and validate if present
 public final class StaticConfiguration
 {
     public static final String DEBUG_PRINT_MESSAGES_PROPERTY = "fix.core.debug";
@@ -70,6 +70,7 @@ public final class StaticConfiguration
     private String counterBuffersFile = System.getProperty(COUNTERS_FILE_PROP_NAME, COUNTERS_FILE_PROP_DEFAULT);
     private String aeronChannel;
     private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
+    private AdminEventHandler adminEventHandler;
 
     public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
     {
@@ -142,6 +143,13 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration adminEventHandler(final AdminEventHandler adminEventHandler)
+    {
+        this.adminEventHandler = adminEventHandler;
+        return this;
+    }
+
+
     int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -200,5 +208,10 @@ public final class StaticConfiguration
     OtfMessageAcceptor fallbackAcceptor()
     {
         return fallbackAcceptor;
+    }
+
+    AdminEventHandler adminEventHandler()
+    {
+        return adminEventHandler;
     }
 }

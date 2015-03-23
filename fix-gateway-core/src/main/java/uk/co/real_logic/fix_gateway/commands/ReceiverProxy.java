@@ -21,6 +21,11 @@ public class ReceiverProxy
         offer(new NewInitiatedConnection(receiverEndPoint));
     }
 
+    public void disconnect(final long connectionId)
+    {
+        offer(new ReceiverDisconnect(connectionId));
+    }
+
     private void offer(final ReceiverCommand command)
     {
         while (!commandQueue.offer(command))

@@ -42,6 +42,7 @@ public final class Receiver implements Agent
 {
     private final Consumer<ReceiverCommand> onCommandFunc = this::onCommand;
     private final List<Session> sessions = new ArrayList<>();
+    private final List<ReceiverEndPoint> endPoints = new ArrayList<>();
 
     private final ServerSocketChannel listeningChannel;
     private final MilliClock clock;
@@ -144,6 +145,7 @@ public final class Receiver implements Agent
 
     private void register(final SocketChannel channel, final ReceiverEndPoint receiverEndPoint) throws ClosedChannelException
     {
+        endPoints.add(receiverEndPoint);
         sessions.add(receiverEndPoint.session());
         channel.register(selector, OP_READ, receiverEndPoint);
     }
@@ -172,5 +174,21 @@ public final class Receiver implements Agent
     public String roleName()
     {
         return "Dispatcher";
+    }
+
+    public void onDisconnect(final long connectionId)
+    {
+        final Iterator<ReceiverEndPoint> it = endPoints.iterator();
+        while (it.hasNext())
+        {
+            final ReceiverEndPoint endPoint = it.next();
+            if (endPoint.connectionId() == connectionId)
+            {
+                endPoint.close();
+                it.remove();
+                sessions.remove(endPoint.session());
+                break;
+            }
+        }
     }
 }

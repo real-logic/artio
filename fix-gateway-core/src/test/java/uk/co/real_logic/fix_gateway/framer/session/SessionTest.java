@@ -158,7 +158,7 @@ public class SessionTest extends AbstractSessionTest
 
     private void verifyConnected()
     {
-        verify(mockProxy, never()).disconnect(anyLong());
+        verify(mockProxy, never()).disconnect(CONNECTION_ID);
     }
 
     @Test
