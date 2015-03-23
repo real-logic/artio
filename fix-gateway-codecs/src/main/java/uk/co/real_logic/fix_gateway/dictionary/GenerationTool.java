@@ -16,10 +16,7 @@
 package uk.co.real_logic.fix_gateway.dictionary;
 
 import uk.co.real_logic.agrona.generation.PackageOutputManager;
-import uk.co.real_logic.fix_gateway.dictionary.generation.DecoderGenerator;
-import uk.co.real_logic.fix_gateway.dictionary.generation.EncoderGenerator;
-import uk.co.real_logic.fix_gateway.dictionary.generation.EnumGenerator;
-import uk.co.real_logic.fix_gateway.dictionary.generation.PrinterGenerator;
+import uk.co.real_logic.fix_gateway.dictionary.generation.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 
 import java.io.FileInputStream;
@@ -39,20 +36,23 @@ public final class GenerationTool
         {
             final DataDictionary dictionary = parser.parse(input);
 
-            final EnumGenerator enumGenerator = new EnumGenerator(dictionary,
-                new PackageOutputManager(outputPath, PARENT_PACKAGE));
+            final PackageOutputManager parent = new PackageOutputManager(outputPath, PARENT_PACKAGE);
+            final EnumGenerator enumGenerator = new EnumGenerator(dictionary, parent);
+            final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, DECODER_PACKAGE, parent);
 
             final EncoderGenerator encoderGenerator = new EncoderGenerator(dictionary, 1, ENCODER_PACKAGE,
                 new PackageOutputManager(outputPath, ENCODER_PACKAGE));
 
-            final DecoderGenerator decoderGenerator = new DecoderGenerator(dictionary, 1, DECODER_PACKAGE,
-                    new PackageOutputManager(outputPath, DECODER_PACKAGE));
+            final PackageOutputManager decoder = new PackageOutputManager(outputPath, DECODER_PACKAGE);
+            final DecoderGenerator decoderGenerator = new DecoderGenerator(dictionary, 1, DECODER_PACKAGE, decoder);
+            final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE, decoder);
 
-            final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE,
-                new PackageOutputManager(outputPath, DECODER_PACKAGE));
 
             enumGenerator.generate();
+            constantGenerator.generate();
+
             encoderGenerator.generate();
+
             decoderGenerator.generate();
             printerGenerator.generate();
         }

@@ -111,6 +111,8 @@ public final class ExampleDictionary
     public static final String SHORTER_STRING_EXAMPLE =
         "8=FIX.4.4\0019=0026\00135=0\001115=ab\001116=2\001117=1.1\00110=61\001";
 
+    public static final int TEST_REQ_ID_TAG = 112;
+
     static
     {
         final Field egEnum = new Field(123, "EgEnum", Type.CHAR);
@@ -132,7 +134,7 @@ public final class ExampleDictionary
         final Field checkSum = Field.register(messageEgFields, 10, "CheckSum", Type.STRING);
 
         final Field onBehalfOfCompID = Field.register(messageEgFields, 115, "OnBehalfOfCompID", Type.STRING);
-        final Field testReqID = Field.register(messageEgFields, 112, "TestReqID", Type.STRING);
+        final Field testReqID = Field.register(messageEgFields, TEST_REQ_ID_TAG, "TestReqID", Type.STRING);
         final Field intField = Field.register(messageEgFields, 116, "IntField", Type.LENGTH);
         final Field floatField = Field.register(messageEgFields, 117, "FloatField", Type.PRICE);
         final Field booleanField = Field.register(messageEgFields, 118, "BooleanField", Type.BOOLEAN);

@@ -37,6 +37,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.*;
 
 @RunWith(Theories.class)
 public class OtfParsesBytesFromEncoderTest
@@ -89,18 +90,17 @@ public class OtfParsesBytesFromEncoderTest
         parser.onMessage(buffer, offset, length, SESSION_ID, LogonDecoder.MESSAGE_TYPE);
 
         final InOrder inOrder = inOrder(acceptor);
-        // TODO: generate constants and use them.
         once(inOrder).onNext();
-        verifyField(inOrder, 8, "FIX.4.4");
-        verifyField(inOrder, 9);
-        verifyField(inOrder, 35, "A");
-        verifyField(inOrder, 49, "abc");
-        verifyField(inOrder, 56, "def");
-        verifyField(inOrder, 34, "1");
-        verifyField(inOrder, 52, "19700101-00:00:00.010");
-        verifyField(inOrder, 98, "0");
-        verifyField(inOrder, 108, "10");
-        verifyField(inOrder, 10);
+        verifyField(inOrder, BEGIN_STRING, "FIX.4.4");
+        verifyField(inOrder, BODY_LENGTH);
+        verifyField(inOrder, MSG_TYPE, "A");
+        verifyField(inOrder, SENDER_COMP_ID, "abc");
+        verifyField(inOrder, TARGET_COMP_ID, "def");
+        verifyField(inOrder, MSG_SEQ_NUM, "1");
+        verifyField(inOrder, SENDING_TIME, "19700101-00:00:00.010");
+        verifyField(inOrder, ENCRYPT_METHOD, "0");
+        verifyField(inOrder, HEART_BT_INT, "10");
+        verifyField(inOrder, CHECK_SUM);
         once(inOrder).onComplete();
         inOrder.verifyNoMoreInteractions();
     }
