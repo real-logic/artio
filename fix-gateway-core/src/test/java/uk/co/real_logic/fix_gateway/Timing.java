@@ -64,7 +64,7 @@ public final class Timing
                 return;
             }
 
-            Thread.sleep(20);
+            Thread.sleep(100);
         }
 
         fail(message);
