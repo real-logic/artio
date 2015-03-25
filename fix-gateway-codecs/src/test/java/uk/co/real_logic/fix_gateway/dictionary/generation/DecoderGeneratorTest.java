@@ -46,7 +46,6 @@ public class DecoderGeneratorTest
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
     private static DecoderGenerator decoderGenerator = new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager);
     private static Class<?> heartbeat;
-    private static Class<?> headerClass;
 
     private MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
 
@@ -57,7 +56,7 @@ public class DecoderGeneratorTest
         final Map<String, CharSequence> sources = outputManager.getSources();
         //System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sources);
-        headerClass = compileInMemory(HEADER_DECODER, sources);
+        compileInMemory(HEADER_DECODER, sources);
     }
 
     @Test
