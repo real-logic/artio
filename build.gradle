@@ -212,6 +212,7 @@ project(':fix-gateway-system-tests') {
     dependencies {
         testCompile project(path: ':fix-gateway-core', configuration: 'tests')
         compile project(path: ':fix-gateway-core')
+        compile 'uk.co.real-logic:aeron-client:0.1-SNAPSHOT', 'org.hdrhistogram:HdrHistogram:1.2.1'
     }
 
     test {
