@@ -15,81 +15,35 @@
  */
 package uk.co.real_logic.fix_gateway.benchmarks;
 
-import org.HdrHistogram.Histogram;
-
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
-public class NioBufferPingPong
+public class NioBufferPingPong extends AbstractPingPong
 {
-    private static final int PORT = 9999;
-    public static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", PORT);
-    private static final int TIMES = 1_000_000;
-    public static final int MESSAGE_SIZE = 40;
-
-    private static final ByteBuffer PING_BUFFER = ByteBuffer.allocate(MESSAGE_SIZE);
-    private static final ByteBuffer PONG_BUFFER = ByteBuffer.allocate(MESSAGE_SIZE);
-
-    private static ServerSocketChannel serverSocket;
+    private final ByteBuffer PING_BUFFER = ByteBuffer.allocate(MESSAGE_SIZE);
+    private final ByteBuffer PONG_BUFFER = ByteBuffer.allocate(MESSAGE_SIZE);
 
     public static void main(String[] args) throws IOException
     {
-        serverSocket = ServerSocketChannel.open().bind(ADDRESS);
-        new Thread(NioBufferPingPong::pong).start();
-        ping();
+        new NioBufferPingPong().benchmark();
     }
 
-    private static void pong()
+    protected void ping(SocketChannel channel) throws IOException
     {
-        try (SocketChannel channel = serverSocket.accept())
-        {
-            System.out.println("Accepted");
-            final Histogram histogram = new Histogram(100_000_000, 2);
-            for (int i = 0; i < TIMES; i++)
-            {
-                final long time = System.nanoTime();
-                read(channel, PONG_BUFFER);
+        write(channel, PING_BUFFER);
 
-                write(channel, PONG_BUFFER);
-                histogram.recordValue(System.nanoTime() - time);
-            }
-            System.out.println("Finished Ponging");
-            histogram.outputPercentileDistribution(System.out, 1.0);
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
+        read(channel, PING_BUFFER);
     }
 
-    private static void ping()
+    protected void pong(SocketChannel channel) throws IOException
     {
-        try(SocketChannel channel = SocketChannel.open())
-        {
-            if (!channel.connect(ADDRESS))
-            {
-                System.err.println("Unable to connect");
-            }
-            //channel.configureBlocking(false);
+        read(channel, PONG_BUFFER);
 
-            for (int i = 0; i < TIMES; i++)
-            {
-                write(channel, PING_BUFFER);
-
-                read(channel, PING_BUFFER);
-            }
-            System.out.println("Finished Pinging");
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
+        write(channel, PONG_BUFFER);
     }
 
-    private static void write(SocketChannel channel, ByteBuffer buffer) throws IOException
+    private void write(final SocketChannel channel, final ByteBuffer buffer) throws IOException
     {
         buffer.position(0);
         int remaining = MESSAGE_SIZE;
@@ -99,7 +53,7 @@ public class NioBufferPingPong
         }
     }
 
-    private static void read(SocketChannel channel, ByteBuffer buffer) throws IOException
+    private void read(final SocketChannel channel, final ByteBuffer buffer) throws IOException
     {
         int remaining = MESSAGE_SIZE;
         buffer.position(0);
