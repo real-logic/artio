@@ -18,7 +18,10 @@ package uk.co.real_logic.fix_gateway.benchmarks;
 import org.HdrHistogram.Histogram;
 
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
@@ -35,7 +38,16 @@ public abstract class AbstractPingPong
     public void benchmark() throws IOException
     {
         serverSocket = ServerSocketChannel.open().bind(ADDRESS);
-        new Thread(this::pongs).start();
+        new Thread(() ->
+        {
+            pongs();
+            System.out.println("Completed Warmup Run");
+
+            pongs();
+            System.out.println("Completed Benchmark Run");
+        }).start();
+
+        pings();
         pings();
     }
 
@@ -43,17 +55,12 @@ public abstract class AbstractPingPong
     {
         try (SocketChannel channel = serverSocket.accept())
         {
-            System.out.println("Accepted");
             channel.configureBlocking(false);
-            final Histogram histogram = new Histogram(100_000_000, 2);
+
             for (int i = 0; i < TIMES; i++)
             {
-                final long time = System.nanoTime();
                 pong(channel);
-                histogram.recordValue(System.nanoTime() - time);
             }
-            System.out.println("Finished Ponging");
-            histogram.outputPercentileDistribution(System.out, 1.0);
         }
         catch (IOException e)
         {
@@ -71,11 +78,14 @@ public abstract class AbstractPingPong
             }
             channel.configureBlocking(false);
 
+            final Histogram histogram = new Histogram(100_000_000, 2);
             for (int i = 0; i < TIMES; i++)
             {
+                final long time = System.nanoTime();
                 ping(channel);
+                histogram.recordValue(System.nanoTime() - time);
             }
-            System.out.println("Finished Pinging");
+            histogram.outputPercentileDistribution(System.out, 1.0);
         }
         catch (IOException e)
         {
@@ -86,4 +96,59 @@ public abstract class AbstractPingPong
     protected abstract void ping(SocketChannel channel) throws IOException;
 
     protected abstract void pong(SocketChannel channel) throws IOException;
+
+    protected void writeByteBuffer(final SocketChannel channel, final ByteBuffer buffer) throws IOException
+    {
+        buffer.position(0);
+        int remaining = MESSAGE_SIZE;
+        while (remaining > 0)
+        {
+            remaining -= channel.write(buffer);
+        }
+    }
+
+    protected void readByteBuffer(final SocketChannel channel, final ByteBuffer buffer) throws IOException
+    {
+        int remaining = MESSAGE_SIZE;
+        buffer.position(0);
+        while (remaining > 0)
+        {
+            remaining -= channel.read(buffer);
+        }
+    }
+
+    protected void writeChannel(final SocketChannel channel, final FileChannel buffer) throws IOException
+    {
+        int position = 0;
+        while (position < MESSAGE_SIZE)
+        {
+            position += buffer.transferTo(position, MESSAGE_SIZE - position, channel);
+        }
+    }
+
+    protected void readChannel(final SocketChannel channel, final FileChannel buffer) throws IOException
+    {
+        int position = 0;
+        while (position < MESSAGE_SIZE)
+        {
+            position += buffer.transferFrom(channel, position, MESSAGE_SIZE - position);
+        }
+    }
+
+    protected FileChannel newFileChannel(String filename)
+    {
+        try
+        {
+            RandomAccessFile file = new RandomAccessFile("/dev/shm/" + filename, "rw");
+            file.write(new byte[MESSAGE_SIZE]);
+            file.seek(0);
+            return file.getChannel();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+            System.exit(1);
+            return null;
+        }
+    }
 }

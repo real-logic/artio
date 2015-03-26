@@ -16,19 +16,19 @@
 package uk.co.real_logic.fix_gateway.benchmarks;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SocketChannel;
 
-public final class TransferToPingPong extends AbstractPingPong
+public final class HybridPingPong extends AbstractPingPong
 {
     private final FileChannel PING_BUFFER = newFileChannel("ping");
 
-    private final FileChannel PONG_BUFFER = newFileChannel("pong");
+    private final ByteBuffer PONG_BUFFER = ByteBuffer.allocate(MESSAGE_SIZE);
 
     public static void main(String[] args) throws IOException
     {
-
-        new TransferToPingPong().benchmark();
+        new HybridPingPong().benchmark();
     }
 
     protected void ping(SocketChannel channel) throws IOException
@@ -40,9 +40,9 @@ public final class TransferToPingPong extends AbstractPingPong
 
     protected void pong(SocketChannel channel) throws IOException
     {
-        readChannel(channel, PONG_BUFFER);
+        readByteBuffer(channel, PONG_BUFFER);
 
-        writeChannel(channel, PONG_BUFFER);
+        writeByteBuffer(channel, PONG_BUFFER);
     }
 
 }

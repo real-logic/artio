@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-public class NioBufferPingPong extends AbstractPingPong
+public final class NioBufferPingPong extends AbstractPingPong
 {
     private final ByteBuffer PING_BUFFER = ByteBuffer.allocate(MESSAGE_SIZE);
     private final ByteBuffer PONG_BUFFER = ByteBuffer.allocate(MESSAGE_SIZE);
@@ -31,35 +31,15 @@ public class NioBufferPingPong extends AbstractPingPong
 
     protected void ping(SocketChannel channel) throws IOException
     {
-        write(channel, PING_BUFFER);
+        writeByteBuffer(channel, PING_BUFFER);
 
-        read(channel, PING_BUFFER);
+        readByteBuffer(channel, PING_BUFFER);
     }
 
     protected void pong(SocketChannel channel) throws IOException
     {
-        read(channel, PONG_BUFFER);
+        readByteBuffer(channel, PONG_BUFFER);
 
-        write(channel, PONG_BUFFER);
-    }
-
-    private void write(final SocketChannel channel, final ByteBuffer buffer) throws IOException
-    {
-        buffer.position(0);
-        int remaining = MESSAGE_SIZE;
-        while (remaining > 0)
-        {
-            remaining -= channel.write(buffer);
-        }
-    }
-
-    private void read(final SocketChannel channel, final ByteBuffer buffer) throws IOException
-    {
-        int remaining = MESSAGE_SIZE;
-        buffer.position(0);
-        while (remaining > 0)
-        {
-            remaining -= channel.read(buffer);
-        }
+        writeByteBuffer(channel, PONG_BUFFER);
     }
 }
