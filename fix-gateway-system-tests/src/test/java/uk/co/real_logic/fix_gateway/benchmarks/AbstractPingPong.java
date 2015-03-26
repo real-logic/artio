@@ -44,6 +44,7 @@ public abstract class AbstractPingPong
         try (SocketChannel channel = serverSocket.accept())
         {
             System.out.println("Accepted");
+            channel.configureBlocking(false);
             final Histogram histogram = new Histogram(100_000_000, 2);
             for (int i = 0; i < TIMES; i++)
             {
@@ -68,6 +69,7 @@ public abstract class AbstractPingPong
             {
                 System.err.println("Unable to connect");
             }
+            channel.configureBlocking(false);
 
             for (int i = 0; i < TIMES; i++)
             {
