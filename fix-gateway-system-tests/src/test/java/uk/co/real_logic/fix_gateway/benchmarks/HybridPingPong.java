@@ -20,11 +20,13 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SocketChannel;
 
+import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.*;
+
 public final class HybridPingPong extends AbstractPingPong
 {
-    private final FileChannel PING_BUFFER = newFileChannel("ping");
+    private final FileChannel PING_BUFFER = NetworkBenchmarkUtil.newFileChannel("ping");
 
-    private final ByteBuffer PONG_BUFFER = ByteBuffer.allocate(MESSAGE_SIZE);
+    private final ByteBuffer PONG_BUFFER = ByteBuffer.allocate(NetworkBenchmarkUtil.MESSAGE_SIZE);
 
     public static void main(String[] args) throws IOException
     {

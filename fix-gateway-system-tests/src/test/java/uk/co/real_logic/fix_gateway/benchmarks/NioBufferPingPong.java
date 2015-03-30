@@ -19,10 +19,13 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
+import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.readByteBuffer;
+import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.writeByteBuffer;
+
 public final class NioBufferPingPong extends AbstractPingPong
 {
-    private final ByteBuffer PING_BUFFER = ByteBuffer.allocate(MESSAGE_SIZE);
-    private final ByteBuffer PONG_BUFFER = ByteBuffer.allocate(MESSAGE_SIZE);
+    private final ByteBuffer PING_BUFFER = ByteBuffer.allocate(NetworkBenchmarkUtil.MESSAGE_SIZE);
+    private final ByteBuffer PONG_BUFFER = ByteBuffer.allocate(NetworkBenchmarkUtil.MESSAGE_SIZE);
 
     public static void main(String[] args) throws IOException
     {

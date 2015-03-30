@@ -19,15 +19,17 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SocketChannel;
 
+import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.readChannel;
+import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.writeChannel;
+
 public final class TransferToPingPong extends AbstractPingPong
 {
-    private final FileChannel PING_BUFFER = newFileChannel("ping");
+    private final FileChannel PING_BUFFER = NetworkBenchmarkUtil.newFileChannel("ping");
 
-    private final FileChannel PONG_BUFFER = newFileChannel("pong");
+    private final FileChannel PONG_BUFFER = NetworkBenchmarkUtil.newFileChannel("pong");
 
     public static void main(String[] args) throws IOException
     {
-
         new TransferToPingPong().benchmark();
     }
 
