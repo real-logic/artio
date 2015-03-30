@@ -31,7 +31,7 @@ public final class NetworkBenchmarkUtil
     public static final int PORT = 9999;
     public static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", PORT);
     public static final int BENCHMARKS = 10;
-    public static final int ITERATIONS = 10; //250_000;
+    public static final int ITERATIONS = 250_000;
 
     private static final ByteBuffer sigh = ByteBuffer.allocate(8);
 
@@ -81,7 +81,7 @@ public final class NetworkBenchmarkUtil
     public static void writeByteBuffer(final SocketChannel channel, final ByteBuffer buffer, final long value) throws IOException
     {
         buffer.putLong(0, value);
-        buffer.flip();
+        buffer.clear();
 
         int remaining = MESSAGE_SIZE;
         while (remaining > 0)

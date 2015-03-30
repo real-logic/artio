@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.concurrent.locks.LockSupport;
 
 import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.*;
 
@@ -100,12 +99,6 @@ public abstract class AbstractContendedPingPong
             {
                 final long time = readResponse(channel);
                 long value = System.nanoTime() - time;
-                if (time == 0)
-                {
-                    System.out.println(time + " -> " + value);
-                    System.out.println(i);
-                }
-                //System.out.println(time + " -> " + value);
                 histogram.recordValue(value);
             }
             printStats(histogram);
@@ -123,7 +116,7 @@ public abstract class AbstractContendedPingPong
             for (int i = 0; i < ITERATIONS; i++)
             {
                 sendPing(channel, System.nanoTime());
-                LockSupport.parkNanos(1);
+                //LockSupport.parkNanos(1_000_000);
             }
             System.out.println("Sent all pings");
         }
