@@ -17,34 +17,48 @@ package uk.co.real_logic.fix_gateway.benchmarks;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SocketChannel;
 
+import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.*;
 
 public final class HybridPingPong extends AbstractPingPong
 {
-    private final FileChannel PING_BUFFER = NetworkBenchmarkUtil.newFileChannel("ping");
+    private final FileChannel pingWriteBuffer = NetworkBenchmarkUtil.newFile("ping");
+    private final MappedByteBuffer mappedPingWriteBuffer;
+    private final ByteBuffer pingReadBuffer = ByteBuffer.allocateDirect(MESSAGE_SIZE);
 
-    private final ByteBuffer PONG_BUFFER = ByteBuffer.allocate(NetworkBenchmarkUtil.MESSAGE_SIZE);
+    private final FileChannel pongWriteBuffer = NetworkBenchmarkUtil.newFile("pong");
+    private final MappedByteBuffer mappedPongWriteBuffer;
+    private final ByteBuffer pongReadBuffer = ByteBuffer.allocateDirect(MESSAGE_SIZE);
 
     public static void main(String[] args) throws IOException
     {
         new HybridPingPong().benchmark();
     }
 
-    protected void ping(SocketChannel channel) throws IOException
+    public HybridPingPong() throws IOException
     {
-        writeChannel(channel, PING_BUFFER);
+        mappedPingWriteBuffer = pingWriteBuffer.map(READ_WRITE, 0, MESSAGE_SIZE);
+        mappedPongWriteBuffer = pongWriteBuffer.map(READ_WRITE, 0, MESSAGE_SIZE);
+    }
 
-        readChannel(channel, PING_BUFFER);
+    protected void ping(SocketChannel channel, long time) throws IOException
+    {
+        writeChannel(channel, pingWriteBuffer, mappedPingWriteBuffer, time);
+
+        long result = readByteBuffer(channel, pingReadBuffer);
+
+        checkEqual(time, result);
     }
 
     protected void pong(SocketChannel channel) throws IOException
     {
-        readByteBuffer(channel, PONG_BUFFER);
+        long value = readByteBuffer(channel, pongReadBuffer);
 
-        writeByteBuffer(channel, PONG_BUFFER);
+        writeChannel(channel, pongWriteBuffer, mappedPongWriteBuffer, value);
     }
 
 }

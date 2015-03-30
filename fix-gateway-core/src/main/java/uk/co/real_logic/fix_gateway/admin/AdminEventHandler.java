@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.admin;
 
+// TODO: connect
 public interface AdminEventHandler
 {
     void onDisconnect(final long sessionId);

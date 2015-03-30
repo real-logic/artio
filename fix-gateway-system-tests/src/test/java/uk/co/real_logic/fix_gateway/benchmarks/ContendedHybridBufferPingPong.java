@@ -17,32 +17,38 @@ package uk.co.real_logic.fix_gateway.benchmarks;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.channels.SocketChannel;
 
-import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.MESSAGE_SIZE;
-import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.readByteBuffer;
-import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.writeByteBuffer;
+import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
+import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.*;
 
-// TODO: alter the send/receive buffer sizes
-// TODO: look at aeron buffer sizes
-public final class ContendedNioBufferPingPong extends AbstractContendedPingPong
+public final class ContendedHybridBufferPingPong extends AbstractContendedPingPong
 {
 
-    private final ByteBuffer SEND_PING_BUFFER = ByteBuffer.allocateDirect(MESSAGE_SIZE);
-    private final ByteBuffer READ_RESPONSE_BUFFER = ByteBuffer.allocateDirect(MESSAGE_SIZE);
+    private final FileChannel writeChannel = newFile("ping");
+    private final MappedByteBuffer mappedWriteBuffer;
+
+    private final ByteBuffer readResponseBuffer = ByteBuffer.allocateDirect(MESSAGE_SIZE);
 
     public static void main(String[] args) throws Exception
     {
-        new ContendedNioBufferPingPong().benchmark();
+        new ContendedHybridBufferPingPong().benchmark();
+    }
+
+    public ContendedHybridBufferPingPong() throws IOException
+    {
+        mappedWriteBuffer = writeChannel.map(READ_WRITE, 0, MESSAGE_SIZE);
     }
 
     protected void sendPing(final SocketChannel channel, final long time) throws IOException
     {
-        writeByteBuffer(channel, SEND_PING_BUFFER, time);
+        writeChannel(channel, writeChannel, mappedWriteBuffer, time);
     }
 
     protected long readResponse(final SocketChannel channel) throws IOException
     {
-        return readByteBuffer(channel, READ_RESPONSE_BUFFER);
+        return readByteBuffer(channel, readResponseBuffer);
     }
 }

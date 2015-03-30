@@ -18,16 +18,21 @@ package uk.co.real_logic.fix_gateway.benchmarks;
 import org.HdrHistogram.Histogram;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.locks.LockSupport;
 
-import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.ADDRESS;
-import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.TIMES;
+import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.*;
 
 public abstract class AbstractContendedPingPong
 {
 
+    private final ByteBuffer PONG_BUFFER = ByteBuffer.allocateDirect(MESSAGE_SIZE);
+
     private ServerSocketChannel serverSocket;
+
+    private volatile boolean running = true;
 
     public void benchmark() throws Exception
     {
@@ -41,51 +46,47 @@ public abstract class AbstractContendedPingPong
             }
             pingChannel.configureBlocking(false);
 
+            final Thread echoThread = new Thread(() ->
+            {
+                try (SocketChannel channel = serverSocket.accept())
+                {
+                    channel.configureBlocking(false);
+                    System.out.println("Accepted");
+
+                    while (running)
+                    {
+                        pong(channel);
+                    }
+                }
+                catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+            });
+
             final Thread pingSendingThread = new Thread(() ->
             {
-                sendPings(pingChannel);
-
-                sendPings(pingChannel);
+                for (int i = 0; i < BENCHMARKS; i++)
+                {
+                    sendPings(pingChannel);
+                }
             });
 
             final Thread responseReadingThread = new Thread(() ->
             {
-                readResponses(pingChannel);
+                for (int i = 0; i < BENCHMARKS; i++)
+                {
+                    readResponses(pingChannel);
+                }
 
-                readResponses(pingChannel);
+                running = false;
             });
 
-            pingSendingThread.start();
+            echoThread.start();
             responseReadingThread.start();
+            pingSendingThread.start();
 
-            warmupAndPong();
-
-            pingSendingThread.join();
-            responseReadingThread.join();
-        }
-    }
-
-    private void warmupAndPong()
-    {
-        try (SocketChannel channel = serverSocket.accept())
-        {
-            pongs(channel);
-            System.out.println("Completed Warmup Run");
-
-            pongs(channel);
-            System.out.println("Completed Benchmark Run");
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-    }
-
-    private void pongs(SocketChannel channel) throws IOException
-    {
-        for (int i = 0; i < TIMES; i++)
-        {
-            pong(channel);
+            echoThread.join();
         }
     }
 
@@ -93,30 +94,37 @@ public abstract class AbstractContendedPingPong
     {
         try
         {
-            final Histogram histogram = new Histogram(100_000_000, 2);
+            final Histogram histogram = new Histogram(1_000_000_000, 4);
 
-            for (int i = 0; i < TIMES; i++)
+            for (int i = 0; i < ITERATIONS; i++)
             {
                 final long time = readResponse(channel);
-                histogram.recordValue(System.nanoTime() - time);
+                long value = System.nanoTime() - time;
+                if (time == 0)
+                {
+                    System.out.println(time + " -> " + value);
+                    System.out.println(i);
+                }
+                //System.out.println(time + " -> " + value);
+                histogram.recordValue(value);
             }
-            histogram.outputPercentileDistribution(System.out, 1.0);
+            printStats(histogram);
         }
         catch (IOException e)
         {
             e.printStackTrace();
         }
-
     }
 
     private void sendPings(final SocketChannel channel)
     {
         try
         {
-            for (int i = 0; i < TIMES; i++)
+            for (int i = 0; i < ITERATIONS; i++)
             {
                 sendPing(channel, System.nanoTime());
-            }mosmo
+                LockSupport.parkNanos(1);
+            }
             System.out.println("Sent all pings");
         }
         catch (IOException e)
@@ -129,6 +137,19 @@ public abstract class AbstractContendedPingPong
 
     protected abstract long readResponse(SocketChannel channel) throws IOException;
 
-    protected abstract void pong(SocketChannel channel) throws IOException;
+    protected void pong(final SocketChannel channel) throws IOException
+    {
+        PONG_BUFFER.clear();
+        int amountRead = channel.read(PONG_BUFFER);
+        if (amountRead > 0)
+        {
+            PONG_BUFFER.flip();
+
+            while (amountRead > 0)
+            {
+                amountRead -= channel.write(PONG_BUFFER);
+            }
+        }
+    }
 
 }

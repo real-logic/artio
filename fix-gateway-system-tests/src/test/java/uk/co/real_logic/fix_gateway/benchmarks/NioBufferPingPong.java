@@ -19,30 +19,34 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.readByteBuffer;
-import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.writeByteBuffer;
+import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.*;
 
 public final class NioBufferPingPong extends AbstractPingPong
 {
-    private final ByteBuffer PING_BUFFER = ByteBuffer.allocate(NetworkBenchmarkUtil.MESSAGE_SIZE);
-    private final ByteBuffer PONG_BUFFER = ByteBuffer.allocate(NetworkBenchmarkUtil.MESSAGE_SIZE);
+    private final ByteBuffer pingWriteBuffer = ByteBuffer.allocateDirect(MESSAGE_SIZE);
+    private final ByteBuffer pingReadBuffer = ByteBuffer.allocateDirect(MESSAGE_SIZE);
+
+    private final ByteBuffer pongWriteBuffer = ByteBuffer.allocateDirect(MESSAGE_SIZE);
+    private final ByteBuffer pongReadBuffer = ByteBuffer.allocateDirect(MESSAGE_SIZE);
 
     public static void main(String[] args) throws IOException
     {
         new NioBufferPingPong().benchmark();
     }
 
-    protected void ping(SocketChannel channel) throws IOException
+    protected void ping(SocketChannel channel, long time) throws IOException
     {
-        writeByteBuffer(channel, PING_BUFFER);
+        writeByteBuffer(channel, pingWriteBuffer, time);
 
-        readByteBuffer(channel, PING_BUFFER);
+        long result = readByteBuffer(channel, pingReadBuffer);
+
+        checkEqual(time, result);
     }
 
     protected void pong(SocketChannel channel) throws IOException
     {
-        readByteBuffer(channel, PONG_BUFFER);
+        long value = readByteBuffer(channel, pongReadBuffer);
 
-        writeByteBuffer(channel, PONG_BUFFER);
+        writeByteBuffer(channel, pongWriteBuffer, value);
     }
 }

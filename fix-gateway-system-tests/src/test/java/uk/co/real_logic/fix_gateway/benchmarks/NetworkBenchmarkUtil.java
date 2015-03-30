@@ -15,39 +15,53 @@
  */
 package uk.co.real_logic.fix_gateway.benchmarks;
 
+import org.HdrHistogram.Histogram;
+
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SocketChannel;
 
 public final class NetworkBenchmarkUtil
 {
-    public static final int MESSAGE_SIZE = 40;
+    public static final int MESSAGE_SIZE = 1024;
     public static final int PORT = 9999;
     public static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", PORT);
-    public static final int TIMES = 2;
+    public static final int BENCHMARKS = 10;
+    public static final int ITERATIONS = 10; //250_000;
 
-    public static void writeChannel(final SocketChannel channel, final FileChannel buffer) throws IOException
+    private static final ByteBuffer sigh = ByteBuffer.allocate(8);
+
+    public static void writeChannel(
+        final SocketChannel destination,
+        final FileChannel source,
+        final MappedByteBuffer buffer,
+        final long time) throws IOException
     {
+        buffer.putLong(0, time);
         int position = 0;
         while (position < MESSAGE_SIZE)
         {
-            position += buffer.transferTo(position, MESSAGE_SIZE - position, channel);
+            position += source.transferTo(position, MESSAGE_SIZE - position, destination);
         }
     }
 
-    public static void readChannel(final SocketChannel channel, final FileChannel buffer) throws IOException
+    public static long readChannel(final SocketChannel channel, final FileChannel buffer) throws IOException
     {
         int position = 0;
         while (position < MESSAGE_SIZE)
         {
             position += buffer.transferFrom(channel, position, MESSAGE_SIZE - position);
         }
+
+        // TODO?
+        return 0;
     }
 
-    public static FileChannel newFileChannel(String filename)
+    public static FileChannel newFile(String filename)
     {
         try
         {
@@ -64,27 +78,44 @@ public final class NetworkBenchmarkUtil
         }
     }
 
-    public static void writeByteBuffer(final SocketChannel channel, final ByteBuffer buffer) throws IOException
+    public static void writeByteBuffer(final SocketChannel channel, final ByteBuffer buffer, final long value) throws IOException
     {
-        buffer.position(0);
-        channel.write(buffer);
+        buffer.putLong(0, value);
+        buffer.flip();
+
         int remaining = MESSAGE_SIZE;
         while (remaining > 0)
         {
             remaining -= channel.write(buffer);
-            Thread.yield();
         }
     }
 
-    public static void readByteBuffer(final SocketChannel channel, final ByteBuffer buffer) throws IOException
+    public static long readByteBuffer(final SocketChannel channel, final ByteBuffer buffer) throws IOException
     {
+        buffer.clear();
+
         int remaining = MESSAGE_SIZE;
-        buffer.position(0);
-        buffer.limit(MESSAGE_SIZE);
         while (remaining > 0)
         {
             remaining -= channel.read(buffer);
-            Thread.yield();
         }
+        return buffer.getLong(0);
+    }
+
+    public static void checkEqual(long time, long result)
+    {
+        if (time != result)
+        {
+            throw new IllegalStateException(String.format("Expected %d, Actual: %d", time, result));
+        }
+    }
+
+    public static void printStats(Histogram histogram)
+    {
+        System.out.printf(
+            "Max = %d, Mean = %f, 99.9%% = %d\n",
+            histogram.getMaxValue(),
+            histogram.getMean(),
+            histogram.getValueAtPercentile(99.9));
     }
 }

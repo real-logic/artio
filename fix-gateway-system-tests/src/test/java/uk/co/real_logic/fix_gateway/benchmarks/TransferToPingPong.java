@@ -24,27 +24,27 @@ import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.write
 
 public final class TransferToPingPong extends AbstractPingPong
 {
-    private final FileChannel PING_BUFFER = NetworkBenchmarkUtil.newFileChannel("ping");
+    private final FileChannel PING_BUFFER = NetworkBenchmarkUtil.newFile("ping");
 
-    private final FileChannel PONG_BUFFER = NetworkBenchmarkUtil.newFileChannel("pong");
+    private final FileChannel PONG_BUFFER = NetworkBenchmarkUtil.newFile("pong");
 
     public static void main(String[] args) throws IOException
     {
         new TransferToPingPong().benchmark();
     }
 
-    protected void ping(SocketChannel channel) throws IOException
+    protected void ping(SocketChannel channel, long time) throws IOException
     {
-        writeChannel(channel, PING_BUFFER);
+        writeChannel(channel, PING_BUFFER, null, time);
 
         readChannel(channel, PING_BUFFER);
     }
 
     protected void pong(SocketChannel channel) throws IOException
     {
-        readChannel(channel, PONG_BUFFER);
+        final long time = readChannel(channel, PONG_BUFFER);
 
-        writeChannel(channel, PONG_BUFFER);
+        writeChannel(channel, PONG_BUFFER, null, time);
     }
 
 }

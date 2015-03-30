@@ -218,6 +218,11 @@ project(':fix-gateway-system-tests') {
     test {
         systemProperties('java.net.preferIPv4Stack': true)
     }
+
+    task execute(type:JavaExec) {
+        main = mainClass
+        classpath = sourceSets.test.runtimeClasspath
+    }
 }
 
 project(':fix-gateway-samples') {

@@ -52,6 +52,7 @@ public class FixPublication implements MessageHandler
     }
 
     // NB: assumes that whatever has called it has encoded the body at offset + FRAME_SIZE
+    // TODO: remove this assumption by using the claim strategy and then writing the header into the claimed area
     public void onMessage(
         final DirectBuffer buffer, final int offset, final int length, final long sessionId, final int messageType)
     {

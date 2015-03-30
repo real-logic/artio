@@ -20,10 +20,13 @@ import org.HdrHistogram.Histogram;
 import java.io.IOException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.locks.LockSupport;
+
+import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.BENCHMARKS;
+import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.printStats;
 
 public abstract class AbstractPingPong
 {
-
     private ServerSocketChannel serverSocket;
 
     public void benchmark() throws IOException
@@ -31,15 +34,19 @@ public abstract class AbstractPingPong
         serverSocket = ServerSocketChannel.open().bind(NetworkBenchmarkUtil.ADDRESS);
         new Thread(() ->
         {
-            pongs();
-            System.out.println("Completed Warmup Run");
-
-            pongs();
-            System.out.println("Completed Benchmark Run");
+            for (int i = 0; i < BENCHMARKS; i++)
+            {
+                System.gc();
+                LockSupport.parkNanos(10 * 1000);
+                pongs();
+                System.out.println("Completed Run");
+            }
         }).start();
 
-        pings();
-        pings();
+        for (int i = 0; i < BENCHMARKS; i++)
+        {
+            pings();
+        }
     }
 
     private void pongs()
@@ -48,7 +55,7 @@ public abstract class AbstractPingPong
         {
             channel.configureBlocking(false);
 
-            for (int i = 0; i < NetworkBenchmarkUtil.TIMES; i++)
+            for (int i = 0; i < NetworkBenchmarkUtil.ITERATIONS; i++)
             {
                 pong(channel);
             }
@@ -70,13 +77,14 @@ public abstract class AbstractPingPong
             channel.configureBlocking(false);
 
             final Histogram histogram = new Histogram(100_000_000, 2);
-            for (int i = 0; i < NetworkBenchmarkUtil.TIMES; i++)
+            for (int i = 0; i < NetworkBenchmarkUtil.ITERATIONS; i++)
             {
                 final long time = System.nanoTime();
-                ping(channel);
+                ping(channel, time);
                 histogram.recordValue(System.nanoTime() - time);
             }
-            histogram.outputPercentileDistribution(System.out, 1.0);
+
+            printStats(histogram);
         }
         catch (IOException e)
         {
@@ -84,7 +92,7 @@ public abstract class AbstractPingPong
         }
     }
 
-    protected abstract void ping(SocketChannel channel) throws IOException;
+    protected abstract void ping(SocketChannel channel, long time) throws IOException;
 
     protected abstract void pong(SocketChannel channel) throws IOException;
 
