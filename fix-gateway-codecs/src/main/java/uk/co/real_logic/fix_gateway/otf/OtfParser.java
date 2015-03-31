@@ -26,7 +26,6 @@ import static uk.co.real_logic.fix_gateway.ValidationError.INVALID_CHECKSUM;
 import static uk.co.real_logic.fix_gateway.ValidationError.PARSE_ERROR;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.*;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
-import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.computeChecksum;
 
 // TODO: what should we do if the callbacks throw an exception?
 
@@ -76,7 +75,7 @@ public final class OtfParser implements MessageHandler
         {
             parseFields(buffer, offset, offset + length, UNKNOWN, null, 0);
 
-            if (validChecksum(buffer, offset, checksum))
+            if (validChecksum(offset, checksum))
             {
                 acceptor.onComplete();
             }
@@ -252,7 +251,7 @@ public final class OtfParser implements MessageHandler
         return true;
     }
 
-    private boolean validChecksum(final DirectBuffer buffer, final int offset, final int expectedChecksum)
+    private boolean validChecksum(final int offset, final int expectedChecksum)
     {
         if (expectedChecksum == NO_CHECKSUM)
         {
@@ -264,7 +263,7 @@ public final class OtfParser implements MessageHandler
         AsciiFlyweight string = new AsciiFlyweight(buffer);
         string.log(offset, checksumOffset- offset);*/
 
-        return computeChecksum(buffer, offset, checksumOffset) == expectedChecksum;
+        return string.computeChecksum(offset, checksumOffset) == expectedChecksum;
     }
 
 }
