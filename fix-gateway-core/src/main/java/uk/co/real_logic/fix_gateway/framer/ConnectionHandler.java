@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.fix_gateway.FixGateway;
-import uk.co.real_logic.fix_gateway.FixPublication;
+import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.MessageHandler;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.admin.AdminEventHandler;
@@ -97,9 +97,9 @@ public class ConnectionHandler
         final long connectionId, final FixGateway gateway, final SessionConfiguration configuration)
     {
         final long sessionId = sessionIdStrategy.register(configuration);
-        final FixPublication fixPublication = replicationStreams.fixPublication();
+        final GatewayPublication gatewayPublication = replicationStreams.fixPublication();
 
-        return new InitiatorSession(defaultInterval, connectionId, clock, sessionProxy, gateway, fixPublication,
+        return new InitiatorSession(defaultInterval, connectionId, clock, sessionProxy, gateway, gatewayPublication,
             sessionId, sessionIdStrategy);
     }
 }

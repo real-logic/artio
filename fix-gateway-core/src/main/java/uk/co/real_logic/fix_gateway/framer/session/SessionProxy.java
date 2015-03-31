@@ -16,13 +16,11 @@
 package uk.co.real_logic.fix_gateway.framer.session;
 
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.FixPublication;
+import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.builder.*;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
-
-import static uk.co.real_logic.fix_gateway.FixPublication.FRAME_SIZE;
 
 /**
  * Encapsulates sending messages relating to sessions
@@ -38,15 +36,15 @@ public class SessionProxy
 
     private final UnsafeBuffer buffer;
     private final MutableAsciiFlyweight string;
-    private final FixPublication fixPublication;
+    private final GatewayPublication gatewayPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SenderProxy senderProxy;
 
     public SessionProxy(
-        final int bufferSize, final FixPublication fixPublication, final SessionIdStrategy sessionIdStrategy,
+        final int bufferSize, final GatewayPublication gatewayPublication, final SessionIdStrategy sessionIdStrategy,
         final SenderProxy senderProxy)
     {
-        this.fixPublication = fixPublication;
+        this.gatewayPublication = gatewayPublication;
         this.sessionIdStrategy = sessionIdStrategy;
         this.senderProxy = senderProxy;
         buffer = new UnsafeBuffer(new byte[bufferSize]);
@@ -60,7 +58,7 @@ public class SessionProxy
         header.msgSeqNum(msgSeqNo);
         resendRequest.beginSeqNo(beginSeqNo)
                      .endSeqNo(endSeqNo);
-        send(resendRequest.encode(string, FRAME_SIZE), sessionId, ResendRequestDecoder.MESSAGE_TYPE);
+        send(resendRequest.encode(string, 0), sessionId, ResendRequestDecoder.MESSAGE_TYPE);
     }
 
     /**
@@ -81,7 +79,7 @@ public class SessionProxy
         header.msgSeqNum(msgSeqNo);
 
         logon.heartBtInt(heartbeatInterval);
-        send(logon.encode(string, FRAME_SIZE), sessionId, LogonDecoder.MESSAGE_TYPE);
+        send(logon.encode(string, 0), sessionId, LogonDecoder.MESSAGE_TYPE);
     }
 
     public void logout(final int msgSeqNo, final long sessionId)
@@ -90,7 +88,7 @@ public class SessionProxy
         sessionIdStrategy.encode(sessionId, header);
         header.msgSeqNum(msgSeqNo);
 
-        send(logout.encode(string, FRAME_SIZE), sessionId, LogoutDecoder.MESSAGE_TYPE);
+        send(logout.encode(string, 0), sessionId, LogoutDecoder.MESSAGE_TYPE);
     }
 
     public void heartbeat(final String testReqId, final long sessionId)
@@ -103,7 +101,7 @@ public class SessionProxy
         {
             heartbeat.testReqID(testReqId);
         }
-        send(heartbeat.encode(string, FRAME_SIZE), sessionId, HeartbeatDecoder.MESSAGE_TYPE);
+        send(heartbeat.encode(string, 0), sessionId, HeartbeatDecoder.MESSAGE_TYPE);
     }
 
     public void reject(final int msgSeqNo, final int refSeqNum, final long sessionId)
@@ -114,11 +112,11 @@ public class SessionProxy
 
         reject.refSeqNum(refSeqNum);
         // TODO: decide on other ref fields
-        send(reject.encode(string, FRAME_SIZE), sessionId, RejectDecoder.MESSAGE_TYPE);
+        send(reject.encode(string, 0), sessionId, RejectDecoder.MESSAGE_TYPE);
     }
 
     private void send(final int length, final long sessionId, final int messageType)
     {
-        fixPublication.onMessage(buffer, 0, length + FRAME_SIZE, sessionId, messageType);
+        gatewayPublication.onMessage(buffer, 0, length, sessionId, messageType);
     }
 }

@@ -13,12 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway;
+package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Publication;
+import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.MessageHandler;
 import uk.co.real_logic.fix_gateway.messages.FixMessage;
 import uk.co.real_logic.sbe.codec.java.CodecUtil;
 
@@ -29,7 +32,7 @@ import static uk.co.real_logic.fix_gateway.messages.FixMessage.BLOCK_LENGTH;
  * A proxy for publishing messages fix related messages
  *
  */
-public class FixPublication implements MessageHandler
+public class GatewayPublication implements MessageHandler
 {
     public static final int FRAME_SIZE = BLOCK_LENGTH + FixMessage.bodyHeaderSize();
     // SBE Message offset: offset + fixMessage.sbeBlockLength() + fixMessage.bodyHeaderSize();
@@ -42,33 +45,61 @@ public class FixPublication implements MessageHandler
 
     private final FixMessage messageFrame = new FixMessage();
 
+    private final BufferClaim bufferClaim;
     private final Publication dataPublication;
     private final AtomicCounter fails;
 
-    public FixPublication(final Publication dataPublication, final AtomicCounter fails)
+    public GatewayPublication(final Publication dataPublication, final AtomicCounter fails)
     {
         this.dataPublication = dataPublication;
+        bufferClaim = new BufferClaim();
         this.fails = fails;
     }
 
-    // NB: assumes that whatever has called it has encoded the body at offset + FRAME_SIZE
     public void onMessage(
         final DirectBuffer buffer, final int offset, final int length, final long sessionId, final int messageType)
     {
-        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) buffer;
-        messageFrame
-            .wrapForEncode(unsafeBuffer, offset)
-            .messageType(messageType)
-            .session(sessionId)
-            .connection(0L); // TODO
-        putBodyLength(unsafeBuffer, offset, length - FRAME_SIZE);
+        saveFixMessage(buffer, offset, length, sessionId, messageType);
+    }
 
-        while (!dataPublication.offer(buffer, offset, length))
+    private void saveFixMessage(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength,
+        final long sessionId,
+        final int messageType)
+    {
+        final int framedLength = srcLength + FRAME_SIZE;
+
+        while (!dataPublication.tryClaim(framedLength, bufferClaim))
         {
             // TODO: backoff
             fails.increment();
         }
 
-        DebugLogger.log("Enqueued %s\n", buffer, offset, length);
+        final int destOffset = bufferClaim.offset();
+        final int desMessageOffset = destOffset + FRAME_SIZE;
+
+        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) bufferClaim.buffer();
+        messageFrame
+            .wrapForEncode(unsafeBuffer, destOffset)
+            .messageType(messageType)
+            .session(sessionId)
+            .connection(0L); // TODO
+        putBodyLength(unsafeBuffer, destOffset, srcLength);
+
+        unsafeBuffer.putBytes(desMessageOffset, srcBuffer, srcOffset, srcLength);
+
+        bufferClaim.commit();
+
+        DebugLogger.log("Enqueued %s\n", unsafeBuffer, desMessageOffset, srcLength);
+    }
+
+    public void saveConnect()
+    {
+    }
+
+    public void saveDisconnect()
+    {
     }
 }

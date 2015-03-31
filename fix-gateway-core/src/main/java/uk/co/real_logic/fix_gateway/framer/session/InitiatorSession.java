@@ -18,19 +18,18 @@ package uk.co.real_logic.fix_gateway.framer.session;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.FixGateway;
-import uk.co.real_logic.fix_gateway.FixPublication;
+import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
-import static uk.co.real_logic.fix_gateway.FixPublication.FRAME_SIZE;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.*;
 
 public class InitiatorSession extends Session
 {
     private final FixGateway gateway;
-    private final FixPublication publication;
+    private final GatewayPublication publication;
     private final SessionIdStrategy sessionIdStrategy;
     private final MutableDirectBuffer buffer;
     private final MutableAsciiFlyweight string;
@@ -41,7 +40,7 @@ public class InitiatorSession extends Session
         final MilliClock clock,
         final SessionProxy proxy,
         final FixGateway gateway,
-        final FixPublication publication,
+        final GatewayPublication publication,
         final long sessionId,
         final SessionIdStrategy sessionIdStrategy)
     {
@@ -86,9 +85,9 @@ public class InitiatorSession extends Session
 
         sessionIdStrategy.encode(id(), header);
 
-        final int length = encoder.encode(string, FRAME_SIZE);
+        final int length = encoder.encode(string, 0);
 
-        publication.onMessage(buffer, 0, length + FRAME_SIZE, id(), encoder.messageType());
+        publication.onMessage(buffer, 0, length, id(), encoder.messageType());
         incrementSequenceNumber();
     }
 

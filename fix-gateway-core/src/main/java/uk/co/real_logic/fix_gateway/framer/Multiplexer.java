@@ -22,7 +22,7 @@ import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.FixMessage;
 
-import static uk.co.real_logic.fix_gateway.FixPublication.FRAME_SIZE;
+import static uk.co.real_logic.fix_gateway.replication.GatewayPublication.FRAME_SIZE;
 
 /**
  * Responsible for splitting the data coming out of the replication
