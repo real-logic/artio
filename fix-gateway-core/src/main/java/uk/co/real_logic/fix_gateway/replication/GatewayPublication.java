@@ -22,7 +22,10 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.MessageHandler;
+import uk.co.real_logic.fix_gateway.messages.Connect;
+import uk.co.real_logic.fix_gateway.messages.Disconnect;
 import uk.co.real_logic.fix_gateway.messages.FixMessage;
+import uk.co.real_logic.fix_gateway.messages.MessageHeader;
 import uk.co.real_logic.sbe.codec.java.CodecUtil;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
@@ -43,6 +46,9 @@ public class GatewayPublication implements MessageHandler
         CodecUtil.uint16Put(unsafeBuffer, offset + BLOCK_LENGTH, bodyLength, LITTLE_ENDIAN);
     }
 
+    private final MessageHeader header = new MessageHeader();
+    private final Connect connect = new Connect();
+    private final Disconnect disconnect = new Disconnect();
     private final FixMessage messageFrame = new FixMessage();
 
     private final BufferClaim bufferClaim;
@@ -69,37 +75,75 @@ public class GatewayPublication implements MessageHandler
         final long sessionId,
         final int messageType)
     {
-        final int framedLength = srcLength + FRAME_SIZE;
 
+        claim(header.size() + FRAME_SIZE + srcLength);
+
+        int offset = bufferClaim.offset();
+
+        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) bufferClaim.buffer();
+
+        header
+            .wrap(unsafeBuffer, offset, 0)
+            .blockLength(messageFrame.sbeBlockLength())
+            .templateId(messageFrame.sbeTemplateId())
+            .schemaId(messageFrame.sbeSchemaId())
+            .version(messageFrame.sbeSchemaVersion());
+
+        offset += header.size();
+
+        messageFrame
+            .wrapForEncode(unsafeBuffer, offset)
+            .messageType(messageType)
+            .session(sessionId)
+            .connection(0L); // TODO
+        putBodyLength(unsafeBuffer, offset, srcLength);
+
+        offset += FRAME_SIZE;
+
+        unsafeBuffer.putBytes(offset, srcBuffer, srcOffset, srcLength);
+
+        bufferClaim.commit();
+
+        DebugLogger.log("Enqueued %s\n", unsafeBuffer, offset, srcLength);
+    }
+
+    public void saveConnect()
+    {
+        claim(Connect.BLOCK_LENGTH);
+
+        // TODO
+
+        bufferClaim.commit();
+    }
+
+    public void saveDisconnect(final long connectionId)
+    {
+        claim(header.size() + disconnect.size());
+
+        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(unsafeBuffer, offset, 0)
+            .blockLength(disconnect.sbeBlockLength())
+            .templateId(disconnect.sbeTemplateId())
+            .schemaId(disconnect.sbeSchemaId())
+            .version(disconnect.sbeSchemaVersion());
+
+        offset += header.size();
+
+        disconnect.wrapForEncode(unsafeBuffer, offset);
+        disconnect.connection(connectionId);
+
+        bufferClaim.commit();
+    }
+
+    private void claim(final int framedLength)
+    {
         while (!dataPublication.tryClaim(framedLength, bufferClaim))
         {
             // TODO: backoff
             fails.increment();
         }
-
-        final int destOffset = bufferClaim.offset();
-        final int desMessageOffset = destOffset + FRAME_SIZE;
-
-        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) bufferClaim.buffer();
-        messageFrame
-            .wrapForEncode(unsafeBuffer, destOffset)
-            .messageType(messageType)
-            .session(sessionId)
-            .connection(0L); // TODO
-        putBodyLength(unsafeBuffer, destOffset, srcLength);
-
-        unsafeBuffer.putBytes(desMessageOffset, srcBuffer, srcOffset, srcLength);
-
-        bufferClaim.commit();
-
-        DebugLogger.log("Enqueued %s\n", unsafeBuffer, desMessageOffset, srcLength);
-    }
-
-    public void saveConnect()
-    {
-    }
-
-    public void saveDisconnect()
-    {
     }
 }

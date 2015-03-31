@@ -20,7 +20,11 @@ import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
+import uk.co.real_logic.fix_gateway.messages.Disconnect;
 import uk.co.real_logic.fix_gateway.messages.FixMessage;
+import uk.co.real_logic.fix_gateway.messages.MessageHeader;
 
 import static uk.co.real_logic.fix_gateway.replication.GatewayPublication.FRAME_SIZE;
 
@@ -32,7 +36,17 @@ public class Multiplexer implements DataHandler
 {
 
     private final Long2ObjectHashMap<SenderEndPoint> endpoints = new Long2ObjectHashMap<>();
+
+    private final MessageHeader messageHeader = new MessageHeader();
+    private final Disconnect disconnect = new Disconnect();
     private final FixMessage messageFrame = new FixMessage();
+
+    private final ReceiverProxy mockReceiver;
+
+    public Multiplexer(final ReceiverProxy mockReceiver)
+    {
+        this.mockReceiver = mockReceiver;
+    }
 
     public void onNewConnection(final SenderEndPoint senderEndPoint)
     {
@@ -51,15 +65,38 @@ public class Multiplexer implements DataHandler
         }
     }
 
-    public void onData(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    public void onData(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
-        messageFrame.wrapForDecode((UnsafeBuffer) buffer, offset, length, 0);
-        final long connectionId = messageFrame.connection();
-        onMessage(buffer, offset + FRAME_SIZE, length - FRAME_SIZE, connectionId);
+        // TODO:
+        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) buffer;
+        messageHeader.wrap(unsafeBuffer, offset, 0);
+
+        offset += messageHeader.size();
+
+        switch (messageHeader.templateId())
+        {
+            case FixMessage.TEMPLATE_ID:
+            {
+                messageFrame.wrapForDecode(unsafeBuffer, offset, length, 0);
+                final long connectionId = messageFrame.connection();
+                onMessage(buffer, offset + FRAME_SIZE, length - FRAME_SIZE, connectionId);
+                return;
+            }
+
+            case Disconnect.TEMPLATE_ID:
+            {
+                disconnect.wrapForDecode(unsafeBuffer, offset, length, 0);
+                final long connectionId = disconnect.connection();
+                DebugLogger.log("Multiplexer Disconnect: %d\n", connectionId);
+                disconnect(connectionId);
+                return;
+            }
+        }
     }
 
-    public void unregister(final long connectionId)
+    public void disconnect(final long connectionId)
     {
         endpoints.remove(connectionId);
+        mockReceiver.disconnect(connectionId);
     }
 }

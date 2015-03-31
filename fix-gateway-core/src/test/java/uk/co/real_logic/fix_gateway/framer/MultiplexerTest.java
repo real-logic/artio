@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import org.junit.Test;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
 
 import static org.mockito.Mockito.*;
 
@@ -24,7 +25,9 @@ public class MultiplexerTest
 {
     public static final long CONNECTION_ID = 1L;
     private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
-    private Multiplexer multiplexer = new Multiplexer();
+    private ReceiverProxy mockReceiver = mock(ReceiverProxy.class);
+
+    private Multiplexer multiplexer = new Multiplexer(mockReceiver);
     private DirectBuffer buffer = mock(DirectBuffer.class);
 
     private void connectedId(final long connectionId)
@@ -65,13 +68,25 @@ public class MultiplexerTest
         given:
         connectedId(CONNECTION_ID);
 
-        multiplexer.unregister(CONNECTION_ID);
-
         when:
+        multiplexer.disconnect(CONNECTION_ID);
         aMessageArrives();
 
         then:
         noFrameReceived();
+    }
+
+    @Test
+    public void receiverNotifiedOfDisconnect()
+    {
+        given:
+        connectedId(CONNECTION_ID);
+
+        when:
+        multiplexer.disconnect(CONNECTION_ID);
+
+        then:
+        verify(mockReceiver).disconnect(CONNECTION_ID);
     }
 
     private void messagePassedToEndpoint()

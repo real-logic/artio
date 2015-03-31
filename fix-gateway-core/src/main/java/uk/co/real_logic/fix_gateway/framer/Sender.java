@@ -104,7 +104,7 @@ public final class Sender implements Agent
 
     public void onDisconnect(final long connectionId)
     {
-        multiplexer.unregister(connectionId);
+        multiplexer.disconnect(connectionId);
         receiver.disconnect(connectionId);
     }
 }

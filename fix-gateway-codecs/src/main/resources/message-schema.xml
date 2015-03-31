@@ -35,4 +35,11 @@
     <sbe:message name="MessageAcknowledgement" id="2" description="An acknowledgement of a received FIX Message">
         <field name="term" id="5" type="TermId"/>
     </sbe:message>
+    <sbe:message name="Disconnect" id="3" description="A connection has disconnected">
+        <field name="connection" id="5" type="ConnectionId"/>
+    </sbe:message>
+    <sbe:message name="Connect" id="4" description="A session has connected">
+        <field name="connection" id="5" type="ConnectionId"/>
+        <field name="session" id="5" type="FixSessionId"/>
+    </sbe:message>
 </sbe:messageSchema>
