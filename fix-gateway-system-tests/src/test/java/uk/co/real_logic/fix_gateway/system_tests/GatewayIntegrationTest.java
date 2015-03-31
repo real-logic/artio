@@ -18,15 +18,17 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
-import uk.co.real_logic.fix_gateway.admin.AdminEventHandler;
+import uk.co.real_logic.fix_gateway.admin.SessionHandler;
 import uk.co.real_logic.fix_gateway.admin.CompIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
+import uk.co.real_logic.fix_gateway.framer.session.Session;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.*;
@@ -46,7 +48,7 @@ public class GatewayIntegrationTest
     private FixGateway initiatingGateway;
     private InitiatorSession session;
     private FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
-    private AdminEventHandler adminEventHandler = mock(AdminEventHandler.class);
+    private SessionHandler sessionHandler = mock(SessionHandler.class);
 
     @Before
     public void launch()
@@ -60,7 +62,7 @@ public class GatewayIntegrationTest
                 .bind("localhost", port)
                 .aeronChannel("udp://localhost:" + unusedPort())
                 .authenticationStrategy(new CompIdAuthenticationStrategy("CCG"))
-                .adminEventHandler(adminEventHandler);
+                .adminEventHandler(sessionHandler);
         acceptingGateway = FixGateway.launch(acceptingConfig);
 
         final StaticConfiguration initiatingConfig = new StaticConfiguration()
@@ -104,7 +106,12 @@ public class GatewayIntegrationTest
         assertFalse("Session is still connected", session.isConnected());
 
         assertEventuallyTrue("Failed to disconnect",
-            () -> verify(adminEventHandler).onDisconnect(SESSION_ID));
+            () ->
+            {
+                ArgumentCaptor<Session> session = ArgumentCaptor.forClass(Session.class);
+                verify(sessionHandler).onDisconnect(session.capture());
+                assertEquals(SESSION_ID, session.getValue().id());
+            });
     }
 
     // TODO: shutdown a gateway and check logout

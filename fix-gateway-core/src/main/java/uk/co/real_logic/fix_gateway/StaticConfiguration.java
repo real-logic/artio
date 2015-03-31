@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
-import uk.co.real_logic.fix_gateway.admin.AdminEventHandler;
+import uk.co.real_logic.fix_gateway.admin.SessionHandler;
 import uk.co.real_logic.fix_gateway.admin.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.admin.NoAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
@@ -70,7 +70,7 @@ public final class StaticConfiguration
     private String counterBuffersFile = System.getProperty(COUNTERS_FILE_PROP_NAME, COUNTERS_FILE_PROP_DEFAULT);
     private String aeronChannel;
     private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
-    private AdminEventHandler adminEventHandler;
+    private SessionHandler sessionHandler;
 
     public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
     {
@@ -143,9 +143,9 @@ public final class StaticConfiguration
         return this;
     }
 
-    public StaticConfiguration adminEventHandler(final AdminEventHandler adminEventHandler)
+    public StaticConfiguration adminEventHandler(final SessionHandler sessionHandler)
     {
-        this.adminEventHandler = adminEventHandler;
+        this.sessionHandler = sessionHandler;
         return this;
     }
 
@@ -210,8 +210,8 @@ public final class StaticConfiguration
         return fallbackAcceptor;
     }
 
-    AdminEventHandler adminEventHandler()
+    SessionHandler adminEventHandler()
     {
-        return adminEventHandler;
+        return sessionHandler;
     }
 }

@@ -22,7 +22,7 @@ import org.mockito.Mockito;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.MessageHandler;
-import uk.co.real_logic.fix_gateway.admin.AdminEventHandler;
+import uk.co.real_logic.fix_gateway.admin.SessionHandler;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
 
@@ -49,7 +49,7 @@ public class ReceiverEndPointTest
     private MessageHandler mockHandler = mock(MessageHandler.class);
     private SessionParser mockSessionParser = mock(SessionParser.class);
     private Session mockSession = mock(Session.class);
-    private AdminEventHandler mockAdminHandler = mock(AdminEventHandler.class);
+    private SessionHandler mockAdminHandler = mock(SessionHandler.class);
 
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(mockChannel, 16 * 1024, mockHandler, CONNECTION_ID, mockSessionParser, mockAdminHandler);

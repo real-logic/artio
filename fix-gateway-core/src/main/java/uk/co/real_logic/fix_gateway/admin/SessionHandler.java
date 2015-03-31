@@ -15,8 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.admin;
 
+import uk.co.real_logic.fix_gateway.framer.session.Session;
+
 // TODO: connect
-public interface AdminEventHandler
+public interface SessionHandler
 {
-    void onDisconnect(final long sessionId);
+    void onConnect(final Session session);
+
+    void onDisconnect(final Session session);
 }
