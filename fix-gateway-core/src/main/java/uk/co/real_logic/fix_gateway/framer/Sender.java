@@ -93,10 +93,6 @@ public final class Sender implements Agent
         multiplexer.onNewConnection(senderEndPoint);
     }
 
-    public void onClose()
-    {
-    }
-
     public String roleName()
     {
         return "Sender";

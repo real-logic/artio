@@ -44,7 +44,8 @@ public class ConnectionHandler
     private final int defaultInterval;
     private final SessionIdStrategy sessionIdStrategy;
     private final MessageHandler messageHandler;
-    private final ReplicationStreams replicationStreams;
+    private final ReplicationStreams inboundStreams;
+    private final ReplicationStreams outboundStreams;
     private final AuthenticationStrategy authenticationStrategy;
     private final NewSessionHandler newSessionHandler;
 
@@ -55,7 +56,8 @@ public class ConnectionHandler
         final int defaultInterval,
         final SessionIdStrategy sessionIdStrategy,
         final MessageHandler messageHandler,
-        final ReplicationStreams replicationStreams,
+        final ReplicationStreams inboundStreams,
+        final ReplicationStreams outboundStreams,
         final AuthenticationStrategy authenticationStrategy,
         final NewSessionHandler newSessionHandler)
     {
@@ -65,7 +67,8 @@ public class ConnectionHandler
         this.defaultInterval = defaultInterval;
         this.sessionIdStrategy = sessionIdStrategy;
         this.messageHandler = messageHandler;
-        this.replicationStreams = replicationStreams;
+        this.inboundStreams = inboundStreams;
+        this.outboundStreams = outboundStreams;
         this.authenticationStrategy = authenticationStrategy;
         this.newSessionHandler = newSessionHandler;
     }
@@ -97,7 +100,7 @@ public class ConnectionHandler
         final long connectionId, final FixGateway gateway, final SessionConfiguration configuration)
     {
         final long sessionId = sessionIdStrategy.register(configuration);
-        final GatewayPublication gatewayPublication = replicationStreams.gatewayPublication();
+        final GatewayPublication gatewayPublication = inboundStreams.gatewayPublication();
 
         return new InitiatorSession(defaultInterval, connectionId, clock, sessionProxy, gateway, gatewayPublication,
             sessionId, sessionIdStrategy);

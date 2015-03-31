@@ -21,40 +21,49 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 
-public final class ReplicationStreams
+import java.util.ArrayList;
+import java.util.List;
+
+public final class ReplicationStreams implements AutoCloseable
 {
-    private static final int DATA_STREAM = 0;
-    private static final int CONTROL_STREAM = 1;
+    private final List<Subscription> subscriptions = new ArrayList<>();
+
+    private final int dataStream;
+    private final int controlStream;
 
     private final String channel;
     private final Aeron aeron;
     private final AtomicCounter failedDataPublications;
+    private final Publication dataPublication;
 
-    public ReplicationStreams(final String channel, final Aeron aeron, final AtomicCounter failedDataPublications)
+    public ReplicationStreams(
+        final String channel,
+        final Aeron aeron,
+        final AtomicCounter failedDataPublications,
+        final int dataStream,
+        final int controlStream)
     {
         this.channel = channel;
         this.aeron = aeron;
         this.failedDataPublications = failedDataPublications;
-    }
-
-    public Publication dataPublication()
-    {
-        return aeron.addPublication(channel, DATA_STREAM);
+        this.dataStream = dataStream;
+        this.controlStream = controlStream;
+        dataPublication = aeron.addPublication(channel, dataStream);
     }
 
     public GatewayPublication gatewayPublication()
     {
-        return new GatewayPublication(dataPublication(), failedDataPublications);
+        return new GatewayPublication(dataPublication, failedDataPublications);
     }
 
     public Publication controlPublication()
     {
-        return aeron.addPublication(channel, CONTROL_STREAM);
+        return aeron.addPublication(channel, controlStream);
     }
 
     public Subscription dataSubscription(final DataHandler handler)
     {
-        return aeron.addSubscription(channel, DATA_STREAM, handler);
+        return addSubscription(dataStream, handler);
     }
 
     public GatewaySubscription gatewaySubscription()
@@ -64,6 +73,19 @@ public final class ReplicationStreams
 
     public Subscription controlSubscription(final DataHandler handler)
     {
-        return aeron.addSubscription(channel, CONTROL_STREAM, handler);
+        return addSubscription(controlStream, handler);
+    }
+
+    private Subscription addSubscription(final int stream, final DataHandler handler)
+    {
+        final Subscription subscription = aeron.addSubscription(channel, stream, handler);
+        subscriptions.add(subscription);
+        return subscription;
+    }
+
+    public void close()
+    {
+        dataPublication.close();
+        subscriptions.forEach(Subscription::close);
     }
 }

@@ -16,17 +16,25 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import uk.co.real_logic.fix_gateway.admin.NewSessionHandler;
+import uk.co.real_logic.fix_gateway.admin.SessionHandler;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 
 public class FakeNewSessionHandler implements NewSessionHandler
 {
+    private final SessionHandler sessionHandler;
     private GatewaySubscription subscription;
     private Session session;
+
+    public FakeNewSessionHandler(final SessionHandler sessionHandler)
+    {
+        this.sessionHandler = sessionHandler;
+    }
 
     public void onConnect(final Session session, final GatewaySubscription subscription)
     {
         this.subscription = subscription;
+        subscription.sessionHandler(sessionHandler);
     }
 
     public void onDisconnect(final Session session)

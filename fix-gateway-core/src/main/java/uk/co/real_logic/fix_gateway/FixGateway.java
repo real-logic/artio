@@ -41,10 +41,16 @@ public class FixGateway implements AutoCloseable
 {
     private static final MessageHandler EMPTY_HANDLER = (buffer, offset, length, sessionId, messageType) -> {};
 
+    public static final int INBOUND_DATA_STREAM = 0;
+    public static final int INBOUND_CONTROL_STREAM = 1;
+    public static final int OUTBOUND_DATA_STREAM = 2;
+    public static final int OUTBOUND_CONTROL_STREAM = 3;
+
     private final FixCounters fixCounters;
 
     private final Aeron aeron;
-    private final ReplicationStreams streams;
+    private final ReplicationStreams inboundStreams;
+    private final ReplicationStreams outboundStreams;
 
     private final SenderProxy senderProxy;
     private final ReceiverProxy receiverProxy;
@@ -66,10 +72,15 @@ public class FixGateway implements AutoCloseable
         connectionTimeout = configuration.connectionTimeout();
 
         fixCounters = new FixCounters(CountersFileDescriptor.createCountersManager(configuration));
+        final AtomicCounter failedPublications = fixCounters.failedDataPublications();
 
         Aeron.Context context = new Aeron.Context();
         aeron = Aeron.connect(context);
-        streams = new ReplicationStreams(configuration.aeronChannel(), aeron, fixCounters.failedDataPublications());
+
+        inboundStreams = new ReplicationStreams(
+            configuration.aeronChannel(), aeron, failedPublications, INBOUND_DATA_STREAM, INBOUND_CONTROL_STREAM);
+        outboundStreams = new ReplicationStreams(
+            configuration.aeronChannel(), aeron, failedPublications, OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
 
         final SequencedContainerQueue<SenderCommand> senderCommands = new ManyToOneConcurrentArrayQueue<>(10);
         final SequencedContainerQueue<ReceiverCommand> receiverCommands = new ManyToOneConcurrentArrayQueue<>(10);
@@ -78,9 +89,9 @@ public class FixGateway implements AutoCloseable
         receiverProxy = new ReceiverProxy(receiverCommands, fixCounters.receiverProxyFails());
 
         final Multiplexer multiplexer = new Multiplexer(receiverProxy);
-        final GatewaySubscription dataSubscription = streams.gatewaySubscription().sessionHandler(multiplexer);
+        final GatewaySubscription dataSubscription = inboundStreams.gatewaySubscription().sessionHandler(multiplexer);
         final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(),
-            streams.gatewayPublication(), configuration.sessionIdStrategy());
+            inboundStreams.gatewayPublication(), configuration.sessionIdStrategy());
 
         final MessageHandler messageHandler = messageHandler(configuration.fallbackAcceptor());
 
@@ -93,7 +104,8 @@ public class FixGateway implements AutoCloseable
             configuration.defaultHeartbeatInterval(),
             configuration.sessionIdStrategy(),
             messageHandler,
-            streams,
+            inboundStreams,
+            outboundStreams,
             configuration.authenticationStrategy(),
             configuration.newSessionHandler());
 
@@ -162,11 +174,10 @@ public class FixGateway implements AutoCloseable
         senderRunner.close();
         receiverRunner.close();
 
-        sender.onClose();
         receiver.onClose();
 
-        streams.dataPublication().close();
-        streams.controlPublication().close();
+        inboundStreams.close();
+        outboundStreams.close();
         aeron.close();
     }
 

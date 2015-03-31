@@ -23,12 +23,14 @@ import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.admin.CompIdAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.admin.SessionHandler;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -43,7 +45,8 @@ public class GatewayIntegrationTest
     private FixGateway initiatingGateway;
     private InitiatorSession session;
     private FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
-    private FakeNewSessionHandler newSessionHandler = new FakeNewSessionHandler();
+    private SessionHandler mockSessionHandler = mock(SessionHandler.class);
+    private FakeNewSessionHandler newSessionHandler = new FakeNewSessionHandler(mockSessionHandler);
 
     @Before
     public void launch()
