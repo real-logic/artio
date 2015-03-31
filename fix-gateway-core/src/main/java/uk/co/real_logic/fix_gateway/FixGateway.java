@@ -92,7 +92,7 @@ public class FixGateway implements AutoCloseable
             messageHandler,
             streams,
             configuration.authenticationStrategy(),
-            configuration.sessionHandler());
+            configuration.newSessionHandler());
 
         sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer, dataSubscription);
 

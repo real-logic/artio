@@ -15,12 +15,13 @@
  */
 package uk.co.real_logic.fix_gateway.admin;
 
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
+import uk.co.real_logic.fix_gateway.replication.FixSubscription;
 
-public interface SessionHandler
+public interface NewSessionHandler
 {
-    void onMessage(final DirectBuffer buffer, final int offset, final int length);
+    void onConnect(final Session session, final FixSubscription subscription);
 
+    // TODO: remove
     void onDisconnect(final Session session);
 }

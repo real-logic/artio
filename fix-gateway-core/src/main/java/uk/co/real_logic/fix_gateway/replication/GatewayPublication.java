@@ -68,7 +68,7 @@ public class GatewayPublication implements MessageHandler
         saveFixMessage(buffer, offset, length, sessionId, messageType);
     }
 
-    private void saveFixMessage(
+    public void saveFixMessage(
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength,

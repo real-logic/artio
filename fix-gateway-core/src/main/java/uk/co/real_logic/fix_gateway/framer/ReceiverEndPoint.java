@@ -19,7 +19,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.MessageHandler;
-import uk.co.real_logic.fix_gateway.admin.SessionHandler;
+import uk.co.real_logic.fix_gateway.admin.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
@@ -50,7 +50,7 @@ public class ReceiverEndPoint
     private final MessageHandler handler;
     private final long connectionId;
     private final SessionParser session;
-    private final SessionHandler sessionHandler;
+    private final NewSessionHandler newSessionHandler;
     private final AtomicBuffer buffer;
     private final AsciiFlyweight string;
     private final ByteBuffer byteBuffer;
@@ -63,13 +63,13 @@ public class ReceiverEndPoint
         final MessageHandler handler,
         final long connectionId,
         final SessionParser session,
-        final SessionHandler sessionHandler)
+        final NewSessionHandler newSessionHandler)
     {
         this.channel = channel;
         this.handler = handler;
         this.connectionId = connectionId;
         this.session = session;
-        this.sessionHandler = sessionHandler;
+        this.newSessionHandler = newSessionHandler;
 
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new AsciiFlyweight(buffer);
@@ -236,9 +236,9 @@ public class ReceiverEndPoint
         }
 
         // TODO: this event handler probably shouldn't be called on the receiver thread.
-        if (sessionHandler != null)
+        if (newSessionHandler != null)
         {
-            sessionHandler.onDisconnect(session.session());
+            newSessionHandler.onDisconnect(session.session());
         }
     }
 }

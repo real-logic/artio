@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.admin;
+package uk.co.real_logic.fix_gateway.replication;
 
-import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.framer.session.Session;
+import uk.co.real_logic.fix_gateway.admin.SessionHandler;
 
-public interface SessionHandler
+public class FixSubscription
 {
-    void onMessage(final DirectBuffer buffer, final int offset, final int length);
+    public void register(final SessionHandler sessionHandler)
+    {
 
-    void onDisconnect(final Session session);
+    }
 }
