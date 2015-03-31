@@ -42,11 +42,6 @@ public class SenderProxy
         offer(new NewAcceptedConnection(senderEndPoint));
     }
 
-    public void disconnect(final long connectionId)
-    {
-        offer(new SenderDisconnect(connectionId));
-    }
-
     private void offer(final SenderCommand command)
     {
         // TODO: decide on retry/backoff strategy

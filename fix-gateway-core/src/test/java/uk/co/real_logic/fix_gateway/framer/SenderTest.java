@@ -119,19 +119,6 @@ public class SenderTest
         verify(mockGateway).onInitiationError(any(IOException.class));
     }
 
-    @Test
-    public void shouldNotifyReceiverUponDisconnect() throws Exception
-    {
-        connect();
-        final Long connectionId = this.connectionId.getValue();
-
-        proxy.disconnect(connectionId);
-        sender.doWork();
-
-        receiverNotified();
-        verify(mockReceiver).disconnect(connectionId);
-    }
-
     private void receiverNotified()
     {
         verify(mockReceiver).newInitiatedConnection(mockReceiverEndPoint);
