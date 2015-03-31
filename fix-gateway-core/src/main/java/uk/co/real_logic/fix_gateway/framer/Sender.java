@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
-import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
 import uk.co.real_logic.fix_gateway.FixGateway;
@@ -23,6 +22,7 @@ import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
+import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
@@ -40,7 +40,7 @@ public final class Sender implements Agent
     private final ReceiverProxy receiver;
     private final FixGateway gateway;
     private final Multiplexer multiplexer;
-    private final Subscription dataSubscription;
+    private final GatewaySubscription dataSubscription;
 
     public Sender(
         final SequencedContainerQueue<SenderCommand> commandQueue,
@@ -48,7 +48,7 @@ public final class Sender implements Agent
         final ReceiverProxy receiver,
         final FixGateway gateway,
         final Multiplexer multiplexer,
-        final Subscription dataSubscription)
+        final GatewaySubscription dataSubscription)
     {
         this.commandQueue = commandQueue;
         this.connectionHandler = connectionHandler;

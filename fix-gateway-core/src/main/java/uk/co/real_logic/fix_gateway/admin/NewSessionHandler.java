@@ -16,11 +16,11 @@
 package uk.co.real_logic.fix_gateway.admin;
 
 import uk.co.real_logic.fix_gateway.framer.session.Session;
-import uk.co.real_logic.fix_gateway.replication.FixSubscription;
+import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 
 public interface NewSessionHandler
 {
-    void onConnect(final Session session, final FixSubscription subscription);
+    void onConnect(final Session session, final GatewaySubscription subscription);
 
     // TODO: remove
     void onDisconnect(final Session session);

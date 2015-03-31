@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
-import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
@@ -24,11 +23,15 @@ import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
-import uk.co.real_logic.fix_gateway.framer.*;
+import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
+import uk.co.real_logic.fix_gateway.framer.Multiplexer;
+import uk.co.real_logic.fix_gateway.framer.Receiver;
+import uk.co.real_logic.fix_gateway.framer.Sender;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.SessionProxy;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
+import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -75,9 +78,9 @@ public class FixGateway implements AutoCloseable
         receiverProxy = new ReceiverProxy(receiverCommands, fixCounters.receiverProxyFails());
 
         final Multiplexer multiplexer = new Multiplexer(receiverProxy);
-        final Subscription dataSubscription = streams.dataSubscription(multiplexer);
+        final GatewaySubscription dataSubscription = streams.gatewaySubscription().sessionHandler(multiplexer);
         final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(),
-            streams.fixPublication(), configuration.sessionIdStrategy());
+            streams.gatewayPublication(), configuration.sessionIdStrategy());
 
         final MessageHandler messageHandler = messageHandler(configuration.fallbackAcceptor());
 

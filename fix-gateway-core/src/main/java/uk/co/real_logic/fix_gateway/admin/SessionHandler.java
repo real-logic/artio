@@ -16,11 +16,10 @@
 package uk.co.real_logic.fix_gateway.admin;
 
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.framer.session.Session;
 
 public interface SessionHandler
 {
-    void onMessage(final DirectBuffer buffer, final int offset, final int length);
+    void onMessage(final DirectBuffer buffer, final int offset, final int length, final long connectionId);
 
-    void onDisconnect(final Session session);
+    void onDisconnect(final long connectionId);
 }

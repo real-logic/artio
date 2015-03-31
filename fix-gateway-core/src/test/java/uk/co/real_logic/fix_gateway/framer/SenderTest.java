@@ -19,7 +19,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.FixGateway;
@@ -29,6 +28,7 @@ import uk.co.real_logic.fix_gateway.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
+import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -57,7 +57,7 @@ public class SenderTest
     private FixGateway mockGateway = mock(FixGateway.class);
     private Multiplexer mockMultiplexer = mock(Multiplexer.class);
     private InitiatorSession mockSession = mock(InitiatorSession.class);
-    private Subscription mockDataSubscription = mock(Subscription.class);
+    private GatewaySubscription mockDataSubscription = mock(GatewaySubscription.class);
 
     private OneToOneConcurrentArrayQueue<SenderCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private SenderProxy proxy = new SenderProxy(commandQueue, mock(AtomicCounter.class));

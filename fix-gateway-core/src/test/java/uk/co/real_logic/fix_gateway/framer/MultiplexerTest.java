@@ -69,7 +69,7 @@ public class MultiplexerTest
         connectedId(CONNECTION_ID);
 
         when:
-        multiplexer.disconnect(CONNECTION_ID);
+        multiplexer.onDisconnect(CONNECTION_ID);
         aMessageArrives();
 
         then:
@@ -83,7 +83,7 @@ public class MultiplexerTest
         connectedId(CONNECTION_ID);
 
         when:
-        multiplexer.disconnect(CONNECTION_ID);
+        multiplexer.onDisconnect(CONNECTION_ID);
 
         then:
         verify(mockReceiver).disconnect(CONNECTION_ID);

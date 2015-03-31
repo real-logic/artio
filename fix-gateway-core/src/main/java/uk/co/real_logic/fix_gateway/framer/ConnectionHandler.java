@@ -97,7 +97,7 @@ public class ConnectionHandler
         final long connectionId, final FixGateway gateway, final SessionConfiguration configuration)
     {
         final long sessionId = sessionIdStrategy.register(configuration);
-        final GatewayPublication gatewayPublication = replicationStreams.fixPublication();
+        final GatewayPublication gatewayPublication = replicationStreams.gatewayPublication();
 
         return new InitiatorSession(defaultInterval, connectionId, clock, sessionProxy, gateway, gatewayPublication,
             sessionId, sessionIdStrategy);

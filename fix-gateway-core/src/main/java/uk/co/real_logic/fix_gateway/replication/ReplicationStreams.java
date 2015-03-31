@@ -42,7 +42,7 @@ public final class ReplicationStreams
         return aeron.addPublication(channel, DATA_STREAM);
     }
 
-    public GatewayPublication fixPublication()
+    public GatewayPublication gatewayPublication()
     {
         return new GatewayPublication(dataPublication(), failedDataPublications);
     }
@@ -55,6 +55,11 @@ public final class ReplicationStreams
     public Subscription dataSubscription(final DataHandler handler)
     {
         return aeron.addSubscription(channel, DATA_STREAM, handler);
+    }
+
+    public GatewaySubscription gatewaySubscription()
+    {
+        return new GatewaySubscription(this);
     }
 
     public Subscription controlSubscription(final DataHandler handler)
