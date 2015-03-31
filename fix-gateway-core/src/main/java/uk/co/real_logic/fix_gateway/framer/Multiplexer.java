@@ -79,7 +79,7 @@ public class Multiplexer implements DataHandler
             {
                 messageFrame.wrapForDecode(unsafeBuffer, offset, length, 0);
                 final long connectionId = messageFrame.connection();
-                onMessage(buffer, offset + FRAME_SIZE, length - FRAME_SIZE, connectionId);
+                onMessage(buffer, offset + FRAME_SIZE, length - (FRAME_SIZE + messageHeader.size()), connectionId);
                 break;
             }
 

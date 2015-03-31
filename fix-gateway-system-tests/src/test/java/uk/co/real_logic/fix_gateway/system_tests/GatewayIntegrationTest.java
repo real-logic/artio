@@ -48,6 +48,7 @@ public class GatewayIntegrationTest
     @Before
     public void launch()
     {
+        //System.setProperty("fix.core.debug", "true");
         final int port = unusedPort();
 
         mediaDriver = MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
