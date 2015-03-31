@@ -15,12 +15,13 @@
  */
 package uk.co.real_logic.fix_gateway.admin;
 
+import uk.co.real_logic.fix_gateway.framer.session.AcceptorSession;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 
 // TODO: connect
 public interface SessionHandler
 {
-    void onConnect(final Session session);
+    void onConnect(final AcceptorSession session);
 
     void onDisconnect(final Session session);
 }

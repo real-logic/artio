@@ -143,12 +143,11 @@ public final class StaticConfiguration
         return this;
     }
 
-    public StaticConfiguration adminEventHandler(final SessionHandler sessionHandler)
+    public StaticConfiguration sessionHandler(final SessionHandler sessionHandler)
     {
         this.sessionHandler = sessionHandler;
         return this;
     }
-
 
     int defaultHeartbeatInterval()
     {
@@ -210,7 +209,7 @@ public final class StaticConfiguration
         return fallbackAcceptor;
     }
 
-    SessionHandler adminEventHandler()
+    SessionHandler sessionHandler()
     {
         return sessionHandler;
     }

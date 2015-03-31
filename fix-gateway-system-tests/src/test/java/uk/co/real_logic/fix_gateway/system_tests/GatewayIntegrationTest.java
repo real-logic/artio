@@ -62,7 +62,7 @@ public class GatewayIntegrationTest
                 .bind("localhost", port)
                 .aeronChannel("udp://localhost:" + unusedPort())
                 .authenticationStrategy(new CompIdAuthenticationStrategy("CCG"))
-                .adminEventHandler(sessionHandler);
+                .sessionHandler(sessionHandler);
         acceptingGateway = FixGateway.launch(acceptingConfig);
 
         final StaticConfiguration initiatingConfig = new StaticConfiguration()

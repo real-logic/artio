@@ -80,7 +80,7 @@ public class Multiplexer implements DataHandler
                 messageFrame.wrapForDecode(unsafeBuffer, offset, length, 0);
                 final long connectionId = messageFrame.connection();
                 onMessage(buffer, offset + FRAME_SIZE, length - FRAME_SIZE, connectionId);
-                return;
+                break;
             }
 
             case Disconnect.TEMPLATE_ID:
@@ -89,7 +89,7 @@ public class Multiplexer implements DataHandler
                 final long connectionId = disconnect.connection();
                 DebugLogger.log("Multiplexer Disconnect: %d\n", connectionId);
                 disconnect(connectionId);
-                return;
+                break;
             }
         }
     }

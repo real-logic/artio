@@ -76,7 +76,7 @@ public class FixGateway implements AutoCloseable
 
         final Multiplexer multiplexer = new Multiplexer(receiverProxy);
         final Subscription dataSubscription = streams.dataSubscription(multiplexer);
-        final SessionProxy sesseionProxy = new SessionProxy(configuration.encoderBufferSize(),
+        final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(),
             streams.fixPublication(), configuration.sessionIdStrategy());
 
         final MessageHandler messageHandler = messageHandler(configuration.fallbackAcceptor());
@@ -85,14 +85,14 @@ public class FixGateway implements AutoCloseable
 
         final ConnectionHandler handler = new ConnectionHandler(
             systemClock,
-            sesseionProxy,
+            sessionProxy,
             configuration.receiverBufferSize(),
             configuration.defaultHeartbeatInterval(),
             configuration.sessionIdStrategy(),
             messageHandler,
             streams,
             configuration.authenticationStrategy(),
-            configuration.adminEventHandler());
+            configuration.sessionHandler());
 
         sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer, dataSubscription);
 
