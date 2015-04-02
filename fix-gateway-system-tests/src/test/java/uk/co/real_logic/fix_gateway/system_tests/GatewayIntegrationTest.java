@@ -49,7 +49,6 @@ public class GatewayIntegrationTest
 
     private FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
     private FakeSessionHandler fakeSessionHandler = new FakeSessionHandler(fakeOtfAcceptor);
-    private FakeNewSessionHandler fakeNewSessionHandler = new FakeNewSessionHandler(fakeSessionHandler);
 
     @Before
     public void launch()
@@ -63,7 +62,7 @@ public class GatewayIntegrationTest
                 .bind("localhost", port)
                 .aeronChannel("udp://localhost:" + unusedPort())
                 .authenticationStrategy(new CompIdAuthenticationStrategy("CCG"))
-                .newSessionHandler(fakeNewSessionHandler);
+                .newSessionHandler(fakeSessionHandler);
         acceptingGateway = FixGateway.launch(acceptingConfig);
 
         final StaticConfiguration initiatingConfig = new StaticConfiguration()
@@ -96,7 +95,7 @@ public class GatewayIntegrationTest
     {
         assertTrue("Session has failed to connect", session.isConnected());
         assertTrue("Session has failed to logon", session.state() == ACTIVE);
-        assertNotNull("Subscription has not been passed to handler", fakeNewSessionHandler.subscription());
+        assertNotNull("Subscription has not been passed to handler", fakeSessionHandler.subscription());
     }
 
     @Test
@@ -107,7 +106,7 @@ public class GatewayIntegrationTest
 
         session.send(testRequest);
 
-        final GatewaySubscription subscription = fakeNewSessionHandler.subscription();
+        final GatewaySubscription subscription = fakeSessionHandler.subscription();
 
         assertEventuallyEquals("Failed to receive a message", 2, () -> subscription.poll(2));
         assertEquals(2, fakeOtfAcceptor.messageTypes().size());
@@ -120,7 +119,7 @@ public class GatewayIntegrationTest
         session.disconnect();
         assertFalse("Session is still connected", session.isConnected());
 
-        final GatewaySubscription subscription = fakeNewSessionHandler.subscription();
+        final GatewaySubscription subscription = fakeSessionHandler.subscription();
 
         assertEventuallyTrue("Failed to disconnect",
             () ->
