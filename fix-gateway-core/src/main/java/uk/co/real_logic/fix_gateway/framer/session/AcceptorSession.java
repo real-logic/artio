@@ -36,7 +36,6 @@ public final class AcceptorSession extends Session
 
     public void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
-        //System.out.printf("Received logon from %s, msgSeqNo = %s\n", sessionId, msgSeqNo);
         if (state() == CONNECTED)
         {
             id(sessionId);
@@ -52,6 +51,7 @@ public final class AcceptorSession extends Session
             {
                 state(SessionState.AWAITING_RESEND);
             }
+            publication.saveConnect(connectionId, sessionId);
         }
         onMessage(msgSeqNo);
     }

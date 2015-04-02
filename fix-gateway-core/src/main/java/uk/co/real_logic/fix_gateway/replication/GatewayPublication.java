@@ -99,11 +99,25 @@ public class GatewayPublication
         DebugLogger.log("Enqueued %s\n", unsafeBuffer, offset, srcLength);
     }
 
-    public void saveConnect()
+    public void saveConnect(final long connectionId, final long sessionId)
     {
         claim(Connect.BLOCK_LENGTH);
 
-        // TODO
+        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(unsafeBuffer, offset, 0)
+            .blockLength(connect.sbeBlockLength())
+            .templateId(connect.sbeTemplateId())
+            .schemaId(connect.sbeSchemaId())
+            .version(connect.sbeSchemaVersion());
+
+        offset += header.size();
+
+        connect.wrapForEncode(unsafeBuffer, offset);
+        connect.connection(connectionId);
+        connect.session(sessionId);
 
         bufferClaim.commit();
     }

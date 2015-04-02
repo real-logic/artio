@@ -56,7 +56,6 @@ public class GatewayIntegrationTest
     @Before
     public void launch()
     {
-        //System.setProperty("fix.core.debug", "true");
         final int port = unusedPort();
 
         mediaDriver = MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
@@ -154,9 +153,6 @@ public class GatewayIntegrationTest
         assertEquals(2, acceptor.messageTypes().size());
         assertThat(acceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
     }
-
-    // TODO: shutdown a gateway and check logout
-    // TODO: initiate/accept multiple sessions
 
     @After
     public void close() throws Exception

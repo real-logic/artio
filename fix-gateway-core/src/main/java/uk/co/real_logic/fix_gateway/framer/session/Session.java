@@ -180,6 +180,7 @@ public class Session
         id(sessionId);
         heartbeatIntervalInS(heartbeatInterval);
         onMessage(msgSeqNo);
+        publication.saveConnect(connectionId, sessionId);
     }
 
     void onLogout(final int msgSeqNo, final long sessionId)

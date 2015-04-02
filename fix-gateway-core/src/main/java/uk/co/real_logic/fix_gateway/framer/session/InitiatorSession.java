@@ -46,8 +46,12 @@ public class InitiatorSession extends Session
         {
             state(ACTIVE);
             gateway.onInitiatorSessionActive(this);
+            super.onLogon(heartbeatInterval, msgSeqNo, sessionId);
         }
-        onMessage(msgSeqNo);
+        else
+        {
+            onMessage(msgSeqNo);
+        }
     }
 
     public int poll(final long time)
