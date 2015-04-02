@@ -101,6 +101,6 @@ public class MultiplexerTest
 
     private void aMessageArrives()
     {
-        multiplexer.onMessage(buffer, 1, 1, CONNECTION_ID);
+        multiplexer.onMessage(buffer, 1, 1, CONNECTION_ID, 0, 0);
     }
 }

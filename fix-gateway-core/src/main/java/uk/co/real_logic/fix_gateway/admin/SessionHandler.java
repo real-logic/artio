@@ -19,7 +19,13 @@ import uk.co.real_logic.agrona.DirectBuffer;
 
 public interface SessionHandler
 {
-    void onMessage(final DirectBuffer buffer, final int offset, final int length, final long connectionId);
+    void onMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final long connectionId,
+        final long sessionId,
+        final int messageType);
 
     void onDisconnect(final long connectionId);
 }

@@ -61,9 +61,14 @@ public class GatewaySubscription
             case FixMessage.TEMPLATE_ID:
             {
                 messageFrame.wrapForDecode(unsafeBuffer, offset, length, 0);
-                final long connectionId = messageFrame.connection();
                 final int messageLength = length - (FRAME_SIZE + messageHeader.size());
-                sessionHandler.onMessage(buffer, offset + FRAME_SIZE, messageLength, connectionId);
+                sessionHandler.onMessage(
+                    buffer,
+                    offset + FRAME_SIZE,
+                    messageLength,
+                    messageFrame.connection(),
+                    messageFrame.session(),
+                    messageFrame.messageType());
                 break;
             }
 

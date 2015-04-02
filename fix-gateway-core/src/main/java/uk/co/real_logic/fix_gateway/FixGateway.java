@@ -105,7 +105,6 @@ public class FixGateway implements AutoCloseable
             configuration.receiverBufferSize(),
             configuration.defaultHeartbeatInterval(),
             configuration.sessionIdStrategy(),
-            messageHandler,
             inboundStreams,
             outboundStreams,
             configuration.authenticationStrategy(),

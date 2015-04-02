@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
-import uk.co.real_logic.fix_gateway.MessageHandler;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.admin.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.admin.AuthenticationStrategy;
@@ -43,7 +42,6 @@ public class ConnectionHandler
     private final int bufferSize;
     private final int defaultInterval;
     private final SessionIdStrategy sessionIdStrategy;
-    private final MessageHandler messageHandler;
     private final ReplicationStreams inboundStreams;
     private final ReplicationStreams outboundStreams;
     private final AuthenticationStrategy authenticationStrategy;
@@ -55,7 +53,6 @@ public class ConnectionHandler
         final int bufferSize,
         final int defaultInterval,
         final SessionIdStrategy sessionIdStrategy,
-        final MessageHandler messageHandler,
         final ReplicationStreams inboundStreams,
         final ReplicationStreams outboundStreams,
         final AuthenticationStrategy authenticationStrategy,
@@ -66,7 +63,6 @@ public class ConnectionHandler
         this.bufferSize = bufferSize;
         this.defaultInterval = defaultInterval;
         this.sessionIdStrategy = sessionIdStrategy;
-        this.messageHandler = messageHandler;
         this.inboundStreams = inboundStreams;
         this.outboundStreams = outboundStreams;
         this.authenticationStrategy = authenticationStrategy;
@@ -82,7 +78,15 @@ public class ConnectionHandler
         final SocketChannel channel, final long connectionId, final Session session)
     {
         final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy, authenticationStrategy);
-        return new ReceiverEndPoint(channel, bufferSize, messageHandler, connectionId, sessionParser,
+
+        newSessionHandler.onConnect(session, inboundStreams.gatewaySubscription());
+
+        return new ReceiverEndPoint(
+            channel,
+            bufferSize,
+            inboundStreams.gatewayPublication(),
+            connectionId,
+            sessionParser,
             newSessionHandler);
     }
 
@@ -102,7 +106,8 @@ public class ConnectionHandler
         final long sessionId = sessionIdStrategy.register(configuration);
         final GatewayPublication gatewayPublication = outboundStreams.gatewayPublication();
 
-        return new InitiatorSession(defaultInterval, connectionId, clock, sessionProxy, gateway, gatewayPublication,
+        return new InitiatorSession(
+            defaultInterval, connectionId, clock, sessionProxy, gateway, gatewayPublication,
             sessionId, sessionIdStrategy);
     }
 }

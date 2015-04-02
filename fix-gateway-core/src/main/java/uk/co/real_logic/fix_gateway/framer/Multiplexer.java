@@ -44,7 +44,13 @@ public class Multiplexer implements SessionHandler
     /**
      * Receive a message from a message subscription buffer.
      */
-    public void onMessage(final DirectBuffer buffer, final int offset, final int length, final long connectionId)
+    public void onMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final long connectionId,
+        final long sessionId,
+        final int messageType)
     {
         final SenderEndPoint endPoint = endpoints.get(connectionId);
         if (endPoint != null)

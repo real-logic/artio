@@ -17,7 +17,9 @@ package uk.co.real_logic.fix_gateway;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
+import java.util.function.IntSupplier;
 
 import static org.junit.Assert.fail;
 
@@ -30,6 +32,18 @@ public final class Timing
             final BooleanSupplier condition) throws InterruptedException
     {
         assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT);
+    }
+
+    public static void assertEventuallyEquals(
+        final String message,
+        final int expectedCount,
+        final IntSupplier supplier) throws InterruptedException
+    {
+        AtomicInteger count = new AtomicInteger(0);
+        assertEventuallyTrue(message, () ->
+        {
+            return count.addAndGet(supplier.getAsInt()) >= expectedCount;
+        });
     }
 
     public static void assertEventuallyTrue(

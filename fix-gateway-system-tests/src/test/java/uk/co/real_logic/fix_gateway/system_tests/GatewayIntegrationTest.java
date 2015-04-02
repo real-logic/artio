@@ -19,20 +19,26 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.admin.CompIdAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.admin.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.admin.SessionHandler;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
+import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
+import uk.co.real_logic.fix_gateway.framer.session.Session;
+import uk.co.real_logic.fix_gateway.otf.OtfParser;
+import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyEquals;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 
@@ -46,8 +52,29 @@ public class GatewayIntegrationTest
     private FixGateway initiatingGateway;
     private InitiatorSession session;
     private FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
-    private SessionHandler mockSessionHandler = mock(SessionHandler.class);
-    private FakeNewSessionHandler newSessionHandler = new FakeNewSessionHandler(mockSessionHandler);
+
+    private SessionHandler fakeSessionHandler = new SessionHandler()
+    {
+        private final OtfParser parser = new OtfParser(fakeOtfAcceptor, new IntDictionary());
+
+        public void onMessage(
+            final DirectBuffer buffer,
+            final int offset,
+            final int length,
+            final long connectionId,
+            final long sessionId,
+            final int messageType)
+        {
+            parser.onMessage(buffer, offset, length, sessionId, messageType);
+        }
+
+        public void onDisconnect(final long connectionId)
+        {
+            // TODO: USE!
+        }
+    };
+
+    private FakeNewSessionHandler newSessionHandler = new FakeNewSessionHandler(fakeSessionHandler);
 
     @Before
     public void launch()
@@ -67,7 +94,18 @@ public class GatewayIntegrationTest
 
         final StaticConfiguration initiatingConfig = new StaticConfiguration()
                 .bind("localhost", unusedPort())
-                .aeronChannel("udp://localhost:" + unusedPort());
+                .aeronChannel("udp://localhost:" + unusedPort())
+                .newSessionHandler(new NewSessionHandler() {
+                    public void onConnect(final Session session, final GatewaySubscription subscription)
+                    {
+
+                    }
+
+                    public void onDisconnect(final Session session)
+                    {
+
+                    }
+                });
         initiatingGateway = FixGateway.launch(initiatingConfig);
 
         final SessionConfiguration config = SessionConfiguration.builder()
@@ -84,6 +122,7 @@ public class GatewayIntegrationTest
     {
         assertTrue("Session has failed to connect", session.isConnected());
         assertTrue("Session has failed to logon", session.state() == ACTIVE);
+        assertNotNull("Subscription has not been passed to handler", newSessionHandler.subscription());
     }
 
     @Test
@@ -94,7 +133,10 @@ public class GatewayIntegrationTest
 
         session.send(testRequest);
 
-        assertEventuallyTrue("Failed to receive a message", () -> fakeOtfAcceptor.messageTypes().size() == 2);
+        final GatewaySubscription subscription = newSessionHandler.subscription();
+
+        assertEventuallyEquals("Failed to receive a message", 2, () -> subscription.poll(2));
+        assertEquals(2, fakeOtfAcceptor.messageTypes().size());
         assertThat(fakeOtfAcceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
     }
 
