@@ -65,7 +65,6 @@ public final class StaticConfiguration
 
     private String host;
     private int port;
-    private OtfMessageAcceptor fallbackAcceptor;
     private int counterBuffersLength = getInteger(COUNTER_BUFFERS_LENGTH_PROP_NAME, COUNTERS_BUFFER_LENGTH_DEFAULT);
     private String counterBuffersFile = System.getProperty(COUNTERS_FILE_PROP_NAME, COUNTERS_FILE_PROP_DEFAULT);
     private String aeronChannel;
@@ -85,13 +84,6 @@ public final class StaticConfiguration
     {
         otfAcceptors.put(firstTag, messageAcceptor);
         IntStream.of(tags).forEach(tag -> otfAcceptors.put(tag, messageAcceptor));
-        return this;
-    }
-
-    public StaticConfiguration registerFallbackAcceptor(
-            final OtfMessageAcceptor fallbackAcceptor)
-    {
-        this.fallbackAcceptor = fallbackAcceptor;
         return this;
     }
 
@@ -202,11 +194,6 @@ public final class StaticConfiguration
     AuthenticationStrategy authenticationStrategy()
     {
         return authenticationStrategy;
-    }
-
-    OtfMessageAcceptor fallbackAcceptor()
-    {
-        return fallbackAcceptor;
     }
 
     NewSessionHandler newSessionHandler()

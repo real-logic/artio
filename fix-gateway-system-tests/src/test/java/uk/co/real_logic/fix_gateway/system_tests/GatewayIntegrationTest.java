@@ -85,7 +85,6 @@ public class GatewayIntegrationTest
         mediaDriver = MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
 
         final StaticConfiguration acceptingConfig = new StaticConfiguration()
-                .registerFallbackAcceptor(fakeOtfAcceptor)
                 .bind("localhost", port)
                 .aeronChannel("udp://localhost:" + unusedPort())
                 .authenticationStrategy(new CompIdAuthenticationStrategy("CCG"))

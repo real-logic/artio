@@ -32,7 +32,6 @@ import static uk.co.real_logic.fix_gateway.messages.FixMessage.BLOCK_LENGTH;
 
 /**
  * A proxy for publishing messages fix related messages
- *
  */
 public class GatewayPublication
 {
