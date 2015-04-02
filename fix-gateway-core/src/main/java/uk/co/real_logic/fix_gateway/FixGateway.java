@@ -22,25 +22,18 @@ import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
 import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.commands.SenderCommand;
 import uk.co.real_logic.fix_gateway.commands.SenderProxy;
-import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.framer.Receiver;
 import uk.co.real_logic.fix_gateway.framer.Sender;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.SessionProxy;
-import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
-import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEBUG_PRINT_MESSAGES;
-
 public class FixGateway implements AutoCloseable
 {
-    private static final MessageHandler EMPTY_HANDLER = (buffer, offset, length, sessionId, messageType) -> {};
-
     public static final int INBOUND_DATA_STREAM = 0;
     public static final int INBOUND_CONTROL_STREAM = 1;
     public static final int OUTBOUND_DATA_STREAM = 2;
@@ -95,8 +88,6 @@ public class FixGateway implements AutoCloseable
         final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(),
             outboundStreams.gatewayPublication(), configuration.sessionIdStrategy());
 
-        final MessageHandler messageHandler = messageHandler(configuration.fallbackAcceptor());
-
         final MilliClock systemClock = System::currentTimeMillis;
 
         final ConnectionHandler handler = new ConnectionHandler(
@@ -116,14 +107,6 @@ public class FixGateway implements AutoCloseable
 
         senderRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sender);
         receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, receiver);
-    }
-
-    private MessageHandler messageHandler(final OtfMessageAcceptor fallbackAcceptor)
-    {
-        final MessageHandler handler = fallbackAcceptor  == null
-                                     ? EMPTY_HANDLER
-                                     : new OtfParser(fallbackAcceptor, new IntDictionary());
-        return DEBUG_PRINT_MESSAGES ? new DebugMessageHandler(handler) : handler;
     }
 
     private BackoffIdleStrategy backoffIdleStrategy()

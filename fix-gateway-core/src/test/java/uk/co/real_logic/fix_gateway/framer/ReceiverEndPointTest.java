@@ -21,10 +21,10 @@ import org.mockito.InOrder;
 import org.mockito.Mockito;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.fix_gateway.MessageHandler;
 import uk.co.real_logic.fix_gateway.admin.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
+import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -46,13 +46,13 @@ public class ReceiverEndPointTest
     private static final long SESSION_ID = 4L;
 
     private SocketChannel mockChannel = mock(SocketChannel.class);
-    private MessageHandler mockHandler = mock(MessageHandler.class);
+    private GatewayPublication mockPub = mock(GatewayPublication.class);
     private SessionParser mockSessionParser = mock(SessionParser.class);
     private Session mockSession = mock(Session.class);
     private NewSessionHandler mockAdminHandler = mock(NewSessionHandler.class);
 
     private ReceiverEndPoint endPoint =
-        new ReceiverEndPoint(mockChannel, 16 * 1024, mockHandler, CONNECTION_ID, mockSessionParser, mockAdminHandler);
+        new ReceiverEndPoint(mockChannel, 16 * 1024, mockPub, CONNECTION_ID, mockSessionParser, mockAdminHandler);
 
     @Before
     public void setUp()
@@ -200,23 +200,23 @@ public class ReceiverEndPointTest
 
     private void handlerReceivesFramedMessages(int numberOfMessages)
     {
-        verify(mockHandler, times(numberOfMessages))
+        verify(mockPub, times(numberOfMessages))
             .onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(SESSION_ID), eq(MESSAGE_TYPE));
     }
 
     private void handlerReceivesTwoFramedMessages()
     {
-        InOrder inOrder = Mockito.inOrder(mockHandler);
-        inOrder.verify(mockHandler, times(1))
+        InOrder inOrder = Mockito.inOrder(mockPub);
+        inOrder.verify(mockPub, times(1))
             .onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(SESSION_ID), eq(MESSAGE_TYPE));
-        inOrder.verify(mockHandler, times(1))
+        inOrder.verify(mockPub, times(1))
             .onMessage(any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(SESSION_ID), eq(MESSAGE_TYPE));
         inOrder.verifyNoMoreInteractions();
     }
 
     private void handlerNotCalled()
     {
-        verifyNoMoreInteractions(mockHandler);
+        verifyNoMoreInteractions(mockPub);
     }
 
     private void theEndpointReceivesACompleteMessage()

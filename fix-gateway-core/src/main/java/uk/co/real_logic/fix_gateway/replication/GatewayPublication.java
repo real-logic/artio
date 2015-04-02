@@ -21,7 +21,6 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.MessageHandler;
 import uk.co.real_logic.fix_gateway.messages.Connect;
 import uk.co.real_logic.fix_gateway.messages.Disconnect;
 import uk.co.real_logic.fix_gateway.messages.FixMessage;
@@ -35,7 +34,7 @@ import static uk.co.real_logic.fix_gateway.messages.FixMessage.BLOCK_LENGTH;
  * A proxy for publishing messages fix related messages
  *
  */
-public class GatewayPublication implements MessageHandler
+public class GatewayPublication
 {
     public static final int FRAME_SIZE = BLOCK_LENGTH + FixMessage.bodyHeaderSize();
     // SBE Message offset: offset + fixMessage.sbeBlockLength() + fixMessage.bodyHeaderSize();

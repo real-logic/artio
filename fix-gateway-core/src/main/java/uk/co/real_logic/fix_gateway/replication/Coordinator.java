@@ -23,7 +23,6 @@ import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.MessageHandler;
 import uk.co.real_logic.fix_gateway.messages.FixMessage;
 import uk.co.real_logic.fix_gateway.messages.MessageAcknowledgement;
 import uk.co.real_logic.fix_gateway.messages.MessageHeader;
@@ -38,7 +37,7 @@ public class Coordinator implements Agent
     private final MessageAcknowledgement messageAcknowledgement = new MessageAcknowledgement();
     private final FixMessage fixMessage = new FixMessage();
 
-    private final MessageHandler delegate;
+    //private final MessageHandler delegate;
     private final TermAcknowledgementStrategy termAcknowledgementStrategy;
 
     private final Subscription dataSubscription;
@@ -52,11 +51,11 @@ public class Coordinator implements Agent
 
     public Coordinator(
         final ReplicationStreams replicationStreams,
-        final MessageHandler delegate,
+        //final MessageHandler delegate,
         final IntHashSet followers,
         final TermAcknowledgementStrategy termAcknowledgementStrategy)
     {
-        this.delegate = delegate;
+        //this.delegate = delegate;
         this.termAcknowledgementStrategy = termAcknowledgementStrategy;
 
         dataSubscription = replicationStreams.dataSubscription(this::onDataMessage);
@@ -75,7 +74,7 @@ public class Coordinator implements Agent
         final int messageType = 'A'; // TODO
         // TODO: use FixPublication
         // SBE Message offset: offset + fixMessage.sbeBlockLength() + fixMessage.bodyHeaderSize();
-        delegate.onMessage(buffer, offset, length, fixSessionId, messageType);
+        //delegate.onMessage(buffer, offset, length, fixSessionId, messageType);
     }
 
     private void onControlMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)

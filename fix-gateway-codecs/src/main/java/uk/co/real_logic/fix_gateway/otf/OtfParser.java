@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.otf;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
-import uk.co.real_logic.fix_gateway.MessageHandler;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
@@ -37,7 +36,7 @@ import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
  * There are a lot of places where values are passed as parameters and not assigned to fields in order to
  * allow stack allocated primitives and avoid allocation.
  */
-public final class OtfParser implements MessageHandler
+public final class OtfParser
 {
     private static final int NO_CHECKSUM = 0;
     private static final int UNKNOWN = -1;

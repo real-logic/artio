@@ -18,10 +18,10 @@ package uk.co.real_logic.fix_gateway.framer;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.MessageHandler;
 import uk.co.real_logic.fix_gateway.admin.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
+import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.io.IOException;
@@ -35,7 +35,6 @@ import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 /**
  * Handles incoming data from sockets
  */
-// TODO: should this refer to a MessageHandler or just pass it onto the session or session parser?
 public class ReceiverEndPoint
 {
     private static final byte BODY_LENGTH_FIELD = 9;
@@ -47,7 +46,7 @@ public class ReceiverEndPoint
     public static final int DISCONNECTED = -1;
 
     private final SocketChannel channel;
-    private final MessageHandler handler;
+    private final GatewayPublication publication;
     private final long connectionId;
     private final SessionParser session;
     private final NewSessionHandler newSessionHandler;
@@ -60,13 +59,13 @@ public class ReceiverEndPoint
     public ReceiverEndPoint(
         final SocketChannel channel,
         final int bufferSize,
-        final MessageHandler handler,
+        final GatewayPublication publication,
         final long connectionId,
         final SessionParser session,
         final NewSessionHandler newSessionHandler)
     {
         this.channel = channel;
-        this.handler = handler;
+        this.publication = publication;
         this.connectionId = connectionId;
         this.session = session;
         this.newSessionHandler = newSessionHandler;
@@ -162,7 +161,7 @@ public class ReceiverEndPoint
                 final long sessionId = session.onMessage(buffer, offset, length, connectionId, messageType);
                 if (sessionId != SessionParser.UNKNOWN_SESSION_ID)
                 {
-                    handler.onMessage(buffer, offset, length, sessionId, messageType);
+                    publication.onMessage(buffer, offset, length, sessionId, messageType);
                 }
                 else
                 {
@@ -235,7 +234,7 @@ public class ReceiverEndPoint
             e.printStackTrace();
         }
 
-        // TODO: this event handler probably shouldn't be called on the receiver thread.
+        // TODO: this event publication probably shouldn't be called on the receiver thread.
         if (newSessionHandler != null)
         {
             newSessionHandler.onDisconnect(session.session());

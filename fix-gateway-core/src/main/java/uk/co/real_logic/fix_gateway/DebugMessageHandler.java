@@ -20,17 +20,14 @@ import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.decoder.PrinterImpl;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
-public final class DebugMessageHandler implements MessageHandler
+public final class DebugMessageHandler
 {
 
     private final Printer printer = new PrinterImpl();
     private final AsciiFlyweight string = new AsciiFlyweight();
 
-    private final MessageHandler delegate;
-
-    public DebugMessageHandler(final MessageHandler delegate)
+    public DebugMessageHandler()
     {
-        this.delegate = delegate;
     }
 
     public void onMessage(
@@ -40,6 +37,6 @@ public final class DebugMessageHandler implements MessageHandler
         final String message = printer.toString(string, offset, length, messageType);
         System.out.printf("Received from %d", sessionId);
         System.out.println(message);
-        delegate.onMessage(buffer, offset, length, sessionId, messageType);
+        // TODO: delegate.onMessage(buffer, offset, length, sessionId, messageType);
     }
 }
