@@ -45,6 +45,7 @@ public class GatewayIntegrationTest
     private FixGateway acceptingGateway;
     private FixGateway initiatingGateway;
     private InitiatorSession initiatedSession;
+    private Session acceptorSession;
 
     private FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
     private FakeSessionHandler acceptingSessionHandler = new FakeSessionHandler(acceptingOtfAcceptor);
@@ -80,6 +81,7 @@ public class GatewayIntegrationTest
                 .targetCompId("CCG")
                 .build();
         initiatedSession = initiatingGateway.initiate(config, null);
+        acceptorSession = acceptingSessionHandler.session();
     }
 
     @Test
@@ -88,7 +90,7 @@ public class GatewayIntegrationTest
         assertTrue("Session has failed to connect", initiatedSession.isConnected());
         assertTrue("Session has failed to logon", initiatedSession.state() == ACTIVE);
 
-        assertNotNull("Accepting Session not been setup", acceptingSessionHandler.session());
+        assertNotNull("Accepting Session not been setup", acceptorSession);
         assertNotNull("Accepting Session not been passed a subscription", acceptingSessionHandler.subscription());
     }
 
@@ -103,7 +105,7 @@ public class GatewayIntegrationTest
     @Test
     public void messagesCanBeSentFromAcceptorToInitiator() throws InterruptedException
     {
-        sendTestRequest(acceptingSessionHandler.session());
+        sendTestRequest(acceptorSession);
 
         assertReceivedMessage(initiatingSessionHandler.subscription(), initiatingOtfAcceptor);
     }
@@ -112,15 +114,28 @@ public class GatewayIntegrationTest
     public void initiatorSessionCanBeDisconnected() throws InterruptedException
     {
         initiatedSession.disconnect();
-        assertFalse("Session is still connected", initiatedSession.isConnected());
 
-        final GatewaySubscription subscription = acceptingSessionHandler.subscription();
+        assertDisconnected(acceptingSessionHandler, initiatedSession);
+    }
+
+    @Test
+    public void acceptorSessionCanBeDisconnected() throws InterruptedException
+    {
+        acceptorSession.disconnect();
+
+        assertDisconnected(initiatingSessionHandler, acceptorSession);
+    }
+
+    private void assertDisconnected(
+        final FakeSessionHandler sessionHandler, final Session session) throws InterruptedException
+    {
+        assertFalse("Session is still connected", session.isConnected());
 
         assertEventuallyTrue("Failed to disconnect",
             () ->
             {
-                subscription.poll(1);
-                assertEquals(CONNECTION_ID, acceptingSessionHandler.connectionId());
+                sessionHandler.subscription().poll(1);
+                assertEquals(CONNECTION_ID, sessionHandler.connectionId());
             });
     }
 
