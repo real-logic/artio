@@ -60,13 +60,7 @@ public class GatewayPublication
         this.fails = fails;
     }
 
-    public void onMessage(
-        final DirectBuffer buffer, final int offset, final int length, final long sessionId, final int messageType)
-    {
-        saveFixMessage(buffer, offset, length, sessionId, messageType);
-    }
-
-    public void saveFixMessage(
+    public void saveMessage(
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength,

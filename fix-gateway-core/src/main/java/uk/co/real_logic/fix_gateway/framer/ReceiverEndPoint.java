@@ -157,7 +157,7 @@ public class ReceiverEndPoint
                 final long sessionId = session.onMessage(buffer, offset, length, connectionId, messageType);
                 if (sessionId != SessionParser.UNKNOWN_SESSION_ID)
                 {
-                    publication.onMessage(buffer, offset, length, sessionId, messageType);
+                    publication.saveMessage(buffer, offset, length, sessionId, messageType);
                 }
                 else
                 {

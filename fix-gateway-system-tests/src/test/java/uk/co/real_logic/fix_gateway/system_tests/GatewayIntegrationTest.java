@@ -23,7 +23,6 @@ import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.admin.CompIdAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.admin.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
@@ -45,10 +44,13 @@ public class GatewayIntegrationTest
     private MediaDriver mediaDriver;
     private FixGateway acceptingGateway;
     private FixGateway initiatingGateway;
-    private InitiatorSession session;
+    private InitiatorSession initiatedSession;
 
-    private FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
-    private FakeSessionHandler fakeSessionHandler = new FakeSessionHandler(fakeOtfAcceptor);
+    private FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
+    private FakeSessionHandler acceptingSessionHandler = new FakeSessionHandler(acceptingOtfAcceptor);
+
+    private FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
+    private FakeSessionHandler initiatingSessionHandler = new FakeSessionHandler(initiatingOtfAcceptor);
 
     @Before
     public void launch()
@@ -62,23 +64,13 @@ public class GatewayIntegrationTest
                 .bind("localhost", port)
                 .aeronChannel("udp://localhost:" + unusedPort())
                 .authenticationStrategy(new CompIdAuthenticationStrategy("CCG"))
-                .newSessionHandler(fakeSessionHandler);
+                .newSessionHandler(acceptingSessionHandler);
         acceptingGateway = FixGateway.launch(acceptingConfig);
 
         final StaticConfiguration initiatingConfig = new StaticConfiguration()
                 .bind("localhost", unusedPort())
                 .aeronChannel("udp://localhost:" + unusedPort())
-                .newSessionHandler(new NewSessionHandler() {
-                    public void onConnect(final Session session, final GatewaySubscription subscription)
-                    {
-
-                    }
-
-                    public void onDisconnect(final Session session)
-                    {
-
-                    }
-                });
+                .newSessionHandler(initiatingSessionHandler);
         initiatingGateway = FixGateway.launch(initiatingConfig);
 
         final SessionConfiguration config = SessionConfiguration.builder()
@@ -87,46 +79,65 @@ public class GatewayIntegrationTest
                 .senderCompId("LEH_LZJ02")
                 .targetCompId("CCG")
                 .build();
-        session = initiatingGateway.initiate(config, null);
+        initiatedSession = initiatingGateway.initiate(config, null);
     }
 
     @Test
     public void sessionHasBeenInitiated() throws InterruptedException
     {
-        assertTrue("Session has failed to connect", session.isConnected());
-        assertTrue("Session has failed to logon", session.state() == ACTIVE);
-        assertNotNull("Subscription has not been passed to handler", fakeSessionHandler.subscription());
+        assertTrue("Session has failed to connect", initiatedSession.isConnected());
+        assertTrue("Session has failed to logon", initiatedSession.state() == ACTIVE);
+
+        assertNotNull("Accepting Session not been setup", acceptingSessionHandler.session());
+        assertNotNull("Accepting Session not been passed a subscription", acceptingSessionHandler.subscription());
     }
 
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptor() throws InterruptedException
     {
-        final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest.testReqID("hi");
+        sendTestRequest(initiatedSession);
 
-        session.send(testRequest);
+        assertReceivedMessage(acceptingSessionHandler.subscription(), acceptingOtfAcceptor);
+    }
 
-        final GatewaySubscription subscription = fakeSessionHandler.subscription();
+    @Test
+    public void messagesCanBeSentFromAcceptorToInitiator() throws InterruptedException
+    {
+        sendTestRequest(acceptingSessionHandler.session());
 
-        assertEventuallyEquals("Failed to receive a message", 2, () -> subscription.poll(2));
-        assertEquals(2, fakeOtfAcceptor.messageTypes().size());
-        assertThat(fakeOtfAcceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
+        assertReceivedMessage(initiatingSessionHandler.subscription(), initiatingOtfAcceptor);
     }
 
     @Test
     public void initiatorSessionCanBeDisconnected() throws InterruptedException
     {
-        session.disconnect();
-        assertFalse("Session is still connected", session.isConnected());
+        initiatedSession.disconnect();
+        assertFalse("Session is still connected", initiatedSession.isConnected());
 
-        final GatewaySubscription subscription = fakeSessionHandler.subscription();
+        final GatewaySubscription subscription = acceptingSessionHandler.subscription();
 
         assertEventuallyTrue("Failed to disconnect",
             () ->
             {
                 subscription.poll(1);
-                assertEquals(CONNECTION_ID, fakeSessionHandler.connectionId());
+                assertEquals(CONNECTION_ID, acceptingSessionHandler.connectionId());
             });
+    }
+
+    private void sendTestRequest(final Session session)
+    {
+        final TestRequestEncoder testRequest = new TestRequestEncoder();
+        testRequest.testReqID("hi");
+
+        session.send(testRequest);
+    }
+
+    private void assertReceivedMessage(
+        final GatewaySubscription subscription, final FakeOtfAcceptor acceptor) throws InterruptedException
+    {
+        assertEventuallyEquals("Failed to receive a message", 2, () -> subscription.poll(2));
+        assertEquals(2, acceptor.messageTypes().size());
+        assertThat(acceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
     }
 
     // TODO: shutdown a gateway and check logout

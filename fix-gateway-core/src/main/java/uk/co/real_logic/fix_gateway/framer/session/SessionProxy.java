@@ -113,6 +113,6 @@ public class SessionProxy
 
     private void send(final int length, final long sessionId, final int messageType)
     {
-        gatewayPublication.onMessage(buffer, 0, length, sessionId, messageType);
+        gatewayPublication.saveMessage(buffer, 0, length, sessionId, messageType);
     }
 }

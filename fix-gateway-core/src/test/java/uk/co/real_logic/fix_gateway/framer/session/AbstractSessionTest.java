@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.framer.session;
 
 import uk.co.real_logic.fix_gateway.framer.FakeMilliClock;
+import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
@@ -28,7 +29,7 @@ public abstract class AbstractSessionTest
     public static final int HEARTBEAT_INTERVAL = 2;
 
     protected SessionProxy mockProxy = mock(SessionProxy.class);
-
+    protected GatewayPublication mockPublication = mock(GatewayPublication.class);
     protected FakeMilliClock fakeClock = new FakeMilliClock();
 
     public void verifyNoFurtherMessages()

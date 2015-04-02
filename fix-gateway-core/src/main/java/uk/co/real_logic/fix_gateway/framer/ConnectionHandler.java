@@ -97,7 +97,9 @@ public class ConnectionHandler
 
     public AcceptorSession acceptSession(final long connectionId)
     {
-        return new AcceptorSession(defaultInterval, connectionId, clock, sessionProxy);
+        final GatewayPublication publication = outboundStreams.gatewayPublication();
+        return new AcceptorSession(
+            defaultInterval, connectionId, clock, sessionProxy, publication, sessionIdStrategy);
     }
 
     public InitiatorSession initiateSession(
@@ -107,7 +109,7 @@ public class ConnectionHandler
         final GatewayPublication gatewayPublication = outboundStreams.gatewayPublication();
 
         return new InitiatorSession(
-            defaultInterval, connectionId, clock, sessionProxy, gateway, gatewayPublication,
-            sessionId, sessionIdStrategy);
+            defaultInterval, connectionId, clock, sessionProxy, gatewayPublication, sessionIdStrategy, gateway,
+            sessionId);
     }
 }

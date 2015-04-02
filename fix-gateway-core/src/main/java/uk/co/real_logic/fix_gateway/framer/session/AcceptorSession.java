@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.framer.session;
 
+import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.CONNECTED;
@@ -23,9 +24,14 @@ public final class AcceptorSession extends Session
 {
 
     public AcceptorSession(
-        final int defaultInterval, final long connectionId, final MilliClock clock, final SessionProxy proxy)
+        final int defaultInterval,
+        final long connectionId,
+        final MilliClock clock,
+        final SessionProxy proxy,
+        final GatewayPublication publication,
+        final SessionIdStrategy sessionIdStrategy)
     {
-        super(defaultInterval, connectionId, clock, CONNECTED, proxy);
+        super(defaultInterval, connectionId, clock, CONNECTED, proxy, publication, sessionIdStrategy);
     }
 
     public void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
@@ -35,12 +41,12 @@ public final class AcceptorSession extends Session
         {
             id(sessionId);
 
-            final int expectedSeqNo = expectedSeqNo();
+            final int expectedSeqNo = expectedReceivedSeqNum();
             if (expectedSeqNo == msgSeqNo)
             {
                 heartbeatIntervalInS(heartbeatInterval);
                 state(SessionState.ACTIVE);
-                proxy.logon(heartbeatInterval, msgSeqNo + 1, sessionId);
+                proxy.logon(heartbeatInterval, newSentSeqNum(), sessionId);
             }
             else if (expectedSeqNo < msgSeqNo)
             {

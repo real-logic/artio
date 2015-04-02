@@ -15,8 +15,14 @@
  */
 package uk.co.real_logic.fix_gateway.framer.session;
 
+import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.Verify;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
+import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
+import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.*;
 
@@ -34,10 +40,15 @@ public class Session
 
     protected final SessionProxy proxy;
     protected final long connectionId;
+    protected final SessionIdStrategy sessionIdStrategy;
+    protected final GatewayPublication publication;
+    protected final MutableDirectBuffer buffer;
+    protected final MutableAsciiFlyweight string;
 
     private SessionState state;
     private long id = UNKNOWN_ID;
-    private int lastMsgSeqNum = 0;
+    private int lastReceivedMsgSeqNum = 0;
+    private int lastSentMsgSeqNum = 0;
 
     private long heartbeatIntervalInMs;
     private long nextRequiredMessageTimeInMs;
@@ -49,19 +60,30 @@ public class Session
         final long connectionId,
         final MilliClock clock,
         final SessionState state,
-        final SessionProxy proxy)
+        final SessionProxy proxy,
+        final GatewayPublication publication,
+        final SessionIdStrategy sessionIdStrategy)
     {
         Verify.notNull(clock, "clock");
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
+        Verify.notNull(publication, "publication");
 
         this.clock = clock;
         this.proxy = proxy;
         this.connectionId = connectionId;
+        this.publication = publication;
+        this.sessionIdStrategy = sessionIdStrategy;
+
+        buffer = new UnsafeBuffer(new byte[8 * 1024]);
+        string = new MutableAsciiFlyweight(buffer);
+
         this.state = state;
 
         heartbeatIntervalInS(heartbeatIntervalInS);
     }
+
+    // ---------- PUBLIC API ----------
 
     public boolean isConnected()
     {
@@ -71,106 +93,6 @@ public class Session
     public SessionState state()
     {
         return this.state;
-    }
-
-    void onMessage(final int msgSeqNo)
-    {
-        if (state() == CONNECTED)
-        {
-            disconnect();
-        }
-        else
-        {
-            final int expectedSeqNo = expectedSeqNo();
-            if (expectedSeqNo == msgSeqNo)
-            {
-                nextRequiredMessageTime(time() + heartbeatIntervalInMs());
-                lastMsgSeqNum(msgSeqNo);
-            }
-            else if (expectedSeqNo < msgSeqNo)
-            {
-                state(AWAITING_RESEND);
-                proxy.resendRequest(msgSeqNo + 1, expectedSeqNo, msgSeqNo - 1, id());
-                incrementSequenceNumber();
-            }
-            else if (expectedSeqNo > msgSeqNo)
-            {
-                disconnect();
-            }
-        }
-    }
-
-    void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
-    {
-        id(sessionId);
-        heartbeatIntervalInS(heartbeatInterval);
-        onMessage(msgSeqNo);
-    }
-
-    void onLogout(final int msgSeqNo, final long sessionId)
-    {
-
-        final int replySeqNo = msgSeqNo + 1;
-        proxy.logout(replySeqNo, sessionId);
-        lastMsgSeqNum(replySeqNo);
-
-        disconnect();
-    }
-
-    void onTestRequest(final String testReqId)
-    {
-        proxy.heartbeat(testReqId, id());
-    }
-
-    void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
-    {
-        if (newSeqNo > msgSeqNo)
-        {
-            gapFill(msgSeqNo, newSeqNo, possDupFlag);
-        }
-        else
-        {
-            sequenceReset(msgSeqNo, newSeqNo);
-        }
-    }
-
-    private void sequenceReset(final int msgSeqNo, final int newSeqNo)
-    {
-        final int expectedMsgSeqNo = expectedSeqNo();
-        if (newSeqNo > expectedMsgSeqNo)
-        {
-            lastMsgSeqNum(newSeqNo - 1);
-        }
-        else if (newSeqNo < expectedMsgSeqNo)
-        {
-            proxy.reject(expectedMsgSeqNo, msgSeqNo, id());
-        }
-    }
-
-    private void gapFill(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
-    {
-        final int expectedMsgSeqNo = expectedSeqNo();
-        if (msgSeqNo > expectedMsgSeqNo)
-        {
-            proxy.resendRequest(newSeqNo + 1, expectedMsgSeqNo, msgSeqNo - 1, id());
-            lastMsgSeqNum(newSeqNo - 1);
-        }
-        else if(msgSeqNo < expectedMsgSeqNo)
-        {
-            if (!possDupFlag)
-            {
-                disconnect();
-            }
-        }
-        else
-        {
-            lastMsgSeqNum(newSeqNo - 1);
-        }
-    }
-
-    void onResendRequest(final int beginSeqNo, final int endSeqNo)
-    {
-        // TODO: decide how to resend messages once logging is figured out
     }
 
     public int poll(final long time)
@@ -200,6 +122,137 @@ public class Session
         state(DISCONNECTED);
         // TODO: await reply
     }
+
+    public void send(final MessageEncoder encoder)
+    {
+        final HeaderEncoder header = (HeaderEncoder) encoder.header();
+        header
+            .msgSeqNum(newSentSeqNum())
+            .sendingTime(0);
+        sessionIdStrategy.encode(id(), header);
+
+        final int length = encoder.encode(string, 0);
+
+        publication.saveMessage(buffer, 0, length, id(), encoder.messageType());
+    }
+
+    public void send(
+        final MutableDirectBuffer buffer,
+        final int offset,
+        final int length,
+        final int messageType)
+    {
+        publication.saveMessage(buffer, offset, length, id(), messageType);
+        newSentSeqNum();
+    }
+
+    // ---------- Event Handlers ----------
+
+    void onMessage(final int msgSeqNo)
+    {
+        if (state() == CONNECTED)
+        {
+            disconnect();
+        }
+        else
+        {
+            final int expectedSeqNo = expectedReceivedSeqNum();
+            if (expectedSeqNo == msgSeqNo)
+            {
+                nextRequiredMessageTime(time() + heartbeatIntervalInMs());
+                lastReceivedMsgSeqNum(msgSeqNo);
+            }
+            else if (expectedSeqNo < msgSeqNo)
+            {
+                state(AWAITING_RESEND);
+                proxy.resendRequest(newSentSeqNum(), expectedSeqNo, msgSeqNo - 1, id());
+                incReceivedSeqNum();
+            }
+            else if (expectedSeqNo > msgSeqNo)
+            {
+                disconnect();
+            }
+        }
+    }
+
+    void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
+    {
+        id(sessionId);
+        heartbeatIntervalInS(heartbeatInterval);
+        onMessage(msgSeqNo);
+    }
+
+    void onLogout(final int msgSeqNo, final long sessionId)
+    {
+        onMessage(msgSeqNo);
+        newSentSeqNum();
+        proxy.logout(lastSentMsgSeqNum, sessionId);
+
+        disconnect();
+    }
+
+    void onTestRequest(final String testReqId)
+    {
+        proxy.heartbeat(testReqId, id());
+    }
+
+    void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
+    {
+        if (newSeqNo > msgSeqNo)
+        {
+            gapFill(msgSeqNo, newSeqNo, possDupFlag);
+        }
+        else
+        {
+            sequenceReset(msgSeqNo, newSeqNo);
+        }
+    }
+
+    private void sequenceReset(final int msgSeqNo, final int newSeqNo)
+    {
+        final int expectedMsgSeqNo = expectedReceivedSeqNum();
+        if (newSeqNo > expectedMsgSeqNo)
+        {
+            lastReceivedMsgSeqNum(newSeqNo - 1);
+        }
+        else if (newSeqNo < expectedMsgSeqNo)
+        {
+            proxy.reject(expectedMsgSeqNo, msgSeqNo, id());
+        }
+    }
+
+    private void gapFill(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
+    {
+        final int expectedMsgSeqNo = expectedReceivedSeqNum();
+        if (msgSeqNo > expectedMsgSeqNo)
+        {
+            proxy.resendRequest(newSeqNo + 1, expectedMsgSeqNo, msgSeqNo - 1, id());
+            lastReceivedMsgSeqNum(newSeqNo - 1);
+        }
+        else if(msgSeqNo < expectedMsgSeqNo)
+        {
+            if (!possDupFlag)
+            {
+                disconnect();
+            }
+        }
+        else
+        {
+            lastReceivedMsgSeqNum(newSeqNo - 1);
+        }
+    }
+
+    void onResendRequest(final int beginSeqNo, final int endSeqNo)
+    {
+        // TODO: decide how to resend messages once logging is figured out
+    }
+
+    void onReject()
+    {
+        // TODO
+    }
+
+    // ---------- Accessors ----------
 
     long heartbeatIntervalInMs()
     {
@@ -245,35 +298,35 @@ public class Session
         return this;
     }
 
-    public int lastMsgSeqNo()
-    {
-        return lastMsgSeqNum;
-    }
-
-    Session lastMsgSeqNum(final int lastMsgSeqNum)
-    {
-        this.lastMsgSeqNum = lastMsgSeqNum;
-        return this;
-    }
-
-    int expectedSeqNo()
-    {
-        return lastMsgSeqNo() + 1;
-    }
-
     protected long time()
     {
         return clock.time();
     }
 
-    public void onReject()
+    Session lastReceivedMsgSeqNum(final int value)
     {
-        // TODO
+        this.lastReceivedMsgSeqNum = value;
+        return this;
     }
 
-    protected void incrementSequenceNumber()
+    int expectedReceivedSeqNum()
     {
-        lastMsgSeqNum(expectedSeqNo());
+        return lastReceivedMsgSeqNum + 1;
+    }
+
+    int sentSeqNum()
+    {
+        return lastSentMsgSeqNum;
+    }
+
+    int newSentSeqNum()
+    {
+        return ++lastSentMsgSeqNum;
+    }
+
+    void incReceivedSeqNum()
+    {
+        lastReceivedMsgSeqNum++;
     }
 
 }

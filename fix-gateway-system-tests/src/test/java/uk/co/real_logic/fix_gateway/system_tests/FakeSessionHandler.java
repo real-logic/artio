@@ -14,6 +14,7 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
 
     private final OtfParser parser;
 
+    private Session session;
     private GatewaySubscription subscription;
     private long connectionId = -1;
 
@@ -45,6 +46,7 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
 
     public void onConnect(final Session session, final GatewaySubscription subscription)
     {
+        this.session = session;
         this.subscription = subscription;
         subscription.sessionHandler(this);
     }
@@ -52,5 +54,10 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
     public GatewaySubscription subscription()
     {
         return subscription;
+    }
+
+    public Session session()
+    {
+        return session;
     }
 }

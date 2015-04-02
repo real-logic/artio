@@ -17,21 +17,17 @@ package uk.co.real_logic.fix_gateway.framer.session;
 
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.FixGateway;
-import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
-import static uk.co.real_logic.fix_gateway.framer.session.SessionState.CONNECTED;
-import static uk.co.real_logic.fix_gateway.framer.session.SessionState.SENT_LOGON;
+import static uk.co.real_logic.fix_gateway.framer.session.SessionState.*;
 
 public class InitiatorSessionTest extends AbstractSessionTest
 {
     private final FixGateway mockGateway = mock(FixGateway.class);
-    private final GatewayPublication mockPublication = mock(GatewayPublication.class);
 
     private InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy,
-        mockGateway, mockPublication, SESSION_ID, null);
+        mockPublication, null, mockGateway, SESSION_ID);
 
     @Test
     public void shouldInitiallyBeConnected()
@@ -43,7 +39,6 @@ public class InitiatorSessionTest extends AbstractSessionTest
     public void shouldActivateUponLogonResponse()
     {
         session.state(SENT_LOGON);
-        session.lastMsgSeqNum(0);
 
         onLogon(1);
 
@@ -54,7 +49,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
     @Test
     public void shouldDisconnectIfLowSeqNo()
     {
-        session.lastMsgSeqNum(5);
+        session.lastReceivedMsgSeqNum(5);
 
         session.state(SENT_LOGON);
         onLogon(1);
@@ -69,7 +64,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
         verifyLogon();
 
-        assertEquals(2, session.expectedSeqNo());
+        assertEquals(1, session.sentSeqNum());
     }
 
     @Test

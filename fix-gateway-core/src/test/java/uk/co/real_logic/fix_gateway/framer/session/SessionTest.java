@@ -24,7 +24,8 @@ import static uk.co.real_logic.fix_gateway.framer.session.SessionState.AWAITING_
 
 public class SessionTest extends AbstractSessionTest
 {
-    private Session session = new Session(HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, ACTIVE, mockProxy);
+    private Session session = new Session(
+        HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, ACTIVE, mockProxy, mockPublication, null);
 
     @Test
     public void shouldReplyToValidLogout()
@@ -33,7 +34,7 @@ public class SessionTest extends AbstractSessionTest
 
         session.onLogout(1, SESSION_ID);
 
-        verify(mockProxy).logout(2, SESSION_ID);
+        verify(mockProxy).logout(1, SESSION_ID);
         verifyDisconnect();
     }
 
@@ -52,7 +53,6 @@ public class SessionTest extends AbstractSessionTest
     public void shouldResendRequestForUnexpectedGapFill()
     {
         session.id(SESSION_ID);
-        session.lastMsgSeqNum(0);
 
         session.onSequenceReset(3, 4, false);
         session.onMessage(3);
@@ -63,7 +63,7 @@ public class SessionTest extends AbstractSessionTest
     @Test
     public void shouldIgnoreDuplicateGapFill()
     {
-        session.lastMsgSeqNum(2);
+        session.lastReceivedMsgSeqNum(2);
 
         session.onSequenceReset(1, 4, true);
 
@@ -73,7 +73,7 @@ public class SessionTest extends AbstractSessionTest
     @Test
     public void shouldDisconnectOnInvalidGapFill()
     {
-        session.lastMsgSeqNum(2);
+        session.lastReceivedMsgSeqNum(2);
 
         session.onSequenceReset(1, 4, false);
 
@@ -85,7 +85,7 @@ public class SessionTest extends AbstractSessionTest
     {
         session.onSequenceReset(1, 4, false);
 
-        assertEquals(4, session.expectedSeqNo());
+        assertEquals(4, session.expectedReceivedSeqNum());
         verifyNoFurtherMessages();
     }
 
@@ -94,29 +94,29 @@ public class SessionTest extends AbstractSessionTest
     {
         session.onSequenceReset(4, 4, false);
 
-        assertEquals(4, session.expectedSeqNo());
+        assertEquals(4, session.expectedReceivedSeqNum());
         verifyNoFurtherMessages();
     }
 
     @Test
     public void shouldAcceptUnnecessarySequenceReset()
     {
-        session.lastMsgSeqNum(3);
+        session.lastReceivedMsgSeqNum(3);
 
         session.onSequenceReset(4, 4, false);
 
-        assertEquals(4, session.expectedSeqNo());
+        assertEquals(4, session.expectedReceivedSeqNum());
         verifyNoFurtherMessages();
     }
 
     @Test
     public void shouldRejectLowSequenceReset()
     {
-        session.lastMsgSeqNum(3);
+        session.lastReceivedMsgSeqNum(3);
 
         session.onSequenceReset(2, 1, false);
 
-        assertEquals(4, session.expectedSeqNo());
+        assertEquals(4, session.expectedReceivedSeqNum());
         verify(mockProxy).reject(4, 2, Session.UNKNOWN_ID);
     }
 
@@ -125,7 +125,7 @@ public class SessionTest extends AbstractSessionTest
     public void shouldDisconnectUponTimeout()
     {
         session.state(ACTIVE);
-        session.lastMsgSeqNum(9);
+        session.lastReceivedMsgSeqNum(9);
 
         session.onMessage(10);
 
@@ -140,7 +140,7 @@ public class SessionTest extends AbstractSessionTest
     public void shouldSuppressTimeout()
     {
         session.state(ACTIVE);
-        session.lastMsgSeqNum(9);
+        session.lastReceivedMsgSeqNum(9);
 
         session.onMessage(10);
 
@@ -169,7 +169,7 @@ public class SessionTest extends AbstractSessionTest
 
         session.onMessage(3);
 
-        verify(mockProxy).resendRequest(4, 1, 2, SESSION_ID);
+        verify(mockProxy).resendRequest(1, 1, 2, SESSION_ID);
         assertState(AWAITING_RESEND);
     }
 
@@ -177,7 +177,7 @@ public class SessionTest extends AbstractSessionTest
     public void shouldLogoutIfLowSeqNo()
     {
         session.state(ACTIVE);
-        session.lastMsgSeqNum(2);
+        session.lastReceivedMsgSeqNum(2);
 
         session.onMessage(1);
         verifyDisconnect();

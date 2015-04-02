@@ -23,7 +23,8 @@ import static uk.co.real_logic.fix_gateway.framer.session.SessionState.*;
 
 public class AcceptorSessionTest extends AbstractSessionTest
 {
-    private AcceptorSession session = new AcceptorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy);
+    private AcceptorSession session = new AcceptorSession(
+        HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy, mockPublication, null);
 
     @Test
     public void shouldInitiallyBeConnected()
@@ -34,11 +35,9 @@ public class AcceptorSessionTest extends AbstractSessionTest
     @Test
     public void shouldBeActivatedBySuccessfulLogin()
     {
-        session.lastMsgSeqNum(1);
+        onLogon(1);
 
-        onLogon(2);
-
-        verify(mockProxy).logon(HEARTBEAT_INTERVAL, 3, SESSION_ID);
+        verify(mockProxy).logon(HEARTBEAT_INTERVAL, 1, SESSION_ID);
         verifyNoFurtherMessages();
         assertState(ACTIVE);
     }
@@ -48,7 +47,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     {
         onLogon(3);
 
-        verify(mockProxy).resendRequest(4, 1, 2, SESSION_ID);
+        verify(mockProxy).resendRequest(1, 1, 2, SESSION_ID);
         verifyNoFurtherMessages();
         assertState(AWAITING_RESEND);
     }
@@ -56,7 +55,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     @Test
     public void shouldLogoutIfLowSeqNoLogon()
     {
-        session.lastMsgSeqNum(2);
+        session.lastReceivedMsgSeqNum(2);
 
         onLogon(1);
         verifyDisconnect();

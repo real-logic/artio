@@ -199,16 +199,16 @@ public class ReceiverEndPointTest
     private void handlerReceivesFramedMessages(int numberOfMessages)
     {
         verify(mockPub, times(numberOfMessages))
-            .onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(SESSION_ID), eq(MESSAGE_TYPE));
+            .saveMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(SESSION_ID), eq(MESSAGE_TYPE));
     }
 
     private void handlerReceivesTwoFramedMessages()
     {
         InOrder inOrder = Mockito.inOrder(mockPub);
         inOrder.verify(mockPub, times(1))
-            .onMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(SESSION_ID), eq(MESSAGE_TYPE));
+            .saveMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(SESSION_ID), eq(MESSAGE_TYPE));
         inOrder.verify(mockPub, times(1))
-            .onMessage(any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(SESSION_ID), eq(MESSAGE_TYPE));
+            .saveMessage(any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(SESSION_ID), eq(MESSAGE_TYPE));
         inOrder.verifyNoMoreInteractions();
     }
 
