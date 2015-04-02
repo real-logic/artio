@@ -28,4 +28,5 @@ public interface SessionHandler
         final int messageType);
 
     void onDisconnect(final long connectionId);
+
 }

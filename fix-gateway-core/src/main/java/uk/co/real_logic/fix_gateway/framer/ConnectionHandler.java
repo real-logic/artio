@@ -86,8 +86,8 @@ public class ConnectionHandler
             bufferSize,
             inboundStreams.gatewayPublication(),
             connectionId,
-            sessionParser,
-            newSessionHandler);
+            sessionParser
+        );
     }
 
     public SenderEndPoint senderEndPoint(final SocketChannel channel, final long connectionId)

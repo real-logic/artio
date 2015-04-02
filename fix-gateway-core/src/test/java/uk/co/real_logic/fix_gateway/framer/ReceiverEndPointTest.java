@@ -21,7 +21,6 @@ import org.mockito.InOrder;
 import org.mockito.Mockito;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.fix_gateway.admin.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
@@ -49,10 +48,9 @@ public class ReceiverEndPointTest
     private GatewayPublication mockPub = mock(GatewayPublication.class);
     private SessionParser mockSessionParser = mock(SessionParser.class);
     private Session mockSession = mock(Session.class);
-    private NewSessionHandler mockAdminHandler = mock(NewSessionHandler.class);
 
     private ReceiverEndPoint endPoint =
-        new ReceiverEndPoint(mockChannel, 16 * 1024, mockPub, CONNECTION_ID, mockSessionParser, mockAdminHandler);
+        new ReceiverEndPoint(mockChannel, 16 * 1024, mockPub, CONNECTION_ID, mockSessionParser);
 
     @Before
     public void setUp()

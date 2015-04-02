@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.framer;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.admin.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
@@ -49,7 +48,6 @@ public class ReceiverEndPoint
     private final GatewayPublication publication;
     private final long connectionId;
     private final SessionParser session;
-    private final NewSessionHandler newSessionHandler;
     private final AtomicBuffer buffer;
     private final AsciiFlyweight string;
     private final ByteBuffer byteBuffer;
@@ -61,14 +59,12 @@ public class ReceiverEndPoint
         final int bufferSize,
         final GatewayPublication publication,
         final long connectionId,
-        final SessionParser session,
-        final NewSessionHandler newSessionHandler)
+        final SessionParser session)
     {
         this.channel = channel;
         this.publication = publication;
         this.connectionId = connectionId;
         this.session = session;
-        this.newSessionHandler = newSessionHandler;
 
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new AsciiFlyweight(buffer);
@@ -234,10 +230,6 @@ public class ReceiverEndPoint
             e.printStackTrace();
         }
 
-        // TODO: this event publication probably shouldn't be called on the receiver thread.
-        if (newSessionHandler != null)
-        {
-            newSessionHandler.onDisconnect(session.session());
-        }
+        publication.saveDisconnect(connectionId);
     }
 }

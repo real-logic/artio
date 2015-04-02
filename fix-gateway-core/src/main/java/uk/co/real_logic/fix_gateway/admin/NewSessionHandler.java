@@ -18,10 +18,8 @@ package uk.co.real_logic.fix_gateway.admin;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 
+@FunctionalInterface
 public interface NewSessionHandler
 {
     void onConnect(final Session session, final GatewaySubscription subscription);
-
-    // TODO: remove
-    void onDisconnect(final Session session);
 }

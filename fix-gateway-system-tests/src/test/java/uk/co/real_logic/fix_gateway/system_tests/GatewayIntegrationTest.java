@@ -19,19 +19,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.admin.CompIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.admin.NewSessionHandler;
-import uk.co.real_logic.fix_gateway.admin.SessionHandler;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
-import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
-import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 
 import static org.hamcrest.Matchers.hasItem;
@@ -44,37 +40,16 @@ import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 
 public class GatewayIntegrationTest
 {
-
-    public static final long SESSION_ID = 0L;
+    public static final long CONNECTION_ID = 0L;
 
     private MediaDriver mediaDriver;
     private FixGateway acceptingGateway;
     private FixGateway initiatingGateway;
     private InitiatorSession session;
+
     private FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
-
-    private SessionHandler fakeSessionHandler = new SessionHandler()
-    {
-        private final OtfParser parser = new OtfParser(fakeOtfAcceptor, new IntDictionary());
-
-        public void onMessage(
-            final DirectBuffer buffer,
-            final int offset,
-            final int length,
-            final long connectionId,
-            final long sessionId,
-            final int messageType)
-        {
-            parser.onMessage(buffer, offset, length, sessionId, messageType);
-        }
-
-        public void onDisconnect(final long connectionId)
-        {
-            // TODO: USE!
-        }
-    };
-
-    private FakeNewSessionHandler newSessionHandler = new FakeNewSessionHandler(fakeSessionHandler);
+    private FakeSessionHandler fakeSessionHandler = new FakeSessionHandler(fakeOtfAcceptor);
+    private FakeNewSessionHandler fakeNewSessionHandler = new FakeNewSessionHandler(fakeSessionHandler);
 
     @Before
     public void launch()
@@ -88,7 +63,7 @@ public class GatewayIntegrationTest
                 .bind("localhost", port)
                 .aeronChannel("udp://localhost:" + unusedPort())
                 .authenticationStrategy(new CompIdAuthenticationStrategy("CCG"))
-                .newSessionHandler(newSessionHandler);
+                .newSessionHandler(fakeNewSessionHandler);
         acceptingGateway = FixGateway.launch(acceptingConfig);
 
         final StaticConfiguration initiatingConfig = new StaticConfiguration()
@@ -121,7 +96,7 @@ public class GatewayIntegrationTest
     {
         assertTrue("Session has failed to connect", session.isConnected());
         assertTrue("Session has failed to logon", session.state() == ACTIVE);
-        assertNotNull("Subscription has not been passed to handler", newSessionHandler.subscription());
+        assertNotNull("Subscription has not been passed to handler", fakeNewSessionHandler.subscription());
     }
 
     @Test
@@ -132,7 +107,7 @@ public class GatewayIntegrationTest
 
         session.send(testRequest);
 
-        final GatewaySubscription subscription = newSessionHandler.subscription();
+        final GatewaySubscription subscription = fakeNewSessionHandler.subscription();
 
         assertEventuallyEquals("Failed to receive a message", 2, () -> subscription.poll(2));
         assertEquals(2, fakeOtfAcceptor.messageTypes().size());
@@ -143,13 +118,15 @@ public class GatewayIntegrationTest
     public void initiatorSessionCanBeDisconnected() throws InterruptedException
     {
         session.disconnect();
-
         assertFalse("Session is still connected", session.isConnected());
+
+        final GatewaySubscription subscription = fakeNewSessionHandler.subscription();
 
         assertEventuallyTrue("Failed to disconnect",
             () ->
             {
-                assertEquals(SESSION_ID, newSessionHandler.disconnectedSession().id());
+                subscription.poll(1);
+                assertEquals(CONNECTION_ID, fakeSessionHandler.connectionId());
             });
     }
 

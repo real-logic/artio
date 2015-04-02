@@ -24,7 +24,6 @@ public class FakeNewSessionHandler implements NewSessionHandler
 {
     private final SessionHandler sessionHandler;
     private GatewaySubscription subscription;
-    private Session session;
 
     public FakeNewSessionHandler(final SessionHandler sessionHandler)
     {
@@ -37,18 +36,9 @@ public class FakeNewSessionHandler implements NewSessionHandler
         subscription.sessionHandler(sessionHandler);
     }
 
-    public void onDisconnect(final Session session)
-    {
-        this.session = session;
-    }
-
     public GatewaySubscription subscription()
     {
         return subscription;
     }
 
-    public Session disconnectedSession()
-    {
-        return session;
-    }
 }

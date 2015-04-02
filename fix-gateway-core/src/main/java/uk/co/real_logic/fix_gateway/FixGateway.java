@@ -27,6 +27,7 @@ import uk.co.real_logic.fix_gateway.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.framer.Receiver;
 import uk.co.real_logic.fix_gateway.framer.Sender;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
+import uk.co.real_logic.fix_gateway.framer.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.framer.session.SessionProxy;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
@@ -85,8 +86,11 @@ public class FixGateway implements AutoCloseable
 
         final Multiplexer multiplexer = new Multiplexer(receiverProxy);
         final GatewaySubscription dataSubscription = outboundStreams.gatewaySubscription().sessionHandler(multiplexer);
-        final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(),
-            outboundStreams.gatewayPublication(), configuration.sessionIdStrategy());
+        // TODO: remove the shared, mutable state in the sessionIdStrategy
+        final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
+
+        final SessionProxy sessionProxy = new SessionProxy(
+            configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy);
 
         final MilliClock systemClock = System::currentTimeMillis;
 
@@ -95,7 +99,7 @@ public class FixGateway implements AutoCloseable
             sessionProxy,
             configuration.receiverBufferSize(),
             configuration.defaultHeartbeatInterval(),
-            configuration.sessionIdStrategy(),
+            sessionIdStrategy,
             inboundStreams,
             outboundStreams,
             configuration.authenticationStrategy(),
