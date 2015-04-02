@@ -77,10 +77,12 @@ public class FixGateway implements AutoCloseable
         Aeron.Context context = new Aeron.Context();
         aeron = Aeron.connect(context);
 
+        final String channel = configuration.aeronChannel();
+
         inboundStreams = new ReplicationStreams(
-            configuration.aeronChannel(), aeron, failedPublications, INBOUND_DATA_STREAM, INBOUND_CONTROL_STREAM);
+            channel, aeron, failedPublications, INBOUND_DATA_STREAM, INBOUND_CONTROL_STREAM);
         outboundStreams = new ReplicationStreams(
-            configuration.aeronChannel(), aeron, failedPublications, OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
+            channel, aeron, failedPublications, OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
 
         final SequencedContainerQueue<SenderCommand> senderCommands = new ManyToOneConcurrentArrayQueue<>(10);
         final SequencedContainerQueue<ReceiverCommand> receiverCommands = new ManyToOneConcurrentArrayQueue<>(10);
@@ -89,9 +91,9 @@ public class FixGateway implements AutoCloseable
         receiverProxy = new ReceiverProxy(receiverCommands, fixCounters.receiverProxyFails());
 
         final Multiplexer multiplexer = new Multiplexer(receiverProxy);
-        final GatewaySubscription dataSubscription = inboundStreams.gatewaySubscription().sessionHandler(multiplexer);
+        final GatewaySubscription dataSubscription = outboundStreams.gatewaySubscription().sessionHandler(multiplexer);
         final SessionProxy sessionProxy = new SessionProxy(configuration.encoderBufferSize(),
-            inboundStreams.gatewayPublication(), configuration.sessionIdStrategy());
+            outboundStreams.gatewayPublication(), configuration.sessionIdStrategy());
 
         final MessageHandler messageHandler = messageHandler(configuration.fallbackAcceptor());
 

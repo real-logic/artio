@@ -40,6 +40,7 @@ public class GatewayIntegrationTest
 {
 
     public static final long SESSION_ID = 0L;
+
     private MediaDriver mediaDriver;
     private FixGateway acceptingGateway;
     private FixGateway initiatingGateway;
