@@ -49,7 +49,7 @@ public final class CustomMatchers
 
             protected boolean matchesSafely(final AsciiFlyweight item)
             {
-                this.string = item.getRangeAsString(offset, length);
+                this.string = item.getAscii(offset, length);
 
                 return expectedValue.equals(string);
             }

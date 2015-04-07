@@ -15,12 +15,14 @@
  */
 package uk.co.real_logic.fix_gateway.integration_tests;
 
-import quickfix.Message;
+import quickfix.*;
 import quickfix.field.*;
 import quickfix.fix44.Logon;
 import quickfix.fix44.TestRequest;
 
 import java.util.Date;
+
+import static org.junit.Assert.assertEquals;
 
 public final class QuickFixUtil
 {
@@ -46,5 +48,19 @@ public final class QuickFixUtil
         message.set(new HeartBtInt(10));
         setupHeader(message);
         return message;
+    }
+
+    public static void assertFieldEquals(
+        final String expectedValue, final FieldMap decoder, final StringField field) throws FieldNotFound
+    {
+        decoder.getField(field);
+        assertEquals(expectedValue, field.getValue());
+    }
+
+    public static void assertFieldEquals(
+        final int expectedValue, final FieldMap decoder, final IntField field) throws FieldNotFound
+    {
+        decoder.getField(field);
+        assertEquals(expectedValue, field.getValue());
     }
 }

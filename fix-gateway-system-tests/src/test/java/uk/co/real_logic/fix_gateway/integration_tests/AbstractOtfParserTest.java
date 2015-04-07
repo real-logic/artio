@@ -46,7 +46,7 @@ public abstract class AbstractOtfParserTest
         ArgumentCaptor<Integer> length = ArgumentCaptor.forClass(Integer.class);
         once(inOrder).onField(eq(tag), anyBuffer(), offset.capture(), length.capture());
 
-        final String value = string.getRangeAsString(offset.getValue(), length.getValue());
+        final String value = string.getAscii(offset.getValue(), length.getValue());
         assertEquals(expectedValue, value);
     }
 

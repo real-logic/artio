@@ -114,7 +114,7 @@ public class AsciiFlyweight
      * @param length
      * @return a String
      */
-    public String getRangeAsString(final int offset, final int length)
+    public String getAscii(final int offset, final int length)
     {
         final byte[] buff = new byte[length];
         buffer.getBytes(offset, buff);
@@ -232,7 +232,7 @@ public class AsciiFlyweight
     // TODO: improve debug logging
     public void log(final int offset, final int length)
     {
-        System.out.println(getRangeAsString(offset, length));
+        System.out.println(getAscii(offset, length));
     }
 
     public int computeChecksum(final int offset, final int end)
