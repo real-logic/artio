@@ -31,13 +31,13 @@ import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyEquals;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
+import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.launchMediaDriver;
 
-public class GatewayIntegrationTest
+public class GatewayToGatewaySystemTest
 {
     public static final long CONNECTION_ID = 0L;
 
@@ -58,7 +58,7 @@ public class GatewayIntegrationTest
     {
         final int port = unusedPort();
 
-        mediaDriver = MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
+        mediaDriver = launchMediaDriver();
 
         final StaticConfiguration acceptingConfig = new StaticConfiguration()
                 .bind("localhost", port)
