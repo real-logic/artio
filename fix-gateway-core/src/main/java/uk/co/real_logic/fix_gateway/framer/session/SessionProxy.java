@@ -71,7 +71,7 @@ public class SessionProxy
     public void logon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
     {
         final HeaderEncoder header = logon.header();
-        sessionIdStrategy.encode(sessionId, header);
+        setupHeader(header, sessionId);
         header.msgSeqNum(msgSeqNo);
 
         logon.heartBtInt(heartbeatInterval);
@@ -81,7 +81,7 @@ public class SessionProxy
     public void logout(final int msgSeqNo, final long sessionId)
     {
         final HeaderEncoder header = logout.header();
-        sessionIdStrategy.encode(sessionId, header);
+        setupHeader(header, sessionId);
         header.msgSeqNum(msgSeqNo);
 
         send(logout.encode(string, 0), sessionId, LogoutDecoder.MESSAGE_TYPE);
@@ -90,7 +90,7 @@ public class SessionProxy
     public void heartbeat(final String testReqId, final long sessionId)
     {
         final HeaderEncoder header = heartbeat.header();
-        sessionIdStrategy.encode(sessionId, header);
+        setupHeader(header, sessionId);
         // TODO: header.msgSeqNum(0);
 
         if (testReqId != null)
@@ -103,12 +103,18 @@ public class SessionProxy
     public void reject(final int msgSeqNo, final int refSeqNum, final long sessionId)
     {
         final HeaderEncoder header = reject.header();
-        sessionIdStrategy.encode(sessionId, header);
+        setupHeader(header, sessionId);
         header.msgSeqNum(msgSeqNo);
 
         reject.refSeqNum(refSeqNum);
         // TODO: decide on other ref fields
         send(reject.encode(string, 0), sessionId, RejectDecoder.MESSAGE_TYPE);
+    }
+
+    private void setupHeader(final HeaderEncoder header, final long sessionId)
+    {
+        sessionIdStrategy.encode(sessionId, header);
+        header.sendingTime(System.currentTimeMillis());
     }
 
     private void send(final int length, final long sessionId, final int messageType)

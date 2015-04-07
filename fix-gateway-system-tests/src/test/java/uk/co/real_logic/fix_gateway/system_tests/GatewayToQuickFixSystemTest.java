@@ -20,6 +20,9 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import quickfix.*;
+import quickfix.field.BeginString;
+import quickfix.field.SenderCompID;
+import quickfix.field.TargetCompID;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
@@ -54,10 +57,26 @@ public class GatewayToQuickFixSystemTest
         // "udp://localhost:" + unusedPort()
 
         final SessionSettings settings = new SessionSettings();
+        settings.setString("FileStorePath", "build/tmp/quickfix_acceptor");
+        settings.setString("DataDictionary", "FIX44.xml");
+        settings.setString("SocketAcceptPort", String.valueOf(port));
+        settings.setString("BeginString", "FIX.4.4");
+
+        final SessionID sessionID = new SessionID(
+            new BeginString("FIX.4.4"),
+            new SenderCompID("CCG"),
+            new TargetCompID("LEH_LZJ02")
+        );
+        settings.setString(sessionID, "ConnectionType", "acceptor");
+        settings.setString(sessionID, "StartTime", "00:00:00");
+        settings.setString(sessionID, "EndTime", "00:00:00");
+
         final FileStoreFactory storeFactory = new FileStoreFactory(settings);
         final LogFactory logFactory = new ScreenLogFactory(settings);
         socketAcceptor = new SocketAcceptor(this.acceptor, storeFactory, settings, logFactory,
             new DefaultMessageFactory());
+
+        socketAcceptor.start();
 
         final StaticConfiguration initiatingConfig = new StaticConfiguration()
             .bind("localhost", unusedPort())

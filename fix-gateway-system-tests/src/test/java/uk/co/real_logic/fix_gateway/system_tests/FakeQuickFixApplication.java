@@ -26,12 +26,12 @@ public class FakeQuickFixApplication implements Application
 
     public void onLogon(final SessionID sessionID)
     {
-
+        System.out.println("Logon from : " + sessionID);
     }
 
     public void onLogout(final SessionID sessionID)
     {
-
+        System.out.println("Logout from : " + sessionID);
     }
 
     public void toAdmin(final Message message, final SessionID sessionID)
