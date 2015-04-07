@@ -24,6 +24,8 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Objects;
 
+import static org.junit.Assert.assertEquals;
+
 /**
  * Custom hamcrest matchers to support our own types in tests.
  */
@@ -123,5 +125,12 @@ public final class CustomMatchers
                 }
             }
         };
+    }
+
+    public static void assertCharsEquals(final String expectedValue, final char[] chars, final int length)
+    {
+        assertEquals("length wasn't equal", expectedValue.length(), length);
+        final String value = new String(chars, 0, length);
+        assertEquals(expectedValue, value);
     }
 }

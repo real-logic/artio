@@ -17,29 +17,21 @@ package uk.co.real_logic.fix_gateway.integration_tests;
 
 import org.junit.Test;
 import org.mockito.InOrder;
-import quickfix.IntField;
 import quickfix.Message;
-import quickfix.field.*;
 import quickfix.fix44.Logon;
 import quickfix.fix44.TestRequest;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 
-import java.util.Date;
-
 import static org.mockito.Mockito.inOrder;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.*;
 
-public class OtfParsesQuickFixMessagesTest extends AbstractOtfParserTest
+public class OtfParserQuickFixIntegrationTest extends AbstractOtfParserTest
 {
     @Test
     public void parsesTestRequest()
     {
-        final TestRequest message = new TestRequest(
-            new TestReqID("abc")
-        );
-
-        setupHeader(message);
+        final TestRequest message = QuickFixUtil.testRequest();
 
         final int length = encodeMessage(message);
 
@@ -49,9 +41,7 @@ public class OtfParsesQuickFixMessagesTest extends AbstractOtfParserTest
     @Test
     public void parsesLogon()
     {
-        final Logon message = new Logon();
-        message.set(new HeartBtInt(10));
-        setupHeader(message);
+        final Logon message = QuickFixUtil.logon();
 
         final int length = encodeMessage(message);
         parser.onMessage(buffer, 0, length, SESSION_ID, LogonDecoder.MESSAGE_TYPE);
@@ -65,20 +55,9 @@ public class OtfParsesQuickFixMessagesTest extends AbstractOtfParserTest
         verifyField(inOrder, SENDER_COMP_ID, "LEH_LZJ02");
         verifyField(inOrder, SENDING_TIME, "19700101-00:00:00.000");
         verifyField(inOrder, TARGET_COMP_ID, "CCG");
-        verifyField(inOrder, ENCRYPT_METHOD, "0");
         verifyField(inOrder, HEART_BT_INT, "10");
         verifyField(inOrder, CHECK_SUM);
         verifyComplete(inOrder);
-    }
-
-    private void setupHeader(final Message message)
-    {
-        final Message.Header header = message.getHeader();
-        header.setField(new SenderCompID("LEH_LZJ02"));
-        header.setField(new TargetCompID("CCG"));
-        header.setField(new MsgSeqNum(1));
-        header.setField(new SendingTime(new Date(0)));
-        header.setField(new IntField(EncryptMethod.FIELD, EncryptMethod.NONE_OTHER));
     }
 
     private int encodeMessage(final Message message)
