@@ -128,7 +128,7 @@ public class Session
         final HeaderEncoder header = (HeaderEncoder) encoder.header();
         header
             .msgSeqNum(newSentSeqNum())
-            .sendingTime(0);
+            .sendingTime(time());
         sessionIdStrategy.encode(id(), header);
 
         final int length = encoder.encode(string, 0);

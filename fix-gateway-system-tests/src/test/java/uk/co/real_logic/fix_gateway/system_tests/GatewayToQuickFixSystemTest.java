@@ -17,24 +17,25 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import quickfix.*;
 import quickfix.field.BeginString;
 import quickfix.field.SenderCompID;
 import quickfix.field.TargetCompID;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
+
+import java.io.File;
 
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.launchMediaDriver;
 
-@Ignore
 public class GatewayToQuickFixSystemTest
 {
     private MediaDriver mediaDriver;
@@ -54,10 +55,10 @@ public class GatewayToQuickFixSystemTest
 
         mediaDriver = launchMediaDriver();
 
-        // "udp://localhost:" + unusedPort()
-
         final SessionSettings settings = new SessionSettings();
-        settings.setString("FileStorePath", "build/tmp/quickfix_acceptor");
+        final String path = "build/tmp/quickfix";
+        IoUtil.delete(new File(path), true);
+        settings.setString("FileStorePath", path);
         settings.setString("DataDictionary", "FIX44.xml");
         settings.setString("SocketAcceptPort", String.valueOf(port));
         settings.setString("BeginString", "FIX.4.4");
