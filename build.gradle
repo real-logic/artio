@@ -214,8 +214,8 @@ project(':fix-gateway-core') {
 project(':fix-gateway-system-tests') {
     dependencies {
         testCompile project(path: ':fix-gateway-core', configuration: 'tests'), 'quickfixj:quickfixj-core:1.5.3',
-                    'quickfixj:quickfixj-msg-fix44:1.5.3'
-        compile project(path: ':fix-gateway-core'), 'uk.co.real-logic:aeron-client:0.1-SNAPSHOT',
+                    'quickfixj:quickfixj-msg-fix44:1.5.3', project(path: ':fix-gateway-codecs', configuration: 'tests')
+                compile project(path: ':fix-gateway-core'), 'uk.co.real-logic:aeron-client:0.1-SNAPSHOT',
                 'org.hdrhistogram:HdrHistogram:1.2.1'
     }
 
