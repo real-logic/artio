@@ -83,6 +83,8 @@ public abstract class AbstractOtfParserTest
         final InOrder inOrder = inOrder(acceptor);
         verifyNext(inOrder);
         verifyField(inOrder, 35);
+        verifyField(inOrder, 49);
+        verifyField(inOrder, 56);
         verifyField(inOrder, 112);
         verifyComplete(inOrder);
     }

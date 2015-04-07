@@ -63,7 +63,7 @@ public class OtfParsesBytesFromEncoderTest extends AbstractOtfParserTest
         parser.onMessage(buffer, offset, length, SESSION_ID, LogonDecoder.MESSAGE_TYPE);
 
         final InOrder inOrder = inOrder(acceptor);
-        once(inOrder).onNext();
+        verifyNext(inOrder);
         verifyField(inOrder, BEGIN_STRING, "FIX.4.4");
         verifyField(inOrder, BODY_LENGTH);
         verifyField(inOrder, MSG_TYPE, "A");
@@ -74,8 +74,7 @@ public class OtfParsesBytesFromEncoderTest extends AbstractOtfParserTest
         verifyField(inOrder, ENCRYPT_METHOD, "0");
         verifyField(inOrder, HEART_BT_INT, "10");
         verifyField(inOrder, CHECK_SUM);
-        once(inOrder).onComplete();
-        inOrder.verifyNoMoreInteractions();
+        verifyComplete(inOrder);
     }
 
     private int encodeLogon(final int offset)
