@@ -19,28 +19,17 @@ import org.junit.experimental.theories.DataPoint;
 import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
-import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
-import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
-import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
-import uk.co.real_logic.fix_gateway.otf.OtfParser;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.inOrder;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.*;
 
 @RunWith(Theories.class)
-public class OtfParsesBytesFromEncoderTest
+public class OtfParsesBytesFromEncoderTest extends AbstractOtfParserTest
 {
 
     @DataPoint
@@ -48,14 +37,6 @@ public class OtfParsesBytesFromEncoderTest
 
     @DataPoint
     public static final int OFFSET = 1;
-
-    private static final int SESSION_ID = 0;
-
-    private final UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
-    private final MutableAsciiFlyweight string = new MutableAsciiFlyweight(buffer);
-    private final OtfMessageAcceptor acceptor = mock(OtfMessageAcceptor.class);
-    private final OtfParser parser = new OtfParser(acceptor, new IntDictionary());
-
 
     @Theory
     public void shouldParseLogon(final int offset)
@@ -74,15 +55,7 @@ public class OtfParsesBytesFromEncoderTest
 
         DebugLogger.log("%s\n", buffer, offset, length);
 
-        parseTestRequest(length, offset);
-    }
-
-    private void parseTestRequest(final int length, final int offset)
-    {
-        parser.onMessage(buffer, offset, length, SESSION_ID, LogonDecoder.MESSAGE_TYPE);
-
-        verify(acceptor, times(1)).onField(eq(35), anyBuffer(), anyInt(), anyInt());
-        verify(acceptor, times(1)).onComplete();
+        parseTestRequest(offset, length);
     }
 
     private void parseLogon(final int length, final int offset)
@@ -132,31 +105,6 @@ public class OtfParsesBytesFromEncoderTest
             .targetCompID("CCG");
 
         return testRequest.encode(string, offset);
-    }
-
-    private void verifyField(final InOrder inOrder, final int tag, final String expectedValue)
-    {
-        ArgumentCaptor<Integer> offset = ArgumentCaptor.forClass(Integer.class);
-        ArgumentCaptor<Integer> length = ArgumentCaptor.forClass(Integer.class);
-        once(inOrder).onField(eq(tag), anyBuffer(), offset.capture(), length.capture());
-
-        final String value = string.getRangeAsString(offset.getValue(), length.getValue());
-        assertEquals(expectedValue, value);
-    }
-
-    private void verifyField(final InOrder inOrder, final int tag)
-    {
-        once(inOrder).onField(eq(tag), anyBuffer(), anyInt(), anyInt());
-    }
-
-    private OtfMessageAcceptor once(final InOrder inOrder)
-    {
-        return inOrder.verify(acceptor, times(1));
-    }
-
-    private DirectBuffer anyBuffer()
-    {
-        return any(DirectBuffer.class);
     }
 
 }

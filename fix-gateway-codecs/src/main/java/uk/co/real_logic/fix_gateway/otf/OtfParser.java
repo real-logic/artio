@@ -258,8 +258,7 @@ public final class OtfParser
         }
 
         /*System.out.printf("Expected Checksum: %s, Actual: %s\n",
-            computeChecksum(buffer, offset, checksumOffset), expectedChecksum);
-        AsciiFlyweight string = new AsciiFlyweight(buffer);
+            string.computeChecksum(offset, checksumOffset), expectedChecksum);
         string.log(offset, checksumOffset- offset);*/
 
         return string.computeChecksum(offset, checksumOffset) == expectedChecksum;

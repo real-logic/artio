@@ -45,7 +45,7 @@ public class GatewayIntegrationTest
     private FixGateway acceptingGateway;
     private FixGateway initiatingGateway;
     private InitiatorSession initiatedSession;
-    private Session acceptorSession;
+    private Session acceptingSession;
 
     private FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
     private FakeSessionHandler acceptingSessionHandler = new FakeSessionHandler(acceptingOtfAcceptor);
@@ -80,7 +80,7 @@ public class GatewayIntegrationTest
                 .targetCompId("CCG")
                 .build();
         initiatedSession = initiatingGateway.initiate(config, null);
-        acceptorSession = acceptingSessionHandler.session();
+        acceptingSession = acceptingSessionHandler.session();
     }
 
     @Test
@@ -89,7 +89,7 @@ public class GatewayIntegrationTest
         assertTrue("Session has failed to connect", initiatedSession.isConnected());
         assertTrue("Session has failed to logon", initiatedSession.state() == ACTIVE);
 
-        assertNotNull("Accepting Session not been setup", acceptorSession);
+        assertNotNull("Accepting Session not been setup", acceptingSession);
         assertNotNull("Accepting Session not been passed a subscription", acceptingSessionHandler.subscription());
     }
 
@@ -104,7 +104,7 @@ public class GatewayIntegrationTest
     @Test
     public void messagesCanBeSentFromAcceptorToInitiator() throws InterruptedException
     {
-        sendTestRequest(acceptorSession);
+        sendTestRequest(acceptingSession);
 
         assertReceivedMessage(initiatingSessionHandler.subscription(), initiatingOtfAcceptor);
     }
@@ -120,9 +120,9 @@ public class GatewayIntegrationTest
     @Test
     public void acceptorSessionCanBeDisconnected() throws InterruptedException
     {
-        acceptorSession.disconnect();
+        acceptingSession.disconnect();
 
-        assertDisconnected(initiatingSessionHandler, acceptorSession);
+        assertDisconnected(initiatingSessionHandler, acceptingSession);
     }
 
     private void assertDisconnected(

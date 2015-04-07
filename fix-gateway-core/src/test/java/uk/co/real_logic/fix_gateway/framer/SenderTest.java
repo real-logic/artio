@@ -73,7 +73,6 @@ public class SenderTest
     public void setUp() throws IOException
     {
         server = ServerSocketChannel.open().bind(ADDRESS);
-        //server.configureBlocking(false);
 
         when(mockConnectionHandler.receiverEndPoint(any(SocketChannel.class), anyLong(), any(Session.class)))
             .thenReturn(mockReceiverEndPoint);
