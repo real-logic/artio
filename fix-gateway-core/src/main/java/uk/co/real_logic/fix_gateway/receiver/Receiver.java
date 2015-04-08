@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.receiver;
 
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
-import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
+import uk.co.real_logic.fix_gateway.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.sender.SenderProxy;
 import uk.co.real_logic.fix_gateway.session.AcceptorSession;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -190,5 +190,10 @@ public final class Receiver implements Agent
                 break;
             }
         }
+    }
+
+    public void onNewSessionId(final Object compositeId, final long surrogateId)
+    {
+        // TODO
     }
 }

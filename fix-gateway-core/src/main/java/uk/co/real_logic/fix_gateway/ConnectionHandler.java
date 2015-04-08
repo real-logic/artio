@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer;
+package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.fix_gateway.FixGateway;
-import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.receiver.ReceiverEndPoint;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
@@ -34,6 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * Threadsafe.
  */
+// TODO: refactor out this class - its ended up absorbing connection and session concerns
 public class ConnectionHandler
 {
     private final AtomicLong idSource = new AtomicLong(0);
@@ -43,6 +42,8 @@ public class ConnectionHandler
     private final int bufferSize;
     private final int defaultInterval;
     private final SessionIdStrategy sessionIdStrategy;
+    private final SessionIds receiverSessions;
+    private final SessionIds senderSessions;
     private final ReplicationStreams inboundStreams;
     private final ReplicationStreams outboundStreams;
     private final AuthenticationStrategy authenticationStrategy;
@@ -54,6 +55,8 @@ public class ConnectionHandler
         final int bufferSize,
         final int defaultInterval,
         final SessionIdStrategy sessionIdStrategy,
+        final SessionIds receiverSessions,
+        final SessionIds senderSessions,
         final ReplicationStreams inboundStreams,
         final ReplicationStreams outboundStreams,
         final AuthenticationStrategy authenticationStrategy,
@@ -64,6 +67,8 @@ public class ConnectionHandler
         this.bufferSize = bufferSize;
         this.defaultInterval = defaultInterval;
         this.sessionIdStrategy = sessionIdStrategy;
+        this.receiverSessions = receiverSessions;
+        this.senderSessions = senderSessions;
         this.inboundStreams = inboundStreams;
         this.outboundStreams = outboundStreams;
         this.authenticationStrategy = authenticationStrategy;
@@ -78,7 +83,8 @@ public class ConnectionHandler
     public ReceiverEndPoint receiverEndPoint(
         final SocketChannel channel, final long connectionId, final Session session)
     {
-        final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy, authenticationStrategy);
+        final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy, receiverSessions,
+            authenticationStrategy);
 
         newSessionHandler.onConnect(session, inboundStreams.gatewaySubscription());
 
@@ -106,7 +112,8 @@ public class ConnectionHandler
     public InitiatorSession initiateSession(
         final long connectionId, final FixGateway gateway, final SessionConfiguration configuration)
     {
-        final long sessionId = sessionIdStrategy.register(configuration);
+        final Object key = sessionIdStrategy.onInitiatorLogon(configuration);
+        final long sessionId = senderSessions.onLogon(key);
         final GatewayPublication gatewayPublication = outboundStreams.gatewayPublication();
 
         return new InitiatorSession(

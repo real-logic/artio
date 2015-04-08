@@ -21,6 +21,7 @@ import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
+import uk.co.real_logic.fix_gateway.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.receiver.Receiver;
 import uk.co.real_logic.fix_gateway.receiver.ReceiverCommand;
 import uk.co.real_logic.fix_gateway.receiver.ReceiverEndPoint;

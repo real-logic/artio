@@ -40,13 +40,13 @@ public class InitiatorSession extends Session
         id(sessionId);
     }
 
-    void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
+    void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId, final Object sessionKey)
     {
         if (msgSeqNo == expectedReceivedSeqNum() && state() == SENT_LOGON)
         {
             state(ACTIVE);
             gateway.onInitiatorSessionActive(this);
-            super.onLogon(heartbeatInterval, msgSeqNo, sessionId);
+            super.onLogon(heartbeatInterval, msgSeqNo, sessionId, sessionKey);
         }
         else
         {

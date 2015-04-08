@@ -15,81 +15,64 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import org.junit.BeforeClass;
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
+import uk.co.real_logic.fix_gateway.SessionConfiguration;
 
-import java.util.*;
-import java.util.stream.IntStream;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.junit.Assert.assertThat;
 
 public class SenderAndTargetSessionIdStrategyTest
 {
-    private static List<char[]> identifiers = new ArrayList<>();
+    private static final List<String> IDS = Arrays.asList("SIGMAX", "ABC_DEFG04", "LEH_LZJ02");
 
     private SenderAndTargetSessionIdStrategy strategy = new SenderAndTargetSessionIdStrategy();
 
-    @BeforeClass
-    public static void generateIdentifiers()
+    @Test
+    public void differentIdsDoNotClash()
     {
-        IntStream.range(0, 100)
-                 .mapToObj(i -> UUID.randomUUID().toString().toCharArray())
-                 .forEach(identifiers::add);
+        final Set<Object> compositeKeys = IDS.stream()
+            .flatMap(sender ->
+                IDS.stream()
+                    .map(target ->
+                    {
+                        SessionConfiguration configuration = SessionConfiguration
+                            .builder()
+                            .address("", 0)
+                            .senderCompId(sender)
+                            .targetCompId(target)
+                            .build();
 
-        identifiers.add("SIGMAX".toCharArray());
-        identifiers.add("ABC_DEFG04".toCharArray());
-        identifiers.add("ABC_DEFG01".toCharArray());
-        identifiers.add("CCG".toCharArray());
-        identifiers.add("LEH_LZJ02".toCharArray());
+                        return strategy.onInitiatorLogon(configuration);
+                    }))
+            .collect(toSet());
+
+        assertThat(compositeKeys, hasSize(IDS.size() * IDS.size()));
     }
 
     @Test
-    public void differentSessionsGenerateDifferentIds()
+    public void theSameIdIsEqual()
     {
-        List<Long> ids = decodeIds();
-
-        new HashSet<>(ids).forEach(ids::remove);
-
-        assertEquals("You have duplicate ids", Collections.<Long>emptyList(), ids);
-    }
-
-    @Test
-    public void theSameSessionGeneratesTheSameId()
-    {
-        List<Long> firstIds = decodeIds();
-        List<Long> secondIds = decodeIds();
-
-        assertEquals("The ids aren't generated equally on future runs", firstIds, secondIds);
-    }
-
-    @Test
-    public void shouldEncodeFieldsAsRegisteredWith()
-    {
-        final List<Long> ids = decodeIds();
-
-        final int size = identifiers.size();
-        for (int i = 0; i < size; i++)
-        {
-            for (int j = 0; j < size; j++)
+        IDS.forEach(sender ->
+            IDS.forEach(target ->
             {
-                final HeaderEncoder mockHeader = mock(HeaderEncoder.class);
-                strategy.encode(ids.get(i * size+ j), mockHeader);
-                verify(mockHeader).senderCompID(identifiers.get(i));
-                verify(mockHeader).targetCompID(identifiers.get(j));
-            }
-        }
-    }
+                SessionConfiguration configuration = SessionConfiguration
+                    .builder()
+                    .address("", 0)
+                    .senderCompId(sender)
+                    .targetCompId(target)
+                    .build();
 
-    private List<Long> decodeIds()
-    {
-        return identifiers.stream()
-                          .flatMap(senderId -> identifiers.stream()
-                              .map(targetId -> strategy.register(senderId, targetId)))
-                          .collect(toList());
+                final Object first = strategy.onInitiatorLogon(configuration);
+                final Object second = strategy.onInitiatorLogon(configuration);
+                assertEquals(first, second);
+                assertEquals(first.hashCode(), second.hashCode());
+            }));
     }
 
 }

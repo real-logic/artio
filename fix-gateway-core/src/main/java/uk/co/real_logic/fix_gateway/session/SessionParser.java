@@ -33,6 +33,7 @@ public class SessionParser
 
     private final Session session;
     private final SessionIdStrategy sessionIdStrategy;
+    private final SessionIds sessionIds;
     private final AuthenticationStrategy authenticationStrategy;
 
     private long sessionId;
@@ -40,10 +41,12 @@ public class SessionParser
     public SessionParser(
         final Session session,
         final SessionIdStrategy sessionIdStrategy,
+        final SessionIds sessionIds,
         final AuthenticationStrategy authenticationStrategy)
     {
         this.session = session;
         this.sessionIdStrategy = sessionIdStrategy;
+        this.sessionIds = sessionIds;
         this.authenticationStrategy = authenticationStrategy;
     }
 
@@ -63,8 +66,10 @@ public class SessionParser
                 if (authenticationStrategy.authenticate(logon))
                 {
                     final HeaderDecoder header = logon.header();
-                    sessionId = sessionIdStrategy.decode(header);
-                    session.onLogon(logon.heartBtInt(), header.msgSeqNum(), sessionId);
+                    final Object sessionKey = sessionIdStrategy.onAcceptorLogon(header);
+                    System.out.println(sessionKey);
+                    sessionId = sessionIds.onLogon(sessionKey);
+                    session.onLogon(logon.heartBtInt(), header.msgSeqNum(), sessionId, sessionKey);
                 }
                 else
                 {

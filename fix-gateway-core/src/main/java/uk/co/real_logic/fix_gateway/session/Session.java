@@ -44,6 +44,7 @@ public class Session
     protected final GatewayPublication publication;
     protected final MutableDirectBuffer buffer;
     protected final MutableAsciiFlyweight string;
+    protected Object sessionKey;
 
     private SessionState state;
     private long id = UNKNOWN_ID;
@@ -129,7 +130,7 @@ public class Session
         header
             .msgSeqNum(newSentSeqNum())
             .sendingTime(time());
-        sessionIdStrategy.encode(id(), header);
+        sessionIdStrategy.onSend(sessionKey, header);
 
         final int length = encoder.encode(string, 0);
 
@@ -175,8 +176,9 @@ public class Session
         }
     }
 
-    void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
+    void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId, final Object sessionKey)
     {
+        this.sessionKey = sessionKey;
         id(sessionId);
         heartbeatIntervalInS(heartbeatInterval);
         onMessage(msgSeqNo);

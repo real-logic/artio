@@ -34,11 +34,12 @@ public final class AcceptorSession extends Session
         super(defaultInterval, connectionId, clock, CONNECTED, proxy, publication, sessionIdStrategy);
     }
 
-    public void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId)
+    public void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId, final Object sessionKey)
     {
         if (state() == CONNECTED)
         {
             id(sessionId);
+            this.sessionKey = sessionKey;
 
             final int expectedSeqNo = expectedReceivedSeqNum();
             if (expectedSeqNo == msgSeqNo)

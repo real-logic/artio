@@ -37,12 +37,17 @@ public class SessionProxy
     private final MutableAsciiFlyweight string;
     private final GatewayPublication gatewayPublication;
     private final SessionIdStrategy sessionIdStrategy;
+    private final SessionIds senderSessions;
 
     public SessionProxy(
-        final int bufferSize, final GatewayPublication gatewayPublication, final SessionIdStrategy sessionIdStrategy)
+        final int bufferSize,
+        final GatewayPublication gatewayPublication,
+        final SessionIdStrategy sessionIdStrategy,
+        final SessionIds senderSessions)
     {
         this.gatewayPublication = gatewayPublication;
         this.sessionIdStrategy = sessionIdStrategy;
+        this.senderSessions = senderSessions;
         buffer = new UnsafeBuffer(new byte[bufferSize]);
         string = new MutableAsciiFlyweight(buffer);
     }
@@ -50,7 +55,7 @@ public class SessionProxy
     public void resendRequest(final int msgSeqNo, final int beginSeqNo, final int endSeqNo, final long sessionId)
     {
         final HeaderEncoder header = resendRequest.header();
-        sessionIdStrategy.encode(sessionId, header);
+        sessionIdStrategy.onSend(senderSessions.get(sessionId), header);
         header.msgSeqNum(msgSeqNo);
         resendRequest.beginSeqNo(beginSeqNo)
                      .endSeqNo(endSeqNo);
@@ -113,7 +118,7 @@ public class SessionProxy
 
     private void setupHeader(final HeaderEncoder header, final long sessionId)
     {
-        sessionIdStrategy.encode(sessionId, header);
+        sessionIdStrategy.onSend(senderSessions.get(sessionId), header);
         header.sendingTime(System.currentTimeMillis());
     }
 

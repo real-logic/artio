@@ -162,7 +162,7 @@ public class ReceiverEndPoint
                 else
                 {
                     // TODO: proper logging
-                    System.err.printf("Message not authenticated %s", buffer.getStringUtf8(offset, length));
+                    System.err.printf("Message not authenticated %s", string.getAscii(offset, length));
                 }
 
                 offset += length;

@@ -21,9 +21,9 @@ import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
 public interface SessionIdStrategy
 {
-    long decode(final HeaderDecoder header);
+    Object onAcceptorLogon(final HeaderDecoder header);
 
-    long register(final SessionConfiguration configuration);
+    Object onInitiatorLogon(final SessionConfiguration configuration);
 
-    void encode(final long sessionId, final HeaderEncoder encoder);
+    void onSend(final Object compositeKey, final HeaderEncoder encoder);
 }

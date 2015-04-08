@@ -50,7 +50,7 @@ public abstract class AbstractSessionTest
 
     public void onLogon(final int msgSeqNo)
     {
-        session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID);
+        session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID, null);
     }
 
     protected abstract Session session();

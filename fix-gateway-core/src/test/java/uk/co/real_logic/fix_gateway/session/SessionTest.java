@@ -194,7 +194,7 @@ public class SessionTest extends AbstractSessionTest
     @Test
     public void shouldSendHeartbeatAfterLogonSpecifiedInterval()
     {
-        session().onLogon(1, 0, SESSION_ID);
+        session().onLogon(1, 0, SESSION_ID, null);
         session().onMessage(0);
 
         heartbeatSentAfterInterval(1);

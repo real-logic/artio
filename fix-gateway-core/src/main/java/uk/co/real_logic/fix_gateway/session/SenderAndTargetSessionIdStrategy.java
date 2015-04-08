@@ -15,65 +15,37 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * A simple, and dumb session id Strategy based upon hashing SenderCompID and TargetCompID. Makes no assumptions
  * about the nature of either identifiers.
  *
- * Should be used sparingly.
- *
- * TODO: refactor be thread-local state updated by messages
+ * Threadsafe - no state;
  */
 public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 {
-    private final Map<CompositeKey, Long> compositeToSurrogate = new HashMap<>();
-    private final Long2ObjectHashMap<CompositeKey> surrogateToComposite = new Long2ObjectHashMap<>();
-
-    private long counter = 0;
-
-    public void encode(final long sessionId, final HeaderEncoder encoder)
+    public Object onAcceptorLogon(final HeaderDecoder header)
     {
-        final CompositeKey composite = surrogateToComposite.get(sessionId);
-        //System.out.println(Arrays.toString(composite.senderCompID) + " " + Arrays.toString(composite.targetCompID));
+        return new CompositeKey(header.targetCompID(), header.senderCompID());
+    }
+
+    public Object onInitiatorLogon(final SessionConfiguration configuration)
+    {
+        final char[] targetCompID = configuration.targetCompId().toCharArray();
+        final char[] senderCompID = configuration.senderCompId().toCharArray();
+        return new CompositeKey(targetCompID, senderCompID);
+    }
+
+    public void onSend(final Object compositeKey, final HeaderEncoder encoder)
+    {
+        final CompositeKey composite = (CompositeKey) compositeKey;
         encoder.senderCompID(composite.senderCompID);
         encoder.targetCompID(composite.targetCompID);
-    }
-
-    public long decode(final HeaderDecoder header)
-    {
-        return register(header.targetCompID(), header.senderCompID());
-    }
-
-    public long register(final SessionConfiguration config)
-    {
-        return register(config.senderCompId().toCharArray(), config.targetCompId().toCharArray());
-    }
-
-    long register(final char[] senderCompID, final char[] targetCompID)
-    {
-        final CompositeKey compositeKey = new CompositeKey(targetCompID, senderCompID);
-        Long identifier = compositeToSurrogate.putIfAbsent(compositeKey, counter);
-        if (identifier == null)
-        {
-            identifier = counter;
-            final CompositeKey flippedCompositeKey = new CompositeKey(senderCompID, targetCompID);
-            surrogateToComposite.put(identifier.longValue(), flippedCompositeKey);
-        }
-
-        if (identifier == counter)
-        {
-            counter++;
-        }
-
-        return identifier;
     }
 
     private static final class CompositeKey
@@ -112,6 +84,15 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
             }
 
             return false;
+        }
+
+        public String toString()
+        {
+            return "CompositeKey{" +
+                "senderCompID=" + Arrays.toString(senderCompID) +
+                ", targetCompID=" + Arrays.toString(targetCompID) +
+                ", hashCode=" + hashCode +
+                '}';
         }
     }
 }

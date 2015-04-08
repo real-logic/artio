@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.*;
-import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.receiver.Receiver;
 import uk.co.real_logic.fix_gateway.receiver.ReceiverCommand;
 import uk.co.real_logic.fix_gateway.receiver.ReceiverProxy;
@@ -30,6 +29,7 @@ import uk.co.real_logic.fix_gateway.sender.SenderCommand;
 import uk.co.real_logic.fix_gateway.sender.SenderProxy;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.session.SessionIds;
 import uk.co.real_logic.fix_gateway.session.SessionProxy;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -84,13 +84,16 @@ public class FixGateway implements AutoCloseable
         senderProxy = new SenderProxy(senderCommands, fixCounters.senderProxyFails(), backoffIdleStrategy());
         receiverProxy = new ReceiverProxy(receiverCommands, fixCounters.receiverProxyFails(), backoffIdleStrategy());
 
+        final SessionIds receiverSessions = new SessionIds(senderCommands);
+        final SessionIds senderSessions = receiverSessions; //new SessionIds(receiverCommands);
+
         final Multiplexer multiplexer = new Multiplexer(receiverProxy);
         final GatewaySubscription dataSubscription = outboundStreams.gatewaySubscription().sessionHandler(multiplexer);
         // TODO: remove the shared, mutable state in the sessionIdStrategy
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
 
         final SessionProxy sessionProxy = new SessionProxy(
-            configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy);
+            configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy, senderSessions);
 
         final MilliClock systemClock = System::currentTimeMillis;
 
@@ -100,13 +103,14 @@ public class FixGateway implements AutoCloseable
             configuration.receiverBufferSize(),
             configuration.defaultHeartbeatInterval(),
             sessionIdStrategy,
+            receiverSessions,
+            senderSessions,
             inboundStreams,
             outboundStreams,
             configuration.authenticationStrategy(),
             configuration.newSessionHandler());
 
         sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer, dataSubscription);
-
         receiver = new Receiver(systemClock, configuration.bindAddress(), handler, receiverCommands, senderProxy);
 
         senderRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sender);
