@@ -229,12 +229,6 @@ public class AsciiFlyweight
         return indexValue;
     }
 
-    // TODO: improve debug logging
-    public void log(final int offset, final int length)
-    {
-        System.out.println(getAscii(offset, length));
-    }
-
     public int computeChecksum(final int offset, final int end)
     {
         int total = 0;

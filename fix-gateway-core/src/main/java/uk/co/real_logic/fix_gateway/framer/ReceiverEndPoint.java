@@ -214,7 +214,7 @@ public class ReceiverEndPoint
 
     private void invalidateMessage(final int offset)
     {
-        string.log(offset, COMMON_PREFIX_LENGTH);
+        DebugLogger.log("%s", buffer, offset, COMMON_PREFIX_LENGTH);
         System.err.println("Invalid message");
     }
 
