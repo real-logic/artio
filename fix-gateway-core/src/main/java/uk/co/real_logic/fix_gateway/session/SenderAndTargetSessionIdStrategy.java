@@ -38,7 +38,7 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
     {
         final char[] targetCompID = configuration.targetCompId().toCharArray();
         final char[] senderCompID = configuration.senderCompId().toCharArray();
-        return new CompositeKey(targetCompID, senderCompID);
+        return new CompositeKey(senderCompID, targetCompID);
     }
 
     public void onSend(final Object compositeKey, final HeaderEncoder encoder)
