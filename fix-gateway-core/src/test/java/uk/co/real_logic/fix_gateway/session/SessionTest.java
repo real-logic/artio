@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer.session;
+package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
-import static uk.co.real_logic.fix_gateway.framer.session.SessionState.AWAITING_RESEND;
+import static uk.co.real_logic.fix_gateway.session.SessionState.ACTIVE;
+import static uk.co.real_logic.fix_gateway.session.SessionState.AWAITING_RESEND;
 
 public class SessionTest extends AbstractSessionTest
 {

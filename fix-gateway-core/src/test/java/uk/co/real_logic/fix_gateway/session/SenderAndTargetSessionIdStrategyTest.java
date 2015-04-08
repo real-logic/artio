@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer.session;
+package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.BeforeClass;
 import org.junit.Test;

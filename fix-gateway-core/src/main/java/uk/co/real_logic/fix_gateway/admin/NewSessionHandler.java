@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.admin;
 
-import uk.co.real_logic.fix_gateway.framer.session.Session;
+import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 
 @FunctionalInterface

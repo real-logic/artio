@@ -21,8 +21,8 @@ import uk.co.real_logic.fix_gateway.admin.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.admin.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.admin.NoAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
-import uk.co.real_logic.fix_gateway.framer.session.SenderAndTargetSessionIdStrategy;
-import uk.co.real_logic.fix_gateway.framer.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 
 import java.io.File;

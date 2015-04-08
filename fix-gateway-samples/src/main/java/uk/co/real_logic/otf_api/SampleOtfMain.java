@@ -21,7 +21,7 @@ import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.builder.DataDictionary;
 import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
-import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
+import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 
 import static uk.co.real_logic.fix_gateway.flyweight_api.OrdType.Market;
 import static uk.co.real_logic.fix_gateway.flyweight_api.Side.Sell;

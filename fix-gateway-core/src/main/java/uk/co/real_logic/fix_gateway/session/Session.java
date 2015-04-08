@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer.session;
+package uk.co.real_logic.fix_gateway.session;
 
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.Verify;
@@ -24,7 +24,7 @@ import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
-import static uk.co.real_logic.fix_gateway.framer.session.SessionState.*;
+import static uk.co.real_logic.fix_gateway.session.SessionState.*;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound

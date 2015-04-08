@@ -21,8 +21,8 @@ import org.mockito.InOrder;
 import org.mockito.Mockito;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.fix_gateway.framer.session.Session;
-import uk.co.real_logic.fix_gateway.framer.session.SessionParser;
+import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 
 import java.io.IOException;
@@ -34,7 +34,7 @@ import java.util.function.ToIntFunction;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.framer.session.SessionParser.UNKNOWN_SESSION_ID;
+import static uk.co.real_logic.fix_gateway.session.SessionParser.UNKNOWN_SESSION_ID;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.EG_MESSAGE;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.MSG_LEN;
 
