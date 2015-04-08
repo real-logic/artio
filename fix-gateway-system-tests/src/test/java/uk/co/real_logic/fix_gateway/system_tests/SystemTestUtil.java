@@ -1,17 +1,24 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.hamcrest.Matcher;
-import quickfix.SessionID;
+import quickfix.*;
+import quickfix.field.BeginString;
+import quickfix.field.SenderCompID;
+import quickfix.field.TargetCompID;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.admin.CompIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.admin.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
+
+import java.io.File;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
@@ -62,12 +69,12 @@ public final class SystemTestUtil
         assertThat(acceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
     }
 
-    static void assertQuickFixDisconnected(final FakeQuickFixApplication acceptor)
+    public static void assertQuickFixDisconnected(final FakeQuickFixApplication acceptor)
     {
         assertThat(acceptor.logouts(), containsInitiator());
     }
 
-    static Matcher<Iterable<? extends SessionID>> containsInitiator()
+    public static Matcher<Iterable<? extends SessionID>> containsInitiator()
     {
         return contains(
             allOf(hasProperty("senderCompID", equalTo(ACCEPTOR_ID)),
@@ -92,5 +99,50 @@ public final class SystemTestUtil
                 .aeronChannel("udp://localhost:" + unusedPort())
                 .newSessionHandler(sessionHandler);
         return FixGateway.launch(initiatingConfig);
+    }
+
+    public static FixGateway launchAcceptingGateway(final int port, final NewSessionHandler sessionHandler)
+    {
+        final StaticConfiguration acceptingConfig = new StaticConfiguration()
+                .bind("localhost", port)
+                .aeronChannel("udp://localhost:" + unusedPort())
+                .authenticationStrategy(new CompIdAuthenticationStrategy(ACCEPTOR_ID))
+                .newSessionHandler(sessionHandler);
+        return FixGateway.launch(acceptingConfig);
+    }
+
+    public static SocketAcceptor launchQuickFixAcceptor(
+        final int port, final FakeQuickFixApplication application) throws ConfigError
+    {
+        final SessionSettings settings = new SessionSettings();
+        final String path = "build/tmp/quickfix";
+        IoUtil.delete(new File(path), true);
+        settings.setString("FileStorePath", path);
+        settings.setString("DataDictionary", "FIX44.xml");
+        settings.setString("SocketAcceptPort", String.valueOf(port));
+        settings.setString("BeginString", "FIX.4.4");
+
+        final SessionID sessionID = new SessionID(
+            new BeginString("FIX.4.4"),
+            new SenderCompID(ACCEPTOR_ID),
+            new TargetCompID(INITIATOR_ID)
+        );
+        settings.setString(sessionID, "ConnectionType", "acceptor");
+        settings.setString(sessionID, "StartTime", "00:00:00");
+        settings.setString(sessionID, "EndTime", "00:00:00");
+
+        final FileStoreFactory storeFactory = new FileStoreFactory(settings);
+        final LogFactory logFactory = new ScreenLogFactory(settings);
+        SocketAcceptor socketAcceptor = new SocketAcceptor(application, storeFactory, settings, logFactory,
+            new DefaultMessageFactory());
+        socketAcceptor.start();
+
+        return socketAcceptor;
+    }
+
+    static void assertQuickFixReceivedMessage(final FakeQuickFixApplication acceptor)
+    {
+        assertThat(acceptor.messagesFromApp(),
+            hasItem(hasProperty("msgType", equalTo(String.valueOf(TestRequestDecoder.MESSAGE_TYPE)))));
     }
 }

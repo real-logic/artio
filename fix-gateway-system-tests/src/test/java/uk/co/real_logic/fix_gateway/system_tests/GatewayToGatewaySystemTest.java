@@ -20,8 +20,6 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.FixGateway;
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
-import uk.co.real_logic.fix_gateway.admin.CompIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
 
@@ -50,16 +48,8 @@ public class GatewayToGatewaySystemTest
     public void launch()
     {
         final int port = unusedPort();
-
         mediaDriver = launchMediaDriver();
-
-        final StaticConfiguration acceptingConfig = new StaticConfiguration()
-                .bind("localhost", port)
-                .aeronChannel("udp://localhost:" + unusedPort())
-                .authenticationStrategy(new CompIdAuthenticationStrategy(ACCEPTOR_ID))
-                .newSessionHandler(acceptingSessionHandler);
-        acceptingGateway = FixGateway.launch(acceptingConfig);
-
+        acceptingGateway = launchAcceptingGateway(port, acceptingSessionHandler);
         initiatingGateway = launchInitiatingGateway(initiatingSessionHandler);
         initiatedSession = initiate(initiatingGateway, port);
         acceptingSession = acceptingSessionHandler.session();

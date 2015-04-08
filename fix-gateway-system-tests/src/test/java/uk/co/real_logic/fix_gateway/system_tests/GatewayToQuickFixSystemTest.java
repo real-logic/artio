@@ -20,18 +20,10 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import quickfix.*;
-import quickfix.field.BeginString;
-import quickfix.field.SenderCompID;
-import quickfix.field.TargetCompID;
 import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.FixGateway;
-import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
-import java.io.File;
-
-import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
@@ -55,32 +47,8 @@ public class GatewayToQuickFixSystemTest
     public void launch() throws ConfigError
     {
         final int port = unusedPort();
-
         mediaDriver = launchMediaDriver();
-
-        final SessionSettings settings = new SessionSettings();
-        final String path = "build/tmp/quickfix";
-        IoUtil.delete(new File(path), true);
-        settings.setString("FileStorePath", path);
-        settings.setString("DataDictionary", "FIX44.xml");
-        settings.setString("SocketAcceptPort", String.valueOf(port));
-        settings.setString("BeginString", "FIX.4.4");
-
-        final SessionID sessionID = new SessionID(
-            new BeginString("FIX.4.4"),
-            new SenderCompID(SystemTestUtil.ACCEPTOR_ID),
-            new TargetCompID(SystemTestUtil.INITIATOR_ID)
-        );
-        settings.setString(sessionID, "ConnectionType", "acceptor");
-        settings.setString(sessionID, "StartTime", "00:00:00");
-        settings.setString(sessionID, "EndTime", "00:00:00");
-
-        final FileStoreFactory storeFactory = new FileStoreFactory(settings);
-        final LogFactory logFactory = new ScreenLogFactory(settings);
-        socketAcceptor = new SocketAcceptor(acceptor, storeFactory, settings, logFactory,
-            new DefaultMessageFactory());
-        socketAcceptor.start();
-
+        socketAcceptor = launchQuickFixAcceptor(port, acceptor);
         initiatingGateway = launchInitiatingGateway(initiatingSessionHandler);
         initiatedSession = initiate(initiatingGateway, port);
     }
@@ -91,7 +59,7 @@ public class GatewayToQuickFixSystemTest
         assertTrue("Session has failed to connect", initiatedSession.isConnected());
         assertTrue("Session has failed to logon", initiatedSession.state() == ACTIVE);
 
-        assertThat(acceptor.logons(), SystemTestUtil.containsInitiator());
+        assertThat(acceptor.logons(), containsInitiator());
     }
 
     @Ignore
@@ -129,12 +97,6 @@ public class GatewayToQuickFixSystemTest
         {
             mediaDriver.close();
         }
-    }
-
-    private static void assertQuickFixReceivedMessage(final FakeQuickFixApplication acceptor)
-    {
-        assertThat(acceptor.messagesFromApp(),
-            hasItem(hasProperty("msgType", equalTo(String.valueOf(TestRequestDecoder.MESSAGE_TYPE)))));
     }
 
 }
