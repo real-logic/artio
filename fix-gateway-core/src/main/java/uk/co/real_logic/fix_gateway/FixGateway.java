@@ -81,8 +81,8 @@ public class FixGateway implements AutoCloseable
         final SequencedContainerQueue<SenderCommand> senderCommands = new ManyToOneConcurrentArrayQueue<>(10);
         final SequencedContainerQueue<ReceiverCommand> receiverCommands = new ManyToOneConcurrentArrayQueue<>(10);
 
-        senderProxy = new SenderProxy(senderCommands, fixCounters.senderProxyFails());
-        receiverProxy = new ReceiverProxy(receiverCommands, fixCounters.receiverProxyFails());
+        senderProxy = new SenderProxy(senderCommands, fixCounters.senderProxyFails(), backoffIdleStrategy());
+        receiverProxy = new ReceiverProxy(receiverCommands, fixCounters.receiverProxyFails(), backoffIdleStrategy());
 
         final Multiplexer multiplexer = new Multiplexer(receiverProxy);
         final GatewaySubscription dataSubscription = outboundStreams.gatewaySubscription().sessionHandler(multiplexer);

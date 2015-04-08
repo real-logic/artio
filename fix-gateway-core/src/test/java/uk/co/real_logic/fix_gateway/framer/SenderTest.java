@@ -20,6 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
@@ -60,7 +61,7 @@ public class SenderTest
     private GatewaySubscription mockDataSubscription = mock(GatewaySubscription.class);
 
     private OneToOneConcurrentArrayQueue<SenderCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
-    private SenderProxy proxy = new SenderProxy(commandQueue, mock(AtomicCounter.class));
+    private SenderProxy proxy = new SenderProxy(commandQueue, mock(AtomicCounter.class), new NoOpIdleStrategy());
 
     private Sender sender = new Sender(commandQueue, mockConnectionHandler, mockReceiver,
             mockGateway, mockMultiplexer, mockDataSubscription);

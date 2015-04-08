@@ -19,6 +19,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
 import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
@@ -53,7 +54,8 @@ public class ReceiverTest
     private Session mockSession = mock(Session.class);
     private MilliClock mockClock = mock(MilliClock.class);
 
-    private ReceiverProxy receiverProxy = new ReceiverProxy(commandQueue, mock(AtomicCounter.class));
+    private ReceiverProxy receiverProxy = new ReceiverProxy(commandQueue, mock(AtomicCounter.class),
+        new NoOpIdleStrategy());
     private Receiver receiver = new Receiver(mockClock, ADDRESS, mockConnectionHandler, commandQueue, mockSender);
 
     @Before

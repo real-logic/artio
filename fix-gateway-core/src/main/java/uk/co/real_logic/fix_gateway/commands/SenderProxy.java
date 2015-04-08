@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.commands;
 
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.framer.SenderEndPoint;
 
@@ -25,11 +26,14 @@ public class SenderProxy
 {
     private final Queue<SenderCommand> commandQueue;
     private final AtomicCounter fails;
+    private final IdleStrategy idleStrategy;
 
-    public SenderProxy(final Queue<SenderCommand> commandQueue, final AtomicCounter fails)
+    public SenderProxy(
+        final Queue<SenderCommand> commandQueue, final AtomicCounter fails, final IdleStrategy idleStrategy)
     {
         this.commandQueue = commandQueue;
         this.fails = fails;
+        this.idleStrategy = idleStrategy;
     }
 
     public void connect(final SessionConfiguration configuration)
@@ -44,10 +48,10 @@ public class SenderProxy
 
     private void offer(final SenderCommand command)
     {
-        // TODO: decide on retry/backoff strategy
         while (!commandQueue.offer(command))
         {
             fails.increment();
+            idleStrategy.idle(1);
         }
     }
 }

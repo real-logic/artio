@@ -29,6 +29,8 @@ import java.util.Map;
  * about the nature of either identifiers.
  *
  * Should be used sparingly.
+ *
+ * TODO: refactor be thread-local state updated by messages
  */
 public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 {
