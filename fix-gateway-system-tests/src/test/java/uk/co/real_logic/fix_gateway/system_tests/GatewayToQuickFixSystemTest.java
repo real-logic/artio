@@ -31,6 +31,8 @@ import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
 import java.io.File;
 
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
@@ -74,7 +76,7 @@ public class GatewayToQuickFixSystemTest
 
         final FileStoreFactory storeFactory = new FileStoreFactory(settings);
         final LogFactory logFactory = new ScreenLogFactory(settings);
-        socketAcceptor = new SocketAcceptor(this.acceptor, storeFactory, settings, logFactory,
+        socketAcceptor = new SocketAcceptor(acceptor, storeFactory, settings, logFactory,
             new DefaultMessageFactory());
 
         socketAcceptor.start();
@@ -99,6 +101,10 @@ public class GatewayToQuickFixSystemTest
     {
         assertTrue("Session has failed to connect", initiatedSession.isConnected());
         assertTrue("Session has failed to logon", initiatedSession.state() == ACTIVE);
+
+        assertThat(acceptor.logons(), hasItems(
+            allOf(hasProperty("senderCompID", equalTo("CCG")),
+                hasProperty("targetCompID", equalTo("LEH_LZJ02")))));
     }
 
     @After

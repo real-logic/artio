@@ -17,8 +17,13 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import quickfix.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class FakeQuickFixApplication implements Application
 {
+    private final List<SessionID> logons = new ArrayList<>();
+
     public void onCreate(final SessionID sessionID)
     {
 
@@ -26,12 +31,12 @@ public class FakeQuickFixApplication implements Application
 
     public void onLogon(final SessionID sessionID)
     {
-        System.out.println("Logon from : " + sessionID);
+        logons.add(sessionID);
     }
 
     public void onLogout(final SessionID sessionID)
     {
-        System.out.println("Logout from : " + sessionID);
+
     }
 
     public void toAdmin(final Message message, final SessionID sessionID)
@@ -54,5 +59,10 @@ public class FakeQuickFixApplication implements Application
         throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType
     {
 
+    }
+
+    public List<SessionID> logons()
+    {
+        return logons;
     }
 }
