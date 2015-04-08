@@ -13,20 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.admin;
+package uk.co.real_logic.fix_gateway.sender;
 
-import uk.co.real_logic.agrona.DirectBuffer;
-
-public interface SessionHandler
+final class NewAcceptedConnection implements SenderCommand
 {
-    void onMessage(
-        final DirectBuffer buffer,
-        final int offset,
-        final int length,
-        final long connectionId,
-        final long sessionId,
-        final int messageType);
+    private final SenderEndPoint senderEndPoint;
 
-    void onDisconnect(final long connectionId);
+    NewAcceptedConnection(final SenderEndPoint senderEndPoint)
+    {
+        this.senderEndPoint = senderEndPoint;
+    }
 
+    @Override
+    public void execute(final Sender sender)
+    {
+        sender.onNewAcceptedConnection(senderEndPoint);
+    }
 }

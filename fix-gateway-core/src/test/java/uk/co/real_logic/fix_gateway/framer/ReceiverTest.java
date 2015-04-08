@@ -21,9 +21,12 @@ import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
-import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
-import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
-import uk.co.real_logic.fix_gateway.commands.SenderProxy;
+import uk.co.real_logic.fix_gateway.receiver.Receiver;
+import uk.co.real_logic.fix_gateway.receiver.ReceiverCommand;
+import uk.co.real_logic.fix_gateway.receiver.ReceiverEndPoint;
+import uk.co.real_logic.fix_gateway.receiver.ReceiverProxy;
+import uk.co.real_logic.fix_gateway.sender.SenderEndPoint;
+import uk.co.real_logic.fix_gateway.sender.SenderProxy;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 

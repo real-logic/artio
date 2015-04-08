@@ -20,10 +20,10 @@ import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.admin.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.Disconnect;
 import uk.co.real_logic.fix_gateway.messages.FixMessage;
 import uk.co.real_logic.fix_gateway.messages.MessageHeader;
+import uk.co.real_logic.fix_gateway.session.SessionHandler;
 
 import static uk.co.real_logic.fix_gateway.replication.GatewayPublication.FRAME_SIZE;
 

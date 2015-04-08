@@ -13,13 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.admin;
+package uk.co.real_logic.fix_gateway.sender;
 
-import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
-
-@FunctionalInterface
-public interface NewSessionHandler
+public interface SenderCommand
 {
-    void onConnect(final Session session, final GatewaySubscription subscription);
+    void execute(Sender sender);
 }

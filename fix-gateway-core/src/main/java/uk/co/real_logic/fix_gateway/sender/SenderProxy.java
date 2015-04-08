@@ -13,39 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.commands;
+package uk.co.real_logic.fix_gateway.sender;
 
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
+import uk.co.real_logic.fix_gateway.SessionConfiguration;
 
 import java.util.Queue;
 
-public class ReceiverProxy
+public class SenderProxy
 {
-    private final Queue<ReceiverCommand> commandQueue;
+    private final Queue<SenderCommand> commandQueue;
     private final AtomicCounter fails;
     private final IdleStrategy idleStrategy;
 
-    public ReceiverProxy(
-        final Queue<ReceiverCommand> commandQueue, final AtomicCounter fails, final IdleStrategy idleStrategy)
+    public SenderProxy(
+        final Queue<SenderCommand> commandQueue, final AtomicCounter fails, final IdleStrategy idleStrategy)
     {
         this.commandQueue = commandQueue;
         this.fails = fails;
         this.idleStrategy = idleStrategy;
     }
 
-    public void newInitiatedConnection(final ReceiverEndPoint receiverEndPoint)
+    public void connect(final SessionConfiguration configuration)
     {
-        offer(new NewInitiatedConnection(receiverEndPoint));
+        offer(new Connect(configuration));
     }
 
-    public void disconnect(final long connectionId)
+    public void newAcceptedConnection(final SenderEndPoint senderEndPoint)
     {
-        offer(new ReceiverDisconnect(connectionId));
+        offer(new NewAcceptedConnection(senderEndPoint));
     }
 
-    private void offer(final ReceiverCommand command)
+    private void offer(final SenderCommand command)
     {
         while (!commandQueue.offer(command))
         {

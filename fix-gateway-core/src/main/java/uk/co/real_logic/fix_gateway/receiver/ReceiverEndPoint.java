@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer;
+package uk.co.real_logic.fix_gateway.receiver;
 
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
-import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.io.IOException;

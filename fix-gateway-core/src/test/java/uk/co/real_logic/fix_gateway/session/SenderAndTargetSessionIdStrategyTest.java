@@ -24,7 +24,8 @@ import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 public class SenderAndTargetSessionIdStrategyTest
 {

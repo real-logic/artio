@@ -18,19 +18,19 @@ package uk.co.real_logic.fix_gateway;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.*;
-import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
-import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
-import uk.co.real_logic.fix_gateway.commands.SenderCommand;
-import uk.co.real_logic.fix_gateway.commands.SenderProxy;
 import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
-import uk.co.real_logic.fix_gateway.framer.Multiplexer;
-import uk.co.real_logic.fix_gateway.framer.Receiver;
-import uk.co.real_logic.fix_gateway.framer.Sender;
+import uk.co.real_logic.fix_gateway.receiver.Receiver;
+import uk.co.real_logic.fix_gateway.receiver.ReceiverCommand;
+import uk.co.real_logic.fix_gateway.receiver.ReceiverProxy;
+import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
+import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
+import uk.co.real_logic.fix_gateway.sender.Multiplexer;
+import uk.co.real_logic.fix_gateway.sender.Sender;
+import uk.co.real_logic.fix_gateway.sender.SenderCommand;
+import uk.co.real_logic.fix_gateway.sender.SenderProxy;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionProxy;
-import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
-import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 public class FixGateway implements AutoCloseable

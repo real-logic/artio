@@ -13,21 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.commands;
+package uk.co.real_logic.fix_gateway.sender;
 
-import uk.co.real_logic.fix_gateway.framer.Receiver;
+import uk.co.real_logic.fix_gateway.SessionConfiguration;
 
-public class ReceiverDisconnect implements ReceiverCommand
+final class Connect implements SenderCommand
 {
-    private final long connectionId;
+    private final SessionConfiguration configuration;
 
-    public ReceiverDisconnect(final long connectionId)
+    Connect(final SessionConfiguration configuration)
     {
-        this.connectionId = connectionId;
+        this.configuration = configuration;
     }
 
-    public void execute(final Receiver receiver)
+    @Override
+    public void execute(final Sender sender)
     {
-        receiver.onDisconnect(connectionId);
+        sender.onConnect(configuration);
     }
 }

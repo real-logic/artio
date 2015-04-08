@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer;
+package uk.co.real_logic.fix_gateway.sender;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
-import uk.co.real_logic.fix_gateway.admin.SessionHandler;
-import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
+import uk.co.real_logic.fix_gateway.receiver.ReceiverProxy;
+import uk.co.real_logic.fix_gateway.session.SessionHandler;
 
 /**
  * Responsible for splitting the data coming out of the replication

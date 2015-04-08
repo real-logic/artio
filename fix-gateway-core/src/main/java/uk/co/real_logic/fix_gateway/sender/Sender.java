@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer;
+package uk.co.real_logic.fix_gateway.sender;
 
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
-import uk.co.real_logic.fix_gateway.commands.SenderCommand;
-import uk.co.real_logic.fix_gateway.session.InitiatorSession;
+import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
+import uk.co.real_logic.fix_gateway.receiver.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
+import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;

@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.framer;
+package uk.co.real_logic.fix_gateway.receiver;
 
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
-import uk.co.real_logic.fix_gateway.commands.ReceiverCommand;
-import uk.co.real_logic.fix_gateway.commands.SenderProxy;
+import uk.co.real_logic.fix_gateway.framer.ConnectionHandler;
+import uk.co.real_logic.fix_gateway.sender.SenderProxy;
 import uk.co.real_logic.fix_gateway.session.AcceptorSession;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.util.MilliClock;

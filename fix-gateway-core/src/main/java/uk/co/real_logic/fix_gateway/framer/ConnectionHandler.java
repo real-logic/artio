@@ -16,11 +16,13 @@
 package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.fix_gateway.FixGateway;
-import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.admin.NewSessionHandler;
-import uk.co.real_logic.fix_gateway.admin.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.receiver.ReceiverEndPoint;
+import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
+import uk.co.real_logic.fix_gateway.sender.SenderEndPoint;
+import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;

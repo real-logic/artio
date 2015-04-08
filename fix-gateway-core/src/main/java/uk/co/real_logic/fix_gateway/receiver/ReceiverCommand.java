@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.admin;
+package uk.co.real_logic.fix_gateway.receiver;
 
-import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
-
-public interface AuthenticationStrategy
+public interface ReceiverCommand
 {
-    boolean authenticate(final LogonDecoder logon);
+    void execute(Receiver receiver);
 }

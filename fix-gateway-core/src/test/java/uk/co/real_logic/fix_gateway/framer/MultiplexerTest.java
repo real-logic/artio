@@ -17,7 +17,9 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import org.junit.Test;
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.commands.ReceiverProxy;
+import uk.co.real_logic.fix_gateway.receiver.ReceiverProxy;
+import uk.co.real_logic.fix_gateway.sender.Multiplexer;
+import uk.co.real_logic.fix_gateway.sender.SenderEndPoint;
 
 import static org.mockito.Mockito.*;
 

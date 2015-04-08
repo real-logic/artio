@@ -13,16 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package uk.co.real_logic.fix_gateway.session;
 
-/**
- * Framing covers:
- * <ul>
- *     <li>Handling connects and disconnects</li>
- *     <li>Takes messages off a TCP stream and framing them as Aeron messages</li>
- *     <li>Authentication - login/logout</li>
- *     <li>Handling Heartbeats & Test Requests</li>
- *     <li>Admin aspects of session management - ability to disconnect clients etc</li>
- *     <li>Connection Hijacking</li>
- * </ul>
- */
-package uk.co.real_logic.fix_gateway.framer;
+import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
+
+@FunctionalInterface
+public interface NewSessionHandler
+{
+    void onConnect(final Session session, final GatewaySubscription subscription);
+}
