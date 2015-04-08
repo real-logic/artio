@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import quickfix.*;
 import quickfix.field.BeginString;
@@ -25,8 +26,7 @@ import quickfix.field.TargetCompID;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.FixGateway;
-import uk.co.real_logic.fix_gateway.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 
 import java.io.File;
@@ -36,10 +36,11 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
-import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.launchMediaDriver;
+import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToQuickFixSystemTest
 {
+
     private MediaDriver mediaDriver;
     private FixGateway initiatingGateway;
     private InitiatorSession initiatedSession;
@@ -67,8 +68,8 @@ public class GatewayToQuickFixSystemTest
 
         final SessionID sessionID = new SessionID(
             new BeginString("FIX.4.4"),
-            new SenderCompID("CCG"),
-            new TargetCompID("LEH_LZJ02")
+            new SenderCompID(SystemTestUtil.ACCEPTOR_ID),
+            new TargetCompID(SystemTestUtil.INITIATOR_ID)
         );
         settings.setString(sessionID, "ConnectionType", "acceptor");
         settings.setString(sessionID, "StartTime", "00:00:00");
@@ -78,22 +79,10 @@ public class GatewayToQuickFixSystemTest
         final LogFactory logFactory = new ScreenLogFactory(settings);
         socketAcceptor = new SocketAcceptor(acceptor, storeFactory, settings, logFactory,
             new DefaultMessageFactory());
-
         socketAcceptor.start();
 
-        final StaticConfiguration initiatingConfig = new StaticConfiguration()
-            .bind("localhost", unusedPort())
-            .aeronChannel("udp://localhost:" + unusedPort())
-            .newSessionHandler(initiatingSessionHandler);
-        initiatingGateway = FixGateway.launch(initiatingConfig);
-
-        final SessionConfiguration config = SessionConfiguration.builder()
-            .address("localhost", port)
-            .credentials("bob", "Uv1aegoh")
-            .senderCompId("LEH_LZJ02")
-            .targetCompId("CCG")
-            .build();
-        initiatedSession = initiatingGateway.initiate(config, null);
+        initiatingGateway = launchInitiatingGateway(initiatingSessionHandler);
+        initiatedSession = initiate(initiatingGateway, port);
     }
 
     @Test
@@ -102,9 +91,25 @@ public class GatewayToQuickFixSystemTest
         assertTrue("Session has failed to connect", initiatedSession.isConnected());
         assertTrue("Session has failed to logon", initiatedSession.state() == ACTIVE);
 
-        assertThat(acceptor.logons(), hasItems(
-            allOf(hasProperty("senderCompID", equalTo("CCG")),
-                hasProperty("targetCompID", equalTo("LEH_LZJ02")))));
+        assertThat(acceptor.logons(), SystemTestUtil.containsInitiator());
+    }
+
+    @Ignore
+    @Test
+    public void messagesCanBeSentFromInitiatorToAcceptor() throws InterruptedException
+    {
+        sendTestRequest(initiatedSession);
+
+        assertQuickFixReceivedMessage(acceptor);
+    }
+
+    @Ignore
+    @Test
+    public void initiatorSessionCanBeDisconnected() throws InterruptedException
+    {
+        initiatedSession.disconnect();
+
+        assertQuickFixDisconnected(acceptor);
     }
 
     @After
@@ -125,4 +130,11 @@ public class GatewayToQuickFixSystemTest
             mediaDriver.close();
         }
     }
+
+    private static void assertQuickFixReceivedMessage(final FakeQuickFixApplication acceptor)
+    {
+        assertThat(acceptor.messagesFromApp(),
+            hasItem(hasProperty("msgType", equalTo(String.valueOf(TestRequestDecoder.MESSAGE_TYPE)))));
+    }
+
 }

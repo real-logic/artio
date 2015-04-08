@@ -23,6 +23,8 @@ import java.util.List;
 public class FakeQuickFixApplication implements Application
 {
     private final List<SessionID> logons = new ArrayList<>();
+    private final List<SessionID> logouts = new ArrayList<>();
+    private final List<Message> messagesFromApp = new ArrayList<>();
 
     public void onCreate(final SessionID sessionID)
     {
@@ -36,7 +38,7 @@ public class FakeQuickFixApplication implements Application
 
     public void onLogout(final SessionID sessionID)
     {
-
+        logouts.add(sessionID);
     }
 
     public void toAdmin(final Message message, final SessionID sessionID)
@@ -58,11 +60,21 @@ public class FakeQuickFixApplication implements Application
     public void fromApp(final Message message, final SessionID sessionID)
         throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType
     {
-
+        messagesFromApp.add(message);
     }
 
     public List<SessionID> logons()
     {
         return logons;
+    }
+
+    public List<SessionID> logouts()
+    {
+        return logouts;
+    }
+
+    public List<Message> messagesFromApp()
+    {
+        return messagesFromApp;
     }
 }

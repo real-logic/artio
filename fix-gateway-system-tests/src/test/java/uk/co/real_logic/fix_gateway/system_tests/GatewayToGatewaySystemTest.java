@@ -20,26 +20,19 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.FixGateway;
-import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.admin.CompIdAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
-import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.framer.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.framer.session.Session;
-import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 
-import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
-import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyEquals;
-import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.framer.session.SessionState.ACTIVE;
-import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.launchMediaDriver;
+import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest
 {
-    public static final long CONNECTION_ID = 0L;
 
     private MediaDriver mediaDriver;
     private FixGateway acceptingGateway;
@@ -63,23 +56,12 @@ public class GatewayToGatewaySystemTest
         final StaticConfiguration acceptingConfig = new StaticConfiguration()
                 .bind("localhost", port)
                 .aeronChannel("udp://localhost:" + unusedPort())
-                .authenticationStrategy(new CompIdAuthenticationStrategy("CCG"))
+                .authenticationStrategy(new CompIdAuthenticationStrategy(ACCEPTOR_ID))
                 .newSessionHandler(acceptingSessionHandler);
         acceptingGateway = FixGateway.launch(acceptingConfig);
 
-        final StaticConfiguration initiatingConfig = new StaticConfiguration()
-                .bind("localhost", unusedPort())
-                .aeronChannel("udp://localhost:" + unusedPort())
-                .newSessionHandler(initiatingSessionHandler);
-        initiatingGateway = FixGateway.launch(initiatingConfig);
-
-        final SessionConfiguration config = SessionConfiguration.builder()
-                .address("localhost", port)
-                .credentials("bob", "Uv1aegoh")
-                .senderCompId("LEH_LZJ02")
-                .targetCompId("CCG")
-                .build();
-        initiatedSession = initiatingGateway.initiate(config, null);
+        initiatingGateway = launchInitiatingGateway(initiatingSessionHandler);
+        initiatedSession = initiate(initiatingGateway, port);
         acceptingSession = acceptingSessionHandler.session();
     }
 
@@ -123,35 +105,6 @@ public class GatewayToGatewaySystemTest
         acceptingSession.disconnect();
 
         assertDisconnected(initiatingSessionHandler, acceptingSession);
-    }
-
-    private void assertDisconnected(
-        final FakeSessionHandler sessionHandler, final Session session) throws InterruptedException
-    {
-        assertFalse("Session is still connected", session.isConnected());
-
-        assertEventuallyTrue("Failed to disconnect",
-            () ->
-            {
-                sessionHandler.subscription().poll(1);
-                assertEquals(CONNECTION_ID, sessionHandler.connectionId());
-            });
-    }
-
-    private void sendTestRequest(final Session session)
-    {
-        final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest.testReqID("hi");
-
-        session.send(testRequest);
-    }
-
-    private void assertReceivedMessage(
-        final GatewaySubscription subscription, final FakeOtfAcceptor acceptor) throws InterruptedException
-    {
-        assertEventuallyEquals("Failed to receive a message", 2, () -> subscription.poll(2));
-        assertEquals(2, acceptor.messageTypes().size());
-        assertThat(acceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
     }
 
     @After
