@@ -42,12 +42,19 @@ public final class SessionIds
             final long newSurrogateKey = counter.getAndIncrement();
             final NewSessionId newSessionId = new NewSessionId(key, newSurrogateKey);
             surrogateToComposite.put(newSurrogateKey, key);
+            System.out.println("STORE");
             while (!commandQueue.offer(newSessionId))
             {
                 // TODO: backoff
             }
             return newSurrogateKey;
         });
+    }
+
+    public void put(final Object compositeId, final long surrogateId)
+    {
+        compositeToSurrogate.put(compositeId, surrogateId);
+        surrogateToComposite.put(surrogateId, compositeId);
     }
 
     // TODO: remove this method and any usages of it

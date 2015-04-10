@@ -38,6 +38,6 @@ public class NewSessionId implements ReceiverCommand, SenderCommand
 
     public void execute(final Sender sender)
     {
-
+        sender.onNewSessionId(compositeId, surrogateId);
     }
 }

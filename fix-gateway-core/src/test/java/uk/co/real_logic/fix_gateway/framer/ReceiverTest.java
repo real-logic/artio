@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.receiver.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.sender.SenderEndPoint;
 import uk.co.real_logic.fix_gateway.sender.SenderProxy;
 import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.session.SessionIds;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
@@ -60,7 +61,8 @@ public class ReceiverTest
 
     private ReceiverProxy receiverProxy = new ReceiverProxy(commandQueue, mock(AtomicCounter.class),
         new NoOpIdleStrategy());
-    private Receiver receiver = new Receiver(mockClock, ADDRESS, mockConnectionHandler, commandQueue, mockSender);
+    private Receiver receiver = new Receiver(mockClock, ADDRESS, mockConnectionHandler, commandQueue, mockSender,
+        mock(SessionIds.class));
 
     @Before
     public void setUp() throws IOException

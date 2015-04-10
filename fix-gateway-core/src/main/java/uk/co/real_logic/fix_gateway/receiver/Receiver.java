@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.sender.SenderProxy;
 import uk.co.real_logic.fix_gateway.session.AcceptorSession;
 import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.session.SessionIds;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
@@ -49,6 +50,7 @@ public final class Receiver implements Agent
     private final ConnectionHandler connectionHandler;
     private final SequencedContainerQueue<ReceiverCommand> commandQueue;
     private final SenderProxy sender;
+    private final SessionIds receiverSessions;
     private final Selector selector;
 
     // TODO: add hooks for receive and send buffer sizes
@@ -57,12 +59,14 @@ public final class Receiver implements Agent
         final SocketAddress address,
         final ConnectionHandler connectionHandler,
         final SequencedContainerQueue<ReceiverCommand> commandQueue,
-        final SenderProxy sender)
+        final SenderProxy sender,
+        final SessionIds receiverSessions)
     {
         this.clock = clock;
         this.connectionHandler = connectionHandler;
         this.commandQueue = commandQueue;
         this.sender = sender;
+        this.receiverSessions = receiverSessions;
 
         try
         {
@@ -194,6 +198,7 @@ public final class Receiver implements Agent
 
     public void onNewSessionId(final Object compositeId, final long surrogateId)
     {
-        // TODO
+        System.out.println("READ");
+        receiverSessions.put(compositeId, surrogateId);
     }
 }

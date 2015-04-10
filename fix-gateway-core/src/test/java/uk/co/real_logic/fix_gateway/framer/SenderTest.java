@@ -31,6 +31,7 @@ import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.sender.*;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.session.SessionIds;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -65,7 +66,7 @@ public class SenderTest
     private SenderProxy proxy = new SenderProxy(commandQueue, mock(AtomicCounter.class), new NoOpIdleStrategy());
 
     private Sender sender = new Sender(commandQueue, mockConnectionHandler, mockReceiver,
-            mockGateway, mockMultiplexer, mockDataSubscription);
+            mockGateway, mockMultiplexer, mockDataSubscription, mock(SessionIds.class));
 
     private ServerSocketChannel server;
 

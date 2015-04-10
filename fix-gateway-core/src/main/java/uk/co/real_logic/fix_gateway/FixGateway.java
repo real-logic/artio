@@ -85,7 +85,7 @@ public class FixGateway implements AutoCloseable
         receiverProxy = new ReceiverProxy(receiverCommands, fixCounters.receiverProxyFails(), backoffIdleStrategy());
 
         final SessionIds receiverSessions = new SessionIds(senderCommands);
-        final SessionIds senderSessions = receiverSessions; //new SessionIds(receiverCommands);
+        final SessionIds senderSessions = new SessionIds(receiverCommands);
 
         final Multiplexer multiplexer = new Multiplexer(receiverProxy);
         final GatewaySubscription dataSubscription = outboundStreams.gatewaySubscription().sessionHandler(multiplexer);
@@ -110,8 +110,8 @@ public class FixGateway implements AutoCloseable
             configuration.authenticationStrategy(),
             configuration.newSessionHandler());
 
-        sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer, dataSubscription);
-        receiver = new Receiver(systemClock, configuration.bindAddress(), handler, receiverCommands, senderProxy);
+        sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer, dataSubscription, senderSessions);
+        receiver = new Receiver(systemClock, configuration.bindAddress(), handler, receiverCommands, senderProxy, receiverSessions);
 
         senderRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sender);
         receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, receiver);

@@ -23,6 +23,7 @@ import uk.co.real_logic.fix_gateway.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.receiver.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
+import uk.co.real_logic.fix_gateway.session.SessionIds;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
@@ -41,6 +42,7 @@ public final class Sender implements Agent
     private final FixGateway gateway;
     private final Multiplexer multiplexer;
     private final GatewaySubscription dataSubscription;
+    private final SessionIds senderSessions;
 
     public Sender(
         final SequencedContainerQueue<SenderCommand> commandQueue,
@@ -48,7 +50,8 @@ public final class Sender implements Agent
         final ReceiverProxy receiver,
         final FixGateway gateway,
         final Multiplexer multiplexer,
-        final GatewaySubscription dataSubscription)
+        final GatewaySubscription dataSubscription,
+        final SessionIds senderSessions)
     {
         this.commandQueue = commandQueue;
         this.connectionHandler = connectionHandler;
@@ -56,6 +59,7 @@ public final class Sender implements Agent
         this.gateway = gateway;
         this.multiplexer = multiplexer;
         this.dataSubscription = dataSubscription;
+        this.senderSessions = senderSessions;
     }
 
     public int doWork() throws Exception
@@ -96,5 +100,10 @@ public final class Sender implements Agent
     public String roleName()
     {
         return "Sender";
+    }
+
+    public void onNewSessionId(final Object compositeId, final long surrogateId)
+    {
+        senderSessions.put(compositeId, surrogateId);
     }
 }
