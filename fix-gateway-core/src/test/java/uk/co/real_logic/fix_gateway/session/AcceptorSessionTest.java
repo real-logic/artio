@@ -58,16 +58,16 @@ public class AcceptorSessionTest extends AbstractSessionTest
         session.lastReceivedMsgSeqNum(2);
 
         onLogon(1);
-        verifyDisconnect();
+        verifyLogoutStarted();
         verifyNoFurtherMessages();
     }
 
     @Test
-    public void shouldDisconnectIfFirstMessageNotALogon()
+    public void shouldLogoutIfFirstMessageNotALogon()
     {
         session.onMessage(1);
 
-        verifyDisconnect();
+        verifyLogoutStarted();
         verifyNoFurtherMessages();
     }
 

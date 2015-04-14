@@ -20,6 +20,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.session.SessionState.ACTIVE;
+import static uk.co.real_logic.fix_gateway.session.SessionState.AWAITING_LOGOUT;
 import static uk.co.real_logic.fix_gateway.session.SessionState.AWAITING_RESEND;
 
 public class SessionTest extends AbstractSessionTest
@@ -31,6 +32,16 @@ public class SessionTest extends AbstractSessionTest
     public void shouldReplyToValidLogout()
     {
         session.state(ACTIVE);
+
+        session.onLogout(1);
+
+        verifyLogoutAcknowledged();
+    }
+
+    @Test
+    public void shouldDisconnectUponLogoutAcknowledgement()
+    {
+        session.state(AWAITING_LOGOUT);
 
         session.onLogout(1);
 
@@ -70,13 +81,13 @@ public class SessionTest extends AbstractSessionTest
     }
 
     @Test
-    public void shouldDisconnectOnInvalidGapFill()
+    public void shouldLogoutOnInvalidGapFill()
     {
         session.lastReceivedMsgSeqNum(2);
 
         session.onSequenceReset(1, 4, false);
 
-        verifyDisconnect();
+        verifyLogoutStarted();
     }
 
     @Test
@@ -121,7 +132,7 @@ public class SessionTest extends AbstractSessionTest
 
     // NB: differs from the spec to disconnect, rather than test request.
     @Test
-    public void shouldDisconnectUponTimeout()
+    public void shouldLogoutUponTimeout()
     {
         session.state(ACTIVE);
         session.lastReceivedMsgSeqNum(9);
@@ -132,7 +143,7 @@ public class SessionTest extends AbstractSessionTest
 
         session.poll(fakeClock.time());
 
-        verifyDisconnect();
+        verifyLogoutStarted();
     }
 
     @Test
@@ -179,7 +190,7 @@ public class SessionTest extends AbstractSessionTest
         session.lastReceivedMsgSeqNum(2);
 
         session.onMessage(1);
-        verifyDisconnect();
+        verifyLogoutStarted();
     }
 
     @Test
@@ -225,7 +236,6 @@ public class SessionTest extends AbstractSessionTest
         verify(mockProxy).heartbeat(null);
         reset(mockProxy);
     }
-
 
     protected Session session()
     {

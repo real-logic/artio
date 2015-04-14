@@ -20,7 +20,9 @@ import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.session.SessionState.AWAITING_LOGOUT;
 import static uk.co.real_logic.fix_gateway.session.SessionState.DISCONNECTED;
+import static uk.co.real_logic.fix_gateway.session.SessionState.DRAINING;
 
 public abstract class AbstractSessionTest
 {
@@ -40,9 +42,25 @@ public abstract class AbstractSessionTest
 
     public void verifyDisconnect()
     {
-        verify(mockProxy).logout(anyInt());
         verify(mockProxy).disconnect(CONNECTION_ID);
         assertState(DISCONNECTED);
+    }
+
+    public void verifyLogoutStarted()
+    {
+        verifyLogout();
+        assertState(AWAITING_LOGOUT);
+    }
+
+    public void verifyLogoutAcknowledged()
+    {
+        verifyLogout();
+        assertState(DRAINING);
+    }
+
+    private void verifyLogout()
+    {
+        verify(mockProxy).logout(anyInt());
     }
 
     public void assertState(final SessionState state)

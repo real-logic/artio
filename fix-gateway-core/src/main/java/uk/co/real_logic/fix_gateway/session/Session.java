@@ -102,7 +102,14 @@ public class Session
 
         if (time >= nextRequiredMessageTimeInMs)
         {
-            disconnect();
+            if (state() == AWAITING_LOGOUT)
+            {
+                disconnect();
+            }
+            else
+            {
+                startLogout();
+            }
             actions++;
         }
 
@@ -116,13 +123,21 @@ public class Session
         return actions;
     }
 
-    public void disconnect()
+    public void startLogout()
+    {
+        sendLogout();
+        state(AWAITING_LOGOUT);
+    }
+
+    private void sendLogout()
     {
         proxy.logout(newSentSeqNum());
-        state(LINGER);
+    }
+
+    public void disconnect()
+    {
         proxy.disconnect(connectionId);
         state(DISCONNECTED);
-        // TODO: await reply
     }
 
     public void send(final MessageEncoder encoder)
@@ -155,7 +170,7 @@ public class Session
     {
         if (state() == CONNECTED)
         {
-            disconnect();
+            startLogout();
         }
         else
         {
@@ -173,7 +188,7 @@ public class Session
             }
             else if (expectedSeqNo > msgSeqNo)
             {
-                disconnect();
+                startLogout();
             }
         }
     }
@@ -191,9 +206,15 @@ public class Session
     void onLogout(final int msgSeqNo)
     {
         onMessage(msgSeqNo);
-        newSentSeqNum();
-
-        disconnect();
+        if (state() == AWAITING_LOGOUT)
+        {
+            disconnect();
+        }
+        else
+        {
+            sendLogout();
+            state(DRAINING);
+        }
     }
 
     void onTestRequest(final String testReqId)
@@ -238,7 +259,7 @@ public class Session
         {
             if (!possDupFlag)
             {
-                disconnect();
+                startLogout();
             }
         }
         else

@@ -72,7 +72,7 @@ public class SessionParser
                 }
                 else
                 {
-                    session.disconnect();
+                    session.startLogout();
                 }
                 break;
 

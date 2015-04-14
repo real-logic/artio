@@ -84,7 +84,7 @@ public class GatewayToGatewaySystemTest
     @Test(timeout = 2000L)
     public void initiatorSessionCanBeDisconnected() throws InterruptedException
     {
-        initiatedSession.disconnect();
+        initiatedSession.startLogout();
 
         assertDisconnected(acceptingSessionHandler, initiatedSession);
     }
@@ -92,7 +92,7 @@ public class GatewayToGatewaySystemTest
     @Test(timeout = 2000L)
     public void acceptorSessionCanBeDisconnected() throws InterruptedException
     {
-        acceptingSession.disconnect();
+        acceptingSession.startLogout();
 
         assertDisconnected(initiatingSessionHandler, acceptingSession);
     }

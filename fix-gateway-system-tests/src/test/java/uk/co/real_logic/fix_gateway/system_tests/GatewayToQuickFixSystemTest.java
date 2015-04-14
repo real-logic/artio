@@ -75,7 +75,7 @@ public class GatewayToQuickFixSystemTest
     @Test
     public void initiatorSessionCanBeDisconnected() throws InterruptedException
     {
-        initiatedSession.disconnect();
+        initiatedSession.startLogout();
 
         assertQuickFixDisconnected(acceptor);
     }

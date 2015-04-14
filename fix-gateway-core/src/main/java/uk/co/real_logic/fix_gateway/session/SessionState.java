@@ -35,8 +35,8 @@ package uk.co.real_logic.fix_gateway.session;
  * Successful Heartbeat: ACTIVE -> ACTIVE - updates the timeout time.
  * Heartbeat Timeout: ACTIVE -> DISCONNECTED
  *
- * Logout request: ACTIVE -> LINGER
- * Logout acknowledgement: LINGER -> DISCONNECTED
+ * Logout request: ACTIVE -> AWAITING_LOGOUT
+ * Logout acknowledgement: AWAITING_LOGOUT -> DISCONNECTED
  *
  * Manual disable: * -> DISABLED
  */
@@ -71,7 +71,12 @@ public enum SessionState
      * Linger between logout request and a logout acknowledgement. You can do resend processing at this point, but
      * no other messages.
      */
-    LINGER,
+    AWAITING_LOGOUT,
+
+    /**
+     *  Disconnect the session, once you've sent remaining messages in the buffer.
+     */
+    DRAINING,
 
     /**
      * Session has been disconnected and can't send messages.
