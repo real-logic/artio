@@ -79,9 +79,9 @@ public final class SystemTestUtil
         assertThat(logouts, containsInitiator());
     }
 
-    public static Matcher<Iterable<? extends SessionID>> containsInitiator()
+    public static <T> Matcher<Iterable<? super T>> containsInitiator()
     {
-        return contains(
+        return hasItem(
             allOf(hasProperty("senderCompID", equalTo(ACCEPTOR_ID)),
                 hasProperty("targetCompID", equalTo(INITIATOR_ID))));
     }

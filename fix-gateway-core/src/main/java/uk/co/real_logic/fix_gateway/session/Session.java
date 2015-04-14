@@ -119,6 +119,7 @@ public class Session
     public void disconnect()
     {
         proxy.logout(newSentSeqNum());
+        state(LINGER);
         proxy.disconnect(connectionId);
         state(DISCONNECTED);
         // TODO: await reply

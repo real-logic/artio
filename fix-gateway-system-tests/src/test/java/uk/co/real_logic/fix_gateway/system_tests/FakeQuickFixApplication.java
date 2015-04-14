@@ -48,6 +48,23 @@ public class FakeQuickFixApplication implements Application
         onMessage(message, sessionID);
     }
 
+    public void fromAdmin(final Message message, final SessionID sessionID)
+        throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon
+    {
+        onMessage(message, sessionID);
+    }
+
+    public void toApp(final Message message, final SessionID sessionID) throws DoNotSend
+    {
+        onMessage(message, sessionID);
+    }
+
+    public void fromApp(final Message message, final SessionID sessionID)
+        throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType
+    {
+        messagesFromApp.add(message);
+    }
+
     private void onMessage(final Message message, final SessionID sessionID)
     {
         try
@@ -62,30 +79,6 @@ public class FakeQuickFixApplication implements Application
         {
             LangUtil.rethrowUnchecked(fieldNotFound);
         }
-    }
-
-    public void fromAdmin(final Message message, final SessionID sessionID)
-        throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon
-    {
-        System.out.println("???" + message.getHeader().getField(new MsgType()).getValue());
-    }
-
-    public void toApp(final Message message, final SessionID sessionID) throws DoNotSend
-    {
-        try
-        {
-            System.out.println("???" + message.getHeader().getField(new MsgType()).getValue());
-        }
-        catch (FieldNotFound fieldNotFound)
-        {
-            fieldNotFound.printStackTrace();
-        }
-    }
-
-    public void fromApp(final Message message, final SessionID sessionID)
-        throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType
-    {
-        messagesFromApp.add(message);
     }
 
     public List<SessionID> logons()
