@@ -25,8 +25,8 @@ final class NewInitiatedConnection implements ReceiverCommand
     }
 
     @Override
-    public void execute(final Receiver receiver)
+    public void execute(final Framer framer)
     {
-        receiver.onNewInitiatedConnection(endPoint);
+        framer.onNewInitiatedConnection(endPoint);
     }
 }

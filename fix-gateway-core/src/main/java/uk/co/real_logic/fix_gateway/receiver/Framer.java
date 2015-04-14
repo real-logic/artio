@@ -39,7 +39,7 @@ import static java.nio.channels.SelectionKey.OP_READ;
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
  */
-public final class Receiver implements Agent
+public final class Framer implements Agent
 {
     private final Consumer<ReceiverCommand> onCommandFunc = this::onCommand;
     private final List<Session> sessions = new ArrayList<>();
@@ -54,7 +54,7 @@ public final class Receiver implements Agent
     private final Selector selector;
 
     // TODO: add hooks for receive and send buffer sizes
-    public Receiver(
+    public Framer(
         final MilliClock clock,
         final SocketAddress address,
         final ConnectionHandler connectionHandler,

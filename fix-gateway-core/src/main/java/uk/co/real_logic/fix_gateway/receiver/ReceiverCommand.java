@@ -17,5 +17,5 @@ package uk.co.real_logic.fix_gateway.receiver;
 
 public interface ReceiverCommand
 {
-    void execute(Receiver receiver);
+    void execute(Framer framer);
 }

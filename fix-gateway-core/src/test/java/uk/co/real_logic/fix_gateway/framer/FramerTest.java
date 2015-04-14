@@ -22,7 +22,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.ConnectionHandler;
-import uk.co.real_logic.fix_gateway.receiver.Receiver;
+import uk.co.real_logic.fix_gateway.receiver.Framer;
 import uk.co.real_logic.fix_gateway.receiver.ReceiverCommand;
 import uk.co.real_logic.fix_gateway.receiver.ReceiverEndPoint;
 import uk.co.real_logic.fix_gateway.receiver.ReceiverProxy;
@@ -43,7 +43,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
 
-public class ReceiverTest
+public class FramerTest
 {
     private static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", 9999);
     private static final long CONNECTION_ID = 2L;
@@ -61,7 +61,7 @@ public class ReceiverTest
 
     private ReceiverProxy receiverProxy = new ReceiverProxy(commandQueue, mock(AtomicCounter.class),
         new NoOpIdleStrategy());
-    private Receiver receiver = new Receiver(mockClock, ADDRESS, mockConnectionHandler, commandQueue, mockSender,
+    private Framer framer = new Framer(mockClock, ADDRESS, mockConnectionHandler, commandQueue, mockSender,
         mock(SessionIds.class));
 
     @Before
@@ -82,7 +82,7 @@ public class ReceiverTest
     @After
     public void tearDown()
     {
-        receiver.onClose();
+        framer.onClose();
     }
 
     @Test
@@ -102,7 +102,7 @@ public class ReceiverTest
         aClientConnects();
 
         when:
-        receiver.doWork();
+        framer.doWork();
 
         then:
         verify(mockConnectionHandler).receiverEndPoint(notNull(SocketChannel.class), anyLong(), any(Session.class));
@@ -115,7 +115,7 @@ public class ReceiverTest
         aClientConnects();
 
         when:
-        receiver.doWork();
+        framer.doWork();
 
         then:
         verify(mockSender).newAcceptedConnection(mockSenderEndPoint);
@@ -128,7 +128,7 @@ public class ReceiverTest
         aClientConnects();
 
         when:
-        receiver.doWork();
+        framer.doWork();
 
         then:
         verify(mockSession).poll(0);
@@ -139,11 +139,11 @@ public class ReceiverTest
     {
         given:
         aClientConnects();
-        receiver.doWork();
+        framer.doWork();
 
         when:
         aClientSendsData();
-        receiver.doWork();
+        framer.doWork();
 
         then:
         verify(mockReceiverEndPoint).receiveData();
@@ -154,11 +154,11 @@ public class ReceiverTest
     {
         given:
         aClientConnects();
-        receiver.doWork();
+        framer.doWork();
 
         when:
         receiverProxy.disconnect(CONNECTION_ID);
-        receiver.doWork();
+        framer.doWork();
 
         then:
         verify(mockReceiverEndPoint).close();

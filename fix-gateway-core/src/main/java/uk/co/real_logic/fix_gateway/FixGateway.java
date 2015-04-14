@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.*;
-import uk.co.real_logic.fix_gateway.receiver.Receiver;
+import uk.co.real_logic.fix_gateway.receiver.Framer;
 import uk.co.real_logic.fix_gateway.receiver.ReceiverCommand;
 import uk.co.real_logic.fix_gateway.receiver.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
@@ -49,7 +49,7 @@ public class FixGateway implements AutoCloseable
     private final ReceiverProxy receiverProxy;
 
     private final Sender sender;
-    private final Receiver receiver;
+    private final Framer framer;
 
     private final AgentRunner senderRunner;
     private final AgentRunner receiverRunner;
@@ -103,11 +103,11 @@ public class FixGateway implements AutoCloseable
             outboundStreams);
 
         sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer, dataSubscription, senderSessions);
-        receiver = new Receiver(systemClock, configuration.bindAddress(), handler, receiverCommands, senderProxy,
+        framer = new Framer(systemClock, configuration.bindAddress(), handler, receiverCommands, senderProxy,
             receiverSessions);
 
         senderRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sender);
-        receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, receiver);
+        receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, framer);
     }
 
     private BackoffIdleStrategy backoffIdleStrategy()
@@ -159,7 +159,7 @@ public class FixGateway implements AutoCloseable
         senderRunner.close();
         receiverRunner.close();
 
-        receiver.onClose();
+        framer.onClose();
 
         inboundStreams.close();
         outboundStreams.close();

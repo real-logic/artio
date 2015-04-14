@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import uk.co.real_logic.fix_gateway.receiver.Receiver;
+import uk.co.real_logic.fix_gateway.receiver.Framer;
 import uk.co.real_logic.fix_gateway.receiver.ReceiverCommand;
 import uk.co.real_logic.fix_gateway.sender.Sender;
 import uk.co.real_logic.fix_gateway.sender.SenderCommand;
@@ -31,9 +31,9 @@ public class NewSessionId implements ReceiverCommand, SenderCommand
         this.surrogateId = surrogateId;
     }
 
-    public void execute(final Receiver receiver)
+    public void execute(final Framer framer)
     {
-        receiver.onNewSessionId(compositeId, surrogateId);
+        framer.onNewSessionId(compositeId, surrogateId);
     }
 
     public void execute(final Sender sender)

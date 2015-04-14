@@ -39,7 +39,7 @@ import static uk.co.real_logic.fix_gateway.session.SessionParser.UNKNOWN_SESSION
 import static uk.co.real_logic.fix_gateway.util.TestMessages.EG_MESSAGE;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.MSG_LEN;
 
-public class ReceiverEndPointTest
+public class FramerEndPointTest
 {
     private static final int MESSAGE_TYPE = 'D';
     private static final long CONNECTION_ID = 20L;

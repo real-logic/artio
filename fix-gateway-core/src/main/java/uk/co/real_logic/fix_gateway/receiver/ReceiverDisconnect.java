@@ -24,8 +24,8 @@ public class ReceiverDisconnect implements ReceiverCommand
         this.connectionId = connectionId;
     }
 
-    public void execute(final Receiver receiver)
+    public void execute(final Framer framer)
     {
-        receiver.onDisconnect(connectionId);
+        framer.onDisconnect(connectionId);
     }
 }
