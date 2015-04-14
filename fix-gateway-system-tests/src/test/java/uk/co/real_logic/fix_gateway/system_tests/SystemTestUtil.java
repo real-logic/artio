@@ -3,6 +3,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import org.hamcrest.Matcher;
 import quickfix.*;
 import quickfix.field.BeginString;
+import quickfix.field.MsgType;
 import quickfix.field.SenderCompID;
 import quickfix.field.TargetCompID;
 import uk.co.real_logic.aeron.driver.MediaDriver;
@@ -25,6 +26,8 @@ import java.util.List;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
+import static quickfix.field.MsgType.TEST_REQUEST;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyEquals;
@@ -151,7 +154,28 @@ public final class SystemTestUtil
 
     static void assertQuickFixReceivedMessage(final FakeQuickFixApplication acceptor)
     {
-        assertThat(acceptor.messages(),
-            hasItem(hasProperty("msgType", equalTo(String.valueOf(TestRequestDecoder.MESSAGE_TYPE)))));
+        final List<Message> messages = acceptor.messages();
+        for (Message message : messages)
+        {
+            if (TEST_REQUEST.equals(getMsgType(message)))
+            {
+                return;
+            }
+        }
+
+        fail("Unable to fnd test request in " + messages);
+    }
+
+    private static String getMsgType(Message message)
+    {
+        try
+        {
+            return message.getHeader().getField(new MsgType()).getValue();
+        }
+        catch (FieldNotFound ex)
+        {
+            ex.printStackTrace();
+            return null;
+        }
     }
 }
