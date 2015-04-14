@@ -108,7 +108,7 @@ public class Session
 
         if (time >= nextRequiredHeartbeatTimeInMs)
         {
-            proxy.heartbeat(null, id());
+            proxy.heartbeat(null);
             nextRequiredHeartbeatTimeInMs += sendingHeartbeatIntervalInMs;
             actions++;
         }
@@ -130,7 +130,8 @@ public class Session
         header
             .msgSeqNum(newSentSeqNum())
             .sendingTime(time());
-        sessionIdStrategy.onSend(sessionKey, header);
+        // TODO: figure out the best way to remove this overhead from every send
+        sessionIdStrategy.setupSession(sessionKey, header);
 
         final int length = encoder.encode(string, 0);
 
@@ -166,7 +167,7 @@ public class Session
             else if (expectedSeqNo < msgSeqNo)
             {
                 state(AWAITING_RESEND);
-                proxy.resendRequest(newSentSeqNum(), expectedSeqNo, msgSeqNo - 1, id());
+                proxy.resendRequest(newSentSeqNum(), expectedSeqNo, msgSeqNo - 1);
                 incReceivedSeqNum();
             }
             else if (expectedSeqNo > msgSeqNo)
@@ -183,20 +184,21 @@ public class Session
         heartbeatIntervalInS(heartbeatInterval);
         onMessage(msgSeqNo);
         publication.saveConnect(connectionId, sessionId);
+        proxy.setupSession(sessionId, sessionKey);
     }
 
     void onLogout(final int msgSeqNo, final long sessionId)
     {
         onMessage(msgSeqNo);
         newSentSeqNum();
-        proxy.logout(lastSentMsgSeqNum, sessionId);
+        proxy.logout(lastSentMsgSeqNum);
 
         disconnect();
     }
 
     void onTestRequest(final String testReqId)
     {
-        proxy.heartbeat(testReqId, id());
+        proxy.heartbeat(testReqId);
     }
 
     void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
@@ -220,7 +222,7 @@ public class Session
         }
         else if (newSeqNo < expectedMsgSeqNo)
         {
-            proxy.reject(expectedMsgSeqNo, msgSeqNo, id());
+            proxy.reject(expectedMsgSeqNo, msgSeqNo);
         }
     }
 
@@ -229,7 +231,7 @@ public class Session
         final int expectedMsgSeqNo = expectedReceivedSeqNum();
         if (msgSeqNo > expectedMsgSeqNo)
         {
-            proxy.resendRequest(newSeqNo + 1, expectedMsgSeqNo, msgSeqNo - 1, id());
+            proxy.resendRequest(newSeqNo + 1, expectedMsgSeqNo, msgSeqNo - 1);
             lastReceivedMsgSeqNum(newSeqNo - 1);
         }
         else if(msgSeqNo < expectedMsgSeqNo)

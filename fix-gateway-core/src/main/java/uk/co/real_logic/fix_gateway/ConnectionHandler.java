@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.receiver.ReceiverEndPoint;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
@@ -38,41 +37,29 @@ public class ConnectionHandler
     private final AtomicLong idSource = new AtomicLong(0);
 
     private final MilliClock clock;
-    private final SessionProxy sessionProxy;
-    private final int bufferSize;
-    private final int defaultInterval;
+    private final StaticConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds receiverSessions;
     private final SessionIds senderSessions;
     private final ReplicationStreams inboundStreams;
     private final ReplicationStreams outboundStreams;
-    private final AuthenticationStrategy authenticationStrategy;
-    private final NewSessionHandler newSessionHandler;
 
     public ConnectionHandler(
         final MilliClock clock,
-        final SessionProxy sessionProxy,
-        final int bufferSize,
-        final int defaultInterval,
+        final StaticConfiguration configuration,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds receiverSessions,
         final SessionIds senderSessions,
         final ReplicationStreams inboundStreams,
-        final ReplicationStreams outboundStreams,
-        final AuthenticationStrategy authenticationStrategy,
-        final NewSessionHandler newSessionHandler)
+        final ReplicationStreams outboundStreams)
     {
         this.clock = clock;
-        this.sessionProxy = sessionProxy;
-        this.bufferSize = bufferSize;
-        this.defaultInterval = defaultInterval;
+        this.configuration = configuration;
         this.sessionIdStrategy = sessionIdStrategy;
         this.receiverSessions = receiverSessions;
         this.senderSessions = senderSessions;
         this.inboundStreams = inboundStreams;
         this.outboundStreams = outboundStreams;
-        this.authenticationStrategy = authenticationStrategy;
-        this.newSessionHandler = newSessionHandler;
     }
 
     public long onConnection() throws IOException
@@ -84,13 +71,13 @@ public class ConnectionHandler
         final SocketChannel channel, final long connectionId, final Session session)
     {
         final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy, receiverSessions,
-            authenticationStrategy);
+            configuration.authenticationStrategy());
 
-        newSessionHandler.onConnect(session, inboundStreams.gatewaySubscription());
+        configuration.newSessionHandler().onConnect(session, inboundStreams.gatewaySubscription());
 
         return new ReceiverEndPoint(
             channel,
-            bufferSize,
+            configuration.receiverBufferSize(),
             inboundStreams.gatewayPublication(),
             connectionId,
             sessionParser
@@ -105,19 +92,33 @@ public class ConnectionHandler
     public AcceptorSession acceptSession(final long connectionId)
     {
         final GatewayPublication publication = outboundStreams.gatewayPublication();
+        final int defaultInterval = configuration.defaultHeartbeatInterval();
         return new AcceptorSession(
-            defaultInterval, connectionId, clock, sessionProxy, publication, sessionIdStrategy);
+            defaultInterval, connectionId, clock, sessionProxy(), publication, sessionIdStrategy);
     }
 
     public InitiatorSession initiateSession(
-        final long connectionId, final FixGateway gateway, final SessionConfiguration configuration)
+        final long connectionId, final FixGateway gateway, final SessionConfiguration sessionConfiguration)
     {
-        final Object key = sessionIdStrategy.onInitiatorLogon(configuration);
+        final Object key = sessionIdStrategy.onInitiatorLogon(sessionConfiguration);
         final long sessionId = senderSessions.onLogon(key);
+        final int defaultInterval = configuration.defaultHeartbeatInterval();
         final GatewayPublication gatewayPublication = outboundStreams.gatewayPublication();
 
         return new InitiatorSession(
-            defaultInterval, connectionId, clock, sessionProxy, gatewayPublication, sessionIdStrategy, gateway,
+            defaultInterval,
+            connectionId,
+            clock,
+            sessionProxy().setupSession(sessionId, key),
+            gatewayPublication,
+            sessionIdStrategy,
+            gateway,
             sessionId);
+    }
+
+    private SessionProxy sessionProxy()
+    {
+        return new SessionProxy(
+            configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy, senderSessions);
     }
 }

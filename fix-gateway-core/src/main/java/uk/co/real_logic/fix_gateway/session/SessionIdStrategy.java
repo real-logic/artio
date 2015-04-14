@@ -25,5 +25,5 @@ public interface SessionIdStrategy
 
     Object onInitiatorLogon(final SessionConfiguration configuration);
 
-    void onSend(final Object compositeKey, final HeaderEncoder encoder);
+    void setupSession(final Object compositeKey, final HeaderEncoder encoder);
 }

@@ -27,6 +27,7 @@ public abstract class AbstractSessionTest
     public static final long CONNECTION_ID = 3L;
     public static final long SESSION_ID = 2L;
     public static final int HEARTBEAT_INTERVAL = 2;
+    public static final Object SESSION_KEY = new Object();
 
     protected SessionProxy mockProxy = mock(SessionProxy.class);
     protected GatewayPublication mockPublication = mock(GatewayPublication.class);
@@ -50,7 +51,7 @@ public abstract class AbstractSessionTest
 
     public void onLogon(final int msgSeqNo)
     {
-        session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID, null);
+        session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID, SESSION_KEY);
     }
 
     protected abstract Session session();

@@ -43,6 +43,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
         onLogon(1);
 
         assertState(ACTIVE);
+        verify(mockProxy).setupSession(SESSION_ID, SESSION_KEY);
         verifyNoFurtherMessages();
     }
 
@@ -103,7 +104,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
     private void verifyLogon()
     {
-        verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1, SESSION_ID);
+        verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1);
     }
 
     protected Session session()

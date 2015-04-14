@@ -30,7 +30,6 @@ import uk.co.real_logic.fix_gateway.sender.SenderProxy;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIds;
-import uk.co.real_logic.fix_gateway.session.SessionProxy;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 public class FixGateway implements AutoCloseable
@@ -92,23 +91,16 @@ public class FixGateway implements AutoCloseable
         // TODO: remove the shared, mutable state in the sessionIdStrategy
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
 
-        final SessionProxy sessionProxy = new SessionProxy(
-            configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy, senderSessions);
-
         final MilliClock systemClock = System::currentTimeMillis;
 
         final ConnectionHandler handler = new ConnectionHandler(
             systemClock,
-            sessionProxy,
-            configuration.receiverBufferSize(),
-            configuration.defaultHeartbeatInterval(),
+            configuration,
             sessionIdStrategy,
             receiverSessions,
             senderSessions,
             inboundStreams,
-            outboundStreams,
-            configuration.authenticationStrategy(),
-            configuration.newSessionHandler());
+            outboundStreams);
 
         sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer, dataSubscription, senderSessions);
         receiver = new Receiver(systemClock, configuration.bindAddress(), handler, receiverCommands, senderProxy,

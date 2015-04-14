@@ -34,7 +34,7 @@ public class SessionTest extends AbstractSessionTest
 
         session.onLogout(1, SESSION_ID);
 
-        verify(mockProxy).logout(1, SESSION_ID);
+        verify(mockProxy).logout(1);
         verifyDisconnect();
     }
 
@@ -46,7 +46,7 @@ public class SessionTest extends AbstractSessionTest
         // TODO: figure out the correct String type here
         session.onTestRequest("ABC");
 
-        verify(mockProxy).heartbeat("ABC", SESSION_ID);
+        verify(mockProxy).heartbeat("ABC");
     }
 
     @Test
@@ -57,7 +57,7 @@ public class SessionTest extends AbstractSessionTest
         session.onSequenceReset(3, 4, false);
         session.onMessage(3);
 
-        verify(mockProxy).resendRequest(5, 1, 2, SESSION_ID);
+        verify(mockProxy).resendRequest(5, 1, 2);
     }
 
     @Test
@@ -117,7 +117,7 @@ public class SessionTest extends AbstractSessionTest
         session.onSequenceReset(2, 1, false);
 
         assertEquals(4, session.expectedReceivedSeqNum());
-        verify(mockProxy).reject(4, 2, Session.UNKNOWN_ID);
+        verify(mockProxy).reject(4, 2);
     }
 
     // NB: differs from the spec to disconnect, rather than test request.
@@ -169,7 +169,7 @@ public class SessionTest extends AbstractSessionTest
 
         session.onMessage(3);
 
-        verify(mockProxy).resendRequest(1, 1, 2, SESSION_ID);
+        verify(mockProxy).resendRequest(1, 1, 2);
         assertState(AWAITING_RESEND);
     }
 
@@ -223,7 +223,7 @@ public class SessionTest extends AbstractSessionTest
 
         session.poll(fakeClock.time());
 
-        verify(mockProxy).heartbeat(null, SESSION_ID);
+        verify(mockProxy).heartbeat(null);
         reset(mockProxy);
     }
 
