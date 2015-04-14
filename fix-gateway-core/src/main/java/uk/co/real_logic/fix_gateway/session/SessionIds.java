@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
-public final class SessionIds
+public class SessionIds
 {
     private static AtomicLong counter = new AtomicLong(0);
 
