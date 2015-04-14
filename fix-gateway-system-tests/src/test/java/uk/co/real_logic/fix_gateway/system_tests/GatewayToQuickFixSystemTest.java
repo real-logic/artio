@@ -17,9 +17,9 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-import quickfix.*;
+import quickfix.ConfigError;
+import quickfix.SocketAcceptor;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
@@ -62,11 +62,14 @@ public class GatewayToQuickFixSystemTest
         assertThat(acceptor.logons(), containsInitiator());
     }
 
-    @Ignore
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptor() throws InterruptedException
     {
+        Thread.sleep(1000);
+
         sendTestRequest(initiatedSession);
+
+        Thread.sleep(1000);
 
         assertQuickFixReceivedMessage(acceptor);
     }

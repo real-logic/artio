@@ -151,7 +151,7 @@ public final class SystemTestUtil
 
     static void assertQuickFixReceivedMessage(final FakeQuickFixApplication acceptor)
     {
-        assertThat(acceptor.messagesFromApp(),
+        assertThat(acceptor.messages(),
             hasItem(hasProperty("msgType", equalTo(String.valueOf(TestRequestDecoder.MESSAGE_TYPE)))));
     }
 }

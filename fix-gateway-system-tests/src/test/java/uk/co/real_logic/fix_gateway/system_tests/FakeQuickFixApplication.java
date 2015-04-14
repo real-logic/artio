@@ -26,7 +26,7 @@ public class FakeQuickFixApplication implements Application
 {
     private final List<SessionID> logons = new ArrayList<>();
     private final List<SessionID> logouts = new ArrayList<>();
-    private final List<Message> messagesFromApp = new ArrayList<>();
+    private final List<Message> messages = new ArrayList<>();
 
     public void onCreate(final SessionID sessionID)
     {
@@ -62,11 +62,12 @@ public class FakeQuickFixApplication implements Application
     public void fromApp(final Message message, final SessionID sessionID)
         throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType
     {
-        messagesFromApp.add(message);
+        messages.add(message);
     }
 
     private void onMessage(final Message message, final SessionID sessionID)
     {
+        messages.add(message);
         try
         {
             final String msgType = message.getHeader().getField(new MsgType()).getValue();
@@ -91,8 +92,8 @@ public class FakeQuickFixApplication implements Application
         return logouts;
     }
 
-    public List<Message> messagesFromApp()
+    public List<Message> messages()
     {
-        return messagesFromApp;
+        return messages;
     }
 }
