@@ -44,7 +44,7 @@ public final class SystemTestUtil
     public static void assertDisconnected(
         final FakeSessionHandler sessionHandler, final Session session) throws InterruptedException
     {
-        assertEventuallyTrue("Session is still connected", () -> !session.isConnected());
+        assertSessionDisconnected(session);
 
         assertEventuallyTrue("Failed to disconnect",
             () ->
@@ -52,6 +52,11 @@ public final class SystemTestUtil
                 sessionHandler.subscription().poll(1);
                 assertEquals(CONNECTION_ID, sessionHandler.connectionId());
             });
+    }
+
+    private static void assertSessionDisconnected(final Session session)
+    {
+        assertEventuallyTrue("Session is still connected", () -> !session.isConnected());
     }
 
     public static void sendTestRequest(final Session session)

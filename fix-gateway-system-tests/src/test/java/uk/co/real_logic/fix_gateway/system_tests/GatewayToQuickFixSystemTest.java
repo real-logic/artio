@@ -71,7 +71,6 @@ public class GatewayToQuickFixSystemTest
         assertQuickFixReceivedMessage(acceptor);
     }
 
-    @Ignore
     @Test
     public void initiatorSessionCanBeDisconnected() throws InterruptedException
     {
