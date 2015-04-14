@@ -26,7 +26,6 @@ import java.util.List;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 import static quickfix.field.MsgType.TEST_REQUEST;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
@@ -64,6 +63,8 @@ public final class SystemTestUtil
 
     public static void sendTestRequest(final Session session)
     {
+        assertEventuallyTrue("Session not connected", () -> session.isConnected());
+
         final TestRequestEncoder testRequest = new TestRequestEncoder();
         testRequest.testReqID("hi");
 
@@ -154,16 +155,19 @@ public final class SystemTestUtil
 
     static void assertQuickFixReceivedMessage(final FakeQuickFixApplication acceptor)
     {
-        final List<Message> messages = acceptor.messages();
-        for (Message message : messages)
+        assertEventuallyTrue("Unable to fnd test request", () ->
         {
-            if (TEST_REQUEST.equals(getMsgType(message)))
+            final List<Message> messages = acceptor.messages();
+            for (Message message : messages)
             {
-                return;
+                if (TEST_REQUEST.equals(getMsgType(message)))
+                {
+                    return true;
+                }
             }
-        }
 
-        fail("Unable to fnd test request in " + messages);
+            return false;
+        });
     }
 
     private static String getMsgType(Message message)

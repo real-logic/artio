@@ -65,11 +65,7 @@ public class GatewayToQuickFixSystemTest
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptor() throws InterruptedException
     {
-        Thread.sleep(1000);
-
         sendTestRequest(initiatedSession);
-
-        Thread.sleep(1000);
 
         assertQuickFixReceivedMessage(acceptor);
     }
