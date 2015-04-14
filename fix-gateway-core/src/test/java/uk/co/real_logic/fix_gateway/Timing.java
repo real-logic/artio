@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import uk.co.real_logic.agrona.LangUtil;
+
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,7 +31,7 @@ public final class Timing
 
     public static void assertEventuallyTrue(
             final String message,
-            final BooleanSupplier condition) throws InterruptedException
+            final BooleanSupplier condition)
     {
         assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT);
     }
@@ -37,7 +39,7 @@ public final class Timing
     public static void assertEventuallyEquals(
         final String message,
         final int expectedCount,
-        final IntSupplier supplier) throws InterruptedException
+        final IntSupplier supplier)
     {
         AtomicInteger count = new AtomicInteger(0);
         assertEventuallyTrue(message, () ->
@@ -48,7 +50,7 @@ public final class Timing
 
     public static void assertEventuallyTrue(
         final String message,
-        final Runnable runnable) throws InterruptedException
+        final Runnable runnable)
     {
         assertEventuallyTrue(message, () ->
         {
@@ -67,7 +69,7 @@ public final class Timing
     public static void assertEventuallyTrue(
         final String message,
         final BooleanSupplier condition,
-        final long timeout) throws InterruptedException
+        final long timeout)
     {
         final long startTime = System.currentTimeMillis();
 
@@ -78,7 +80,14 @@ public final class Timing
                 return;
             }
 
-            Thread.sleep(100);
+            try
+            {
+                Thread.sleep(100);
+            }
+            catch (InterruptedException e)
+            {
+                LangUtil.rethrowUnchecked(e);
+            }
         }
 
         fail(message);

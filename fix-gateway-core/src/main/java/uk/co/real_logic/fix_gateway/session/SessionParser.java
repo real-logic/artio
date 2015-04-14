@@ -83,7 +83,7 @@ public class SessionParser
 
             case LogoutDecoder.MESSAGE_TYPE:
                 logout.decode(string, offset, length);
-                session.onLogout(logout.header().msgSeqNum(), sessionId);
+                session.onLogout(logout.header().msgSeqNum());
                 break;
 
             case RejectDecoder.MESSAGE_TYPE:

@@ -198,7 +198,6 @@ public final class Receiver implements Agent
 
     public void onNewSessionId(final Object compositeId, final long surrogateId)
     {
-        System.out.println("READ");
         receiverSessions.put(compositeId, surrogateId);
     }
 }

@@ -118,7 +118,7 @@ public class Session
 
     public void disconnect()
     {
-        // TODO: logoff case
+        proxy.logout(newSentSeqNum());
         proxy.disconnect(connectionId);
         state(DISCONNECTED);
         // TODO: await reply
@@ -187,11 +187,10 @@ public class Session
         proxy.setupSession(sessionId, sessionKey);
     }
 
-    void onLogout(final int msgSeqNo, final long sessionId)
+    void onLogout(final int msgSeqNo)
     {
         onMessage(msgSeqNo);
         newSentSeqNum();
-        proxy.logout(lastSentMsgSeqNum);
 
         disconnect();
     }

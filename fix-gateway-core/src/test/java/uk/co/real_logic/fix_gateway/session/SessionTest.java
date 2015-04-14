@@ -32,9 +32,8 @@ public class SessionTest extends AbstractSessionTest
     {
         session.state(ACTIVE);
 
-        session.onLogout(1, SESSION_ID);
+        session.onLogout(1);
 
-        verify(mockProxy).logout(1);
         verifyDisconnect();
     }
 

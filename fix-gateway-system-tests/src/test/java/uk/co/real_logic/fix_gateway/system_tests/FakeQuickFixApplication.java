@@ -16,6 +16,8 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import quickfix.*;
+import quickfix.field.MsgType;
+import uk.co.real_logic.agrona.LangUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,18 +45,41 @@ public class FakeQuickFixApplication implements Application
 
     public void toAdmin(final Message message, final SessionID sessionID)
     {
+        onMessage(message, sessionID);
+    }
 
+    private void onMessage(final Message message, final SessionID sessionID)
+    {
+        try
+        {
+            final String msgType = message.getHeader().getField(new MsgType()).getValue();
+            if (MsgType.LOGOUT.equals(msgType))
+            {
+                logouts.add(sessionID);
+            }
+        }
+        catch (FieldNotFound fieldNotFound)
+        {
+            LangUtil.rethrowUnchecked(fieldNotFound);
+        }
     }
 
     public void fromAdmin(final Message message, final SessionID sessionID)
         throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon
     {
-
+        System.out.println("???" + message.getHeader().getField(new MsgType()).getValue());
     }
 
     public void toApp(final Message message, final SessionID sessionID) throws DoNotSend
     {
-
+        try
+        {
+            System.out.println("???" + message.getHeader().getField(new MsgType()).getValue());
+        }
+        catch (FieldNotFound fieldNotFound)
+        {
+            fieldNotFound.printStackTrace();
+        }
     }
 
     public void fromApp(final Message message, final SessionID sessionID)

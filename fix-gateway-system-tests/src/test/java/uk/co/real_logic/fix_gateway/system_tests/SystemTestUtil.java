@@ -7,6 +7,7 @@ import quickfix.field.SenderCompID;
 import quickfix.field.TargetCompID;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.IoUtil;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
@@ -19,6 +20,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 
 import java.io.File;
+import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
@@ -62,7 +64,7 @@ public final class SystemTestUtil
     }
 
     public static void assertReceivedMessage(
-        final GatewaySubscription subscription, final FakeOtfAcceptor acceptor) throws InterruptedException
+        final GatewaySubscription subscription, final FakeOtfAcceptor acceptor)
     {
         assertEventuallyEquals("Failed to receive a message", 2, () -> subscription.poll(2));
         assertEquals(2, acceptor.messageTypes().size());
@@ -71,7 +73,10 @@ public final class SystemTestUtil
 
     public static void assertQuickFixDisconnected(final FakeQuickFixApplication acceptor)
     {
-        assertThat(acceptor.logouts(), containsInitiator());
+        assertEventuallyEquals("Failed to receive a logout", 1, () -> acceptor.logouts().size());
+        final List<SessionID> logouts = acceptor.logouts();
+        DebugLogger.log("\nLogouts: %s\n", logouts);
+        assertThat(logouts, containsInitiator());
     }
 
     public static Matcher<Iterable<? extends SessionID>> containsInitiator()

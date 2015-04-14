@@ -40,6 +40,7 @@ public abstract class AbstractSessionTest
 
     public void verifyDisconnect()
     {
+        verify(mockProxy).logout(anyInt());
         verify(mockProxy).disconnect(CONNECTION_ID);
         assertState(DISCONNECTED);
     }
