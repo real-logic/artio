@@ -111,7 +111,8 @@ public class FixGateway implements AutoCloseable
             configuration.newSessionHandler());
 
         sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer, dataSubscription, senderSessions);
-        receiver = new Receiver(systemClock, configuration.bindAddress(), handler, receiverCommands, senderProxy, receiverSessions);
+        receiver = new Receiver(systemClock, configuration.bindAddress(), handler, receiverCommands, senderProxy,
+            receiverSessions);
 
         senderRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sender);
         receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, receiver);
