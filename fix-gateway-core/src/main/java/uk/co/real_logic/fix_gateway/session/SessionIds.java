@@ -42,7 +42,6 @@ public class SessionIds
             final long newSurrogateKey = counter.getAndIncrement();
             final NewSessionId newSessionId = new NewSessionId(key, newSurrogateKey);
             surrogateToComposite.put(newSurrogateKey, key);
-            System.out.println("STORE");
             while (!commandQueue.offer(newSessionId))
             {
                 // TODO: backoff
@@ -57,9 +56,4 @@ public class SessionIds
         surrogateToComposite.put(surrogateId, compositeId);
     }
 
-    // TODO: remove this method and any usages of it
-    public Object get(final long sessionId)
-    {
-        return surrogateToComposite.get(sessionId);
-    }
 }

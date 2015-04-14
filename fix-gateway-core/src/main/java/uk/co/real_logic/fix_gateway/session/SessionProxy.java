@@ -43,18 +43,15 @@ public class SessionProxy
     private final MutableAsciiFlyweight string;
     private final GatewayPublication gatewayPublication;
     private final SessionIdStrategy sessionIdStrategy;
-    private final SessionIds senderSessions;
     private long sessionId;
 
     public SessionProxy(
         final int bufferSize,
         final GatewayPublication gatewayPublication,
-        final SessionIdStrategy sessionIdStrategy,
-        final SessionIds senderSessions)
+        final SessionIdStrategy sessionIdStrategy)
     {
         this.gatewayPublication = gatewayPublication;
         this.sessionIdStrategy = sessionIdStrategy;
-        this.senderSessions = senderSessions;
         buffer = new UnsafeBuffer(new byte[bufferSize]);
         string = new MutableAsciiFlyweight(buffer);
     }

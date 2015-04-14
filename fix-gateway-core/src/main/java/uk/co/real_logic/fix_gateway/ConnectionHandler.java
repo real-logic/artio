@@ -119,6 +119,6 @@ public class ConnectionHandler
     private SessionProxy sessionProxy()
     {
         return new SessionProxy(
-            configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy, senderSessions);
+            configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy);
     }
 }
