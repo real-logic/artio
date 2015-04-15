@@ -39,8 +39,7 @@ public class ConnectionHandler
     private final MilliClock clock;
     private final StaticConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
-    private final SessionIds receiverSessions;
-    private final SessionIds senderSessions;
+    private final SessionIds sessionIds;
     private final ReplicationStreams inboundStreams;
     private final ReplicationStreams outboundStreams;
 
@@ -48,16 +47,14 @@ public class ConnectionHandler
         final MilliClock clock,
         final StaticConfiguration configuration,
         final SessionIdStrategy sessionIdStrategy,
-        final SessionIds receiverSessions,
-        final SessionIds senderSessions,
+        final SessionIds sessionIds,
         final ReplicationStreams inboundStreams,
         final ReplicationStreams outboundStreams)
     {
         this.clock = clock;
         this.configuration = configuration;
         this.sessionIdStrategy = sessionIdStrategy;
-        this.receiverSessions = receiverSessions;
-        this.senderSessions = senderSessions;
+        this.sessionIds = sessionIds;
         this.inboundStreams = inboundStreams;
         this.outboundStreams = outboundStreams;
     }
@@ -70,7 +67,7 @@ public class ConnectionHandler
     public ReceiverEndPoint receiverEndPoint(
         final SocketChannel channel, final long connectionId, final Session session)
     {
-        final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy, receiverSessions,
+        final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy, sessionIds,
             configuration.authenticationStrategy());
 
         configuration.newSessionHandler().onConnect(session, inboundStreams.gatewaySubscription());
@@ -101,7 +98,7 @@ public class ConnectionHandler
         final long connectionId, final FixGateway gateway, final SessionConfiguration sessionConfiguration)
     {
         final Object key = sessionIdStrategy.onInitiatorLogon(sessionConfiguration);
-        final long sessionId = senderSessions.onLogon(key);
+        final long sessionId = sessionIds.onLogon(key);
         final int defaultInterval = configuration.defaultHeartbeatInterval();
         final GatewayPublication gatewayPublication = outboundStreams.gatewayPublication();
 

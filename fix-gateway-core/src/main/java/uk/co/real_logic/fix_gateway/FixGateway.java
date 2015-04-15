@@ -24,9 +24,6 @@ import uk.co.real_logic.fix_gateway.framer.FramerProxy;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.framer.Multiplexer;
-import uk.co.real_logic.fix_gateway.sender.Sender;
-import uk.co.real_logic.fix_gateway.sender.SenderCommand;
-import uk.co.real_logic.fix_gateway.sender.SenderProxy;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIds;
@@ -45,13 +42,10 @@ public class FixGateway implements AutoCloseable
     private final ReplicationStreams inboundStreams;
     private final ReplicationStreams outboundStreams;
 
-    private final SenderProxy senderProxy;
     private final FramerProxy framerProxy;
 
-    private final Sender sender;
     private final Framer framer;
 
-    private final AgentRunner senderRunner;
     private final AgentRunner receiverRunner;
 
     private final Signal signal = new Signal();
@@ -77,14 +71,11 @@ public class FixGateway implements AutoCloseable
         outboundStreams = new ReplicationStreams(
             channel, aeron, failedPublications, OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
 
-        final SequencedContainerQueue<SenderCommand> senderCommands = new ManyToOneConcurrentArrayQueue<>(10);
         final SequencedContainerQueue<FramerCommand> receiverCommands = new ManyToOneConcurrentArrayQueue<>(10);
 
-        senderProxy = new SenderProxy(senderCommands, fixCounters.senderProxyFails(), backoffIdleStrategy());
         framerProxy = new FramerProxy(receiverCommands, fixCounters.receiverProxyFails(), backoffIdleStrategy());
 
-        final SessionIds receiverSessions = new SessionIds(senderCommands);
-        final SessionIds senderSessions = new SessionIds(receiverCommands);
+        final SessionIds sessionIds = new SessionIds(receiverCommands);
 
         final Multiplexer multiplexer = new Multiplexer(framerProxy);
         final GatewaySubscription dataSubscription = outboundStreams.gatewaySubscription().sessionHandler(multiplexer);
@@ -97,16 +88,13 @@ public class FixGateway implements AutoCloseable
             systemClock,
             configuration,
             sessionIdStrategy,
-            receiverSessions,
-            senderSessions,
+            sessionIds,
             inboundStreams,
             outboundStreams);
 
-        sender = new Sender(senderCommands, handler, framerProxy, this, multiplexer, dataSubscription, senderSessions);
         framer = new Framer(systemClock, configuration.bindAddress(), handler, receiverCommands,
-            multiplexer, this, dataSubscription, receiverSessions);
+            multiplexer, this, dataSubscription, sessionIds);
 
-        senderRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sender);
         receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, framer);
     }
 
@@ -122,7 +110,6 @@ public class FixGateway implements AutoCloseable
 
     private FixGateway start()
     {
-        start(senderRunner);
         start(receiverRunner);
         return this;
     }
@@ -156,7 +143,6 @@ public class FixGateway implements AutoCloseable
 
     public synchronized void close() throws Exception
     {
-        senderRunner.close();
         receiverRunner.close();
 
         framer.onClose();
