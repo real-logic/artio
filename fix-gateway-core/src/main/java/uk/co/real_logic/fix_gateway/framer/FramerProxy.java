@@ -17,17 +17,20 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.SessionConfiguration;
 
 import java.util.Queue;
 
-public class ReceiverProxy
+public class FramerProxy
 {
     private final Queue<FramerCommand> commandQueue;
     private final AtomicCounter fails;
     private final IdleStrategy idleStrategy;
 
-    public ReceiverProxy(
-        final Queue<FramerCommand> commandQueue, final AtomicCounter fails, final IdleStrategy idleStrategy)
+    public FramerProxy(
+        final Queue<FramerCommand> commandQueue,
+        final AtomicCounter fails,
+        final IdleStrategy idleStrategy)
     {
         this.commandQueue = commandQueue;
         this.fails = fails;
@@ -37,6 +40,11 @@ public class ReceiverProxy
     public void newInitiatedConnection(final ReceiverEndPoint receiverEndPoint)
     {
         offer(new NewInitiatedConnection(receiverEndPoint));
+    }
+
+    public void connect(final SessionConfiguration configuration)
+    {
+        offer(new Connect(configuration));
     }
 
     public void disconnect(final long connectionId)

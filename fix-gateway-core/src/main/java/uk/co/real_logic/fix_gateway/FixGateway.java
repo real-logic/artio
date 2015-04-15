@@ -20,7 +20,7 @@ import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.framer.Framer;
 import uk.co.real_logic.fix_gateway.framer.FramerCommand;
-import uk.co.real_logic.fix_gateway.framer.ReceiverProxy;
+import uk.co.real_logic.fix_gateway.framer.FramerProxy;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.framer.Multiplexer;
@@ -46,7 +46,7 @@ public class FixGateway implements AutoCloseable
     private final ReplicationStreams outboundStreams;
 
     private final SenderProxy senderProxy;
-    private final ReceiverProxy receiverProxy;
+    private final FramerProxy framerProxy;
 
     private final Sender sender;
     private final Framer framer;
@@ -81,12 +81,12 @@ public class FixGateway implements AutoCloseable
         final SequencedContainerQueue<FramerCommand> receiverCommands = new ManyToOneConcurrentArrayQueue<>(10);
 
         senderProxy = new SenderProxy(senderCommands, fixCounters.senderProxyFails(), backoffIdleStrategy());
-        receiverProxy = new ReceiverProxy(receiverCommands, fixCounters.receiverProxyFails(), backoffIdleStrategy());
+        framerProxy = new FramerProxy(receiverCommands, fixCounters.receiverProxyFails(), backoffIdleStrategy());
 
         final SessionIds receiverSessions = new SessionIds(senderCommands);
         final SessionIds senderSessions = new SessionIds(receiverCommands);
 
-        final Multiplexer multiplexer = new Multiplexer(receiverProxy);
+        final Multiplexer multiplexer = new Multiplexer(framerProxy);
         final GatewaySubscription dataSubscription = outboundStreams.gatewaySubscription().sessionHandler(multiplexer);
         // TODO: remove the shared, mutable state in the sessionIdStrategy
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
@@ -102,9 +102,9 @@ public class FixGateway implements AutoCloseable
             inboundStreams,
             outboundStreams);
 
-        sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer, dataSubscription, senderSessions);
-        framer = new Framer(systemClock, configuration.bindAddress(), handler, receiverCommands, senderProxy,
-                multiplexer, dataSubscription, receiverSessions);
+        sender = new Sender(senderCommands, handler, framerProxy, this, multiplexer, dataSubscription, senderSessions);
+        framer = new Framer(systemClock, configuration.bindAddress(), handler, receiverCommands,
+            multiplexer, this, dataSubscription, receiverSessions);
 
         senderRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sender);
         receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, framer);
@@ -137,7 +137,7 @@ public class FixGateway implements AutoCloseable
     // TODO: figure out correct type for dictionary
     public synchronized InitiatorSession initiate(final SessionConfiguration configuration, final Object dictionary)
     {
-        senderProxy.connect(configuration);
+        framerProxy.connect(configuration);
         signal.await(connectionTimeout);
         final InitiatorSession addedSession = this.addedSession;
         if (addedSession == null)

@@ -21,7 +21,7 @@ import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.framer.Multiplexer;
-import uk.co.real_logic.fix_gateway.framer.ReceiverProxy;
+import uk.co.real_logic.fix_gateway.framer.FramerProxy;
 import uk.co.real_logic.fix_gateway.framer.SenderEndPoint;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
@@ -40,7 +40,7 @@ public final class Sender implements Agent
 
     private final SequencedContainerQueue<SenderCommand> commandQueue;
     private final ConnectionHandler connectionHandler;
-    private final ReceiverProxy receiver;
+    private final FramerProxy receiver;
     private final FixGateway gateway;
     private final Multiplexer multiplexer;
     private final GatewaySubscription dataSubscription;
@@ -49,7 +49,7 @@ public final class Sender implements Agent
     public Sender(
         final SequencedContainerQueue<SenderCommand> commandQueue,
         final ConnectionHandler connectionHandler,
-        final ReceiverProxy receiver,
+        final FramerProxy receiver,
         final FixGateway gateway,
         final Multiplexer multiplexer,
         final GatewaySubscription dataSubscription,
@@ -99,13 +99,13 @@ public final class Sender implements Agent
         multiplexer.onNewConnection(senderEndPoint);
     }
 
-    public String roleName()
-    {
-        return "Sender";
-    }
-
     public void onNewSessionId(final Object compositeId, final long surrogateId)
     {
         senderSessions.put(compositeId, surrogateId);
+    }
+
+    public String roleName()
+    {
+        return "Sender";
     }
 }

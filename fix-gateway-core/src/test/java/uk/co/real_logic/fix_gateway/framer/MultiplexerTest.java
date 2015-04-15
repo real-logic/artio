@@ -24,7 +24,7 @@ public class MultiplexerTest
 {
     public static final long CONNECTION_ID = 1L;
     private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
-    private ReceiverProxy mockReceiver = mock(ReceiverProxy.class);
+    private FramerProxy mockReceiver = mock(FramerProxy.class);
 
     private Multiplexer multiplexer = new Multiplexer(mockReceiver);
     private DirectBuffer buffer = mock(DirectBuffer.class);

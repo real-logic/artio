@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.sender;
+package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 
-final class Connect implements SenderCommand
+final class Connect implements FramerCommand
 {
     private final SessionConfiguration configuration;
 
@@ -27,8 +27,8 @@ final class Connect implements SenderCommand
     }
 
     @Override
-    public void execute(final Sender sender)
+    public void execute(final Framer framer)
     {
-        sender.onConnect(configuration);
+        framer.onConnect(configuration);
     }
 }

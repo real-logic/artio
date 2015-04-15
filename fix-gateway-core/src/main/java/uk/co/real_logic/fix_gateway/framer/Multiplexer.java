@@ -28,9 +28,9 @@ public class Multiplexer implements SessionHandler
 
     private final Long2ObjectHashMap<SenderEndPoint> endpoints = new Long2ObjectHashMap<>();
 
-    private final ReceiverProxy receiver;
+    private final FramerProxy receiver;
 
-    public Multiplexer(final ReceiverProxy receiver)
+    public Multiplexer(final FramerProxy receiver)
     {
         this.receiver = receiver;
     }

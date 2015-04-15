@@ -18,14 +18,17 @@ package uk.co.real_logic.fix_gateway.framer;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
 import uk.co.real_logic.fix_gateway.ConnectionHandler;
+import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
-import uk.co.real_logic.fix_gateway.sender.SenderProxy;
 import uk.co.real_logic.fix_gateway.session.AcceptorSession;
+import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIds;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.*;
 import java.util.ArrayList;
@@ -50,8 +53,8 @@ public final class Framer implements Agent
     private final MilliClock clock;
     private final ConnectionHandler connectionHandler;
     private final SequencedContainerQueue<FramerCommand> commandQueue;
-    private final SenderProxy sender;
     private final Multiplexer multiplexer;
+    private final FixGateway gateway;
     private final GatewaySubscription dataSubscription;
     private final SessionIds sessionIds;
     private final Selector selector;
@@ -62,16 +65,16 @@ public final class Framer implements Agent
         final SocketAddress address,
         final ConnectionHandler connectionHandler,
         final SequencedContainerQueue<FramerCommand> commandQueue,
-        final SenderProxy sender,
         final Multiplexer multiplexer,
+        final FixGateway gateway,
         final GatewaySubscription dataSubscription,
         final SessionIds sessionIds)
     {
         this.clock = clock;
         this.connectionHandler = connectionHandler;
         this.commandQueue = commandQueue;
-        this.sender = sender;
         this.multiplexer = multiplexer;
+        this.gateway = gateway;
         this.dataSubscription = dataSubscription;
         this.sessionIds = sessionIds;
 
@@ -92,7 +95,10 @@ public final class Framer implements Agent
     @Override
     public int doWork() throws Exception
     {
-        return commandQueue.drain(onCommandFunc) + pollSockets() + pollSessions();
+        return commandQueue.drain(onCommandFunc) +
+            pollSockets() +
+            pollSessions() +
+            dataSubscription.poll(5);
     }
 
     private void onCommand(final FramerCommand command)
@@ -117,7 +123,7 @@ public final class Framer implements Agent
                 final long connectionId = connectionHandler.onConnection();
                 final AcceptorSession session = connectionHandler.acceptSession(connectionId);
                 register(channel, connectionHandler.receiverEndPoint(channel, connectionId, session));
-                sender.newAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
+                onNewAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
             }
             else if (key.isReadable())
             {
@@ -152,6 +158,37 @@ public final class Framer implements Agent
             // TODO
             ex.printStackTrace();
         }
+    }
+
+    public void onConnect(final SessionConfiguration configuration)
+    {
+        try
+        {
+            final InetSocketAddress address = new InetSocketAddress(configuration.host(), configuration.port());
+            final SocketChannel channel = SocketChannel.open();
+            channel.connect(address);
+            channel.configureBlocking(false);
+
+            final long connectionId = connectionHandler.onConnection();
+            onNewAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
+            final InitiatorSession session = connectionHandler.initiateSession(connectionId, gateway, configuration);
+            // TODO:
+            //receiver.newInitiatedConnection(connectionHandler.receiverEndPoint(channel, connectionId, session));
+        }
+        catch (final Exception e)
+        {
+            gateway.onInitiationError(e);
+        }
+    }
+
+    public void onNewAcceptedConnection(final SenderEndPoint senderEndPoint)
+    {
+        multiplexer.onNewConnection(senderEndPoint);
+    }
+
+    public void onNewSessionId(final Object compositeId, final long surrogateId)
+    {
+        sessionIds.put(compositeId, surrogateId);
     }
 
     private void register(final SocketChannel channel, final ReceiverEndPoint receiverEndPoint) throws ClosedChannelException
@@ -203,8 +240,4 @@ public final class Framer implements Agent
         }
     }
 
-    public void onNewSessionId(final Object compositeId, final long surrogateId)
-    {
-        sessionIds.put(compositeId, surrogateId);
-    }
 }
