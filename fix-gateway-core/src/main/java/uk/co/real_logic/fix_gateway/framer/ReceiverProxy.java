@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.receiver;
+package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
@@ -22,12 +22,12 @@ import java.util.Queue;
 
 public class ReceiverProxy
 {
-    private final Queue<ReceiverCommand> commandQueue;
+    private final Queue<FramerCommand> commandQueue;
     private final AtomicCounter fails;
     private final IdleStrategy idleStrategy;
 
     public ReceiverProxy(
-        final Queue<ReceiverCommand> commandQueue, final AtomicCounter fails, final IdleStrategy idleStrategy)
+        final Queue<FramerCommand> commandQueue, final AtomicCounter fails, final IdleStrategy idleStrategy)
     {
         this.commandQueue = commandQueue;
         this.fails = fails;
@@ -41,10 +41,10 @@ public class ReceiverProxy
 
     public void disconnect(final long connectionId)
     {
-        offer(new ReceiverDisconnect(connectionId));
+        offer(new FramerDisconnect(connectionId));
     }
 
-    private void offer(final ReceiverCommand command)
+    private void offer(final FramerCommand command)
     {
         while (!commandQueue.offer(command))
         {

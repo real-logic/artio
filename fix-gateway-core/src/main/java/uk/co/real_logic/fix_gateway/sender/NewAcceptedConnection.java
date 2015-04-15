@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.sender;
 
+import uk.co.real_logic.fix_gateway.framer.SenderEndPoint;
+
 final class NewAcceptedConnection implements SenderCommand
 {
     private final SenderEndPoint senderEndPoint;

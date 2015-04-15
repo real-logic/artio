@@ -15,12 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import uk.co.real_logic.fix_gateway.receiver.Framer;
-import uk.co.real_logic.fix_gateway.receiver.ReceiverCommand;
+import uk.co.real_logic.fix_gateway.framer.Framer;
+import uk.co.real_logic.fix_gateway.framer.FramerCommand;
 import uk.co.real_logic.fix_gateway.sender.Sender;
 import uk.co.real_logic.fix_gateway.sender.SenderCommand;
 
-public class NewSessionId implements ReceiverCommand, SenderCommand
+public class NewSessionId implements FramerCommand, SenderCommand
 {
     private final Object compositeId;
     private final long surrogateId;

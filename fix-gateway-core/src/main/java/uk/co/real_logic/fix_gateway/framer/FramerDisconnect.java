@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.receiver;
+package uk.co.real_logic.fix_gateway.framer;
 
-public class ReceiverDisconnect implements ReceiverCommand
+public class FramerDisconnect implements FramerCommand
 {
     private final long connectionId;
 
-    public ReceiverDisconnect(final long connectionId)
+    public FramerDisconnect(final long connectionId)
     {
         this.connectionId = connectionId;
     }

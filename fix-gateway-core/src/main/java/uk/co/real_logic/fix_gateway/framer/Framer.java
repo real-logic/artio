@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.receiver;
+package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
 import uk.co.real_logic.fix_gateway.ConnectionHandler;
+import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.sender.SenderProxy;
 import uk.co.real_logic.fix_gateway.session.AcceptorSession;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -41,16 +42,18 @@ import static java.nio.channels.SelectionKey.OP_READ;
  */
 public final class Framer implements Agent
 {
-    private final Consumer<ReceiverCommand> onCommandFunc = this::onCommand;
+    private final Consumer<FramerCommand> onCommandFunc = this::onCommand;
     private final List<Session> sessions = new ArrayList<>();
-    private final List<ReceiverEndPoint> endPoints = new ArrayList<>();
+    private final List<ReceiverEndPoint> receiverEndPoints = new ArrayList<>();
 
     private final ServerSocketChannel listeningChannel;
     private final MilliClock clock;
     private final ConnectionHandler connectionHandler;
-    private final SequencedContainerQueue<ReceiverCommand> commandQueue;
+    private final SequencedContainerQueue<FramerCommand> commandQueue;
     private final SenderProxy sender;
-    private final SessionIds receiverSessions;
+    private final Multiplexer multiplexer;
+    private final GatewaySubscription dataSubscription;
+    private final SessionIds sessionIds;
     private final Selector selector;
 
     // TODO: add hooks for receive and send buffer sizes
@@ -58,15 +61,19 @@ public final class Framer implements Agent
         final MilliClock clock,
         final SocketAddress address,
         final ConnectionHandler connectionHandler,
-        final SequencedContainerQueue<ReceiverCommand> commandQueue,
+        final SequencedContainerQueue<FramerCommand> commandQueue,
         final SenderProxy sender,
-        final SessionIds receiverSessions)
+        final Multiplexer multiplexer,
+        final GatewaySubscription dataSubscription,
+        final SessionIds sessionIds)
     {
         this.clock = clock;
         this.connectionHandler = connectionHandler;
         this.commandQueue = commandQueue;
         this.sender = sender;
-        this.receiverSessions = receiverSessions;
+        this.multiplexer = multiplexer;
+        this.dataSubscription = dataSubscription;
+        this.sessionIds = sessionIds;
 
         try
         {
@@ -88,7 +95,7 @@ public final class Framer implements Agent
         return commandQueue.drain(onCommandFunc) + pollSockets() + pollSessions();
     }
 
-    private void onCommand(final ReceiverCommand command)
+    private void onCommand(final FramerCommand command)
     {
         command.execute(this);
     }
@@ -149,7 +156,7 @@ public final class Framer implements Agent
 
     private void register(final SocketChannel channel, final ReceiverEndPoint receiverEndPoint) throws ClosedChannelException
     {
-        endPoints.add(receiverEndPoint);
+        receiverEndPoints.add(receiverEndPoint);
         sessions.add(receiverEndPoint.session());
         channel.register(selector, OP_READ, receiverEndPoint);
     }
@@ -182,7 +189,7 @@ public final class Framer implements Agent
 
     public void onDisconnect(final long connectionId)
     {
-        final Iterator<ReceiverEndPoint> it = endPoints.iterator();
+        final Iterator<ReceiverEndPoint> it = receiverEndPoints.iterator();
         while (it.hasNext())
         {
             final ReceiverEndPoint endPoint = it.next();
@@ -198,6 +205,6 @@ public final class Framer implements Agent
 
     public void onNewSessionId(final Object compositeId, final long surrogateId)
     {
-        receiverSessions.put(compositeId, surrogateId);
+        sessionIds.put(compositeId, surrogateId);
     }
 }

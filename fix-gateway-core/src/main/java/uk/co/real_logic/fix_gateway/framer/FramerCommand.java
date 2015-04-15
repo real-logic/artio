@@ -13,20 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.receiver;
+package uk.co.real_logic.fix_gateway.framer;
 
-final class NewInitiatedConnection implements ReceiverCommand
+public interface FramerCommand
 {
-    private final ReceiverEndPoint endPoint;
-
-    NewInitiatedConnection(final ReceiverEndPoint endPoint)
-    {
-        this.endPoint = endPoint;
-    }
-
-    @Override
-    public void execute(final Framer framer)
-    {
-        framer.onNewInitiatedConnection(endPoint);
-    }
+    void execute(Framer framer);
 }

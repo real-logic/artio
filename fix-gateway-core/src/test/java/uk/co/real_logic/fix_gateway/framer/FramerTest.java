@@ -22,11 +22,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.ConnectionHandler;
-import uk.co.real_logic.fix_gateway.receiver.Framer;
-import uk.co.real_logic.fix_gateway.receiver.ReceiverCommand;
-import uk.co.real_logic.fix_gateway.receiver.ReceiverEndPoint;
-import uk.co.real_logic.fix_gateway.receiver.ReceiverProxy;
-import uk.co.real_logic.fix_gateway.sender.SenderEndPoint;
+import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.sender.SenderProxy;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIds;
@@ -54,7 +50,7 @@ public class FramerTest
     private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
     private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
-    private OneToOneConcurrentArrayQueue<ReceiverCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
+    private OneToOneConcurrentArrayQueue<FramerCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private SenderProxy mockSender = mock(SenderProxy.class);
     private Session mockSession = mock(Session.class);
     private MilliClock mockClock = mock(MilliClock.class);
@@ -62,7 +58,7 @@ public class FramerTest
     private ReceiverProxy receiverProxy = new ReceiverProxy(commandQueue, mock(AtomicCounter.class),
         new NoOpIdleStrategy());
     private Framer framer = new Framer(mockClock, ADDRESS, mockConnectionHandler, commandQueue, mockSender,
-        mock(SessionIds.class));
+        mock(Multiplexer.class), mock(GatewaySubscription.class), mock(SessionIds.class));
 
     @Before
     public void setUp() throws IOException

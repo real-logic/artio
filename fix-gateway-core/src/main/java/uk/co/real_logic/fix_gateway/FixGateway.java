@@ -18,12 +18,12 @@ package uk.co.real_logic.fix_gateway;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.*;
-import uk.co.real_logic.fix_gateway.receiver.Framer;
-import uk.co.real_logic.fix_gateway.receiver.ReceiverCommand;
-import uk.co.real_logic.fix_gateway.receiver.ReceiverProxy;
+import uk.co.real_logic.fix_gateway.framer.Framer;
+import uk.co.real_logic.fix_gateway.framer.FramerCommand;
+import uk.co.real_logic.fix_gateway.framer.ReceiverProxy;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
-import uk.co.real_logic.fix_gateway.sender.Multiplexer;
+import uk.co.real_logic.fix_gateway.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.sender.Sender;
 import uk.co.real_logic.fix_gateway.sender.SenderCommand;
 import uk.co.real_logic.fix_gateway.sender.SenderProxy;
@@ -78,7 +78,7 @@ public class FixGateway implements AutoCloseable
             channel, aeron, failedPublications, OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
 
         final SequencedContainerQueue<SenderCommand> senderCommands = new ManyToOneConcurrentArrayQueue<>(10);
-        final SequencedContainerQueue<ReceiverCommand> receiverCommands = new ManyToOneConcurrentArrayQueue<>(10);
+        final SequencedContainerQueue<FramerCommand> receiverCommands = new ManyToOneConcurrentArrayQueue<>(10);
 
         senderProxy = new SenderProxy(senderCommands, fixCounters.senderProxyFails(), backoffIdleStrategy());
         receiverProxy = new ReceiverProxy(receiverCommands, fixCounters.receiverProxyFails(), backoffIdleStrategy());
@@ -104,7 +104,7 @@ public class FixGateway implements AutoCloseable
 
         sender = new Sender(senderCommands, handler, receiverProxy, this, multiplexer, dataSubscription, senderSessions);
         framer = new Framer(systemClock, configuration.bindAddress(), handler, receiverCommands, senderProxy,
-            receiverSessions);
+                multiplexer, dataSubscription, receiverSessions);
 
         senderRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, sender);
         receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, framer);
