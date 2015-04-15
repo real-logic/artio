@@ -15,11 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
-public class FramerDisconnect implements FramerCommand
+public class Disconnect implements FramerCommand
 {
     private final long connectionId;
 
-    public FramerDisconnect(final long connectionId)
+    public Disconnect(final long connectionId)
     {
         this.connectionId = connectionId;
     }

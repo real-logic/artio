@@ -49,7 +49,7 @@ public class FramerProxy
 
     public void disconnect(final long connectionId)
     {
-        offer(new FramerDisconnect(connectionId));
+        offer(new Disconnect(connectionId));
     }
 
     private void offer(final FramerCommand command)

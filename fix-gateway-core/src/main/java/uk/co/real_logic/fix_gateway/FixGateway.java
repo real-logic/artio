@@ -71,11 +71,11 @@ public class FixGateway implements AutoCloseable
         outboundStreams = new ReplicationStreams(
             channel, aeron, failedPublications, OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
 
-        final SequencedContainerQueue<FramerCommand> receiverCommands = new ManyToOneConcurrentArrayQueue<>(10);
+        final SequencedContainerQueue<FramerCommand> framerCommands = new ManyToOneConcurrentArrayQueue<>(10);
 
-        framerProxy = new FramerProxy(receiverCommands, fixCounters.receiverProxyFails(), backoffIdleStrategy());
+        framerProxy = new FramerProxy(framerCommands, fixCounters.receiverProxyFails(), backoffIdleStrategy());
 
-        final SessionIds sessionIds = new SessionIds(receiverCommands);
+        final SessionIds sessionIds = new SessionIds(framerCommands);
 
         final Multiplexer multiplexer = new Multiplexer(framerProxy);
         final GatewaySubscription dataSubscription = outboundStreams.gatewaySubscription().sessionHandler(multiplexer);
@@ -92,7 +92,7 @@ public class FixGateway implements AutoCloseable
             inboundStreams,
             outboundStreams);
 
-        framer = new Framer(systemClock, configuration.bindAddress(), handler, receiverCommands,
+        framer = new Framer(systemClock, configuration.bindAddress(), handler, framerCommands,
             multiplexer, this, dataSubscription, sessionIds);
 
         receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, framer);
