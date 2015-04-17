@@ -30,7 +30,6 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * Threadsafe.
  */
-// TODO: refactor out this class - its ended up absorbing connection and session concerns
 public class ConnectionHandler
 {
     private final AtomicLong idSource = new AtomicLong(0);
@@ -56,11 +55,6 @@ public class ConnectionHandler
         this.sessionIds = sessionIds;
         this.inboundStreams = inboundStreams;
         this.outboundStreams = outboundStreams;
-    }
-
-    public long nextConnectionId()
-    {
-        return idSource.getAndIncrement();
     }
 
     public ReceiverEndPoint receiverEndPoint(
@@ -115,5 +109,10 @@ public class ConnectionHandler
     {
         return new SessionProxy(
             configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy);
+    }
+
+    private long nextConnectionId()
+    {
+        return idSource.getAndIncrement();
     }
 }
