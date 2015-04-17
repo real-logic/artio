@@ -28,7 +28,6 @@ import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.session.SessionIds;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
@@ -74,7 +73,7 @@ public class FramerTest
     private FramerProxy proxy = new FramerProxy(commandQueue, mock(AtomicCounter.class),
         new NoOpIdleStrategy());
     private Framer framer = new Framer(mockClock, FRAMER_ADDRESS, mockConnectionHandler, commandQueue,
-        mock(Multiplexer.class), mockGateway, mock(GatewaySubscription.class), mock(SessionIds.class));
+        mock(Multiplexer.class), mockGateway, mock(GatewaySubscription.class));
 
     private ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);
 

@@ -17,34 +17,11 @@ package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.Test;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedDeque;
-
-import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThat;
 
 public class SessionIdsTest
 {
-    private Queue<? super NewSessionId> stubQueue = new ConcurrentLinkedDeque<>();
-    private SessionIds sessionIds = new SessionIds(stubQueue);
-
-    @Test
-    public void newSessionIdsNotifyQueue()
-    {
-        sessionIds.onLogon("a");
-
-        sessionIdEnqueuedOnce();
-    }
-
-    @Test
-    public void existingSessionIdsDoNotNotifyQueue()
-    {
-        sessionIds.onLogon("a");
-        sessionIds.onLogon("a");
-
-        sessionIdEnqueuedOnce();
-    }
+    private SessionIds sessionIds = new SessionIds();
 
     @Test
     public void sessionIdsAreUnique()
@@ -52,8 +29,4 @@ public class SessionIdsTest
         assertNotEquals(sessionIds.onLogon("a"), sessionIds.onLogon("b"));
     }
 
-    private void sessionIdEnqueuedOnce()
-    {
-        assertThat(stubQueue, hasSize(1));
-    }
 }

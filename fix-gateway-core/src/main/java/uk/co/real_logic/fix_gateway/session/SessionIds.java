@@ -19,7 +19,6 @@ import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class SessionIds
@@ -28,24 +27,13 @@ public class SessionIds
 
     private final Map<Object, Long> compositeToSurrogate = new HashMap<>();
     private final Long2ObjectHashMap<Object> surrogateToComposite = new Long2ObjectHashMap<>();
-    private final Queue<? super NewSessionId> commandQueue;
-
-    public SessionIds(final Queue<? super NewSessionId> commandQueue)
-    {
-        this.commandQueue = commandQueue;
-    }
 
     public long onLogon(final Object compositeKey)
     {
         return compositeToSurrogate.computeIfAbsent(compositeKey, key ->
         {
             final long newSurrogateKey = counter.getAndIncrement();
-            final NewSessionId newSessionId = new NewSessionId(key, newSurrogateKey);
             surrogateToComposite.put(newSurrogateKey, key);
-            while (!commandQueue.offer(newSessionId))
-            {
-                // TODO: backoff
-            }
             return newSurrogateKey;
         });
     }

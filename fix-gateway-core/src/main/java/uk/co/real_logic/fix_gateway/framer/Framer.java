@@ -24,7 +24,6 @@ import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.session.AcceptorSession;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.session.SessionIds;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
@@ -56,7 +55,6 @@ public final class Framer implements Agent
     private final Multiplexer multiplexer;
     private final FixGateway gateway;
     private final GatewaySubscription dataSubscription;
-    private final SessionIds sessionIds;
     private final Selector selector;
 
     // TODO: add hooks for receive and send buffer sizes
@@ -67,8 +65,7 @@ public final class Framer implements Agent
         final SequencedContainerQueue<FramerCommand> commandQueue,
         final Multiplexer multiplexer,
         final FixGateway gateway,
-        final GatewaySubscription dataSubscription,
-        final SessionIds sessionIds)
+        final GatewaySubscription dataSubscription)
     {
         this.clock = clock;
         this.connectionHandler = connectionHandler;
@@ -76,7 +73,6 @@ public final class Framer implements Agent
         this.multiplexer = multiplexer;
         this.gateway = gateway;
         this.dataSubscription = dataSubscription;
-        this.sessionIds = sessionIds;
 
         try
         {
@@ -172,8 +168,7 @@ public final class Framer implements Agent
             final long connectionId = connectionHandler.onConnection();
             onNewAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
             final InitiatorSession session = connectionHandler.initiateSession(connectionId, gateway, configuration);
-            // TODO:
-            //receiver.newInitiatedConnection(connectionHandler.receiverEndPoint(channel, connectionId, session));
+            onNewInitiatedConnection(connectionHandler.receiverEndPoint(channel, connectionId, session));
         }
         catch (final Exception e)
         {
@@ -184,11 +179,6 @@ public final class Framer implements Agent
     public void onNewAcceptedConnection(final SenderEndPoint senderEndPoint)
     {
         multiplexer.onNewConnection(senderEndPoint);
-    }
-
-    public void onNewSessionId(final Object compositeId, final long surrogateId)
-    {
-        sessionIds.put(compositeId, surrogateId);
     }
 
     private void register(final SocketChannel channel, final ReceiverEndPoint receiverEndPoint) throws ClosedChannelException
