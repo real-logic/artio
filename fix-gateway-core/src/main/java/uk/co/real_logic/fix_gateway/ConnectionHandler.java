@@ -16,13 +16,12 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
+import uk.co.real_logic.fix_gateway.framer.SenderEndPoint;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
-import uk.co.real_logic.fix_gateway.framer.SenderEndPoint;
 import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
-import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -59,7 +58,7 @@ public class ConnectionHandler
         this.outboundStreams = outboundStreams;
     }
 
-    public long onConnection() throws IOException
+    public long nextConnectionId()
     {
         return idSource.getAndIncrement();
     }
@@ -86,16 +85,15 @@ public class ConnectionHandler
         return new SenderEndPoint(connectionId, channel);
     }
 
-    public AcceptorSession acceptSession(final long connectionId)
+    public Session acceptSession()
     {
         final GatewayPublication publication = outboundStreams.gatewayPublication();
         final int defaultInterval = configuration.defaultHeartbeatInterval();
         return new AcceptorSession(
-            defaultInterval, connectionId, clock, sessionProxy(), publication, sessionIdStrategy);
+            defaultInterval, nextConnectionId(), clock, sessionProxy(), publication, sessionIdStrategy);
     }
 
-    public InitiatorSession initiateSession(
-        final long connectionId, final FixGateway gateway, final SessionConfiguration sessionConfiguration)
+    public Session initiateSession(final FixGateway gateway, final SessionConfiguration sessionConfiguration)
     {
         final Object key = sessionIdStrategy.onInitiatorLogon(sessionConfiguration);
         final long sessionId = sessionIds.onLogon(key);
@@ -104,7 +102,7 @@ public class ConnectionHandler
 
         return new InitiatorSession(
             defaultInterval,
-            connectionId,
+            nextConnectionId(),
             clock,
             sessionProxy().setupSession(sessionId, key),
             gatewayPublication,

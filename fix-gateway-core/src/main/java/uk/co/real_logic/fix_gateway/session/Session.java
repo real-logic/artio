@@ -355,4 +355,8 @@ public class Session
         lastReceivedMsgSeqNum++;
     }
 
+    public long connectionId()
+    {
+        return connectionId;
+    }
 }

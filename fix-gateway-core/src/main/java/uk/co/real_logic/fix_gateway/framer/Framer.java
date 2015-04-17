@@ -21,8 +21,6 @@ import uk.co.real_logic.fix_gateway.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
-import uk.co.real_logic.fix_gateway.session.AcceptorSession;
-import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -116,10 +114,7 @@ public final class Framer implements Agent
                 channel.configureBlocking(false);
                 channel.setOption(TCP_NODELAY, false);
 
-                final long connectionId = connectionHandler.onConnection();
-                final AcceptorSession session = connectionHandler.acceptSession(connectionId);
-                register(channel, connectionHandler.receiverEndPoint(channel, connectionId, session));
-                multiplexer.onNewConnection(connectionHandler.senderEndPoint(channel, connectionId));
+                onNewSession(channel, connectionHandler.acceptSession());
             }
             else if (key.isReadable())
             {
@@ -130,6 +125,18 @@ public final class Framer implements Agent
         }
 
         return count;
+    }
+
+    private void onNewSession(final SocketChannel channel, final Session session)
+        throws ClosedChannelException
+    {
+        final long connectionId = session.connectionId();
+        final ReceiverEndPoint receiverEndPoint = connectionHandler.receiverEndPoint(channel, connectionId, session);
+        receiverEndPoints.add(receiverEndPoint);
+        channel.register(selector, OP_READ, receiverEndPoint);
+
+        sessions.add(session);
+        multiplexer.onNewConnection(connectionHandler.senderEndPoint(channel, connectionId));
     }
 
     private int pollSessions()
@@ -152,23 +159,12 @@ public final class Framer implements Agent
             channel.connect(address);
             channel.configureBlocking(false);
 
-            final long connectionId = connectionHandler.onConnection();
-            multiplexer.onNewConnection(connectionHandler.senderEndPoint(channel, connectionId));
-            final InitiatorSession session = connectionHandler.initiateSession(connectionId, gateway, configuration);
-            final ReceiverEndPoint receiverEndPoint = connectionHandler.receiverEndPoint(channel, connectionId, session);
-            register(receiverEndPoint.channel(), receiverEndPoint);
+            onNewSession(channel, connectionHandler.initiateSession(gateway, configuration));
         }
         catch (final Exception e)
         {
             gateway.onInitiationError(e);
         }
-    }
-
-    private void register(final SocketChannel channel, final ReceiverEndPoint receiverEndPoint) throws ClosedChannelException
-    {
-        receiverEndPoints.add(receiverEndPoint);
-        sessions.add(receiverEndPoint.session());
-        channel.register(selector, OP_READ, receiverEndPoint);
     }
 
     public void onDisconnect(final long connectionId)
