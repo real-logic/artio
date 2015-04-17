@@ -37,11 +37,6 @@ public class FramerProxy
         this.idleStrategy = idleStrategy;
     }
 
-    public void newInitiatedConnection(final ReceiverEndPoint receiverEndPoint)
-    {
-        offer(new NewInitiatedConnection(receiverEndPoint));
-    }
-
     public void connect(final SessionConfiguration configuration)
     {
         offer(new Connect(configuration));

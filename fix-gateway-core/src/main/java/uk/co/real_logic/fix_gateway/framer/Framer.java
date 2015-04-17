@@ -119,7 +119,7 @@ public final class Framer implements Agent
                 final long connectionId = connectionHandler.onConnection();
                 final AcceptorSession session = connectionHandler.acceptSession(connectionId);
                 register(channel, connectionHandler.receiverEndPoint(channel, connectionId, session));
-                onNewAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
+                multiplexer.onNewConnection(connectionHandler.senderEndPoint(channel, connectionId));
             }
             else if (key.isReadable())
             {
@@ -143,19 +143,6 @@ public final class Framer implements Agent
         return stateChanges;
     }
 
-    public void onNewInitiatedConnection(final ReceiverEndPoint receiverEndPoint)
-    {
-        try
-        {
-            register(receiverEndPoint.channel(), receiverEndPoint);
-        }
-        catch (final ClosedChannelException ex)
-        {
-            // TODO
-            ex.printStackTrace();
-        }
-    }
-
     public void onConnect(final SessionConfiguration configuration)
     {
         try
@@ -166,9 +153,10 @@ public final class Framer implements Agent
             channel.configureBlocking(false);
 
             final long connectionId = connectionHandler.onConnection();
-            onNewAcceptedConnection(connectionHandler.senderEndPoint(channel, connectionId));
+            multiplexer.onNewConnection(connectionHandler.senderEndPoint(channel, connectionId));
             final InitiatorSession session = connectionHandler.initiateSession(connectionId, gateway, configuration);
-            onNewInitiatedConnection(connectionHandler.receiverEndPoint(channel, connectionId, session));
+            final ReceiverEndPoint receiverEndPoint = connectionHandler.receiverEndPoint(channel, connectionId, session);
+            register(receiverEndPoint.channel(), receiverEndPoint);
         }
         catch (final Exception e)
         {
@@ -176,16 +164,27 @@ public final class Framer implements Agent
         }
     }
 
-    public void onNewAcceptedConnection(final SenderEndPoint senderEndPoint)
-    {
-        multiplexer.onNewConnection(senderEndPoint);
-    }
-
     private void register(final SocketChannel channel, final ReceiverEndPoint receiverEndPoint) throws ClosedChannelException
     {
         receiverEndPoints.add(receiverEndPoint);
         sessions.add(receiverEndPoint.session());
         channel.register(selector, OP_READ, receiverEndPoint);
+    }
+
+    public void onDisconnect(final long connectionId)
+    {
+        final Iterator<ReceiverEndPoint> it = receiverEndPoints.iterator();
+        while (it.hasNext())
+        {
+            final ReceiverEndPoint endPoint = it.next();
+            if (endPoint.connectionId() == connectionId)
+            {
+                endPoint.close();
+                it.remove();
+                sessions.remove(endPoint.session());
+                break;
+            }
+        }
     }
 
     @Override
@@ -211,23 +210,7 @@ public final class Framer implements Agent
     @Override
     public String roleName()
     {
-        return "Dispatcher";
-    }
-
-    public void onDisconnect(final long connectionId)
-    {
-        final Iterator<ReceiverEndPoint> it = receiverEndPoints.iterator();
-        while (it.hasNext())
-        {
-            final ReceiverEndPoint endPoint = it.next();
-            if (endPoint.connectionId() == connectionId)
-            {
-                endPoint.close();
-                it.remove();
-                sessions.remove(endPoint.session());
-                break;
-            }
-        }
+        return "Framer";
     }
 
 }
