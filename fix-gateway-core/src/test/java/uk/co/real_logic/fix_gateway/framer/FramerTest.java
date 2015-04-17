@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
@@ -40,8 +39,6 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
 
-// TODO: decouple this test from the implementation
-@Ignore
 public class FramerTest
 {
     private static final InetSocketAddress TEST_ADDRESS = new InetSocketAddress("localhost", 9998);
