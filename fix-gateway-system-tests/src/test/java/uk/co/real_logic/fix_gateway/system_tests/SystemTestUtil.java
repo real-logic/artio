@@ -127,22 +127,10 @@ public final class SystemTestUtil
     public static SocketAcceptor launchQuickFixAcceptor(
         final int port, final FakeQuickFixApplication application) throws ConfigError
     {
-        final SessionSettings settings = new SessionSettings();
-        final String path = "build/tmp/quickfix";
-        IoUtil.delete(new File(path), true);
-        settings.setString("FileStorePath", path);
-        settings.setString("DataDictionary", "FIX44.xml");
-        settings.setString("SocketAcceptPort", String.valueOf(port));
-        settings.setString("BeginString", "FIX.4.4");
+        final SessionID sessionID = sessionID();
+        final SessionSettings settings = sessionSettings(port, sessionID);
 
-        final SessionID sessionID = new SessionID(
-            new BeginString("FIX.4.4"),
-            new SenderCompID(ACCEPTOR_ID),
-            new TargetCompID(INITIATOR_ID)
-        );
         settings.setString(sessionID, "ConnectionType", "acceptor");
-        settings.setString(sessionID, "StartTime", "00:00:00");
-        settings.setString(sessionID, "EndTime", "00:00:00");
 
         final FileStoreFactory storeFactory = new FileStoreFactory(settings);
         final LogFactory logFactory = new ScreenLogFactory(settings);
@@ -151,6 +139,46 @@ public final class SystemTestUtil
         socketAcceptor.start();
 
         return socketAcceptor;
+    }
+
+    public static SocketInitiator launchQuickFixInitiator(
+        final int port, final FakeQuickFixApplication application) throws ConfigError
+    {
+        final SessionID sessionID = sessionID();
+        final SessionSettings settings = sessionSettings(port, sessionID);
+
+        // TODO:
+        settings.setString(sessionID, "ConnectionType", "acceptor");
+
+        final FileStoreFactory storeFactory = new FileStoreFactory(settings);
+        final LogFactory logFactory = new ScreenLogFactory(settings);
+        SocketInitiator socketInitiator = new SocketInitiator(application, storeFactory, settings, logFactory,
+            new DefaultMessageFactory());
+        socketInitiator.start();
+        return socketInitiator;
+    }
+
+    private static SessionSettings sessionSettings(int port, SessionID sessionID)
+    {
+        final SessionSettings settings = new SessionSettings();
+        final String path = "build/tmp/quickfix";
+        IoUtil.delete(new File(path), true);
+        settings.setString("FileStorePath", path);
+        settings.setString("DataDictionary", "FIX44.xml");
+        settings.setString("SocketAcceptPort", String.valueOf(port));
+        settings.setString("BeginString", "FIX.4.4");
+        settings.setString(sessionID, "StartTime", "00:00:00");
+        settings.setString(sessionID, "EndTime", "00:00:00");
+        return settings;
+    }
+
+    private static SessionID sessionID()
+    {
+        return new SessionID(
+                new BeginString("FIX.4.4"),
+                new SenderCompID(ACCEPTOR_ID),
+                new TargetCompID(INITIATOR_ID)
+            );
     }
 
     static void assertQuickFixReceivedMessage(final FakeQuickFixApplication acceptor)
