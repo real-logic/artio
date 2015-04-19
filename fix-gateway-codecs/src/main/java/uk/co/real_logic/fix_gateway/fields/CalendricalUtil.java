@@ -23,7 +23,6 @@ import static java.time.Year.isLeap;
 
 final class CalendricalUtil
 {
-
     // ------------ Time Constants ------------
     static final int SECONDS_IN_MINUTE = 60;
     static final int SECONDS_IN_HOUR = SECONDS_IN_MINUTE * 60;
@@ -44,11 +43,11 @@ final class CalendricalUtil
     // ------------ Decoding ------------
 
     static int getValidInt(
-            final AsciiFlyweight timestamp,
-            final int startInclusive,
-            final int endExclusive,
-            final int min,
-            final int max)
+        final AsciiFlyweight timestamp,
+        final int startInclusive,
+        final int endExclusive,
+        final int min,
+        final int max)
     {
         final int value = timestamp.getInt(startInclusive, endExclusive);
         if (value < min || value > max)
@@ -66,7 +65,7 @@ final class CalendricalUtil
      * @param day
      * @return
      */
-    static int toEpochDay(int year, int month, int day)
+    static int toEpochDay(final int year, final int month, final int day)
     {
         return yearsToDays(year) + monthsToDays(month, year) + (day - 1) - DAYS_UNTIL_START_OF_UNIX_EPOCH;
     }
@@ -103,7 +102,7 @@ final class CalendricalUtil
     static void encodeDate(final long epochDay, final MutableAsciiFlyweight string, final int offset)
     {
         // adjust to 0000-03-01 so leap day is at end of four year cycle
-        long zeroDay = epochDay + DAYS_UNTIL_START_OF_UNIX_EPOCH - 60;
+        final long zeroDay = epochDay + DAYS_UNTIL_START_OF_UNIX_EPOCH - 60;
         long yearEstimate = (400 * zeroDay + 591) / DAYS_IN_400_YEAR_CYCLE;
         long dayEstimate = estimateDayOfYear(zeroDay, yearEstimate);
         if (dayEstimate < 0)
@@ -112,13 +111,13 @@ final class CalendricalUtil
             yearEstimate--;
             dayEstimate = estimateDayOfYear(zeroDay, yearEstimate);
         }
-        int marchDay0 = (int) dayEstimate;
+        final int marchDay0 = (int)dayEstimate;
 
         // convert march-based values back to january-based
-        int marchMonth0 = (marchDay0 * 5 + 2) / 153;
-        int month = (marchMonth0 + 2) % 12 + 1;
-        int day = marchDay0 - (marchMonth0 * 306 + 5) / 10 + 1;
-        int year = (int) (yearEstimate + marchMonth0 / 10);
+        final int marchMonth0 = (marchDay0 * 5 + 2) / 153;
+        final int month = (marchMonth0 + 2) % 12 + 1;
+        final int day = marchDay0 - (marchMonth0 * 306 + 5) / 10 + 1;
+        final int year = (int)(yearEstimate + marchMonth0 / 10);
 
         string.putNatural(offset, 4, year);
         string.putNatural(offset + 4, 2, month);

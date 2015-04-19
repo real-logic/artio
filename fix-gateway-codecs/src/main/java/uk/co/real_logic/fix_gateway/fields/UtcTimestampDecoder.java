@@ -72,7 +72,7 @@ public final class UtcTimestampDecoder
 
         final long epochDay = toEpochDay(year, month, day);
         final long secs = epochDay * SECONDS_IN_DAY + secondOfDay;
+
         return secs * MILLIS_IN_SECOND + millisecond;
     }
-
 }

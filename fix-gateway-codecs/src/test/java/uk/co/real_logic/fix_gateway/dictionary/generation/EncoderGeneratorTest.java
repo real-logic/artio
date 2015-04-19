@@ -42,9 +42,9 @@ import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class EncoderGeneratorTest
 {
-
-    private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
-    private static EncoderGenerator encoderGenerator = new EncoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager);
+    private static final StringWriterOutputManager OUTPUT_MANAGER = new StringWriterOutputManager();
+    private static final EncoderGenerator ENCODER_GENERATOR =
+        new EncoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, OUTPUT_MANAGER);
     private static Class<?> heartbeat;
     private static Class<?> headerClass;
 
@@ -53,8 +53,8 @@ public class EncoderGeneratorTest
     @BeforeClass
     public static void generate() throws Exception
     {
-        encoderGenerator.generate();
-        final Map<String, CharSequence> sources = outputManager.getSources();
+        ENCODER_GENERATOR.generate();
+        final Map<String, CharSequence> sources = OUTPUT_MANAGER.getSources();
         //System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
         headerClass = compileInMemory(HEADER_ENCODER, sources);
@@ -126,7 +126,7 @@ public class EncoderGeneratorTest
     {
         final Object encoder = heartbeat.newInstance();
 
-        DecimalFloat value = new DecimalFloat(1, 2);
+        final DecimalFloat value = new DecimalFloat(1, 2);
 
         setFloat(encoder, FLOAT_FIELD, value);
 
@@ -315,5 +315,4 @@ public class EncoderGeneratorTest
         field.setAccessible(true);
         return field.get(encoder);
     }
-
 }

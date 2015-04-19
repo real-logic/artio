@@ -63,12 +63,12 @@ public final class NetworkBenchmarkUtil
     {
         try
         {
-            RandomAccessFile file = new RandomAccessFile("/dev/shm/" + filename, "rw");
+            final RandomAccessFile file = new RandomAccessFile("/dev/shm/" + filename, "rw");
             file.write(new byte[MESSAGE_SIZE]);
             file.seek(0);
             return file.getChannel();
         }
-        catch (IOException e)
+        catch (final IOException e)
         {
             e.printStackTrace();
             System.exit(1);
@@ -97,10 +97,11 @@ public final class NetworkBenchmarkUtil
         {
             remaining -= channel.read(buffer);
         }
+
         return buffer.getLong(0);
     }
 
-    public static void checkEqual(long time, long result)
+    public static void checkEqual(final long time, final long result)
     {
         if (time != result)
         {
@@ -108,7 +109,7 @@ public final class NetworkBenchmarkUtil
         }
     }
 
-    public static void printStats(Histogram histogram)
+    public static void printStats(final Histogram histogram)
     {
         System.out.printf(
             "Max = %d, Mean = %f, 99.9%% = %d\n",

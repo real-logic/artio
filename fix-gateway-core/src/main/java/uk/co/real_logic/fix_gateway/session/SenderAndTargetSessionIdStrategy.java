@@ -43,7 +43,7 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 
     public void setupSession(final Object compositeKey, final HeaderEncoder encoder)
     {
-        final CompositeKey composite = (CompositeKey) compositeKey;
+        final CompositeKey composite = (CompositeKey)compositeKey;
         encoder.senderCompID(composite.senderCompID);
         encoder.targetCompID(composite.targetCompID);
     }
@@ -78,7 +78,7 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         {
             if (obj instanceof CompositeKey)
             {
-                CompositeKey compositeKey = (CompositeKey) obj;
+                final CompositeKey compositeKey = (CompositeKey)obj;
                 return Arrays.equals(compositeKey.senderCompID, senderCompID)
                     && Arrays.equals(compositeKey.targetCompID, targetCompID);
             }

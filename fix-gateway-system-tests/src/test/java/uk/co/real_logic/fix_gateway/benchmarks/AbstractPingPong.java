@@ -51,7 +51,7 @@ public abstract class AbstractPingPong
 
     private void pongs()
     {
-        try (SocketChannel channel = serverSocket.accept())
+        try (final SocketChannel channel = serverSocket.accept())
         {
             channel.configureBlocking(false);
 
@@ -60,7 +60,7 @@ public abstract class AbstractPingPong
                 pong(channel);
             }
         }
-        catch (IOException e)
+        catch (final IOException e)
         {
             e.printStackTrace();
         }
@@ -68,7 +68,7 @@ public abstract class AbstractPingPong
 
     private void pings()
     {
-        try(SocketChannel channel = SocketChannel.open())
+        try (final SocketChannel channel = SocketChannel.open())
         {
             if (!channel.connect(NetworkBenchmarkUtil.ADDRESS))
             {
@@ -86,7 +86,7 @@ public abstract class AbstractPingPong
 
             printStats(histogram);
         }
-        catch (IOException e)
+        catch (final IOException e)
         {
             e.printStackTrace();
         }
@@ -95,5 +95,4 @@ public abstract class AbstractPingPong
     protected abstract void ping(SocketChannel channel, long time) throws IOException;
 
     protected abstract void pong(SocketChannel channel) throws IOException;
-
 }

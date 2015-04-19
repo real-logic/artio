@@ -26,7 +26,6 @@ import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.*;
 
 public abstract class AbstractContendedPingPong
 {
-
     private static final ByteBuffer PONG_BUFFER = ByteBuffer.allocateDirect(MESSAGE_SIZE);
 
     private ServerSocketChannel serverSocket;
@@ -37,7 +36,7 @@ public abstract class AbstractContendedPingPong
     {
         serverSocket = ServerSocketChannel.open().bind(ADDRESS);
 
-        try(final SocketChannel pingChannel = SocketChannel.open())
+        try (final SocketChannel pingChannel = SocketChannel.open())
         {
             if (!pingChannel.connect(ADDRESS))
             {
@@ -98,12 +97,12 @@ public abstract class AbstractContendedPingPong
             for (int i = 0; i < ITERATIONS; i++)
             {
                 final long time = readResponse(channel);
-                long value = System.nanoTime() - time;
+                final long value = System.nanoTime() - time;
                 histogram.recordValue(value);
             }
             printStats(histogram);
         }
-        catch (IOException e)
+        catch (final IOException e)
         {
             e.printStackTrace();
         }
@@ -120,15 +119,15 @@ public abstract class AbstractContendedPingPong
             }
             System.out.println("Sent all pings");
         }
-        catch (IOException e)
+        catch (final IOException e)
         {
             e.printStackTrace();
         }
     }
 
-    protected abstract void sendPing(SocketChannel channel, long time) throws IOException;
+    protected abstract void sendPing(final SocketChannel channel, final long time) throws IOException;
 
-    protected abstract long readResponse(SocketChannel channel) throws IOException;
+    protected abstract long readResponse(final SocketChannel channel) throws IOException;
 
     protected void pong(final SocketChannel channel) throws IOException
     {

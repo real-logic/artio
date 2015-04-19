@@ -35,7 +35,6 @@ import static uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight.LONGEST_IN
 
 public class EncoderGenerator extends Generator
 {
-
     private static final String SUFFIX =
         "        buffer.putSeparator(position);\n" +
         "        position++;\n" +
@@ -43,11 +42,11 @@ public class EncoderGenerator extends Generator
 
     private static final String TRAILER_PREFIX =
         "    public int encode(final MutableAsciiFlyweight buffer, final int offset)\n" +
-        "    {\n"+
+        "    {\n" +
         "        throw new UnsupportedOperationException();\n" +
         "    }\n\n" +
         "    public int encode(final MutableAsciiFlyweight buffer, final int offset, final int bodyStart)\n" +
-        "    {\n"+
+        "    {\n" +
         "        int position = offset;\n\n";
 
     private final byte[] buffer = new byte[LONGEST_INT_LENGTH + 1];
@@ -73,7 +72,7 @@ public class EncoderGenerator extends Generator
         try (final Writer out = outputManager.createOutput(className))
         {
             out.append(fileHeader(builderPackage));
-            Class<?> type = isMessage ? MessageEncoder.class : Encoder.class;
+            final Class<?> type = isMessage ? MessageEncoder.class : Encoder.class;
             out.append(generateClassDeclaration(className, isMessage, type, Encoder.class));
             out.append(generateConstructor(aggregate, dictionary));
             if (isMessage)
@@ -87,7 +86,7 @@ public class EncoderGenerator extends Generator
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         }
-        catch (IOException e)
+        catch (final IOException e)
         {
             // TODO: logging
             e.printStackTrace();
@@ -104,12 +103,14 @@ public class EncoderGenerator extends Generator
         final Component header = dictionary.header();
         final Message message = (Message) aggregate;
         final int type = message.type();
-        final String msgType = header.hasField(MSG_TYPE)
-                             ? String.format("        header.msgType(\"%s\");\n", (char) type) : "";
+        final String msgType =
+            header.hasField(MSG_TYPE)
+                ? String.format("        header.msgType(\"%s\");\n", (char) type) : "";
 
-        final String beginString = header.hasField("BeginString")
-                                 ? String.format("        header.beginString(\"FIX.%d.%d\");\n",
-                                                 dictionary.majorVersion(), dictionary.minorVersion()) : "";
+        final String beginString =
+            header.hasField("BeginString")
+                ? String.format("        header.beginString(\"FIX.%d.%d\");\n",
+                    dictionary.majorVersion(), dictionary.minorVersion()) : "";
 
         return String.format(
             "    public int messageType()\n" +
@@ -130,7 +131,7 @@ public class EncoderGenerator extends Generator
 
     private void generateSetters(final Writer out, final String className, final List<Entry> entries) throws IOException
     {
-        for (Entry entry : entries)
+        for (final Entry entry : entries)
         {
             out.append(generateSetter(className, entry));
         }
@@ -145,8 +146,8 @@ public class EncoderGenerator extends Generator
         final String optionalAssign = optionalAssign(entry);
 
         // TODO: make encoding generation more regular and delegate to library calls more
-        Function<String, String> generateSetter =
-            type -> generateSetter(name, type, fieldName, optionalField, className, optionalAssign);
+        final Function<String, String> generateSetter =
+            (type) -> generateSetter(name, type, fieldName, optionalField, className, optionalAssign);
 
         switch (field.type())
         {
@@ -223,12 +224,12 @@ public class EncoderGenerator extends Generator
     }
 
     private String generateSetter(
-            final String name,
-            final String type,
-            final String fieldName,
-            final String optionalField,
-            final String className,
-            final String optionalAssign)
+        final String name,
+        final String type,
+        final String fieldName,
+        final String optionalField,
+        final String className,
+        final String optionalAssign)
     {
         return String.format(
             "    %s %s %s;\n\n" +
@@ -253,11 +254,11 @@ public class EncoderGenerator extends Generator
 
         final String prefix =
             aggregateType == AggregateType.TRAILER ?
-            TRAILER_PREFIX :
-            ("    public int encode(final MutableAsciiFlyweight buffer, final int offset)\n" +
-            "    {\n"+
-            "        int position = offset;\n\n" +
-            (hasCommonCompounds ? "        position += header.encode(buffer, position);\n" : ""));
+                TRAILER_PREFIX :
+                ("    public int encode(final MutableAsciiFlyweight buffer, final int offset)\n" +
+                "    {\n" +
+                "        int position = offset;\n\n" +
+                (hasCommonCompounds ? "        position += header.encode(buffer, position);\n" : ""));
 
         final String body =
             entries.stream()
@@ -390,20 +391,19 @@ public class EncoderGenerator extends Generator
             optionalSuffix);
     }
 
-    private void generatePrecomputedHeaders(
-        final Writer out,
-        final List<Entry> entries) throws IOException
+    private void generatePrecomputedHeaders(final Writer out, final List<Entry> entries) throws IOException
     {
-        for (Entry entry : entries)
+        for (final Entry entry : entries)
         {
             final Field field = (Field) entry.element();
             final String name = field.name();
             final String fieldName = JavaUtil.formatPropertyName(name);
             // TODO: tags aren't always ints
             final int length = string.putInt(0, field.number());
-            final String bytes = IntStream.range(0, length)
-                                          .mapToObj(i -> String.valueOf(buffer[i]))
-                                          .collect(joining(", ", "", ", (byte) '='"));
+            final String bytes =
+                IntStream.range(0, length)
+                         .mapToObj(i -> String.valueOf(buffer[i]))
+                         .collect(joining(", ", "", ", (byte) '='"));
 
             out.append(String.format(
                 "    private static final int %sHeaderLength = %d;\n" +
@@ -423,5 +423,4 @@ public class EncoderGenerator extends Generator
     {
         return String.format("new String(%s, 0, %1$sLength, StandardCharsets.US_ASCII)", fieldName);
     }
-
 }

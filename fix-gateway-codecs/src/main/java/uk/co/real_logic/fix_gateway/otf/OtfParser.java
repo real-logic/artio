@@ -140,7 +140,7 @@ public final class OtfParser
                             firstFieldInGroup = tag;
                         }
                         // We've seen the first field again - its a new group iteration
-                        else if(tag == firstFieldInGroup)
+                        else if (tag == firstFieldInGroup)
                         {
                             groupEnd(groupTag, numberOfElementsInGroup, indexOfGroupElement);
                             indexOfGroupElement++;
@@ -165,12 +165,12 @@ public final class OtfParser
     }
 
     private int parseGroup(
-            final DirectBuffer buffer,
-            final int tag,
-            final int valueOffset,
-            final int endOfField,
-            final int end,
-            final IntHashSet groupFields)
+        final DirectBuffer buffer,
+        final int tag,
+        final int valueOffset,
+        final int endOfField,
+        final int end,
+        final IntHashSet groupFields)
     {
         final int numberOfElements = string.getInt(valueOffset, endOfField);
 
@@ -206,7 +206,7 @@ public final class OtfParser
             checksum = string.getInt(valueOffset, endOfField);
             checksumOffset = equalsPosition - 2;
         }
-        else if(tag == MESSAGE_TYPE)
+        else if (tag == MESSAGE_TYPE)
         {
             messageType = string.getMessageType(valueOffset, valueLength);
         }
@@ -263,5 +263,4 @@ public final class OtfParser
 
         return string.computeChecksum(offset, checksumOffset) == expectedChecksum;
     }
-
 }

@@ -255,7 +255,7 @@ public class Session
             proxy.resendRequest(newSeqNo + 1, expectedMsgSeqNo, msgSeqNo - 1);
             lastReceivedMsgSeqNum(newSeqNo - 1);
         }
-        else if(msgSeqNo < expectedMsgSeqNo)
+        else if (msgSeqNo < expectedMsgSeqNo)
         {
             if (!possDupFlag)
             {

@@ -37,11 +37,11 @@ public class SenderAndTargetSessionIdStrategyTest
     public void differentIdsDoNotClash()
     {
         final Set<Object> compositeKeys = IDS.stream()
-            .flatMap(sender ->
+            .flatMap((sender) ->
                 IDS.stream()
-                    .map(target ->
+                    .map((target) ->
                     {
-                        SessionConfiguration configuration = SessionConfiguration
+                        final SessionConfiguration configuration = SessionConfiguration
                             .builder()
                             .address("", 0)
                             .senderCompId(sender)
@@ -58,10 +58,10 @@ public class SenderAndTargetSessionIdStrategyTest
     @Test
     public void theSameIdIsEqual()
     {
-        IDS.forEach(sender ->
-            IDS.forEach(target ->
+        IDS.forEach((sender) ->
+            IDS.forEach((target) ->
             {
-                SessionConfiguration configuration = SessionConfiguration
+                final SessionConfiguration configuration = SessionConfiguration
                     .builder()
                     .address("", 0)
                     .senderCompId(sender)

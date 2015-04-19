@@ -61,7 +61,7 @@ public class FixGateway implements AutoCloseable
         fixCounters = new FixCounters(CountersFileDescriptor.createCountersManager(configuration));
         final AtomicCounter failedPublications = fixCounters.failedDataPublications();
 
-        Aeron.Context context = new Aeron.Context();
+        final Aeron.Context context = new Aeron.Context();
         aeron = Aeron.connect(context);
 
         final String channel = configuration.aeronChannel();
@@ -116,7 +116,7 @@ public class FixGateway implements AutoCloseable
 
     private void start(final AgentRunner runner)
     {
-        Thread thread = new Thread(runner);
+        final Thread thread = new Thread(runner);
         thread.setName(runner.agent().roleName());
         thread.start();
     }

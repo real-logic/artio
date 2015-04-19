@@ -65,7 +65,7 @@ public class DecoderGenerator extends Generator
             out.append(generateClassDeclaration(className, isMessage, Decoder.class, Decoder.class));
             if (isMessage)
             {
-                Message message = (Message) aggregate;
+                final Message message = (Message)aggregate;
                 out.append(generateMessageType(message.type()));
                 out.append(commonCompoundImports("Decoder"));
             }
@@ -75,7 +75,7 @@ public class DecoderGenerator extends Generator
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         }
-        catch (IOException e)
+        catch (final IOException e)
         {
             // TODO: logging
             e.printStackTrace();
@@ -91,7 +91,7 @@ public class DecoderGenerator extends Generator
 
     private void generateGetters(final Writer out, final String className, final List<Entry> entries) throws IOException
     {
-        for (Entry entry : entries)
+        for (final Entry entry : entries)
         {
             out.append(generateGetter(entry));
         }
@@ -99,7 +99,7 @@ public class DecoderGenerator extends Generator
 
     private String generateGetter(final Entry entry) throws IOException
     {
-        final Field field = (Field) entry.element();
+        final Field field = (Field)entry.element();
         final String name = entry.name();
         final String fieldName = JavaUtil.formatPropertyName(name);
         final Type type = field.type();
@@ -107,15 +107,15 @@ public class DecoderGenerator extends Generator
 
         final String suffix = type == STRING
             ? String.format(
-                "    private int %s;\n\n" +
-                "    public int %1$s()\n" +
-                "    {\n" +
-                "%s" +
-                "        return %1$s;\n" +
-                "    }\n",
-                fieldName + "Length",
-                optionalCheck
-            )
+            "    private int %s;\n\n" +
+            "    public int %1$s()\n" +
+            "    {\n" +
+            "%s" +
+            "        return %1$s;\n" +
+            "    }\n",
+            fieldName + "Length",
+            optionalCheck
+        )
             : "";
 
         return String.format(
@@ -138,7 +138,7 @@ public class DecoderGenerator extends Generator
         );
     }
 
-    private String fieldInitialisation(Type type, final String name)
+    private String fieldInitialisation(final Type type, final String name)
     {
         switch (type)
         {
@@ -161,7 +161,8 @@ public class DecoderGenerator extends Generator
             case UTCTIMESTAMP:
                 return "";
 
-            default: throw new UnsupportedOperationException("Unknown type: " + type);
+            default:
+                throw new UnsupportedOperationException("Unknown type: " + type);
         }
     }
 
@@ -212,7 +213,8 @@ public class DecoderGenerator extends Generator
             case PRICEOFFSET:
                 return "DecimalFloat";
 
-            default: throw new UnsupportedOperationException("Unknown type: " + type);
+            default:
+                throw new UnsupportedOperationException("Unknown type: " + type);
         }
     }
 
@@ -220,7 +222,7 @@ public class DecoderGenerator extends Generator
     {
         final String prefix =
             "    public int decode(final AsciiFlyweight buffer, final int offset, final int length)\n" +
-            "    {\n"+
+            "    {\n" +
             "        final int end = offset + length;\n" +
             "        int position = offset;\n" +
             (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
@@ -237,8 +239,8 @@ public class DecoderGenerator extends Generator
 
         final String body =
             entries.stream()
-                   .map(this::decodeField)
-                   .collect(joining("\n", "", "\n"));
+                .map(this::decodeField)
+                .collect(joining("\n", "", "\n"));
 
         final String suffix =
             "            default:\n" +
@@ -262,7 +264,7 @@ public class DecoderGenerator extends Generator
         // int valueLength = the number of bytes for the value
         // int endOfField = the end index of the value
 
-        final Field field = (Field) entry.element();
+        final Field field = (Field)entry.element();
         final int tag = field.number();
         final String name = entry.name();
         final String fieldName = JavaUtil.formatPropertyName(name);
@@ -284,8 +286,8 @@ public class DecoderGenerator extends Generator
     private String optionalStringAssignment(final Type type, final String fieldName)
     {
         return type == STRING
-             ? String.format("                %sLength = valueLength;\n", fieldName)
-             : "";
+            ? String.format("                %sLength = valueLength;\n", fieldName)
+            : "";
     }
 
     private String optionalAssign(final Entry entry)
@@ -322,13 +324,13 @@ public class DecoderGenerator extends Generator
             case UTCTIMESTAMP:
                 return "getUtcTimestamp(valueOffset, valueLength";
 
-            default: throw new UnsupportedOperationException("Unknown type: " + type);
+            default:
+                throw new UnsupportedOperationException("Unknown type: " + type);
         }
     }
 
-    protected String generateStringToString(String fieldName)
+    protected String generateStringToString(final String fieldName)
     {
         return String.format("new String(%s)", fieldName);
     }
-
 }

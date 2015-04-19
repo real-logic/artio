@@ -42,8 +42,8 @@ public abstract class AbstractOtfParserTest
 
     protected void verifyField(final InOrder inOrder, final int tag, final String expectedValue)
     {
-        ArgumentCaptor<Integer> offset = ArgumentCaptor.forClass(Integer.class);
-        ArgumentCaptor<Integer> length = ArgumentCaptor.forClass(Integer.class);
+        final ArgumentCaptor<Integer> offset = ArgumentCaptor.forClass(Integer.class);
+        final ArgumentCaptor<Integer> length = ArgumentCaptor.forClass(Integer.class);
         once(inOrder).onField(eq(tag), anyBuffer(), offset.capture(), length.capture());
 
         final String value = string.getAscii(offset.getValue(), length.getValue());

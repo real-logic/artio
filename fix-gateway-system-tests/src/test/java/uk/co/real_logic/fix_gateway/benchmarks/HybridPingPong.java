@@ -34,7 +34,7 @@ public final class HybridPingPong extends AbstractPingPong
     private final MappedByteBuffer mappedPongWriteBuffer;
     private final ByteBuffer pongReadBuffer = ByteBuffer.allocateDirect(MESSAGE_SIZE);
 
-    public static void main(String[] args) throws IOException
+    public static void main(final String[] args) throws IOException
     {
         new HybridPingPong().benchmark();
     }
@@ -45,20 +45,19 @@ public final class HybridPingPong extends AbstractPingPong
         mappedPongWriteBuffer = pongWriteBuffer.map(READ_WRITE, 0, MESSAGE_SIZE);
     }
 
-    protected void ping(SocketChannel channel, long time) throws IOException
+    protected void ping(final SocketChannel channel, final long time) throws IOException
     {
         writeChannel(channel, pingWriteBuffer, mappedPingWriteBuffer, time);
 
-        long result = readByteBuffer(channel, pingReadBuffer);
+        final long result = readByteBuffer(channel, pingReadBuffer);
 
         checkEqual(time, result);
     }
 
-    protected void pong(SocketChannel channel) throws IOException
+    protected void pong(final SocketChannel channel) throws IOException
     {
-        long value = readByteBuffer(channel, pongReadBuffer);
+        final long value = readByteBuffer(channel, pongReadBuffer);
 
         writeChannel(channel, pongWriteBuffer, mappedPongWriteBuffer, value);
     }
-
 }

@@ -29,47 +29,38 @@ public final class Timing
 {
     private static final long DEFAULT_TIMEOUT = hasDebuggerAttached() ? Long.MAX_VALUE : 1_000;
 
-    public static void assertEventuallyTrue(
-            final String message,
-            final BooleanSupplier condition)
+    public static void assertEventuallyTrue(final String message, final BooleanSupplier condition)
     {
         assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT);
     }
 
     public static void assertEventuallyEquals(
-        final String message,
-        final int expectedCount,
-        final IntSupplier supplier)
+        final String message, final int expectedCount, final IntSupplier supplier)
     {
-        AtomicInteger count = new AtomicInteger(0);
-        assertEventuallyTrue(message, () ->
-        {
-            return count.addAndGet(supplier.getAsInt()) >= expectedCount;
-        });
+        final AtomicInteger count = new AtomicInteger(0);
+        assertEventuallyTrue(message, () -> count.addAndGet(supplier.getAsInt()) >= expectedCount);
     }
 
     public static void assertEventuallyTrue(
         final String message,
         final Runnable runnable)
     {
-        assertEventuallyTrue(message, () ->
-        {
-            try
+        assertEventuallyTrue(message,
+            () ->
             {
-                runnable.run();
-                return true;
-            }
-            catch (Throwable e)
-            {
-                return false;
-            }
-        }, DEFAULT_TIMEOUT);
+                try
+                {
+                    runnable.run();
+                    return true;
+                }
+                catch (Throwable e)
+                {
+                    return false;
+                }
+            }, DEFAULT_TIMEOUT);
     }
 
-    public static void assertEventuallyTrue(
-        final String message,
-        final BooleanSupplier condition,
-        final long timeout)
+    public static void assertEventuallyTrue(final String message, final BooleanSupplier condition, final long timeout)
     {
         final long startTime = System.currentTimeMillis();
 
@@ -84,7 +75,7 @@ public final class Timing
             {
                 Thread.sleep(100);
             }
-            catch (InterruptedException e)
+            catch (final InterruptedException e)
             {
                 LangUtil.rethrowUnchecked(e);
             }
@@ -95,9 +86,9 @@ public final class Timing
 
     private static boolean hasDebuggerAttached()
     {
-        RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
-        String jvmArguments = runtimeMXBean.getInputArguments().toString();
+        final RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
+        final String jvmArguments = runtimeMXBean.getInputArguments().toString();
+
         return jvmArguments.contains("-agentlib:jdwp");
     }
-
 }

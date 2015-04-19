@@ -38,7 +38,6 @@ import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class DecoderGeneratorTest
 {
-
     public static final char[] ABC = "abc".toCharArray();
     public static final char[] AB = "ab".toCharArray();
     public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
@@ -73,7 +72,7 @@ public class DecoderGeneratorTest
     @Test
     public void generatesGetters() throws NoSuchMethodException
     {
-        Method onBehalfOfCompID = heartbeat.getMethod(ON_BEHALF_OF_COMP_ID);
+        final Method onBehalfOfCompID = heartbeat.getMethod(ON_BEHALF_OF_COMP_ID);
         assertEquals(char[].class, onBehalfOfCompID.getReturnType());
     }
 
@@ -265,5 +264,4 @@ public class DecoderGeneratorTest
         final int length = (int) get(decoder, name + "Length");
         return Arrays.copyOf(value, length);
     }
-
 }

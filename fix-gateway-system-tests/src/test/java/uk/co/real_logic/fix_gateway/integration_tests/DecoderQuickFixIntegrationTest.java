@@ -37,7 +37,7 @@ public class DecoderQuickFixIntegrationTest
     @Test
     public void decodesTestRequest()
     {
-        TestRequestDecoder decoder = new TestRequestDecoder();
+        final TestRequestDecoder decoder = new TestRequestDecoder();
         decode(testRequest(), decoder);
 
         assertCharsEquals("abc", decoder.testReqID(), decoder.testReqIDLength());
@@ -46,7 +46,7 @@ public class DecoderQuickFixIntegrationTest
     @Test
     public void decodesLogon()
     {
-        LogonDecoder decoder = new LogonDecoder();
+        final LogonDecoder decoder = new LogonDecoder();
         decode(logon(), decoder);
 
         DebugLogger.log("Decoder: %s\n", decoder);

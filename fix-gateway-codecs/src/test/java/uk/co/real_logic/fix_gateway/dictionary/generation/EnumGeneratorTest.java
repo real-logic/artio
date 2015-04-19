@@ -30,7 +30,6 @@ import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.FIELD_EX
 // TODO: support enums whose values has multiple characters
 public class EnumGeneratorTest
 {
-
     private StringWriterOutputManager outputManager = new StringWriterOutputManager();
     private EnumGenerator enumGenerator = new EnumGenerator(FIELD_EXAMPLE, outputManager);
 
@@ -43,7 +42,7 @@ public class EnumGeneratorTest
     @Test
     public void generatesEnumClass() throws Exception
     {
-        Class<?> clazz = compileEgEnum();
+        final Class<?> clazz = compileEgEnum();
 
         assertNotNull("Failed to generate a class", clazz);
         assertTrue("Generated class isn't an enum", clazz.isEnum());
@@ -52,8 +51,8 @@ public class EnumGeneratorTest
     @Test
     public void generatesEnumConstants() throws Exception
     {
-        Class<?> clazz = compileEgEnum();
-        Enum<?>[] values = (Enum<?>[]) clazz.getEnumConstants();
+        final Class<?> clazz = compileEgEnum();
+        final Enum[] values = (Enum[])clazz.getEnumConstants();
 
         assertThat(values, arrayWithSize(2));
 
@@ -66,10 +65,10 @@ public class EnumGeneratorTest
     @Test
     public void generatesLookupTable() throws Exception
     {
-        Class<?> clazz = compileEgEnum();
-        Enum<?>[] values = (Enum<?>[]) clazz.getEnumConstants();
+        final Class<?> clazz = compileEgEnum();
+        final Enum[] values = (Enum[])clazz.getEnumConstants();
 
-        Method valueOf = clazz.getMethod("valueOf", int.class);
+        final Method valueOf = clazz.getMethod("valueOf", int.class);
 
         assertEquals(values[0], valueOf.invoke(null, 'a'));
         assertEquals(values[1], valueOf.invoke(null, 'b'));
@@ -83,18 +82,17 @@ public class EnumGeneratorTest
 
     private Class<?> compileEgEnum() throws Exception
     {
-        //System.out.println(outputManager.getSources());
         return CompilerUtil.compileInMemory(EG_ENUM, outputManager.getSources());
     }
 
     private void assertRepresentation(final int expected, final Enum<?> enumElement) throws Exception
     {
-        final int representation = (int) enumElement
+        final int representation =
+            (int)enumElement
                 .getDeclaringClass()
                 .getMethod("representation")
                 .invoke(enumElement);
 
         assertEquals(expected, representation);
     }
-
 }

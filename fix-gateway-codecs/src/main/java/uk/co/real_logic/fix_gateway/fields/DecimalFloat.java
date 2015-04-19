@@ -95,7 +95,7 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 
     public int hashCode()
     {
-        int result = (int)(value ^ (value >>> 32));
+        final int result = (int)(value ^ (value >>> 32));
         return 31 * result + scale;
     }
 

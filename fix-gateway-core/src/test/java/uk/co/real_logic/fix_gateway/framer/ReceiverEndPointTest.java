@@ -204,7 +204,7 @@ public class ReceiverEndPointTest
 
     private void handlerReceivesTwoFramedMessages()
     {
-        InOrder inOrder = Mockito.inOrder(mockPub);
+        final InOrder inOrder = Mockito.inOrder(mockPub);
         inOrder.verify(mockPub, times(1))
             .saveMessage(any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(SESSION_ID), eq(MESSAGE_TYPE));
         inOrder.verify(mockPub, times(1))
@@ -242,16 +242,17 @@ public class ReceiverEndPointTest
         theEndpointReceivesTwoMessages(0, MSG_LEN - 8);
     }
 
-    private void theEndpointReceives(byte[] data, int offset, int length)
+    private void theEndpointReceives(final byte[] data, final int offset, final int length)
     {
         endpointBufferUpdatedWith(
-            (buffer) -> {
+            (buffer) ->
+            {
                 buffer.put(data, offset, length);
                 return length;
             });
     }
 
-    private void theEndpointReceivesTwoMessages(int secondOffset, int secondLength)
+    private void theEndpointReceivesTwoMessages(final int secondOffset, final int secondLength)
     {
         endpointBufferUpdatedWith(
             (buffer) -> {
@@ -261,13 +262,13 @@ public class ReceiverEndPointTest
             });
     }
 
-    private void endpointBufferUpdatedWith(ToIntFunction<ByteBuffer> bufferUpdater)
+    private void endpointBufferUpdatedWith(final ToIntFunction<ByteBuffer> bufferUpdater)
     {
         try
         {
             doAnswer(
                 (invocation) -> {
-                    ByteBuffer buffer = (ByteBuffer)invocation.getArguments()[0];
+                    final ByteBuffer buffer = (ByteBuffer)invocation.getArguments()[0];
                     return bufferUpdater.applyAsInt(buffer);
                 }).when(mockChannel).read(any(ByteBuffer.class));
         }

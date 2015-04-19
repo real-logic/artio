@@ -73,7 +73,7 @@ public class DictionaryParserTest
     @Test
     public void shouldParseTestReqID()
     {
-        Field field = field("TestReqID");
+        final Field field = field("TestReqID");
         assertEquals("TestReqID", field.name());
         assertEquals(112, field.number());
         assertFalse(field.isEnum());
@@ -252,5 +252,4 @@ public class DictionaryParserTest
     {
         return allOf(instanceOf(Group.class), withName(equalTo(name)), valueMatcher);
     }
-
 }

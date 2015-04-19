@@ -21,7 +21,6 @@ import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.*;
 
 public final class UtcTimestampEncoder
 {
-
     public static final long MIN_EPOCH_MILLIS = UtcTimestampDecoder.MIN_EPOCH_MILLIS;
     public static final long MAX_EPOCH_MILLIS = UtcTimestampDecoder.MAX_EPOCH_MILLIS;
 
@@ -41,7 +40,7 @@ public final class UtcTimestampEncoder
 
         final long localSecond = Math.floorDiv(epochMillis, MILLIS_IN_SECOND);
         final long epochDay = Math.floorDiv(localSecond, SECONDS_IN_DAY);
-        final int fractionOfSecond = (int) (Math.floorMod(epochMillis, MILLIS_IN_SECOND));
+        final int fractionOfSecond = (int)(Math.floorMod(epochMillis, MILLIS_IN_SECOND));
 
         encodeDate(epochDay, string, offset);
         string.putChar(offset + 8, '-');
@@ -57,10 +56,10 @@ public final class UtcTimestampEncoder
         final MutableAsciiFlyweight string,
         final int offset)
     {
-        int secondOfDay = (int) Math.floorMod(epochSecond, SECONDS_IN_DAY);
-        int hours = secondOfDay / SECONDS_IN_HOUR;
+        int secondOfDay = (int)Math.floorMod(epochSecond, SECONDS_IN_DAY);
+        final int hours = secondOfDay / SECONDS_IN_HOUR;
         secondOfDay -= hours * SECONDS_IN_HOUR;
-        int minutes = secondOfDay / SECONDS_IN_MINUTE;
+        final int minutes = secondOfDay / SECONDS_IN_MINUTE;
         secondOfDay -= minutes * SECONDS_IN_MINUTE;
 
         string.putNatural(offset, 2, hours);
@@ -75,5 +74,4 @@ public final class UtcTimestampEncoder
             string.putNatural(offset + 9, 3, epochMillis);
         }
     }
-
 }

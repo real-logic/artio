@@ -31,8 +31,7 @@ public class ConstantGenerator
     public static final String CLASS_NAME = "Constants";
 
     private static final String BODY =
-        "public class "+ CLASS_NAME + "\n" +
-        "{\n\n";
+        "public class " + CLASS_NAME + "\n" + "{\n\n";
 
     private final DataDictionary dictionary;
     private final String builderPackage;
@@ -56,7 +55,7 @@ public class ConstantGenerator
             out.append(generateFieldTags());
             out.append("}\n");
         }
-        catch (IOException e)
+        catch (final IOException e)
         {
             // TODO
             e.printStackTrace();
@@ -94,10 +93,10 @@ public class ConstantGenerator
     {
         name = name.replace("ID", "Id");
         return toUpperCase(name.charAt(0)) +
-               name.substring(1)
-                   .chars()
-                   .mapToObj(codePoint -> (isUpperCase(codePoint) ? "_" : "") + (char) toUpperCase(codePoint))
-                   .collect(joining());
+            name.substring(1)
+                .chars()
+                .mapToObj((codePoint) -> (isUpperCase(codePoint) ? "_" : "") + (char)toUpperCase(codePoint))
+                .collect(joining());
     }
 
 }

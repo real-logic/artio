@@ -41,11 +41,12 @@ public final class EnumGenerator
 
     public void generate()
     {
-        dictionary.fields()
-                  .values()
-                  .stream()
-                  .filter(Field::isEnum)
-                  .forEach(this::generateEnum);
+        dictionary
+            .fields()
+            .values()
+            .stream()
+            .filter(Field::isEnum)
+            .forEach(this::generateEnum);
 
     }
 
@@ -65,7 +66,7 @@ public final class EnumGenerator
 
             out.append("}\n");
         }
-        catch (IOException e)
+        catch (final IOException e)
         {
             // TODO: logging
             e.printStackTrace();
@@ -80,7 +81,7 @@ public final class EnumGenerator
     private String generateEnumValues(final List<Value> allValues)
     {
         return allValues.stream()
-                        .map(value -> format("%s%s('%s')", INDENT, value.description(), value.representation()))
+                        .map((value) -> format("%s%s('%s')", INDENT, value.description(), value.representation()))
                         .collect(joining(",\n"));
     }
 
@@ -89,9 +90,9 @@ public final class EnumGenerator
         final Var representation = new Var("int", "representation");
 
         return ";\n\n" +
-               representation.field() +
-               constructor(name, representation) +
-               representation.getter();
+            representation.field() +
+            constructor(name, representation) +
+            representation.getter();
     }
 
     private String generateEnumLookupMethod(final String name, final List<Value> allValues)
@@ -99,17 +100,16 @@ public final class EnumGenerator
         final Var representation = new Var("int", "representation");
 
         final String cases = allValues
-                .stream()
-                .map(value -> format("        case '%s': return %s;\n", value.representation(), value.description()))
-                .collect(joining());
+            .stream()
+            .map((value) -> format("        case '%s': return %s;\n", value.representation(), value.description()))
+            .collect(joining());
 
         return method("valueOf", name, representation) +
-               format("        switch(representation)\n" +
-                      "        {\n" +
-                      cases +
-                      "        default: throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
-                      "        }\n" +
-                      "    }\n");
+            "        switch(representation)\n" +
+            "        {\n" +
+            cases +
+            "        default: throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
+            "        }\n" +
+            "    }\n";
     }
-
 }

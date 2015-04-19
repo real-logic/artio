@@ -29,7 +29,7 @@ public final class NioBufferPingPong extends AbstractPingPong
     private final ByteBuffer pongWriteBuffer = ByteBuffer.allocateDirect(MESSAGE_SIZE);
     private final ByteBuffer pongReadBuffer = ByteBuffer.allocateDirect(MESSAGE_SIZE);
 
-    public static void main(String[] args) throws IOException
+    public static void main(final String[] args) throws IOException
     {
         new NioBufferPingPong().benchmark();
     }
@@ -38,14 +38,14 @@ public final class NioBufferPingPong extends AbstractPingPong
     {
         writeByteBuffer(channel, pingWriteBuffer, time);
 
-        long result = readByteBuffer(channel, pingReadBuffer);
+        final long result = readByteBuffer(channel, pingReadBuffer);
 
         checkEqual(time, result);
     }
 
     protected void pong(SocketChannel channel) throws IOException
     {
-        long value = readByteBuffer(channel, pongReadBuffer);
+        final long value = readByteBuffer(channel, pongReadBuffer);
 
         writeByteBuffer(channel, pongWriteBuffer, value);
     }

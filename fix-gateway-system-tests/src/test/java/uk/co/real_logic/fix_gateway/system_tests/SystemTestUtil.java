@@ -43,8 +43,8 @@ public final class SystemTestUtil
         return MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
     }
 
-    public static void assertDisconnected(
-        final FakeSessionHandler sessionHandler, final Session session) throws InterruptedException
+    public static void assertDisconnected(final FakeSessionHandler sessionHandler, final Session session)
+        throws InterruptedException
     {
         assertSessionDisconnected(session);
 
@@ -63,7 +63,7 @@ public final class SystemTestUtil
 
     public static void sendTestRequest(final Session session)
     {
-        assertEventuallyTrue("Session not connected", () -> session.isConnected());
+        assertEventuallyTrue("Session not connected", session::isConnected);
 
         final TestRequestEncoder testRequest = new TestRequestEncoder();
         testRequest.testReqID("hi");
@@ -97,35 +97,35 @@ public final class SystemTestUtil
     public static InitiatorSession initiate(final FixGateway gateway, final int port)
     {
         final SessionConfiguration config = SessionConfiguration.builder()
-                .address("localhost", port)
-                .credentials("bob", "Uv1aegoh")
-                .senderCompId(INITIATOR_ID)
-                .targetCompId(ACCEPTOR_ID)
-                .build();
+            .address("localhost", port)
+            .credentials("bob", "Uv1aegoh")
+            .senderCompId(INITIATOR_ID)
+            .targetCompId(ACCEPTOR_ID)
+            .build();
         return gateway.initiate(config, null);
     }
 
     public static FixGateway launchInitiatingGateway(final NewSessionHandler sessionHandler)
     {
         final StaticConfiguration initiatingConfig = new StaticConfiguration()
-                .bind("localhost", unusedPort())
-                .aeronChannel("udp://localhost:" + unusedPort())
-                .newSessionHandler(sessionHandler);
+            .bind("localhost", unusedPort())
+            .aeronChannel("udp://localhost:" + unusedPort())
+            .newSessionHandler(sessionHandler);
         return FixGateway.launch(initiatingConfig);
     }
 
     public static FixGateway launchAcceptingGateway(final int port, final NewSessionHandler sessionHandler)
     {
         final StaticConfiguration acceptingConfig = new StaticConfiguration()
-                .bind("localhost", port)
-                .aeronChannel("udp://localhost:" + unusedPort())
-                .authenticationStrategy(new CompIdAuthenticationStrategy(ACCEPTOR_ID))
-                .newSessionHandler(sessionHandler);
+            .bind("localhost", port)
+            .aeronChannel("udp://localhost:" + unusedPort())
+            .authenticationStrategy(new CompIdAuthenticationStrategy(ACCEPTOR_ID))
+            .newSessionHandler(sessionHandler);
         return FixGateway.launch(acceptingConfig);
     }
 
-    public static SocketAcceptor launchQuickFixAcceptor(
-        final int port, final FakeQuickFixApplication application) throws ConfigError
+    public static SocketAcceptor launchQuickFixAcceptor(final int port, final FakeQuickFixApplication application)
+        throws ConfigError
     {
         final SessionID sessionID = sessionID();
         final SessionSettings settings = sessionSettings(port, sessionID);
@@ -134,8 +134,8 @@ public final class SystemTestUtil
 
         final FileStoreFactory storeFactory = new FileStoreFactory(settings);
         final LogFactory logFactory = new ScreenLogFactory(settings);
-        SocketAcceptor socketAcceptor = new SocketAcceptor(application, storeFactory, settings, logFactory,
-            new DefaultMessageFactory());
+        final SocketAcceptor socketAcceptor = new SocketAcceptor(
+            application, storeFactory, settings, logFactory, new DefaultMessageFactory());
         socketAcceptor.start();
 
         return socketAcceptor;
@@ -152,8 +152,8 @@ public final class SystemTestUtil
 
         final FileStoreFactory storeFactory = new FileStoreFactory(settings);
         final LogFactory logFactory = new ScreenLogFactory(settings);
-        SocketInitiator socketInitiator = new SocketInitiator(application, storeFactory, settings, logFactory,
-            new DefaultMessageFactory());
+        final SocketInitiator socketInitiator = new SocketInitiator(
+            application, storeFactory, settings, logFactory, new DefaultMessageFactory());
         socketInitiator.start();
         return socketInitiator;
     }
@@ -175,10 +175,10 @@ public final class SystemTestUtil
     private static SessionID sessionID()
     {
         return new SessionID(
-                new BeginString("FIX.4.4"),
-                new SenderCompID(ACCEPTOR_ID),
-                new TargetCompID(INITIATOR_ID)
-            );
+            new BeginString("FIX.4.4"),
+            new SenderCompID(ACCEPTOR_ID),
+            new TargetCompID(INITIATOR_ID)
+        );
     }
 
     static void assertQuickFixReceivedMessage(final FakeQuickFixApplication acceptor)
@@ -186,7 +186,7 @@ public final class SystemTestUtil
         assertEventuallyTrue("Unable to fnd test request", () ->
         {
             final List<Message> messages = acceptor.messages();
-            for (Message message : messages)
+            for (final Message message : messages)
             {
                 if (TEST_REQUEST.equals(getMsgType(message)))
                 {
@@ -198,13 +198,13 @@ public final class SystemTestUtil
         });
     }
 
-    private static String getMsgType(Message message)
+    private static String getMsgType(final Message message)
     {
         try
         {
             return message.getHeader().getField(new MsgType()).getValue();
         }
-        catch (FieldNotFound ex)
+        catch (final FieldNotFound ex)
         {
             ex.printStackTrace();
             return null;
