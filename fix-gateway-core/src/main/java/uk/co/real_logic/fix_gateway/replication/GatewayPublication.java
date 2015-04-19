@@ -146,7 +146,7 @@ public class GatewayPublication
 
     private void claim(final int framedLength)
     {
-        while (!dataPublication.tryClaim(framedLength, bufferClaim))
+        while (dataPublication.tryClaim(framedLength, bufferClaim) < 0L)
         {
             // TODO: backoff
             fails.increment();
