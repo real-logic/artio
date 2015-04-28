@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
@@ -65,8 +66,7 @@ public class PrinterGenerator
         }
         catch (IOException e)
         {
-            // TODO: logging
-            e.printStackTrace();
+            LangUtil.rethrowUnchecked(e);
         }
     }
 

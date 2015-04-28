@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
@@ -47,7 +48,6 @@ public final class EnumGenerator
             .stream()
             .filter(Field::isEnum)
             .forEach(this::generateEnum);
-
     }
 
     private void generateEnum(final Field field)
@@ -68,8 +68,7 @@ public final class EnumGenerator
         }
         catch (final IOException e)
         {
-            // TODO: logging
-            e.printStackTrace();
+            LangUtil.rethrowUnchecked(e);
         }
     }
 

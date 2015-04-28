@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
 
@@ -57,8 +58,7 @@ public class ConstantGenerator
         }
         catch (final IOException e)
         {
-            // TODO
-            e.printStackTrace();
+            LangUtil.rethrowUnchecked(e);
         }
     }
 

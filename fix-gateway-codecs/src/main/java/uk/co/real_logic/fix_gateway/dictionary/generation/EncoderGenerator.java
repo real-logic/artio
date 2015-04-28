@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
@@ -88,8 +89,7 @@ public class EncoderGenerator extends Generator
         }
         catch (final IOException e)
         {
-            // TODO: logging
-            e.printStackTrace();
+            LangUtil.rethrowUnchecked(e);
         }
     }
 
