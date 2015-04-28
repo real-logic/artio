@@ -19,7 +19,7 @@ import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
-import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.sbe.generation.java.JavaUtil;
@@ -42,12 +42,12 @@ public class PrinterGenerator
         "\npublic class PrinterImpl implements Printer\n" +
         "{\n\n";
 
-    private final DataDictionary dictionary;
+    private final Dictionary dictionary;
     private final String builderPackage;
     private final OutputManager outputManager;
 
     public PrinterGenerator(
-        final DataDictionary dictionary, final String builderPackage, final OutputManager outputManager)
+        final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
     {
         this.dictionary = dictionary;
         this.builderPackage = builderPackage;

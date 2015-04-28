@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary;
 
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.collections.IntHashSet;
-import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 
@@ -35,21 +35,21 @@ public final class IntDictionary
 
     private final Int2ObjectHashMap<IntHashSet> map;
 
-    public static IntDictionary requiredFields(final DataDictionary dataDictionary)
+    public static IntDictionary requiredFields(final Dictionary dictionary)
     {
-        return fields(dataDictionary, Entry::required);
+        return fields(dictionary, Entry::required);
     }
 
-    public static IntDictionary allFields(final DataDictionary dataDictionary)
+    public static IntDictionary allFields(final Dictionary dictionary)
     {
-        return fields(dataDictionary, (entry) -> true);
+        return fields(dictionary, (entry) -> true);
     }
 
-    private static IntDictionary fields(final DataDictionary dataDictionary, final Predicate<Entry> entryPredicate)
+    private static IntDictionary fields(final Dictionary dictionary, final Predicate<Entry> entryPredicate)
     {
         final IntDictionary fields = new IntDictionary();
 
-        dataDictionary.messages().forEach(
+        dictionary.messages().forEach(
             (message) ->
             {
                 final int type = message.type();

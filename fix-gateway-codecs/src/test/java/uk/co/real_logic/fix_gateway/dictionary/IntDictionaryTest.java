@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.dictionary;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.collections.IntHashSet;
-import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
@@ -34,7 +34,7 @@ import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 
 public class IntDictionaryTest
 {
-    private DataDictionary data;
+    private Dictionary data;
 
     @Before
     public void createDataDictionary()
@@ -44,7 +44,7 @@ public class IntDictionaryTest
         heartbeat.optionalEntry(new Field(112, "TestReqID", Type.STRING));
 
         final List<Message> messages = Arrays.asList(heartbeat);
-        data = new DataDictionary(messages, null, null, null, null, 4, 4);
+        data = new Dictionary(messages, null, null, null, null, 4, 4);
     }
 
     @Test

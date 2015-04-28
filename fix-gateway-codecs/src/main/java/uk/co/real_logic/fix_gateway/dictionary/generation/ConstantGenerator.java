@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.generation.OutputManager;
-import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -34,12 +34,12 @@ public class ConstantGenerator
     private static final String BODY =
         "public class " + CLASS_NAME + "\n" + "{\n\n";
 
-    private final DataDictionary dictionary;
+    private final Dictionary dictionary;
     private final String builderPackage;
     private final OutputManager outputManager;
 
     public ConstantGenerator(
-        final DataDictionary dictionary, final String builderPackage, final OutputManager outputManager)
+        final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
     {
         this.dictionary = dictionary;
         this.builderPackage = builderPackage;

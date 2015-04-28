@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.generation.OutputManager;
-import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 
@@ -31,10 +31,10 @@ import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.
 
 public final class EnumGenerator
 {
-    private final DataDictionary dictionary;
+    private final Dictionary dictionary;
     private final OutputManager outputManager;
 
-    public EnumGenerator(final DataDictionary dictionary, final OutputManager outputManager)
+    public EnumGenerator(final Dictionary dictionary, final OutputManager outputManager)
     {
         this.dictionary = dictionary;
         this.outputManager = outputManager;

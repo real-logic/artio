@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.dictionary;
 
 import uk.co.real_logic.fix_gateway.dictionary.ir.Component;
-import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
@@ -60,9 +60,9 @@ public final class ExampleDictionary
 
     public static final int HEARTBEAT_TYPE = '0';
 
-    public static final DataDictionary FIELD_EXAMPLE;
+    public static final Dictionary FIELD_EXAMPLE;
 
-    public static final DataDictionary MESSAGE_EXAMPLE;
+    public static final Dictionary MESSAGE_EXAMPLE;
 
     public static final String ENCODED_MESSAGE_EXAMPLE =
         "8=FIX.4.4\0019=0049\00135=0\001115=abc\001112=abc\001116=2\001117=1.1\001118=Y\001119=123\00110=061\001";
@@ -123,7 +123,7 @@ public final class ExampleDictionary
         fieldEgFields.put("EgEnum", egEnum);
         fieldEgFields.put("egNotEnum", new Field(123, "EgNotEnum", Type.CHAR));
 
-        FIELD_EXAMPLE = new DataDictionary(emptyList(), fieldEgFields, emptyMap(), null, null, 4, 4);
+        FIELD_EXAMPLE = new Dictionary(emptyList(), fieldEgFields, emptyMap(), null, null, 4, 4);
 
         final Map<String, Field> messageEgFields = new HashMap<>();
 
@@ -158,6 +158,6 @@ public final class ExampleDictionary
 
         final List<Message> messages = singletonList(heartbeat);
 
-        MESSAGE_EXAMPLE = new DataDictionary(messages, messageEgFields, emptyMap(), header, trailer, 4, 4);
+        MESSAGE_EXAMPLE = new Dictionary(messages, messageEgFields, emptyMap(), header, trailer, 4, 4);
     }
 }

@@ -38,7 +38,7 @@ import static javax.xml.xpath.XPathConstants.NODESET;
 
 /**
  * Parses XML format dictionary files and into instances of
- * {@link uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary}.
+ * {@link uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary}.
  */
 public final class DictionaryParser
 {
@@ -74,7 +74,7 @@ public final class DictionaryParser
         }
     }
 
-    public DataDictionary parse(final InputStream in) throws Exception
+    public Dictionary parse(final InputStream in) throws Exception
     {
         final Document document = documentBuilder.parse(in);
         final Map<String, Field> fields = parseFields(document);
@@ -87,7 +87,7 @@ public final class DictionaryParser
         final int majorVersion = getInt(fixAttributes, "major");
         final int minorVersion = getInt(fixAttributes, "minor");
 
-        return new DataDictionary(messages, fields, components, header, trailer, majorVersion, minorVersion);
+        return new Dictionary(messages, fields, components, header, trailer, majorVersion, minorVersion);
     }
 
     private Map<String, Component> parseComponents(final Document document, final Map<String, Field> fields)

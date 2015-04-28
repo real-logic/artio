@@ -45,7 +45,7 @@ public class DecoderGenerator extends Generator
     private final int initialBufferSize;
 
     public DecoderGenerator(
-        final DataDictionary dictionary,
+        final Dictionary dictionary,
         final int initialBufferSize,
         final String builderPackage,
         final OutputManager outputManager)

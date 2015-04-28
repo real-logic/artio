@@ -19,7 +19,7 @@ import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
-import uk.co.real_logic.fix_gateway.dictionary.ir.DataDictionary;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
@@ -61,11 +61,11 @@ public abstract class Generator
             "import %1$s.Header%4$s;\n" +
             "import %1$s.Trailer%4$s;\n";
 
-    protected final DataDictionary dictionary;
+    protected final Dictionary dictionary;
     protected final String builderPackage;
     protected final OutputManager outputManager;
 
-    protected Generator(final DataDictionary dictionary, final String builderPackage, final OutputManager outputManager)
+    protected Generator(final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
     {
         this.dictionary = dictionary;
         this.builderPackage = builderPackage;

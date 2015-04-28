@@ -35,7 +35,7 @@ public class DictionaryParserTest
 {
     private static final String EXAMPLE_FILE = "example_dictionary.xml";
 
-    private DataDictionary dictionary;
+    private Dictionary dictionary;
 
     @Before
     public void setUp() throws Exception
@@ -203,7 +203,7 @@ public class DictionaryParserTest
         return dictionary.fields().get(name);
     }
 
-    private DataDictionary parseExample() throws Exception
+    private Dictionary parseExample() throws Exception
     {
         return new DictionaryParser().parse(DictionaryParserTest.class.getResourceAsStream(EXAMPLE_FILE));
     }

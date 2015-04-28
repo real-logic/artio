@@ -56,7 +56,7 @@ public class EncoderGenerator extends Generator
     private final int initialArraySize;
 
     public EncoderGenerator(
-        final DataDictionary dictionary,
+        final Dictionary dictionary,
         final int initialArraySize,
         final String builderPackage,
         final OutputManager outputManager)
@@ -93,7 +93,7 @@ public class EncoderGenerator extends Generator
         }
     }
 
-    private String generateConstructor(final Aggregate aggregate, final DataDictionary dictionary)
+    private String generateConstructor(final Aggregate aggregate, final Dictionary dictionary)
     {
         if (!(aggregate instanceof Message))
         {

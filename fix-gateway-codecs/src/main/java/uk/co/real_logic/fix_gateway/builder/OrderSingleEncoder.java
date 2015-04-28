@@ -194,20 +194,16 @@ public class OrderSingleEncoder implements MessageEncoder
 
     public OrderSingleEncoder clOrdID(final String clOrdID)
     {
-        // TODO
         return this;
     }
 
     public OrderSingleEncoder clOrdID(final AsciiFlyweight clOrdID)
     {
-        // TODO
         return this;
     }
 
     public OrderSingleEncoder clOrdID(final DirectBuffer clOrdID, final int offset, final int length)
     {
-
-       // TODO
         return this;
     }
 
