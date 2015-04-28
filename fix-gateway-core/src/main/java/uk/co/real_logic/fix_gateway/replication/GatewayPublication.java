@@ -25,9 +25,7 @@ import uk.co.real_logic.fix_gateway.messages.Connect;
 import uk.co.real_logic.fix_gateway.messages.Disconnect;
 import uk.co.real_logic.fix_gateway.messages.FixMessage;
 import uk.co.real_logic.fix_gateway.messages.MessageHeader;
-import uk.co.real_logic.sbe.codec.java.CodecUtil;
 
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static uk.co.real_logic.fix_gateway.messages.FixMessage.BLOCK_LENGTH;
 
 /**
@@ -36,13 +34,6 @@ import static uk.co.real_logic.fix_gateway.messages.FixMessage.BLOCK_LENGTH;
 public class GatewayPublication
 {
     public static final int FRAME_SIZE = BLOCK_LENGTH + FixMessage.bodyHeaderSize();
-    // SBE Message offset: offset + fixMessage.sbeBlockLength() + fixMessage.bodyHeaderSize();
-
-    // TODO: get SBE to generate this code:
-    public static void putBodyLength(final UnsafeBuffer unsafeBuffer, final int offset, final int bodyLength)
-    {
-        CodecUtil.uint16Put(unsafeBuffer, offset + BLOCK_LENGTH, bodyLength, LITTLE_ENDIAN);
-    }
 
     private final MessageHeader header = new MessageHeader();
     private final Connect connect = new Connect();
@@ -67,12 +58,13 @@ public class GatewayPublication
         final long sessionId,
         final int messageType)
     {
-
-        claim(header.size() + FRAME_SIZE + srcLength);
+        final int framedLength = header.size() + FRAME_SIZE + srcLength;
+        claim(framedLength);
 
         int offset = bufferClaim.offset();
 
         final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) bufferClaim.buffer();
+        final UnsafeBuffer unsafeSrcBuffer = (UnsafeBuffer) srcBuffer;
 
         header
             .wrap(unsafeBuffer, offset, 0)
@@ -87,16 +79,12 @@ public class GatewayPublication
             .wrapForEncode(unsafeBuffer, offset)
             .messageType(messageType)
             .session(sessionId)
-            .connection(0L); // TODO
-        putBodyLength(unsafeBuffer, offset, srcLength);
-
-        offset += FRAME_SIZE;
-
-        unsafeBuffer.putBytes(offset, srcBuffer, srcOffset, srcLength);
+            .connection(0L)
+            .putBody(unsafeSrcBuffer, srcOffset, srcLength);
 
         bufferClaim.commit();
 
-        DebugLogger.log("Enqueued %s\n", unsafeBuffer, offset, srcLength);
+        DebugLogger.log("Enqueued %s\n", unsafeBuffer, offset, framedLength);
     }
 
     public void saveConnect(final long connectionId, final long sessionId)

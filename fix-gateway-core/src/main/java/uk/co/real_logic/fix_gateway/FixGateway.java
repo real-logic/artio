@@ -79,7 +79,6 @@ public class FixGateway implements AutoCloseable
 
         final Multiplexer multiplexer = new Multiplexer(framerProxy);
         final GatewaySubscription dataSubscription = outboundStreams.gatewaySubscription().sessionHandler(multiplexer);
-        // TODO: remove the shared, mutable state in the sessionIdStrategy
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
 
         final MilliClock systemClock = System::currentTimeMillis;
