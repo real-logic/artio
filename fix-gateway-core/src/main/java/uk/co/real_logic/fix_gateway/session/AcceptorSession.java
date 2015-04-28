@@ -40,6 +40,7 @@ public final class AcceptorSession extends Session
         {
             id(sessionId);
             this.sessionKey = sessionKey;
+            proxy.setupSession(sessionId, sessionKey);
 
             final int expectedSeqNo = expectedReceivedSeqNum();
             if (expectedSeqNo == msgSeqNo)

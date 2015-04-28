@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import quickfix.ConfigError;
 import quickfix.SocketInitiator;
@@ -25,12 +24,14 @@ import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.session.Session;
 
+import java.util.concurrent.locks.LockSupport;
+
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-@Ignore
 public class QuickFixToGatewaySystemTest
 {
 
@@ -51,14 +52,14 @@ public class QuickFixToGatewaySystemTest
         mediaDriver = launchMediaDriver();
         acceptingGateway = launchAcceptingGateway(port, acceptingSessionHandler);
         socketInitiator = launchQuickFixInitiator(port, initiator);
+        awaitQuickFixLogon();
         acceptedSession = acceptingSessionHandler.session();
     }
 
     @Test
     public void sessionHasBeenInitiated() throws InterruptedException
     {
-        // TODO:
-        //assertThat(initiator.logons(), containsInitiator());
+        assertThat(initiator.logons(), containsAcceptor());
 
         assertTrue("Session has failed to connect", acceptedSession.isConnected());
         assertTrue("Session has failed to logon", acceptedSession.state() == ACTIVE);
@@ -77,7 +78,7 @@ public class QuickFixToGatewaySystemTest
     {
         acceptedSession.startLogout();
 
-        assertQuickFixDisconnected(initiator);
+        assertQuickFixDisconnected(initiator, containsAcceptor());
     }
 
     @After
@@ -96,6 +97,14 @@ public class QuickFixToGatewaySystemTest
         if (mediaDriver != null)
         {
             mediaDriver.close();
+        }
+    }
+
+    private void awaitQuickFixLogon()
+    {
+        while (!socketInitiator.isLoggedOn())
+        {
+            LockSupport.parkNanos(1000);
         }
     }
 

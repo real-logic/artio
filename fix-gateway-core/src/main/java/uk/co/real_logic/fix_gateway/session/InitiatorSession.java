@@ -45,8 +45,8 @@ public class InitiatorSession extends Session
         if (msgSeqNo == expectedReceivedSeqNum() && state() == SENT_LOGON)
         {
             state(ACTIVE);
-            gateway.onInitiatorSessionActive(this);
             super.onLogon(heartbeatInterval, msgSeqNo, sessionId, sessionKey);
+            gateway.onInitiatorSessionActive(this);
         }
         else
         {

@@ -79,19 +79,41 @@ public final class SystemTestUtil
         assertThat(acceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
     }
 
-    public static void assertQuickFixDisconnected(final FakeQuickFixApplication acceptor)
+    public static void assertQuickFixDisconnected(
+        final FakeQuickFixApplication acceptor,
+        final Matcher<Iterable<? super SessionID>> sessionMatcher)
     {
         assertEventuallyEquals("Failed to receive a logout", 1, () -> acceptor.logouts().size());
         final List<SessionID> logouts = acceptor.logouts();
         DebugLogger.log("\nLogouts: %s\n", logouts);
-        assertThat(logouts, containsInitiator());
+        assertThat(logouts, sessionMatcher);
     }
 
     public static <T> Matcher<Iterable<? super T>> containsInitiator()
     {
+        return containsLogon(ACCEPTOR_ID, INITIATOR_ID);
+    }
+
+    public static <T> Matcher<Iterable<? super T>> containsAcceptor()
+    {
+        return containsLogon(INITIATOR_ID, ACCEPTOR_ID);
+    }
+
+    private static <T> Matcher<Iterable<? super T>> containsLogon(final String senderCompId, final String targetCompId)
+    {
         return hasItem(
-            allOf(hasProperty("senderCompID", equalTo(ACCEPTOR_ID)),
-                hasProperty("targetCompID", equalTo(INITIATOR_ID))));
+            allOf(hasSenderCompId(senderCompId),
+                  hasTargetCompId(targetCompId)));
+    }
+
+    private static <T> Matcher<T> hasTargetCompId(final String targetCompId)
+    {
+        return hasProperty("targetCompID", equalTo(targetCompId));
+    }
+
+    private static <T> Matcher<T> hasSenderCompId(final String senderCompId)
+    {
+        return hasProperty("senderCompID", equalTo(senderCompId));
     }
 
     public static InitiatorSession initiate(final FixGateway gateway, final int port)
@@ -127,9 +149,10 @@ public final class SystemTestUtil
     public static SocketAcceptor launchQuickFixAcceptor(final int port, final FakeQuickFixApplication application)
         throws ConfigError
     {
-        final SessionID sessionID = sessionID();
-        final SessionSettings settings = sessionSettings(port, sessionID);
+        final SessionID sessionID = sessionID(ACCEPTOR_ID, INITIATOR_ID);
+        final SessionSettings settings = sessionSettings(sessionID);
 
+        settings.setString("SocketAcceptPort", String.valueOf(port));
         settings.setString(sessionID, "ConnectionType", "acceptor");
 
         final FileStoreFactory storeFactory = new FileStoreFactory(settings);
@@ -144,11 +167,14 @@ public final class SystemTestUtil
     public static SocketInitiator launchQuickFixInitiator(
         final int port, final FakeQuickFixApplication application) throws ConfigError
     {
-        final SessionID sessionID = sessionID();
-        final SessionSettings settings = sessionSettings(port, sessionID);
+        final SessionID sessionID = sessionID(INITIATOR_ID, ACCEPTOR_ID);
+        final SessionSettings settings = sessionSettings(sessionID);
 
-        // TODO:
-        settings.setString(sessionID, "ConnectionType", "acceptor");
+        settings.setString("HeartBtInt", "30");
+
+        settings.setString(sessionID, "ConnectionType", "initiator");
+        settings.setString(sessionID, "SocketConnectPort", String.valueOf(port));
+        settings.setString(sessionID, "SocketConnectHost", "localhost");
 
         final FileStoreFactory storeFactory = new FileStoreFactory(settings);
         final LogFactory logFactory = new ScreenLogFactory(settings);
@@ -158,26 +184,25 @@ public final class SystemTestUtil
         return socketInitiator;
     }
 
-    private static SessionSettings sessionSettings(int port, SessionID sessionID)
+    private static SessionSettings sessionSettings(final SessionID sessionID)
     {
         final SessionSettings settings = new SessionSettings();
         final String path = "build/tmp/quickfix";
         IoUtil.delete(new File(path), true);
         settings.setString("FileStorePath", path);
         settings.setString("DataDictionary", "FIX44.xml");
-        settings.setString("SocketAcceptPort", String.valueOf(port));
         settings.setString("BeginString", "FIX.4.4");
         settings.setString(sessionID, "StartTime", "00:00:00");
         settings.setString(sessionID, "EndTime", "00:00:00");
         return settings;
     }
 
-    private static SessionID sessionID()
+    private static SessionID sessionID(final String senderCompId, final String targetCompId)
     {
         return new SessionID(
             new BeginString("FIX.4.4"),
-            new SenderCompID(ACCEPTOR_ID),
-            new TargetCompID(INITIATOR_ID)
+            new SenderCompID(senderCompId),
+            new TargetCompID(targetCompId)
         );
     }
 

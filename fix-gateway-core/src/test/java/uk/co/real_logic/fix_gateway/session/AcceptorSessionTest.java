@@ -37,6 +37,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     {
         onLogon(1);
 
+        verifySessionSetup();
         verify(mockProxy).logon(HEARTBEAT_INTERVAL, 1);
         verifyNoFurtherMessages();
         assertState(ACTIVE);
@@ -47,6 +48,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     {
         onLogon(3);
 
+        verifySessionSetup();
         verify(mockProxy).resendRequest(1, 1, 2);
         verifyNoFurtherMessages();
         assertState(AWAITING_RESEND);
@@ -58,6 +60,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
         session.lastReceivedMsgSeqNum(2);
 
         onLogon(1);
+        verifySessionSetup();
         verifyLogoutStarted();
         verifyNoFurtherMessages();
     }
@@ -74,5 +77,10 @@ public class AcceptorSessionTest extends AbstractSessionTest
     protected Session session()
     {
         return session;
+    }
+
+    private void verifySessionSetup()
+    {
+        verify(mockProxy).setupSession(SESSION_ID, SESSION_KEY);
     }
 }

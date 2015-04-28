@@ -75,7 +75,7 @@ public class GatewayToQuickFixSystemTest
     {
         initiatedSession.startLogout();
 
-        assertQuickFixDisconnected(acceptor);
+        assertQuickFixDisconnected(acceptor, containsInitiator());
     }
 
     @After
