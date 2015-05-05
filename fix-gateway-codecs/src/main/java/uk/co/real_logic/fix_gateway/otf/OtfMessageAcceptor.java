@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.otf;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.MessageAcceptor;
 
+// TODO: add ability to abort parsing from within the acceptor
 public interface OtfMessageAcceptor extends MessageAcceptor
 {
     int NEW_ORDER_SINGLE = 'D';

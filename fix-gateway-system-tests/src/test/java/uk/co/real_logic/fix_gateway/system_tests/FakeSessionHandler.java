@@ -31,7 +31,7 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
         final long sessionId,
         final int messageType)
     {
-        parser.onMessage(buffer, offset, length, sessionId, messageType);
+        parser.onMessage(buffer, offset, length);
     }
 
     public void onDisconnect(final long connectionId)

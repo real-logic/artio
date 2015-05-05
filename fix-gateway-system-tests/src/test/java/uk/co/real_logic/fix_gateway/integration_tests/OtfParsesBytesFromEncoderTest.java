@@ -23,7 +23,6 @@ import org.mockito.InOrder;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
-import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 
 import static org.mockito.Mockito.inOrder;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.*;
@@ -60,7 +59,7 @@ public class OtfParsesBytesFromEncoderTest extends AbstractOtfParserTest
 
     private void parseLogon(final int length, final int offset)
     {
-        parser.onMessage(buffer, offset, length, SESSION_ID, LogonDecoder.MESSAGE_TYPE);
+        parser.onMessage(buffer, offset, length);
 
         final InOrder inOrder = inOrder(acceptor);
         verifyNext(inOrder);

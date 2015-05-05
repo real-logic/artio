@@ -30,7 +30,6 @@
         <field name="session" id="2" type="FixSessionId"/>
         <field name="connection" id="3" type="ConnectionId"/>
         <field name="timestamp" id="4" type="Timestamp"/>
-        <field name="possDupOffset" id="5" type="int32"/>
         <data name="body" id="6" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="MessageAcknowledgement" id="2" description="An acknowledgement of a received FIX Message">

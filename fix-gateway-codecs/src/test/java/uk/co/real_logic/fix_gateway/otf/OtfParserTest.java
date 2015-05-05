@@ -57,7 +57,7 @@ public class OtfParserTest
         putMessage(offset);
 
         when:
-        parser.onMessage(buffer, offset, MSG_LEN, 1L, MESSAGE_TYPE);
+        parser.onMessage(buffer, offset, MSG_LEN);
 
         then:
         verify(mockAcceptor).onNext();
@@ -70,7 +70,7 @@ public class OtfParserTest
         putMessage(offset);
 
         when:
-        parser.onMessage(buffer, offset, MSG_LEN, 1L, MESSAGE_TYPE);
+        parser.onMessage(buffer, offset, MSG_LEN);
 
         then:
         //8=FIX.4.2
@@ -92,7 +92,7 @@ public class OtfParserTest
         putMessage(offset);
 
         when:
-        parser.onMessage(buffer, offset, MSG_LEN, 1L, MESSAGE_TYPE);
+        parser.onMessage(buffer, offset, MSG_LEN);
 
         then:
         verify(mockAcceptor).onComplete();
@@ -105,7 +105,7 @@ public class OtfParserTest
         buffer.putBytes(offset, INVALID_CHECKSUM_MSG);
 
         when:
-        parser.onMessage(buffer, offset, INVALID_CHECKSUM_LEN, 1L, MESSAGE_TYPE);
+        parser.onMessage(buffer, offset, INVALID_CHECKSUM_LEN);
 
         then:
         verify(mockAcceptor).onError(eq(INVALID_CHECKSUM), eq((int) 'D'), eq(10), any(AsciiFieldFlyweight.class));
@@ -118,7 +118,7 @@ public class OtfParserTest
         buffer.putBytes(offset, INVALID_MESSAGE);
 
         when:
-        parser.onMessage(buffer, offset, INVALID_LEN, 1L, MESSAGE_TYPE);
+        parser.onMessage(buffer, offset, INVALID_LEN);
 
         then:
         verify(mockAcceptor).onError(eq(PARSE_ERROR), eq((int) 'D'), eq(11), any(AsciiFieldFlyweight.class));
@@ -133,7 +133,7 @@ public class OtfParserTest
         buffer.putBytes(offset, EXECUTION_REPORT);
 
         when:
-        parser.onMessage(buffer, offset, EXECUTION_REPORT.length, 1L, MESSAGE_TYPE);
+        parser.onMessage(buffer, offset, EXECUTION_REPORT.length);
 
         then:
         verifyGroupHeader(382, 1);
@@ -153,7 +153,7 @@ public class OtfParserTest
         buffer.putBytes(offset, ZERO_REPEATING_GROUP);
 
         when:
-        parser.onMessage(buffer, offset, ZERO_REPEATING_GROUP.length, 1L, MESSAGE_TYPE);
+        parser.onMessage(buffer, offset, ZERO_REPEATING_GROUP.length);
 
         then:
         verifyGroupHeader(382, 0);
@@ -170,7 +170,7 @@ public class OtfParserTest
         buffer.putBytes(offset, REPEATING_GROUP);
 
         when:
-        parser.onMessage(buffer, offset, REPEATING_GROUP.length, 1L, MESSAGE_TYPE);
+        parser.onMessage(buffer, offset, REPEATING_GROUP.length);
 
         then:
         verifyGroupHeader(NO_ORDERS, 2);
@@ -188,7 +188,7 @@ public class OtfParserTest
         buffer.putBytes(offset, NESTED_REPEATING_GROUP);
 
         when:
-        parser.onMessage(buffer, offset, NESTED_REPEATING_GROUP.length, 1L, MESSAGE_TYPE);
+        parser.onMessage(buffer, offset, NESTED_REPEATING_GROUP.length);
 
         then:
         verifyGroupHeader(NO_ORDERS, 2);

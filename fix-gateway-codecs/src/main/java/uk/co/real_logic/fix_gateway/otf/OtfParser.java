@@ -58,8 +58,7 @@ public final class OtfParser
         this.groupToField = groupToField;
     }
 
-    public void onMessage(
-        final DirectBuffer buffer, final int offset, final int length, final long sessionId, final int messageType)
+    public void onMessage(final DirectBuffer buffer, final int offset, final int length)
     {
         string.wrap(buffer);
         acceptor.onNext();

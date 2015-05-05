@@ -20,8 +20,10 @@ import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
+import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
@@ -38,6 +40,8 @@ public class Replayer implements SessionHandler
 
     private final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
+    private final PossDupFinder acceptor = new PossDupFinder();
+    private final OtfParser parser = new OtfParser(acceptor, new IntDictionary());
 
     public Replayer(final QueryService queryService, final Publication publication)
     {
@@ -68,13 +72,19 @@ public class Replayer implements SessionHandler
 
                 while (claimOffset < end)
                 {
-                    messageFrameHeader.wrap(claimBuffer, claimOffset, claimLength);
-                    claimOffset += messageFrameHeader.size();
+                    messageFrameHeader.wrap(claimBuffer, claimOffset, messageFrameHeader.size());
                     final int actingBlockLength = messageFrameHeader.blockLength();
+
+                    claimOffset += messageFrameHeader.size();
+
                     messageFrame.wrap(claimBuffer, claimOffset, actingBlockLength, messageFrameHeader.version());
-                    claimOffset += SIZE_OF_LENGTH_FIELD + actingBlockLength;
-                    putPossibleDuplicate(claimBuffer, claimOffset);
-                    claimOffset += messageFrame.bodyLength();
+                    final int bodyLength = messageFrame.bodyLength();
+
+                    claimOffset += actingBlockLength + SIZE_OF_LENGTH_FIELD;
+
+                    setPossDupFlag(claimBuffer, claimOffset, bodyLength);
+
+                    claimOffset += bodyLength;
                 }
 
                 claim.commit();
@@ -82,11 +92,11 @@ public class Replayer implements SessionHandler
         }
     }
 
-    private void putPossibleDuplicate(final MutableDirectBuffer claimBuffer, final int claimOffset)
+    private void setPossDupFlag(final MutableDirectBuffer claimBuffer, final int claimOffset, final int bodyLength)
     {
-        final int possDupOffset = claimOffset + messageFrame.possDupOffset();
+        parser.onMessage(claimBuffer, claimOffset, bodyLength);
         mutableAsciiFlyweight.wrap(claimBuffer);
-        mutableAsciiFlyweight.putChar(possDupOffset, 'Y');
+        mutableAsciiFlyweight.putChar(acceptor.possDupOffset(), 'Y');
     }
 
     private BufferClaim queryMessages(final long sessionId)

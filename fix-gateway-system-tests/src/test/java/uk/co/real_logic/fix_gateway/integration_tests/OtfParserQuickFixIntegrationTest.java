@@ -21,7 +21,6 @@ import quickfix.Message;
 import quickfix.fix44.Logon;
 import quickfix.fix44.TestRequest;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 
 import static org.mockito.Mockito.inOrder;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.*;
@@ -44,7 +43,7 @@ public class OtfParserQuickFixIntegrationTest extends AbstractOtfParserTest
         final Logon message = QuickFixUtil.logon();
 
         final int length = encodeMessage(message);
-        parser.onMessage(buffer, 0, length, SESSION_ID, LogonDecoder.MESSAGE_TYPE);
+        parser.onMessage(buffer, 0, length);
 
         final InOrder inOrder = inOrder(acceptor);
         verifyNext(inOrder);

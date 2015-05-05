@@ -19,7 +19,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
@@ -78,7 +77,7 @@ public abstract class AbstractOtfParserTest
 
     protected void parseTestRequest(final int offset, final int length)
     {
-        parser.onMessage(buffer, offset, length, SESSION_ID, LogonDecoder.MESSAGE_TYPE);
+        parser.onMessage(buffer, offset, length);
 
         final InOrder inOrder = inOrder(acceptor);
         verifyNext(inOrder);
