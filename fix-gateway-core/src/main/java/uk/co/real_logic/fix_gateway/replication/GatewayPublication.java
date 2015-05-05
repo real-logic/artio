@@ -74,7 +74,7 @@ public class GatewayPublication
             .messageType(messageType)
             .session(sessionId)
             .connection(0L)
-            .putBody((MutableDirectBuffer) srcBuffer, srcOffset, srcLength); // TODO
+            .putBody(srcBuffer, srcOffset, srcLength);
 
         bufferClaim.commit();
 
