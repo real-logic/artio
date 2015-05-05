@@ -18,8 +18,8 @@ package uk.co.real_logic.fix_gateway.replication;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.*;
 
@@ -58,11 +58,10 @@ public class GatewayPublication
 
         int offset = bufferClaim.offset();
 
-        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) bufferClaim.buffer();
-        final UnsafeBuffer unsafeSrcBuffer = (UnsafeBuffer) srcBuffer;
+        final MutableDirectBuffer destBuffer = bufferClaim.buffer();
 
         header
-            .wrap(unsafeBuffer, offset, 0)
+            .wrap(destBuffer, offset, 0)
             .blockLength(messageFrame.sbeBlockLength())
             .templateId(messageFrame.sbeTemplateId())
             .schemaId(messageFrame.sbeSchemaId())
@@ -71,26 +70,26 @@ public class GatewayPublication
         offset += header.size();
 
         messageFrame
-            .wrap(unsafeBuffer, offset)
+            .wrap(destBuffer, offset)
             .messageType(messageType)
             .session(sessionId)
             .connection(0L)
-            .putBody(unsafeSrcBuffer, srcOffset, srcLength);
+            .putBody((MutableDirectBuffer) srcBuffer, srcOffset, srcLength); // TODO
 
         bufferClaim.commit();
 
-        DebugLogger.log("Enqueued %s\n", unsafeBuffer, offset, framedLength);
+        DebugLogger.log("Enqueued %s\n", destBuffer, offset, framedLength);
     }
 
     public void saveConnect(final long connectionId, final long sessionId)
     {
         claim(ConnectEncoder.BLOCK_LENGTH);
 
-        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) bufferClaim.buffer();
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
 
         header
-            .wrap(unsafeBuffer, offset, 0)
+            .wrap(buffer, offset, 0)
             .blockLength(connect.sbeBlockLength())
             .templateId(connect.sbeTemplateId())
             .schemaId(connect.sbeSchemaId())
@@ -99,7 +98,7 @@ public class GatewayPublication
         offset += header.size();
 
         connect
-            .wrap(unsafeBuffer, offset)
+            .wrap(buffer, offset)
             .connection(connectionId)
             .session(sessionId);
 
@@ -110,11 +109,11 @@ public class GatewayPublication
     {
         claim(header.size() + disconnect.size());
 
-        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) bufferClaim.buffer();
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
 
         header
-            .wrap(unsafeBuffer, offset, 0)
+            .wrap(buffer, offset, 0)
             .blockLength(disconnect.sbeBlockLength())
             .templateId(disconnect.sbeTemplateId())
             .schemaId(disconnect.sbeSchemaId())
@@ -123,7 +122,7 @@ public class GatewayPublication
         offset += header.size();
 
         disconnect
-            .wrap(unsafeBuffer, offset)
+            .wrap(buffer, offset)
             .connection(connectionId);
 
         bufferClaim.commit();

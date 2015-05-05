@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.replication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.DisconnectDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
@@ -50,9 +49,7 @@ public class GatewaySubscription
 
     public void onData(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
-        // TODO:
-        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) buffer;
-        messageHeader.wrap(unsafeBuffer, offset, 0);
+        messageHeader.wrap(buffer, offset, 0);
 
         offset += messageHeader.size();
 
@@ -60,7 +57,7 @@ public class GatewaySubscription
         {
             case FixMessageDecoder.TEMPLATE_ID:
             {
-                messageFrame.wrap(unsafeBuffer, offset, length, 0);
+                messageFrame.wrap(buffer, offset, length, 0);
                 final int messageLength = length - (FRAME_SIZE + messageHeader.size());
                 sessionHandler.onMessage(
                     buffer,
@@ -74,7 +71,7 @@ public class GatewaySubscription
 
             case DisconnectDecoder.TEMPLATE_ID:
             {
-                disconnect.wrap(unsafeBuffer, offset, length, 0);
+                disconnect.wrap(buffer, offset, length, 0);
                 final long connectionId = disconnect.connection();
                 DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
                 sessionHandler.onDisconnect(connectionId);
