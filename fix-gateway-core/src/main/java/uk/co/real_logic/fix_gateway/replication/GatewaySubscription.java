@@ -20,9 +20,9 @@ import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.messages.Disconnect;
-import uk.co.real_logic.fix_gateway.messages.FixMessage;
-import uk.co.real_logic.fix_gateway.messages.MessageHeader;
+import uk.co.real_logic.fix_gateway.messages.DisconnectDecoder;
+import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
 
 import static uk.co.real_logic.fix_gateway.replication.GatewayPublication.FRAME_SIZE;
@@ -30,9 +30,9 @@ import static uk.co.real_logic.fix_gateway.replication.GatewayPublication.FRAME_
 public class GatewaySubscription
 {
 
-    private final MessageHeader messageHeader = new MessageHeader();
-    private final Disconnect disconnect = new Disconnect();
-    private final FixMessage messageFrame = new FixMessage();
+    private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
+    private final DisconnectDecoder disconnect = new DisconnectDecoder();
+    private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final Subscription subscription;
 
     private SessionHandler sessionHandler;
@@ -58,9 +58,9 @@ public class GatewaySubscription
 
         switch (messageHeader.templateId())
         {
-            case FixMessage.TEMPLATE_ID:
+            case FixMessageDecoder.TEMPLATE_ID:
             {
-                messageFrame.wrapForDecode(unsafeBuffer, offset, length, 0);
+                messageFrame.wrap(unsafeBuffer, offset, length, 0);
                 final int messageLength = length - (FRAME_SIZE + messageHeader.size());
                 sessionHandler.onMessage(
                     buffer,
@@ -72,9 +72,9 @@ public class GatewaySubscription
                 break;
             }
 
-            case Disconnect.TEMPLATE_ID:
+            case DisconnectDecoder.TEMPLATE_ID:
             {
-                disconnect.wrapForDecode(unsafeBuffer, offset, length, 0);
+                disconnect.wrap(unsafeBuffer, offset, length, 0);
                 final long connectionId = disconnect.connection();
                 DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
                 sessionHandler.onDisconnect(connectionId);

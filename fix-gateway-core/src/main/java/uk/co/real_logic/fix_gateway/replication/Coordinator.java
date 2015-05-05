@@ -23,19 +23,14 @@ import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.messages.FixMessage;
-import uk.co.real_logic.fix_gateway.messages.MessageAcknowledgement;
-import uk.co.real_logic.fix_gateway.messages.MessageHeader;
-
-import static uk.co.real_logic.fix_gateway.messages.MessageAcknowledgement.SCHEMA_VERSION;
 
 public class Coordinator implements Agent
 {
     public static final int NO_SESSION_ID = -1;
 
-    private final MessageHeader messageHeader = new MessageHeader();
+    /*private final MessageHeader messageHeader = new MessageHeader();
     private final MessageAcknowledgement messageAcknowledgement = new MessageAcknowledgement();
-    private final FixMessage fixMessage = new FixMessage();
+    private final FixMessage fixMessage = new FixMessage();*/
 
     //private final MessageHandler delegate;
     private final TermAcknowledgementStrategy termAcknowledgementStrategy;
@@ -68,9 +63,10 @@ public class Coordinator implements Agent
     private void onDataMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) buffer;
-        fixMessage.wrapForDecode(unsafeBuffer, offset, length, SCHEMA_VERSION);
+        // TODO
+        //fixMessage.wrapForDecode(unsafeBuffer, offset, length, SCHEMA_VERSION);
 
-        final long fixSessionId = fixMessage.session();
+        //final long fixSessionId = fixMessage.session();
         final int messageType = 'A'; // TODO
         // TODO: use FixPublication
         // SBE Message offset: offset + fixMessage.sbeBlockLength() + fixMessage.bodyHeaderSize();
@@ -80,17 +76,18 @@ public class Coordinator implements Agent
     private void onControlMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) buffer;
-        if (isTemplate(offset, unsafeBuffer, MessageAcknowledgement.TEMPLATE_ID))
+        /*if (isTemplate(offset, unsafeBuffer, MessageAcknowledgement.TEMPLATE_ID))
         {
             messageAcknowledgement.wrapForDecode(unsafeBuffer, offset, length, SCHEMA_VERSION);
             onMessageAcknowledgement(messageAcknowledgement.term(), header.sessionId());
-        }
+        }*/
     }
 
     private boolean isTemplate(final int offset, final UnsafeBuffer unsafeBuffer, final int templateId)
     {
-        messageHeader.wrap(unsafeBuffer, offset, 0);
-        return messageHeader.templateId() == templateId;
+        //messageHeader.wrap(unsafeBuffer, offset, 0);
+        //return messageHeader.templateId() == templateId;
+        return true;
     }
 
     public void onMessageAcknowledgement(final int newAckedterm, final int session)

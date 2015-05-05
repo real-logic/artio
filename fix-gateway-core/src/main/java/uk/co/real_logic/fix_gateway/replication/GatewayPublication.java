@@ -21,24 +21,19 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.messages.Connect;
-import uk.co.real_logic.fix_gateway.messages.Disconnect;
-import uk.co.real_logic.fix_gateway.messages.FixMessage;
-import uk.co.real_logic.fix_gateway.messages.MessageHeader;
-
-import static uk.co.real_logic.fix_gateway.messages.FixMessage.BLOCK_LENGTH;
+import uk.co.real_logic.fix_gateway.messages.*;
 
 /**
  * A proxy for publishing messages fix related messages
  */
 public class GatewayPublication
 {
-    public static final int FRAME_SIZE = BLOCK_LENGTH + FixMessage.bodyHeaderSize();
+    public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderSize();
 
-    private final MessageHeader header = new MessageHeader();
-    private final Connect connect = new Connect();
-    private final Disconnect disconnect = new Disconnect();
-    private final FixMessage messageFrame = new FixMessage();
+    private final MessageHeaderEncoder header = new MessageHeaderEncoder();
+    private final ConnectEncoder connect = new ConnectEncoder();
+    private final DisconnectEncoder disconnect = new DisconnectEncoder();
+    private final FixMessageEncoder messageFrame = new FixMessageEncoder();
 
     private final BufferClaim bufferClaim;
     private final Publication dataPublication;
@@ -76,7 +71,7 @@ public class GatewayPublication
         offset += header.size();
 
         messageFrame
-            .wrapForEncode(unsafeBuffer, offset)
+            .wrap(unsafeBuffer, offset)
             .messageType(messageType)
             .session(sessionId)
             .connection(0L)
@@ -89,7 +84,7 @@ public class GatewayPublication
 
     public void saveConnect(final long connectionId, final long sessionId)
     {
-        claim(Connect.BLOCK_LENGTH);
+        claim(ConnectEncoder.BLOCK_LENGTH);
 
         final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -103,9 +98,10 @@ public class GatewayPublication
 
         offset += header.size();
 
-        connect.wrapForEncode(unsafeBuffer, offset);
-        connect.connection(connectionId);
-        connect.session(sessionId);
+        connect
+            .wrap(unsafeBuffer, offset)
+            .connection(connectionId)
+            .session(sessionId);
 
         bufferClaim.commit();
     }
@@ -126,8 +122,9 @@ public class GatewayPublication
 
         offset += header.size();
 
-        disconnect.wrapForEncode(unsafeBuffer, offset);
-        disconnect.connection(connectionId);
+        disconnect
+            .wrap(unsafeBuffer, offset)
+            .connection(connectionId);
 
         bufferClaim.commit();
     }
