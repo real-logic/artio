@@ -63,7 +63,6 @@ public class SessionProxy
         {
             sessionIdStrategy.setupSession(sessionKey, header);
         }
-
         return this;
     }
 

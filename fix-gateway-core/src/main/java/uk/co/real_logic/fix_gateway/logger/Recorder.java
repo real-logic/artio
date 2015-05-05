@@ -13,26 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session;
+package uk.co.real_logic.fix_gateway.logger;
 
-import uk.co.real_logic.agrona.DirectBuffer;
-
-public interface SessionHandler
+public class Recorder
 {
-    default void onMessage(
-        final DirectBuffer buffer,
-        final int offset,
-        final int length,
-        final long connectionId,
-        final long sessionId,
-        final int messageType)
-    {
-        // Optional method, implement if you care about this type of message.
-    }
-
-    default void onDisconnect(final long connectionId)
-    {
-        // Optional method, implement if you care about this type of message.
-    }
-
 }

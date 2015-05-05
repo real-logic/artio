@@ -33,11 +33,21 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
     private static final byte Y = (byte) 'Y';
     private static final byte N = (byte) 'N';
 
-    private final MutableDirectBuffer buffer;
+    private MutableDirectBuffer buffer;
+
+    public MutableAsciiFlyweight()
+    {
+        this(null);
+    }
 
     public MutableAsciiFlyweight(final MutableDirectBuffer buffer)
     {
         super(buffer);
+        wrap(buffer);
+    }
+
+    public void wrap(final MutableDirectBuffer buffer)
+    {
         this.buffer = buffer;
     }
 

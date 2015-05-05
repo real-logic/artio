@@ -271,11 +271,12 @@ public class Session
     void onResendRequest(final int beginSeqNo, final int endSeqNo)
     {
         // TODO: decide how to resend messages once logging is figured out
+        // Do we even want this logic going as part of the session class?
     }
 
     void onReject()
     {
-        // TODO
+        // TODO:
     }
 
     // ---------- Accessors ----------

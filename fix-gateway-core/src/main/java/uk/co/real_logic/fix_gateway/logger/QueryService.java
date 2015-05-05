@@ -13,26 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session;
+package uk.co.real_logic.fix_gateway.logger;
 
-import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.aeron.Publication;
+import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
 
-public interface SessionHandler
+/**
+ * QueryService should be used in a single threaded fashion.
+ */
+public class QueryService
 {
-    default void onMessage(
-        final DirectBuffer buffer,
-        final int offset,
-        final int length,
-        final long connectionId,
-        final long sessionId,
-        final int messageType)
-    {
-        // Optional method, implement if you care about this type of message.
-    }
+    private BufferClaim bufferClaim = new BufferClaim();
 
-    default void onDisconnect(final long connectionId)
+    public BufferClaim query(
+        final Publication publication, final long sessionId, final int beginSeqNo, final int endSeqNo)
     {
-        // Optional method, implement if you care about this type of message.
+        return bufferClaim;
     }
-
 }
