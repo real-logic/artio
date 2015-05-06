@@ -15,24 +15,25 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
-import org.junit.Ignore;
-import org.junit.Test;
-import org.mockito.stubbing.OngoingStubbing;
-import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
-import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
-import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
-import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
-import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+    import org.junit.Test;
+    import uk.co.real_logic.aeron.Publication;
+    import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
+    import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+    import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
+    import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+    import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
+    import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
+    import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
+    import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
+    import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
+    import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+    import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.logger.Replayer.SIZE_OF_LENGTH_FIELD;
+    import static org.junit.Assert.assertNotEquals;
+    import static org.mockito.Mockito.*;
+    import static uk.co.real_logic.fix_gateway.logger.Replayer.POSS_DUP_FIELD;
+    import static uk.co.real_logic.fix_gateway.logger.Replayer.SIZE_OF_LENGTH_FIELD;
+    import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
 public class ReplayerTest
 {
@@ -40,48 +41,61 @@ public class ReplayerTest
     private static final int BEGIN_SEQ_NO = 2;
     private static final int END_SEQ_NO = 2;
     private static final int CONNECTION_ID = 1;
-    private static final int START_OFFSET = 1;
+    private static final int START = 1;
 
     final MessageHeaderEncoder header = new MessageHeaderEncoder();
     final FixMessageEncoder messageFrame = new FixMessageEncoder();
 
-    private QueryService mockQueryService = mock(QueryService.class);
+    private LogScanner mockLogScanner = mock(LogScanner.class);
     private Publication mockPublication = mock(Publication.class);
-    private BufferClaim mockBufferClaim = mock(BufferClaim.class);
+    private BufferClaim mockClaim = mock(BufferClaim.class);
 
-    private Replayer replayer = new Replayer(mockQueryService, mockPublication);
+    private Replayer replayer = new Replayer(mockLogScanner, mockPublication, mockClaim);
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[16 * 1024]);
-    private UnsafeBuffer replayBuffer = new UnsafeBuffer(new byte[16 * 1024]);
+    private UnsafeBuffer resultBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
-    private int possDupPositionOffset;
+    private int logEntryLength;
+    private int offset;
 
     @Test
     public void shouldParseResendRequest()
     {
         bufferHasResendRequest(END_SEQ_NO);
-        queryServiceHasMessage();
-        bufferClaimRefersToMessage(true);
 
         onMessage(ResendRequestDecoder.MESSAGE_TYPE);
 
         verifyQueriedService();
-        verify(mockBufferClaim).commit();
-        assertHasSetPossDupFlag();
+        verifyNoMoreInteractions(mockPublication);
     }
 
-    @Ignore
     @Test
-    public void shouldParseResendRequestWithMissingPossDupFlag()
+    public void shouldPublishMessagesWithSetPossDupFlag()
     {
-        bufferHasResendRequest(END_SEQ_NO);
-        queryServiceHasMessage();
-        bufferClaimRefersToMessage(false);
+        bufferClaimRefersToMessage(true);
+        final int srcLength = offset + logEntryLength - START;
+        setupClaim(srcLength);
+        setupPublication(srcLength);
 
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE);
+        replayer.onLogEntry(null, buffer, START, offset, srcLength);
 
-        verifyQueriedService();
-        verify(mockBufferClaim).commit();
+        verifyClaim(srcLength);
         assertHasSetPossDupFlag();
+        verifyCommit();
+    }
+
+    @Test
+    public void shouldPublishMessagesWithoutSetPossDupFlag()
+    {
+        bufferClaimRefersToMessage(false);
+        final int srcLength = offset + logEntryLength - START;
+        setupClaim(srcLength);
+        setupPublication(srcLength);
+
+        replayer.onLogEntry(null, buffer, START, offset, srcLength);
+
+        verifyClaim(srcLength + POSS_DUP_FIELD.length);
+        assertHasSetPossDupFlag();
+        verifyCommit();
     }
 
     @Test
@@ -89,7 +103,7 @@ public class ReplayerTest
     {
         onMessage(LogonDecoder.MESSAGE_TYPE);
 
-        verifyNoMoreInteractions(mockQueryService, mockPublication);
+        verifyNoMoreInteractions(mockLogScanner, mockPublication);
     }
 
     @Test
@@ -98,44 +112,40 @@ public class ReplayerTest
         bufferHasResendRequest(BEGIN_SEQ_NO - 1);
         onMessage(ResendRequestDecoder.MESSAGE_TYPE);
 
-        verifyNoMoreInteractions(mockQueryService, mockPublication);
+        verifyNoMoreInteractions(mockLogScanner, mockPublication);
     }
 
-    @Test
-    public void shouldHandleMissingMessages()
+    private void setupPublication(final int srcLength)
     {
-        bufferHasResendRequest(END_SEQ_NO);
-        queryServiceDoesNotHaveMessage();
+        when(mockPublication.tryClaim(srcLength, mockClaim)).thenReturn((long) srcLength);
+    }
 
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE);
+    private void setupClaim(final int srcLength)
+    {
+        when(mockClaim.buffer()).thenReturn(resultBuffer);
+        when(mockClaim.offset()).thenReturn(START + 1);
+        when(mockClaim.length()).thenReturn(srcLength);
+    }
 
-        verifyQueriedService();
-        verifyNoMoreInteractions(mockBufferClaim);
+    private void verifyClaim(final int srcLength)
+    {
+        verify(mockPublication).tryClaim(srcLength, mockClaim);
+    }
+
+    private void verifyCommit()
+    {
+        verify(mockClaim).commit();
     }
 
     private void verifyQueriedService()
     {
-        verify(mockQueryService).query(mockPublication, SESSION_ID, BEGIN_SEQ_NO, END_SEQ_NO);
+        verify(mockLogScanner).query(replayer, SESSION_ID, BEGIN_SEQ_NO, END_SEQ_NO);
     }
 
     private void assertHasSetPossDupFlag()
     {
-        assertEquals((byte) 'Y', replayBuffer.getByte(possDupPositionOffset));
-    }
-
-    private void queryServiceHasMessage()
-    {
-        whenQueryService().thenReturn(mockBufferClaim);
-    }
-
-    private void queryServiceDoesNotHaveMessage()
-    {
-        whenQueryService().thenReturn(null);
-    }
-
-    private OngoingStubbing<BufferClaim> whenQueryService()
-    {
-        return when(mockQueryService.query(eq(mockPublication), anyInt(), anyInt(), anyInt()));
+        final int possDupIndex = new AsciiFlyweight(resultBuffer).scan(0, resultBuffer.capacity(), 'Y');
+        assertNotEquals("Unable to find poss dup index", UNKNOWN_INDEX, possDupIndex);
     }
 
     private void bufferClaimRefersToMessage(final boolean hasPossDupFlag)
@@ -148,32 +158,26 @@ public class ReplayerTest
         {
             testRequest.header().possDupFlag(false);
         }
-        final int length = testRequest.encode(asciiFlyweight, 0);
-        System.out.println(asciiFlyweight.getAscii(0, length));
+        logEntryLength = testRequest.encode(asciiFlyweight, 0);
 
-        int index = START_OFFSET;
+        offset = START;
         header
-            .wrap(replayBuffer, index, 0)
+            .wrap(buffer, offset, 0)
             .blockLength(messageFrame.sbeBlockLength())
             .templateId(messageFrame.sbeTemplateId())
             .schemaId(messageFrame.sbeSchemaId())
             .version(messageFrame.sbeSchemaVersion());
 
-        index += header.size();
+        offset += header.size();
 
         messageFrame
-            .wrap(replayBuffer, index)
+            .wrap(buffer, offset)
             .messageType(TestRequestDecoder.MESSAGE_TYPE)
             .session(SESSION_ID)
             .connection(CONNECTION_ID)
-            .putBody(msgBuffer, 0, length);
+            .putBody(msgBuffer, 0, logEntryLength);
 
-        index += messageFrame.sbeBlockLength() + SIZE_OF_LENGTH_FIELD;
-        possDupPositionOffset = index + asciiFlyweight.scan(0, length, 'N');
-
-        when(mockBufferClaim.buffer()).thenReturn(replayBuffer);
-        when(mockBufferClaim.length()).thenReturn(messageFrame.limit() - START_OFFSET);
-        when(mockBufferClaim.offset()).thenReturn(START_OFFSET);
+        offset += messageFrame.sbeBlockLength() + SIZE_OF_LENGTH_FIELD;
     }
 
     private void bufferHasResendRequest(final int endSeqNo)

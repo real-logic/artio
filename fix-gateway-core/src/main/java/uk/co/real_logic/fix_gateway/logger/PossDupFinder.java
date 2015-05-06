@@ -23,11 +23,15 @@ import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 
 class PossDupFinder implements OtfMessageAcceptor
 {
+    public static final int NO_ENTRY = -1;
+
     private int possDupOffset;
+    private int sendingTimeOffset;
 
     public void onNext()
     {
-        possDupOffset = 0;
+        possDupOffset = NO_ENTRY;
+        sendingTimeOffset = NO_ENTRY;
     }
 
     public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
@@ -35,6 +39,10 @@ class PossDupFinder implements OtfMessageAcceptor
         if (tag == Constants.POSS_DUP_FLAG)
         {
             possDupOffset = offset;
+        }
+        else if (tag == Constants.SENDING_TIME)
+        {
+            sendingTimeOffset = offset;
         }
     }
 
@@ -69,5 +77,10 @@ class PossDupFinder implements OtfMessageAcceptor
     public int possDupOffset()
     {
         return possDupOffset;
+    }
+
+    public int sendingTimeOffset()
+    {
+        return sendingTimeOffset;
     }
 }

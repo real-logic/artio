@@ -15,19 +15,22 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
-import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
+import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 
-/**
- * QueryService should be used in a single threaded fashion.
- */
-public class QueryService
+public interface LogHandler
 {
-    private BufferClaim bufferClaim = new BufferClaim();
-
-    public BufferClaim query(
-        final Publication publication, final long sessionId, final int beginSeqNo, final int endSeqNo)
-    {
-        return bufferClaim;
-    }
+    /**
+     *
+     * @param length
+     * @param srcBuffer
+     * @param startOffset
+     * @return false to stop
+     */
+    boolean onLogEntry(
+        final FixMessageDecoder messageFrame,
+        final DirectBuffer srcBuffer,
+        final int startOffset,
+        final int messageOffset,
+        final int length);
 }

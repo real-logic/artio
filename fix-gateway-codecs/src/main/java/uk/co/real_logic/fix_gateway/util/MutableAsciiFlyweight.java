@@ -48,6 +48,7 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
 
     public void wrap(final MutableDirectBuffer buffer)
     {
+        super.wrap(buffer);
         this.buffer = buffer;
     }
 
