@@ -19,10 +19,12 @@ import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
+import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
@@ -31,14 +33,16 @@ import java.nio.charset.StandardCharsets;
 
 import static uk.co.real_logic.fix_gateway.logger.PossDupFinder.NO_ENTRY;
 
-public class Replayer implements SessionHandler, LogHandler
+public class LogReplayer implements SessionHandler, LogHandler, Agent
 {
     public static final int SIZE_OF_LENGTH_FIELD = 2;
     public static final byte[] POSS_DUP_FIELD = "43=Y\001".getBytes(StandardCharsets.US_ASCII);
+    public static final int POLL_LIMIT = 10;
 
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
     private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
     private final MutableAsciiFlyweight mutableAsciiFlyweight = new MutableAsciiFlyweight();
+    private final GatewaySubscription subscription;
     private final LogScanner logScanner;
     private final Publication publication;
 
@@ -46,11 +50,17 @@ public class Replayer implements SessionHandler, LogHandler
     private final PossDupFinder acceptor = new PossDupFinder();
     private final OtfParser parser = new OtfParser(acceptor, new IntDictionary());
 
-    public Replayer(final LogScanner logScanner, final Publication publication, final BufferClaim claim)
+    public LogReplayer(
+        final GatewaySubscription subscription,
+        final LogScanner logScanner,
+        final Publication publication,
+        final BufferClaim claim)
     {
+        this.subscription = subscription;
         this.logScanner = logScanner;
         this.publication = publication;
         this.claim = claim;
+        subscription.sessionHandler(this);
     }
 
     public void onMessage(final DirectBuffer srcBuffer,
@@ -155,4 +165,18 @@ public class Replayer implements SessionHandler, LogHandler
         return srcIndexedOffset - srcOffset + claimOffset;
     }
 
+    public int doWork() throws Exception
+    {
+        return subscription.poll(POLL_LIMIT);
+    }
+
+    public void onClose()
+    {
+        publication.close();
+    }
+
+    public String roleName()
+    {
+        return "LogReplayer";
+    }
 }

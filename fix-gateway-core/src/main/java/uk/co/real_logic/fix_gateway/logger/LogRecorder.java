@@ -15,6 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
-public class Recorder
+public class LogRecorder
 {
 }
