@@ -22,6 +22,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordEncoder;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
@@ -39,11 +40,14 @@ public class ReplayIndex implements Index
         return String.format(LogDirectoryDescriptor.LOG_FILE_DIR + File.separator + "replay-index-%d", sessionId);
     }
 
-    private final ReplayIndexRecordEncoder replayIndexRecord = new ReplayIndexRecordEncoder();
-    private final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
-    private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
+
+    private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
+    private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final HeaderDecoder fixHeader = new HeaderDecoder();
+
+    private final ReplayIndexRecordEncoder replayIndexRecord = new ReplayIndexRecordEncoder();
+    private final MessageHeaderEncoder indexHeaderEncoder = new MessageHeaderEncoder();
 
     // TODO: remove long boxing
     private final Function<Long, SessionIndex> newSessionIndex = SessionIndex::new;
@@ -64,12 +68,12 @@ public class ReplayIndex implements Index
     public void indexRecord(final DirectBuffer srcBuffer, final int srcOffset, final int srcLength, final int streamId)
     {
         int offset = srcOffset;
-        messageFrameHeader.wrap(srcBuffer, offset, messageFrameHeader.size());
-        final int actingBlockLength = messageFrameHeader.blockLength();
+        frameHeaderDecoder.wrap(srcBuffer, offset, frameHeaderDecoder.size());
+        final int actingBlockLength = frameHeaderDecoder.blockLength();
 
-        offset += messageFrameHeader.size();
+        offset += frameHeaderDecoder.size();
 
-        messageFrame.wrap(srcBuffer, offset, actingBlockLength, messageFrameHeader.version());
+        messageFrame.wrap(srcBuffer, offset, actingBlockLength, frameHeaderDecoder.version());
 
         offset += actingBlockLength + 2;
 
@@ -87,13 +91,18 @@ public class ReplayIndex implements Index
         private final ByteBuffer wrappedBuffer;
         private final MutableDirectBuffer buffer;
 
-        private int index = 8;
+        private int index = indexHeaderEncoder.size();
 
         private SessionIndex(final long sessionId)
         {
             this.wrappedBuffer = bufferFactory.apply(logFile(sessionId));
             this.buffer = new UnsafeBuffer(wrappedBuffer);
-            // TODO: write SBE header
+            indexHeaderEncoder
+                .wrap(buffer, 0, replayIndexRecord.sbeSchemaVersion())
+                .blockLength(replayIndexRecord.sbeBlockLength())
+                .templateId(replayIndexRecord.sbeTemplateId())
+                .schemaId(replayIndexRecord.sbeSchemaId())
+                .version(replayIndexRecord.sbeSchemaVersion());
         }
 
         public void onRecord(final int streamId, final long position, final int sequenceNumber)
