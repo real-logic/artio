@@ -15,6 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
-public class LogRecorder
+public class IndexQuery
 {
+    public IndexQuery()
+    {
+
+    }
 }
