@@ -30,20 +30,9 @@ final class LogDirectoryDescriptor
         return new File(String.format(LOG_FILE_DIR + File.separator + "data-%d.log", id));
     }
 
-    public static File indexFile(final String indexName, final int id)
-    {
-        return new File(String.format(LOG_FILE_DIR + File.separator + "index-%s-%d.log", indexName, id));
-    }
-
     public static final String INDEX_FILE_SIZE_PROP = "logging.index.size";
 
     public static final long INDEX_FILE_SIZE_DEFAULT = 2 * 1024 * 1024;
 
     public static final long INDEX_FILE_SIZE = Long.getLong(INDEX_FILE_SIZE_PROP, INDEX_FILE_SIZE_DEFAULT);
-
-    public static final String LOG_FILE_SIZE_PROP = "logging.file.size";
-
-    public static final long LOG_FILE_SIZE_DEFAULT = 2 * 1024 * 1024;
-
-    public static final long LOG_FILE_SIZE = Long.getLong(LOG_FILE_SIZE_PROP, LOG_FILE_SIZE_DEFAULT);
 }

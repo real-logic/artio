@@ -32,11 +32,11 @@ package uk.co.real_logic.fix_gateway.logger;
 
     import static org.junit.Assert.assertNotEquals;
     import static org.mockito.Mockito.*;
-    import static uk.co.real_logic.fix_gateway.logger.LogReplayer.POSS_DUP_FIELD;
-    import static uk.co.real_logic.fix_gateway.logger.LogReplayer.SIZE_OF_LENGTH_FIELD;
+    import static uk.co.real_logic.fix_gateway.logger.Replayer.POSS_DUP_FIELD;
+    import static uk.co.real_logic.fix_gateway.logger.Replayer.SIZE_OF_LENGTH_FIELD;
     import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
-public class LogReplayerTest
+public class ReplayerTest
 {
     private static final long SESSION_ID = 1;
     private static final int BEGIN_SEQ_NO = 2;
@@ -47,12 +47,12 @@ public class LogReplayerTest
     final MessageHeaderEncoder header = new MessageHeaderEncoder();
     final FixMessageEncoder messageFrame = new FixMessageEncoder();
 
-    private LogScanner mockLogScanner = mock(LogScanner.class);
+    private ReplayQuery mockReplayQuery = mock(ReplayQuery.class);
     private Publication mockPublication = mock(Publication.class);
     private GatewaySubscription mockSubscription = mock(GatewaySubscription.class);
     private BufferClaim mockClaim = mock(BufferClaim.class);
 
-    private LogReplayer logReplayer = new LogReplayer(mockSubscription, mockLogScanner, mockPublication, mockClaim);
+    private Replayer replayer = new Replayer(mockSubscription, mockReplayQuery, mockPublication, mockClaim);
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[16 * 1024]);
     private UnsafeBuffer resultBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
@@ -78,7 +78,7 @@ public class LogReplayerTest
         setupClaim(srcLength);
         setupPublication(srcLength);
 
-        logReplayer.onLogEntry(null, buffer, START, offset, srcLength);
+        replayer.onLogEntry(null, buffer, START, offset, srcLength);
 
         verifyClaim(srcLength);
         assertHasSetPossDupFlag();
@@ -93,7 +93,7 @@ public class LogReplayerTest
         setupClaim(srcLength);
         setupPublication(srcLength);
 
-        logReplayer.onLogEntry(null, buffer, START, offset, srcLength);
+        replayer.onLogEntry(null, buffer, START, offset, srcLength);
 
         verifyClaim(srcLength + POSS_DUP_FIELD.length);
         assertHasSetPossDupFlag();
@@ -105,7 +105,7 @@ public class LogReplayerTest
     {
         onMessage(LogonDecoder.MESSAGE_TYPE);
 
-        verifyNoMoreInteractions(mockLogScanner, mockPublication);
+        verifyNoMoreInteractions(mockReplayQuery, mockPublication);
     }
 
     @Test
@@ -114,7 +114,7 @@ public class LogReplayerTest
         bufferHasResendRequest(BEGIN_SEQ_NO - 1);
         onMessage(ResendRequestDecoder.MESSAGE_TYPE);
 
-        verifyNoMoreInteractions(mockLogScanner, mockPublication);
+        verifyNoMoreInteractions(mockReplayQuery, mockPublication);
     }
 
     private void setupPublication(final int srcLength)
@@ -141,7 +141,7 @@ public class LogReplayerTest
 
     private void verifyQueriedService()
     {
-        verify(mockLogScanner).query(logReplayer, SESSION_ID, BEGIN_SEQ_NO, END_SEQ_NO);
+        verify(mockReplayQuery).query(replayer, SESSION_ID, BEGIN_SEQ_NO, END_SEQ_NO);
     }
 
     private void assertHasSetPossDupFlag()
@@ -194,6 +194,6 @@ public class LogReplayerTest
 
     private void onMessage(final int messageType)
     {
-        logReplayer.onMessage(buffer, 1, buffer.capacity(), CONNECTION_ID, SESSION_ID, messageType);
+        replayer.onMessage(buffer, 1, buffer.capacity(), CONNECTION_ID, SESSION_ID, messageType);
     }
 }

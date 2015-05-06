@@ -22,18 +22,12 @@ import uk.co.real_logic.agrona.DirectBuffer;
  */
 public interface Index
 {
-    /**
-     *
-     * @param buffer
-     * @param offset
-     * @param length
-     * @return the index value for the record in question.
-     */
-    long extractKey(final DirectBuffer buffer, final int offset, final int length);
+    void indexRecord(final DirectBuffer buffer, final int offset, final int length);
 
     default String getName()
     {
         return getClass().getSimpleName();
     }
 
+    void close();
 }

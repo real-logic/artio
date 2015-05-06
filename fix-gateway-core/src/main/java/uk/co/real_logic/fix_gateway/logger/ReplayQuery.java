@@ -21,7 +21,7 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 /**
  * LogScanner should be used in a single threaded fashion.
  */
-public class LogScanner
+public class ReplayQuery
 {
     private final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();

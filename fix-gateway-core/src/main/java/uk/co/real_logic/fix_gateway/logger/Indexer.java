@@ -15,10 +15,33 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
-public class IndexQuery
-{
-    public IndexQuery()
-    {
+import uk.co.real_logic.agrona.concurrent.Agent;
 
+import java.util.List;
+
+public class Indexer implements Agent
+{
+
+    private final List<Index> indices;
+
+    public Indexer(final List<Index> indices)
+    {
+        this.indices = indices;
+    }
+
+    public int doWork() throws Exception
+    {
+        // TODO: read messages out of the log file
+        return 0;
+    }
+
+    public void onClose()
+    {
+        indices.forEach(Index::close);
+    }
+
+    public String roleName()
+    {
+        return "Indexer";
     }
 }

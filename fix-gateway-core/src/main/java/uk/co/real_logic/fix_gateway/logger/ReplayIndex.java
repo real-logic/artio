@@ -20,15 +20,13 @@ import uk.co.real_logic.agrona.IoUtil;
 
 import java.nio.MappedByteBuffer;
 
-import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.INDEX_FILE_SIZE;
-
-public class IndexWriter implements AutoCloseable
+public class ReplayIndex implements Index
 {
     private final Index index;
 
     private MappedByteBuffer currentFileBuffer;
 
-    public IndexWriter(final Index index)
+    public ReplayIndex(final Index index)
     {
         this.index = index;
     }
@@ -36,7 +34,8 @@ public class IndexWriter implements AutoCloseable
     public void newIndexFile(final int id)
     {
         close();
-        currentFileBuffer = IoUtil.mapNewFile(LogDirectoryDescriptor.indexFile(index.getName(), id), INDEX_FILE_SIZE);
+        currentFileBuffer = null;
+        //IoUtil.mapNewFile(LogDirectoryDescriptor.indexFile(index.getName(), id), INDEX_FILE_SIZE);
     }
 
     public void close()
@@ -47,9 +46,10 @@ public class IndexWriter implements AutoCloseable
         }
     }
 
-    public void onRecord(final DirectBuffer buffer, final int offset, final int length)
+    public void indexRecord(final DirectBuffer buffer, final int offset, final int length)
     {
-        final long value = index.extractKey(buffer, offset, length);
+        final long value = 0L;
+        //index.extractKey(buffer, offset, length);
         currentFileBuffer.putLong(value);
     }
 }

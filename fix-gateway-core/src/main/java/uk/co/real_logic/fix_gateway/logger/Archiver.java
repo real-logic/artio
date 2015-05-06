@@ -25,40 +25,33 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
 import java.nio.MappedByteBuffer;
-import java.util.List;
 
-import static java.util.stream.Collectors.toList;
-import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.LOG_FILE_SIZE;
-
-public class LogWriter implements Agent
+// TODO: rework this to be a simple buffer copier
+public class Archiver implements Agent
 {
     private static final int FRAGMENT_LIMIT = 10;
 
     private final Subscription subscription;
-    private final List<IndexWriter> indexWriters;
 
     private MappedByteBuffer currentMappedBuffer;
     private MutableDirectBuffer currentBuffer;
     private int currentIndex;
     private int currentId;
 
-    public LogWriter(final int initialId, final ReplicationStreams streams, final List<Index> indices)
+    public Archiver(final int initialId, final ReplicationStreams streams)
     {
         this.subscription = streams.dataSubscription(this::onData);
-        indexWriters = indices.stream().map(IndexWriter::new).collect(toList());
         nextBuffer(initialId);
     }
 
     private void onData(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        if (currentIndex + length > LOG_FILE_SIZE)
+        /*if (currentIndex + length > LOG_FILE_SIZE)
         {
             nextBuffer(currentId + 1);
-        }
+        }*/
 
         copyData(buffer, offset, length);
-
-        updateIndices(buffer, offset, length);
     }
 
     private void nextBuffer(final int newId)
@@ -68,28 +61,15 @@ public class LogWriter implements Agent
         {
             IoUtil.unmap(currentMappedBuffer);
         }
-        currentMappedBuffer = IoUtil.mapNewFile(LogDirectoryDescriptor.logFile(newId), LOG_FILE_SIZE);
+        currentMappedBuffer = null; //IoUtil.mapNewFile(LogDirectoryDescriptor.logFile(newId), LOG_FILE_SIZE);
         currentBuffer = new UnsafeBuffer(currentMappedBuffer);
         currentIndex = 0;
-
-        for (final IndexWriter writer : indexWriters)
-        {
-            writer.newIndexFile(newId);
-        }
     }
 
     private void copyData(final DirectBuffer srcBuffer, final int srcOffset, final int srcLength)
     {
         currentBuffer.putBytes(currentIndex, srcBuffer, srcOffset, srcLength);
         currentIndex += srcLength;
-    }
-
-    private void updateIndices(final DirectBuffer buffer, final int offset, final int length)
-    {
-        for (final IndexWriter writer : indexWriters)
-        {
-            writer.onRecord(buffer, offset, length);
-        }
     }
 
     public int doWork() throws Exception
@@ -99,12 +79,11 @@ public class LogWriter implements Agent
 
     public String roleName()
     {
-        return "LogRecoder";
+        return "Archiver";
     }
 
     public void onClose()
     {
         subscription.close();
-        indexWriters.forEach(IndexWriter::close);
     }
 }

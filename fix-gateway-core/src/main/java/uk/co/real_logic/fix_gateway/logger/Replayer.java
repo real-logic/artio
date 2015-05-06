@@ -33,7 +33,7 @@ import java.nio.charset.StandardCharsets;
 
 import static uk.co.real_logic.fix_gateway.logger.PossDupFinder.NO_ENTRY;
 
-public class LogReplayer implements SessionHandler, LogHandler, Agent
+public class Replayer implements SessionHandler, LogHandler, Agent
 {
     public static final int SIZE_OF_LENGTH_FIELD = 2;
     public static final byte[] POSS_DUP_FIELD = "43=Y\001".getBytes(StandardCharsets.US_ASCII);
@@ -43,21 +43,21 @@ public class LogReplayer implements SessionHandler, LogHandler, Agent
     private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
     private final MutableAsciiFlyweight mutableAsciiFlyweight = new MutableAsciiFlyweight();
     private final GatewaySubscription subscription;
-    private final LogScanner logScanner;
+    private final ReplayQuery replayQuery;
     private final Publication publication;
 
     private final BufferClaim claim;
     private final PossDupFinder acceptor = new PossDupFinder();
     private final OtfParser parser = new OtfParser(acceptor, new IntDictionary());
 
-    public LogReplayer(
+    public Replayer(
         final GatewaySubscription subscription,
-        final LogScanner logScanner,
+        final ReplayQuery replayQuery,
         final Publication publication,
         final BufferClaim claim)
     {
         this.subscription = subscription;
-        this.logScanner = logScanner;
+        this.replayQuery = replayQuery;
         this.publication = publication;
         this.claim = claim;
         subscription.sessionHandler(this);
@@ -82,7 +82,7 @@ public class LogReplayer implements SessionHandler, LogHandler, Agent
                 return;
             }
 
-            logScanner.query(this, sessionId, beginSeqNo, endSeqNo);
+            replayQuery.query(this, sessionId, beginSeqNo, endSeqNo);
         }
     }
 
@@ -177,6 +177,6 @@ public class LogReplayer implements SessionHandler, LogHandler, Agent
 
     public String roleName()
     {
-        return "LogReplayer";
+        return "Replayer";
     }
 }
