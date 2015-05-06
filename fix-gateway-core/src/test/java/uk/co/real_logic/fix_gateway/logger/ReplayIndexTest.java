@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.logger;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.messages.ConnectEncoder;
 import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordDecoder;
 
 import java.nio.ByteBuffer;
@@ -35,6 +36,7 @@ public class ReplayIndexTest extends AbstractMessageTest
     @SuppressWarnings("unchecked")
     private Function<String, ByteBuffer> mockBufferFactory = mock(Function.class);
 
+    private ConnectEncoder connect = new ConnectEncoder();
     private ReplayIndex replayIndex = new ReplayIndex(mockBufferFactory);
 
     @Before
@@ -48,9 +50,9 @@ public class ReplayIndexTest extends AbstractMessageTest
     {
         bufferContainsMessage(true);
 
-        replayIndex.indexRecord(buffer, START, messageLength(), STREAM_ID);
+        indexRecord();
 
-        verifyMappedFile();
+        verifyMappedFile(SESSION_ID);
 
         final ReplayIndexRecordDecoder replayIndexRecord = new ReplayIndexRecordDecoder()
             .wrap(new UnsafeBuffer(indexBuffer), 8, 16, 0);
@@ -63,24 +65,65 @@ public class ReplayIndexTest extends AbstractMessageTest
     @Test
     public void shouldOnlyMapSessionFileOnce()
     {
+        bufferContainsMessage(true);
 
+        indexRecord();
+        indexRecord();
+
+        verifyMappedFile(SESSION_ID);
     }
 
     @Test
     public void shouldRecordIndexesForMultipleSessions()
     {
-        // TODO
+        bufferContainsMessage(true, SESSION_ID);
+        indexRecord();
+
+        bufferContainsMessage(true, SESSION_ID_2);
+        indexRecord();
+
+        verifyMappedFile(SESSION_ID);
+        verifyMappedFile(SESSION_ID_2);
     }
 
     @Test
     public void shouldIgnoreOtherMessageTypes()
     {
-        // TODO
+        bufferContainsConnect();
+
+        indexRecord();
+
+        verifyNoMoreInteractions(mockBufferFactory);
     }
 
-    private void verifyMappedFile()
+    private void bufferContainsConnect()
     {
-        verify(mockBufferFactory).apply(ReplayIndex.logFile(SESSION_ID));
+        offset = START;
+        header
+            .wrap(buffer, offset, 0)
+            .blockLength(connect.sbeBlockLength())
+            .templateId(connect.sbeTemplateId())
+            .schemaId(connect.sbeSchemaId())
+            .version(connect.sbeSchemaVersion());
+
+        offset += header.size();
+
+        connect
+            .wrap(buffer, offset)
+            .connection(CONNECTION_ID)
+            .session(SESSION_ID);
+
+        offset += connect.size();
+    }
+
+    private void verifyMappedFile(final long sessionId)
+    {
+        verify(mockBufferFactory, times(1)).apply(ReplayIndex.logFile(sessionId));
+    }
+
+    private void indexRecord()
+    {
+        replayIndex.indexRecord(buffer, START, messageLength(), STREAM_ID);
     }
 
 }

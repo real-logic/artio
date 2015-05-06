@@ -27,6 +27,7 @@ import static uk.co.real_logic.fix_gateway.logger.Replayer.SIZE_OF_LENGTH_FIELD;
 public class AbstractMessageTest
 {
     protected static final long SESSION_ID = 1;
+    protected static final long SESSION_ID_2 = 2;
     protected static final int CONNECTION_ID = 1;
     protected static final int START = 1;
     protected static final int SEQUENCE_NUMBER = 5;
@@ -40,6 +41,11 @@ public class AbstractMessageTest
     protected int offset;
 
     protected void bufferContainsMessage(final boolean hasPossDupFlag)
+    {
+        bufferContainsMessage(hasPossDupFlag, SESSION_ID);
+    }
+
+    protected void bufferContainsMessage(final boolean hasPossDupFlag, final long sessionId)
     {
         final UnsafeBuffer msgBuffer = new UnsafeBuffer(new byte[8 * 1024]);
         final MutableAsciiFlyweight asciiFlyweight = new MutableAsciiFlyweight(msgBuffer);
@@ -67,7 +73,7 @@ public class AbstractMessageTest
         messageFrame
             .wrap(buffer, offset)
             .messageType(TestRequestDecoder.MESSAGE_TYPE)
-            .session(SESSION_ID)
+            .session(sessionId)
             .connection(CONNECTION_ID)
             .putBody(msgBuffer, 0, logEntryLength);
 

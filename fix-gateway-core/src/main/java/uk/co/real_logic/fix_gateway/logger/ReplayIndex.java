@@ -16,18 +16,17 @@
 package uk.co.real_logic.fix_gateway.logger;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
-import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordEncoder;
+import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.util.function.Function;
 import java.util.function.LongFunction;
 
@@ -63,27 +62,30 @@ public class ReplayIndex implements Index
 
     public void close()
     {
+        sessionToIndex.values().forEach(SessionIndex::close);
     }
 
     public void indexRecord(final DirectBuffer srcBuffer, final int srcOffset, final int srcLength, final int streamId)
     {
         int offset = srcOffset;
         frameHeaderDecoder.wrap(srcBuffer, offset, frameHeaderDecoder.size());
-        final int actingBlockLength = frameHeaderDecoder.blockLength();
+        if (frameHeaderDecoder.templateId() == FixMessageEncoder.TEMPLATE_ID)
+        {
+            final int actingBlockLength = frameHeaderDecoder.blockLength();
+            offset += frameHeaderDecoder.size();
 
-        offset += frameHeaderDecoder.size();
+            messageFrame.wrap(srcBuffer, offset, actingBlockLength, frameHeaderDecoder.version());
 
-        messageFrame.wrap(srcBuffer, offset, actingBlockLength, frameHeaderDecoder.version());
+            offset += actingBlockLength + 2;
 
-        offset += actingBlockLength + 2;
-
-        asciiFlyweight.wrap(srcBuffer);
-        fixHeader.decode(asciiFlyweight, offset, messageFrame.bodyLength());
+            asciiFlyweight.wrap(srcBuffer);
+            fixHeader.decode(asciiFlyweight, offset, messageFrame.bodyLength());
 
 
-        sessionToIndex
-            .computeIfAbsent(messageFrame.session(), newSessionIndex)
-            .onRecord(streamId, srcOffset, fixHeader.msgSeqNum());
+            sessionToIndex
+                .computeIfAbsent(messageFrame.session(), newSessionIndex)
+                .onRecord(streamId, srcOffset, fixHeader.msgSeqNum());
+        }
     }
 
     private final class SessionIndex
@@ -114,6 +116,14 @@ public class ReplayIndex implements Index
                 .sequenceNumber(sequenceNumber);
 
             index = replayIndexRecord.limit();
+        }
+
+        public void close()
+        {
+            if (wrappedBuffer instanceof MappedByteBuffer)
+            {
+                IoUtil.unmap((MappedByteBuffer) wrappedBuffer);
+            }
         }
     }
 }
