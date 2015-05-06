@@ -22,7 +22,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
  */
 public interface Index
 {
-    void indexRecord(final DirectBuffer buffer, final int offset, final int length);
+    void indexRecord(final DirectBuffer buffer, final int offset, final int length, final int streamId);
 
     default String getName()
     {

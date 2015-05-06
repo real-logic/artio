@@ -29,6 +29,7 @@ public class AbstractMessageTest
     protected static final long SESSION_ID = 1;
     protected static final int CONNECTION_ID = 1;
     protected static final int START = 1;
+    protected static final int SEQUENCE_NUMBER = 5;
 
     protected MessageHeaderEncoder header = new MessageHeaderEncoder();
     protected FixMessageEncoder messageFrame = new FixMessageEncoder();
@@ -46,7 +47,10 @@ public class AbstractMessageTest
         testRequest.testReqID("abc");
         if (hasPossDupFlag)
         {
-            testRequest.header().possDupFlag(false);
+            testRequest
+                .header()
+                .possDupFlag(false)
+                .msgSeqNum(SEQUENCE_NUMBER);
         }
         logEntryLength = testRequest.encode(asciiFlyweight, 0);
 
