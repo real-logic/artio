@@ -16,36 +16,26 @@
 package uk.co.real_logic.fix_gateway.logger;
 
     import org.junit.Test;
-    import uk.co.real_logic.aeron.Publication;
-    import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
-    import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-    import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
-    import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
-    import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
-    import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
-    import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
-    import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
-    import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
-    import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
-    import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
-    import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.aeron.Publication;
+import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
+import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
+import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
+import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
-    import static org.junit.Assert.assertNotEquals;
-    import static org.mockito.Mockito.*;
-    import static uk.co.real_logic.fix_gateway.logger.Replayer.POSS_DUP_FIELD;
-    import static uk.co.real_logic.fix_gateway.logger.Replayer.SIZE_OF_LENGTH_FIELD;
-    import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
+import static org.junit.Assert.assertNotEquals;
+import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.logger.Replayer.POSS_DUP_FIELD;
+import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
-public class ReplayerTest
+public class ReplayerTest extends AbstractMessageTest
 {
-    private static final long SESSION_ID = 1;
+
     private static final int BEGIN_SEQ_NO = 2;
     private static final int END_SEQ_NO = 2;
-    private static final int CONNECTION_ID = 1;
-    private static final int START = 1;
-
-    final MessageHeaderEncoder header = new MessageHeaderEncoder();
-    final FixMessageEncoder messageFrame = new FixMessageEncoder();
 
     private ReplayQuery mockReplayQuery = mock(ReplayQuery.class);
     private Publication mockPublication = mock(Publication.class);
@@ -53,11 +43,8 @@ public class ReplayerTest
     private BufferClaim mockClaim = mock(BufferClaim.class);
 
     private Replayer replayer = new Replayer(mockSubscription, mockReplayQuery, mockPublication, mockClaim);
-    private UnsafeBuffer buffer = new UnsafeBuffer(new byte[16 * 1024]);
-    private UnsafeBuffer resultBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
-    private int logEntryLength;
-    private int offset;
+    private UnsafeBuffer resultBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
     @Test
     public void shouldParseResendRequest()
@@ -73,8 +60,8 @@ public class ReplayerTest
     @Test
     public void shouldPublishMessagesWithSetPossDupFlag()
     {
-        bufferClaimRefersToMessage(true);
-        final int srcLength = offset + logEntryLength - START;
+        bufferContainsMessage(true);
+        final int srcLength = messageLength();
         setupClaim(srcLength);
         setupPublication(srcLength);
 
@@ -88,8 +75,8 @@ public class ReplayerTest
     @Test
     public void shouldPublishMessagesWithoutSetPossDupFlag()
     {
-        bufferClaimRefersToMessage(false);
-        final int srcLength = offset + logEntryLength - START;
+        bufferContainsMessage(false);
+        final int srcLength = messageLength();
         setupClaim(srcLength);
         setupPublication(srcLength);
 
@@ -148,38 +135,6 @@ public class ReplayerTest
     {
         final int possDupIndex = new AsciiFlyweight(resultBuffer).scan(0, resultBuffer.capacity(), 'Y');
         assertNotEquals("Unable to find poss dup index", UNKNOWN_INDEX, possDupIndex);
-    }
-
-    private void bufferClaimRefersToMessage(final boolean hasPossDupFlag)
-    {
-        final UnsafeBuffer msgBuffer = new UnsafeBuffer(new byte[8 * 1024]);
-        final MutableAsciiFlyweight asciiFlyweight = new MutableAsciiFlyweight(msgBuffer);
-        final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest.testReqID("abc");
-        if (hasPossDupFlag)
-        {
-            testRequest.header().possDupFlag(false);
-        }
-        logEntryLength = testRequest.encode(asciiFlyweight, 0);
-
-        offset = START;
-        header
-            .wrap(buffer, offset, 0)
-            .blockLength(messageFrame.sbeBlockLength())
-            .templateId(messageFrame.sbeTemplateId())
-            .schemaId(messageFrame.sbeSchemaId())
-            .version(messageFrame.sbeSchemaVersion());
-
-        offset += header.size();
-
-        messageFrame
-            .wrap(buffer, offset)
-            .messageType(TestRequestDecoder.MESSAGE_TYPE)
-            .session(SESSION_ID)
-            .connection(CONNECTION_ID)
-            .putBody(msgBuffer, 0, logEntryLength);
-
-        offset += messageFrame.sbeBlockLength() + SIZE_OF_LENGTH_FIELD;
     }
 
     private void bufferHasResendRequest(final int endSeqNo)

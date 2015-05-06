@@ -19,7 +19,7 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
 /**
- * LogScanner should be used in a single threaded fashion.
+ * Queries an index of a composite key of session id and sequence number
  */
 public class ReplayQuery
 {

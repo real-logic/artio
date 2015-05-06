@@ -15,30 +15,40 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
-import uk.co.real_logic.agrona.DirectBuffer;
+import org.junit.Test;
 
 import java.nio.MappedByteBuffer;
 import java.util.function.Function;
 
-/**
- * Builds an index of a composite key of session id and sequence number
- */
-public class ReplayIndex implements Index
+import static org.mockito.Mockito.mock;
+
+public class ReplayIndexTest extends AbstractMessageTest
 {
-    private final Function<String, MappedByteBuffer> bufferFactory;
 
-    public ReplayIndex(final Function<String, MappedByteBuffer> bufferFactory)
+    @SuppressWarnings("unchecked")
+    private Function<String, MappedByteBuffer> mockBufferFactory = mock(Function.class);
+    private ReplayIndex replayIndex = new ReplayIndex(mockBufferFactory);
+
+    @Test
+    public void shouldRecordIndexEntryForFixMessage()
     {
-        this.bufferFactory = bufferFactory;
+        bufferContainsMessage(true);
+
+        replayIndex.indexRecord(buffer, START, messageLength());
+
+        // TODO
     }
 
-    public void close()
+    @Test
+    public void shouldRecordIndexesForMultipleSessions()
     {
+        // TODO
     }
 
-    public void indexRecord(final DirectBuffer buffer, final int offset, final int length)
+    @Test
+    public void shouldIgnoreOtherMessageTypes()
     {
-        final long value = 0L;
-        //index.extractKey(buffer, offset, length);
+        // TODO
     }
+
 }
