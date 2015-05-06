@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.function.Function;
+import java.util.function.LongFunction;
 
 /**
  * Builds an index of a composite key of session id and sequence number
@@ -49,8 +50,7 @@ public class ReplayIndex implements Index
     private final ReplayIndexRecordEncoder replayIndexRecord = new ReplayIndexRecordEncoder();
     private final MessageHeaderEncoder indexHeaderEncoder = new MessageHeaderEncoder();
 
-    // TODO: remove long boxing
-    private final Function<Long, SessionIndex> newSessionIndex = SessionIndex::new;
+    private final LongFunction<SessionIndex> newSessionIndex = SessionIndex::new;
 
     private final Long2ObjectHashMap<SessionIndex> sessionToIndex = new Long2ObjectHashMap<>();
 
