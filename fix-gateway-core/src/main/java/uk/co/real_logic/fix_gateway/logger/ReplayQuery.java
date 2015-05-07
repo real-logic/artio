@@ -79,7 +79,8 @@ public class ReplayQuery
 
             while (true)
             {
-                indexRecord.wrap(buffer, index, actingBlockLength, actingVersion).streamId();
+                indexRecord.wrap(buffer, index, actingBlockLength, actingVersion);
+                final int streamId = indexRecord.streamId();
                 final long position = indexRecord.position();
                 if (position == 0)
                 {
@@ -89,7 +90,7 @@ public class ReplayQuery
                 final int sequenceNumber = indexRecord.sequenceNumber();
                 if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo)
                 {
-                    if (!archiveReader.read(position, handler))
+                    if (!archiveReader.read(streamId, position, handler))
                     {
                         return;
                     }

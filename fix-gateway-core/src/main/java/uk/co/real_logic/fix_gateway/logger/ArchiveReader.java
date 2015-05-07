@@ -15,16 +15,79 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
+import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
+import uk.co.real_logic.aeron.common.protocol.HeaderFlyweight;
+import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
+import java.nio.ByteBuffer;
+import java.util.function.IntFunction;
+
+import static uk.co.real_logic.aeron.common.concurrent.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
+import static uk.co.real_logic.aeron.common.concurrent.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
+import static uk.co.real_logic.aeron.driver.Configuration.TERM_BUFFER_LENGTH_DEFAULT;
+
 public class ArchiveReader
 {
+    // TODO: load these out of a configuration file.
+    private static final int INITIAL_TERM_ID = 0;
+    private static final int POSITION_BITS_TO_SHIFT = Integer.numberOfTrailingZeros(TERM_BUFFER_LENGTH_DEFAULT);
+
+    public static final int MESSAGE_FRAME_BLOCK_LENGTH = 8 + FixMessageDecoder.BLOCK_LENGTH;
+
     private final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
 
-    public boolean read(final long position, final LogHandler handler)
+    private final IntFunction<StreamReader> newStreamReader = StreamReader::new;
+    private final Int2ObjectHashMap<StreamReader> streamIdToReader = new Int2ObjectHashMap<>();
+    private final BufferFactory bufferFactory;
+
+    public ArchiveReader(final BufferFactory bufferFactory)
     {
-        return false;
+        this.bufferFactory = bufferFactory;
+    }
+
+    public boolean read(final int streamId, final long position, final LogHandler handler)
+    {
+        return streamIdToReader.computeIfAbsent(streamId, newStreamReader)
+                               .read(position, handler);
+    }
+
+    private final class StreamReader
+    {
+        private final int streamId;
+        private final Int2ObjectHashMap<ByteBuffer> termIdToBuffer = new Int2ObjectHashMap<>();
+        private final IntFunction<ByteBuffer> newBuffer = this::newBuffer;
+        private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
+        private final Header header = new Header();
+
+        private StreamReader(final int streamId)
+        {
+            this.streamId = streamId;
+            header.buffer(buffer);
+        }
+
+        private ByteBuffer newBuffer(final int termId)
+        {
+            return bufferFactory.map(LogDirectoryDescriptor.logFile(streamId, termId));
+        }
+
+        private boolean read(final long position, final LogHandler handler)
+        {
+            final int termId = computeTermIdFromPosition(position, POSITION_BITS_TO_SHIFT, INITIAL_TERM_ID);
+            final ByteBuffer termBuffer = termIdToBuffer.computeIfAbsent(termId, newBuffer);
+            final int aeronFrameOffset = computeTermOffsetFromPosition(position, POSITION_BITS_TO_SHIFT);
+
+            buffer.wrap(termBuffer);
+            header.offset(aeronFrameOffset);
+
+            final int startOffset = aeronFrameOffset + HeaderFlyweight.HEADER_LENGTH;
+            final int messageOffset = startOffset + MESSAGE_FRAME_BLOCK_LENGTH;
+            final int length = header.frameLength();
+
+            return handler.onLogEntry(messageFrame, buffer, startOffset, messageOffset, length);
+        }
     }
 }

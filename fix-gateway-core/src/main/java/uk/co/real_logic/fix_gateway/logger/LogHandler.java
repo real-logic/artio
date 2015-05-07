@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.logger;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 
+// TODO: document parameters and review all implementations make same assumptions
 public interface LogHandler
 {
     /**
