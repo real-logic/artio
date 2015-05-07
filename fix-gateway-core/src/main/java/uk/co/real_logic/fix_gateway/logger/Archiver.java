@@ -19,12 +19,13 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.util.function.IntFunction;
 
 public class Archiver implements Agent, DataHandler
@@ -49,34 +50,40 @@ public class Archiver implements Agent, DataHandler
                          .archive(buffer, offset, length, header);
     }
 
-    private class StreamArchive
+    private final class StreamArchive
     {
-
-        private final MutableDirectBuffer currentBuffer = new UnsafeBuffer(0, 0);
+        private final UnsafeBuffer currentBuffer = new UnsafeBuffer(0, 0);
         private final int streamId;
 
-        private ByteBuffer currentMappedBuffer;
+        private ByteBuffer wrappedBuffer;
 
         private int currentTermId = -1;
 
-        public StreamArchive(final int streamId)
+        private StreamArchive(final int streamId)
         {
             this.streamId = streamId;
         }
 
-        public void archive(final DirectBuffer buffer, final int offset, final int length, final Header header)
+        private void archive(final DirectBuffer buffer, final int offset, final int length, final Header header)
         {
             final int termId = header.termId();
             if (termId != currentTermId)
             {
-                currentMappedBuffer = bufferFactory.map(LogDirectoryDescriptor.logFile(streamId, termId));
-                currentBuffer.wrap(currentMappedBuffer);
+                wrappedBuffer = bufferFactory.map(LogDirectoryDescriptor.logFile(streamId, termId));
+                currentBuffer.wrap(wrappedBuffer);
                 currentTermId = termId;
             }
 
             currentBuffer.putBytes(offset, buffer, offset, length);
         }
 
+        private void close()
+        {
+            if (wrappedBuffer instanceof MappedByteBuffer)
+            {
+                IoUtil.unmap((MappedByteBuffer) wrappedBuffer);
+            }
+        }
     }
 
     public int doWork() throws Exception
@@ -92,5 +99,6 @@ public class Archiver implements Agent, DataHandler
     public void onClose()
     {
         subscription.close();
+        streamIdToArchive.values().forEach(StreamArchive::close);
     }
 }
