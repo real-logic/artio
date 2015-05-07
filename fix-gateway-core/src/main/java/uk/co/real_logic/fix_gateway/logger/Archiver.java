@@ -69,6 +69,7 @@ public class Archiver implements Agent, DataHandler
             final int termId = header.termId();
             if (termId != currentTermId)
             {
+                close();
                 wrappedBuffer = bufferFactory.map(LogDirectoryDescriptor.logFile(streamId, termId));
                 currentBuffer.wrap(wrappedBuffer);
                 currentTermId = termId;
