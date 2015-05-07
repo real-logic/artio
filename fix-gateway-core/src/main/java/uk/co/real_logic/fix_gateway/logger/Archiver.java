@@ -16,60 +16,67 @@
 package uk.co.real_logic.fix_gateway.logger;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
-import java.nio.MappedByteBuffer;
+import java.nio.ByteBuffer;
+import java.util.function.IntFunction;
 
-// TODO: rework this to be a simple buffer copier
-public class Archiver implements Agent
+public class Archiver implements Agent, DataHandler
 {
     private static final int FRAGMENT_LIMIT = 10;
 
+    private final IntFunction<StreamArchive> newStreamArchive = StreamArchive::new;
+    private final Int2ObjectHashMap<StreamArchive> streamIdToArchive = new Int2ObjectHashMap<>();
+
+    private final BufferFactory bufferFactory;
     private final Subscription subscription;
 
-    private MappedByteBuffer currentMappedBuffer;
-    private MutableDirectBuffer currentBuffer;
-    private int currentIndex;
-    private int currentId;
-
-    public Archiver(final int initialId, final ReplicationStreams streams)
+    public Archiver(final BufferFactory bufferFactory, final Subscription subscription)
     {
-        this.subscription = streams.dataSubscription(this::onData);
-        nextBuffer(initialId);
+        this.bufferFactory = bufferFactory;
+        this.subscription = subscription;
     }
 
-    private void onData(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    public void onData(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        /*if (currentIndex + length > LOG_FILE_SIZE)
-        {
-            nextBuffer(currentId + 1);
-        }*/
-
-        copyData(buffer, offset, length);
+        streamIdToArchive.computeIfAbsent(header.streamId(), newStreamArchive)
+                         .archive(buffer, offset, length, header);
     }
 
-    private void nextBuffer(final int newId)
+    private class StreamArchive
     {
-        currentId = newId;
-        if (currentMappedBuffer != null)
+
+        private final MutableDirectBuffer currentBuffer = new UnsafeBuffer(0, 0);
+        private final int streamId;
+
+        private ByteBuffer currentMappedBuffer;
+
+        private int currentTermId = -1;
+
+        public StreamArchive(final int streamId)
         {
-            IoUtil.unmap(currentMappedBuffer);
+            this.streamId = streamId;
         }
-        currentMappedBuffer = null; //IoUtil.mapNewFile(LogDirectoryDescriptor.logFile(newId), LOG_FILE_SIZE);
-        currentBuffer = new UnsafeBuffer(currentMappedBuffer);
-        currentIndex = 0;
-    }
 
-    private void copyData(final DirectBuffer srcBuffer, final int srcOffset, final int srcLength)
-    {
-        currentBuffer.putBytes(currentIndex, srcBuffer, srcOffset, srcLength);
-        currentIndex += srcLength;
+        public void archive(final DirectBuffer buffer, final int offset, final int length, final Header header)
+        {
+            final int termId = header.termId();
+            if (termId != currentTermId)
+            {
+                currentMappedBuffer = bufferFactory.map(LogDirectoryDescriptor.logFile(streamId, termId));
+                currentBuffer.wrap(currentMappedBuffer);
+                currentTermId = termId;
+            }
+
+            currentBuffer.putBytes(offset, buffer, offset, length);
+        }
+
     }
 
     public int doWork() throws Exception

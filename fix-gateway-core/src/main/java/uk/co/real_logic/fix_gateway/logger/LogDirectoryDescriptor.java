@@ -25,9 +25,9 @@ final class LogDirectoryDescriptor
 
     public static final String LOG_FILE_DIR = System.getProperty(LOG_FILE_DIR_PROP, LOG_FILE_DIR_DEFAULT);
 
-    public static File logFile(final int id)
+    public static String logFile(final int streamId, final int termId)
     {
-        return new File(String.format(LOG_FILE_DIR + File.separator + "data-%d.log", id));
+        return String.format(LOG_FILE_DIR + File.separator + "archive-%d-%d.log", streamId, termId);
     }
 
     public static final String INDEX_FILE_SIZE_PROP = "logging.index.size";

@@ -15,8 +15,14 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
+import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+
 public class ArchiveReader
 {
+    private final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
+    private final FixMessageDecoder messageFrame = new FixMessageDecoder();
+
     public boolean read(final long position, final LogHandler handler)
     {
         return false;
