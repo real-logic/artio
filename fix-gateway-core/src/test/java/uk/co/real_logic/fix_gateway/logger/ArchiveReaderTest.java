@@ -28,13 +28,14 @@ import java.nio.ByteBuffer;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.aeron.common.protocol.HeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.fix_gateway.messages.FixMessageDecoder.BLOCK_LENGTH;
 
 public class ArchiveReaderTest
 {
 
     private static final byte DATA = (byte) 4;
     private static final int DATA_POSITION = HEADER_LENGTH + 1;
-    private static final int LENGTH = HEADER_LENGTH + 10;
+    private static final int LENGTH = HEADER_LENGTH + 40;
     private static final int STREAM_ID = 1;
 
     private DataHeaderFlyweight headerFlyweight = new DataHeaderFlyweight();
@@ -76,8 +77,8 @@ public class ArchiveReaderTest
             notNull(FixMessageDecoder.class),
             notNull(UnsafeBuffer.class),
             eq(HEADER_LENGTH),
-            eq(HEADER_LENGTH + 8 + FixMessageDecoder.BLOCK_LENGTH),
-            eq(LENGTH));
+            eq(HEADER_LENGTH + 8 + BLOCK_LENGTH),
+            eq(LENGTH - (8 + BLOCK_LENGTH + HEADER_LENGTH)));
     }
 
     private void verifyBufferMapped(final int wantedNumberOfInvocations)

@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.logger;
 
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
-import uk.co.real_logic.aeron.common.protocol.HeaderFlyweight;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
@@ -27,6 +26,7 @@ import java.util.function.IntFunction;
 
 import static uk.co.real_logic.aeron.common.concurrent.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
 import static uk.co.real_logic.aeron.common.concurrent.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
+import static uk.co.real_logic.aeron.common.protocol.HeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.aeron.driver.Configuration.TERM_BUFFER_LENGTH_DEFAULT;
 
 public class ArchiveReader
@@ -83,9 +83,9 @@ public class ArchiveReader
             buffer.wrap(termBuffer);
             header.offset(aeronFrameOffset);
 
-            final int startOffset = aeronFrameOffset + HeaderFlyweight.HEADER_LENGTH;
+            final int startOffset = aeronFrameOffset + HEADER_LENGTH;
             final int messageOffset = startOffset + MESSAGE_FRAME_BLOCK_LENGTH;
-            final int length = header.frameLength();
+            final int length = header.frameLength() - (HEADER_LENGTH + MESSAGE_FRAME_BLOCK_LENGTH);
 
             return handler.onLogEntry(messageFrame, buffer, startOffset, messageOffset, length);
         }

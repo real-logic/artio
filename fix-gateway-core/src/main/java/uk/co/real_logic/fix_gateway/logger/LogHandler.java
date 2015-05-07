@@ -18,15 +18,17 @@ package uk.co.real_logic.fix_gateway.logger;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 
-// TODO: document parameters and review all implementations make same assumptions
 public interface LogHandler
 {
     /**
+     * Callback to receive log entries in an archive reading/replay scenario.
      *
-     * @param length
-     * @param srcBuffer
-     * @param startOffset
-     * @return false to stop
+     * @param messageFrame the frame of the fix message.
+     * @param srcBuffer the buffer where the message is stored.
+     * @param startOffset the offset denoting the start of the messageFrame
+     * @param messageOffset the offset denoting the start of the message body
+     * @param length the length of message body.
+     * @return true if you want to continue scanning, false if you want to stop.
      */
     boolean onLogEntry(
         final FixMessageDecoder messageFrame,
