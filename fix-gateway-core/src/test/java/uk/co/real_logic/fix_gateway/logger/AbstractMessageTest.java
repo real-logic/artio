@@ -28,6 +28,7 @@ public class AbstractMessageTest
 {
     protected static final long SESSION_ID = 1;
     protected static final long SESSION_ID_2 = 2;
+    protected static final int STREAM_ID = 2;
     protected static final int CONNECTION_ID = 1;
     protected static final int START = 1;
     protected static final int SEQUENCE_NUMBER = 5;

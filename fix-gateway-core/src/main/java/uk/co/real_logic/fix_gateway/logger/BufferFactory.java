@@ -15,16 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
-import uk.co.real_logic.agrona.DirectBuffer;
+import java.nio.ByteBuffer;
 
-public interface Index
+public interface BufferFactory
 {
-    void indexRecord(final DirectBuffer buffer, final int offset, final int length, final int streamId);
-
-    default String getName()
-    {
-        return getClass().getSimpleName();
-    }
-
-    void close();
+    ByteBuffer map(String fileName);
 }

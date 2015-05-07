@@ -15,16 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
-import uk.co.real_logic.agrona.DirectBuffer;
-
-public interface Index
+public class ArchiveReader
 {
-    void indexRecord(final DirectBuffer buffer, final int offset, final int length, final int streamId);
-
-    default String getName()
+    public boolean read(final long position, final LogHandler handler)
     {
-        return getClass().getSimpleName();
+        return false;
     }
-
-    void close();
 }

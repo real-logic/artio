@@ -27,7 +27,6 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.util.function.Function;
 import java.util.function.LongFunction;
 
 /**
@@ -53,9 +52,9 @@ public class ReplayIndex implements Index
 
     private final Long2ObjectHashMap<SessionIndex> sessionToIndex = new Long2ObjectHashMap<>();
 
-    private final Function<String, ByteBuffer> bufferFactory;
+    private final BufferFactory bufferFactory;
 
-    public ReplayIndex(final Function<String, ByteBuffer> bufferFactory)
+    public ReplayIndex(final BufferFactory bufferFactory)
     {
         this.bufferFactory = bufferFactory;
     }
@@ -81,7 +80,6 @@ public class ReplayIndex implements Index
             asciiFlyweight.wrap(srcBuffer);
             fixHeader.decode(asciiFlyweight, offset, messageFrame.bodyLength());
 
-
             sessionToIndex
                 .computeIfAbsent(messageFrame.session(), newSessionIndex)
                 .onRecord(streamId, srcOffset, fixHeader.msgSeqNum());
@@ -97,7 +95,7 @@ public class ReplayIndex implements Index
 
         private SessionIndex(final long sessionId)
         {
-            this.wrappedBuffer = bufferFactory.apply(logFile(sessionId));
+            this.wrappedBuffer = bufferFactory.map(logFile(sessionId));
             this.buffer = new UnsafeBuffer(wrappedBuffer);
             indexHeaderEncoder
                 .wrap(buffer, 0, replayIndexRecord.sbeSchemaVersion())

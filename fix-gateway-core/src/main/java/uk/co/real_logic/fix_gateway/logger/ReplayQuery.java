@@ -15,8 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
-import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.agrona.IoUtil;
+import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordDecoder;
+
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.util.function.LongFunction;
 
 /**
  * Queries an index of a composite key of session id and sequence number
@@ -24,20 +31,79 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 public class ReplayQuery
 {
     private final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
-    private final FixMessageDecoder messageFrame = new FixMessageDecoder();
+    private final ReplayIndexRecordDecoder indexRecord = new ReplayIndexRecordDecoder();
+
+    private final Long2ObjectHashMap<SessionQuery> sessionToIndex = new Long2ObjectHashMap<>();
+    private final LongFunction<SessionQuery> newSessionQuery = SessionQuery::new;
+    private final BufferFactory bufferFactory;
+
+    private final ArchiveReader archiveReader;
+
+    public ReplayQuery(final BufferFactory bufferFactory, final ArchiveReader archiveReader)
+    {
+        this.bufferFactory = bufferFactory;
+        this.archiveReader = archiveReader;
+    }
 
     public void query(
         final LogHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
     {
+        sessionToIndex.computeIfAbsent(sessionId, newSessionQuery)
+                      .query(handler, beginSeqNo, endSeqNo);
+    }
 
-        /*messageFrameHeader.wrap(claimBuffer, claimOffset, messageFrameHeader.size());
-        final int actingBlockLength = messageFrameHeader.blockLength();
+    public void close()
+    {
+        sessionToIndex.values().forEach(SessionQuery::close);
+    }
 
-        claimOffset += messageFrameHeader.size();
+    private final class SessionQuery
+    {
+        private final ByteBuffer wrappedBuffer;
+        private final UnsafeBuffer buffer;
 
-        messageFrame.wrap(claimBuffer, claimOffset, actingBlockLength, messageFrameHeader.version());
-        final int bodyLength = messageFrame.bodyLength();
+        private SessionQuery(final long sessionId)
+        {
+            wrappedBuffer = bufferFactory.map(ReplayIndex.logFile(sessionId));
+            buffer = new UnsafeBuffer(wrappedBuffer);
+        }
 
-        claimOffset += actingBlockLength + SIZE_OF_LENGTH_FIELD;*/
+        // TODO: potential optimisation of jumping straight to the beginSeqNo offset
+        // Needs thinking about out of order sequence numbers due to duplicates and resends
+        private void query(final LogHandler handler, final int beginSeqNo, final int endSeqNo)
+        {
+            messageFrameHeader.wrap(buffer, 0, indexRecord.sbeSchemaVersion());
+            int index = messageFrameHeader.size();
+            final int actingBlockLength = messageFrameHeader.blockLength();
+            final int actingVersion = messageFrameHeader.version();
+
+            while (true)
+            {
+                indexRecord.wrap(buffer, index, actingBlockLength, actingVersion).streamId();
+                final long position = indexRecord.position();
+                if (position == 0)
+                {
+                    return;
+                }
+
+                final int sequenceNumber = indexRecord.sequenceNumber();
+                if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo)
+                {
+                    if (!archiveReader.read(position, handler))
+                    {
+                        return;
+                    }
+                }
+                index = indexRecord.limit();
+            }
+        }
+
+        public void close()
+        {
+            if (wrappedBuffer instanceof MappedByteBuffer)
+            {
+                IoUtil.unmap((MappedByteBuffer) wrappedBuffer);
+            }
+        }
     }
 }

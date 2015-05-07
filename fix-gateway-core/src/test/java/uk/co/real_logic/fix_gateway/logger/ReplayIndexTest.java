@@ -22,7 +22,6 @@ import uk.co.real_logic.fix_gateway.messages.ConnectEncoder;
 import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordDecoder;
 
 import java.nio.ByteBuffer;
-import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.anyString;
@@ -31,10 +30,8 @@ import static org.mockito.Mockito.*;
 public class ReplayIndexTest extends AbstractMessageTest
 {
 
-    private static final int STREAM_ID = 2;
     private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024);
-    @SuppressWarnings("unchecked")
-    private Function<String, ByteBuffer> mockBufferFactory = mock(Function.class);
+    private BufferFactory mockBufferFactory = mock(BufferFactory.class);
 
     private ConnectEncoder connect = new ConnectEncoder();
     private ReplayIndex replayIndex = new ReplayIndex(mockBufferFactory);
@@ -42,7 +39,7 @@ public class ReplayIndexTest extends AbstractMessageTest
     @Before
     public void setUp()
     {
-        when(mockBufferFactory.apply(anyString())).thenReturn(indexBuffer);
+        when(mockBufferFactory.map(anyString())).thenReturn(indexBuffer);
     }
 
     @Test
@@ -118,7 +115,7 @@ public class ReplayIndexTest extends AbstractMessageTest
 
     private void verifyMappedFile(final long sessionId)
     {
-        verify(mockBufferFactory, times(1)).apply(ReplayIndex.logFile(sessionId));
+        verify(mockBufferFactory, times(1)).map(ReplayIndex.logFile(sessionId));
     }
 
     private void indexRecord()
