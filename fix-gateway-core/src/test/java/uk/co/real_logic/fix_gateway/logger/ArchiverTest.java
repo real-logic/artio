@@ -17,10 +17,10 @@ package uk.co.real_logic.fix_gateway.logger;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.aeron.common.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
 import java.nio.ByteBuffer;
 
@@ -39,14 +39,14 @@ public class ArchiverTest
 
     private DataHeaderFlyweight headerFlyweight = new DataHeaderFlyweight();
     private Header mockHeader = new Header();
-    private Subscription mockSubscription = mock(Subscription.class);
+    private ReplicationStreams mockStreams = mock(ReplicationStreams.class);
     private BufferFactory mockBufferFactory = mock(BufferFactory.class);
 
     private ByteBuffer byteBuffer = ByteBuffer.allocate(16 * 1024);
     private UnsafeBuffer outputBuffer = new UnsafeBuffer(byteBuffer);
     private UnsafeBuffer inputBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
-    private Archiver archiver = new Archiver(mockBufferFactory, mockSubscription);
+    private Archiver archiver = new Archiver(mockBufferFactory, mockStreams);
 
     @Before
     public void setUp()

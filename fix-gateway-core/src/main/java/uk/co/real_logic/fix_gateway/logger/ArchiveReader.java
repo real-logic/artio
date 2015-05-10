@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.logger;
 
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
+import uk.co.real_logic.aeron.driver.Configuration;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
@@ -24,16 +25,16 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import java.nio.ByteBuffer;
 import java.util.function.IntFunction;
 
+import static java.lang.Integer.numberOfTrailingZeros;
 import static uk.co.real_logic.aeron.common.concurrent.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
 import static uk.co.real_logic.aeron.common.concurrent.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
 import static uk.co.real_logic.aeron.common.protocol.HeaderFlyweight.HEADER_LENGTH;
-import static uk.co.real_logic.aeron.driver.Configuration.TERM_BUFFER_LENGTH_DEFAULT;
 
 public class ArchiveReader
 {
     // TODO: load these out of a configuration file.
     private static final int INITIAL_TERM_ID = 0;
-    private static final int POSITION_BITS_TO_SHIFT = Integer.numberOfTrailingZeros(TERM_BUFFER_LENGTH_DEFAULT);
+    private static final int POSITION_BITS_TO_SHIFT = numberOfTrailingZeros(Configuration.termBufferLength());
 
     public static final int MESSAGE_FRAME_BLOCK_LENGTH = 8 + FixMessageDecoder.BLOCK_LENGTH;
 
@@ -42,11 +43,11 @@ public class ArchiveReader
 
     private final IntFunction<StreamReader> newStreamReader = StreamReader::new;
     private final Int2ObjectHashMap<StreamReader> streamIdToReader = new Int2ObjectHashMap<>();
-    private final BufferFactory bufferFactory;
+    private final BufferFactory archiveBufferFactory;
 
-    public ArchiveReader(final BufferFactory bufferFactory)
+    public ArchiveReader(final BufferFactory archiveBufferFactory)
     {
-        this.bufferFactory = bufferFactory;
+        this.archiveBufferFactory = archiveBufferFactory;
     }
 
     public boolean read(final int streamId, final long position, final LogHandler handler)
@@ -71,7 +72,7 @@ public class ArchiveReader
 
         private ByteBuffer newBuffer(final int termId)
         {
-            return bufferFactory.map(LogDirectoryDescriptor.logFile(streamId, termId));
+            return archiveBufferFactory.map(LogDirectoryDescriptor.logFile(streamId, termId));
         }
 
         private boolean read(final long position, final LogHandler handler)

@@ -23,6 +23,7 @@ import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -38,10 +39,10 @@ public class Archiver implements Agent, DataHandler
     private final BufferFactory bufferFactory;
     private final Subscription subscription;
 
-    public Archiver(final BufferFactory bufferFactory, final Subscription subscription)
+    public Archiver(final BufferFactory bufferFactory, final ReplicationStreams streams)
     {
         this.bufferFactory = bufferFactory;
-        this.subscription = subscription;
+        this.subscription = streams.dataSubscription(this);
     }
 
     public void onData(final DirectBuffer buffer, final int offset, final int length, final Header header)

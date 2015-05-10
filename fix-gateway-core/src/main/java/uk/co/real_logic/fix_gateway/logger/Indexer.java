@@ -20,6 +20,7 @@ import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
+import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
 import java.util.List;
 
@@ -30,10 +31,10 @@ public class Indexer implements Agent, DataHandler
     private final List<Index> indices;
     private final Subscription subscription;
 
-    public Indexer(final List<Index> indices, final Subscription subscription)
+    public Indexer(final List<Index> indices, final ReplicationStreams streams)
     {
         this.indices = indices;
-        this.subscription = subscription;
+        this.subscription = streams.dataSubscription(this);
     }
 
     public int doWork() throws Exception

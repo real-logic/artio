@@ -35,13 +35,13 @@ public class ReplayQuery
 
     private final Long2ObjectHashMap<SessionQuery> sessionToIndex = new Long2ObjectHashMap<>();
     private final LongFunction<SessionQuery> newSessionQuery = SessionQuery::new;
-    private final BufferFactory bufferFactory;
+    private final BufferFactory indexBufferFactory;
 
     private final ArchiveReader archiveReader;
 
-    public ReplayQuery(final BufferFactory bufferFactory, final ArchiveReader archiveReader)
+    public ReplayQuery(final BufferFactory indexBufferFactory, final ArchiveReader archiveReader)
     {
-        this.bufferFactory = bufferFactory;
+        this.indexBufferFactory = indexBufferFactory;
         this.archiveReader = archiveReader;
     }
 
@@ -64,7 +64,7 @@ public class ReplayQuery
 
         private SessionQuery(final long sessionId)
         {
-            wrappedBuffer = bufferFactory.map(ReplayIndex.logFile(sessionId));
+            wrappedBuffer = indexBufferFactory.map(ReplayIndex.logFile(sessionId));
             buffer = new UnsafeBuffer(wrappedBuffer);
         }
 

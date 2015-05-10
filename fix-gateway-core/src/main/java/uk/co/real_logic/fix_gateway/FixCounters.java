@@ -20,29 +20,29 @@ import uk.co.real_logic.agrona.concurrent.CountersManager;
 
 public final class FixCounters
 {
-    private final AtomicCounter receiverProxyFails;
-    private final AtomicCounter senderProxyFails;
+    private final AtomicCounter framerProxyFails;
     private final AtomicCounter failedDataPublications;
+    private final AtomicCounter exceptions;
 
     public FixCounters(final CountersManager countersManager)
     {
-        receiverProxyFails = countersManager.newCounter("Failed offers to ReceiverProxy");
-        senderProxyFails = countersManager.newCounter("Failed offers to SenderProxy");
+        framerProxyFails = countersManager.newCounter("Failed offers to Framer Proxy");
         failedDataPublications = countersManager.newCounter("Failed offer to data publication");
+        exceptions = countersManager.newCounter("Gateway Exceptions");
     }
 
-    public AtomicCounter receiverProxyFails()
+    public AtomicCounter framerProxyFails()
     {
-        return receiverProxyFails;
-    }
-
-    public AtomicCounter senderProxyFails()
-    {
-        return senderProxyFails;
+        return framerProxyFails;
     }
 
     public AtomicCounter failedDataPublications()
     {
         return failedDataPublications;
+    }
+
+    public AtomicCounter exceptions()
+    {
+        return exceptions;
     }
 }

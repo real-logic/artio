@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.logger;
 
 import java.io.File;
 
-final class LogDirectoryDescriptor
+public final class LogDirectoryDescriptor
 {
     public static final String LOG_FILE_DIR_PROP = "logging.dir";
 
@@ -32,7 +32,7 @@ final class LogDirectoryDescriptor
 
     public static final String INDEX_FILE_SIZE_PROP = "logging.index.size";
 
-    public static final long INDEX_FILE_SIZE_DEFAULT = 2 * 1024 * 1024;
+    public static final int INDEX_FILE_SIZE_DEFAULT = 2 * 1024 * 1024;
 
-    public static final long INDEX_FILE_SIZE = Long.getLong(INDEX_FILE_SIZE_PROP, INDEX_FILE_SIZE_DEFAULT);
+    public static final int INDEX_FILE_SIZE = Integer.getInteger(INDEX_FILE_SIZE_PROP, INDEX_FILE_SIZE_DEFAULT);
 }

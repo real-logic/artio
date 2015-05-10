@@ -24,7 +24,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class ReplicationStreams implements AutoCloseable
+public class ReplicationStreams implements AutoCloseable
 {
     private final List<Subscription> subscriptions = new ArrayList<>();
 
@@ -54,6 +54,11 @@ public final class ReplicationStreams implements AutoCloseable
     public GatewayPublication gatewayPublication()
     {
         return new GatewayPublication(dataPublication, failedDataPublications);
+    }
+
+    public Publication dataPublication()
+    {
+        return dataPublication;
     }
 
     public Publication controlPublication()

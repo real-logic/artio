@@ -16,11 +16,15 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
+import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
+import uk.co.real_logic.aeron.driver.Configuration;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.framer.Framer;
 import uk.co.real_logic.fix_gateway.framer.FramerCommand;
 import uk.co.real_logic.fix_gateway.framer.FramerProxy;
+import uk.co.real_logic.fix_gateway.logger.*;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.framer.Multiplexer;
@@ -29,6 +33,11 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIds;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
+import java.io.File;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
+
 public class FixGateway implements AutoCloseable
 {
     public static final int INBOUND_DATA_STREAM = 0;
@@ -36,17 +45,21 @@ public class FixGateway implements AutoCloseable
     public static final int OUTBOUND_DATA_STREAM = 2;
     public static final int OUTBOUND_CONTROL_STREAM = 3;
 
-    private final FixCounters fixCounters;
+    private FixCounters fixCounters;
 
-    private final Aeron aeron;
-    private final ReplicationStreams inboundStreams;
-    private final ReplicationStreams outboundStreams;
+    private Aeron aeron;
+    private ReplicationStreams inboundStreams;
+    private ReplicationStreams outboundStreams;
 
-    private final FramerProxy framerProxy;
+    private FramerProxy framerProxy;
 
-    private final Framer framer;
+    private Framer framer;
+    private Archiver archiver;
+    private Indexer indexer;
+    private Replayer replayer;
 
-    private final AgentRunner receiverRunner;
+    private AgentRunner framerRunner;
+    private AgentRunner loggingRunner;
 
     private final Signal signal = new Signal();
     private final long connectionTimeout;
@@ -59,21 +72,38 @@ public class FixGateway implements AutoCloseable
         connectionTimeout = configuration.connectionTimeout();
 
         fixCounters = new FixCounters(CountersFileDescriptor.createCountersManager(configuration));
-        final AtomicCounter failedPublications = fixCounters.failedDataPublications();
 
-        final Aeron.Context context = new Aeron.Context();
-        aeron = Aeron.connect(context);
+        initReplicationStreams(configuration);
+        initFramer(configuration, fixCounters);
+        initLogger();
+    }
 
-        final String channel = configuration.aeronChannel();
+    private void initLogger()
+    {
+        final BufferFactory archiveBufferFactory = name -> map(name, Configuration.termBufferLength());
+        final BufferFactory indexBufferFactory = name -> map(name, LogDirectoryDescriptor.INDEX_FILE_SIZE);
 
-        inboundStreams = new ReplicationStreams(
-            channel, aeron, failedPublications, INBOUND_DATA_STREAM, INBOUND_CONTROL_STREAM);
-        outboundStreams = new ReplicationStreams(
-            channel, aeron, failedPublications, OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
+        archiver = new Archiver(archiveBufferFactory, inboundStreams);
 
+        final List<Index> indices = Arrays.asList(new ReplayIndex(indexBufferFactory));
+        indexer = new Indexer(indices, inboundStreams);
+
+        final ReplayQuery replayQuery = new ReplayQuery(indexBufferFactory, new ArchiveReader(archiveBufferFactory));
+        replayer = new Replayer(
+            inboundStreams.gatewaySubscription(),
+            replayQuery,
+            outboundStreams.dataPublication(),
+            new BufferClaim());
+
+        final Agent loggingAgent = new CompositeAgent(archiver, new CompositeAgent(indexer, replayer));
+
+        loggingRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, fixCounters.exceptions(), archiver);
+    }
+
+    private void initFramer(final StaticConfiguration configuration, final FixCounters fixCounters)
+    {
         final SequencedContainerQueue<FramerCommand> framerCommands = new ManyToOneConcurrentArrayQueue<>(10);
-
-        framerProxy = new FramerProxy(framerCommands, fixCounters.receiverProxyFails(), backoffIdleStrategy());
+        framerProxy = new FramerProxy(framerCommands, fixCounters.framerProxyFails(), backoffIdleStrategy());
 
         final SessionIds sessionIds = new SessionIds();
 
@@ -93,8 +123,34 @@ public class FixGateway implements AutoCloseable
 
         framer = new Framer(systemClock, configuration.bindAddress(), handler, framerCommands,
             multiplexer, this, dataSubscription);
+        framerRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, fixCounters.exceptions(), framer);
+    }
 
-        receiverRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, null, framer);
+    private void initReplicationStreams(final StaticConfiguration configuration)
+    {
+        final AtomicCounter failedPublications = fixCounters.failedDataPublications();
+
+        aeron = Aeron.connect(new Aeron.Context());
+
+        final String channel = configuration.aeronChannel();
+
+        inboundStreams = new ReplicationStreams(
+            channel, aeron, failedPublications, INBOUND_DATA_STREAM, INBOUND_CONTROL_STREAM);
+        outboundStreams = new ReplicationStreams(
+            channel, aeron, failedPublications, OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
+    }
+
+    private ByteBuffer map(final String name, final int size)
+    {
+        final File file = new File(name);
+        if (file.exists())
+        {
+            return IoUtil.mapExistingFile(file, name);
+        }
+        else
+        {
+            return IoUtil.mapNewFile(file, size);
+        }
     }
 
     private BackoffIdleStrategy backoffIdleStrategy()
@@ -109,7 +165,8 @@ public class FixGateway implements AutoCloseable
 
     private FixGateway start()
     {
-        start(receiverRunner);
+        start(framerRunner);
+        //start(loggingRunner);
         return this;
     }
 
@@ -142,9 +199,8 @@ public class FixGateway implements AutoCloseable
 
     public synchronized void close() throws Exception
     {
-        receiverRunner.close();
-
-        framer.onClose();
+        framerRunner.close();
+        //loggingRunner.close();
 
         inboundStreams.close();
         outboundStreams.close();
