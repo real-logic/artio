@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
 import java.util.List;
 
+// TODO: add ability to late-join and catchup with indexing
 public class Indexer implements Agent, DataHandler
 {
     private static final int LIMIT = 10;

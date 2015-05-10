@@ -45,6 +45,7 @@ public class ReplayQuery
         this.archiveReader = archiveReader;
     }
 
+    // TODO: add some way of notifying of missing records from the query.
     public void query(
         final LogHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
     {
