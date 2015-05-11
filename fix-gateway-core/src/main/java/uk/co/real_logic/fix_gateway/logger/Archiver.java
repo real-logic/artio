@@ -37,11 +37,13 @@ public class Archiver implements Agent, DataHandler
     private final Int2ObjectHashMap<StreamArchive> streamIdToArchive = new Int2ObjectHashMap<>();
 
     private final BufferFactory bufferFactory;
+    private final ArchiveMetaData metaData;
     private final Subscription subscription;
 
-    public Archiver(final BufferFactory bufferFactory, final ReplicationStreams streams)
+    public Archiver(final BufferFactory bufferFactory, final ReplicationStreams streams, final ArchiveMetaData metaData)
     {
         this.bufferFactory = bufferFactory;
+        this.metaData = metaData;
         this.subscription = streams.dataSubscription(this);
     }
 
@@ -53,12 +55,14 @@ public class Archiver implements Agent, DataHandler
 
     private final class StreamArchive
     {
+        public static final int UNKNOWN = -1;
         private final UnsafeBuffer currentBuffer = new UnsafeBuffer(0, 0);
         private final int streamId;
 
         private ByteBuffer wrappedBuffer;
 
-        private int currentTermId = -1;
+        private int initialTermId = UNKNOWN;
+        private int currentTermId = UNKNOWN;
 
         private StreamArchive(final int streamId)
         {
@@ -67,6 +71,12 @@ public class Archiver implements Agent, DataHandler
 
         private void archive(final DirectBuffer buffer, final int offset, final int length, final Header header)
         {
+            if (initialTermId == UNKNOWN)
+            {
+                initialTermId = header.initialTermId();
+                metaData.write(streamId, initialTermId);
+            }
+
             final int termId = header.termId();
             if (termId != currentTermId)
             {

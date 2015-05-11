@@ -41,12 +41,13 @@ public class ArchiverTest
     private Header mockHeader = new Header();
     private ReplicationStreams mockStreams = mock(ReplicationStreams.class);
     private BufferFactory mockBufferFactory = mock(BufferFactory.class);
+    private ArchiveMetaData mockMetaData = mock(ArchiveMetaData.class);
 
     private ByteBuffer byteBuffer = ByteBuffer.allocate(16 * 1024);
     private UnsafeBuffer outputBuffer = new UnsafeBuffer(byteBuffer);
     private UnsafeBuffer inputBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
-    private Archiver archiver = new Archiver(mockBufferFactory, mockStreams);
+    private Archiver archiver = new Archiver(mockBufferFactory, mockStreams, mockMetaData);
 
     @Before
     public void setUp()

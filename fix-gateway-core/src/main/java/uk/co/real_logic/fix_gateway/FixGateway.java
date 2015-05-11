@@ -83,12 +83,14 @@ public class FixGateway implements AutoCloseable
         final BufferFactory archiveBufferFactory = name -> map(name, Configuration.termBufferLength());
         final BufferFactory indexBufferFactory = name -> map(name, LogDirectoryDescriptor.INDEX_FILE_SIZE);
 
-        archiver = new Archiver(archiveBufferFactory, inboundStreams);
+        final ArchiveMetaData metaData = new ArchiveMetaData();
+        archiver = new Archiver(archiveBufferFactory, inboundStreams, metaData);
+        final ArchiveReader archiveReader = new ArchiveReader(archiveBufferFactory, metaData);
 
         final List<Index> indices = Arrays.asList(new ReplayIndex(indexBufferFactory));
         indexer = new Indexer(indices, inboundStreams);
 
-        final ReplayQuery replayQuery = new ReplayQuery(indexBufferFactory, new ArchiveReader(archiveBufferFactory));
+        final ReplayQuery replayQuery = new ReplayQuery(indexBufferFactory, archiveReader);
         replayer = new Replayer(
             inboundStreams.gatewaySubscription(),
             replayQuery,

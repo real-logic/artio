@@ -30,6 +30,11 @@ public final class LogDirectoryDescriptor
         return String.format(LOG_FILE_DIR + File.separator + "archive-%d-%d.log", streamId, termId);
     }
 
+    public static String metaDatalogFile(final int streamId)
+    {
+        return String.format(LOG_FILE_DIR + File.separator + "meta-data-%d.log", streamId);
+    }
+
     public static final String INDEX_FILE_SIZE_PROP = "logging.index.size";
 
     public static final int INDEX_FILE_SIZE_DEFAULT = 2 * 1024 * 1024;

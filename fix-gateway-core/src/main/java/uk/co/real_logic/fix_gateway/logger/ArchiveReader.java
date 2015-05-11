@@ -33,7 +33,6 @@ import static uk.co.real_logic.aeron.common.protocol.HeaderFlyweight.HEADER_LENG
 public class ArchiveReader
 {
     // TODO: load these out of a configuration file.
-    private static final int INITIAL_TERM_ID = 0;
     private static final int POSITION_BITS_TO_SHIFT = numberOfTrailingZeros(Configuration.termBufferLength());
 
     public static final int MESSAGE_FRAME_BLOCK_LENGTH = 8 + FixMessageDecoder.BLOCK_LENGTH;
@@ -44,10 +43,12 @@ public class ArchiveReader
     private final IntFunction<StreamReader> newStreamReader = StreamReader::new;
     private final Int2ObjectHashMap<StreamReader> streamIdToReader = new Int2ObjectHashMap<>();
     private final BufferFactory archiveBufferFactory;
+    private final ArchiveMetaData metaData;
 
-    public ArchiveReader(final BufferFactory archiveBufferFactory)
+    public ArchiveReader(final BufferFactory archiveBufferFactory, final ArchiveMetaData metaData)
     {
         this.archiveBufferFactory = archiveBufferFactory;
+        this.metaData = metaData;
     }
 
     public boolean read(final int streamId, final long position, final LogHandler handler)
@@ -63,10 +64,12 @@ public class ArchiveReader
         private final IntFunction<ByteBuffer> newBuffer = this::newBuffer;
         private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
         private final Header header = new Header();
+        private final int initialTermId;
 
         private StreamReader(final int streamId)
         {
             this.streamId = streamId;
+            initialTermId = metaData.read(streamId).initialTermId();
             header.buffer(buffer);
         }
 
@@ -77,7 +80,7 @@ public class ArchiveReader
 
         private boolean read(final long position, final LogHandler handler)
         {
-            final int termId = computeTermIdFromPosition(position, POSITION_BITS_TO_SHIFT, INITIAL_TERM_ID);
+            final int termId = computeTermIdFromPosition(position, POSITION_BITS_TO_SHIFT, initialTermId);
             final ByteBuffer termBuffer = termIdToBuffer.computeIfAbsent(termId, newBuffer);
             final int aeronFrameOffset = computeTermOffsetFromPosition(position, POSITION_BITS_TO_SHIFT);
 

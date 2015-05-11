@@ -20,6 +20,7 @@ import org.junit.Test;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.aeron.common.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
@@ -43,13 +44,15 @@ public class ArchiveReaderTest
     private ReplicationStreams mockStreams = mock(ReplicationStreams.class);
     private BufferFactory mockBufferFactory = mock(BufferFactory.class);
     private LogHandler mockHandler = mock(LogHandler.class);
+    private ArchiveMetaData mockMetaData = mock(ArchiveMetaData.class);
+    private ArchiveMetaDataDecoder mockMetaDataDecoder = mock(ArchiveMetaDataDecoder.class);
 
     private ByteBuffer byteBuffer = ByteBuffer.allocate(16 * 1024);
     private UnsafeBuffer inputBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
-    private Archiver archiver = new Archiver(mockBufferFactory, mockStreams);
+    private Archiver archiver = new Archiver(mockBufferFactory, mockStreams, mockMetaData);
 
-    private ArchiveReader archiveReader = new ArchiveReader(mockBufferFactory);
+    private ArchiveReader archiveReader = new ArchiveReader(mockBufferFactory, mockMetaData);
 
     @Before
     public void setUp()
@@ -64,6 +67,8 @@ public class ArchiveReaderTest
         when(mockBufferFactory.map(anyString())).thenReturn(byteBuffer);
 
         inputBuffer.putByte(DATA_POSITION, DATA);
+
+        when(mockMetaData.read(anyInt())).thenReturn(mockMetaDataDecoder);
     }
 
     @Test
