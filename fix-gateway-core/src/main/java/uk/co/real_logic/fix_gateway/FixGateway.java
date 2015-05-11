@@ -97,7 +97,8 @@ public class FixGateway implements AutoCloseable
 
         final Agent loggingAgent = new CompositeAgent(archiver, new CompositeAgent(indexer, replayer));
 
-        loggingRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, fixCounters.exceptions(), loggingAgent);
+        loggingRunner =
+            new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, fixCounters.exceptions(), loggingAgent);
     }
 
     private void initFramer(final StaticConfiguration configuration, final FixCounters fixCounters)
