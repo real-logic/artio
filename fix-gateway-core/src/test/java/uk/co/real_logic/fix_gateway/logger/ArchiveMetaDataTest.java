@@ -28,6 +28,7 @@ public class ArchiveMetaDataTest
 {
     public static final int STREAM_ID = 1;
     public static final int INITIAL_TERM_ID = 12;
+    public static final int TERM_BUFFER_LENGTH = 13;
 
     private ByteBuffer buffer = ByteBuffer.allocate(8 * 1024);
     private Function<File, ByteBuffer> existingBufferFactory = file -> buffer;
@@ -37,10 +38,11 @@ public class ArchiveMetaDataTest
     @Test
     public void shouldStoreMetaDataInformation()
     {
-        archiveMetaData.write(STREAM_ID, INITIAL_TERM_ID);
+        archiveMetaData.write(STREAM_ID, INITIAL_TERM_ID, TERM_BUFFER_LENGTH);
 
         final ArchiveMetaDataDecoder decoder = archiveMetaData.read(STREAM_ID);
         assertEquals(INITIAL_TERM_ID, decoder.initialTermId());
+        assertEquals(TERM_BUFFER_LENGTH, decoder.termBufferLength());
     }
 
 }

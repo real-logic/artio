@@ -29,6 +29,8 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.function.IntFunction;
 
+import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
+
 public class Archiver implements Agent, DataHandler
 {
     private static final int FRAGMENT_LIMIT = 10;
@@ -74,15 +76,14 @@ public class Archiver implements Agent, DataHandler
             if (initialTermId == UNKNOWN)
             {
                 initialTermId = header.initialTermId();
-                metaData.write(streamId, initialTermId);
+                metaData.write(streamId, initialTermId, termBufferLength());
             }
 
             final int termId = header.termId();
             if (termId != currentTermId)
             {
                 close();
-                // TODO:
-                wrappedBuffer = bufferFactory.map(LogDirectoryDescriptor.logFile(streamId, termId), 0);
+                wrappedBuffer = bufferFactory.map(LogDirectoryDescriptor.logFile(streamId, termId), termBufferLength());
                 currentBuffer.wrap(wrappedBuffer);
                 currentTermId = termId;
             }

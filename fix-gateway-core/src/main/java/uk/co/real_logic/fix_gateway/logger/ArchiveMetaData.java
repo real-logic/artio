@@ -48,7 +48,7 @@ public class ArchiveMetaData
         this.newBufferFactory = newBufferFactory;
     }
 
-    public void write(final int streamId, final int initialTermId)
+    public void write(final int streamId, final int initialTermId, final int termBufferLength)
     {
         ensureBufferNotMapped();
         final File metaDataFile = metaDataFile(streamId);
@@ -65,7 +65,8 @@ public class ArchiveMetaData
 
             encoder
                 .wrap(metaDataBuffer, headerEncoder.size())
-                .initialTermId(initialTermId);
+                .initialTermId(initialTermId)
+                .termBufferLength(termBufferLength);
         }
     }
 
