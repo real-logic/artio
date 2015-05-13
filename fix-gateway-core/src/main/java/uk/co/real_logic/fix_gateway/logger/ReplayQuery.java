@@ -37,11 +37,11 @@ public class ReplayQuery
 
     private final Long2ObjectHashMap<SessionQuery> sessionToIndex = new Long2ObjectHashMap<>();
     private final LongFunction<SessionQuery> newSessionQuery = SessionQuery::new;
-    private final ReadableBufferFactory indexBufferFactory;
+    private final ExistingBufferFactory indexBufferFactory;
 
     private final ArchiveReader archiveReader;
 
-    public ReplayQuery(final ReadableBufferFactory indexBufferFactory, final ArchiveReader archiveReader)
+    public ReplayQuery(final ExistingBufferFactory indexBufferFactory, final ArchiveReader archiveReader)
     {
         this.indexBufferFactory = indexBufferFactory;
         this.archiveReader = archiveReader;

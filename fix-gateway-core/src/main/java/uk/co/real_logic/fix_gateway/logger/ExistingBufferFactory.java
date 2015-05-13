@@ -15,9 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 
-public interface ReadableBufferFactory
+public interface ExistingBufferFactory
 {
-    ByteBuffer map(String fileName);
+    ByteBuffer map(File fileName);
 }

@@ -37,9 +37,9 @@ import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.LOG_FIL
  */
 public class ReplayIndex implements Index
 {
-    static String logFile(final long sessionId)
+    static File logFile(final long sessionId)
     {
-        return String.format(LOG_FILE_DIR + File.separator + "replay-index-%d", sessionId);
+        return new File(String.format(LOG_FILE_DIR + File.separator + "replay-index-%d", sessionId));
     }
 
     private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();

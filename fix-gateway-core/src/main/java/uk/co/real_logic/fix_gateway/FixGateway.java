@@ -34,12 +34,9 @@ import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.util.Arrays;
 import java.util.List;
-
-import static uk.co.real_logic.agrona.IoUtil.mapExistingFile;
-import static uk.co.real_logic.agrona.IoUtil.mapNewFile;
-import static uk.co.real_logic.fix_gateway.logger.ArchiveMetaData.META_DATA_FILE_SIZE;
 
 public class FixGateway implements AutoCloseable
 {
@@ -79,13 +76,12 @@ public class FixGateway implements AutoCloseable
     private void initLogger()
     {
         final Archiver archiver = new Archiver(this::map, inboundStreams, newArchiveMetaData());
-        final ArchiveReader archiveReader = new ArchiveReader(
-            file -> mapExistingFile(new File(file), file), newArchiveMetaData());
+        final ArchiveReader archiveReader = new ArchiveReader(this::mapExistingFile, newArchiveMetaData());
 
         final List<Index> indices = Arrays.asList(new ReplayIndex(this::map));
         final Indexer indexer = new Indexer(indices, inboundStreams);
 
-        final ReplayQuery replayQuery = new ReplayQuery(file -> mapExistingFile(new File(file), file), archiveReader);
+        final ReplayQuery replayQuery = new ReplayQuery(this::mapExistingFile, archiveReader);
         final Replayer replayer = new Replayer(
             inboundStreams.gatewaySubscription(),
             replayQuery,
@@ -98,11 +94,14 @@ public class FixGateway implements AutoCloseable
             new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, fixCounters.exceptions(), loggingAgent);
     }
 
+    private MappedByteBuffer mapExistingFile(final File file)
+    {
+        return IoUtil.mapExistingFile(file, file.getName());
+    }
+
     private ArchiveMetaData newArchiveMetaData()
     {
-        return new ArchiveMetaData(
-            file -> mapNewFile(file, META_DATA_FILE_SIZE),
-            file -> mapExistingFile(file, file.getName()));
+        return new ArchiveMetaData(this::mapExistingFile, IoUtil::mapNewFile);
     }
 
     private void initFramer(final StaticConfiguration configuration, final FixCounters fixCounters)
@@ -145,12 +144,11 @@ public class FixGateway implements AutoCloseable
             channel, aeron, failedPublications, OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
     }
 
-    private ByteBuffer map(final String name, final int size)
+    private ByteBuffer map(final File file, final int size)
     {
-        final File file = new File(name);
         if (file.exists())
         {
-            return IoUtil.mapExistingFile(file, name);
+            return IoUtil.mapExistingFile(file, file.getName());
         }
         else
         {

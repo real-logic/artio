@@ -25,14 +25,14 @@ public final class LogDirectoryDescriptor
 
     public static final String LOG_FILE_DIR = System.getProperty(LOG_FILE_DIR_PROP, LOG_FILE_DIR_DEFAULT);
 
-    public static String logFile(final int streamId, final int termId)
+    public static File logFile(final int streamId, final int termId)
     {
-        return String.format(LOG_FILE_DIR + File.separator + "archive-%d-%d.log", streamId, termId);
+        return new File(String.format(LOG_FILE_DIR + File.separator + "archive-%d-%d.log", streamId, termId));
     }
 
-    public static String metaDatalogFile(final int streamId)
+    public static File metaDataLogFile(final int streamId)
     {
-        return String.format(LOG_FILE_DIR + File.separator + "meta-data-%d.log", streamId);
+        return new File(String.format(LOG_FILE_DIR + File.separator + "meta-data-%d.log", streamId));
     }
 
     public static final String INDEX_FILE_SIZE_PROP = "logging.index.size";

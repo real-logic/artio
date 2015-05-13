@@ -25,24 +25,23 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.util.function.Function;
 
-import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.metaDatalogFile;
+import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.metaDataLogFile;
 
 public class ArchiveMetaData
 {
-    public static final int META_DATA_FILE_SIZE = 8 + ArchiveMetaDataDecoder.BLOCK_LENGTH;
+    private static final int META_DATA_FILE_SIZE = 8 + ArchiveMetaDataDecoder.BLOCK_LENGTH;
 
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final ArchiveMetaDataDecoder decoder = new ArchiveMetaDataDecoder();
     private final ArchiveMetaDataEncoder encoder = new ArchiveMetaDataEncoder();
     private final UnsafeBuffer metaDataBuffer = new UnsafeBuffer(0, encoder.sbeBlockLength());
-    private final Function<File, ByteBuffer> existingBufferFactory;
-    private final Function<File, ByteBuffer> newBufferFactory;
+    private final ExistingBufferFactory existingBufferFactory;
+    private final BufferFactory newBufferFactory;
 
     public ArchiveMetaData(
-        final Function<File, ByteBuffer> existingBufferFactory, final Function<File, ByteBuffer> newBufferFactory)
+        final ExistingBufferFactory existingBufferFactory, final BufferFactory newBufferFactory)
     {
         this.existingBufferFactory = existingBufferFactory;
         this.newBufferFactory = newBufferFactory;
@@ -51,10 +50,10 @@ public class ArchiveMetaData
     public void write(final int streamId, final int initialTermId, final int termBufferLength)
     {
         ensureBufferNotMapped();
-        final File metaDataFile = metaDataFile(streamId);
+        final File metaDataFile = metaDataLogFile(streamId);
         if (!metaDataFile.exists())
         {
-            metaDataBuffer.wrap(newBufferFactory.apply(metaDataFile));
+            metaDataBuffer.wrap(newBufferFactory.map(metaDataFile, META_DATA_FILE_SIZE));
 
             headerEncoder
                 .wrap(metaDataBuffer, 0, 0)
@@ -73,15 +72,10 @@ public class ArchiveMetaData
     public ArchiveMetaDataDecoder read(final int streamId)
     {
         ensureBufferNotMapped();
-        metaDataBuffer.wrap(existingBufferFactory.apply(metaDataFile(streamId)));
+        metaDataBuffer.wrap(existingBufferFactory.map(metaDataLogFile(streamId)));
         headerDecoder.wrap(metaDataBuffer, 0, 0);
         decoder.wrap(metaDataBuffer, headerDecoder.size(), headerDecoder.blockLength(), headerDecoder.version());
         return decoder;
-    }
-
-    private File metaDataFile(int streamId)
-    {
-        return new File(metaDatalogFile(streamId));
     }
 
     private void ensureBufferNotMapped()

@@ -30,6 +30,7 @@ import java.nio.MappedByteBuffer;
 import java.util.function.IntFunction;
 
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
+import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.logFile;
 
 public class Archiver implements Agent, DataHandler
 {
@@ -83,7 +84,7 @@ public class Archiver implements Agent, DataHandler
             if (termId != currentTermId)
             {
                 close();
-                wrappedBuffer = bufferFactory.map(LogDirectoryDescriptor.logFile(streamId, termId), termBufferLength());
+                wrappedBuffer = bufferFactory.map(logFile(streamId, termId), termBufferLength());
                 currentBuffer.wrap(wrappedBuffer);
                 currentTermId = termId;
             }

@@ -26,7 +26,7 @@ import static uk.co.real_logic.fix_gateway.logger.ReplayIndex.logFile;
 public class ReplayQueryTest extends AbstractMessageTest
 {
     private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024);
-    private ReadableBufferFactory mockBufferFactory = mock(ReadableBufferFactory.class);
+    private ExistingBufferFactory mockBufferFactory = mock(ExistingBufferFactory.class);
     private LogHandler mockHandler = mock(LogHandler.class);
     private ArchiveReader mockReader = mock(ArchiveReader.class);
     private ReplayIndex replayIndex = new ReplayIndex((name, size) -> indexBuffer);

@@ -21,10 +21,10 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.ConnectEncoder;
 import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordDecoder;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.logger.ReplayIndex.logFile;
 
@@ -40,7 +40,7 @@ public class ReplayIndexTest extends AbstractMessageTest
     @Before
     public void setUp()
     {
-        when(mockBufferFactory.map(anyString(), anyInt())).thenReturn(indexBuffer);
+        when(mockBufferFactory.map(any(File.class), anyInt())).thenReturn(indexBuffer);
     }
 
     @Test

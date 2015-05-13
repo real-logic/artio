@@ -29,6 +29,7 @@ import static java.lang.Integer.numberOfTrailingZeros;
 import static uk.co.real_logic.aeron.common.concurrent.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
 import static uk.co.real_logic.aeron.common.concurrent.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
 import static uk.co.real_logic.aeron.common.protocol.HeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.logFile;
 
 public class ArchiveReader
 {
@@ -39,10 +40,10 @@ public class ArchiveReader
 
     private final IntFunction<StreamReader> newStreamReader = StreamReader::new;
     private final Int2ObjectHashMap<StreamReader> streamIdToReader = new Int2ObjectHashMap<>();
-    private final ReadableBufferFactory archiveBufferFactory;
+    private final ExistingBufferFactory archiveBufferFactory;
     private final ArchiveMetaData metaData;
 
-    public ArchiveReader(final ReadableBufferFactory archiveBufferFactory, final ArchiveMetaData metaData)
+    public ArchiveReader(final ExistingBufferFactory archiveBufferFactory, final ArchiveMetaData metaData)
     {
         this.archiveBufferFactory = archiveBufferFactory;
         this.metaData = metaData;
@@ -76,7 +77,7 @@ public class ArchiveReader
 
         private ByteBuffer newBuffer(final int termId)
         {
-            return archiveBufferFactory.map(LogDirectoryDescriptor.logFile(streamId, termId));
+            return archiveBufferFactory.map(logFile(streamId, termId));
         }
 
         private boolean read(final long position, final LogHandler handler)

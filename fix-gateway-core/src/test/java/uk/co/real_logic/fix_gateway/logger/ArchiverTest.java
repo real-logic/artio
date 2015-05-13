@@ -22,10 +22,10 @@ import uk.co.real_logic.aeron.common.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.aeron.common.protocol.HeaderFlyweight.HEADER_LENGTH;
 
@@ -56,7 +56,7 @@ public class ArchiverTest
         mockHeader.initialTermId(0);
         mockHeader.offset(0);
 
-        when(mockBufferFactory.map(anyString(), anyInt())).thenReturn(byteBuffer);
+        when(mockBufferFactory.map(any(File.class), anyInt())).thenReturn(byteBuffer);
 
         inputBuffer.putByte(DATA_POSITION, DATA);
     }
@@ -105,7 +105,7 @@ public class ArchiverTest
 
     private void verifyBufferMapped(final int wantedNumberOfInvocations)
     {
-        verify(mockBufferFactory, times(wantedNumberOfInvocations)).map(anyString(), anyInt());
+        verify(mockBufferFactory, times(wantedNumberOfInvocations)).map(any(File.class), anyInt());
     }
 
     private void onData()
