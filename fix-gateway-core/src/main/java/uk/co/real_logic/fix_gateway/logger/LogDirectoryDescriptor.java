@@ -40,4 +40,5 @@ public final class LogDirectoryDescriptor
     public static final int INDEX_FILE_SIZE_DEFAULT = 2 * 1024 * 1024;
 
     public static final int INDEX_FILE_SIZE = Integer.getInteger(INDEX_FILE_SIZE_PROP, INDEX_FILE_SIZE_DEFAULT);
+
 }

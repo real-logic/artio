@@ -26,7 +26,6 @@ import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
 import java.nio.ByteBuffer;
 
-import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.aeron.common.protocol.HeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.FixMessageDecoder.BLOCK_LENGTH;
@@ -39,20 +38,19 @@ public class ArchiveReaderTest
     private static final int LENGTH = HEADER_LENGTH + 40;
     private static final int STREAM_ID = 1;
 
+    private ByteBuffer byteBuffer = ByteBuffer.allocate(16 * 1024);
+    private UnsafeBuffer inputBuffer = new UnsafeBuffer(new byte[16 * 1024]);
+
     private DataHeaderFlyweight headerFlyweight = new DataHeaderFlyweight();
     private Header mockHeader = new Header();
     private ReplicationStreams mockStreams = mock(ReplicationStreams.class);
-    private BufferFactory mockBufferFactory = mock(BufferFactory.class);
     private LogHandler mockHandler = mock(LogHandler.class);
     private ArchiveMetaData mockMetaData = mock(ArchiveMetaData.class);
     private ArchiveMetaDataDecoder mockMetaDataDecoder = mock(ArchiveMetaDataDecoder.class);
 
-    private ByteBuffer byteBuffer = ByteBuffer.allocate(16 * 1024);
-    private UnsafeBuffer inputBuffer = new UnsafeBuffer(new byte[16 * 1024]);
+    private Archiver archiver = new Archiver((file, size) -> byteBuffer, mockStreams, mockMetaData);
 
-    private Archiver archiver = new Archiver(mockBufferFactory, mockStreams, mockMetaData);
-
-    private ArchiveReader archiveReader = new ArchiveReader(mockBufferFactory, mockMetaData);
+    private ArchiveReader archiveReader = new ArchiveReader(file -> byteBuffer, mockMetaData);
 
     @Before
     public void setUp()
@@ -63,8 +61,6 @@ public class ArchiveReaderTest
 
         headerFlyweight.wrap(inputBuffer, 0);
         headerFlyweight.frameLength(LENGTH);
-
-        when(mockBufferFactory.map(anyString())).thenReturn(byteBuffer);
 
         inputBuffer.putByte(DATA_POSITION, DATA);
 
@@ -84,11 +80,6 @@ public class ArchiveReaderTest
             eq(HEADER_LENGTH),
             eq(HEADER_LENGTH + 8 + BLOCK_LENGTH),
             eq(LENGTH - (8 + BLOCK_LENGTH + HEADER_LENGTH)));
-    }
-
-    private void verifyBufferMapped(final int wantedNumberOfInvocations)
-    {
-        verify(mockBufferFactory, times(wantedNumberOfInvocations)).map(anyString());
     }
 
     private void dataStored()

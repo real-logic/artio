@@ -21,14 +21,15 @@ import org.junit.Test;
 import java.nio.ByteBuffer;
 
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.logger.ReplayIndex.logFile;
 
 public class ReplayQueryTest extends AbstractMessageTest
 {
     private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024);
-    private BufferFactory mockBufferFactory = mock(BufferFactory.class);
+    private ReadableBufferFactory mockBufferFactory = mock(ReadableBufferFactory.class);
     private LogHandler mockHandler = mock(LogHandler.class);
     private ArchiveReader mockReader = mock(ArchiveReader.class);
-    private ReplayIndex replayIndex = new ReplayIndex(mockBufferFactory);
+    private ReplayIndex replayIndex = new ReplayIndex((name, size) -> indexBuffer);
 
     private ReplayQuery query = new ReplayQuery(mockBufferFactory, mockReader);
 
@@ -48,7 +49,7 @@ public class ReplayQueryTest extends AbstractMessageTest
     {
         query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
 
-        verifyMappedFile(SESSION_ID, 2);
+        verifyMappedFile(SESSION_ID, 1);
         verifyOneMessageRead();
     }
 
@@ -57,7 +58,6 @@ public class ReplayQueryTest extends AbstractMessageTest
     {
         query.query(mockHandler, SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
 
-        verifyMappedFile(SESSION_ID, 1);
         verifyMappedFile(SESSION_ID_2, 1);
         verifyNoMessageRead();
     }
@@ -77,7 +77,6 @@ public class ReplayQueryTest extends AbstractMessageTest
 
         query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
 
-        verifyMappedFile(SESSION_ID, 2);
         verifyOneMessageRead();
     }
 
@@ -93,12 +92,12 @@ public class ReplayQueryTest extends AbstractMessageTest
 
     private void returnBuffer(final ByteBuffer buffer, final long sessionId)
     {
-        when(mockBufferFactory.map(ReplayIndex.logFile(sessionId))).thenReturn(buffer);
+        when(mockBufferFactory.map(logFile(sessionId))).thenReturn(buffer);
     }
 
     private void verifyMappedFile(final long sessionId, final int wantedNumberOfInvocations)
     {
-        verify(mockBufferFactory, times(wantedNumberOfInvocations)).map(ReplayIndex.logFile(sessionId));
+        verify(mockBufferFactory, times(wantedNumberOfInvocations)).map(logFile(sessionId));
     }
 
     private void indexSecondRecord()

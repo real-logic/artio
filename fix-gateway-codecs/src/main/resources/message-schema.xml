@@ -49,5 +49,6 @@
     </sbe:message>
     <sbe:message name="ArchiveMetaData" id="6" description="Meta data about 1 stream's archive">
         <field name="initialTermId" id="15" type="int32"/>
+        <field name="logFileSize" id="16" type="int32"/>
     </sbe:message>
 </sbe:messageSchema>

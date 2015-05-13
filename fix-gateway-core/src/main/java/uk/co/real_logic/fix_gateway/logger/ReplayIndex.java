@@ -29,6 +29,9 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.function.LongFunction;
 
+import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.INDEX_FILE_SIZE;
+import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.LOG_FILE_DIR;
+
 /**
  * Builds an index of a composite key of session id and sequence number
  */
@@ -36,7 +39,7 @@ public class ReplayIndex implements Index
 {
     static String logFile(final long sessionId)
     {
-        return String.format(LogDirectoryDescriptor.LOG_FILE_DIR + File.separator + "replay-index-%d", sessionId);
+        return String.format(LOG_FILE_DIR + File.separator + "replay-index-%d", sessionId);
     }
 
     private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
@@ -95,7 +98,7 @@ public class ReplayIndex implements Index
 
         private SessionIndex(final long sessionId)
         {
-            this.wrappedBuffer = bufferFactory.map(logFile(sessionId));
+            this.wrappedBuffer = bufferFactory.map(logFile(sessionId), INDEX_FILE_SIZE);
             this.buffer = new UnsafeBuffer(wrappedBuffer);
             indexHeaderEncoder
                 .wrap(buffer, 0, replayIndexRecord.sbeSchemaVersion())

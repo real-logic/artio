@@ -56,7 +56,7 @@ public class ArchiverTest
         mockHeader.initialTermId(0);
         mockHeader.offset(0);
 
-        when(mockBufferFactory.map(anyString())).thenReturn(byteBuffer);
+        when(mockBufferFactory.map(anyString(), anyInt())).thenReturn(byteBuffer);
 
         inputBuffer.putByte(DATA_POSITION, DATA);
     }
@@ -105,7 +105,7 @@ public class ArchiverTest
 
     private void verifyBufferMapped(final int wantedNumberOfInvocations)
     {
-        verify(mockBufferFactory, times(wantedNumberOfInvocations)).map(anyString());
+        verify(mockBufferFactory, times(wantedNumberOfInvocations)).map(anyString(), anyInt());
     }
 
     private void onData()

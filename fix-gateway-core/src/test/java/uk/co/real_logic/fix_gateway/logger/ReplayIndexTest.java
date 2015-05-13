@@ -26,6 +26,7 @@ import java.nio.ByteBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.logger.ReplayIndex.logFile;
 
 public class ReplayIndexTest extends AbstractMessageTest
 {
@@ -39,7 +40,7 @@ public class ReplayIndexTest extends AbstractMessageTest
     @Before
     public void setUp()
     {
-        when(mockBufferFactory.map(anyString())).thenReturn(indexBuffer);
+        when(mockBufferFactory.map(anyString(), anyInt())).thenReturn(indexBuffer);
     }
 
     @Test
@@ -115,7 +116,7 @@ public class ReplayIndexTest extends AbstractMessageTest
 
     private void verifyMappedFile(final long sessionId)
     {
-        verify(mockBufferFactory, times(1)).map(ReplayIndex.logFile(sessionId));
+        verify(mockBufferFactory, times(1)).map(eq(logFile(sessionId)), anyInt());
     }
 
     private void indexRecord()

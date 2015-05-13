@@ -42,10 +42,10 @@ public class ArchiveReader
 
     private final IntFunction<StreamReader> newStreamReader = StreamReader::new;
     private final Int2ObjectHashMap<StreamReader> streamIdToReader = new Int2ObjectHashMap<>();
-    private final BufferFactory archiveBufferFactory;
+    private final ReadableBufferFactory archiveBufferFactory;
     private final ArchiveMetaData metaData;
 
-    public ArchiveReader(final BufferFactory archiveBufferFactory, final ArchiveMetaData metaData)
+    public ArchiveReader(final ReadableBufferFactory archiveBufferFactory, final ArchiveMetaData metaData)
     {
         this.archiveBufferFactory = archiveBufferFactory;
         this.metaData = metaData;

@@ -17,17 +17,16 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
-import uk.co.real_logic.aeron.driver.Configuration;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.framer.Framer;
 import uk.co.real_logic.fix_gateway.framer.FramerCommand;
 import uk.co.real_logic.fix_gateway.framer.FramerProxy;
+import uk.co.real_logic.fix_gateway.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.logger.*;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
-import uk.co.real_logic.fix_gateway.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIds;
@@ -79,16 +78,14 @@ public class FixGateway implements AutoCloseable
 
     private void initLogger()
     {
-        final BufferFactory archiveBufferFactory = name -> map(name, Configuration.termBufferLength());
-        final BufferFactory indexBufferFactory = name -> map(name, LogDirectoryDescriptor.INDEX_FILE_SIZE);
+        final Archiver archiver = new Archiver(this::map, inboundStreams, newArchiveMetaData());
+        final ArchiveReader archiveReader = new ArchiveReader(
+            file -> mapExistingFile(new File(file), file), newArchiveMetaData());
 
-        final Archiver archiver = new Archiver(archiveBufferFactory, inboundStreams, newArchiveMetaData());
-        final ArchiveReader archiveReader = new ArchiveReader(archiveBufferFactory, newArchiveMetaData());
-
-        final List<Index> indices = Arrays.asList(new ReplayIndex(indexBufferFactory));
+        final List<Index> indices = Arrays.asList(new ReplayIndex(this::map));
         final Indexer indexer = new Indexer(indices, inboundStreams);
 
-        final ReplayQuery replayQuery = new ReplayQuery(indexBufferFactory, archiveReader);
+        final ReplayQuery replayQuery = new ReplayQuery(file -> mapExistingFile(new File(file), file), archiveReader);
         final Replayer replayer = new Replayer(
             inboundStreams.gatewaySubscription(),
             replayQuery,

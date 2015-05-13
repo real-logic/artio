@@ -25,6 +25,8 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.function.LongFunction;
 
+import static uk.co.real_logic.fix_gateway.logger.ReplayIndex.logFile;
+
 /**
  * Queries an index of a composite key of session id and sequence number
  */
@@ -35,11 +37,11 @@ public class ReplayQuery
 
     private final Long2ObjectHashMap<SessionQuery> sessionToIndex = new Long2ObjectHashMap<>();
     private final LongFunction<SessionQuery> newSessionQuery = SessionQuery::new;
-    private final BufferFactory indexBufferFactory;
+    private final ReadableBufferFactory indexBufferFactory;
 
     private final ArchiveReader archiveReader;
 
-    public ReplayQuery(final BufferFactory indexBufferFactory, final ArchiveReader archiveReader)
+    public ReplayQuery(final ReadableBufferFactory indexBufferFactory, final ArchiveReader archiveReader)
     {
         this.indexBufferFactory = indexBufferFactory;
         this.archiveReader = archiveReader;
@@ -65,7 +67,7 @@ public class ReplayQuery
 
         private SessionQuery(final long sessionId)
         {
-            wrappedBuffer = indexBufferFactory.map(ReplayIndex.logFile(sessionId));
+            wrappedBuffer = indexBufferFactory.map(logFile(sessionId));
             buffer = new UnsafeBuffer(wrappedBuffer);
         }
 
