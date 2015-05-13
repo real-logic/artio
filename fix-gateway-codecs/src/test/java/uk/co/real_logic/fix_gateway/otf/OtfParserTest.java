@@ -39,8 +39,6 @@ public class OtfParserTest
     @DataPoint
     public static final int OFFSET = 1;
 
-    private static final int MESSAGE_TYPE = 'D';
-
     public static final int LENGTH = 16 * 1024;
 
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[LENGTH]);
