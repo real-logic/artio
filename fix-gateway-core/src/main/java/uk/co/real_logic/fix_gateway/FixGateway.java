@@ -38,6 +38,10 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
+import static uk.co.real_logic.agrona.IoUtil.mapExistingFile;
+import static uk.co.real_logic.agrona.IoUtil.mapNewFile;
+import static uk.co.real_logic.fix_gateway.logger.ArchiveMetaData.META_DATA_FILE_SIZE;
+
 public class FixGateway implements AutoCloseable
 {
     public static final int INBOUND_DATA_STREAM = 0;
@@ -52,11 +56,6 @@ public class FixGateway implements AutoCloseable
     private ReplicationStreams outboundStreams;
 
     private FramerProxy framerProxy;
-
-    private Framer framer;
-    private Archiver archiver;
-    private Indexer indexer;
-    private Replayer replayer;
 
     private AgentRunner framerRunner;
     private AgentRunner loggingRunner;
@@ -83,15 +82,14 @@ public class FixGateway implements AutoCloseable
         final BufferFactory archiveBufferFactory = name -> map(name, Configuration.termBufferLength());
         final BufferFactory indexBufferFactory = name -> map(name, LogDirectoryDescriptor.INDEX_FILE_SIZE);
 
-        final ArchiveMetaData metaData = new ArchiveMetaData();
-        archiver = new Archiver(archiveBufferFactory, inboundStreams, metaData);
-        final ArchiveReader archiveReader = new ArchiveReader(archiveBufferFactory, metaData);
+        final Archiver archiver = new Archiver(archiveBufferFactory, inboundStreams, newArchiveMetaData());
+        final ArchiveReader archiveReader = new ArchiveReader(archiveBufferFactory, newArchiveMetaData());
 
         final List<Index> indices = Arrays.asList(new ReplayIndex(indexBufferFactory));
-        indexer = new Indexer(indices, inboundStreams);
+        final Indexer indexer = new Indexer(indices, inboundStreams);
 
         final ReplayQuery replayQuery = new ReplayQuery(indexBufferFactory, archiveReader);
-        replayer = new Replayer(
+        final Replayer replayer = new Replayer(
             inboundStreams.gatewaySubscription(),
             replayQuery,
             outboundStreams.dataPublication(),
@@ -101,6 +99,13 @@ public class FixGateway implements AutoCloseable
 
         loggingRunner =
             new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, fixCounters.exceptions(), loggingAgent);
+    }
+
+    private ArchiveMetaData newArchiveMetaData()
+    {
+        return new ArchiveMetaData(
+            file -> mapNewFile(file, META_DATA_FILE_SIZE),
+            file -> mapExistingFile(file, file.getName()));
     }
 
     private void initFramer(final StaticConfiguration configuration, final FixCounters fixCounters)
@@ -124,7 +129,7 @@ public class FixGateway implements AutoCloseable
             inboundStreams,
             outboundStreams);
 
-        framer = new Framer(systemClock, configuration.bindAddress(), handler, framerCommands,
+        final Framer framer = new Framer(systemClock, configuration.bindAddress(), handler, framerCommands,
             multiplexer, this, dataSubscription);
         framerRunner = new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, fixCounters.exceptions(), framer);
     }
