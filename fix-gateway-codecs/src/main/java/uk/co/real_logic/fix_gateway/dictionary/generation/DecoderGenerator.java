@@ -77,7 +77,6 @@ public class DecoderGenerator extends Generator
         }
         catch (final IOException e)
         {
-            // TODO: logging
             e.printStackTrace();
         }
     }
