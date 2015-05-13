@@ -15,6 +15,19 @@ import org.gradle.plugins.ide.eclipse.model.Classpath
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+buildscript {
+    repositories {
+        jcenter()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.puppycrawl.tools:checkstyle:6.5'
+    }
+}
+
+plugins {
+    id 'com.github.johnrengelman.shadow' version '1.2.1'
+}
 
 apply plugin: 'maven'
 apply plugin: 'signing'
@@ -34,16 +47,6 @@ ext {
 
 allprojects {
     apply plugin: 'eclipse'
-}
-
-buildscript {
-    repositories {
-        jcenter()
-    }
-    dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:0.8'
-        classpath 'com.puppycrawl.tools:checkstyle:6.5'
-    }
 }
 
 subprojects {
@@ -138,7 +141,7 @@ subprojects {
 }
 
 project(':fix-gateway-codecs') {
-    apply plugin: 'shadow'
+    apply plugin: 'com.github.johnrengelman.shadow'
 
     dependencies {
         compile 'uk.co.real-logic:Agrona:0.3.2-SNAPSHOT'
@@ -214,6 +217,12 @@ project(':fix-gateway-core') {
 }
 
 project(':fix-gateway-system-tests') {
+    apply plugin: 'com.github.johnrengelman.shadow'
+
+    sourceSets {
+        perf
+    }
+
     dependencies {
         testCompile project(path: ':fix-gateway-core', configuration: 'tests'), 'quickfixj:quickfixj-core:1.5.3',
                     'quickfixj:quickfixj-msg-fix44:1.5.3', project(path: ':fix-gateway-codecs', configuration: 'tests'),
@@ -222,27 +231,49 @@ project(':fix-gateway-system-tests') {
 
         compile project(path: ':fix-gateway-core'), 'uk.co.real-logic:aeron-client:0.1-SNAPSHOT',
                 'org.hdrhistogram:HdrHistogram:1.2.1'
+
+        perfCompile project
+        perfCompile 'org.openjdk.jmh:jmh-core:1.9.2', 'org.openjdk.jmh:jmh-generator-annprocess:1.9.2'
+
     }
 
     test {
         systemProperties('java.net.preferIPv4Stack': true)
     }
 
-    /*task execute(type:JavaExec) {
-        main = mainClass
-        classpath = sourceSets.test.runtimeClasspath
-    }*/
+    idea.module {
+        scopes.COMPILE.plus  += [ configurations.perfCompile ]
+    }
+
+    task benchmarks(dependsOn: perfClasses) {
+        shadowJar {
+            classifier = "benchmarks"
+
+            from sourceSets.main.output
+            from sourceSets.perf.output
+            from project.configurations.perfRuntime
+
+            manifest {
+                attributes "Main-Class": "org.openjdk.jmh.Main"
+            }
+        }
+
+        doLast {
+            shadowJar.execute()
+        }
+    }
+
 }
 
 project(':fix-gateway-samples') {
-    apply plugin: 'shadow'
+    apply plugin: 'com.github.johnrengelman.shadow'
 
     dependencies {
         compile project(':fix-gateway-core')
     }
 
-    shadow {
-        outputFile = new File('fix-gateway-samples/build/libs/samples.jar')
+    shadowJar {
+        baseName = 'samples.jar'
     }
 
     build.doLast {
