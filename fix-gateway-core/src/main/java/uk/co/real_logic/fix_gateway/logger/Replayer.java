@@ -33,7 +33,6 @@ import java.nio.charset.StandardCharsets;
 
 import static uk.co.real_logic.fix_gateway.logger.PossDupFinder.NO_ENTRY;
 
-// TODO: figure out the scenario where there's a requested replay of missing messages.
 public class Replayer implements SessionHandler, LogHandler, Agent
 {
     public static final int SIZE_OF_LENGTH_FIELD = 2;
@@ -83,7 +82,12 @@ public class Replayer implements SessionHandler, LogHandler, Agent
                 return;
             }
 
-            replayQuery.query(this, sessionId, beginSeqNo, endSeqNo);
+            final int expectedCount = endSeqNo - beginSeqNo;
+            final int count = replayQuery.query(this, sessionId, beginSeqNo, endSeqNo);
+            if (count != expectedCount)
+            {
+                // TODO: figure out the scenario where there's a requested replay of missing messages.
+            }
         }
     }
 

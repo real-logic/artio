@@ -47,12 +47,11 @@ public class ReplayQuery
         this.archiveReader = archiveReader;
     }
 
-    // TODO: add some way of notifying of missing records from the query.
-    public void query(
+    public int query(
         final LogHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
     {
-        sessionToIndex.computeIfAbsent(sessionId, newSessionQuery)
-                      .query(handler, beginSeqNo, endSeqNo);
+        return sessionToIndex.computeIfAbsent(sessionId, newSessionQuery)
+                             .query(handler, beginSeqNo, endSeqNo);
     }
 
     public void close()
@@ -73,12 +72,13 @@ public class ReplayQuery
 
         // TODO: potential optimisation of jumping straight to the beginSeqNo offset
         // Needs thinking about out of order sequence numbers due to duplicates and resends
-        private void query(final LogHandler handler, final int beginSeqNo, final int endSeqNo)
+        private int query(final LogHandler handler, final int beginSeqNo, final int endSeqNo)
         {
             messageFrameHeader.wrap(buffer, 0, indexRecord.sbeSchemaVersion());
             int index = messageFrameHeader.size();
             final int actingBlockLength = messageFrameHeader.blockLength();
             final int actingVersion = messageFrameHeader.version();
+            int count = 0;
 
             while (true)
             {
@@ -87,15 +87,16 @@ public class ReplayQuery
                 final long position = indexRecord.position();
                 if (position == 0)
                 {
-                    return;
+                    return count;
                 }
 
                 final int sequenceNumber = indexRecord.sequenceNumber();
                 if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo)
                 {
+                    count++;
                     if (!archiveReader.read(streamId, position, handler))
                     {
-                        return;
+                        return count;
                     }
                 }
                 index = indexRecord.limit();

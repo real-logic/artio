@@ -20,6 +20,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.logger.ReplayIndex.logFile;
 
@@ -47,8 +48,9 @@ public class ReplayQueryTest extends AbstractMessageTest
     @Test
     public void shouldReturnLogEntriesMatchingQuery()
     {
-        query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
+        final int msgCount = query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
 
+        assertEquals(1, msgCount);
         verifyMappedFile(SESSION_ID, 1);
         verifyOneMessageRead();
     }
@@ -56,8 +58,9 @@ public class ReplayQueryTest extends AbstractMessageTest
     @Test
     public void shouldNotReturnLogEntriesWithWrongSessionId()
     {
-        query.query(mockHandler, SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
+        final int msgCount = query.query(mockHandler, SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
 
+        assertEquals(0, msgCount);
         verifyMappedFile(SESSION_ID_2, 1);
         verifyNoMessageRead();
     }
@@ -65,8 +68,9 @@ public class ReplayQueryTest extends AbstractMessageTest
     @Test
     public void shouldNotReturnLogEntriesWithOutOfRangeSequenceNumbers()
     {
-        query.query(mockHandler, SESSION_ID, 1001, 1002);
+        final int msgCount = query.query(mockHandler, SESSION_ID, 1001, 1002);
 
+        assertEquals(0, msgCount);
         verifyNoMessageRead();
     }
 
@@ -75,8 +79,9 @@ public class ReplayQueryTest extends AbstractMessageTest
     {
         indexSecondRecord();
 
-        query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
+        final int msgCount = query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
 
+        assertEquals(1, msgCount);
         verifyOneMessageRead();
     }
 
