@@ -86,7 +86,8 @@ public class FixGateway implements AutoCloseable
             inboundStreams.gatewaySubscription(),
             replayQuery,
             outboundStreams.dataPublication(),
-            new BufferClaim());
+            new BufferClaim(),
+            backoffIdleStrategy());
 
         final Agent loggingAgent = new CompositeAgent(archiver, new CompositeAgent(indexer, replayer));
 

@@ -20,6 +20,7 @@ import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
@@ -45,8 +46,9 @@ public class Replayer implements SessionHandler, LogHandler, Agent
     private final GatewaySubscription subscription;
     private final ReplayQuery replayQuery;
     private final Publication publication;
-
     private final BufferClaim claim;
+    private final IdleStrategy idleStrategy;
+
     private final PossDupFinder acceptor = new PossDupFinder();
     private final OtfParser parser = new OtfParser(acceptor, new IntDictionary());
 
@@ -54,12 +56,14 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         final GatewaySubscription subscription,
         final ReplayQuery replayQuery,
         final Publication publication,
-        final BufferClaim claim)
+        final BufferClaim claim,
+        final IdleStrategy idleStrategy)
     {
         this.subscription = subscription;
         this.replayQuery = replayQuery;
         this.publication = publication;
         this.claim = claim;
+        this.idleStrategy = idleStrategy;
         subscription.sessionHandler(this);
     }
 
@@ -132,8 +136,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
     {
         while (publication.tryClaim(newLength, claim) < 0)
         {
-            // TODO: backoff
-            Thread.yield();
+            idleStrategy.idle(0);
         }
     }
 
