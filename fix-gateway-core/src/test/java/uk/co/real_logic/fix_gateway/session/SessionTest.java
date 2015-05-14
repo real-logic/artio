@@ -56,7 +56,7 @@ public class SessionTest extends AbstractSessionTest
         // TODO: figure out the correct String type here
         session.onTestRequest("ABC");
 
-        verify(mockProxy).heartbeat("ABC");
+        verify(mockProxy).heartbeat("ABC", 1);
     }
 
     @Test
@@ -198,7 +198,7 @@ public class SessionTest extends AbstractSessionTest
     {
         onLogon(0);
 
-        heartbeatSentAfterInterval();
+        heartbeatSentAfterInterval(2);
     }
 
     @Test
@@ -207,7 +207,7 @@ public class SessionTest extends AbstractSessionTest
         session().onLogon(1, 0, SESSION_ID, null);
         session().onMessage(0);
 
-        heartbeatSentAfterInterval(1);
+        heartbeatSentAfterInterval(1, 3);
     }
 
     @Test
@@ -215,25 +215,25 @@ public class SessionTest extends AbstractSessionTest
     {
         onLogon(0);
 
-        heartbeatSentAfterInterval();
+        heartbeatSentAfterInterval(2);
 
-        heartbeatSentAfterInterval();
+        heartbeatSentAfterInterval(4);
 
-        heartbeatSentAfterInterval();
+        heartbeatSentAfterInterval(5);
     }
 
-    private void heartbeatSentAfterInterval()
+    private void heartbeatSentAfterInterval(final int msgSeqNo)
     {
-        heartbeatSentAfterInterval(HEARTBEAT_INTERVAL);
+        heartbeatSentAfterInterval(HEARTBEAT_INTERVAL, msgSeqNo);
     }
 
-    private void heartbeatSentAfterInterval(final int heartbeatInterval)
+    private void heartbeatSentAfterInterval(final int heartbeatInterval, final int msgSeqNo)
     {
         fakeClock.advanceSeconds(heartbeatInterval);
 
         session.poll(fakeClock.time());
 
-        verify(mockProxy).heartbeat(null);
+        verify(mockProxy).heartbeat(null, msgSeqNo);
         reset(mockProxy);
     }
 

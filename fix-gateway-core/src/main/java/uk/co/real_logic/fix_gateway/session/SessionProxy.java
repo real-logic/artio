@@ -105,11 +105,11 @@ public class SessionProxy
         send(logout.encode(string, 0), LogoutDecoder.MESSAGE_TYPE);
     }
 
-    public void heartbeat(final String testReqId)
+    public void heartbeat(final String testReqId, final int msgSeqNo)
     {
         final HeaderEncoder header = heartbeat.header();
         setupHeader(header);
-        // TODO: header.msgSeqNum(0);
+        header.msgSeqNum(msgSeqNo);
 
         if (testReqId != null)
         {
