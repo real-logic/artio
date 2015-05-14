@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 
 import java.io.IOException;
@@ -26,11 +27,13 @@ public class SenderEndPoint
 {
     private final long connectionId;
     private final SocketChannel channel;
+    private final IdleStrategy idleStrategy;
 
-    public SenderEndPoint(final long connectionId, final SocketChannel channel)
+    public SenderEndPoint(final long connectionId, final SocketChannel channel, final IdleStrategy idleStrategy)
     {
         this.connectionId = connectionId;
         this.channel = channel;
+        this.idleStrategy = idleStrategy;
     }
 
     public void onFramedMessage(final DirectBuffer directBuffer, final int offset, final int length)
@@ -47,7 +50,7 @@ public class SenderEndPoint
                 final int written = channel.write(buffer);
                 DebugLogger.log("Written  %s\n", buffer, written);
                 bytesWritten += written;
-                // TODO: figure backoff strategy
+                idleStrategy.idle(1);
             }
         }
         catch (final IOException ex)

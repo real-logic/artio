@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
 import uk.co.real_logic.fix_gateway.framer.SenderEndPoint;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
@@ -40,6 +41,7 @@ public class ConnectionHandler
     private final SessionIds sessionIds;
     private final ReplicationStreams inboundStreams;
     private final ReplicationStreams outboundStreams;
+    private final IdleStrategy idleStrategy;
 
     public ConnectionHandler(
         final MilliClock clock,
@@ -47,7 +49,8 @@ public class ConnectionHandler
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
         final ReplicationStreams inboundStreams,
-        final ReplicationStreams outboundStreams)
+        final ReplicationStreams outboundStreams,
+        final IdleStrategy idleStrategy)
     {
         this.clock = clock;
         this.configuration = configuration;
@@ -55,6 +58,7 @@ public class ConnectionHandler
         this.sessionIds = sessionIds;
         this.inboundStreams = inboundStreams;
         this.outboundStreams = outboundStreams;
+        this.idleStrategy = idleStrategy;
     }
 
     public ReceiverEndPoint receiverEndPoint(
@@ -76,7 +80,7 @@ public class ConnectionHandler
 
     public SenderEndPoint senderEndPoint(final SocketChannel channel, final long connectionId)
     {
-        return new SenderEndPoint(connectionId, channel);
+        return new SenderEndPoint(connectionId, channel, idleStrategy);
     }
 
     public Session acceptSession()
