@@ -113,8 +113,7 @@ public class FixGateway implements AutoCloseable
         final SessionIds sessionIds = new SessionIds();
 
         final IdleStrategy idleStrategy = backoffIdleStrategy();
-        final FramerProxy framerProxy = new FramerProxy(framerCommands, fixCounters.framerProxyFails(), idleStrategy);
-        final Multiplexer multiplexer = new Multiplexer(framerProxy);
+        final Multiplexer multiplexer = new Multiplexer();
         final GatewaySubscription dataSubscription = outboundStreams.gatewaySubscription().sessionHandler(multiplexer);
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
 
@@ -131,6 +130,7 @@ public class FixGateway implements AutoCloseable
 
         final Framer framer = new Framer(systemClock, configuration.bindAddress(), handler, framerCommands,
             multiplexer, this, dataSubscription);
+        multiplexer.framer(framer);
         framerRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace, fixCounters.exceptions(), framer);
     }
 

@@ -28,12 +28,7 @@ public class Multiplexer implements SessionHandler
 
     private final Long2ObjectHashMap<SenderEndPoint> endpoints = new Long2ObjectHashMap<>();
 
-    private final FramerProxy receiver;
-
-    public Multiplexer(final FramerProxy receiver)
-    {
-        this.receiver = receiver;
-    }
+    private Framer framer;
 
     public void onNewConnection(final SenderEndPoint senderEndPoint)
     {
@@ -61,7 +56,12 @@ public class Multiplexer implements SessionHandler
     public void onDisconnect(final long connectionId)
     {
         endpoints.remove(connectionId);
-        receiver.disconnect(connectionId);
+        framer.onDisconnect(connectionId);
     }
 
+    public Multiplexer framer(final Framer framer)
+    {
+        this.framer = framer;
+        return this;
+    }
 }

@@ -40,7 +40,7 @@ import static java.nio.channels.SelectionKey.OP_READ;
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
  */
-public final class Framer implements Agent
+public class Framer implements Agent
 {
     private final Consumer<FramerCommand> onCommandFunc = this::onCommand;
     private final List<Session> sessions = new ArrayList<>();

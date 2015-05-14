@@ -24,9 +24,9 @@ public class MultiplexerTest
 {
     public static final long CONNECTION_ID = 1L;
     private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
-    private FramerProxy mockReceiver = mock(FramerProxy.class);
+    private Framer mockFramer = mock(Framer.class);
 
-    private Multiplexer multiplexer = new Multiplexer(mockReceiver);
+    private Multiplexer multiplexer = new Multiplexer().framer(mockFramer);
     private DirectBuffer buffer = mock(DirectBuffer.class);
 
     private void connectedId(final long connectionId)
@@ -85,7 +85,7 @@ public class MultiplexerTest
         multiplexer.onDisconnect(CONNECTION_ID);
 
         then:
-        verify(mockReceiver).disconnect(CONNECTION_ID);
+        verify(mockFramer).onDisconnect(CONNECTION_ID);
     }
 
     private void messagePassedToEndpoint()
