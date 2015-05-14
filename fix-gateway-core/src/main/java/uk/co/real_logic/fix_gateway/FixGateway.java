@@ -128,7 +128,7 @@ public class FixGateway implements AutoCloseable
             outboundStreams,
             idleStrategy);
 
-        final Framer framer = new Framer(systemClock, configuration.bindAddress(), handler, framerCommands,
+        final Framer framer = new Framer(systemClock, configuration, handler, framerCommands,
             multiplexer, this, dataSubscription);
         multiplexer.framer(framer);
         framerRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace, fixCounters.exceptions(), framer);

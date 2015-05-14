@@ -20,13 +20,13 @@ import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
 import uk.co.real_logic.fix_gateway.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
+import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.channels.*;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import static java.net.StandardSocketOptions.SO_RCVBUF;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
 import static java.nio.channels.SelectionKey.OP_READ;
 
@@ -48,6 +49,7 @@ public class Framer implements Agent
 
     private final ServerSocketChannel listeningChannel;
     private final MilliClock clock;
+    private final StaticConfiguration configuration;
     private final ConnectionHandler connectionHandler;
     private final SequencedContainerQueue<FramerCommand> commandQueue;
     private final Multiplexer multiplexer;
@@ -55,10 +57,9 @@ public class Framer implements Agent
     private final GatewaySubscription dataSubscription;
     private final Selector selector;
 
-    // TODO: add hooks for receive and send buffer sizes
     public Framer(
         final MilliClock clock,
-        final SocketAddress address,
+        final StaticConfiguration configuration,
         final ConnectionHandler connectionHandler,
         final SequencedContainerQueue<FramerCommand> commandQueue,
         final Multiplexer multiplexer,
@@ -66,6 +67,7 @@ public class Framer implements Agent
         final GatewaySubscription dataSubscription)
     {
         this.clock = clock;
+        this.configuration = configuration;
         this.connectionHandler = connectionHandler;
         this.commandQueue = commandQueue;
         this.multiplexer = multiplexer;
@@ -75,7 +77,7 @@ public class Framer implements Agent
         try
         {
             listeningChannel = ServerSocketChannel.open();
-            listeningChannel.bind(address).configureBlocking(false);
+            listeningChannel.bind(configuration.bindAddress()).configureBlocking(false);
 
             selector = Selector.open();
             listeningChannel.register(selector, SelectionKey.OP_ACCEPT);
@@ -111,9 +113,6 @@ public class Framer implements Agent
             if (key.isAcceptable())
             {
                 final SocketChannel channel = listeningChannel.accept();
-                channel.configureBlocking(false);
-                channel.setOption(TCP_NODELAY, false);
-
                 onNewSession(channel, connectionHandler.acceptSession());
             }
             else if (key.isReadable())
@@ -128,8 +127,19 @@ public class Framer implements Agent
     }
 
     private void onNewSession(final SocketChannel channel, final Session session)
-        throws ClosedChannelException
+        throws IOException
     {
+        channel.configureBlocking(false);
+        channel.setOption(TCP_NODELAY, false);
+        if (configuration.receiverSocketBufferSize() > 0)
+        {
+            channel.setOption(SO_RCVBUF, configuration.receiverSocketBufferSize());
+        }
+        if (configuration.senderSocketBufferSize() > 0)
+        {
+            channel.setOption(SO_RCVBUF, configuration.senderSocketBufferSize());
+        }
+
         final long connectionId = session.connectionId();
         final ReceiverEndPoint receiverEndPoint = connectionHandler.receiverEndPoint(channel, connectionId, session);
         receiverEndPoints.add(receiverEndPoint);
@@ -157,7 +167,6 @@ public class Framer implements Agent
             final InetSocketAddress address = new InetSocketAddress(configuration.host(), configuration.port());
             final SocketChannel channel = SocketChannel.open();
             channel.connect(address);
-            channel.configureBlocking(false);
 
             onNewSession(channel, connectionHandler.initiateSession(gateway, configuration));
         }

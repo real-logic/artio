@@ -59,6 +59,8 @@ public final class StaticConfiguration
 
     private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
     private int receiverBufferSize = DEFAULT_RECEIVER_BUFFER_SIZE;
+    private int receiverSocketBufferSize = 0;
+    private int senderSocketBufferSize = 0;
     private long connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
     private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
     private SessionIdStrategy sessionIdStrategy = new SenderAndTargetSessionIdStrategy();
@@ -111,6 +113,18 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration receiverSocketBufferSize(final int value)
+    {
+        receiverSocketBufferSize = value;
+        return this;
+    }
+
+    public StaticConfiguration senderSocketBufferSize(final int value)
+    {
+        senderSocketBufferSize = value;
+        return this;
+    }
+
     public StaticConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
     {
         this.sessionIdStrategy = sessionIdStrategy;
@@ -141,62 +155,72 @@ public final class StaticConfiguration
         return this;
     }
 
-    int defaultHeartbeatInterval()
+    public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
     }
 
-    SessionIdStrategy sessionIdStrategy()
+    public SessionIdStrategy sessionIdStrategy()
     {
         return sessionIdStrategy;
     }
 
-    int receiverBufferSize()
+    public int receiverBufferSize()
     {
         return receiverBufferSize;
     }
 
-    InetSocketAddress bindAddress()
+    public int receiverSocketBufferSize()
+    {
+        return receiverSocketBufferSize;
+    }
+
+    public int senderSocketBufferSize()
+    {
+        return senderSocketBufferSize;
+    }
+
+    public InetSocketAddress bindAddress()
     {
         return new InetSocketAddress(host, port);
     }
 
-    long connectionTimeout()
+    public long connectionTimeout()
     {
         return connectionTimeout;
     }
 
-    int encoderBufferSize()
+    public int encoderBufferSize()
     {
         return encoderBufferSize;
     }
 
-    int counterBuffersLength()
+    public int counterBuffersLength()
     {
         return counterBuffersLength;
     }
 
-    String counterBuffersFile()
+    public String counterBuffersFile()
     {
         return counterBuffersFile;
     }
 
-    StaticConfiguration conclude()
+    public StaticConfiguration conclude()
     {
         return this;
     }
 
-    String aeronChannel()
+    public String aeronChannel()
     {
         return aeronChannel;
     }
 
-    AuthenticationStrategy authenticationStrategy()
+    public AuthenticationStrategy authenticationStrategy()
     {
         return authenticationStrategy;
     }
 
-    NewSessionHandler newSessionHandler()
+    public NewSessionHandler newSessionHandler()
     {
         return newSessionHandler;
     }

@@ -24,6 +24,7 @@ import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
+import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
@@ -42,16 +43,14 @@ import static org.mockito.Mockito.*;
 public class FramerTest
 {
     private static final InetSocketAddress TEST_ADDRESS = new InetSocketAddress("localhost", 9998);
-
+    private static final InetSocketAddress FRAMER_ADDRESS = new InetSocketAddress("localhost", 9999);
+    private static final long CONNECTION_ID = 2L;
     private static final SessionConfiguration CONFIGURATION = SessionConfiguration
         .builder()
         .address(TEST_ADDRESS.getHostName(), TEST_ADDRESS.getPort())
         .senderCompId("LEH_LZJ02")
         .targetCompId("CCG")
         .build();
-
-    private static final InetSocketAddress FRAMER_ADDRESS = new InetSocketAddress("localhost", 9999);
-    private static final long CONNECTION_ID = 2L;
 
     private ServerSocketChannel server;
 
@@ -68,7 +67,10 @@ public class FramerTest
 
     private FramerProxy proxy = new FramerProxy(commandQueue, mock(AtomicCounter.class),
         new NoOpIdleStrategy());
-    private Framer framer = new Framer(mockClock, FRAMER_ADDRESS, mockConnectionHandler, commandQueue,
+    private StaticConfiguration staticConfiguration = new StaticConfiguration()
+        .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort());
+
+    private Framer framer = new Framer(mockClock, staticConfiguration, mockConnectionHandler, commandQueue,
         mock(Multiplexer.class), mockGateway, mock(GatewaySubscription.class));
 
     @Before
