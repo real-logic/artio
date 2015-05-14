@@ -76,11 +76,6 @@ public class SessionParser
                 }
                 break;
 
-            case ResendRequestDecoder.MESSAGE_TYPE:
-                resendRequest.decode(string, offset, length);
-                session.onResendRequest(resendRequest.beginSeqNo(), resendRequest.endSeqNo());
-                break;
-
             case LogoutDecoder.MESSAGE_TYPE:
                 logout.decode(string, offset, length);
                 session.onLogout(logout.header().msgSeqNum());
