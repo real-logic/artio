@@ -34,6 +34,8 @@ public final class ExampleDictionary
 {
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
     public static final String OTHER_ENUM = PARENT_PACKAGE + "." + "OtherEnum";
+    public static final String STRING_ENUM = PARENT_PACKAGE + "." + "stringEnum";
+
     public static final String TEST_PACKAGE = ENCODER_PACKAGE + ".test";
 
     public static final String HEARTBEAT_ENCODER = TEST_PACKAGE + ".HeartbeatEncoder";
@@ -124,9 +126,15 @@ public final class ExampleDictionary
             .addValue("1", "AnEntry")
             .addValue("12", "AnotherEntry");
 
+        final Field stringEnum = new Field(126, "stringEnum", Type.STRING)
+            .addValue("0", "_0")
+            .addValue("A", "_A")
+            .addValue("AA", "_AA");
+
         final Map<String, Field> fieldEgFields = new HashMap<>();
         fieldEgFields.put("EgEnum", egEnum);
         fieldEgFields.put("OtherEnum", otherEnum);
+        fieldEgFields.put("stringEnum", stringEnum);
         fieldEgFields.put("egNotEnum", new Field(125, "EgNotEnum", Type.CHAR));
 
         FIELD_EXAMPLE = new Dictionary(emptyList(), fieldEgFields, emptyMap(), null, null, 4, 4);

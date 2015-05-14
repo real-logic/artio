@@ -124,9 +124,19 @@ public final class EnumGenerator
             case INT:
             case LENGTH:
             case SEQNUM:
+                Integer.parseInt(representation);
                 return representation;
 
             case STRING:
+                int packed = representation.charAt(0);
+
+                if (representation.length() == 2)
+                {
+                    final byte second = (byte) representation.charAt(0);
+                    packed |= second >> 1;
+                }
+                return "" + packed;
+
             case CHAR:
                 return "'" + representation + "'";
 
