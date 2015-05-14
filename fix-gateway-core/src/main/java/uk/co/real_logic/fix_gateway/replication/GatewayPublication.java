@@ -20,6 +20,7 @@ import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.*;
 
@@ -37,11 +38,15 @@ public class GatewayPublication
 
     private final BufferClaim bufferClaim;
     private final Publication dataPublication;
+    private final IdleStrategy idleStrategy;
     private final AtomicCounter fails;
 
-    public GatewayPublication(final Publication dataPublication, final AtomicCounter fails)
+    public GatewayPublication(final Publication dataPublication,
+                              final AtomicCounter fails,
+                              final IdleStrategy idleStrategy)
     {
         this.dataPublication = dataPublication;
+        this.idleStrategy = idleStrategy;
         bufferClaim = new BufferClaim();
         this.fails = fails;
     }
@@ -132,7 +137,7 @@ public class GatewayPublication
     {
         while (dataPublication.tryClaim(framedLength, bufferClaim) < 0L)
         {
-            // TODO: backoff
+            idleStrategy.idle(0);
             fails.increment();
         }
     }

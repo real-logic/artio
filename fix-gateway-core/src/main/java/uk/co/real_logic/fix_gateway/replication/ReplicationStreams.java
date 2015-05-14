@@ -20,6 +20,7 @@ import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,7 +54,7 @@ public class ReplicationStreams implements AutoCloseable
 
     public GatewayPublication gatewayPublication()
     {
-        return new GatewayPublication(dataPublication, failedDataPublications);
+        return new GatewayPublication(dataPublication, failedDataPublications, new BackoffIdleStrategy(1, 1, 1, 1 << 20));
     }
 
     public Publication dataPublication()
