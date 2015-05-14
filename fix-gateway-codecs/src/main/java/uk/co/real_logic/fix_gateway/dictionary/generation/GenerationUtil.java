@@ -40,6 +40,18 @@ public final class GenerationUtil
         );
     }
 
+    public static int getMessageType(final String representation)
+    {
+        int packed = representation.charAt(0);
+
+        if (representation.length() == 2)
+        {
+            final byte second = (byte) representation.charAt(0);
+            packed |= second >> 1;
+        }
+        return packed;
+    }
+
     public static class Var
     {
         private final String type;

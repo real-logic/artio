@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import static javax.xml.xpath.XPathConstants.NODESET;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.getMessageType;
 
 /**
  * Parses XML format dictionary files and into instances of
@@ -174,13 +175,7 @@ public final class DictionaryParser
     private int parseMessageType(final NamedNodeMap attributes)
     {
         final String msgtype = getValue(attributes, "msgtype");
-        int type = msgtype.charAt(0);
-        if (msgtype.length() == 2)
-        {
-            type |= (msgtype.charAt(1) >> 1);
-        }
-
-        return type;
+        return getMessageType(msgtype);
     }
 
     private void extractEntries(

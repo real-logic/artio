@@ -128,14 +128,7 @@ public final class EnumGenerator
                 return representation;
 
             case STRING:
-                int packed = representation.charAt(0);
-
-                if (representation.length() == 2)
-                {
-                    final byte second = (byte) representation.charAt(0);
-                    packed |= second >> 1;
-                }
-                return "" + packed;
+                return String.valueOf(getMessageType(representation));
 
             case CHAR:
                 return "'" + representation + "'";
@@ -145,4 +138,5 @@ public final class EnumGenerator
                 throw new IllegalArgumentException(msg);
         }
     }
+
 }
