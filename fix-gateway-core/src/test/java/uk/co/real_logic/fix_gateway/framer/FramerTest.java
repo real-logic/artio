@@ -131,7 +131,6 @@ public class FramerTest
         when:
         framer.doWork();
 
-        // TODO
         then:
         verify(mockSession).poll(0);
     }

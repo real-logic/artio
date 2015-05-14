@@ -140,7 +140,7 @@ public final class DictionaryParser
             (node) ->
             {
                 final NamedNodeMap attributes = node.getAttributes();
-                final char representation = getValue(attributes, "enum").charAt(0);
+                final String representation = getValue(attributes, "enum");
                 final String description = getValue(attributes, "description");
                 values.add(new Value(representation, description));
             });

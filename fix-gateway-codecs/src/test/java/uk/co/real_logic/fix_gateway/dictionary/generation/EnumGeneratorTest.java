@@ -24,8 +24,7 @@ import java.lang.reflect.Method;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.EG_ENUM;
-import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.FIELD_EXAMPLE;
+import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 
 // TODO: support enums whose values has multiple characters
 public class EnumGeneratorTest
@@ -80,9 +79,27 @@ public class EnumGeneratorTest
         assertThat(outputManager.getSources(), not(hasKey("EgNotEnum")));
     }
 
+    @Test
+    public void generatesIntBasedEnumField() throws Exception
+    {
+        final Class<?> clazz = compile(OTHER_ENUM);
+        final Enum[] values = (Enum[])clazz.getEnumConstants();
+
+        final Method valueOf = clazz.getMethod("valueOf", int.class);
+
+        assertEquals(values[0], valueOf.invoke(null, 1));
+        assertEquals(values[1], valueOf.invoke(null, 12));
+    }
+
     private Class<?> compileEgEnum() throws Exception
     {
-        return CompilerUtil.compileInMemory(EG_ENUM, outputManager.getSources());
+        return compile(EG_ENUM);
+    }
+
+    private Class<?> compile(final String className) throws ClassNotFoundException
+    {
+        //System.out.println(outputManager.getSources());
+        return CompilerUtil.compileInMemory(className, outputManager.getSources());
     }
 
     private void assertRepresentation(final int expected, final Enum<?> enumElement) throws Exception

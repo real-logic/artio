@@ -33,6 +33,7 @@ import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 public final class ExampleDictionary
 {
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
+    public static final String OTHER_ENUM = PARENT_PACKAGE + "." + "OtherEnum";
     public static final String TEST_PACKAGE = ENCODER_PACKAGE + ".test";
 
     public static final String HEARTBEAT_ENCODER = TEST_PACKAGE + ".HeartbeatEncoder";
@@ -115,13 +116,18 @@ public final class ExampleDictionary
 
     static
     {
-        final Field egEnum = new Field(123, "EgEnum", Type.CHAR);
-        egEnum.addValue('a', "AnEntry");
-        egEnum.addValue('b', "AnotherEntry");
+        final Field egEnum = new Field(123, "EgEnum", Type.CHAR)
+            .addValue("a", "AnEntry")
+            .addValue("b", "AnotherEntry");
+
+        final Field otherEnum = new Field(124, "OtherEnum", Type.INT)
+            .addValue("1", "AnEntry")
+            .addValue("12", "AnotherEntry");
 
         final Map<String, Field> fieldEgFields = new HashMap<>();
         fieldEgFields.put("EgEnum", egEnum);
-        fieldEgFields.put("egNotEnum", new Field(123, "EgNotEnum", Type.CHAR));
+        fieldEgFields.put("OtherEnum", otherEnum);
+        fieldEgFields.put("egNotEnum", new Field(125, "EgNotEnum", Type.CHAR));
 
         FIELD_EXAMPLE = new Dictionary(emptyList(), fieldEgFields, emptyMap(), null, null, 4, 4);
 

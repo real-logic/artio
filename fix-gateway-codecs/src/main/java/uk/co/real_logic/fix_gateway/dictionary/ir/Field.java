@@ -68,7 +68,7 @@ public final class Field implements Element
         return values;
     }
 
-    public Field addValue(final char representation, final String description)
+    public Field addValue(final String representation, final String description)
     {
         values().add(new Value(representation, description));
         return this;
@@ -119,16 +119,16 @@ public final class Field implements Element
 
     public static class Value
     {
-        private final char representation;
+        private final String representation;
         private final String description;
 
-        public Value(final char representation, final String description)
+        public Value(final String representation, final String description)
         {
             this.representation = representation;
             this.description = description;
         }
 
-        public char representation()
+        public String representation()
         {
             return representation;
         }
@@ -153,7 +153,7 @@ public final class Field implements Element
         @Override
         public int hashCode()
         {
-            int result = representation;
+            int result = representation.hashCode();
             result = 31 * result + (description != null ? description.hashCode() : 0);
             return result;
         }

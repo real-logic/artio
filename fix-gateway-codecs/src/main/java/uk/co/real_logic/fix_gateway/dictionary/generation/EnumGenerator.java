@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 
 import java.io.IOException;
@@ -53,16 +54,18 @@ public final class EnumGenerator
     private void generateEnum(final Field field)
     {
         final String enumName = field.name();
+        final Type type = field.type();
+        final List<Value> values = field.values();
 
         try (final Writer out = outputManager.createOutput(enumName))
         {
             out.append(fileHeader(PARENT_PACKAGE));
             out.append(generateEnumDeclaration(enumName));
 
-            out.append(generateEnumValues(field.values()));
+            out.append(generateEnumValues(values, type));
 
             out.append(generateEnumBody(enumName));
-            out.append(generateEnumLookupMethod(enumName, field.values()));
+            out.append(generateEnumLookupMethod(enumName, values, type));
 
             out.append("}\n");
         }
@@ -77,10 +80,10 @@ public final class EnumGenerator
         return "public enum " + name + "\n{\n";
     }
 
-    private String generateEnumValues(final List<Value> allValues)
+    private String generateEnumValues(final List<Value> allValues, final Type type)
     {
         return allValues.stream()
-                        .map((value) -> format("%s%s('%s')", INDENT, value.description(), value.representation()))
+                        .map((value) -> format("%s%s(%s)", INDENT, value.description(), literal(value, type)))
                         .collect(joining(",\n"));
     }
 
@@ -94,13 +97,13 @@ public final class EnumGenerator
             representation.getter();
     }
 
-    private String generateEnumLookupMethod(final String name, final List<Value> allValues)
+    private String generateEnumLookupMethod(final String name, final List<Value> allValues, final Type type)
     {
         final Var representation = new Var("int", "representation");
 
         final String cases = allValues
             .stream()
-            .map((value) -> format("        case '%s': return %s;\n", value.representation(), value.description()))
+            .map((value) -> format("        case %s: return %s;\n", literal(value, type), value.description()))
             .collect(joining());
 
         return method("valueOf", name, representation) +
@@ -110,5 +113,26 @@ public final class EnumGenerator
             "        default: throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
             "        }\n" +
             "    }\n";
+    }
+
+    private String literal(final Value value, final Type type)
+    {
+        final String representation = value.representation();
+
+        switch (type)
+        {
+            case INT:
+            case LENGTH:
+            case SEQNUM:
+                return representation;
+
+            case STRING:
+            case CHAR:
+                return "'" + representation + "'";
+
+            default:
+                final String msg = "Unknown type for creating an enum from: " + type + " for value" + value.description();
+                throw new IllegalArgumentException(msg);
+        }
     }
 }

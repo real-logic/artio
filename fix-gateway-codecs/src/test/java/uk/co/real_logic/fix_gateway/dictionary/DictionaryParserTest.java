@@ -98,9 +98,9 @@ public class DictionaryParserTest
 
         final List<Value> values = msgType.values();
 
-        assertEquals(new Value('0', "HEARTBEAT"), values.get(0));
-        assertEquals(new Value('8', "EXECUTION_REPORT"), values.get(1));
-        assertEquals(new Value('D', "ORDER_SINGLE"), values.get(2));
+        assertEquals(new Value("0", "HEARTBEAT"), values.get(0));
+        assertEquals(new Value("8", "EXECUTION_REPORT"), values.get(1));
+        assertEquals(new Value("D", "ORDER_SINGLE"), values.get(2));
     }
 
     @Test
