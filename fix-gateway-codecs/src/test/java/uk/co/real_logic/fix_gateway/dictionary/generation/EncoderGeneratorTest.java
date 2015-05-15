@@ -26,14 +26,11 @@ import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.Reflection;
 
-import java.lang.reflect.Field;
 import java.util.Map;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.endsWith;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
@@ -45,6 +42,7 @@ public class EncoderGeneratorTest
     private static final StringWriterOutputManager OUTPUT_MANAGER = new StringWriterOutputManager();
     private static final EncoderGenerator ENCODER_GENERATOR =
         new EncoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, OUTPUT_MANAGER);
+
     private static Class<?> heartbeat;
     private static Class<?> headerClass;
 
@@ -248,8 +246,33 @@ public class EncoderGeneratorTest
         assertThat(encoder.toString(), not(containsString("abc")));
     }
 
-    // TODO: lengths get resized down from initial buffer length being too high.
+    @Test
+    public void shouldEncodeRepeatingGroups() throws Exception
+    {
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        setRequiredFields(encoder);
 
+        Object group = get(encoder, "egGroup");
+        setGroupField(group, 1);
+
+        group = next(group);
+        setGroupField(group, 2);
+
+        assertEncodesTo(encoder, REPEATING_GROUP_EXAMPLE);
+    }
+
+    private void setGroupField(final Object tradingSessions, final int value) throws Exception
+    {
+        setInt(tradingSessions, "groupField", value);
+    }
+
+    private Object next(final Object tradingSessions) throws Exception
+    {
+        return call(tradingSessions, "next");
+    }
+
+    // TODO: lengths get resized down from initial buffer length being too high.
+    // TODO: reset method
     // TODO: compound types
     // TODO: groups (RefMsgType used in session management)
     // TODO: nested groups
@@ -309,10 +332,4 @@ public class EncoderGeneratorTest
         setCharSequence(encoder, TEST_REQ_ID, value);
     }
 
-    private Object getField(final Object encoder, final String fieldName) throws Exception
-    {
-        final Field field = heartbeat.getDeclaredField(fieldName);
-        field.setAccessible(true);
-        return field.get(encoder);
-    }
 }

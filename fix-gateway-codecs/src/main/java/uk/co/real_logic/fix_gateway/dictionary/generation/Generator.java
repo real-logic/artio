@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
@@ -34,6 +35,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static java.util.stream.Collectors.joining;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.MESSAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importStaticFor;
 
@@ -85,7 +87,7 @@ public abstract class Generator
 
     protected String generateClassDeclaration(
         final String className,
-        final boolean hasCommonCompounds,
+        final AggregateType type,
         final Class<?> parent,
         final Class<?> topType)
     {
@@ -94,7 +96,7 @@ public abstract class Generator
             importStaticFor(CodecUtil.class) +
             importStaticFor(StandardFixConstants.class) +
             importFor(parent) +
-            (hasCommonCompounds ? COMMON_COMPOUND_IMPORTS : "") +
+            (type == MESSAGE ? COMMON_COMPOUND_IMPORTS : "") +
             importFor(DecimalFloat.class) +
             importFor(MutableAsciiFlyweight.class) +
             importFor(AsciiFlyweight.class) +
@@ -120,7 +122,6 @@ public abstract class Generator
     {
         return entry.required() ? "" : String.format("    private boolean has%s;\n\n", entry.name());
     }
-
 
     protected String generateToString(Aggregate aggregate, final boolean hasCommonCompounds)
     {
@@ -150,17 +151,23 @@ public abstract class Generator
     {
         //"  \"OnBehalfOfCompID\": \"abc\",\n" +
 
-        final Field field = (Field) entry.element();
-        final String name = entry.name();
-        final String value = generateValueToString(field);
+        final Element element = entry.element();
+        if (element instanceof Field)
+        {
+            final Field field = (Field) element;
+            final String name = entry.name();
+            final String value = generateValueToString(field);
 
-        final String formatter = String.format(
+            final String formatter = String.format(
                 "String.format(\"  \\\"%s\\\": \\\"%%s\\\",\\n\", %s)",
                 name,
                 value
-        );
+            );
 
-        return "            " + (entry.required() ? formatter : String.format("(has%s ? %s : \"\")", name, formatter));
+            return "            " + (entry.required() ? formatter : String.format("(has%s ? %s : \"\")", name, formatter));
+        }
+
+        return "\"\"";
     }
 
     protected String generateValueToString(Field field)

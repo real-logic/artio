@@ -15,11 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary;
 
-import uk.co.real_logic.fix_gateway.dictionary.ir.Component;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
+import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
 
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +26,7 @@ import static java.util.Collections.*;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.ENCODER_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
+import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.registerField;
 
 public final class ExampleDictionary
 {
@@ -114,7 +112,12 @@ public final class ExampleDictionary
     public static final String SHORTER_STRING_EXAMPLE =
         "8=FIX.4.4\0019=0026\00135=0\001115=ab\001116=2\001117=1.1\00110=061\001";
 
+    public static final String REPEATING_GROUP_EXAMPLE =
+        "8=FIX.4.4\0019=0045\00135=0\001115=abc\001116=2\001117=1.1\001120=2\001121=1\001121=2\00110=171\001";
+
     public static final int TEST_REQ_ID_TAG = 112;
+
+    public static final String NO_EG_GROUP = "NoEgGroup";
 
     static
     {
@@ -141,18 +144,21 @@ public final class ExampleDictionary
 
         final Map<String, Field> messageEgFields = new HashMap<>();
 
-        final Field beginString = Field.register(messageEgFields, 8, "BeginString", Type.STRING);
-        final Field bodyLength = Field.register(messageEgFields, 9, "BodyLength", Type.INT);
-        final Field msgType = Field.register(messageEgFields, 35, "MsgType", Type.STRING);
+        final Field beginString = registerField(messageEgFields, 8, "BeginString", Type.STRING);
+        final Field bodyLength = registerField(messageEgFields, 9, "BodyLength", Type.INT);
+        final Field msgType = registerField(messageEgFields, 35, "MsgType", Type.STRING);
 
-        final Field checkSum = Field.register(messageEgFields, 10, "CheckSum", Type.STRING);
+        final Field checkSum = registerField(messageEgFields, 10, "CheckSum", Type.STRING);
 
-        final Field onBehalfOfCompID = Field.register(messageEgFields, 115, "OnBehalfOfCompID", Type.STRING);
-        final Field testReqID = Field.register(messageEgFields, TEST_REQ_ID_TAG, "TestReqID", Type.STRING);
-        final Field intField = Field.register(messageEgFields, 116, "IntField", Type.LENGTH);
-        final Field floatField = Field.register(messageEgFields, 117, "FloatField", Type.PRICE);
-        final Field booleanField = Field.register(messageEgFields, 118, "BooleanField", Type.BOOLEAN);
-        final Field dataField = Field.register(messageEgFields, 119, "DataField", Type.DATA);
+        final Field onBehalfOfCompID = registerField(messageEgFields, 115, "OnBehalfOfCompID", Type.STRING);
+        final Field testReqID = registerField(messageEgFields, TEST_REQ_ID_TAG, "TestReqID", Type.STRING);
+        final Field intField = registerField(messageEgFields, 116, "IntField", Type.LENGTH);
+        final Field floatField = registerField(messageEgFields, 117, "FloatField", Type.PRICE);
+        final Field booleanField = registerField(messageEgFields, 118, "BooleanField", Type.BOOLEAN);
+        final Field dataField = registerField(messageEgFields, 119, "DataField", Type.DATA);
+
+        final Group egGroup = Group.of(registerField(messageEgFields, 120, NO_EG_GROUP, Type.INT));
+        egGroup.optionalEntry(registerField(messageEgFields, 121, "GroupField", Type.INT));
 
         final Message heartbeat = new Message("Heartbeat", HEARTBEAT_TYPE, ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);
@@ -161,6 +167,7 @@ public final class ExampleDictionary
         heartbeat.requiredEntry(floatField);
         heartbeat.optionalEntry(booleanField);
         heartbeat.optionalEntry(dataField);
+        heartbeat.optionalEntry(egGroup);
 
         final Component header = new Component("Header");
         header.requiredEntry(beginString)

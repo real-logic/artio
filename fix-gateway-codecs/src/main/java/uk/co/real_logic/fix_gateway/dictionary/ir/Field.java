@@ -29,7 +29,7 @@ public final class Field implements Element
     private final Type type;
     private final List<Value> values;
 
-    public static Field register(
+    public static Field registerField(
         final Map<String, Field> nameToField,
         final int number,
         final String name,

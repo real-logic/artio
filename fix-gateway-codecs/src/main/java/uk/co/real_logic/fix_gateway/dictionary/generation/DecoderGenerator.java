@@ -62,7 +62,7 @@ public class DecoderGenerator extends Generator
         try (final Writer out = outputManager.createOutput(className))
         {
             out.append(fileHeader(builderPackage));
-            out.append(generateClassDeclaration(className, isMessage, Decoder.class, Decoder.class));
+            out.append(generateClassDeclaration(className, type, Decoder.class, Decoder.class));
             if (isMessage)
             {
                 final Message message = (Message)aggregate;
@@ -98,43 +98,48 @@ public class DecoderGenerator extends Generator
 
     private String generateGetter(final Entry entry) throws IOException
     {
-        final Field field = (Field)entry.element();
-        final String name = entry.name();
-        final String fieldName = JavaUtil.formatPropertyName(name);
-        final Type type = field.type();
-        final String optionalCheck = optionalCheck(entry);
+        if (entry.element() instanceof Field)
+        {
+            final Field field = (Field)entry.element();
+            final String name = entry.name();
+            final String fieldName = JavaUtil.formatPropertyName(name);
+            final Type type = field.type();
+            final String optionalCheck = optionalCheck(entry);
 
-        final String suffix = type == STRING
-            ? String.format(
-            "    private int %s;\n\n" +
-            "    public int %1$s()\n" +
-            "    {\n" +
-            "%s" +
-            "        return %1$s;\n" +
-            "    }\n",
-            fieldName + "Length",
-            optionalCheck
-        )
-            : "";
+            final String suffix = type == STRING
+                ? String.format(
+                "    private int %s;\n\n" +
+                    "    public int %1$s()\n" +
+                    "    {\n" +
+                    "%s" +
+                    "        return %1$s;\n" +
+                    "    }\n",
+                fieldName + "Length",
+                optionalCheck
+            )
+                : "";
 
-        return String.format(
-            "    private %s %s%s;\n\n" +
-            "%s" +
-            "    public %1$s %2$s()\n" +
-            "    {\n" +
-            "%s" +
-            "        return %2$s;\n" +
-            "    }\n\n" +
-            "%s\n" +
-            "%s",
-            javaTypeOf(type),
-            fieldName,
-            fieldInitialisation(type, name),
-            optionalField(entry),
-            optionalCheck,
-            optionalGetter(entry),
-            suffix
-        );
+            return String.format(
+                "    private %s %s%s;\n\n" +
+                    "%s" +
+                    "    public %1$s %2$s()\n" +
+                    "    {\n" +
+                    "%s" +
+                    "        return %2$s;\n" +
+                    "    }\n\n" +
+                    "%s\n" +
+                    "%s",
+                javaTypeOf(type),
+                fieldName,
+                fieldInitialisation(type, name),
+                optionalField(entry),
+                optionalCheck,
+                optionalGetter(entry),
+                suffix
+            );
+        }
+
+        return "";
     }
 
     private String fieldInitialisation(final Type type, final String name)
@@ -263,23 +268,28 @@ public class DecoderGenerator extends Generator
         // int valueLength = the number of bytes for the value
         // int endOfField = the end index of the value
 
-        final Field field = (Field)entry.element();
-        final int tag = field.number();
-        final String name = entry.name();
-        final String fieldName = JavaUtil.formatPropertyName(name);
+        if (entry.element() instanceof Field)
+        {
+            final Field field = (Field)entry.element();
+            final int tag = field.number();
+            final String name = entry.name();
+            final String fieldName = JavaUtil.formatPropertyName(name);
 
-        return String.format(
-            "            case %d:\n" +
-            "%s" +
-            "                %s = buffer.%s);\n" +
-            "%s" +
-            "                break;\n",
-            tag,
-            optionalAssign(entry),
-            fieldName,
-            decodeMethod(field.type(), fieldName),
-            optionalStringAssignment(field.type(), fieldName)
-        );
+            return String.format(
+                "            case %d:\n" +
+                    "%s" +
+                    "                %s = buffer.%s);\n" +
+                    "%s" +
+                    "                break;\n",
+                tag,
+                optionalAssign(entry),
+                fieldName,
+                decodeMethod(field.type(), fieldName),
+                optionalStringAssignment(field.type(), fieldName)
+            );
+        }
+
+        return "";
     }
 
     private String optionalStringAssignment(final Type type, final String fieldName)

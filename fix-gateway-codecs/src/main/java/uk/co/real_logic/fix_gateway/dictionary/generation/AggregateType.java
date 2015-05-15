@@ -19,5 +19,6 @@ enum AggregateType
 {
     HEADER,
     TRAILER,
-    MESSAGE
+    MESSAGE,
+    GROUP
 }

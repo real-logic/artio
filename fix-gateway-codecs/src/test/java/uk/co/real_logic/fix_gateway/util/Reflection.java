@@ -88,4 +88,11 @@ public final class Reflection
         return field;
     }
 
+    public static Object call(final Object value, final String methodName) throws Exception
+    {
+        return value.getClass()
+                    .getMethod(methodName)
+                    .invoke(value);
+    }
+
 }

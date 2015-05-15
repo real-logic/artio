@@ -199,7 +199,7 @@ public final class DictionaryParser
                         break;
 
                     case "group":
-                        final Group group = new Group(name);
+                        final Group group = Group.of(fields.get(name));
                         extractEntries(node.getChildNodes(), fields, group.entries(), components);
                         newEntry.accept(group);
                         break;
