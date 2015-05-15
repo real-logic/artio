@@ -261,6 +261,23 @@ public class EncoderGeneratorTest
         assertEncodesTo(encoder, REPEATING_GROUP_EXAMPLE);
     }
 
+    @Test
+    public void shouldResetOptionalFields() throws Exception
+    {
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        setRequiredFields(encoder);
+        setOptionalFields(encoder);
+
+        reset(encoder);
+
+        assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE_EXAMPLE);
+    }
+
+    private void reset(final Encoder encoder) throws Exception
+    {
+        call(encoder, "reset");
+    }
+
     private void setGroupField(final Object tradingSessions, final int value) throws Exception
     {
         setInt(tradingSessions, "groupField", value);
@@ -271,7 +288,7 @@ public class EncoderGeneratorTest
         return call(tradingSessions, "next");
     }
 
-    // TODO: lengths get resized down from initial buffer length being too high.
+    // TODO: toString for groups
     // TODO: reset method
     // TODO: compound types
     // TODO: nested groups

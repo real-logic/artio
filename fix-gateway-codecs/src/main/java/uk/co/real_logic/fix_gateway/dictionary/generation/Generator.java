@@ -114,13 +114,53 @@ public abstract class Generator
 
     protected String generateResetMethod(List<Entry> entries)
     {
-        return "    public void reset() {\n" +
-               "    }\n\n";
+        final String resetCalls = entries
+            .stream()
+            .filter(entry -> !entry.required())
+            .map(this::resetCall)
+            .collect(joining());
+
+        return String.format(
+            "    public void reset() {\n" +
+            "%s" +
+            "    }\n\n",
+            resetCalls
+        );
+    }
+
+    protected String resetMethodName(final String name)
+    {
+        return "reset" + name;
+    }
+
+    private String resetCall(final Entry entry)
+    {
+        if (entry.element() instanceof Field)
+        {
+            return String.format(
+                "        %1$s();\n",
+                resetMethodName(entry.name())
+            );
+        }
+        else
+        {
+            return "";
+        }
     }
 
     protected String optionalField(final Entry entry)
     {
-        return entry.required() ? "" : String.format("    private boolean has%s;\n\n", entry.name());
+        final String name = entry.name();
+        return entry.required()
+             ? ""
+             : String.format(
+                "    private boolean has%1$s;\n\n" +
+                "    public void %2$s()\n" +
+                "    {\n" +
+                "        has%1$s = false;\n" +
+                "    }\n\n",
+                name,
+                resetMethodName(name));
     }
 
     protected String generateToString(Aggregate aggregate, final boolean hasCommonCompounds)
