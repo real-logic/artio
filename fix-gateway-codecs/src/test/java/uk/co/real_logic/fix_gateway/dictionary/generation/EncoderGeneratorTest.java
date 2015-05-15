@@ -274,7 +274,6 @@ public class EncoderGeneratorTest
     // TODO: lengths get resized down from initial buffer length being too high.
     // TODO: reset method
     // TODO: compound types
-    // TODO: groups (RefMsgType used in session management)
     // TODO: nested groups
 
     private void setupHeader(final Encoder encoder) throws Exception
