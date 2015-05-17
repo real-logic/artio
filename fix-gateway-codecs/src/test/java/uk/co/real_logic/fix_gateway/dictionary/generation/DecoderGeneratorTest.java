@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
@@ -172,16 +173,37 @@ public class DecoderGeneratorTest
     @Test
     public void shouldDecodeShorterStringsAfterLongerStrings() throws Exception
     {
-        final Decoder decoder = (Decoder) heartbeat.newInstance();
-        buffer.putAscii(1, DERIVED_FIELDS_EXAMPLE);
-        decoder.decode(buffer, 1, DERIVED_FIELDS_EXAMPLE.length());
+        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_EXAMPLE);
 
         assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
 
-        buffer.putAscii(1, SHORTER_STRING_EXAMPLE);
-        decoder.decode(buffer, 1, SHORTER_STRING_EXAMPLE.length());
+        decode(SHORTER_STRING_EXAMPLE, decoder);
 
         assertArrayEquals(AB, getOnBehalfOfCompId(decoder));
+    }
+
+    @Ignore
+    @Test
+    public void shouldDecodeRepeatingGroups() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_EXAMPLE);
+
+        assertEquals(2, get(decoder, "noEgGroup"));
+
+        final Object group = getEgGroup(decoder);
+
+        assertEquals(1, getGroupField(group));
+    }
+
+    // TODO: finish groups
+    // TODO: compound types
+    // TODO: groups
+    // TODO: nested groups
+    // TODO: validation
+
+    private int getGroupField(final Object group) throws Exception
+    {
+        return (int) get(group, "groupField");
     }
 
     private int getBodyLength(final Decoder header) throws Exception
@@ -197,16 +219,15 @@ public class DecoderGeneratorTest
     private Decoder decodeHeartbeat(final String example) throws InstantiationException, IllegalAccessException
     {
         final Decoder decoder = (Decoder) heartbeat.newInstance();
-        buffer.putAscii(1, example);
-
-        decoder.decode(buffer, 1, example.length());
+        decode(example, decoder);
         return decoder;
     }
 
-    // TODO: compound types
-    // TODO: groups (RefMsgType used in session management)
-    // TODO: nested groups
-    // TODO: validation
+    private void decode(final String example, final Decoder decoder)
+    {
+        buffer.putAscii(1, example);
+        decoder.decode(buffer, 1, example.length());
+    }
 
     private void assertIsDecoder(final Class<?> cls)
     {

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.util;
 
+import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 
 import java.lang.reflect.Field;
@@ -95,4 +96,18 @@ public final class Reflection
                     .invoke(value);
     }
 
+    public static void reset(final Encoder encoder) throws Exception
+    {
+        call(encoder, "reset");
+    }
+
+    public static Object next(final Object stub) throws Exception
+    {
+        return call(stub, "next");
+    }
+
+    public static Object getEgGroup(final Object stub) throws Exception
+    {
+        return get(stub, "egGroup");
+    }
 }

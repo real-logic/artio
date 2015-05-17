@@ -175,7 +175,7 @@ public abstract class Generator
             : "\"  \\\"header\\\": \" + header" + EXPAND_INDENT + " + \"\\n\" + ";
 
         final String suffix =
-            !(aggregate instanceof Group) ? ""
+            !(aggregate instanceof Group && getClass() == EncoderGenerator.class) ? ""
             : "        if (next != null)\n" +
               "        {\n" +
               "            entries += \",\\n\" + next.toString();\n" +

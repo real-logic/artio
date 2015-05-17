@@ -19,7 +19,6 @@ import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
-import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -29,6 +28,7 @@ import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.MESSAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
+import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 // TODO: optimisations
 // skip decoding the msg type, since its known
@@ -98,48 +98,82 @@ public class DecoderGenerator extends Generator
 
     private String generateGetter(final Entry entry) throws IOException
     {
-        if (entry.element() instanceof Field)
+        final Entry.Element element = entry.element();
+        if (element instanceof Field)
         {
-            final Field field = (Field)entry.element();
-            final String name = entry.name();
-            final String fieldName = JavaUtil.formatPropertyName(name);
-            final Type type = field.type();
-            final String optionalCheck = optionalCheck(entry);
-
-            final String suffix = type == STRING
-                ? String.format(
-                "    private int %s;\n\n" +
-                    "    public int %1$s()\n" +
-                    "    {\n" +
-                    "%s" +
-                    "        return %1$s;\n" +
-                    "    }\n",
-                fieldName + "Length",
-                optionalCheck
-            )
-                : "";
-
-            return String.format(
-                "    private %s %s%s;\n\n" +
-                    "%s" +
-                    "    public %1$s %2$s()\n" +
-                    "    {\n" +
-                    "%s" +
-                    "        return %2$s;\n" +
-                    "    }\n\n" +
-                    "%s\n" +
-                    "%s",
-                javaTypeOf(type),
-                fieldName,
-                fieldInitialisation(type, name),
-                optionalField(entry),
-                optionalCheck,
-                optionalGetter(entry),
-                suffix
-            );
+            return generateFieldGetter(entry, (Field) element);
+        }
+        else if (element instanceof Group)
+        {
+            return generateGroupGetter((Group) element);
         }
 
         return "";
+    }
+
+    private String generateGroupGetter(final Group element)
+    {
+        generateAggregate(element, AggregateType.GROUP);
+
+        final Entry numberField = element.numberField();
+        final String prefix = generateFieldGetter(numberField, (Field) numberField.element());
+
+        return String.format(
+            "    private %1$s %2$s = null;\n" +
+            "    public %1$s %2$s()\n" +
+            "    {\n" +
+            "        return %2$s;" +
+            "    }\n\n" +
+            "%3$s",
+            decoderClassName(element.name()),
+            formatPropertyName(element.name()),
+            prefix
+        );
+    }
+
+    private String decoderClassName(final String name)
+    {
+        return name + "Decoder";
+    }
+
+    private String generateFieldGetter(final Entry entry, final Field field)
+    {
+        final String name = field.name();
+        final String fieldName = formatPropertyName(name);
+        final Type type = field.type();
+        final String optionalCheck = optionalCheck(entry);
+
+        final String suffix = type == STRING
+            ? String.format(
+                "    private int %s;\n\n" +
+                "    public int %1$s()\n" +
+                "    {\n" +
+                "%s" +
+                "        return %1$s;\n" +
+                "    }\n",
+                fieldName + "Length",
+                optionalCheck
+            )
+            : "";
+
+        return String.format(
+            "    private %s %s%s;\n\n" +
+                "%s" +
+                "    public %1$s %2$s()\n" +
+                "    {\n" +
+                "%s" +
+                "        return %2$s;\n" +
+                "    }\n\n" +
+                "%s\n" +
+                "%s",
+            javaTypeOf(type),
+            fieldName,
+            fieldInitialisation(type, name),
+            optionalField(entry),
+            optionalCheck,
+            optionalGetter(entry),
+            suffix
+        );
     }
 
     private String fieldInitialisation(final Type type, final String name)
@@ -243,8 +277,8 @@ public class DecoderGenerator extends Generator
 
         final String body =
             entries.stream()
-                .map(this::decodeField)
-                .collect(joining("\n", "", "\n"));
+                   .map(this::decodeEntry)
+                   .collect(joining("\n", "", "\n"));
 
         final String suffix =
             "            default:\n" +
@@ -260,7 +294,7 @@ public class DecoderGenerator extends Generator
         return prefix + body + suffix;
     }
 
-    private String decodeField(final Entry entry)
+    private String decodeEntry(final Entry entry)
     {
         // Uses variables from surrounding context:
         // int tag = the tag number of the field
@@ -270,26 +304,53 @@ public class DecoderGenerator extends Generator
 
         if (entry.element() instanceof Field)
         {
-            final Field field = (Field)entry.element();
-            final int tag = field.number();
-            final String name = entry.name();
-            final String fieldName = JavaUtil.formatPropertyName(name);
-
-            return String.format(
-                "            case %d:\n" +
-                    "%s" +
-                    "                %s = buffer.%s);\n" +
-                    "%s" +
-                    "                break;\n",
-                tag,
-                optionalAssign(entry),
-                fieldName,
-                decodeMethod(field.type(), fieldName),
-                optionalStringAssignment(field.type(), fieldName)
-            );
+            return decodeField(entry, "");
+        }
+        else if (entry.element() instanceof Group)
+        {
+            return decodeGroup(entry);
         }
 
         return "";
+    }
+
+    private String decodeGroup(final Entry entry)
+    {
+        final Group group = (Group) entry.element();
+
+        final String parseGroup = String.format(
+            "                if (%1$s == null)\n" +
+            "                {\n" +
+            "                    %1$s = new %2$s();\n" +
+            "                }\n",
+            //"                %1$s.decode(buffer, endOfField, length);\n",
+            formatPropertyName(group.name()),
+            decoderClassName(group)
+        );
+        return decodeField(group.numberField(), parseGroup);
+    }
+
+    private String decodeField(final Entry entry, final String suffix)
+    {
+        final Field field = (Field)entry.element();
+        final int tag = field.number();
+        final String name = entry.name();
+        final String fieldName = formatPropertyName(name);
+
+        return String.format(
+            "            case %d:\n" +
+            "%s" +
+            "                %s = buffer.%s);\n" +
+            "%s" +
+            "%s" +
+            "                break;\n",
+            tag,
+            optionalAssign(entry),
+            fieldName,
+            decodeMethod(field.type(), fieldName),
+            optionalStringAssignment(field.type(), fieldName),
+            suffix
+        );
     }
 
     private String optionalStringAssignment(final Type type, final String fieldName)

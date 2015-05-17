@@ -285,26 +285,16 @@ public class EncoderGeneratorTest
 
     private void setGroup(final Encoder encoder) throws Exception
     {
-        Object group = get(encoder, "egGroup");
+        Object group = getEgGroup(encoder);
         setGroupField(group, 1);
 
         group = next(group);
         setGroupField(group, 2);
     }
 
-    private void reset(final Encoder encoder) throws Exception
-    {
-        call(encoder, "reset");
-    }
-
     private void setGroupField(final Object tradingSessions, final int value) throws Exception
     {
         setInt(tradingSessions, "groupField", value);
-    }
-
-    private Object next(final Object tradingSessions) throws Exception
-    {
-        return call(tradingSessions, "next");
     }
 
     private void setupHeader(final Encoder encoder) throws Exception
