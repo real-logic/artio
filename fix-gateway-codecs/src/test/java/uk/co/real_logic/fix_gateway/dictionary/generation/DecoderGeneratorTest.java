@@ -170,7 +170,7 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void shouldEncodeShorterStringsAfterLongerStrings() throws Exception
+    public void shouldDecodeShorterStringsAfterLongerStrings() throws Exception
     {
         final Decoder decoder = (Decoder) heartbeat.newInstance();
         buffer.putAscii(1, DERIVED_FIELDS_EXAMPLE);

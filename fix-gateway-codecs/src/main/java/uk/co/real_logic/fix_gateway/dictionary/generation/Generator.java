@@ -18,11 +18,8 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Entry;
+import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
@@ -38,11 +35,13 @@ import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.MESSAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importStaticFor;
+import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 public abstract class Generator
 {
 
     protected static final String MSG_TYPE = "MsgType";
+    public static final String EXPAND_INDENT = ".toString().replace(\"\\n\", \"\\n  \")";
 
     protected String commonCompoundImports(final String form)
     {
@@ -171,19 +170,29 @@ public abstract class Generator
                         .map(this::generateEntryToString)
                         .collect(joining(" + \n"));
 
-        final String prefix = hasCommonCompounds
-                            ? "\"  \\\"header\\\": \" + header.toString().replace(\"\\n\", \"\\n  \") + \"\\n\" + "
-                            : "";
+        final String prefix =
+            !hasCommonCompounds ? ""
+            : "\"  \\\"header\\\": \" + header" + EXPAND_INDENT + " + \"\\n\" + ";
+
+        final String suffix =
+            !(aggregate instanceof Group) ? ""
+            : "        if (next != null)\n" +
+              "        {\n" +
+              "            entries += \",\\n\" + next.toString();\n" +
+              "        }\n";
 
         return String.format(
                 "    public String toString()\n" +
-                        "    {\n" +
-                        "        final String entries =%s\n" +
-                        "%s;\n" +
-                        "        return \"{\\n  \\\"MsgType\\\": \\\"%s\\\",\\n\" + entries + \"}\";\n" +
-                        "    }\n\n",
+                "    {\n" +
+                "        String entries =%1$s\n" +
+                "%2$s;\n\n" +
+                "        entries = \"{\\n  \\\"MsgType\\\": \\\"%4$s\\\",\\n\" + entries + \"}\";\n" +
+                "%3$s" +
+                "        return entries;\n" +
+                "    }\n\n",
                 prefix,
                 entriesToString,
+                suffix,
                 aggregate.name());
     }
 
@@ -192,10 +201,10 @@ public abstract class Generator
         //"  \"OnBehalfOfCompID\": \"abc\",\n" +
 
         final Element element = entry.element();
+        final String name = entry.name();
         if (element instanceof Field)
         {
             final Field field = (Field) element;
-            final String name = entry.name();
             final String value = generateValueToString(field);
 
             final String formatter = String.format(
@@ -204,7 +213,19 @@ public abstract class Generator
                 value
             );
 
-            return "            " + (entry.required() ? formatter : String.format("(has%s ? %s : \"\")", name, formatter));
+            return "             " + (entry.required() ? formatter : String.format("(has%s ? %s : \"\")", name, formatter));
+        }
+        else if (element instanceof Group && getClass() == EncoderGenerator.class)
+        // TODO: remove this restriction groups for decoders are implemented
+        {
+            return String.format(
+                "                (%2$s != null ? String.format(\"  \\\"%1$s\\\": [\\n" +
+                "  %%s" +
+                "\\n  ]" +
+                "\\n\", %2$s" + EXPAND_INDENT + ") : \"\")",
+                name,
+                formatPropertyName(name)
+            );
         }
 
         return "\"\"";

@@ -251,12 +251,7 @@ public class EncoderGeneratorTest
     {
         final Encoder encoder = (Encoder) heartbeat.newInstance();
         setRequiredFields(encoder);
-
-        Object group = get(encoder, "egGroup");
-        setGroupField(group, 1);
-
-        group = next(group);
-        setGroupField(group, 2);
+        setGroup(encoder);
 
         assertEncodesTo(encoder, REPEATING_GROUP_EXAMPLE);
     }
@@ -273,6 +268,30 @@ public class EncoderGeneratorTest
         assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE_EXAMPLE);
     }
 
+    @Test
+    public void shouldDelegateToStringCallsForGroups() throws Exception
+    {
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        setRequiredFields(encoder);
+        setGroup(encoder);
+
+        //System.out.println(STRING_FOR_GROUP);
+        assertThat(encoder, hasToString(containsString(STRING_FOR_GROUP)));
+    }
+
+    // TODO: reset method
+    // TODO: nested groups
+    // TODO: compound types
+
+    private void setGroup(final Encoder encoder) throws Exception
+    {
+        Object group = get(encoder, "egGroup");
+        setGroupField(group, 1);
+
+        group = next(group);
+        setGroupField(group, 2);
+    }
+
     private void reset(final Encoder encoder) throws Exception
     {
         call(encoder, "reset");
@@ -287,11 +306,6 @@ public class EncoderGeneratorTest
     {
         return call(tradingSessions, "next");
     }
-
-    // TODO: toString for groups
-    // TODO: reset method
-    // TODO: compound types
-    // TODO: nested groups
 
     private void setupHeader(final Encoder encoder) throws Exception
     {

@@ -105,15 +105,15 @@ public class EncoderGenerator extends Generator
     {
         return String.format(
             "    private %1$s next = null;\n\n" +
-            "    public %1$s next()\n" +
-            "    {\n" +
-            "        if (next == null)\n" +
-            "        {\n" +
-            "            next = new %1$s(onNext);\n" +
-            "            onNext.run();\n" +
-            "        }\n" +
-            "        return next;\n" +
-            "    }\n\n",
+                "    public %1$s next()\n" +
+                "    {\n" +
+                "        if (next == null)\n" +
+                "        {\n" +
+                "            next = new %1$s(onNext);\n" +
+                "            onNext.run();\n" +
+                "        }\n" +
+                "        return next;\n" +
+                "    }\n\n",
             encoderClassName(group.name())
         );
     }
@@ -184,56 +184,66 @@ public class EncoderGenerator extends Generator
         final Element element = entry.element();
         if (element instanceof Field)
         {
-            final Field field = (Field) element;
-            final String name = field.name();
-            final String fieldName = formatPropertyName(name);
-            final String optionalField = optionalField(entry);
-            final String optionalAssign = optionalAssign(entry);
-
-            // TODO: make encoding generation more regular and delegate to library calls more
-            final Function<String, String> generateSetter =
-                (type) -> generateSetter(name, type, fieldName, optionalField, className, optionalAssign);
-
-            switch (field.type())
-            {
-                // TODO: other type cases
-                // TODO: how do we reset optional fields - clear method?
-                case STRING:
-                    return generateStringSetter(className, fieldName, optionalField, optionalAssign);
-
-                case BOOLEAN:
-                    return generateSetter.apply("boolean");
-
-                case DATA:
-                    return generateSetter.apply("byte[]");
-
-                case INT:
-                case LENGTH:
-                case SEQNUM:
-                case LOCALMKTDATE:
-                    return generateSetter.apply("int");
-
-                case UTCTIMESTAMP:
-                    return generateSetter.apply("long");
-
-                case QTY:
-                case PRICE:
-                case PRICEOFFSET:
-                    return generateSetter.apply("DecimalFloat");
-
-                default: throw new UnsupportedOperationException("Unknown type: " + field.type());
-            }
+            return generateFieldSetter(className, entry, (Field) element);
         }
         else if (element instanceof Group)
         {
-            final Group group = (Group) element;
-            generateAggregate(group, GROUP);
+            return generateGroupSetter(className, (Group) element);
+        }
+        return "";
+    }
 
-            final Entry numberField = group.numberField();
-            final String setter = generateSetter(className, numberField);
+    private String generateFieldSetter(final String className, final Entry entry, final Field field)
+    {
+        final String name = field.name();
+        final String fieldName = formatPropertyName(name);
+        final String optionalField = optionalField(entry);
+        final String optionalAssign = optionalAssign(entry);
 
-            return String.format(
-                "%1$s\n" +
+        // TODO: make encoding generation more regular and delegate to library calls more
+        final Function<String, String> generateSetter =
+            (type) -> generateSetter(name, type, fieldName, optionalField, className, optionalAssign);
+
+        switch (field.type())
+        {
+            // TODO: other type cases
+            // TODO: how do we reset optional fields - clear method?
+            case STRING:
+                return generateStringSetter(className, fieldName, optionalField, optionalAssign);
+
+            case BOOLEAN:
+                return generateSetter.apply("boolean");
+
+            case DATA:
+                return generateSetter.apply("byte[]");
+
+            case INT:
+            case LENGTH:
+            case SEQNUM:
+            case LOCALMKTDATE:
+                return generateSetter.apply("int");
+
+            case UTCTIMESTAMP:
+                return generateSetter.apply("long");
+
+            case QTY:
+            case PRICE:
+            case PRICEOFFSET:
+                return generateSetter.apply("DecimalFloat");
+
+            default: throw new UnsupportedOperationException("Unknown type: " + field.type());
+        }
+    }
+
+    private String generateGroupSetter(final String className, final Group group)
+    {
+        generateAggregate(group, GROUP);
+
+        final Entry numberField = group.numberField();
+        final String setter = generateSetter(className, numberField);
+
+        return String.format(
+            "%1$s\n" +
                 "    public void inc%4$s()\n" +
                 "    {\n" +
                 "        %5$s++;\n" +
@@ -249,13 +259,11 @@ public class EncoderGenerator extends Generator
                 "        }\n" +
                 "        return %3$s;\n" +
                 "    }\n\n",
-                setter,
-                encoderClassName(group.name()),
-                formatPropertyName(group.name()),
-                numberField.name(),
-                formatPropertyName(numberField.name()));
-        }
-        return "";
+            setter,
+            encoderClassName(group.name()),
+            formatPropertyName(group.name()),
+            numberField.name(),
+            formatPropertyName(numberField.name()));
     }
 
     private boolean isBodyLength(final String name)

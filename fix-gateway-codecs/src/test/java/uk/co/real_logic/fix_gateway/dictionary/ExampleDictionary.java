@@ -82,6 +82,18 @@ public final class ExampleDictionary
         "  \"DataField\": \"[49, 50, 51]\",\n" +
         "}";
 
+    public static final String STRING_FOR_GROUP =
+        "  \"EgGroup\": [\n" +
+        "  {\n" +
+        "    \"MsgType\": \"EgGroup\",\n" +
+        "    \"GroupField\": \"1\",\n" +
+        "  },\n" +
+        "  {\n" +
+        "    \"MsgType\": \"EgGroup\",\n" +
+        "    \"GroupField\": \"2\",\n" +
+        "  }\n" +
+        "  ]";
+
     public static final String STRING_ENCODED_MESSAGE_EXAMPLE =
         "{\n" +
         "  \"MsgType\": \"Heartbeat\",\n" +
