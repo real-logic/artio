@@ -15,97 +15,44 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
-import uk.co.real_logic.agrona.concurrent.Agent;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
-public class Coordinator implements Agent
+public class Coordinator implements ControlProtocol
 {
     public static final int NO_SESSION_ID = -1;
 
-    /*private final MessageHeader messageHeader = new MessageHeader();
-    private final MessageAcknowledgement messageAcknowledgement = new MessageAcknowledgement();
-    private final FixMessage fixMessage = new FixMessage();*/
-
-    //private final MessageHandler delegate;
     private final TermAcknowledgementStrategy termAcknowledgementStrategy;
-
-    private final Subscription dataSubscription;
-    private final Publication controlPublication;
-    private final Subscription controlSubscription;
-
-    private final Long2LongHashMap sessionToAckedTerms = new Long2LongHashMap(NO_SESSION_ID);
-    private long acknowledgedTerm = 0;
+    private final GatewaySubscription subscription;
 
     // Counts of how many acknowledgements
+    private final Long2LongHashMap nodeToAckedPosition = new Long2LongHashMap(NO_SESSION_ID);
+    private long acknowledgedTerm = 0;
 
     public Coordinator(
-        final ReplicationStreams replicationStreams,
-        //final MessageHandler delegate,
+        final TermAcknowledgementStrategy termAcknowledgementStrategy,
         final IntHashSet followers,
-        final TermAcknowledgementStrategy termAcknowledgementStrategy)
+        final GatewaySubscription subscription)
     {
-        //this.delegate = delegate;
         this.termAcknowledgementStrategy = termAcknowledgementStrategy;
-
-        dataSubscription = replicationStreams.dataSubscription(this::onDataMessage);
-        controlPublication = replicationStreams.controlPublication();
-        controlSubscription = replicationStreams.controlSubscription(this::onControlMessage);
-
-        followers.forEach(follower -> sessionToAckedTerms.put(follower, 0));
+        this.subscription = subscription;
+        followers.forEach(follower -> nodeToAckedPosition.put(follower, 0));
     }
 
-    private void onDataMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    public void messageAcknowledgement(final long newAckedPosition, final int node)
     {
-        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) buffer;
-        // TODO
-        //fixMessage.wrapForDecode(unsafeBuffer, offset, length, SCHEMA_VERSION);
-
-        //final long fixSessionId = fixMessage.session();
-        final int messageType = 'A'; // TODO
-        // TODO: use FixPublication
-        // SBE Message offset: offset + fixMessage.sbeBlockLength() + fixMessage.bodyHeaderSize();
-        //delegate.onMessage(buffer, offset, length, fixSessionId, messageType);
-    }
-
-    private void onControlMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
-    {
-        final UnsafeBuffer unsafeBuffer = (UnsafeBuffer) buffer;
-        /*if (isTemplate(offset, unsafeBuffer, MessageAcknowledgement.TEMPLATE_ID))
+        final long lastAckedPosition = nodeToAckedPosition.get(node);
+        if (lastAckedPosition != NO_SESSION_ID)
         {
-            messageAcknowledgement.wrapForDecode(unsafeBuffer, offset, length, SCHEMA_VERSION);
-            onMessageAcknowledgement(messageAcknowledgement.term(), header.sessionId());
-        }*/
-    }
-
-    private boolean isTemplate(final int offset, final UnsafeBuffer unsafeBuffer, final int templateId)
-    {
-        //messageHeader.wrap(unsafeBuffer, offset, 0);
-        //return messageHeader.templateId() == templateId;
-        return true;
-    }
-
-    public void onMessageAcknowledgement(final int newAckedterm, final int session)
-    {
-        final long lastAckedTerm = sessionToAckedTerms.get(session);
-        if (lastAckedTerm != NO_SESSION_ID)
-        {
-            if (newAckedterm > lastAckedTerm)
+            if (newAckedPosition > lastAckedPosition)
             {
-                sessionToAckedTerms.put(session, newAckedterm);
+                nodeToAckedPosition.put(node, newAckedPosition);
 
-                final long newAcknowledgedTerm = termAcknowledgementStrategy.findAckedTerm(sessionToAckedTerms);
+                final long newAcknowledgedTerm = termAcknowledgementStrategy.findAckedTerm(nodeToAckedPosition);
                 if (newAcknowledgedTerm > acknowledgedTerm)
                 {
-                    // TODO: dataSubscription.pollToPosition(newAcknowledgedTerm);
+                    subscription.pollToPosition(newAckedPosition);
                     acknowledgedTerm = newAcknowledgedTerm;
-
-                    // TODO: broadcast to followers that the message was committed to the delegate
                 }
             }
         }
@@ -115,21 +62,4 @@ public class Coordinator implements Agent
         }
     }
 
-    public int doWork() throws Exception
-    {
-        // TODO: some batch
-        return controlSubscription.poll(10);
-    }
-
-    public void onClose()
-    {
-        dataSubscription.close();
-        controlPublication.close();
-        controlSubscription.close();
-    }
-
-    public String roleName()
-    {
-        return "Coordinator";
-    }
 }

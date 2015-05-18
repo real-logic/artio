@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -26,26 +26,13 @@ import uk.co.real_logic.fix_gateway.session.SessionHandler;
 
 import static uk.co.real_logic.fix_gateway.replication.GatewayPublication.FRAME_SIZE;
 
-public class GatewaySubscription
+public class DataSubscriber implements DataHandler
 {
-
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
-    private final Subscription subscription;
 
     private SessionHandler sessionHandler;
-
-    public GatewaySubscription(final ReplicationStreams replicationStreams)
-    {
-        subscription = replicationStreams.dataSubscription(this::onData);
-    }
-
-    public GatewaySubscription sessionHandler(final SessionHandler sessionHandler)
-    {
-        this.sessionHandler = sessionHandler;
-        return this;
-    }
 
     public void onData(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
@@ -80,13 +67,9 @@ public class GatewaySubscription
         }
     }
 
-    public int poll(final int limit)
+    public DataSubscriber sessionHandler(final SessionHandler sessionHandler)
     {
-        return subscription.poll(limit);
-    }
-
-    public void pollToPosition(final long position)
-    {
-        throw new UnsupportedOperationException("TODO");
+        this.sessionHandler = sessionHandler;
+        return this;
     }
 }
