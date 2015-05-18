@@ -31,6 +31,8 @@ import java.util.Map;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasToString;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
@@ -196,6 +198,14 @@ public class DecoderGeneratorTest
 
         group = next(group);
         assertEquals(2, getGroupField(group));
+    }
+
+    @Test
+    public void shouldToStringRepeatingGroups() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_EXAMPLE);
+
+        assertThat(decoder, hasToString(containsString(STRING_FOR_GROUP)));
     }
 
     // TODO: compound types

@@ -177,7 +177,7 @@ public abstract class Generator
             : "\"  \\\"header\\\": \" + header" + EXPAND_INDENT + " + \"\\n\" + ";
 
         final String suffix =
-            !(aggregate instanceof Group && getClass() == EncoderGenerator.class) ? ""
+            !(aggregate instanceof Group) ? ""
             : "        if (next != null)\n" +
               "        {\n" +
               "            entries += \",\\n\" + next.toString();\n" +
@@ -217,8 +217,7 @@ public abstract class Generator
 
             return "             " + (entry.required() ? formatter : String.format("(has%s ? %s : \"\")", name, formatter));
         }
-        else if (element instanceof Group && getClass() == EncoderGenerator.class)
-        // TODO: remove this restriction groups for decoders are implemented
+        else if (element instanceof Group)
         {
             return String.format(
                 "                (%2$s != null ? String.format(\"  \\\"%1$s\\\": [\\n" +

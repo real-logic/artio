@@ -368,7 +368,7 @@ public class DecoderGenerator extends Generator
             "                {\n" +
             "                    %1$s = new %2$s();\n" +
             "                }\n" +
-            "                %1$s.decode(buffer, endOfField + 1, end - endOfField);\n",
+            "                position = %1$s.decode(buffer, endOfField + 1, end - endOfField);\n",
             formatPropertyName(group.name()),
             decoderClassName(group)
         );
