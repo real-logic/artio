@@ -22,6 +22,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 public class ControlSubscriber implements DataHandler
 {
 
+
     private final ControlProtocol delegate;
 
     public ControlSubscriber(final ControlProtocol delegate)
