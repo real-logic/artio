@@ -127,6 +127,9 @@ public final class ExampleDictionary
     public static final String REPEATING_GROUP_EXAMPLE =
         "8=FIX.4.4\0019=0045\00135=0\001115=abc\001116=2\001117=1.1\001120=2\001121=1\001121=2\00110=171\001";
 
+    public static final String NESTED_GROUP_EXAMPLE =
+        "8=FIX.4.4\0019=0045\00135=0\001115=abc\001116=2\001117=1.1\001120=1\001121=1\001122=1\001123=1\00110=171\001";
+
     public static final int TEST_REQ_ID_TAG = 112;
 
     public static final String NO_EG_GROUP = "NoEgGroup";
@@ -169,8 +172,12 @@ public final class ExampleDictionary
         final Field booleanField = registerField(messageEgFields, 118, "BooleanField", Type.BOOLEAN);
         final Field dataField = registerField(messageEgFields, 119, "DataField", Type.DATA);
 
+        final Group nestedGroup = Group.of(registerField(messageEgFields, 122, "NoNestedGroup", Type.INT));
+        nestedGroup.optionalEntry(registerField(messageEgFields, 123, "NestedField", Type.INT));
+
         final Group egGroup = Group.of(registerField(messageEgFields, 120, NO_EG_GROUP, Type.INT));
         egGroup.optionalEntry(registerField(messageEgFields, 121, "GroupField", Type.INT));
+        egGroup.optionalEntry(nestedGroup);
 
         final Message heartbeat = new Message("Heartbeat", HEARTBEAT_TYPE, ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);

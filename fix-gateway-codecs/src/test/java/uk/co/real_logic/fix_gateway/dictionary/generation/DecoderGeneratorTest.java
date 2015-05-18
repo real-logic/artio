@@ -191,13 +191,30 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_EXAMPLE);
 
-        assertEquals(2, get(decoder, "noEgGroup"));
+        assertEquals(2, getNoEgGroup(decoder));
 
         Object group = getEgGroup(decoder);
         assertEquals(1, getGroupField(group));
 
         group = next(group);
         assertEquals(2, getGroupField(group));
+        assertNull(next(group));
+    }
+
+    @Test
+    public void shouldDecodeNestedRepeatingGroups() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NESTED_GROUP_EXAMPLE);
+
+        assertEquals(1, getNoEgGroup(decoder));
+
+        final Object group = getEgGroup(decoder);
+        assertEquals(1, getGroupField(group));
+        assertNull(next(group));
+
+        final Object nestedGroup = get(group, "nestedGroup");
+        assertEquals(1, get(nestedGroup, "nestedField"));
+        assertNull(next(nestedGroup));
     }
 
     @Test
@@ -209,9 +226,12 @@ public class DecoderGeneratorTest
     }
 
     // TODO: compound types
-    // TODO: groups
-    // TODO: nested groups
     // TODO: validation
+
+    private Object getNoEgGroup(final Decoder decoder) throws Exception
+    {
+        return get(decoder, "noEgGroup");
+    }
 
     private int getGroupField(final Object group) throws Exception
     {
