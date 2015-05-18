@@ -38,6 +38,7 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 // use ordering of fields to reduce branching
 // skip decoding of unread header fields - eg: sender/target comp id.
 // optimise the checksum definition to use an int and be calculated or ignored, have optional validation.
+// evaluate utc parsing, adds about 100 nanos
 public class DecoderGenerator extends Generator
 {
     private static final double HASHSET_SIZE_FACTOR = 1.0 / 0.6;
