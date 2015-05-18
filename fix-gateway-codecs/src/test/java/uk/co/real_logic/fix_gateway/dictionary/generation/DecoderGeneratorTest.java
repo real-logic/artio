@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
@@ -54,8 +53,11 @@ public class DecoderGeneratorTest
     {
         decoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
-        //System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sources);
+        if (heartbeat == null)
+        {
+            System.out.println(sources);
+        }
         compileInMemory(HEADER_DECODER, sources);
     }
 
@@ -182,7 +184,6 @@ public class DecoderGeneratorTest
         assertArrayEquals(AB, getOnBehalfOfCompId(decoder));
     }
 
-    @Ignore
     @Test
     public void shouldDecodeRepeatingGroups() throws Exception
     {
@@ -190,12 +191,13 @@ public class DecoderGeneratorTest
 
         assertEquals(2, get(decoder, "noEgGroup"));
 
-        final Object group = getEgGroup(decoder);
-
+        Object group = getEgGroup(decoder);
         assertEquals(1, getGroupField(group));
+
+        group = next(group);
+        assertEquals(2, getGroupField(group));
     }
 
-    // TODO: finish groups
     // TODO: compound types
     // TODO: groups
     // TODO: nested groups

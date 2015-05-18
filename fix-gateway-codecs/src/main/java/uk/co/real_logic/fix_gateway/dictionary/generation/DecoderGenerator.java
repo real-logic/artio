@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
@@ -25,6 +26,7 @@ import java.io.Writer;
 import java.util.List;
 
 import static java.util.stream.Collectors.joining;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.GROUP;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.MESSAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
@@ -37,6 +39,8 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 // skip decoding of unread header fields - eg: sender/target comp id.
 public class DecoderGenerator extends Generator
 {
+    private static final double HASHSET_SIZE_FACTOR = 1.0 / 0.6;
+
     public static String decoderClassName(final Aggregate aggregate)
     {
         return aggregate.name() + "Decoder";
@@ -69,15 +73,33 @@ public class DecoderGenerator extends Generator
                 out.append(generateMessageType(message.type()));
                 out.append(commonCompoundImports("Decoder"));
             }
+            generateGroupMethods(out, aggregate);
             generateGetters(out, className, aggregate.entries());
-            out.append(generateDecodeMethod(aggregate.entries(), isMessage));
+            out.append(generateDecodeMethod(aggregate.entries(), aggregate, type));
             out.append(generateResetMethod(aggregate.entries()));
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         }
         catch (final IOException e)
         {
-            e.printStackTrace();
+            LangUtil.rethrowUnchecked(e);
+        }
+    }
+
+    private void generateGroupMethods(final Writer out, final Aggregate aggregate) throws IOException
+    {
+        if (aggregate instanceof Group)
+        {
+            out.append(String.format(
+                "    private %1$s next = null;\n\n" +
+                "    public %1$s next()\n" +
+                "    {\n" +
+                "        return next;\n" +
+                "    }\n\n" +
+                "    private IntHashSet seenFields = new IntHashSet(%2$d, -1);\n\n",
+                decoderClassName(aggregate),
+                (int) Math.ceil(HASHSET_SIZE_FACTOR * aggregate.entries().size())
+            ));
         }
     }
 
@@ -256,19 +278,42 @@ public class DecoderGenerator extends Generator
         }
     }
 
-    private String generateDecodeMethod(final List<Entry> entries, final boolean hasCommonCompounds)
+    private String generateDecodeMethod(final List<Entry> entries, final Aggregate aggregate, final AggregateType type)
     {
+        final boolean hasCommonCompounds = type == MESSAGE;
+        final String endGroupCheck;
+        if (type == GROUP)
+        {
+            endGroupCheck = String.format(
+                "        if (!seenFields.add(tag))\n" +
+                "        {\n" +
+                "            if (next == null)\n" +
+                "            {\n" +
+                "                next = new %1$s();" +
+                "            }\n" +
+                "            return next.decode(buffer, position, end - position);\n" +
+                "        }\n",
+                decoderClassName(aggregate.name())
+            );
+        }
+        else
+        {
+            endGroupCheck = "";
+        }
+
         final String prefix =
             "    public int decode(final AsciiFlyweight buffer, final int offset, final int length)\n" +
             "    {\n" +
             "        final int end = offset + length;\n" +
             "        int position = offset;\n" +
             (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
+            (type == GROUP ? "        seenFields.clear();\n" : "") +
             "        int tag;\n\n" +
             "        while (position < end)\n" +
             "        {\n" +
             "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
             "            tag = buffer.getInt(position, equalsPosition);\n" +
+            endGroupCheck +
             "            final int valueOffset = equalsPosition + 1;\n" +
             "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
             "            final int valueLength = endOfField - valueOffset;\n" +
@@ -322,8 +367,8 @@ public class DecoderGenerator extends Generator
             "                if (%1$s == null)\n" +
             "                {\n" +
             "                    %1$s = new %2$s();\n" +
-            "                }\n",
-            //"                %1$s.decode(buffer, endOfField, length);\n",
+            "                }\n" +
+            "                %1$s.decode(buffer, endOfField + 1, end - endOfField);\n",
             formatPropertyName(group.name()),
             decoderClassName(group)
         );

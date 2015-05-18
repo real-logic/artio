@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
@@ -103,6 +104,7 @@ public abstract class Generator
             importFor(UtcTimestampEncoder.class) +
             importFor(StandardCharsets.class) +
             importFor(Arrays.class) +
+            importFor(IntHashSet.class) +
             "\npublic class %2$s implements %3$s\n" +
             "{\n\n",
             builderPackage,
