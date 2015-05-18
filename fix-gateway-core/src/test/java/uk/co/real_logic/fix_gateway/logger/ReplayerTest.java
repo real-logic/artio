@@ -17,13 +17,13 @@ package uk.co.real_logic.fix_gateway.logger;
 
 import org.junit.Test;
 import uk.co.real_logic.aeron.Publication;
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
-import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
@@ -40,7 +40,7 @@ public class ReplayerTest extends AbstractMessageTest
 
     private ReplayQuery mockReplayQuery = mock(ReplayQuery.class);
     private Publication mockPublication = mock(Publication.class);
-    private GatewaySubscription mockSubscription = mock(GatewaySubscription.class);
+    private Subscription mockSubscription = mock(Subscription.class);
     private BufferClaim mockClaim = mock(BufferClaim.class);
     private IdleStrategy idleStrategy = mock(IdleStrategy.class);
 

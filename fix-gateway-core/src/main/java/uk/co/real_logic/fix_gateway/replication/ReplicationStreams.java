@@ -72,11 +72,6 @@ public class ReplicationStreams implements AutoCloseable
         return addSubscription(dataStream, handler);
     }
 
-    public GatewaySubscription gatewaySubscription()
-    {
-        return new GatewaySubscription(this);
-    }
-
     public Subscription controlSubscription(final DataHandler handler)
     {
         return addSubscription(controlStream, handler);

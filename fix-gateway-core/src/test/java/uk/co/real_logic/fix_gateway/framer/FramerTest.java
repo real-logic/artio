@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.framer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
@@ -25,7 +26,6 @@ import uk.co.real_logic.fix_gateway.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
-import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -71,7 +71,7 @@ public class FramerTest
         .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort());
 
     private Framer framer = new Framer(mockClock, staticConfiguration, mockConnectionHandler, commandQueue,
-        mock(Multiplexer.class), mockGateway, mock(GatewaySubscription.class));
+        mock(Multiplexer.class), mockGateway, mock(Subscription.class));
 
     @Before
     public void setUp() throws IOException

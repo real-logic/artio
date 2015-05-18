@@ -15,19 +15,22 @@
  */
 package uk.co.real_logic.fix_gateway.framer;
 
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
 import uk.co.real_logic.fix_gateway.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
-import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.*;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -54,7 +57,7 @@ public class Framer implements Agent
     private final SequencedContainerQueue<FramerCommand> commandQueue;
     private final Multiplexer multiplexer;
     private final FixGateway gateway;
-    private final GatewaySubscription dataSubscription;
+    private final Subscription dataSubscription;
     private final Selector selector;
 
     public Framer(
@@ -64,7 +67,7 @@ public class Framer implements Agent
         final SequencedContainerQueue<FramerCommand> commandQueue,
         final Multiplexer multiplexer,
         final FixGateway gateway,
-        final GatewaySubscription dataSubscription)
+        final Subscription dataSubscription)
     {
         this.clock = clock;
         this.configuration = configuration;

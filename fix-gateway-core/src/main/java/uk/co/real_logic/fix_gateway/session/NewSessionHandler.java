@@ -15,10 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
+import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 
 @FunctionalInterface
 public interface NewSessionHandler
 {
-    void onConnect(final Session session, final GatewaySubscription subscription);
+    void onConnect(Session session, DataSubscriber subscriber, Subscription subscription);
 }

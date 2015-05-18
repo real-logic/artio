@@ -6,6 +6,7 @@ import quickfix.field.BeginString;
 import quickfix.field.MsgType;
 import quickfix.field.SenderCompID;
 import quickfix.field.TargetCompID;
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -15,7 +16,6 @@ import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.auth.CompIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
-import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -72,7 +72,7 @@ public final class SystemTestUtil
     }
 
     public static void assertReceivedMessage(
-        final GatewaySubscription subscription, final FakeOtfAcceptor acceptor)
+        final Subscription subscription, final FakeOtfAcceptor acceptor)
     {
         assertEventuallyEquals("Failed to receive a message", 2, () -> subscription.poll(2));
         assertEquals(2, acceptor.messageTypes().size());

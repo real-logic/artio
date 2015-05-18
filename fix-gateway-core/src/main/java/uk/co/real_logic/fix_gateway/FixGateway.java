@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.LangUtil;
@@ -25,7 +26,7 @@ import uk.co.real_logic.fix_gateway.framer.FramerCommand;
 import uk.co.real_logic.fix_gateway.framer.FramerProxy;
 import uk.co.real_logic.fix_gateway.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.logger.*;
-import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
+import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -82,12 +83,14 @@ public class FixGateway implements AutoCloseable
         final Indexer indexer = new Indexer(indices, inboundStreams);
 
         final ReplayQuery replayQuery = new ReplayQuery(this::mapExistingFile, archiveReader);
+        final DataSubscriber dataSubscriber = new DataSubscriber();
         final Replayer replayer = new Replayer(
-            inboundStreams.gatewaySubscription(),
+            inboundStreams.dataSubscription(dataSubscriber),
             replayQuery,
             outboundStreams.dataPublication(),
             new BufferClaim(),
             backoffIdleStrategy());
+        dataSubscriber.sessionHandler(replayer);
 
         final Agent loggingAgent = new CompositeAgent(archiver, new CompositeAgent(indexer, replayer));
 
@@ -114,7 +117,8 @@ public class FixGateway implements AutoCloseable
 
         final IdleStrategy idleStrategy = backoffIdleStrategy();
         final Multiplexer multiplexer = new Multiplexer();
-        final GatewaySubscription dataSubscription = outboundStreams.gatewaySubscription().sessionHandler(multiplexer);
+        final DataSubscriber dataSubscriber = new DataSubscriber().sessionHandler(multiplexer);
+        final Subscription dataSubscription = outboundStreams.dataSubscription(dataSubscriber);
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
 
         final MilliClock systemClock = System::currentTimeMillis;

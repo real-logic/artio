@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.logger;
 
 import uk.co.real_logic.aeron.Publication;
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
@@ -25,7 +26,6 @@ import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
-import uk.co.real_logic.fix_gateway.replication.GatewaySubscription;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
@@ -43,7 +43,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
     private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
     private final MutableAsciiFlyweight mutableAsciiFlyweight = new MutableAsciiFlyweight();
-    private final GatewaySubscription subscription;
+    private final Subscription subscription;
     private final ReplayQuery replayQuery;
     private final Publication publication;
     private final BufferClaim claim;
@@ -53,7 +53,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
     private final OtfParser parser = new OtfParser(acceptor, new IntDictionary());
 
     public Replayer(
-        final GatewaySubscription subscription,
+        final Subscription subscription,
         final ReplayQuery replayQuery,
         final Publication publication,
         final BufferClaim claim,
@@ -64,7 +64,6 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         this.publication = publication;
         this.claim = claim;
         this.idleStrategy = idleStrategy;
-        subscription.sessionHandler(this);
     }
 
     public void onMessage(final DirectBuffer srcBuffer,

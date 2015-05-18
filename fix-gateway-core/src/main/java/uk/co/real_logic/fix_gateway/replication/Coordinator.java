@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 
@@ -23,7 +24,7 @@ public class Coordinator implements ControlProtocol
     public static final int NO_SESSION_ID = -1;
 
     private final TermAcknowledgementStrategy termAcknowledgementStrategy;
-    private final GatewaySubscription subscription;
+    private final Subscription subscription;
 
     // Counts of how many acknowledgements
     private final Long2LongHashMap nodeToAckedPosition = new Long2LongHashMap(NO_SESSION_ID);
@@ -32,7 +33,7 @@ public class Coordinator implements ControlProtocol
     public Coordinator(
         final TermAcknowledgementStrategy termAcknowledgementStrategy,
         final IntHashSet followers,
-        final GatewaySubscription subscription)
+        final Subscription subscription)
     {
         this.termAcknowledgementStrategy = termAcknowledgementStrategy;
         this.subscription = subscription;
@@ -51,7 +52,7 @@ public class Coordinator implements ControlProtocol
                 final long newAcknowledgedTerm = termAcknowledgementStrategy.findAckedTerm(nodeToAckedPosition);
                 if (newAcknowledgedTerm > acknowledgedTerm)
                 {
-                    subscription.pollToPosition(newAckedPosition);
+                    //subscription.pollToPosition(newAckedPosition);
                     acknowledgedTerm = newAcknowledgedTerm;
                 }
             }
