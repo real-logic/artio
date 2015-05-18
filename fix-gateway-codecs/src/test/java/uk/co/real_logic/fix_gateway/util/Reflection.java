@@ -110,4 +110,9 @@ public final class Reflection
     {
         return get(stub, "egGroup");
     }
+
+    public static Object getNestedGroup(final Object group) throws Exception
+    {
+        return get(group, "nestedGroup");
+    }
 }

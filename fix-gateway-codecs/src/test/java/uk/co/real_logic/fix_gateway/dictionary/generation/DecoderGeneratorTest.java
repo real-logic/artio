@@ -212,7 +212,7 @@ public class DecoderGeneratorTest
         assertEquals(1, getGroupField(group));
         assertNull(next(group));
 
-        final Object nestedGroup = get(group, "nestedGroup");
+        final Object nestedGroup = getNestedGroup(group);
         assertEquals(1, get(nestedGroup, "nestedField"));
         assertNull(next(nestedGroup));
     }

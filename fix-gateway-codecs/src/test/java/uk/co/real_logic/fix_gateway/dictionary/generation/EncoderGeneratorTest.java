@@ -257,6 +257,21 @@ public class EncoderGeneratorTest
     }
 
     @Test
+    public void shouldEncodeNestedRepeatingGroups() throws Exception
+    {
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        setRequiredFields(encoder);
+
+        final Object group = getEgGroup(encoder);
+        setGroupField(group, 1);
+
+        final Object nestedGroup = getNestedGroup(group);
+        setInt(nestedGroup, "nestedField", 1);
+
+        assertEncodesTo(encoder, NESTED_GROUP_EXAMPLE);
+    }
+
+    @Test
     public void shouldResetOptionalFields() throws Exception
     {
         final Encoder encoder = (Encoder) heartbeat.newInstance();
@@ -279,8 +294,6 @@ public class EncoderGeneratorTest
         assertThat(encoder, hasToString(containsString(STRING_FOR_GROUP)));
     }
 
-    // TODO: reset method
-    // TODO: nested groups
     // TODO: compound types
 
     private void setGroup(final Encoder encoder) throws Exception
