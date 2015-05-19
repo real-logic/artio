@@ -48,6 +48,11 @@ public final class SystemTestUtil
     {
         assertSessionDisconnected(session);
 
+        assertAcceptorDisconnected(sessionHandler);
+    }
+
+    public static void assertAcceptorDisconnected(final FakeSessionHandler sessionHandler)
+    {
         assertEventuallyTrue("Failed to disconnect",
             () ->
             {
@@ -116,13 +121,17 @@ public final class SystemTestUtil
         return hasProperty("senderCompID", equalTo(senderCompId));
     }
 
-    public static InitiatorSession initiate(final FixGateway gateway, final int port)
+    public static InitiatorSession initiate(
+        final FixGateway gateway,
+        final int port,
+        final String initiatorId,
+        final String acceptorId)
     {
         final SessionConfiguration config = SessionConfiguration.builder()
             .address("localhost", port)
             .credentials("bob", "Uv1aegoh")
-            .senderCompId(INITIATOR_ID)
-            .targetCompId(ACCEPTOR_ID)
+            .senderCompId(initiatorId)
+            .targetCompId(acceptorId)
             .build();
         return gateway.initiate(config, null);
     }
@@ -136,12 +145,15 @@ public final class SystemTestUtil
         return FixGateway.launch(initiatingConfig);
     }
 
-    public static FixGateway launchAcceptingGateway(final int port, final NewSessionHandler sessionHandler)
+    public static FixGateway launchAcceptingGateway(
+        final int port,
+        final NewSessionHandler sessionHandler,
+        final String acceptorId)
     {
         final StaticConfiguration acceptingConfig = new StaticConfiguration()
             .bind("localhost", port)
             .aeronChannel("udp://localhost:" + unusedPort())
-            .authenticationStrategy(new CompIdAuthenticationStrategy(ACCEPTOR_ID))
+            .authenticationStrategy(new CompIdAuthenticationStrategy(acceptorId))
             .newSessionHandler(sessionHandler);
         return FixGateway.launch(acceptingConfig);
     }

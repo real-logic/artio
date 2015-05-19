@@ -50,7 +50,7 @@ public class GatewayToQuickFixSystemTest
         mediaDriver = launchMediaDriver();
         socketAcceptor = launchQuickFixAcceptor(port, acceptor);
         initiatingGateway = launchInitiatingGateway(initiatingSessionHandler);
-        initiatedSession = initiate(initiatingGateway, port);
+        initiatedSession = initiate(initiatingGateway, port, INITIATOR_ID, ACCEPTOR_ID);
     }
 
     @Test
