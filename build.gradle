@@ -121,6 +121,7 @@ subprojects {
     }
 
     task testJar(type: Jar, dependsOn: testClasses) {
+        classifier = 'tests'
         baseName = "test-${project.archivesBaseName}"
         from sourceSets.test.output
     }
@@ -135,7 +136,7 @@ subprojects {
     }
 
     artifacts {
-        archives sourcesJar, javadocJar
+        archives sourcesJar, javadocJar, testJar
         tests testJar
     }
 }
