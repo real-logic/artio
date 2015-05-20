@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.SessionRejectReason;
 import uk.co.real_logic.fix_gateway.builder.*;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
@@ -23,6 +24,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.util.List;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 
 /**
@@ -30,6 +32,9 @@ import static java.util.Arrays.asList;
  */
 public class SessionProxy
 {
+    private static final byte[] INCORRECT_BEGIN_STRING = "Incorrect BeginString".getBytes(US_ASCII);
+    private static final byte[] NEGATIVE_HEARTBEAT = "HeartBtInt must not be negative".getBytes(US_ASCII);
+    private static final byte[] NO_MSG_SEQ_NO = "Received message without MsgSeqNum".getBytes(US_ASCII);
 
     private final LogonEncoder logon = new LogonEncoder();
     private final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
@@ -96,13 +101,51 @@ public class SessionProxy
         send(logon.encode(string, 0), LogonDecoder.MESSAGE_TYPE);
     }
 
+    // TODO: remove this method once everything has messages
     public void logout(final int msgSeqNo)
+    {
+        logout(msgSeqNo, null);
+    }
+
+    private void logout(final int msgSeqNo, final byte[] text)
     {
         final HeaderEncoder header = logout.header();
         setupHeader(header);
         header.msgSeqNum(msgSeqNo);
 
+        if (text != null)
+        {
+            logout.text(text);
+        }
+
         send(logout.encode(string, 0), LogoutDecoder.MESSAGE_TYPE);
+    }
+
+    // TODO: implement low gc formatters
+
+    public void lowSequenceNumberLogout(final int msgSeqNo, final int expectedSeqNo, final int receivedSeqNo)
+    {
+        // ("MsgSeqNum too low, expecting %d but received %d", expectedSeqNo, receivedSeqNo));
+    }
+
+    public void incorrectBeginStringLogout(final int msgSeqNo)
+    {
+        logout(msgSeqNo, INCORRECT_BEGIN_STRING);
+    }
+
+    public void negativeHeartbeatLogout(final int msgSeqNo)
+    {
+        logout(msgSeqNo, NEGATIVE_HEARTBEAT);
+    }
+
+    public void receivedMessageWithoutSequenceNumber(final int msgSeqNo)
+    {
+        logout(msgSeqNo, NO_MSG_SEQ_NO);
+    }
+
+    public void rejectWhilstNotLoggedOn(final int msgSeqNo, final SessionRejectReason reason)
+    {
+        // "Tried to send a reject while not logged on: %s", reason
     }
 
     public void heartbeat(final String testReqId, final int msgSeqNo)
