@@ -88,7 +88,7 @@ public class GatewayPublication
 
     public void saveConnect(final long connectionId, final long sessionId)
     {
-        claim(ConnectEncoder.BLOCK_LENGTH);
+        claim(header.size() + ConnectEncoder.BLOCK_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
