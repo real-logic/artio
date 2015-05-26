@@ -55,7 +55,7 @@ public class GatewayToGatewaySystemTest
         acceptingSession = acceptingSessionHandler.session();
     }
 
-    @Test(timeout = 2000L)
+    @Test
     public void sessionHasBeenInitiated() throws InterruptedException
     {
         assertTrue("Session has failed to connect", initiatedSession.isConnected());
@@ -65,7 +65,7 @@ public class GatewayToGatewaySystemTest
         assertNotNull("Accepting Session not been passed a subscription", acceptingSessionHandler.subscription());
     }
 
-    @Test(timeout = 2000L)
+    @Test
     public void messagesCanBeSentFromInitiatorToAcceptor() throws InterruptedException
     {
         sendTestRequest(initiatedSession);
@@ -73,7 +73,7 @@ public class GatewayToGatewaySystemTest
         assertReceivedMessage(acceptingSessionHandler.subscription(), acceptingOtfAcceptor);
     }
 
-    @Test(timeout = 2000L)
+    @Test
     public void messagesCanBeSentFromAcceptorToInitiator() throws InterruptedException
     {
         sendTestRequest(acceptingSession);
@@ -81,7 +81,7 @@ public class GatewayToGatewaySystemTest
         assertReceivedMessage(initiatingSessionHandler.subscription(), initiatingOtfAcceptor);
     }
 
-    @Test(timeout = 2000L)
+    @Test
     public void initiatorSessionCanBeDisconnected() throws InterruptedException
     {
         initiatedSession.startLogout();
@@ -89,7 +89,7 @@ public class GatewayToGatewaySystemTest
         assertDisconnected(acceptingSessionHandler, initiatedSession);
     }
 
-    @Test(timeout = 2000L)
+    @Test
     public void acceptorSessionCanBeDisconnected() throws InterruptedException
     {
         acceptingSession.startLogout();

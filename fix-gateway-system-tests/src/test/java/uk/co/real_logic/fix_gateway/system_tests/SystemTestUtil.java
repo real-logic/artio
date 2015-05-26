@@ -79,7 +79,7 @@ public final class SystemTestUtil
     public static void assertReceivedMessage(
         final Subscription subscription, final FakeOtfAcceptor acceptor)
     {
-        assertEventuallyEquals("Failed to receive a message", 2, () -> subscription.poll(2));
+        assertEventuallyEquals("Failed to receive a logon and test request message", 2, () -> subscription.poll(2));
         assertEquals(2, acceptor.messageTypes().size());
         assertThat(acceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
     }
