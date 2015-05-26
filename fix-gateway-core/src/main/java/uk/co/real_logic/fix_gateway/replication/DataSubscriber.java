@@ -44,7 +44,7 @@ public class DataSubscriber implements DataHandler
         {
             case FixMessageDecoder.TEMPLATE_ID:
             {
-                messageFrame.wrap(buffer, offset, length, 0);
+                messageFrame.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
                 final int messageLength = length - (FRAME_SIZE + messageHeader.size());
                 sessionHandler.onMessage(
                     buffer,
@@ -58,7 +58,7 @@ public class DataSubscriber implements DataHandler
 
             case DisconnectDecoder.TEMPLATE_ID:
             {
-                disconnect.wrap(buffer, offset, length, 0);
+                disconnect.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
                 final long connectionId = disconnect.connection();
                 DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
                 sessionHandler.onDisconnect(connectionId);
