@@ -21,28 +21,38 @@ import uk.co.real_logic.agrona.concurrent.CountersManager;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
 import java.io.File;
+import java.nio.MappedByteBuffer;
 
 /**
  *
  * A single file of the labelsBuffer, followed by the countersBuffer.
  *
  */
-public final class CountersFileDescriptor
+public final class CountersFile implements AutoCloseable
 {
+    private final MappedByteBuffer mappedByteBuffer;
+    private final int length;
 
-    public static CountersManager createCountersManager(final StaticConfiguration configuration)
+    public CountersFile(final StaticConfiguration configuration)
     {
         final File file = new File(configuration.counterBuffersFile());
         IoUtil.deleteIfExists(file);
-        file.deleteOnExit();
+        length = configuration.counterBuffersLength();
+        mappedByteBuffer = IoUtil.mapNewFile(file, length * 2);
+    }
 
-        final int length = configuration.counterBuffersLength();
-        final AtomicBuffer mappedFile = new UnsafeBuffer(IoUtil.mapNewFile(file, length * 2));
-
+    public CountersManager createCountersManager()
+    {
+        final AtomicBuffer mappedFile = new UnsafeBuffer(mappedByteBuffer);
         final AtomicBuffer labelsBuffer = new UnsafeBuffer(mappedFile, 0, length);
         final AtomicBuffer countersBuffer = new UnsafeBuffer(mappedFile, length, length);
-
         return new CountersManager(labelsBuffer, countersBuffer);
     }
 
+
+    @Override
+    public void close()
+    {
+        IoUtil.unmap(mappedByteBuffer);
+    }
 }

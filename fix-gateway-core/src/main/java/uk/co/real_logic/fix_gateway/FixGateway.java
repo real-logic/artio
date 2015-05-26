@@ -46,6 +46,7 @@ public class FixGateway implements AutoCloseable
     public static final int OUTBOUND_DATA_STREAM = 2;
     public static final int OUTBOUND_CONTROL_STREAM = 3;
 
+    private CountersFile countersFile;
     private FixCounters fixCounters;
 
     private Aeron aeron;
@@ -67,7 +68,8 @@ public class FixGateway implements AutoCloseable
     {
         connectionTimeout = configuration.connectionTimeout();
 
-        fixCounters = new FixCounters(CountersFileDescriptor.createCountersManager(configuration));
+        countersFile = new CountersFile(configuration);
+        fixCounters = new FixCounters(countersFile.createCountersManager());
 
         initReplicationStreams(configuration);
         initFramer(configuration, fixCounters);
@@ -216,6 +218,7 @@ public class FixGateway implements AutoCloseable
         inboundStreams.close();
         outboundStreams.close();
         aeron.close();
+        countersFile.close();
     }
 
     public void onInitiatorSessionActive(final InitiatorSession session)
