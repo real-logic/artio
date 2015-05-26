@@ -137,6 +137,12 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration counterBuffersFile(String counterBuffersFile)
+    {
+        this.counterBuffersFile = counterBuffersFile;
+        return this;
+    }
+
     public StaticConfiguration aeronChannel(final String aeronChannel)
     {
         this.aeronChannel = aeronChannel;

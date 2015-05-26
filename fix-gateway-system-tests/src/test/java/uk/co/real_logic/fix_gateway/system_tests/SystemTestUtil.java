@@ -141,7 +141,8 @@ public final class SystemTestUtil
         final StaticConfiguration initiatingConfig = new StaticConfiguration()
             .bind("localhost", unusedPort())
             .aeronChannel("udp://localhost:" + unusedPort())
-            .newSessionHandler(sessionHandler);
+            .newSessionHandler(sessionHandler)
+            .counterBuffersFile(IoUtil.tmpDirName() + "fix-initiator" + File.separator + "counters");
         return FixGateway.launch(initiatingConfig);
     }
 
@@ -154,7 +155,8 @@ public final class SystemTestUtil
             .bind("localhost", port)
             .aeronChannel("udp://localhost:" + unusedPort())
             .authenticationStrategy(new CompIdAuthenticationStrategy(acceptorId))
-            .newSessionHandler(sessionHandler);
+            .newSessionHandler(sessionHandler)
+            .counterBuffersFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + "counters");
         return FixGateway.launch(acceptingConfig);
     }
 

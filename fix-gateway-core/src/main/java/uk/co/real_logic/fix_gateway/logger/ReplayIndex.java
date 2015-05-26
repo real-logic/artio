@@ -35,6 +35,7 @@ import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.LOG_FIL
 /**
  * Builds an index of a composite key of session id and sequence number
  */
+// TODO: implement an LRU or victim cache for holding the mapped byte buffer instances, with configurable size
 public class ReplayIndex implements Index
 {
     static File logFile(final long sessionId)
@@ -94,7 +95,7 @@ public class ReplayIndex implements Index
         private final ByteBuffer wrappedBuffer;
         private final MutableDirectBuffer buffer;
 
-        private int index = indexHeaderEncoder.size();
+        private int offset = indexHeaderEncoder.size();
 
         private SessionIndex(final long sessionId)
         {
@@ -111,12 +112,12 @@ public class ReplayIndex implements Index
         public void onRecord(final int streamId, final long position, final int sequenceNumber)
         {
             replayIndexRecord
-                .wrap(buffer, index)
+                .wrap(buffer, offset)
                 .streamId(streamId)
                 .position(position)
                 .sequenceNumber(sequenceNumber);
 
-            index = replayIndexRecord.limit();
+            offset = replayIndexRecord.limit();
         }
 
         public void close()
