@@ -146,7 +146,7 @@ project(':fix-gateway-codecs') {
 
     dependencies {
         compile 'uk.co.real-logic:Agrona:0.3.2-SNAPSHOT'
-        compile 'uk.co.real-logic:sbe:1.0.4-RC2-SNAPSHOT'
+        compile 'uk.co.real-logic:sbe:1.1-RC2-SNAPSHOT'
     }
 
     def generatedDir = file("$buildDir/generated-src")
