@@ -30,7 +30,6 @@ import java.nio.MappedByteBuffer;
 import java.util.function.IntFunction;
 
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
-import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.logFile;
 
 public class Archiver implements Agent, DataHandler
 {
@@ -42,11 +41,16 @@ public class Archiver implements Agent, DataHandler
     private final BufferFactory bufferFactory;
     private final ArchiveMetaData metaData;
     private final Subscription subscription;
+    private final LogDirectoryDescriptor directoryDescriptor;
 
-    public Archiver(final BufferFactory bufferFactory, final ReplicationStreams streams, final ArchiveMetaData metaData)
+    public Archiver(final BufferFactory bufferFactory,
+                    final ReplicationStreams streams,
+                    final ArchiveMetaData metaData,
+                    final String logFileDir)
     {
         this.bufferFactory = bufferFactory;
         this.metaData = metaData;
+        directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
         this.subscription = streams.dataSubscription(this);
     }
 
@@ -84,7 +88,7 @@ public class Archiver implements Agent, DataHandler
             if (termId != currentTermId)
             {
                 close();
-                wrappedBuffer = bufferFactory.map(logFile(streamId, termId), termBufferLength());
+                wrappedBuffer = bufferFactory.map(directoryDescriptor.logFile(streamId, termId), termBufferLength());
                 currentBuffer.wrap(wrappedBuffer);
                 currentTermId = termId;
             }

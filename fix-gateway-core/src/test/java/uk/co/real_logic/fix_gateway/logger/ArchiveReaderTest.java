@@ -28,6 +28,7 @@ import java.nio.ByteBuffer;
 
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.aeron.common.protocol.HeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOG_FILE_DIR_DEFAULT;
 import static uk.co.real_logic.fix_gateway.messages.FixMessageDecoder.BLOCK_LENGTH;
 
 public class ArchiveReaderTest
@@ -48,9 +49,9 @@ public class ArchiveReaderTest
     private ArchiveMetaData mockMetaData = mock(ArchiveMetaData.class);
     private ArchiveMetaDataDecoder mockMetaDataDecoder = mock(ArchiveMetaDataDecoder.class);
 
-    private Archiver archiver = new Archiver((file, size) -> byteBuffer, mockStreams, mockMetaData);
+    private Archiver archiver = new Archiver((file, size) -> byteBuffer, mockStreams, mockMetaData, LOG_FILE_DIR_DEFAULT);
 
-    private ArchiveReader archiveReader = new ArchiveReader(file -> byteBuffer, mockMetaData);
+    private ArchiveReader archiveReader = new ArchiveReader(file -> byteBuffer, mockMetaData, LOG_FILE_DIR_DEFAULT);
 
     @Before
     public void setUp()

@@ -30,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.util.stream.IntStream;
 
 import static java.lang.Integer.getInteger;
+import static java.lang.System.getProperty;
 
 /**
  * Configuration that exists for the entire duration of a fix gateway
@@ -50,10 +51,18 @@ public final class StaticConfiguration
     /** Length of the memory mapped buffers for the counters file */
     public static final int COUNTERS_BUFFER_LENGTH_DEFAULT = 64 * 1024 * 1024;
 
+    public static final String INDEX_FILE_SIZE_PROP = "logging.index.size";
+
+    public static final int INDEX_FILE_SIZE_DEFAULT = 2 * 1024 * 1024;
+
     /** Directory of the conductor buffers */
     public static final String COUNTERS_FILE_PROP_NAME = "fix.counters.file";
     /** Default directory for conductor buffers */
     public static final String COUNTERS_FILE_PROP_DEFAULT = IoUtil.tmpDirName() + "fix" + File.separator + "counters";
+
+    public static final String LOG_FILE_DIR_PROP = "logging.dir";
+
+    public static final String LOG_FILE_DIR_DEFAULT = "logs";
 
     private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
 
@@ -67,8 +76,10 @@ public final class StaticConfiguration
 
     private String host;
     private int port;
+    private int indexFileSize = getInteger(INDEX_FILE_SIZE_PROP, INDEX_FILE_SIZE_DEFAULT);
+    private String logFileDir = getProperty(LOG_FILE_DIR_PROP, LOG_FILE_DIR_DEFAULT);
     private int counterBuffersLength = getInteger(COUNTER_BUFFERS_LENGTH_PROP_NAME, COUNTERS_BUFFER_LENGTH_DEFAULT);
-    private String counterBuffersFile = System.getProperty(COUNTERS_FILE_PROP_NAME, COUNTERS_FILE_PROP_DEFAULT);
+    private String counterBuffersFile = getProperty(COUNTERS_FILE_PROP_NAME, COUNTERS_FILE_PROP_DEFAULT);
     private String aeronChannel;
     private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
     private NewSessionHandler newSessionHandler;
@@ -161,6 +172,18 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration logFileDir(final String logFileDir)
+    {
+        this.logFileDir = logFileDir;
+        return this;
+    }
+
+    public StaticConfiguration indexFileSize(final int indexFileSize)
+    {
+        this.indexFileSize = indexFileSize;
+        return this;
+    }
+
     public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -229,5 +252,15 @@ public final class StaticConfiguration
     public NewSessionHandler newSessionHandler()
     {
         return newSessionHandler;
+    }
+
+    public String logFileDir()
+    {
+        return logFileDir;
+    }
+
+    public int indexFileSize()
+    {
+        return indexFileSize;
     }
 }

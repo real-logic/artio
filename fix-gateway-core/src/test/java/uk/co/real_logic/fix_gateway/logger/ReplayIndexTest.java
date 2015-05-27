@@ -26,6 +26,8 @@ import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.StaticConfiguration.INDEX_FILE_SIZE_DEFAULT;
+import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOG_FILE_DIR_DEFAULT;
 import static uk.co.real_logic.fix_gateway.logger.ReplayIndex.logFile;
 
 public class ReplayIndexTest extends AbstractMessageTest
@@ -35,7 +37,7 @@ public class ReplayIndexTest extends AbstractMessageTest
     private BufferFactory mockBufferFactory = mock(BufferFactory.class);
 
     private ConnectEncoder connect = new ConnectEncoder();
-    private ReplayIndex replayIndex = new ReplayIndex(mockBufferFactory);
+    private ReplayIndex replayIndex = new ReplayIndex(LOG_FILE_DIR_DEFAULT, INDEX_FILE_SIZE_DEFAULT, mockBufferFactory);
 
     @Before
     public void setUp()
@@ -116,7 +118,7 @@ public class ReplayIndexTest extends AbstractMessageTest
 
     private void verifyMappedFile(final long sessionId)
     {
-        verify(mockBufferFactory, times(1)).map(eq(logFile(sessionId)), anyInt());
+        verify(mockBufferFactory, times(1)).map(eq(logFile(LOG_FILE_DIR_DEFAULT, sessionId)), anyInt());
     }
 
     private void indexRecord()

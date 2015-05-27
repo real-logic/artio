@@ -142,7 +142,8 @@ public final class SystemTestUtil
             .bind("localhost", unusedPort())
             .aeronChannel("udp://localhost:" + unusedPort())
             .newSessionHandler(sessionHandler)
-            .counterBuffersFile(IoUtil.tmpDirName() + "fix-initiator" + File.separator + "counters");
+            .counterBuffersFile(IoUtil.tmpDirName() + "fix-initiator" + File.separator + "counters")
+            .logFileDir("initiator-logs");
         return FixGateway.launch(initiatingConfig);
     }
 
@@ -156,7 +157,8 @@ public final class SystemTestUtil
             .aeronChannel("udp://localhost:" + unusedPort())
             .authenticationStrategy(new CompIdAuthenticationStrategy(acceptorId))
             .newSessionHandler(sessionHandler)
-            .counterBuffersFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + "counters");
+            .counterBuffersFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + "counters")
+            .logFileDir("acceptor-logs");
         return FixGateway.launch(acceptingConfig);
     }
 

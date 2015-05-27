@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
+import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOG_FILE_DIR_DEFAULT;
 
 public class ArchiveMetaDataTest
 {
@@ -31,7 +32,8 @@ public class ArchiveMetaDataTest
     private ByteBuffer buffer = ByteBuffer.allocate(8 * 1024);
     private ExistingBufferFactory existingBufferFactory = file -> buffer;
     private BufferFactory newBufferFactory = (file, size) -> buffer;
-    private ArchiveMetaData archiveMetaData = new ArchiveMetaData(existingBufferFactory, newBufferFactory);
+    private ArchiveMetaData archiveMetaData = new ArchiveMetaData(
+        LOG_FILE_DIR_DEFAULT, existingBufferFactory, newBufferFactory);
 
     @Test
     public void shouldStoreMetaDataInformation()

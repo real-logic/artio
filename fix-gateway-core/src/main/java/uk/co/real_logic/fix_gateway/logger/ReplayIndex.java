@@ -29,43 +29,37 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.function.LongFunction;
 
-import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.INDEX_FILE_SIZE;
-import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.LOG_FILE_DIR;
-
 /**
  * Builds an index of a composite key of session id and sequence number
  */
 // TODO: implement an LRU or victim cache for holding the mapped byte buffer instances, with configurable size
 public class ReplayIndex implements Index
 {
-    static File logFile(final long sessionId)
+
+    static File logFile(final String logFileDir, final long sessionId)
     {
-        return new File(String.format(LOG_FILE_DIR + File.separator + "replay-index-%d", sessionId));
+        return new File(String.format(logFileDir + File.separator + "replay-index-%d", sessionId));
     }
 
     private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
-
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final HeaderDecoder fixHeader = new HeaderDecoder();
-
     private final ReplayIndexRecordEncoder replayIndexRecord = new ReplayIndexRecordEncoder();
     private final MessageHeaderEncoder indexHeaderEncoder = new MessageHeaderEncoder();
 
     private final LongFunction<SessionIndex> newSessionIndex = SessionIndex::new;
-
     private final Long2ObjectHashMap<SessionIndex> sessionToIndex = new Long2ObjectHashMap<>();
 
+    private final String logFileDir;
+    private final int indexFileSize;
     private final BufferFactory bufferFactory;
 
-    public ReplayIndex(final BufferFactory bufferFactory)
+    public ReplayIndex(final String logFileDir, final int indexFileSize, final BufferFactory bufferFactory)
     {
+        this.logFileDir = logFileDir;
+        this.indexFileSize = indexFileSize;
         this.bufferFactory = bufferFactory;
-    }
-
-    public void close()
-    {
-        sessionToIndex.values().forEach(SessionIndex::close);
     }
 
     public void indexRecord(final DirectBuffer srcBuffer, final int srcOffset, final int srcLength, final int streamId)
@@ -90,6 +84,11 @@ public class ReplayIndex implements Index
         }
     }
 
+    public void close()
+    {
+        sessionToIndex.values().forEach(SessionIndex::close);
+    }
+
     private final class SessionIndex
     {
         private final ByteBuffer wrappedBuffer;
@@ -99,7 +98,7 @@ public class ReplayIndex implements Index
 
         private SessionIndex(final long sessionId)
         {
-            this.wrappedBuffer = bufferFactory.map(logFile(sessionId), INDEX_FILE_SIZE);
+            this.wrappedBuffer = bufferFactory.map(logFile(logFileDir, sessionId), indexFileSize);
             this.buffer = new UnsafeBuffer(wrappedBuffer);
             indexHeaderEncoder
                 .wrap(buffer, 0, replayIndexRecord.sbeSchemaVersion())

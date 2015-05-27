@@ -26,8 +26,6 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 
-import static uk.co.real_logic.fix_gateway.logger.LogDirectoryDescriptor.metaDataLogFile;
-
 public class ArchiveMetaData
 {
     private static final int META_DATA_FILE_SIZE = 8 + ArchiveMetaDataDecoder.BLOCK_LENGTH;
@@ -39,18 +37,21 @@ public class ArchiveMetaData
     private final UnsafeBuffer metaDataBuffer = new UnsafeBuffer(0, encoder.sbeBlockLength());
     private final ExistingBufferFactory existingBufferFactory;
     private final BufferFactory newBufferFactory;
+    private final LogDirectoryDescriptor directoryDescriptor;
 
     public ArchiveMetaData(
+        final String logFileDir,
         final ExistingBufferFactory existingBufferFactory, final BufferFactory newBufferFactory)
     {
         this.existingBufferFactory = existingBufferFactory;
         this.newBufferFactory = newBufferFactory;
+        this.directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
     }
 
     public void write(final int streamId, final int initialTermId, final int termBufferLength)
     {
         ensureBufferNotMapped();
-        final File metaDataFile = metaDataLogFile(streamId);
+        final File metaDataFile = directoryDescriptor.metaDataLogFile(streamId);
         if (!metaDataFile.exists())
         {
             metaDataBuffer.wrap(newBufferFactory.map(metaDataFile, META_DATA_FILE_SIZE));
@@ -72,7 +73,7 @@ public class ArchiveMetaData
     public ArchiveMetaDataDecoder read(final int streamId)
     {
         ensureBufferNotMapped();
-        metaDataBuffer.wrap(existingBufferFactory.map(metaDataLogFile(streamId)));
+        metaDataBuffer.wrap(existingBufferFactory.map(directoryDescriptor.metaDataLogFile(streamId)));
         headerDecoder.wrap(metaDataBuffer, 0, 0);
         decoder.wrap(metaDataBuffer, headerDecoder.size(), headerDecoder.blockLength(), headerDecoder.version());
         return decoder;

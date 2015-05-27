@@ -28,6 +28,7 @@ import java.nio.ByteBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.aeron.common.protocol.HeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOG_FILE_DIR_DEFAULT;
 
 public class ArchiverTest
 {
@@ -47,7 +48,7 @@ public class ArchiverTest
     private UnsafeBuffer outputBuffer = new UnsafeBuffer(byteBuffer);
     private UnsafeBuffer inputBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
-    private Archiver archiver = new Archiver(mockBufferFactory, mockStreams, mockMetaData);
+    private Archiver archiver = new Archiver(mockBufferFactory, mockStreams, mockMetaData, LOG_FILE_DIR_DEFAULT);
 
     @Before
     public void setUp()

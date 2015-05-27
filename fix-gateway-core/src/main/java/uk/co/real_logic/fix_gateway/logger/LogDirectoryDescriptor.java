@@ -19,26 +19,22 @@ import java.io.File;
 
 public final class LogDirectoryDescriptor
 {
-    public static final String LOG_FILE_DIR_PROP = "logging.dir";
 
-    public static final String LOG_FILE_DIR_DEFAULT = "logs";
+    private final String logFileDir;
 
-    public static final String LOG_FILE_DIR = System.getProperty(LOG_FILE_DIR_PROP, LOG_FILE_DIR_DEFAULT);
-
-    public static File logFile(final int streamId, final int termId)
+    public LogDirectoryDescriptor(final String logFileDir)
     {
-        return new File(String.format(LOG_FILE_DIR + File.separator + "archive-%d-%d.log", streamId, termId));
+        this.logFileDir = logFileDir;
     }
 
-    public static File metaDataLogFile(final int streamId)
+    public File logFile(final int streamId, final int termId)
     {
-        return new File(String.format(LOG_FILE_DIR + File.separator + "meta-data-%d.log", streamId));
+        return new File(String.format(logFileDir + File.separator + "archive-%d-%d.log", streamId, termId));
     }
 
-    public static final String INDEX_FILE_SIZE_PROP = "logging.index.size";
-
-    public static final int INDEX_FILE_SIZE_DEFAULT = 2 * 1024 * 1024;
-
-    public static final int INDEX_FILE_SIZE = Integer.getInteger(INDEX_FILE_SIZE_PROP, INDEX_FILE_SIZE_DEFAULT);
+    public File metaDataLogFile(final int streamId)
+    {
+        return new File(String.format(logFileDir + File.separator + "meta-data-%d.log", streamId));
+    }
 
 }
