@@ -19,7 +19,6 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
-import uk.co.real_logic.aeron.exceptions.RegistrationException;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 
@@ -87,14 +86,7 @@ public class ReplicationStreams implements AutoCloseable
 
     public void close()
     {
-        try
-        {
-            dataPublication.close();
-        }
-        catch (RegistrationException e)
-        {
-            // Deliberately blank, TODO: remove once closing publications is idempotent.
-        }
+        dataPublication.close();
         subscriptions.forEach(Subscription::close);
     }
 }
