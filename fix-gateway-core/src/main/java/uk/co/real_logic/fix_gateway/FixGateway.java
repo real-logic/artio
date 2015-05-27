@@ -179,7 +179,7 @@ public class FixGateway implements AutoCloseable
     private FixGateway start()
     {
         start(framerRunner);
-        //start(loggingRunner);
+        start(loggingRunner);
         return this;
     }
 
@@ -213,7 +213,7 @@ public class FixGateway implements AutoCloseable
     public synchronized void close() throws Exception
     {
         framerRunner.close();
-        //loggingRunner.close();
+        loggingRunner.close();
 
         inboundStreams.close();
         outboundStreams.close();

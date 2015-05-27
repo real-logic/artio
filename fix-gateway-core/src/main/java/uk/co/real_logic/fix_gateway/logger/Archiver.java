@@ -62,7 +62,7 @@ public class Archiver implements Agent, DataHandler
         private final UnsafeBuffer currentBuffer = new UnsafeBuffer(0, 0);
         private final int streamId;
 
-        private ByteBuffer wrappedBuffer;
+        private ByteBuffer wrappedBuffer = null;
 
         private int initialTermId = UNKNOWN;
         private int currentTermId = UNKNOWN;
@@ -94,7 +94,7 @@ public class Archiver implements Agent, DataHandler
 
         private void close()
         {
-            if (wrappedBuffer instanceof MappedByteBuffer)
+            if (wrappedBuffer != null && wrappedBuffer instanceof MappedByteBuffer)
             {
                 IoUtil.unmap((MappedByteBuffer) wrappedBuffer);
             }
