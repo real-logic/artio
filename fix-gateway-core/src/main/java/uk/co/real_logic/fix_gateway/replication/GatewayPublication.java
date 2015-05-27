@@ -112,7 +112,7 @@ public class GatewayPublication
 
     public void saveDisconnect(final long connectionId)
     {
-        claim(header.size() + disconnect.size());
+        claim(header.size() + DisconnectEncoder.BLOCK_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
