@@ -104,6 +104,13 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
         }
     }
 
+    /**
+     * Puts an int into the buffer
+     *
+     * @param offset the offset at which to put the int
+     * @param value the int to write
+     * @return the number of bytes that the int took up encoded
+     */
     public int putInt(final int offset, final int value)
     {
         if (zero(offset, value))

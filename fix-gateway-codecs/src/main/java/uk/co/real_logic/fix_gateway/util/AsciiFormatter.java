@@ -15,9 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.util;
 
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+
 import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight.LONGEST_INT_LENGTH;
 
 /**
  * String formatting class with low garbage creation.
@@ -28,6 +31,8 @@ public class AsciiFormatter
     private static final Pattern PATTERN = Pattern.compile("%s");
 
     private final byte[][] segments;
+    private final byte[] numberBuffer = new byte[LONGEST_INT_LENGTH + 1];
+    private final MutableAsciiFlyweight numberFlyweight = new MutableAsciiFlyweight(new UnsafeBuffer(numberBuffer));
 
     private byte[] value = new byte[DEFAULT_LENGTH];
     private int index = 0;
@@ -47,13 +52,24 @@ public class AsciiFormatter
 
     public AsciiFormatter with(final byte[] field)
     {
-        append(field);
+        return with(field, field.length);
+    }
+
+    public AsciiFormatter with(final byte[] field, final int length)
+    {
+        append(field, length);
         encodedSoFar++;
         if (encodedSoFar < segments.length)
         {
             append(segments[encodedSoFar]);
         }
         return this;
+    }
+
+    public AsciiFormatter with(final int number)
+    {
+        final int length = numberFlyweight.putInt(0, number);
+        return with(numberBuffer, length);
     }
 
     public AsciiFormatter clear()
@@ -74,16 +90,21 @@ public class AsciiFormatter
         return value;
     }
 
-    private void append(byte[] toAppend)
+    private void append(final byte[] toAppend)
+    {
+        append(toAppend, toAppend.length);
+    }
+
+    private void append(final byte[] toAppend, final int toAppendLength)
     {
         byte[] value = this.value;
         int index = this.index;
 
-        final int requiredLength = index + toAppend.length;
+        final int requiredLength = index + toAppendLength;
         value = (value.length < index) ? new byte[index] : value;
 
-        System.arraycopy(toAppend, 0, value, index, toAppend.length);
-        index += toAppend.length;
+        System.arraycopy(toAppend, 0, value, index, toAppendLength);
+        index += toAppendLength;
 
         this.index = index;
         this.value = value;

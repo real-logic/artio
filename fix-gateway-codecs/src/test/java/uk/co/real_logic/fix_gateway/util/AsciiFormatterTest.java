@@ -66,6 +66,18 @@ public class AsciiFormatterTest
         assertFormatsTo("abFcG", formatter);
     }
 
+
+    @Test
+    public void shouldFormatIntegers()
+    {
+        final String format = "ab%sc%s";
+        final AsciiFormatter formatter = new AsciiFormatter(format)
+            .with("D".getBytes(US_ASCII))
+            .with(123);
+
+        assertFormatsTo("abDc123", formatter);
+    }
+
     private void assertFormatsTo(String format, AsciiFormatter formatter)
     {
         assertEquals(format, new String(formatter.value(), 0, formatter.length(), US_ASCII));
