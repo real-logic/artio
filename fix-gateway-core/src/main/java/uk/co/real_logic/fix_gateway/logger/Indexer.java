@@ -44,7 +44,7 @@ public class Indexer implements Agent, DataHandler
     }
 
     @Override
-    public void onData(DirectBuffer buffer, int offset, int length, Header header)
+    public void onData(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         for (final Index index : indices)
         {

@@ -15,13 +15,19 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
+import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOG_FILE_DIR_DEFAULT;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class ArchiveMetaDataTest
 {
@@ -32,8 +38,16 @@ public class ArchiveMetaDataTest
     private ByteBuffer buffer = ByteBuffer.allocate(8 * 1024);
     private ExistingBufferFactory existingBufferFactory = file -> buffer;
     private BufferFactory newBufferFactory = (file, size) -> buffer;
-    private ArchiveMetaData archiveMetaData = new ArchiveMetaData(
-        LOG_FILE_DIR_DEFAULT, existingBufferFactory, newBufferFactory);
+    private LogDirectoryDescriptor mockDirectory = mock(LogDirectoryDescriptor.class);
+    private ArchiveMetaData archiveMetaData = new ArchiveMetaData(mockDirectory, existingBufferFactory, newBufferFactory);
+
+    @Before
+    public void setUp() throws IOException
+    {
+        final File tempFile = File.createTempFile("metadata", "txt");
+        assertTrue(tempFile.delete());
+        when(mockDirectory.metaDataLogFile(anyInt())).thenReturn(tempFile);
+    }
 
     @Test
     public void shouldStoreMetaDataInformation()

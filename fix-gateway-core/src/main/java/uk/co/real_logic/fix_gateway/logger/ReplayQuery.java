@@ -16,52 +16,54 @@
 package uk.co.real_logic.fix_gateway.logger;
 
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.agrona.collections.LongLruCache;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordDecoder;
 
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.util.function.LongFunction;
 
 import static uk.co.real_logic.fix_gateway.logger.ReplayIndex.logFile;
 
 /**
  * Queries an index of a composite key of session id and sequence number
  */
-public class ReplayQuery
+public class ReplayQuery implements AutoCloseable
 {
     private final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
     private final ReplayIndexRecordDecoder indexRecord = new ReplayIndexRecordDecoder();
 
-    private final Long2ObjectHashMap<SessionQuery> sessionToIndex = new Long2ObjectHashMap<>();
-    private final LongFunction<SessionQuery> newSessionQuery = SessionQuery::new;
+    private final LongLruCache<SessionQuery> sessionToIndex;
     private final String logFileDir;
     private final ExistingBufferFactory indexBufferFactory;
 
     private final ArchiveReader archiveReader;
 
-    public ReplayQuery(final String logFileDir, final ExistingBufferFactory indexBufferFactory, final ArchiveReader archiveReader)
+    public ReplayQuery(
+        final String logFileDir,
+        final int loggerCacheCapacity, final ExistingBufferFactory indexBufferFactory,
+        final ArchiveReader archiveReader)
     {
         this.logFileDir = logFileDir;
         this.indexBufferFactory = indexBufferFactory;
         this.archiveReader = archiveReader;
+        sessionToIndex = new LongLruCache<>(loggerCacheCapacity, SessionQuery::new);
     }
 
     public int query(
         final LogHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
     {
-        return sessionToIndex.computeIfAbsent(sessionId, newSessionQuery)
+        return sessionToIndex.lookup(sessionId)
                              .query(handler, beginSeqNo, endSeqNo);
     }
 
     public void close()
     {
-        sessionToIndex.values().forEach(SessionQuery::close);
+        sessionToIndex.close();
     }
 
-    private final class SessionQuery
+    private final class SessionQuery implements AutoCloseable
     {
         private final ByteBuffer wrappedBuffer;
         private final UnsafeBuffer buffer;

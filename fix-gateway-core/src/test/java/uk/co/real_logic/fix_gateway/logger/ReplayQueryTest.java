@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.INDEX_FILE_SIZE_DEFAULT;
+import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOGGER_CACHE_CAPACITY_DEFAULT;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOG_FILE_DIR_DEFAULT;
 import static uk.co.real_logic.fix_gateway.logger.ReplayIndex.logFile;
 
@@ -33,9 +34,10 @@ public class ReplayQueryTest extends AbstractMessageTest
     private LogHandler mockHandler = mock(LogHandler.class);
     private ArchiveReader mockReader = mock(ArchiveReader.class);
     private ReplayIndex replayIndex = new ReplayIndex(
-        LOG_FILE_DIR_DEFAULT, INDEX_FILE_SIZE_DEFAULT, (name, size) -> indexBuffer);
+        LOG_FILE_DIR_DEFAULT, INDEX_FILE_SIZE_DEFAULT, LOGGER_CACHE_CAPACITY_DEFAULT, (name, size) -> indexBuffer);
 
-    private ReplayQuery query = new ReplayQuery(LOG_FILE_DIR_DEFAULT, mockBufferFactory, mockReader);
+    private ReplayQuery query = new ReplayQuery(
+        LOG_FILE_DIR_DEFAULT, LOGGER_CACHE_CAPACITY_DEFAULT, mockBufferFactory, mockReader);
 
     @Before
     public void setUp()

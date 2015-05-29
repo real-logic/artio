@@ -33,19 +33,20 @@ public class ArchiveMetaData
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final ArchiveMetaDataDecoder decoder = new ArchiveMetaDataDecoder();
-    private final ArchiveMetaDataEncoder encoder = new ArchiveMetaDataEncoder();
-    private final UnsafeBuffer metaDataBuffer = new UnsafeBuffer(0, encoder.sbeBlockLength());
+    private final ArchiveMetaDataEncoder metaDataEncoder = new ArchiveMetaDataEncoder();
+    private final UnsafeBuffer metaDataBuffer = new UnsafeBuffer(0, metaDataEncoder.sbeBlockLength());
     private final ExistingBufferFactory existingBufferFactory;
     private final BufferFactory newBufferFactory;
     private final LogDirectoryDescriptor directoryDescriptor;
 
     public ArchiveMetaData(
-        final String logFileDir,
-        final ExistingBufferFactory existingBufferFactory, final BufferFactory newBufferFactory)
+        final LogDirectoryDescriptor directoryDescriptor,
+        final ExistingBufferFactory existingBufferFactory,
+        final BufferFactory newBufferFactory)
     {
+        this.directoryDescriptor = directoryDescriptor;
         this.existingBufferFactory = existingBufferFactory;
         this.newBufferFactory = newBufferFactory;
-        this.directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
     }
 
     public void write(final int streamId, final int initialTermId, final int termBufferLength)
@@ -58,12 +59,12 @@ public class ArchiveMetaData
 
             headerEncoder
                 .wrap(metaDataBuffer, 0, 0)
-                .blockLength(encoder.sbeBlockLength())
-                .templateId(encoder.sbeTemplateId())
-                .schemaId(encoder.sbeSchemaId())
-                .version(encoder.sbeSchemaVersion());
+                .blockLength(metaDataEncoder.sbeBlockLength())
+                .templateId(metaDataEncoder.sbeTemplateId())
+                .schemaId(metaDataEncoder.sbeSchemaId())
+                .version(metaDataEncoder.sbeSchemaVersion());
 
-            encoder
+            metaDataEncoder
                 .wrap(metaDataBuffer, headerEncoder.size())
                 .initialTermId(initialTermId)
                 .termBufferLength(termBufferLength);

@@ -20,14 +20,13 @@ import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
+import uk.co.real_logic.agrona.collections.IntLruCache;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.util.function.IntFunction;
 
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
 
@@ -35,9 +34,7 @@ public class Archiver implements Agent, DataHandler
 {
     private static final int FRAGMENT_LIMIT = 10;
 
-    private final IntFunction<StreamArchive> newStreamArchive = StreamArchive::new;
-    private final Int2ObjectHashMap<StreamArchive> streamIdToArchive = new Int2ObjectHashMap<>();
-
+    private final IntLruCache<StreamArchive> streamIdToArchive;
     private final BufferFactory bufferFactory;
     private final ArchiveMetaData metaData;
     private final Subscription subscription;
@@ -46,21 +43,24 @@ public class Archiver implements Agent, DataHandler
     public Archiver(final BufferFactory bufferFactory,
                     final ReplicationStreams streams,
                     final ArchiveMetaData metaData,
-                    final String logFileDir)
+                    final String logFileDir,
+                    final int loggerCacheCapacity)
     {
         this.bufferFactory = bufferFactory;
         this.metaData = metaData;
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
         this.subscription = streams.dataSubscription(this);
+        streamIdToArchive = new IntLruCache<>(loggerCacheCapacity, StreamArchive::new);
     }
 
     public void onData(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        streamIdToArchive.computeIfAbsent(header.streamId(), newStreamArchive)
-                         .archive(buffer, offset, length, header);
+        streamIdToArchive
+            .lookup(header.streamId())
+            .archive(buffer, offset, length, header);
     }
 
-    private final class StreamArchive
+    private final class StreamArchive implements AutoCloseable
     {
         public static final int UNKNOWN = -1;
         private final UnsafeBuffer currentBuffer = new UnsafeBuffer(0, 0);
@@ -96,7 +96,7 @@ public class Archiver implements Agent, DataHandler
             currentBuffer.putBytes(offset, buffer, offset, length);
         }
 
-        private void close()
+        public void close()
         {
             if (wrappedBuffer != null && wrappedBuffer instanceof MappedByteBuffer)
             {
@@ -118,6 +118,6 @@ public class Archiver implements Agent, DataHandler
     public void onClose()
     {
         subscription.close();
-        streamIdToArchive.values().forEach(StreamArchive::close);
+        streamIdToArchive.close();
     }
 }

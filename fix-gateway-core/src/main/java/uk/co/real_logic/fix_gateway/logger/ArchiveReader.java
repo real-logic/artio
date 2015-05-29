@@ -16,13 +16,15 @@
 package uk.co.real_logic.fix_gateway.logger;
 
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
+import uk.co.real_logic.agrona.collections.IntLruCache;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.util.function.IntFunction;
 
 import static java.lang.Integer.numberOfTrailingZeros;
@@ -34,31 +36,31 @@ public class ArchiveReader
 {
     public static final int MESSAGE_FRAME_BLOCK_LENGTH = 8 + FixMessageDecoder.BLOCK_LENGTH;
 
-    private final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
 
-    private final IntFunction<StreamReader> newStreamReader = StreamReader::new;
-    private final Int2ObjectHashMap<StreamReader> streamIdToReader = new Int2ObjectHashMap<>();
+    private final IntLruCache<StreamReader> streamIdToReader;
     private final ExistingBufferFactory archiveBufferFactory;
     private final ArchiveMetaData metaData;
     private final LogDirectoryDescriptor directoryDescriptor;
 
     public ArchiveReader(final ExistingBufferFactory archiveBufferFactory,
                          final ArchiveMetaData metaData,
-                         final String logFileDir)
+                         final String logFileDir,
+                         final int loggerCacheCapacity)
     {
         this.archiveBufferFactory = archiveBufferFactory;
         this.metaData = metaData;
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
+        streamIdToReader = new IntLruCache<>(loggerCacheCapacity, StreamReader::new);
     }
 
     public boolean read(final int streamId, final long position, final LogHandler handler)
     {
-        return streamIdToReader.computeIfAbsent(streamId, newStreamReader)
+        return streamIdToReader.lookup(streamId)
                                .read(position, handler);
     }
 
-    private final class StreamReader
+    private final class StreamReader implements AutoCloseable
     {
         private final int streamId;
         private final Int2ObjectHashMap<ByteBuffer> termIdToBuffer = new Int2ObjectHashMap<>();
@@ -97,6 +99,18 @@ public class ArchiveReader
             final int length = header.frameLength() - (HEADER_LENGTH + MESSAGE_FRAME_BLOCK_LENGTH);
 
             return handler.onLogEntry(messageFrame, buffer, startOffset, messageOffset, length);
+        }
+
+        @Override
+        public void close() throws Exception
+        {
+            termIdToBuffer.values().forEach(buffer ->
+            {
+                if (buffer instanceof MappedByteBuffer)
+                {
+                    IoUtil.unmap((MappedByteBuffer) buffer);
+                }
+            });
         }
     }
 }

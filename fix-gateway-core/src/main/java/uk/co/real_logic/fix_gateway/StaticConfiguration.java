@@ -64,6 +64,8 @@ public final class StaticConfiguration
 
     public static final String LOG_FILE_DIR_DEFAULT = "logs";
 
+    public static final int LOGGER_CACHE_CAPACITY_DEFAULT = 10;
+
     private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
 
     private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
@@ -83,6 +85,7 @@ public final class StaticConfiguration
     private String aeronChannel;
     private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
     private NewSessionHandler newSessionHandler;
+    private int loggerCacheCapacity = LOGGER_CACHE_CAPACITY_DEFAULT;
 
     public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
     {
@@ -184,6 +187,12 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration loggerCacheCapacity(int loggerCacheCapacity)
+    {
+        this.loggerCacheCapacity = loggerCacheCapacity;
+        return this;
+    }
+
     public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -262,5 +271,10 @@ public final class StaticConfiguration
     public int indexFileSize()
     {
         return indexFileSize;
+    }
+
+    public int loggerCacheCapacity()
+    {
+        return loggerCacheCapacity;
     }
 }

@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.logger;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
-import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.agrona.collections.LongLruCache;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -27,7 +27,6 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.util.function.LongFunction;
 
 /**
  * Builds an index of a composite key of session id and sequence number
@@ -48,18 +47,21 @@ public class ReplayIndex implements Index
     private final ReplayIndexRecordEncoder replayIndexRecord = new ReplayIndexRecordEncoder();
     private final MessageHeaderEncoder indexHeaderEncoder = new MessageHeaderEncoder();
 
-    private final LongFunction<SessionIndex> newSessionIndex = SessionIndex::new;
-    private final Long2ObjectHashMap<SessionIndex> sessionToIndex = new Long2ObjectHashMap<>();
+    private final LongLruCache<SessionIndex> sessionToIndex;
 
     private final String logFileDir;
     private final int indexFileSize;
     private final BufferFactory bufferFactory;
 
-    public ReplayIndex(final String logFileDir, final int indexFileSize, final BufferFactory bufferFactory)
+    public ReplayIndex(
+        final String logFileDir,
+        final int indexFileSize,
+        final int loggerCacheCapacity, final BufferFactory bufferFactory)
     {
         this.logFileDir = logFileDir;
         this.indexFileSize = indexFileSize;
         this.bufferFactory = bufferFactory;
+        sessionToIndex = new LongLruCache<>(loggerCacheCapacity, SessionIndex::new);
     }
 
     public void indexRecord(final DirectBuffer srcBuffer, final int srcOffset, final int srcLength, final int streamId)
@@ -79,17 +81,17 @@ public class ReplayIndex implements Index
             fixHeader.decode(asciiFlyweight, offset, messageFrame.bodyLength());
 
             sessionToIndex
-                .computeIfAbsent(messageFrame.session(), newSessionIndex)
+                .lookup(messageFrame.session())
                 .onRecord(streamId, srcOffset, fixHeader.msgSeqNum());
         }
     }
 
     public void close()
     {
-        sessionToIndex.values().forEach(SessionIndex::close);
+        sessionToIndex.close();
     }
 
-    private final class SessionIndex
+    private final class SessionIndex implements AutoCloseable
     {
         private final ByteBuffer wrappedBuffer;
         private final MutableDirectBuffer buffer;

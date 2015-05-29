@@ -39,8 +39,6 @@ import java.nio.MappedByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOG_FILE_DIR_DEFAULT;
-
 public class FixGateway implements AutoCloseable
 {
     public static final int INBOUND_DATA_STREAM = 0;
@@ -80,16 +78,19 @@ public class FixGateway implements AutoCloseable
 
     private void initLogger(final StaticConfiguration configuration)
     {
+        final int loggerCacheCapacity = configuration.loggerCacheCapacity();
+        final String logFileDir = configuration.logFileDir();
+
         final Archiver archiver = new Archiver(
-            this::map, inboundStreams, newArchiveMetaData(configuration), LOG_FILE_DIR_DEFAULT);
+            this::map, inboundStreams, newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
         final ArchiveReader archiveReader = new ArchiveReader(
-            this::mapExistingFile, newArchiveMetaData(configuration), LOG_FILE_DIR_DEFAULT);
+            this::mapExistingFile, newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
 
         final List<Index> indices = Arrays.asList(
-            new ReplayIndex(configuration.logFileDir(), configuration.indexFileSize(), this::map));
+            new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, this::map));
         final Indexer indexer = new Indexer(indices, inboundStreams);
 
-        final ReplayQuery replayQuery = new ReplayQuery(configuration.logFileDir(), this::mapExistingFile, archiveReader);
+        final ReplayQuery replayQuery = new ReplayQuery(logFileDir, loggerCacheCapacity, this::mapExistingFile, archiveReader);
         final DataSubscriber dataSubscriber = new DataSubscriber();
         final Replayer replayer = new Replayer(
             inboundStreams.dataSubscription(dataSubscriber),
@@ -112,7 +113,8 @@ public class FixGateway implements AutoCloseable
 
     private ArchiveMetaData newArchiveMetaData(final StaticConfiguration configuration)
     {
-        return new ArchiveMetaData(configuration.logFileDir(), this::mapExistingFile, IoUtil::mapNewFile);
+        final LogDirectoryDescriptor directoryDescriptor = new LogDirectoryDescriptor(configuration.logFileDir());
+        return new ArchiveMetaData(directoryDescriptor, this::mapExistingFile, IoUtil::mapNewFile);
     }
 
     private void initFramer(final StaticConfiguration configuration, final FixCounters fixCounters)

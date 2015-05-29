@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.logger;
 
 import java.io.File;
 
-public final class LogDirectoryDescriptor
+public class LogDirectoryDescriptor
 {
 
     private final String logFileDir;
