@@ -31,7 +31,6 @@ import java.nio.MappedByteBuffer;
 /**
  * Builds an index of a composite key of session id and sequence number
  */
-// TODO: implement an LRU or victim cache for holding the mapped byte buffer instances, with configurable size
 public class ReplayIndex implements Index
 {
 
