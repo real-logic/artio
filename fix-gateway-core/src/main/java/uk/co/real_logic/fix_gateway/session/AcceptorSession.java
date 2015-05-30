@@ -39,6 +39,11 @@ public final class AcceptorSession extends Session
     {
         if (state() == CONNECTED)
         {
+            if (!validateHeartbeat(heartbeatInterval))
+            {
+                return;
+            }
+
             id(sessionId);
             this.sessionKey = sessionKey;
             proxy.setupSession(sessionId, sessionKey);

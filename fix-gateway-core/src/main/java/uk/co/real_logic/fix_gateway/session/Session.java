@@ -210,11 +210,28 @@ public class Session
     void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId, final Object sessionKey)
     {
         this.sessionKey = sessionKey;
-        id(sessionId);
-        heartbeatIntervalInS(heartbeatInterval);
-        onMessage(msgSeqNo);
-        publication.saveConnect(connectionId, sessionId);
-        proxy.setupSession(sessionId, sessionKey);
+        if (validateHeartbeat(heartbeatInterval))
+        {
+            id(sessionId);
+            heartbeatIntervalInS(heartbeatInterval);
+            onMessage(msgSeqNo);
+            publication.saveConnect(connectionId, sessionId);
+            proxy.setupSession(sessionId, sessionKey);
+        }
+    }
+
+    protected boolean validateHeartbeat(int heartbeatInterval)
+    {
+        if (heartbeatInterval < 0)
+        {
+            proxy.negativeHeartbeatLogout(newSentSeqNum());
+            state(DRAINING);
+            return false;
+        }
+        else
+        {
+            return true;
+        }
     }
 
     void onLogout(final int msgSeqNo)

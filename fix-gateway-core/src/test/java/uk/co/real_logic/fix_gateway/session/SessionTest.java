@@ -195,6 +195,16 @@ public class SessionTest extends AbstractSessionTest
     }
 
     @Test
+    public void shouldLogoutIfNegativeHeartbeatInterval()
+    {
+        final int heartbeatInterval = -1;
+
+        session().onLogon(heartbeatInterval, 0, SESSION_ID, SESSION_KEY);
+
+        verify(mockProxy).negativeHeartbeatLogout(1);
+    }
+
+    @Test
     public void shouldSendHeartbeatAfterInterval()
     {
         onLogon(0);

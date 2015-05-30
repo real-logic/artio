@@ -34,4 +34,6 @@ timings.log
 # JVM crash reports
 hs_err_pid*
 
+*-logs
 fix-gateway-system-tests/logs/
+
