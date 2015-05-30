@@ -126,6 +126,11 @@ public class Session
     public void startLogout()
     {
         sendLogout();
+        awaitLogout();
+    }
+
+    private void awaitLogout()
+    {
         state(AWAITING_LOGOUT);
     }
 
@@ -166,11 +171,15 @@ public class Session
 
     // ---------- Event Handlers ----------
 
+    /*proxy.receivedMessageWithoutSequenceNumber(newSentSeqNum());
+    awaitLogout();*/
+
     void onMessage(final int msgSeqNo)
     {
         if (state() == CONNECTED)
         {
-            startLogout();
+            // Disconnect if the first message isn't a logon message
+            disconnect();
         }
         else
         {

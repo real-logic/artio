@@ -47,15 +47,21 @@ public final class AcceptorSession extends Session
             {
                 heartbeatIntervalInS(heartbeatInterval);
                 state(SessionState.ACTIVE);
-                proxy.logon(heartbeatInterval, newSentSeqNum());
+                replyToLogon(heartbeatInterval);
             }
             else if (expectedSeqNo < msgSeqNo)
             {
                 state(SessionState.AWAITING_RESEND);
+                replyToLogon(heartbeatInterval);
             }
             publication.saveConnect(connectionId, sessionId);
         }
         onMessage(msgSeqNo);
+    }
+
+    private void replyToLogon(int heartbeatInterval)
+    {
+        proxy.logon(heartbeatInterval, newSentSeqNum());
     }
 
 }
