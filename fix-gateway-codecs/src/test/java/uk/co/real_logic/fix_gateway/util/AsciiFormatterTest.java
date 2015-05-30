@@ -78,6 +78,17 @@ public class AsciiFormatterTest
         assertFormatsTo("abDc123", formatter);
     }
 
+    @Test
+    public void shouldSupportLongFormatString()
+    {
+        final String format = "MsgSeqNum too low, expecting %s but received %s";
+        final AsciiFormatter formatter = new AsciiFormatter(format)
+            .with("0".getBytes(US_ASCII))
+            .with("1".getBytes(US_ASCII));
+
+        assertFormatsTo("MsgSeqNum too low, expecting 0 but received 1", formatter);
+    }
+
     private void assertFormatsTo(String format, AsciiFormatter formatter)
     {
         assertEquals(format, new String(formatter.value(), 0, formatter.length(), US_ASCII));

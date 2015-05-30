@@ -101,7 +101,12 @@ public class AsciiFormatter
         int index = this.index;
 
         final int requiredLength = index + toAppendLength;
-        value = (value.length < index) ? new byte[index] : value;
+        if (value.length < requiredLength)
+        {
+            final byte[] newValue = new byte[requiredLength];
+            System.arraycopy(value, 0, newValue, 0, index);
+            value = newValue;
+        }
 
         System.arraycopy(toAppend, 0, value, index, toAppendLength);
         index += toAppendLength;

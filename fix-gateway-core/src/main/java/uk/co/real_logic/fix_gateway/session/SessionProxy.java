@@ -20,6 +20,7 @@ import uk.co.real_logic.fix_gateway.SessionRejectReason;
 import uk.co.real_logic.fix_gateway.builder.*;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
+import uk.co.real_logic.fix_gateway.util.AsciiFormatter;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.util.List;
@@ -35,6 +36,21 @@ public class SessionProxy
     private static final byte[] INCORRECT_BEGIN_STRING = "Incorrect BeginString".getBytes(US_ASCII);
     private static final byte[] NEGATIVE_HEARTBEAT = "HeartBtInt must not be negative".getBytes(US_ASCII);
     private static final byte[] NO_MSG_SEQ_NO = "Received message without MsgSeqNum".getBytes(US_ASCII);
+    private static final byte[][] SESSION_REJECT_REASONS = new byte[SessionRejectReason.values().length][];
+
+    static
+    {
+        final SessionRejectReason[] reasons = SessionRejectReason.values();
+        for (int i = 0; i < reasons.length; i++)
+        {
+            final SessionRejectReason reason = reasons[i];
+            SESSION_REJECT_REASONS[i] = String.format(
+                "Tried to send a reject while not logged on: %s (field %d)",
+                reason.name().replace('_', ' ').toLowerCase(),
+                reason.representation()
+            ).getBytes(US_ASCII);
+        }
+    }
 
     private final LogonEncoder logon = new LogonEncoder();
     private final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
@@ -44,6 +60,7 @@ public class SessionProxy
     private final List<HeaderEncoder> headers = asList(
         logon.header(), resendRequest.header(), logout.header(), heartbeat.header(), reject.header());
 
+    private final AsciiFormatter logSequenceNumber;
     private final UnsafeBuffer buffer;
     private final MutableAsciiFlyweight string;
     private final GatewayPublication gatewayPublication;
@@ -59,6 +76,7 @@ public class SessionProxy
         this.sessionIdStrategy = sessionIdStrategy;
         buffer = new UnsafeBuffer(new byte[bufferSize]);
         string = new MutableAsciiFlyweight(buffer);
+        logSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
     }
 
     public SessionProxy setupSession(final long sessionId, final Object sessionKey)
@@ -104,10 +122,15 @@ public class SessionProxy
     // TODO: remove this method once everything has messages
     public void logout(final int msgSeqNo)
     {
-        logout(msgSeqNo, null);
+        logout(msgSeqNo, null, 0);
     }
 
     private void logout(final int msgSeqNo, final byte[] text)
+    {
+        logout(msgSeqNo, text, text.length);
+    }
+
+    private void logout(final int msgSeqNo, final byte[] text, final int length)
     {
         final HeaderEncoder header = logout.header();
         setupHeader(header);
@@ -121,11 +144,13 @@ public class SessionProxy
         send(logout.encode(string, 0), LogoutDecoder.MESSAGE_TYPE);
     }
 
-    // TODO: implement low gc formatters
-
     public void lowSequenceNumberLogout(final int msgSeqNo, final int expectedSeqNo, final int receivedSeqNo)
     {
-        // ("MsgSeqNum too low, expecting %d but received %d", expectedSeqNo, receivedSeqNo));
+        logSequenceNumber
+            .with(expectedSeqNo)
+            .with(receivedSeqNo);
+
+        logout(msgSeqNo, logSequenceNumber.value(), logSequenceNumber.length());
     }
 
     public void incorrectBeginStringLogout(final int msgSeqNo)
@@ -145,7 +170,7 @@ public class SessionProxy
 
     public void rejectWhilstNotLoggedOn(final int msgSeqNo, final SessionRejectReason reason)
     {
-        // "Tried to send a reject while not logged on: %s", reason
+        logout(msgSeqNo, SESSION_REJECT_REASONS[reason.ordinal()]);
     }
 
     public void heartbeat(final String testReqId, final int msgSeqNo)
