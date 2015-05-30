@@ -138,7 +138,7 @@ public class SessionProxy
 
         if (text != null)
         {
-            logout.text(text);
+            logout.text(text, length);
         }
 
         send(logout.encode(string, 0), LogoutDecoder.MESSAGE_TYPE);

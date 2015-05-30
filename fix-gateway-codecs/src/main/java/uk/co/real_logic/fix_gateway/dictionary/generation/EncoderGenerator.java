@@ -279,29 +279,33 @@ public class EncoderGenerator extends Generator
     {
         return String.format(
             "    private byte[] %s = new byte[%d];\n\n" +
-                "    private int %1$sLength = 0;\n\n" +
-                "%s" +
-                "    public %s %1$s(CharSequence value)\n" +
-                "    {\n" +
-                "        %1$s = toBytes(value, %1$s);\n" +
-                "        %1$sLength = value.length();\n" +
-                "%s" +
-                "        return this;\n" +
-                "    }\n\n" +
-                "    public %4$s %1$s(char[] value)\n" +
-                "    {\n" +
-                "        %1$s = toBytes(value, %1$s);\n" +
-                "        %1$sLength = value.length;\n" +
-                "%5$s" +
-                "        return this;\n" +
-                "    }\n\n" +
-                "    public %4$s %1$s(byte[] value)\n" +
-                "    {\n" +
-                "        %1$s = value;\n" +
-                "        %1$sLength = value.length;\n" +
-                "%5$s" +
-                "        return this;\n" +
-                "    }\n\n",
+            "    private int %1$sLength = 0;\n\n" +
+            "%s" +
+            "    public %s %1$s(final CharSequence value)\n" +
+            "    {\n" +
+            "        %1$s = toBytes(value, %1$s);\n" +
+            "        %1$sLength = value.length();\n" +
+            "%s" +
+            "        return this;\n" +
+            "    }\n\n" +
+            "    public %4$s %1$s(final char[] value)\n" +
+            "    {\n" +
+            "        %1$s = toBytes(value, %1$s);\n" +
+            "        %1$sLength = value.length;\n" +
+            "%5$s" +
+            "        return this;\n" +
+            "    }\n\n" +
+            "    public %4$s %1$s(final byte[] value)\n" +
+            "    {\n" +
+            "        return %1$s(value, value.length);\n" +
+            "    }\n\n" +
+            "    public %4$s %1$s(final byte[] value, final int length)\n" +
+            "    {\n" +
+            "        %1$s = value;\n" +
+            "        %1$sLength = length;\n" +
+            "%5$s" +
+            "        return this;\n" +
+            "    }\n\n",
             fieldName,
             initialArraySize,
             optionalField,
