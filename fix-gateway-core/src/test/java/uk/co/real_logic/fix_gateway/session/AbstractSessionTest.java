@@ -26,6 +26,7 @@ import static uk.co.real_logic.fix_gateway.session.SessionState.DRAINING;
 
 public abstract class AbstractSessionTest
 {
+    public static final char[] BEGIN_STRING = "FIX.4.4".toCharArray();
     public static final long CONNECTION_ID = 3L;
     public static final long SESSION_ID = 2L;
     public static final int HEARTBEAT_INTERVAL = 2;

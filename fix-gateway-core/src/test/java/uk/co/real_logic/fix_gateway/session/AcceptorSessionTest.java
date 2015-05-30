@@ -25,7 +25,7 @@ import static uk.co.real_logic.fix_gateway.session.SessionState.*;
 public class AcceptorSessionTest extends AbstractSessionTest
 {
     private AcceptorSession session = new AcceptorSession(
-        HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy, mockPublication, null);
+        HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy, mockPublication, null, BEGIN_STRING);
 
     @Test
     public void shouldInitiallyBeConnected()

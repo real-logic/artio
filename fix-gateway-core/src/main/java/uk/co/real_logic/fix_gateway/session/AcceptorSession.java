@@ -29,9 +29,10 @@ public final class AcceptorSession extends Session
         final MilliClock clock,
         final SessionProxy proxy,
         final GatewayPublication publication,
-        final SessionIdStrategy sessionIdStrategy)
+        final SessionIdStrategy sessionIdStrategy,
+        final char[] beginString)
     {
-        super(defaultInterval, connectionId, clock, CONNECTED, proxy, publication, sessionIdStrategy);
+        super(defaultInterval, connectionId, clock, CONNECTED, proxy, publication, sessionIdStrategy, beginString);
     }
 
     public void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId, final Object sessionKey)

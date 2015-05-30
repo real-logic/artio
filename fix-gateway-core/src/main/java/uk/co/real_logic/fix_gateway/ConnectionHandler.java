@@ -90,7 +90,8 @@ public class ConnectionHandler
         final GatewayPublication publication = outboundStreams.gatewayPublication();
         final int defaultInterval = configuration.defaultHeartbeatInterval();
         return new AcceptorSession(
-            defaultInterval, nextConnectionId(), clock, sessionProxy(), publication, sessionIdStrategy);
+            defaultInterval, nextConnectionId(), clock, sessionProxy(), publication, sessionIdStrategy,
+            configuration.beginString());
     }
 
     public Session initiateSession(final FixGateway gateway, final SessionConfiguration sessionConfiguration)
@@ -108,7 +109,8 @@ public class ConnectionHandler
             gatewayPublication,
             sessionIdStrategy,
             gateway,
-            sessionId);
+            sessionId,
+            configuration.beginString());
     }
 
     private SessionProxy sessionProxy()

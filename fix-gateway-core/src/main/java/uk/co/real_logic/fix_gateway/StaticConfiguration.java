@@ -75,6 +75,7 @@ public final class StaticConfiguration
     private long connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
     private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
     private SessionIdStrategy sessionIdStrategy = new SenderAndTargetSessionIdStrategy();
+    private char[] beginString;
 
     private String host;
     private int port;
@@ -86,6 +87,11 @@ public final class StaticConfiguration
     private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
     private NewSessionHandler newSessionHandler;
     private int loggerCacheCapacity = LOGGER_CACHE_CAPACITY_DEFAULT;
+
+    public StaticConfiguration()
+    {
+        beginString("FIX.4.4");
+    }
 
     public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
     {
@@ -193,6 +199,12 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration beginString(final String beginString)
+    {
+        this.beginString = beginString.toCharArray();
+        return this;
+    }
+
     public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -276,5 +288,10 @@ public final class StaticConfiguration
     public int loggerCacheCapacity()
     {
         return loggerCacheCapacity;
+    }
+
+    public char[] beginString()
+    {
+        return beginString;
     }
 }

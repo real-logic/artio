@@ -68,7 +68,10 @@ public class SessionParser
                     final HeaderDecoder header = logon.header();
                     final Object sessionKey = sessionIdStrategy.onAcceptorLogon(header);
                     sessionId = sessionIds.onLogon(sessionKey);
-                    session.onLogon(logon.heartBtInt(), header.msgSeqNum(), sessionId, sessionKey);
+                    if (session.onBeginString(header.beginString(), header.beginStringLength()))
+                    {
+                        session.onLogon(logon.heartBtInt(), header.msgSeqNum(), sessionId, sessionKey);
+                    }
                 }
                 else
                 {

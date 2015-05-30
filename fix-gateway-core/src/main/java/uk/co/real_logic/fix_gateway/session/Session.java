@@ -20,6 +20,7 @@ import uk.co.real_logic.agrona.Verify;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
+import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
@@ -44,6 +45,7 @@ public class Session
     protected final GatewayPublication publication;
     protected final MutableDirectBuffer buffer;
     protected final MutableAsciiFlyweight string;
+    private final char[] expectedBeginString;
     protected Object sessionKey;
 
     private SessionState state;
@@ -63,18 +65,21 @@ public class Session
         final SessionState state,
         final SessionProxy proxy,
         final GatewayPublication publication,
-        final SessionIdStrategy sessionIdStrategy)
+        final SessionIdStrategy sessionIdStrategy,
+        final char[] expectedBeginString)
     {
         Verify.notNull(clock, "clock");
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
         Verify.notNull(publication, "publication");
+        Verify.notNull(expectedBeginString, "expected begin string");
 
         this.clock = clock;
         this.proxy = proxy;
         this.connectionId = connectionId;
         this.publication = publication;
         this.sessionIdStrategy = sessionIdStrategy;
+        this.expectedBeginString = expectedBeginString;
 
         buffer = new UnsafeBuffer(new byte[8 * 1024]);
         string = new MutableAsciiFlyweight(buffer);
@@ -282,6 +287,16 @@ public class Session
         // TODO:
     }
 
+    public boolean onBeginString(final char[] value, final int length)
+    {
+        final boolean isValid = CodecUtil.equals(value, expectedBeginString, length);
+        if (!isValid)
+        {
+            disconnect();
+        }
+        return isValid;
+    }
+
     // ---------- Accessors ----------
 
     long heartbeatIntervalInMs()
@@ -363,4 +378,5 @@ public class Session
     {
         return connectionId;
     }
+
 }

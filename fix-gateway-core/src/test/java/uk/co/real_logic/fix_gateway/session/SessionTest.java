@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.session;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.session.SessionState.AWAITING_LOGOUT;
@@ -26,7 +27,7 @@ import static uk.co.real_logic.fix_gateway.session.SessionState.AWAITING_RESEND;
 public class SessionTest extends AbstractSessionTest
 {
     private Session session = new Session(
-        HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, ACTIVE, mockProxy, mockPublication, null);
+        HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, ACTIVE, mockProxy, mockPublication, null, BEGIN_STRING);
 
     @Test
     public void shouldReplyToValidLogout()
@@ -220,6 +221,17 @@ public class SessionTest extends AbstractSessionTest
         heartbeatSentAfterInterval(4);
 
         heartbeatSentAfterInterval(5);
+    }
+
+    @Test
+    public void shouldDisconnectIfBeginStringIsInvalid()
+    {
+        final char[] beginString = "FIX.3.9 ".toCharArray();
+
+        final boolean valid = session.onBeginString(beginString, beginString.length - 1);
+
+        assertFalse(valid);
+        verifyDisconnect();
     }
 
     private void heartbeatSentAfterInterval(final int msgSeqNo)

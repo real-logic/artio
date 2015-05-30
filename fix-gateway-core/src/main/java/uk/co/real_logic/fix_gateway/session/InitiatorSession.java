@@ -33,9 +33,10 @@ public class InitiatorSession extends Session
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
         final FixGateway gateway,
-        final long sessionId)
+        final long sessionId,
+        final char[] beginString)
     {
-        super(heartbeatInterval, connectionId, clock, CONNECTED, proxy, publication, sessionIdStrategy);
+        super(heartbeatInterval, connectionId, clock, CONNECTED, proxy, publication, sessionIdStrategy, beginString);
         this.gateway = gateway;
         id(sessionId);
     }
