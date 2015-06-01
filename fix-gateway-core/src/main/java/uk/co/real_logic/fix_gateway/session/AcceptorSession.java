@@ -30,12 +30,27 @@ public final class AcceptorSession extends Session
         final SessionProxy proxy,
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
-        final char[] beginString)
+        final char[] beginString,
+        final long sendingTimeWindow)
     {
-        super(defaultInterval, connectionId, clock, CONNECTED, proxy, publication, sessionIdStrategy, beginString);
+        super(
+            defaultInterval,
+            connectionId,
+            clock,
+            CONNECTED,
+            proxy,
+            publication,
+            sessionIdStrategy,
+            beginString,
+            sendingTimeWindow);
     }
 
-    public void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId, final Object sessionKey)
+    public void onLogon(
+        final int heartbeatInterval,
+        final int msgSeqNo,
+        final long sessionId,
+        final Object sessionKey,
+        final long sendingTime)
     {
         if (state() == CONNECTED)
         {

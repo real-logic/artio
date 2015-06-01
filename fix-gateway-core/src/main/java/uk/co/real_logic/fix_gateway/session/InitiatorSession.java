@@ -34,19 +34,34 @@ public class InitiatorSession extends Session
         final SessionIdStrategy sessionIdStrategy,
         final FixGateway gateway,
         final long sessionId,
-        final char[] beginString)
+        final char[] beginString,
+        final long sendingTimeWindow)
     {
-        super(heartbeatInterval, connectionId, clock, CONNECTED, proxy, publication, sessionIdStrategy, beginString);
+        super(
+            heartbeatInterval,
+            connectionId,
+            clock,
+            CONNECTED,
+            proxy,
+            publication,
+            sessionIdStrategy,
+            beginString,
+            sendingTimeWindow);
         this.gateway = gateway;
         id(sessionId);
     }
 
-    void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId, final Object sessionKey)
+    void onLogon(
+        final int heartbeatInterval,
+        final int msgSeqNo,
+        final long sessionId,
+        final Object sessionKey,
+        final long sendingTime)
     {
         if (msgSeqNo == expectedReceivedSeqNum() && state() == SENT_LOGON)
         {
             state(ACTIVE);
-            super.onLogon(heartbeatInterval, msgSeqNo, sessionId, sessionKey);
+            super.onLogon(heartbeatInterval, msgSeqNo, sessionId, sessionKey, sendingTime);
             gateway.onInitiatorSessionActive(this);
         }
         else

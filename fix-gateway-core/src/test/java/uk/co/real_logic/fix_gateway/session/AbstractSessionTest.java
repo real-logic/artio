@@ -26,6 +26,7 @@ import static uk.co.real_logic.fix_gateway.session.SessionState.DRAINING;
 
 public abstract class AbstractSessionTest
 {
+    public static final long SENDING_TIME_WINDOW = 2000;
     public static final char[] BEGIN_STRING = "FIX.4.4".toCharArray();
     public static final long CONNECTION_ID = 3L;
     public static final long SESSION_ID = 2L;
@@ -71,7 +72,7 @@ public abstract class AbstractSessionTest
 
     public void onLogon(final int msgSeqNo)
     {
-        session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID, SESSION_KEY);
+       session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID, SESSION_KEY, fakeClock.time());
     }
 
     protected abstract Session session();

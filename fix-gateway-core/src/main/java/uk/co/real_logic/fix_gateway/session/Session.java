@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
+import static uk.co.real_logic.fix_gateway.SessionRejectReason.SENDINGTIME_ACCURACY_PROBLEM;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.session.SessionState.*;
 
@@ -47,6 +48,7 @@ public class Session
     protected final MutableDirectBuffer buffer;
     protected final MutableAsciiFlyweight string;
     private final char[] expectedBeginString;
+    private final long sendingTimeWindow;
     protected Object sessionKey;
 
     private SessionState state;
@@ -67,8 +69,10 @@ public class Session
         final SessionProxy proxy,
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
-        final char[] expectedBeginString)
+        final char[] expectedBeginString,
+        final long sendingTimeWindow)
     {
+        this.sendingTimeWindow = sendingTimeWindow;
         Verify.notNull(clock, "clock");
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
@@ -177,9 +181,6 @@ public class Session
 
     // ---------- Event Handlers ----------
 
-    /*proxy.receivedMessageWithoutSequenceNumber(newSentSeqNum());
-    awaitLogout();*/
-
     void onMessage(final int msgSeqNo)
     {
         if (state() == CONNECTED)
@@ -215,10 +216,10 @@ public class Session
         }
     }
 
-    void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId, final Object sessionKey)
+    void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId, final Object sessionKey, long sendingTime)
     {
         this.sessionKey = sessionKey;
-        if (validateHeartbeat(heartbeatInterval))
+        if (validateHeartbeat(heartbeatInterval) && validateSendingTime(sendingTime))
         {
             id(sessionId);
             heartbeatIntervalInS(heartbeatInterval);
@@ -226,6 +227,19 @@ public class Session
             publication.saveConnect(connectionId, sessionId);
             proxy.setupSession(sessionId, sessionKey);
         }
+    }
+
+    private boolean validateSendingTime(final long sendingTime)
+    {
+        final long time = time();
+        final boolean isValid = sendingTime < (time + sendingTimeWindow) && sendingTime > (time - sendingTimeWindow);
+
+        if (!isValid)
+        {
+            proxy.rejectWhilstNotLoggedOn(newSentSeqNum(), SENDINGTIME_ACCURACY_PROBLEM);
+        }
+
+        return isValid;
     }
 
     protected boolean validateHeartbeat(int heartbeatInterval)

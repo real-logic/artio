@@ -70,7 +70,8 @@ public class SessionParser
                     sessionId = sessionIds.onLogon(sessionKey);
                     if (session.onBeginString(header.beginString(), header.beginStringLength()))
                     {
-                        session.onLogon(logon.heartBtInt(), header.msgSeqNum(), sessionId, sessionKey);
+                        session.onLogon(
+                            logon.heartBtInt(), header.msgSeqNum(), sessionId, sessionKey, header.sendingTime());
                     }
                 }
                 else

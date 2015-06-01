@@ -31,6 +31,7 @@ import java.util.stream.IntStream;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 /**
  * Configuration that exists for the entire duration of a fix gateway
@@ -66,6 +67,8 @@ public final class StaticConfiguration
 
     public static final int LOGGER_CACHE_CAPACITY_DEFAULT = 10;
 
+    public static final long SENDING_TIME_WINDOW_DEFAULT = MINUTES.toMillis(2);
+
     private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
 
     private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
@@ -87,6 +90,7 @@ public final class StaticConfiguration
     private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
     private NewSessionHandler newSessionHandler;
     private int loggerCacheCapacity = LOGGER_CACHE_CAPACITY_DEFAULT;
+    private long sendingTimeWindow = SENDING_TIME_WINDOW_DEFAULT;
 
     public StaticConfiguration()
     {
@@ -205,6 +209,12 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration setSendingTimeWindow(long sendingTimeWindow)
+    {
+        this.sendingTimeWindow = sendingTimeWindow;
+        return this;
+    }
+
     public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -293,5 +303,10 @@ public final class StaticConfiguration
     public char[] beginString()
     {
         return beginString;
+    }
+
+    public long sendingTimeWindow()
+    {
+        return sendingTimeWindow;
     }
 }

@@ -53,7 +53,7 @@ public class EncoderGeneratorTest
     {
         ENCODER_GENERATOR.generate();
         final Map<String, CharSequence> sources = OUTPUT_MANAGER.getSources();
-        System.out.println(sources);
+        // System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
         headerClass = compileInMemory(HEADER_ENCODER, sources);
     }
