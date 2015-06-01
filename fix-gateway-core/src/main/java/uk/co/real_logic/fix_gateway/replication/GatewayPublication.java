@@ -66,7 +66,7 @@ public class GatewayPublication
         final MutableDirectBuffer destBuffer = bufferClaim.buffer();
 
         header
-            .wrap(destBuffer, offset, 0)
+            .wrap(destBuffer, offset)
             .blockLength(messageFrame.sbeBlockLength())
             .templateId(messageFrame.sbeTemplateId())
             .schemaId(messageFrame.sbeSchemaId())
@@ -94,7 +94,7 @@ public class GatewayPublication
         int offset = bufferClaim.offset();
 
         header
-            .wrap(buffer, offset, 0)
+            .wrap(buffer, offset)
             .blockLength(connect.sbeBlockLength())
             .templateId(connect.sbeTemplateId())
             .schemaId(connect.sbeSchemaId())
@@ -118,7 +118,7 @@ public class GatewayPublication
         int offset = bufferClaim.offset();
 
         header
-            .wrap(buffer, offset, 0)
+            .wrap(buffer, offset)
             .blockLength(disconnect.sbeBlockLength())
             .templateId(disconnect.sbeTemplateId())
             .schemaId(disconnect.sbeSchemaId())

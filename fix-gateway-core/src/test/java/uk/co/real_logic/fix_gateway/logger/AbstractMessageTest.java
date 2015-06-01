@@ -63,7 +63,7 @@ public class AbstractMessageTest
 
         offset = START;
         header
-            .wrap(buffer, offset, 0)
+            .wrap(buffer, offset)
             .blockLength(messageFrame.sbeBlockLength())
             .templateId(messageFrame.sbeTemplateId())
             .schemaId(messageFrame.sbeSchemaId())

@@ -36,7 +36,7 @@ public class DataSubscriber implements DataHandler
 
     public void onData(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
-        messageHeader.wrap(buffer, offset, 0);
+        messageHeader.wrap(buffer, offset);
 
         offset += messageHeader.size();
 

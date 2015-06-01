@@ -58,7 +58,7 @@ public class ArchiveMetaData
             metaDataBuffer.wrap(newBufferFactory.map(metaDataFile, META_DATA_FILE_SIZE));
 
             headerEncoder
-                .wrap(metaDataBuffer, 0, 0)
+                .wrap(metaDataBuffer, 0)
                 .blockLength(metaDataEncoder.sbeBlockLength())
                 .templateId(metaDataEncoder.sbeTemplateId())
                 .schemaId(metaDataEncoder.sbeSchemaId())
@@ -75,7 +75,7 @@ public class ArchiveMetaData
     {
         ensureBufferNotMapped();
         metaDataBuffer.wrap(existingBufferFactory.map(directoryDescriptor.metaDataLogFile(streamId)));
-        headerDecoder.wrap(metaDataBuffer, 0, 0);
+        headerDecoder.wrap(metaDataBuffer, 0);
         decoder.wrap(metaDataBuffer, headerDecoder.size(), headerDecoder.blockLength(), headerDecoder.version());
         return decoder;
     }

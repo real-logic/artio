@@ -66,7 +66,7 @@ public class ReplayIndex implements Index
     public void indexRecord(final DirectBuffer srcBuffer, final int srcOffset, final int srcLength, final int streamId)
     {
         int offset = srcOffset;
-        frameHeaderDecoder.wrap(srcBuffer, offset, frameHeaderDecoder.size());
+        frameHeaderDecoder.wrap(srcBuffer, offset);
         if (frameHeaderDecoder.templateId() == FixMessageEncoder.TEMPLATE_ID)
         {
             final int actingBlockLength = frameHeaderDecoder.blockLength();
@@ -102,7 +102,7 @@ public class ReplayIndex implements Index
             this.wrappedBuffer = bufferFactory.map(logFile(logFileDir, sessionId), indexFileSize);
             this.buffer = new UnsafeBuffer(wrappedBuffer);
             indexHeaderEncoder
-                .wrap(buffer, 0, replayIndexRecord.sbeSchemaVersion())
+                .wrap(buffer, 0)
                 .blockLength(replayIndexRecord.sbeBlockLength())
                 .templateId(replayIndexRecord.sbeTemplateId())
                 .schemaId(replayIndexRecord.sbeSchemaId())

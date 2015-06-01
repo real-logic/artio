@@ -102,7 +102,7 @@ public class ReplayIndexTest extends AbstractMessageTest
     {
         offset = START;
         header
-            .wrap(buffer, offset, 0)
+            .wrap(buffer, offset)
             .blockLength(connect.sbeBlockLength())
             .templateId(connect.sbeTemplateId())
             .schemaId(connect.sbeSchemaId())

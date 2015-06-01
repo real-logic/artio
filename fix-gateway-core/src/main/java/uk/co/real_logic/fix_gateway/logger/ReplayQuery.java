@@ -78,7 +78,7 @@ public class ReplayQuery implements AutoCloseable
         // Needs thinking about out of order sequence numbers due to duplicates and resends
         private int query(final LogHandler handler, final int beginSeqNo, final int endSeqNo)
         {
-            messageFrameHeader.wrap(buffer, 0, indexRecord.sbeSchemaVersion());
+            messageFrameHeader.wrap(buffer, 0);
             int index = messageFrameHeader.size();
             final int actingBlockLength = messageFrameHeader.blockLength();
             final int actingVersion = messageFrameHeader.version();
