@@ -36,6 +36,7 @@ import static org.hamcrest.Matchers.hasToString;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class DecoderGeneratorTest
@@ -156,6 +157,20 @@ public class DecoderGeneratorTest
         final Decoder header = getHeader(decoder);
 
         assertEquals(49, getBodyLength(header));
+    }
+
+    @Test
+    public void shouldResetFields() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE_EXAMPLE);
+
+        decoder.reset();
+
+        assertFalse(hasTestReqId(decoder));
+        assertFalse(hasBooleanField(decoder));
+        assertFalse(hasDataField(decoder));
+
+        assertEquals(MISSING_INT, getIntField(decoder));
     }
 
     @Test

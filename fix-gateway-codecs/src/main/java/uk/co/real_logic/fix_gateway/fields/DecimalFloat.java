@@ -119,4 +119,5 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
             ? Long.compare(value, other.value)
             : !isPositive ? -1 * scaleComparison : scaleComparison;
     }
+
 }

@@ -46,6 +46,11 @@ public final class Entry
         return this.element;
     }
 
+    public boolean isField()
+    {
+        return element() instanceof Field;
+    }
+
     @Override
     public String toString()
     {

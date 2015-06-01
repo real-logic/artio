@@ -113,19 +113,31 @@ public abstract class Generator
             topType.getSimpleName());
     }
 
-    protected String generateResetMethod(List<Entry> entries)
+    protected String generateResetMethods(final boolean isMessage, final List<Entry> entries)
     {
         final String resetCalls = entries
             .stream()
-            .filter(entry -> !entry.required())
+            .filter(Entry::isField)
             .map(this::resetCall)
             .collect(joining());
+
+        final String resetMethods = entries
+            .stream()
+            .filter(Entry::isField)
+            .map(entry -> generateFieldReset(entry.required(), (Field) entry.element()))
+            .collect(joining());
+
+        final String resetHeaderAndTrailer = isMessage ? "    header.reset();\n    trailer.reset();\n" : "";
 
         return String.format(
             "    public void reset() {\n" +
             "%s" +
-            "    }\n\n",
-            resetCalls
+            "%s" +
+            "    }\n\n" +
+            "%s",
+            resetHeaderAndTrailer,
+            resetCalls,
+            resetMethods
         );
     }
 
@@ -136,17 +148,10 @@ public abstract class Generator
 
     private String resetCall(final Entry entry)
     {
-        if (entry.element() instanceof Field)
-        {
-            return String.format(
-                "        %1$s();\n",
-                resetMethodName(entry.name())
-            );
-        }
-        else
-        {
-            return "";
-        }
+        return String.format(
+            "        %1$s();\n",
+            resetMethodName(entry.name())
+        );
     }
 
     protected String optionalField(final Entry entry)
@@ -154,14 +159,69 @@ public abstract class Generator
         final String name = entry.name();
         return entry.required()
              ? ""
-             : String.format(
-                "    private boolean has%1$s;\n\n" +
+             : String.format("    private boolean has%1$s;\n\n", name);
+    }
+
+    private String generateFieldReset(final boolean isRequired, final Field field)
+    {
+        final String name = field.name();
+
+        if (!isRequired)
+        {
+            return String.format(
                 "    public void %2$s()\n" +
                 "    {\n" +
                 "        has%1$s = false;\n" +
                 "    }\n\n",
                 name,
-                resetMethodName(name));
+                resetMethodName(name)
+            );
+        }
+
+        switch (field.type())
+        {
+            case INT:
+            case LENGTH:
+            case SEQNUM:
+            case LOCALMKTDATE:
+                return resetFieldValue(name, "MISSING_INT");
+
+            case UTCTIMESTAMP:
+                return resetFieldValue(name, "MISSING_LONG");
+
+
+            case QTY:
+            case PRICE:
+            case PRICEOFFSET:
+                return resetFieldValue(name, "null");
+
+            // TODO
+            case STRING:
+            case BOOLEAN:
+            case DATA:
+                return String.format(
+                    "    public void %1$s()\n" +
+                    "    {\n" +
+                    "    }\n\n",
+                    resetMethodName(name)
+                );
+
+            default:
+                throw new IllegalArgumentException("Unknown type: " + field.type());
+        }
+    }
+
+    private String resetFieldValue(final String name, final String resetValue)
+    {
+        return String.format(
+            "    public void %1$s()\n" +
+            "    {\n" +
+            "        %2$s = %3$s;\n" +
+            "    }\n\n",
+            resetMethodName(name),
+            formatPropertyName(name),
+            resetValue
+        );
     }
 
     protected String generateToString(Aggregate aggregate, final boolean hasCommonCompounds)

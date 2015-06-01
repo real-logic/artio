@@ -91,7 +91,7 @@ public class EncoderGenerator extends Generator
             generatePrecomputedHeaders(out, aggregate.entries());
             generateSetters(out, className, aggregate.entries());
             out.append(generateEncodeMethod(aggregate.entries(), aggregateType));
-            out.append(generateResetMethod(aggregate.entries()));
+            out.append(generateResetMethods(isMessage, aggregate.entries()));
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         }
@@ -105,15 +105,15 @@ public class EncoderGenerator extends Generator
     {
         return String.format(
             "    private %1$s next = null;\n\n" +
-                "    public %1$s next()\n" +
-                "    {\n" +
-                "        if (next == null)\n" +
-                "        {\n" +
-                "            next = new %1$s(onNext);\n" +
-                "            onNext.run();\n" +
-                "        }\n" +
-                "        return next;\n" +
-                "    }\n\n",
+            "    public %1$s next()\n" +
+            "    {\n" +
+            "        if (next == null)\n" +
+            "        {\n" +
+            "            next = new %1$s(onNext);\n" +
+            "            onNext.run();\n" +
+            "        }\n" +
+            "        return next;\n" +
+            "    }\n\n",
             encoderClassName(group.name())
         );
     }

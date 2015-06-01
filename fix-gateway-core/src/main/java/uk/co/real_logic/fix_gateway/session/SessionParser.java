@@ -77,22 +77,26 @@ public class SessionParser
                 {
                     session.startLogout();
                 }
+                logon.reset();
                 break;
 
             case LogoutDecoder.MESSAGE_TYPE:
                 logout.decode(string, offset, length);
                 session.onLogout(logout.header().msgSeqNum());
+                logout.reset();
                 break;
 
             case RejectDecoder.MESSAGE_TYPE:
                 reject.decode(string, offset, length);
                 // TODO
                 session.onReject();
+                reject.reset();
                 break;
 
             default:
                 this.header.decode(string, offset, length);
                 session.onMessage(this.header.msgSeqNum());
+                header.reset();
                 break;
         }
 

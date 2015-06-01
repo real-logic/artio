@@ -78,7 +78,7 @@ public class DecoderGenerator extends Generator
             generateGroupMethods(out, aggregate);
             generateGetters(out, className, aggregate.entries());
             out.append(generateDecodeMethod(aggregate.entries(), aggregate, type));
-            out.append(generateResetMethod(aggregate.entries()));
+            out.append(generateResetMethods(isMessage, aggregate.entries()));
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         }
@@ -192,7 +192,7 @@ public class DecoderGenerator extends Generator
                 "%s",
             javaTypeOf(type),
             fieldName,
-            fieldInitialisation(type, name),
+            fieldInitialisation(type),
             optionalField(entry),
             optionalCheck,
             optionalGetter(entry),
@@ -200,7 +200,7 @@ public class DecoderGenerator extends Generator
         );
     }
 
-    private String fieldInitialisation(final Type type, final String name)
+    private String fieldInitialisation(final Type type)
     {
         switch (type)
         {
