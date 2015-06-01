@@ -20,9 +20,8 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.session.SessionState.ACTIVE;
-import static uk.co.real_logic.fix_gateway.session.SessionState.AWAITING_LOGOUT;
-import static uk.co.real_logic.fix_gateway.session.SessionState.AWAITING_RESEND;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.fix_gateway.session.SessionState.*;
 
 public class SessionTest extends AbstractSessionTest
 {
@@ -241,6 +240,17 @@ public class SessionTest extends AbstractSessionTest
         final boolean valid = session.onBeginString(beginString, beginString.length - 1);
 
         assertFalse(valid);
+        verifyDisconnect();
+    }
+
+    @Test
+    public void shouldDisconnectIfMissingSequenceNumber()
+    {
+        onLogon(1);
+
+        session.onMessage(MISSING_INT);
+
+        verify(mockProxy).receivedMessageWithoutSequenceNumber(1);
         verifyDisconnect();
     }
 

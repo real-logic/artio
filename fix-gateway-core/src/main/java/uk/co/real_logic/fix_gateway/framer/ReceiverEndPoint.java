@@ -154,7 +154,7 @@ public class ReceiverEndPoint
 
                 final int messageType = getMessageType(endOfBodyLength, indexOfLastByteOfMessage);
                 final int length = (indexOfLastByteOfMessage + 1) - offset;
-                final long sessionId = session.onMessage(buffer, offset, length, connectionId, messageType);
+                final long sessionId = session.onMessage(buffer, offset, length, messageType);
                 if (sessionId != SessionParser.UNKNOWN_SESSION_ID)
                 {
                     publication.saveMessage(buffer, offset, length, sessionId, messageType);

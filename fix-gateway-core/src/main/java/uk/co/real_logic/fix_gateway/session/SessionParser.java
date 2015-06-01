@@ -54,7 +54,6 @@ public class SessionParser
         final DirectBuffer buffer,
         final int offset,
         final int length,
-        final long connectionId,
         final int messageType)
     {
         string.wrap(buffer);
@@ -62,6 +61,7 @@ public class SessionParser
         switch (messageType)
         {
             case LogonDecoder.MESSAGE_TYPE:
+                logon.reset();
                 logon.decode(string, offset, length);
                 if (authenticationStrategy.authenticate(logon))
                 {
@@ -77,26 +77,25 @@ public class SessionParser
                 {
                     session.startLogout();
                 }
-                logon.reset();
                 break;
 
             case LogoutDecoder.MESSAGE_TYPE:
+                logout.reset();
                 logout.decode(string, offset, length);
                 session.onLogout(logout.header().msgSeqNum());
-                logout.reset();
                 break;
 
             case RejectDecoder.MESSAGE_TYPE:
+                reject.reset();
                 reject.decode(string, offset, length);
                 // TODO
                 session.onReject();
-                reject.reset();
                 break;
 
             default:
+                header.reset();
                 this.header.decode(string, offset, length);
                 session.onMessage(this.header.msgSeqNum());
-                header.reset();
                 break;
         }
 

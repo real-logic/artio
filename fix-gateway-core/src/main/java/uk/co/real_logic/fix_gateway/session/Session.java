@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
+import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.session.SessionState.*;
 
 /**
@@ -188,6 +189,13 @@ public class Session
         }
         else
         {
+            if (msgSeqNo == MISSING_INT)
+            {
+                proxy.receivedMessageWithoutSequenceNumber(newSentSeqNum());
+                disconnect();
+                return;
+            }
+
             final int expectedSeqNo = expectedReceivedSeqNum();
             if (expectedSeqNo == msgSeqNo)
             {

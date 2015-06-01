@@ -55,7 +55,7 @@ public class ReceiverEndPointTest
     @Before
     public void setUp()
     {
-        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyLong(), anyInt())).thenReturn(SESSION_ID);
+        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyInt())).thenReturn(SESSION_ID);
         when(mockSessionParser.session()).thenReturn(mockSession);
     }
 
@@ -145,7 +145,7 @@ public class ReceiverEndPointTest
     public void shouldOnlyFrameMessagesWhenConnected()
     {
         given:
-        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyLong(), anyInt())).thenReturn(UNKNOWN_SESSION_ID);
+        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyInt())).thenReturn(UNKNOWN_SESSION_ID);
         theEndpointReceivesACompleteMessage();
 
         when:
