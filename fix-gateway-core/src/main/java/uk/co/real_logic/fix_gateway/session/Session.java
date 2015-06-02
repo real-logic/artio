@@ -211,7 +211,8 @@ public class Session
             }
             else if (expectedSeqNo > msgSeqNo)
             {
-                startLogout();
+                proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedSeqNo, msgSeqNo);
+                awaitLogout();
             }
         }
     }

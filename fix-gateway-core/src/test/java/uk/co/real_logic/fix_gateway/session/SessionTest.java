@@ -193,16 +193,6 @@ public class SessionTest extends AbstractSessionTest
     }
 
     @Test
-    public void shouldLogoutIfLowSeqNo()
-    {
-        session.state(ACTIVE);
-        session.lastReceivedMsgSeqNum(2);
-
-        session.onMessage(1);
-        verifyLogoutStarted();
-    }
-
-    @Test
     public void shouldLogoutIfNegativeHeartbeatInterval()
     {
         final int heartbeatInterval = -1;

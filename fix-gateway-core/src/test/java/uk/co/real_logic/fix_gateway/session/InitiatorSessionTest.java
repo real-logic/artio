@@ -48,17 +48,6 @@ public class InitiatorSessionTest extends AbstractSessionTest
     }
 
     @Test
-    public void shouldLogoutIfLowSeqNo()
-    {
-        session.lastReceivedMsgSeqNum(5);
-
-        session.state(SENT_LOGON);
-        onLogon(1);
-
-        verifyLogoutStarted();
-    }
-
-    @Test
     public void shouldAttemptLogonWhenConnected()
     {
         session.poll(0);

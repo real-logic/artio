@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -55,19 +54,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
         verify(mockProxy).resendRequest(2, 1, 2);
         verifyNoFurtherMessages();
         assertState(AWAITING_RESEND);
-    }
-
-    // TODO: what is the correct behaviour here?
-    @Ignore
-    @Test
-    public void shouldLogoutIfLowSeqNoLogon()
-    {
-        session.lastReceivedMsgSeqNum(2);
-
-        onLogon(1);
-        verifySessionSetup();
-        verifyLogoutStarted();
-        verifyNoFurtherMessages();
     }
 
     @Test

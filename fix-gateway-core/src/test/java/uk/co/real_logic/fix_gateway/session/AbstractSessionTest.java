@@ -15,14 +15,13 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
+import org.junit.Test;
 import uk.co.real_logic.fix_gateway.framer.FakeMilliClock;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.session.SessionState.AWAITING_LOGOUT;
-import static uk.co.real_logic.fix_gateway.session.SessionState.DISCONNECTED;
-import static uk.co.real_logic.fix_gateway.session.SessionState.DRAINING;
+import static uk.co.real_logic.fix_gateway.session.SessionState.*;
 
 public abstract class AbstractSessionTest
 {
@@ -42,6 +41,18 @@ public abstract class AbstractSessionTest
         verifyNoMoreInteractions(mockProxy);
     }
 
+
+    @Test
+    public void shouldLogoutOnLowSequenceNumber()
+    {
+        session().state(ACTIVE);
+        session().lastReceivedMsgSeqNum(2);
+
+        session().onMessage(1);
+        verify(mockProxy).lowSequenceNumberLogout(1, 3, 1);
+        awaitingLogout();
+    }
+
     public void verifyDisconnect()
     {
         verify(mockProxy).disconnect(CONNECTION_ID);
@@ -51,6 +62,11 @@ public abstract class AbstractSessionTest
     public void verifyLogoutStarted()
     {
         verifyLogout();
+        awaitingLogout();
+    }
+
+    public void awaitingLogout()
+    {
         assertState(AWAITING_LOGOUT);
     }
 
