@@ -52,16 +52,16 @@ public final class AcceptorSession extends Session
         final Object sessionKey,
         final long sendingTime)
     {
+        id(sessionId);
+        this.sessionKey = sessionKey;
+        proxy.setupSession(sessionId, sessionKey);
+
         if (state() == CONNECTED)
         {
             if (!validateHeartbeat(heartbeatInterval))
             {
                 return;
             }
-
-            id(sessionId);
-            this.sessionKey = sessionKey;
-            proxy.setupSession(sessionId, sessionKey);
 
             final int expectedSeqNo = expectedReceivedSeqNum();
             if (expectedSeqNo == msgSeqNo)

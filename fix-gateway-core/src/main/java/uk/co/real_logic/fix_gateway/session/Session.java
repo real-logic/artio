@@ -220,13 +220,13 @@ public class Session
     void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId, final Object sessionKey, long sendingTime)
     {
         this.sessionKey = sessionKey;
+        proxy.setupSession(sessionId, sessionKey);
         if (validateHeartbeat(heartbeatInterval) && validateSendingTime(sendingTime))
         {
             id(sessionId);
             heartbeatIntervalInS(heartbeatInterval);
             onMessage(msgSeqNo);
             publication.saveConnect(connectionId, sessionId);
-            proxy.setupSession(sessionId, sessionKey);
         }
     }
 
