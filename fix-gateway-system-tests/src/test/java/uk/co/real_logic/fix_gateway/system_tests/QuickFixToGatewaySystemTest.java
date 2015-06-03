@@ -50,7 +50,7 @@ public class QuickFixToGatewaySystemTest
     {
         final int port = unusedPort();
         mediaDriver = launchMediaDriver();
-        acceptingGateway = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID);
+        acceptingGateway = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID);
         socketInitiator = launchQuickFixInitiator(port, initiator);
         awaitQuickFixLogon();
         acceptedSession = acceptingSessionHandler.session();

@@ -20,4 +20,9 @@ import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 public interface AuthenticationStrategy
 {
     boolean authenticate(final LogonDecoder logon);
+
+    default AuthenticationStrategy and(AuthenticationStrategy other)
+    {
+        return logon -> authenticate(logon) && other.authenticate(logon);
+    }
 }

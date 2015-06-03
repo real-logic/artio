@@ -267,7 +267,7 @@ public class Session
         else
         {
             sendLogout();
-            state(DRAINING);
+            disconnect();
         }
     }
 

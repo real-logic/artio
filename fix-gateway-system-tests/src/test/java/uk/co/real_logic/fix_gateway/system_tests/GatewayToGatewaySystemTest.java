@@ -50,7 +50,7 @@ public class GatewayToGatewaySystemTest
         final int port = unusedPort();
         mediaDriver = launchMediaDriver();
         initiatingGateway = launchInitiatingGateway(initiatingSessionHandler);
-        acceptingGateway = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID);
+        acceptingGateway = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID);
         initiatedSession = initiate(initiatingGateway, port, INITIATOR_ID, ACCEPTOR_ID);
         acceptingSession = acceptingSessionHandler.session();
     }

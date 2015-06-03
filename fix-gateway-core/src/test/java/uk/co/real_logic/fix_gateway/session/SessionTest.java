@@ -44,7 +44,8 @@ public class SessionTest extends AbstractSessionTest
 
         session.onLogout(1);
 
-        verifyLogoutAcknowledged();
+        verifyLogout();
+        verifyDisconnect();
     }
 
     @Test

@@ -13,7 +13,9 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.auth.CompIdAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.auth.SenderIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
@@ -21,6 +23,7 @@ import uk.co.real_logic.fix_gateway.session.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.hamcrest.Matchers.*;
@@ -150,12 +153,16 @@ public final class SystemTestUtil
     public static FixGateway launchAcceptingGateway(
         final int port,
         final NewSessionHandler sessionHandler,
-        final String acceptorId)
+        final String acceptorId,
+        final String initiatorId)
     {
+        final AuthenticationStrategy authenticationStrategy = new CompIdAuthenticationStrategy(acceptorId)
+                .and(new SenderIdAuthenticationStrategy(Arrays.asList(initiatorId)));
+
         final StaticConfiguration acceptingConfig = new StaticConfiguration()
             .bind("localhost", port)
             .aeronChannel("udp://localhost:" + unusedPort())
-            .authenticationStrategy(new CompIdAuthenticationStrategy(acceptorId))
+            .authenticationStrategy(authenticationStrategy)
             .newSessionHandler(sessionHandler)
             .counterBuffersFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + "counters")
             .logFileDir("acceptor-logs");

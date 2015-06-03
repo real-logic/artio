@@ -70,13 +70,7 @@ public abstract class AbstractSessionTest
         assertState(AWAITING_LOGOUT);
     }
 
-    public void verifyLogoutAcknowledged()
-    {
-        verifyLogout();
-        assertState(DRAINING);
-    }
-
-    private void verifyLogout()
+    public void verifyLogout()
     {
         verify(mockProxy).logout(anyInt());
     }
