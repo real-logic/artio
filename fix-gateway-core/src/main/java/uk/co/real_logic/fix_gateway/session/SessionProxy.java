@@ -173,7 +173,12 @@ public class SessionProxy
         logout(msgSeqNo, SESSION_REJECT_REASONS[reason.ordinal()]);
     }
 
-    public void heartbeat(final String testReqId, final int msgSeqNo)
+    public void heartbeat(final int msgSeqNo)
+    {
+        heartbeat(null, 0, msgSeqNo);
+    }
+
+    public void heartbeat(final char[] testReqId, final int testReqIdLength, final int msgSeqNo)
     {
         final HeaderEncoder header = heartbeat.header();
         setupHeader(header);
@@ -181,7 +186,7 @@ public class SessionProxy
 
         if (testReqId != null)
         {
-            heartbeat.testReqID(testReqId);
+            heartbeat.testReqID(testReqId, testReqIdLength);
         }
         send(heartbeat.encode(string, 0), HeartbeatDecoder.MESSAGE_TYPE);
     }

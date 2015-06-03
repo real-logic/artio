@@ -39,9 +39,9 @@ public class SessionParserTest
     public void shouldNotifySessionOfMissingMsgSeqNum()
     {
         final UnsafeBuffer buffer = new UnsafeBuffer(
-            "8=FIX.4.4\00135=1\00149=TW\00152=00000101-00:00:00.000\00156=ISLD\001112=TEST\001".getBytes(US_ASCII));
+            "8=FIX.4.4\00135=B\00149=TW\00152=00000101-00:00:00.000\00156=ISLD\001112=TEST\001".getBytes(US_ASCII));
 
-        parser.onMessage(buffer, 0, buffer.capacity(), '1');
+        parser.onMessage(buffer, 0, buffer.capacity(), 'B');
 
         verify(mockSession).onMessage(MISSING_INT);
     }

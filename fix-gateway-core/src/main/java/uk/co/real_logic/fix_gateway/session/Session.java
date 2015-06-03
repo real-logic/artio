@@ -125,7 +125,7 @@ public class Session
 
         if (time >= nextRequiredHeartbeatTimeInMs)
         {
-            proxy.heartbeat(null, newSentSeqNum());
+            proxy.heartbeat(newSentSeqNum());
             nextRequiredHeartbeatTimeInMs += sendingHeartbeatIntervalInMs;
             actions++;
         }
@@ -271,9 +271,10 @@ public class Session
         }
     }
 
-    void onTestRequest(final String testReqId)
+    void onTestRequest(final char[] testReqId, final int testReqIdLength, final int msgSeqNo)
     {
-        proxy.heartbeat(testReqId, newSentSeqNum());
+        proxy.heartbeat(testReqId, testReqIdLength, newSentSeqNum());
+        onMessage(msgSeqNo);
     }
 
     void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)

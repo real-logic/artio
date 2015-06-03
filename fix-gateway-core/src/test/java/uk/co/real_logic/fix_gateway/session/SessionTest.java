@@ -60,12 +60,14 @@ public class SessionTest extends AbstractSessionTest
     @Test
     public void shouldReplyToTestRequestsWithAHeartbeat()
     {
+        final char[] testReqId = "ABC".toCharArray();
+        final int testReqIdLength = testReqId.length;
+
         session.id(SESSION_ID);
 
-        // TODO: figure out the correct String type here
-        session.onTestRequest("ABC");
+        session.onTestRequest(testReqId, testReqIdLength, 1);
 
-        verify(mockProxy).heartbeat("ABC", 1);
+        verify(mockProxy).heartbeat(testReqId, testReqIdLength, 1);
     }
 
     @Test
@@ -276,7 +278,7 @@ public class SessionTest extends AbstractSessionTest
 
         session.poll(fakeClock.time());
 
-        verify(mockProxy).heartbeat(null, msgSeqNo);
+        verify(mockProxy).heartbeat(msgSeqNo);
         reset(mockProxy);
     }
 

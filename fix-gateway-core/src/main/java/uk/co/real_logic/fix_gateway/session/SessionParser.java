@@ -29,6 +29,7 @@ public class SessionParser
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
     private final LogoutDecoder logout = new LogoutDecoder();
     private final RejectDecoder reject = new RejectDecoder();
+    private final TestRequestDecoder testRequest = new TestRequestDecoder();
     private final HeaderDecoder header = new HeaderDecoder();
 
     private final Session session;
@@ -91,6 +92,13 @@ public class SessionParser
                 reject.decode(string, offset, length);
                 // TODO
                 session.onReject();
+                break;
+
+            case TestRequestDecoder.MESSAGE_TYPE:
+                testRequest.reset();
+                testRequest.decode(string, offset, length);
+                final int msgSeqNo = testRequest.header().msgSeqNum();
+                session.onTestRequest(testRequest.testReqID(), testRequest.testReqIDLength(), msgSeqNo);
                 break;
 
             default:
