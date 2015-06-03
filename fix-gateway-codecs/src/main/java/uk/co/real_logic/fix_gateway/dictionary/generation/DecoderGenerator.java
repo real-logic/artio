@@ -314,7 +314,7 @@ public class DecoderGenerator extends Generator
             "        while (position < end)\n" +
             "        {\n" +
             "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
-            "            tag = buffer.getInt(position, equalsPosition);\n" +
+            "            tag = buffer.getNatural(position, equalsPosition);\n" +
             endGroupCheck +
             "            final int valueOffset = equalsPosition + 1;\n" +
             "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
