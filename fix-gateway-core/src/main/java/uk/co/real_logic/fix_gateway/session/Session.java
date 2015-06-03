@@ -323,9 +323,10 @@ public class Session
         }
     }
 
-    void onReject()
+    void onReject(final int msgSeqNo)
     {
         // TODO:
+        onMessage(msgSeqNo);
     }
 
     public boolean onBeginString(final char[] value, final int length)

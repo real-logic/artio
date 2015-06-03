@@ -90,8 +90,7 @@ public class SessionParser
             case RejectDecoder.MESSAGE_TYPE:
                 reject.reset();
                 reject.decode(string, offset, length);
-                // TODO
-                session.onReject();
+                session.onReject(reject.header().msgSeqNum());
                 break;
 
             case TestRequestDecoder.MESSAGE_TYPE:
