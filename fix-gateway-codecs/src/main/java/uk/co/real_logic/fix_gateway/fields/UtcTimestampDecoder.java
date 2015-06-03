@@ -59,14 +59,14 @@ public final class UtcTimestampDecoder
         final int startMillisecond = endSecond + 1;
         final int endMillisecond = startMillisecond + 3;
 
-        final int year = timestamp.getInt(offset, endYear);
+        final int year = timestamp.getNatural(offset, endYear);
         final int month = getValidInt(timestamp, endYear, endMonth, 1, 12);
         final int day = getValidInt(timestamp, endMonth, endDay, 1, 31);
 
         final int hour = getValidInt(timestamp, startHour, endHour, 0, 23);
         final int minute = getValidInt(timestamp, startMinute, endMinute, 0, 59);
         final int second = getValidInt(timestamp, startSecond, endSecond, 0, 60);
-        final int millisecond = length > endSecond ? timestamp.getInt(startMillisecond, endMillisecond) : 0;
+        final int millisecond = length > endSecond ? timestamp.getNatural(startMillisecond, endMillisecond) : 0;
 
         final int secondOfDay = hour * SECONDS_IN_HOUR + minute * SECONDS_IN_MINUTE + second;
 

@@ -30,6 +30,7 @@ public class AsciiFlyweight
 {
     public static final int UNKNOWN_INDEX = -1;
     public static final byte YES = 'Y';
+    public static final byte NEGATIVE = '-';
 
     private DirectBuffer buffer;
 
@@ -48,12 +49,34 @@ public class AsciiFlyweight
         this.buffer = buffer;
     }
 
-    public int getInt(final int startInclusive, final int endExclusive)
+    public int getNatural(final int startInclusive, final int endExclusive)
     {
         int tally = 0;
         for (int index = startInclusive; index < endExclusive; index++)
         {
             tally = (tally * 10) + getDigit(index);
+        }
+
+        return tally;
+    }
+
+    public int getInt(int startInclusive, final int endExclusive)
+    {
+        final byte first = buffer.getByte(startInclusive);
+        if (first == NEGATIVE)
+        {
+            startInclusive++;
+        }
+
+        int tally = 0;
+        for (int index = startInclusive; index < endExclusive; index++)
+        {
+            tally = (tally * 10) + getDigit(index);
+        }
+
+        if (first == NEGATIVE)
+        {
+            tally *= -1;
         }
 
         return tally;

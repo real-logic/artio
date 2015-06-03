@@ -49,7 +49,7 @@ final class CalendricalUtil
         final int min,
         final int max)
     {
-        final int value = timestamp.getInt(startInclusive, endExclusive);
+        final int value = timestamp.getNatural(startInclusive, endExclusive);
         if (value < min || value > max)
         {
             throw new IllegalArgumentException(format("Invalid value: %s outside of range %d-%d", value, min, max));

@@ -83,7 +83,7 @@ public class AsciiFlyweightTest
     public void shouldGetIntegerValuesAtSpecifiedOffset()
     {
         when:
-        value = string.getInt(16, 19);
+        value = string.getNatural(16, 19);
 
         then:
         assertEquals(145, value);
@@ -113,6 +113,19 @@ public class AsciiFlyweightTest
 
         then:
         assertEquals(103, value);
+    }
+
+    @Test
+    public void shouldDecodeNegativeIntegers()
+    {
+        given:
+        putAscii("-1");
+
+        when:
+        value = string.getInt(0, 2);
+
+        then:
+        assertEquals(-1, value);
     }
 
     private void putAscii(final String value)

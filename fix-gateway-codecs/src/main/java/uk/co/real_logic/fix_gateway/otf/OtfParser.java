@@ -111,7 +111,7 @@ public final class OtfParser
                 return position;
             }
 
-            tag = string.getInt(position, equalsPosition);
+            tag = string.getNatural(position, equalsPosition);
             final int valueOffset = equalsPosition + 1;
             final int endOfField = string.scan(valueOffset, end, START_OF_HEADER);
             if (!validatePosition(endOfField, acceptor))
@@ -171,7 +171,7 @@ public final class OtfParser
         final int end,
         final IntHashSet groupFields)
     {
-        final int numberOfElements = string.getInt(valueOffset, endOfField);
+        final int numberOfElements = string.getNatural(valueOffset, endOfField);
 
         acceptor.onGroupHeader(tag, numberOfElements);
 
@@ -202,7 +202,7 @@ public final class OtfParser
     {
         if (tag == CHECKSUM)
         {
-            checksum = string.getInt(valueOffset, endOfField);
+            checksum = string.getNatural(valueOffset, endOfField);
             checksumOffset = equalsPosition - 2;
         }
         else if (tag == MESSAGE_TYPE)

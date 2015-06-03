@@ -196,7 +196,7 @@ public class ReceiverEndPoint
 
     private int getBodyLength(final int offset, final int endOfBodyLength)
     {
-        return string.getInt(offset + START_OF_BODY_LENGTH, endOfBodyLength);
+        return string.getNatural(offset + START_OF_BODY_LENGTH, endOfBodyLength);
     }
 
     private boolean invalidBodyLengthTag(final int offset)

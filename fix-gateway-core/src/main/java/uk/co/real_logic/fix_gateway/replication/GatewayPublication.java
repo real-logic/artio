@@ -83,7 +83,7 @@ public class GatewayPublication
 
         bufferClaim.commit();
 
-        DebugLogger.log("Enqueued %s\n", destBuffer, offset, framedLength);
+        DebugLogger.log("Enqueued %s\n", srcBuffer, srcOffset, srcLength);
     }
 
     public void saveConnect(final long connectionId, final long sessionId)
