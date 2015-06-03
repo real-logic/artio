@@ -41,7 +41,6 @@ public abstract class AbstractSessionTest
         verifyNoMoreInteractions(mockProxy);
     }
 
-
     @Test
     public void shouldLogoutOnLowSequenceNumber()
     {

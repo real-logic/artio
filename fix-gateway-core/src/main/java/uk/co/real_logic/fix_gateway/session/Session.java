@@ -230,7 +230,7 @@ public class Session
         }
     }
 
-    private boolean validateSendingTime(final long sendingTime)
+    protected boolean validateSendingTime(final long sendingTime)
     {
         final long time = time();
         final boolean isValid = sendingTime < (time + sendingTimeWindow) && sendingTime > (time - sendingTimeWindow);

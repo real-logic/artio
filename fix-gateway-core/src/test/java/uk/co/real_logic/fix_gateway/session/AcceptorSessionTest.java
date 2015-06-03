@@ -19,6 +19,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.verify;
+import static uk.co.real_logic.fix_gateway.SessionRejectReason.SENDINGTIME_ACCURACY_PROBLEM;
 import static uk.co.real_logic.fix_gateway.session.SessionState.*;
 
 public class AcceptorSessionTest extends AbstractSessionTest
@@ -63,6 +64,18 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
         verifyDisconnect();
         verifyNoFurtherMessages();
+    }
+
+    // See http://www.fixtradingcommunity.org/pg/discussions/topicpost/164720/fix-4x-sessionlevel-protocol-tests
+    // 1d_InvalidLogonBadSendingTime.def
+    @Test
+    public void shouldDisconnectIfInvalidSendingTimeAtLogon()
+    {
+        fakeClock.advanceMilliSeconds(2 * SENDING_TIME_WINDOW);
+
+        session().onLogon(HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1);
+
+        verify(mockProxy).rejectWhilstNotLoggedOn(1, SENDINGTIME_ACCURACY_PROBLEM);
     }
 
     protected Session session()

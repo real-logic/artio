@@ -58,7 +58,7 @@ public final class AcceptorSession extends Session
 
         if (state() == CONNECTED)
         {
-            if (!validateHeartbeat(heartbeatInterval))
+            if (!validateHeartbeat(heartbeatInterval) || !validateSendingTime(sendingTime))
             {
                 return;
             }
