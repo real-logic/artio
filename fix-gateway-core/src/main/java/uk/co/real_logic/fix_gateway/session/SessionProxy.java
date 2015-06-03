@@ -45,6 +45,7 @@ public class SessionProxy
         {
             final SessionRejectReason reason = reasons[i];
             SESSION_REJECT_REASONS[i] = String.format(
+                // TODO: try to understand the formatting here
                 "Tried to send a reject while not logged on: %s (field 0)",
                 reason.name().replace('_', ' ').toLowerCase()
             ).getBytes(US_ASCII);

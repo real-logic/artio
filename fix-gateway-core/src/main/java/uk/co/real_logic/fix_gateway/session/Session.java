@@ -238,6 +238,7 @@ public class Session
         if (!isValid)
         {
             proxy.rejectWhilstNotLoggedOn(newSentSeqNum(), SENDINGTIME_ACCURACY_PROBLEM);
+            disconnect();
         }
 
         return isValid;
