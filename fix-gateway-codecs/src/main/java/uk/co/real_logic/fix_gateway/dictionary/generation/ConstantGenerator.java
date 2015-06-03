@@ -84,9 +84,11 @@ public class ConstantGenerator
     private String generateIntConstant(final String name, final int number)
     {
         return String.format(
-            "    public static final int %s = %d;\n\n",
-            constantName(name),
-            number);
+            "    /** In Ascii - %1$s */\n" +
+            "    public static final int %3$s = %2$d;\n\n",
+            (char) number,
+            number,
+            constantName(name));
     }
 
     private String constantName(String name)
