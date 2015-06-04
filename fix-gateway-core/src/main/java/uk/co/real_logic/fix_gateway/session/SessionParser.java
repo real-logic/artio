@@ -20,9 +20,10 @@ import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
+import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN_ID;
+
 public class SessionParser
 {
-    public static final long UNKNOWN_SESSION_ID = -1;
 
     private final AsciiFlyweight string = new AsciiFlyweight();
     private final LogonDecoder logon = new LogonDecoder();
@@ -69,6 +70,7 @@ public class SessionParser
                     final HeaderDecoder header = logon.header();
                     final Object sessionKey = sessionIdStrategy.onAcceptorLogon(header);
                     sessionId = sessionIds.onLogon(sessionKey);
+
                     if (session.onBeginString(header.beginString(), header.beginStringLength()))
                     {
                         session.onLogon(
@@ -113,7 +115,7 @@ public class SessionParser
         }
         else
         {
-            return UNKNOWN_SESSION_ID;
+            return UNKNOWN_ID;
         }
     }
 

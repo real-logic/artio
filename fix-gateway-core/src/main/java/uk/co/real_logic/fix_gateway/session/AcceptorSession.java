@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
+import uk.co.real_logic.agrona.collections.LongHashSet;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -22,6 +23,8 @@ import static uk.co.real_logic.fix_gateway.session.SessionState.CONNECTED;
 
 public final class AcceptorSession extends Session
 {
+
+    private final LongHashSet acceptedSessions;
 
     public AcceptorSession(
         final int defaultInterval,
@@ -31,7 +34,9 @@ public final class AcceptorSession extends Session
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
         final char[] beginString,
-        final long sendingTimeWindow)
+        final long sendingTimeWindow,
+        final SessionIds sessionIds,
+        final LongHashSet acceptedSessions)
     {
         super(
             defaultInterval,
@@ -42,7 +47,9 @@ public final class AcceptorSession extends Session
             publication,
             sessionIdStrategy,
             beginString,
-            sendingTimeWindow);
+            sendingTimeWindow,
+            sessionIds);
+        this.acceptedSessions = acceptedSessions;
     }
 
     public void onLogon(
@@ -55,6 +62,12 @@ public final class AcceptorSession extends Session
         id(sessionId);
         this.sessionKey = sessionKey;
         proxy.setupSession(sessionId, sessionKey);
+
+        if (!acceptedSessions.add(sessionId))
+        {
+            disconnect();
+            return;
+        }
 
         if (state() == CONNECTED)
         {

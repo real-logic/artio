@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
 public class SessionIdsTest
@@ -27,6 +28,12 @@ public class SessionIdsTest
     public void sessionIdsAreUnique()
     {
         assertNotEquals(sessionIds.onLogon("a"), sessionIds.onLogon("b"));
+    }
+
+    @Test
+    public void duplicateSessionsReturnSameId()
+    {
+        assertEquals(sessionIds.onLogon("a"), sessionIds.onLogon("a"));
     }
 
 }

@@ -15,33 +15,24 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class SessionIds
 {
-    private static AtomicLong counter = new AtomicLong(0);
+    private static final AtomicLong COUNTER = new AtomicLong(0);
 
     private final Map<Object, Long> compositeToSurrogate = new HashMap<>();
-    private final Long2ObjectHashMap<Object> surrogateToComposite = new Long2ObjectHashMap<>();
 
     public long onLogon(final Object compositeKey)
     {
-        return compositeToSurrogate.computeIfAbsent(compositeKey, key ->
-        {
-            final long newSurrogateKey = counter.getAndIncrement();
-            surrogateToComposite.put(newSurrogateKey, key);
-            return newSurrogateKey;
-        });
+        return compositeToSurrogate.computeIfAbsent(compositeKey, key -> COUNTER.getAndIncrement());
     }
 
-    public void put(final Object compositeId, final long surrogateId)
+    public void onDisconnect(final Object compositeKey)
     {
-        compositeToSurrogate.put(compositeId, surrogateId);
-        surrogateToComposite.put(surrogateId, compositeId);
+        compositeToSurrogate.remove(compositeKey);
     }
 
 }

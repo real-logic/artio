@@ -34,7 +34,7 @@ import java.util.function.ToIntFunction;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.session.SessionParser.UNKNOWN_SESSION_ID;
+import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN_ID;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
 public class ReceiverEndPointTest
@@ -144,7 +144,7 @@ public class ReceiverEndPointTest
     public void shouldOnlyFrameMessagesWhenConnected()
     {
         given:
-        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyInt())).thenReturn(UNKNOWN_SESSION_ID);
+        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyInt())).thenReturn(UNKNOWN_ID);
         theEndpointReceivesACompleteMessage();
 
         when:

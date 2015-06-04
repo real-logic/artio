@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import uk.co.real_logic.agrona.collections.LongHashSet;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
 import uk.co.real_logic.fix_gateway.framer.SenderEndPoint;
@@ -34,6 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ConnectionHandler
 {
     private final AtomicLong idSource = new AtomicLong(0);
+    private final LongHashSet acceptedSessions = new LongHashSet(40, -1);
 
     private final MilliClock clock;
     private final StaticConfiguration configuration;
@@ -89,7 +91,7 @@ public class ConnectionHandler
         final int defaultInterval = configuration.defaultHeartbeatInterval();
         return new AcceptorSession(
             defaultInterval, nextConnectionId(), clock, sessionProxy(), publication, sessionIdStrategy,
-            configuration.beginString(), configuration.sendingTimeWindow());
+            configuration.beginString(), configuration.sendingTimeWindow(), sessionIds, acceptedSessions);
     }
 
     public Session initiateSession(final FixGateway gateway, final SessionConfiguration sessionConfiguration)
@@ -109,7 +111,8 @@ public class ConnectionHandler
             gateway,
             sessionId,
             configuration.beginString(),
-            configuration.sendingTimeWindow());
+            configuration.sendingTimeWindow(),
+            sessionIds);
     }
 
     private SessionProxy sessionProxy()

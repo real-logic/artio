@@ -29,6 +29,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
+import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN_ID;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
 /**
@@ -169,7 +170,7 @@ public class ReceiverEndPoint
                 final int messageType = getMessageType(endOfBodyLength, indexOfLastByteOfMessage);
                 final int length = (indexOfLastByteOfMessage + 1) - offset;
                 final long sessionId = session.onMessage(buffer, offset, length, messageType);
-                if (sessionId != SessionParser.UNKNOWN_SESSION_ID)
+                if (sessionId != UNKNOWN_ID)
                 {
                     publication.saveMessage(buffer, offset, length, sessionId, messageType);
                 }

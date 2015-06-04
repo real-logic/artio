@@ -49,6 +49,7 @@ public class Session
     protected final MutableAsciiFlyweight string;
     private final char[] expectedBeginString;
     private final long sendingTimeWindow;
+    private final SessionIds sessionIds;
     protected Object sessionKey;
 
     private SessionState state;
@@ -70,9 +71,10 @@ public class Session
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
         final char[] expectedBeginString,
-        final long sendingTimeWindow)
+        final long sendingTimeWindow,
+        final SessionIds sessionIds)
     {
-        this.sendingTimeWindow = sendingTimeWindow;
+        Verify.notNull(sessionIds, "sessionIds");
         Verify.notNull(clock, "clock");
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
@@ -85,6 +87,8 @@ public class Session
         this.publication = publication;
         this.sessionIdStrategy = sessionIdStrategy;
         this.expectedBeginString = expectedBeginString;
+        this.sendingTimeWindow = sendingTimeWindow;
+        this.sessionIds = sessionIds;
 
         buffer = new UnsafeBuffer(new byte[8 * 1024]);
         string = new MutableAsciiFlyweight(buffer);
@@ -151,6 +155,7 @@ public class Session
 
     public void disconnect()
     {
+        sessionIds.onDisconnect(sessionKey);
         proxy.disconnect(connectionId);
         state(DISCONNECTED);
     }

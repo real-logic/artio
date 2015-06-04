@@ -35,7 +35,8 @@ public class InitiatorSession extends Session
         final FixGateway gateway,
         final long sessionId,
         final char[] beginString,
-        final long sendingTimeWindow)
+        final long sendingTimeWindow,
+        final SessionIds sessionIds)
     {
         super(
             heartbeatInterval,
@@ -46,7 +47,8 @@ public class InitiatorSession extends Session
             publication,
             sessionIdStrategy,
             beginString,
-            sendingTimeWindow);
+            sendingTimeWindow,
+            sessionIds);
         this.gateway = gateway;
         id(sessionId);
     }
