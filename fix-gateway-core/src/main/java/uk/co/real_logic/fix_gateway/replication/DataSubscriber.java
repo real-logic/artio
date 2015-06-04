@@ -31,8 +31,12 @@ public class DataSubscriber implements DataHandler
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
+    private final SessionHandler sessionHandler;
 
-    private SessionHandler sessionHandler;
+    public DataSubscriber(final SessionHandler sessionHandler)
+    {
+        this.sessionHandler = sessionHandler;
+    }
 
     public void onData(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
@@ -65,11 +69,5 @@ public class DataSubscriber implements DataHandler
                 break;
             }
         }
-    }
-
-    public DataSubscriber sessionHandler(final SessionHandler sessionHandler)
-    {
-        this.sessionHandler = sessionHandler;
-        return this;
     }
 }

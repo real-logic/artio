@@ -52,7 +52,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
 
     private final PossDupFinder acceptor = new PossDupFinder();
     private final OtfParser parser = new OtfParser(acceptor, new IntDictionary());
-    private final DataSubscriber dataSubscriber = new DataSubscriber();
+    private final DataSubscriber dataSubscriber = new DataSubscriber(this);
 
     public Replayer(
         final Subscription subscription,
@@ -66,7 +66,6 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         this.publication = publication;
         this.claim = claim;
         this.idleStrategy = idleStrategy;
-        dataSubscriber.sessionHandler(this);
     }
 
     public void onMessage(final DirectBuffer srcBuffer,

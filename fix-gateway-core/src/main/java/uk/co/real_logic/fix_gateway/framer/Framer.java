@@ -50,7 +50,7 @@ public class Framer implements Agent
     private final Consumer<FramerCommand> onCommandFunc = this::onCommand;
     private final List<Session> sessions = new ArrayList<>();
     private final List<ReceiverEndPoint> receiverEndPoints = new ArrayList<>();
-    private final DataSubscriber dataSubscriber = new DataSubscriber();
+    private final DataSubscriber dataSubscriber;
 
     private final ServerSocketChannel listeningChannel;
     private final MilliClock clock;
@@ -78,6 +78,7 @@ public class Framer implements Agent
         this.multiplexer = multiplexer;
         this.gateway = gateway;
         this.dataSubscription = dataSubscription;
+        dataSubscriber = new DataSubscriber(multiplexer);
 
         try
         {
@@ -91,8 +92,6 @@ public class Framer implements Agent
         {
             throw new IllegalArgumentException(ex);
         }
-
-        dataSubscriber.sessionHandler(multiplexer);
     }
 
     @Override

@@ -14,7 +14,7 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
 {
 
     private final OtfParser parser;
-    private final DataSubscriber subscriber = new DataSubscriber();
+    private final DataSubscriber subscriber = new DataSubscriber(this);
 
     private Session session;
     private Subscription subscription;
@@ -50,7 +50,6 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
     {
         this.session = session;
         this.subscription = subscription;
-        subscriber.sessionHandler(this);
     }
 
     public Subscription subscription()
