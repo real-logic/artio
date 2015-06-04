@@ -20,7 +20,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 public final class TestMessages
 {
     // BUY 100 CVS MKT DAY
-    public static final byte[] EG_MESSAGE = toAscii("8=FIX.4.2\0019=145\00135=D\00134=4\00149=ABC_DEFG01\001" +
+    public static final byte[] EG_MESSAGE = toAscii("8=FIX.4.2\0019=146\00135=D\00134=4\00149=ABC_DEFG01\001" +
             "52=20090323-15:40:29\00156=CCG\001115=XYZ\00111=NF 0542/03232009\00154=1\00138=100\00155=CVS\00140=1" +
             "\00159=0\00147=A\00160=20090323-15:40:29\00121=1\001207=N\00110=194\001");
 
@@ -69,6 +69,9 @@ public final class TestMessages
                         "79=bob\001467=10\001366=4\001" +
                         "79=sally\001467=11\001366=5\001" +
                 "11=order-2\00167=2\00155=AOL\00154=2\00138=1000\00140=1\001");
+
+    public static final byte[] INVALID_LENGTH = toAscii(
+        "8=FIX.4.4\0019=40\00135=A\00134=1\00149=TW\00152=20150604-12:46:54\00156=ISLD\00198=0\001108=30\001");
 
     public static final int NO_ORDERS = 73;
     public static final int NO_ALLOCS = 78;

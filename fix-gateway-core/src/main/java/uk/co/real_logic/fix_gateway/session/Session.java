@@ -212,7 +212,7 @@ public class Session
             else if (expectedSeqNo > msgSeqNo)
             {
                 proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedSeqNo, msgSeqNo);
-                awaitLogout();
+                disconnect();
             }
         }
     }
@@ -249,7 +249,7 @@ public class Session
         if (heartbeatInterval < 0)
         {
             proxy.negativeHeartbeatLogout(newSentSeqNum());
-            state(DRAINING);
+            disconnect();
             return false;
         }
         else
@@ -274,7 +274,10 @@ public class Session
 
     void onTestRequest(final char[] testReqId, final int testReqIdLength, final int msgSeqNo)
     {
-        proxy.heartbeat(testReqId, testReqIdLength, newSentSeqNum());
+        if (msgSeqNo != MISSING_INT)
+        {
+            proxy.heartbeat(testReqId, testReqIdLength, newSentSeqNum());
+        }
         onMessage(msgSeqNo);
     }
 

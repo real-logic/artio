@@ -209,7 +209,7 @@ public class SessionTest extends AbstractSessionTest
     {
         onLogon(0);
 
-        heartbeatSentAfterInterval(2);
+        heartbeatSentAfterInterval(3);
     }
 
     @Test
@@ -218,7 +218,7 @@ public class SessionTest extends AbstractSessionTest
         session().onLogon(1, 0, SESSION_ID, null, fakeClock.time());
         session().onMessage(0);
 
-        heartbeatSentAfterInterval(1, 3);
+        heartbeatSentAfterInterval(1, 4);
     }
 
     @Test
@@ -226,11 +226,11 @@ public class SessionTest extends AbstractSessionTest
     {
         onLogon(0);
 
-        heartbeatSentAfterInterval(2);
+        heartbeatSentAfterInterval(3);
 
         heartbeatSentAfterInterval(4);
 
-        heartbeatSentAfterInterval(5);
+        heartbeatSentAfterInterval(6);
     }
 
     @Test

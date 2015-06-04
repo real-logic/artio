@@ -41,6 +41,11 @@ public class ReceiverEndPoint
     private static final int COMMON_PREFIX_LENGTH = "8=FIX.4.2 ".length();
     private static final int START_OF_BODY_LENGTH = COMMON_PREFIX_LENGTH + 2;
 
+    private static final byte CHECKSUM0 = 1;
+    private static final byte CHECKSUM1 = (byte) '1';
+    private static final byte CHECKSUM2 = (byte) '0';
+    private static final byte CHECKSUM3 = (byte) '=';
+
     private static final int MIN_CHECKSUM_SIZE = " 10=".length() + 1;
     public static final int DISCONNECTED = -1;
 
@@ -145,7 +150,16 @@ public class ReceiverEndPoint
                 }
 
                 final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData, START_OF_HEADER);
-                final int indexOfLastByteOfMessage = findIndexOfLastByteOfMessage(offset, endOfBodyLength);
+                final int startOfChecksum = endOfBodyLength + getBodyLength(offset, endOfBodyLength);
+
+                if (!validateBodyLength(startOfChecksum))
+                {
+                    onDisconnect();
+                    break;
+                }
+
+                final int earliestChecksumEnd = startOfChecksum + MIN_CHECKSUM_SIZE;
+                final int indexOfLastByteOfMessage = string.scan(earliestChecksumEnd, usedBufferData, START_OF_HEADER);
                 if (indexOfLastByteOfMessage == UNKNOWN_INDEX)
                 {
                     // Need more data
@@ -178,6 +192,14 @@ public class ReceiverEndPoint
         moveRemainingDataToBufferStart(offset);
     }
 
+    private boolean validateBodyLength(final int startOfChecksum)
+    {
+        return buffer.getByte(startOfChecksum) == CHECKSUM0
+            && buffer.getByte(startOfChecksum + 1) == CHECKSUM1
+            && buffer.getByte(startOfChecksum + 2) == CHECKSUM2
+            && buffer.getByte(startOfChecksum + 3) == CHECKSUM3;
+    }
+
     private int getMessageType(final int endOfBodyLength, final int indexOfLastByteOfMessage)
     {
         final int start = string.scan(endOfBodyLength, indexOfLastByteOfMessage, '=');
@@ -186,12 +208,6 @@ public class ReceiverEndPoint
             string.getByte(start + 1);
         }
         return string.getMessageType(start + 1, 2);
-    }
-
-    private int findIndexOfLastByteOfMessage(int offset, int endOfBodyLength)
-    {
-        final int earliestChecksumEnd = endOfBodyLength + getBodyLength(offset, endOfBodyLength) + MIN_CHECKSUM_SIZE;
-        return string.scan(earliestChecksumEnd, usedBufferData, START_OF_HEADER);
     }
 
     private int getBodyLength(final int offset, final int endOfBodyLength)

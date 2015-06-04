@@ -49,7 +49,7 @@ public abstract class AbstractSessionTest
 
         session().onMessage(1);
         verify(mockProxy).lowSequenceNumberLogout(1, 3, 1);
-        awaitingLogout();
+        verifyDisconnect();
     }
 
     public void verifyDisconnect()

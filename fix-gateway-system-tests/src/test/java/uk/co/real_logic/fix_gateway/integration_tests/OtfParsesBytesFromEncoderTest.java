@@ -16,9 +16,7 @@
 package uk.co.real_logic.fix_gateway.integration_tests;
 
 import org.junit.experimental.theories.DataPoint;
-import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
-import org.junit.runner.RunWith;
 import org.mockito.InOrder;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
@@ -27,7 +25,6 @@ import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import static org.mockito.Mockito.inOrder;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.*;
 
-@RunWith(Theories.class)
 public class OtfParsesBytesFromEncoderTest extends AbstractOtfParserTest
 {
 

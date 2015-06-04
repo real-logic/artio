@@ -35,8 +35,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.session.SessionParser.UNKNOWN_SESSION_ID;
-import static uk.co.real_logic.fix_gateway.util.TestMessages.EG_MESSAGE;
-import static uk.co.real_logic.fix_gateway.util.TestMessages.MSG_LEN;
+import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
 public class ReceiverEndPointTest
 {
@@ -179,6 +178,28 @@ public class ReceiverEndPointTest
 
         then:
         verify(mockSession).disconnect();
+    }
+
+    @Test
+    public void shouldNotFrameGarbageMessage() throws IOException
+    {
+        given:
+        theEndpointReceivesAnInvalidMessage();
+
+        when:
+        endPoint.receiveData();
+
+        then:
+        handlerNotCalled();
+        verify(mockSession).disconnect();
+    }
+
+    // TODO: more garbage cases - Invalid checksum
+    // TODO: log not authenticated messages
+
+    private void theEndpointReceivesAnInvalidMessage()
+    {
+        theEndpointReceives(INVALID_LENGTH, 0, INVALID_LENGTH.length);
     }
 
     private void theChannelIsClosed() throws IOException
