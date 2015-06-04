@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
@@ -26,12 +27,13 @@ public class ReplicationAgent implements Agent
 
     private final Subscription dataSubscription;
     private final Subscription controlSubscription;
+    private final DataHandler onDataMessageFunc = this::onDataMessage;
 
     public ReplicationAgent(
         final ReplicationStreams replicationStreams)
     {
-        dataSubscription = replicationStreams.dataSubscription(this::onDataMessage);
-        controlSubscription = replicationStreams.controlSubscription(null);
+        dataSubscription = replicationStreams.dataSubscription();
+        controlSubscription = replicationStreams.controlSubscription();
     }
 
     private void onDataMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
@@ -41,7 +43,7 @@ public class ReplicationAgent implements Agent
 
     public int doWork() throws Exception
     {
-        return controlSubscription.poll(CONTROL_LIMIT);
+        return controlSubscription.poll(onDataMessageFunc, CONTROL_LIMIT);
     }
 
     public void onClose()

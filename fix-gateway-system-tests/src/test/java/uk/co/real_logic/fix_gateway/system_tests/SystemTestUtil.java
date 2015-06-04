@@ -6,7 +6,6 @@ import quickfix.field.BeginString;
 import quickfix.field.MsgType;
 import quickfix.field.SenderCompID;
 import quickfix.field.TargetCompID;
-import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -59,7 +58,7 @@ public final class SystemTestUtil
         assertEventuallyTrue("Failed to disconnect",
             () ->
             {
-                sessionHandler.subscription().poll(1);
+                sessionHandler.poll();
                 assertEquals(CONNECTION_ID, sessionHandler.connectionId());
             });
     }
@@ -80,9 +79,9 @@ public final class SystemTestUtil
     }
 
     public static void assertReceivedMessage(
-        final Subscription subscription, final FakeOtfAcceptor acceptor)
+        final FakeSessionHandler sessionHandler, final FakeOtfAcceptor acceptor)
     {
-        assertEventuallyEquals("Failed to receive a logon and test request message", 2, () -> subscription.poll(2));
+        assertEventuallyEquals("Failed to receive a logon and test request message", 2, sessionHandler::poll);
         assertEquals(2, acceptor.messageTypes().size());
         assertThat(acceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
     }

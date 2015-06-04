@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
 import uk.co.real_logic.fix_gateway.framer.SenderEndPoint;
-import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.session.*;
@@ -68,8 +67,7 @@ public class ConnectionHandler
         final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy, sessionIds,
             configuration.authenticationStrategy());
 
-        final DataSubscriber subscriber = new DataSubscriber();
-        configuration.newSessionHandler().onConnect(session, subscriber, inboundStreams.dataSubscription(subscriber));
+        configuration.newSessionHandler().onConnect(session, inboundStreams.dataSubscription());
 
         return new ReceiverEndPoint(
             channel,

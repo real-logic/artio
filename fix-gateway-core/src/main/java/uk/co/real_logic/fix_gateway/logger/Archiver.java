@@ -49,7 +49,7 @@ public class Archiver implements Agent, DataHandler
         this.bufferFactory = bufferFactory;
         this.metaData = metaData;
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
-        this.subscription = streams.dataSubscription(this);
+        this.subscription = streams.dataSubscription();
         streamIdToArchive = new IntLruCache<>(loggerCacheCapacity, StreamArchive::new);
     }
 
@@ -107,7 +107,7 @@ public class Archiver implements Agent, DataHandler
 
     public int doWork() throws Exception
     {
-        return subscription.poll(FRAGMENT_LIMIT);
+        return subscription.poll(this, FRAGMENT_LIMIT);
     }
 
     public String roleName()

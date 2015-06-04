@@ -14,6 +14,7 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
 {
 
     private final OtfParser parser;
+    private final DataSubscriber subscriber = new DataSubscriber();
 
     private Session session;
     private Subscription subscription;
@@ -45,7 +46,7 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
         return connectionId;
     }
 
-    public void onConnect(final Session session, final DataSubscriber subscriber, final Subscription subscription)
+    public void onConnect(final Session session, final Subscription subscription)
     {
         this.session = session;
         this.subscription = subscription;
@@ -60,5 +61,10 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
     public Session session()
     {
         return session;
+    }
+
+    public int poll()
+    {
+        return subscription.poll(subscriber, 1);
     }
 }

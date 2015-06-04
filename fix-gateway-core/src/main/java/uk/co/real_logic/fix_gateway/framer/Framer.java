@@ -22,6 +22,7 @@ import uk.co.real_logic.fix_gateway.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -49,6 +50,7 @@ public class Framer implements Agent
     private final Consumer<FramerCommand> onCommandFunc = this::onCommand;
     private final List<Session> sessions = new ArrayList<>();
     private final List<ReceiverEndPoint> receiverEndPoints = new ArrayList<>();
+    private final DataSubscriber dataSubscriber = new DataSubscriber();
 
     private final ServerSocketChannel listeningChannel;
     private final MilliClock clock;
@@ -89,6 +91,8 @@ public class Framer implements Agent
         {
             throw new IllegalArgumentException(ex);
         }
+
+        dataSubscriber.sessionHandler(multiplexer);
     }
 
     @Override
@@ -97,7 +101,7 @@ public class Framer implements Agent
         return commandQueue.drain(onCommandFunc) +
             pollSockets() +
             pollSessions() +
-            dataSubscription.poll(5);
+            dataSubscription.poll(dataSubscriber, 5);
     }
 
     private void onCommand(final FramerCommand command)

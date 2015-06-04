@@ -35,12 +35,12 @@ public class Indexer implements Agent, DataHandler
     public Indexer(final List<Index> indices, final ReplicationStreams streams)
     {
         this.indices = indices;
-        this.subscription = streams.dataSubscription(this);
+        this.subscription = streams.dataSubscription();
     }
 
     public int doWork() throws Exception
     {
-        return subscription.poll(LIMIT);
+        return subscription.poll(this, LIMIT);
     }
 
     @Override

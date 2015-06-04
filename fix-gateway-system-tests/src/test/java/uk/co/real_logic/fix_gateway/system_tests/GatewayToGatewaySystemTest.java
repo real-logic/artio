@@ -70,7 +70,7 @@ public class GatewayToGatewaySystemTest
     {
         sendTestRequest(initiatedSession);
 
-        assertReceivedMessage(acceptingSessionHandler.subscription(), acceptingOtfAcceptor);
+        assertReceivedMessage(acceptingSessionHandler, acceptingOtfAcceptor);
     }
 
     @Test
@@ -78,7 +78,7 @@ public class GatewayToGatewaySystemTest
     {
         sendTestRequest(acceptingSession);
 
-        assertReceivedMessage(initiatingSessionHandler.subscription(), initiatingOtfAcceptor);
+        assertReceivedMessage(initiatingSessionHandler, initiatingOtfAcceptor);
     }
 
     @Test

@@ -16,10 +16,9 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 
 @FunctionalInterface
 public interface NewSessionHandler
 {
-    void onConnect(Session session, DataSubscriber subscriber, Subscription subscription);
+    void onConnect(Session session, Subscription subscription);
 }

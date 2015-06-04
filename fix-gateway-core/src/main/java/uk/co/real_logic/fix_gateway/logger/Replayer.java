@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
+import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
@@ -51,6 +52,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
 
     private final PossDupFinder acceptor = new PossDupFinder();
     private final OtfParser parser = new OtfParser(acceptor, new IntDictionary());
+    private final DataSubscriber dataSubscriber = new DataSubscriber();
 
     public Replayer(
         final Subscription subscription,
@@ -64,6 +66,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         this.publication = publication;
         this.claim = claim;
         this.idleStrategy = idleStrategy;
+        dataSubscriber.sessionHandler(this);
     }
 
     public void onMessage(final DirectBuffer srcBuffer,
@@ -174,7 +177,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
 
     public int doWork() throws Exception
     {
-        return subscription.poll(POLL_LIMIT);
+        return subscription.poll(dataSubscriber, POLL_LIMIT);
     }
 
     public void onClose()

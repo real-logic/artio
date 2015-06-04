@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.replication;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 
@@ -67,19 +66,19 @@ public class ReplicationStreams implements AutoCloseable
         return aeron.addPublication(channel, controlStream);
     }
 
-    public Subscription dataSubscription(final DataHandler handler)
+    public Subscription dataSubscription()
     {
-        return addSubscription(dataStream, handler);
+        return addSubscription(dataStream);
     }
 
-    public Subscription controlSubscription(final DataHandler handler)
+    public Subscription controlSubscription()
     {
-        return addSubscription(controlStream, handler);
+        return addSubscription(controlStream);
     }
 
-    private Subscription addSubscription(final int stream, final DataHandler handler)
+    private Subscription addSubscription(final int stream)
     {
-        final Subscription subscription = aeron.addSubscription(channel, stream, handler);
+        final Subscription subscription = aeron.addSubscription(channel, stream);
         subscriptions.add(subscription);
         return subscription;
     }
