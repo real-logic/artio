@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
-import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.framer.Framer;
@@ -32,9 +31,6 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIds;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
-import java.io.File;
-import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
@@ -81,15 +77,16 @@ public class FixGateway implements AutoCloseable
         final String logFileDir = configuration.logFileDir();
 
         final Archiver archiver = new Archiver(
-            this::map, inboundStreams, newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
+            LoggerUtil::map, inboundStreams, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
         final ArchiveReader archiveReader = new ArchiveReader(
-            this::mapExistingFile, newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
+            LoggerUtil::mapExistingFile, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
 
         final List<Index> indices = Arrays.asList(
-            new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, this::map));
+            new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, LoggerUtil::map));
         final Indexer indexer = new Indexer(indices, inboundStreams);
 
-        final ReplayQuery replayQuery = new ReplayQuery(logFileDir, loggerCacheCapacity, this::mapExistingFile, archiveReader);
+        final ReplayQuery replayQuery = new ReplayQuery(
+            logFileDir, loggerCacheCapacity, LoggerUtil::mapExistingFile, archiveReader);
         final Replayer replayer = new Replayer(
             inboundStreams.dataSubscription(),
             replayQuery,
@@ -101,17 +98,6 @@ public class FixGateway implements AutoCloseable
 
         loggingRunner =
             new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, fixCounters.exceptions(), loggingAgent);
-    }
-
-    private MappedByteBuffer mapExistingFile(final File file)
-    {
-        return IoUtil.mapExistingFile(file, file.getName());
-    }
-
-    private ArchiveMetaData newArchiveMetaData(final StaticConfiguration configuration)
-    {
-        final LogDirectoryDescriptor directoryDescriptor = new LogDirectoryDescriptor(configuration.logFileDir());
-        return new ArchiveMetaData(directoryDescriptor, this::mapExistingFile, IoUtil::mapNewFile);
     }
 
     private void initFramer(final StaticConfiguration configuration, final FixCounters fixCounters)
@@ -155,18 +141,6 @@ public class FixGateway implements AutoCloseable
             channel, aeron, failedPublications, INBOUND_DATA_STREAM, INBOUND_CONTROL_STREAM);
         outboundStreams = new ReplicationStreams(
             channel, aeron, failedPublications, OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
-    }
-
-    private ByteBuffer map(final File file, final int size)
-    {
-        if (file.exists())
-        {
-            return IoUtil.mapExistingFile(file, file.getName());
-        }
-        else
-        {
-            return IoUtil.mapNewFile(file, size);
-        }
     }
 
     private BackoffIdleStrategy backoffIdleStrategy()
