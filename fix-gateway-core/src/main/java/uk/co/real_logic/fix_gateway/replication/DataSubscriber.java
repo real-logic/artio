@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.DisconnectDecoder;
@@ -26,7 +26,7 @@ import uk.co.real_logic.fix_gateway.session.SessionHandler;
 
 import static uk.co.real_logic.fix_gateway.replication.GatewayPublication.FRAME_SIZE;
 
-public class DataSubscriber implements DataHandler
+public class DataSubscriber implements FragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
@@ -38,7 +38,7 @@ public class DataSubscriber implements DataHandler
         this.sessionHandler = sessionHandler;
     }
 
-    public void onData(final DirectBuffer buffer, int offset, final int length, final Header header)
+    public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);
 

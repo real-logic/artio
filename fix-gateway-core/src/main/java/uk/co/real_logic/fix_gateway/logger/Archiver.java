@@ -16,8 +16,8 @@
 package uk.co.real_logic.fix_gateway.logger;
 
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.IntLruCache;
@@ -30,7 +30,7 @@ import java.nio.MappedByteBuffer;
 
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
 
-public class Archiver implements Agent, DataHandler
+public class Archiver implements Agent, FragmentHandler
 {
     private static final int FRAGMENT_LIMIT = 10;
 
@@ -40,11 +40,12 @@ public class Archiver implements Agent, DataHandler
     private final Subscription subscription;
     private final LogDirectoryDescriptor directoryDescriptor;
 
-    public Archiver(final BufferFactory bufferFactory,
-                    final ReplicationStreams streams,
-                    final ArchiveMetaData metaData,
-                    final String logFileDir,
-                    final int loggerCacheCapacity)
+    public Archiver(
+        final BufferFactory bufferFactory,
+        final ReplicationStreams streams,
+        final ArchiveMetaData metaData,
+        final String logFileDir,
+        final int loggerCacheCapacity)
     {
         this.bufferFactory = bufferFactory;
         this.metaData = metaData;
@@ -53,7 +54,7 @@ public class Archiver implements Agent, DataHandler
         streamIdToArchive = new IntLruCache<>(loggerCacheCapacity, StreamArchive::new);
     }
 
-    public void onData(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    public void onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         streamIdToArchive
             .lookup(header.streamId())
@@ -100,7 +101,7 @@ public class Archiver implements Agent, DataHandler
         {
             if (wrappedBuffer != null && wrappedBuffer instanceof MappedByteBuffer)
             {
-                IoUtil.unmap((MappedByteBuffer) wrappedBuffer);
+                IoUtil.unmap((MappedByteBuffer)wrappedBuffer);
             }
         }
     }

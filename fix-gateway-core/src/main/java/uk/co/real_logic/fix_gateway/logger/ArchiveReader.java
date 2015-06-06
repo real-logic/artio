@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.collections.IntLruCache;
@@ -28,9 +28,9 @@ import java.nio.MappedByteBuffer;
 import java.util.function.IntFunction;
 
 import static java.lang.Integer.numberOfTrailingZeros;
-import static uk.co.real_logic.aeron.common.concurrent.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
-import static uk.co.real_logic.aeron.common.concurrent.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
-import static uk.co.real_logic.aeron.common.protocol.HeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
+import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
+import static uk.co.real_logic.aeron.protocol.HeaderFlyweight.HEADER_LENGTH;
 
 public class ArchiveReader
 {
@@ -43,10 +43,11 @@ public class ArchiveReader
     private final ArchiveMetaData metaData;
     private final LogDirectoryDescriptor directoryDescriptor;
 
-    public ArchiveReader(final ExistingBufferFactory archiveBufferFactory,
-                         final ArchiveMetaData metaData,
-                         final String logFileDir,
-                         final int loggerCacheCapacity)
+    public ArchiveReader(
+        final ExistingBufferFactory archiveBufferFactory,
+        final ArchiveMetaData metaData,
+        final String logFileDir,
+        final int loggerCacheCapacity)
     {
         this.archiveBufferFactory = archiveBufferFactory;
         this.metaData = metaData;
@@ -56,8 +57,9 @@ public class ArchiveReader
 
     public boolean read(final int streamId, final long position, final LogHandler handler)
     {
-        return streamIdToReader.lookup(streamId)
-                               .read(position, handler);
+        return streamIdToReader
+            .lookup(streamId)
+            .read(position, handler);
     }
 
     private final class StreamReader implements AutoCloseable
@@ -104,13 +106,14 @@ public class ArchiveReader
         @Override
         public void close() throws Exception
         {
-            termIdToBuffer.values().forEach(buffer ->
-            {
-                if (buffer instanceof MappedByteBuffer)
+            termIdToBuffer.values().forEach(
+                (buffer) ->
                 {
-                    IoUtil.unmap((MappedByteBuffer) buffer);
-                }
-            });
+                    if (buffer instanceof MappedByteBuffer)
+                    {
+                        IoUtil.unmap((MappedByteBuffer)buffer);
+                    }
+                });
         }
     }
 }

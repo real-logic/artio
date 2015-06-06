@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.TermReader;
+import uk.co.real_logic.aeron.logbuffer.Header;
+import uk.co.real_logic.aeron.logbuffer.TermReader;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
@@ -94,5 +94,4 @@ public class ArchivePrinter
         // Technically US-ASCII, but that's a subset of UTF-8
         output.println(messageFrame.body());
     }
-
 }

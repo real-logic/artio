@@ -16,8 +16,8 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
 
@@ -27,7 +27,7 @@ public class ReplicationAgent implements Agent
 
     private final Subscription dataSubscription;
     private final Subscription controlSubscription;
-    private final DataHandler onDataMessageFunc = this::onDataMessage;
+    private final FragmentHandler onDataMessageFunc = this::onDataMessage;
 
     public ReplicationAgent(
         final ReplicationStreams replicationStreams)

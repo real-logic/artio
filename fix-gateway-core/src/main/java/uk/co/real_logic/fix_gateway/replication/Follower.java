@@ -15,28 +15,27 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 
-public class Follower implements DataHandler
+public class Follower implements FragmentHandler
 {
     private final int id;
     private final ControlProtocol controlProtocol;
     private final DataSubscriber delegate;
 
-    public Follower(final int id,
-                    final ControlProtocol controlProtocol,
-                    final DataSubscriber delegate)
+    public Follower(
+        final int id, final ControlProtocol controlProtocol, final DataSubscriber delegate)
     {
         this.id = id;
         this.controlProtocol = controlProtocol;
         this.delegate = delegate;
     }
 
-    public void onData(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    public void onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         controlProtocol.messageAcknowledgement(header.position(), id);
-        delegate.onData(buffer, offset, length, header);
+        delegate.onFragment(buffer, offset, length, header);
     }
 }

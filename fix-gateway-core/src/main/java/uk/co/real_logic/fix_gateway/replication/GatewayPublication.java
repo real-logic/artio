@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
+import uk.co.real_logic.aeron.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
@@ -41,9 +41,8 @@ public class GatewayPublication
     private final IdleStrategy idleStrategy;
     private final AtomicCounter fails;
 
-    public GatewayPublication(final Publication dataPublication,
-                              final AtomicCounter fails,
-                              final IdleStrategy idleStrategy)
+    public GatewayPublication(
+        final Publication dataPublication, final AtomicCounter fails, final IdleStrategy idleStrategy)
     {
         this.dataPublication = dataPublication;
         this.idleStrategy = idleStrategy;

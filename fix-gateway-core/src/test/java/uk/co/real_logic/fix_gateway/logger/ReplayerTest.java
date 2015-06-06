@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.logger;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
+import uk.co.real_logic.aeron.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
@@ -34,7 +34,6 @@ import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
 public class ReplayerTest extends AbstractMessageTest
 {
-
     private static final int BEGIN_SEQ_NO = 2;
     private static final int END_SEQ_NO = 2;
 

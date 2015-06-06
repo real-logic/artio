@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.logger;
 
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.BufferClaim;
+import uk.co.real_logic.aeron.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
@@ -68,12 +68,13 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         this.idleStrategy = idleStrategy;
     }
 
-    public void onMessage(final DirectBuffer srcBuffer,
-                          final int srcOffset,
-                          final int length,
-                          final long connectionId,
-                          final long sessionId,
-                          final int messageType)
+    public void onMessage(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int length,
+        final long connectionId,
+        final long sessionId,
+        final int messageType)
     {
         if (messageType == ResendRequestDecoder.MESSAGE_TYPE)
         {
@@ -141,11 +142,12 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         }
     }
 
-    private void copyPossDupField(final DirectBuffer srcBuffer,
-                                  final int srcOffset,
-                                  final int srcLength,
-                                  final MutableDirectBuffer claimBuffer,
-                                  final int claimOffset)
+    private void copyPossDupField(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength,
+        final MutableDirectBuffer claimBuffer,
+        final int claimOffset)
     {
         final int sendingTimeSrcOffset = acceptor.sendingTimeOffset();
         final int firstLength = sendingTimeSrcOffset - srcOffset;
@@ -157,19 +159,21 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         claimBuffer.putBytes(remainingClaimOffset, srcBuffer, sendingTimeSrcOffset, srcLength - firstLength);
     }
 
-    private void setPossDupFlag(final int srcOffset,
-                                final int possDupSrcOffset,
-                                final MutableDirectBuffer claimBuffer,
-                                final int claimOffset)
+    private void setPossDupFlag(
+        final int srcOffset,
+        final int possDupSrcOffset,
+        final MutableDirectBuffer claimBuffer,
+        final int claimOffset)
     {
         final int possDupClaimOffset = srcToClaim(possDupSrcOffset, srcOffset, claimOffset);
         mutableAsciiFlyweight.wrap(claimBuffer);
         mutableAsciiFlyweight.putChar(possDupClaimOffset, 'Y');
     }
 
-    private int srcToClaim(final int srcIndexedOffset,
-                           final int srcOffset,
-                           final int claimOffset)
+    private int srcToClaim(
+        final int srcIndexedOffset,
+        final int srcOffset,
+        final int claimOffset)
     {
         return srcIndexedOffset - srcOffset + claimOffset;
     }

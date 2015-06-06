@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway.logger;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
-import uk.co.real_logic.aeron.common.protocol.DataHeaderFlyweight;
+import uk.co.real_logic.aeron.logbuffer.Header;
+import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
@@ -27,13 +27,12 @@ import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.aeron.common.protocol.HeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.aeron.protocol.HeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOGGER_CACHE_CAPACITY_DEFAULT;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOG_FILE_DIR_DEFAULT;
 
 public class ArchiverTest
 {
-
     private static final byte DATA = (byte) 4;
     private static final int DATA_POSITION = HEADER_LENGTH + 1;
     private static final int LENGTH = HEADER_LENGTH + 10;
@@ -113,7 +112,7 @@ public class ArchiverTest
 
     private void onData()
     {
-        archiver.onData(inputBuffer, 0, LENGTH, mockHeader);
+        archiver.onFragment(inputBuffer, 0, LENGTH, mockHeader);
     }
 
 }

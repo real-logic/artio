@@ -16,8 +16,8 @@
 package uk.co.real_logic.fix_gateway.logger;
 
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
@@ -25,7 +25,7 @@ import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import java.util.List;
 
 // TODO: add ability to late-join and catchup with indexing
-public class Indexer implements Agent, DataHandler
+public class Indexer implements Agent, FragmentHandler
 {
     private static final int LIMIT = 10;
 
@@ -44,7 +44,7 @@ public class Indexer implements Agent, DataHandler
     }
 
     @Override
-    public void onData(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    public void onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         for (final Index index : indices)
         {

@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway.logger;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
-import uk.co.real_logic.aeron.common.protocol.DataHeaderFlyweight;
+import uk.co.real_logic.aeron.logbuffer.Header;
+import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
@@ -27,7 +27,7 @@ import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import java.nio.ByteBuffer;
 
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.aeron.common.protocol.HeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.aeron.protocol.HeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOGGER_CACHE_CAPACITY_DEFAULT;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOG_FILE_DIR_DEFAULT;
 import static uk.co.real_logic.fix_gateway.messages.FixMessageDecoder.BLOCK_LENGTH;
@@ -88,6 +88,6 @@ public class ArchiveReaderTest
 
     private void dataStored()
     {
-        archiver.onData(inputBuffer, 0, LENGTH, mockHeader);
+        archiver.onFragment(inputBuffer, 0, LENGTH, mockHeader);
     }
 }
