@@ -28,6 +28,7 @@ import static uk.co.real_logic.fix_gateway.replication.GatewayPublication.FRAME_
 
 public class DataSubscriber implements FragmentHandler
 {
+    public static final int UNKNOWN_TEMPLATE = -1;
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
@@ -40,6 +41,11 @@ public class DataSubscriber implements FragmentHandler
 
     public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
+        readFragment(buffer, offset);
+    }
+
+    public int readFragment(final DirectBuffer buffer, int offset)
+    {
         messageHeader.wrap(buffer, offset);
 
         offset += messageHeader.size();
@@ -49,7 +55,7 @@ public class DataSubscriber implements FragmentHandler
             case FixMessageDecoder.TEMPLATE_ID:
             {
                 messageFrame.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
-                final int messageLength = length - (FRAME_SIZE + messageHeader.size());
+                final int messageLength = messageFrame.bodyLength();
                 sessionHandler.onMessage(
                     buffer,
                     offset + FRAME_SIZE,
@@ -57,7 +63,8 @@ public class DataSubscriber implements FragmentHandler
                     messageFrame.connection(),
                     messageFrame.session(),
                     messageFrame.messageType());
-                break;
+
+                return offset + FRAME_SIZE + messageLength;
             }
 
             case DisconnectDecoder.TEMPLATE_ID:
@@ -66,8 +73,10 @@ public class DataSubscriber implements FragmentHandler
                 final long connectionId = disconnect.connection();
                 DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
                 sessionHandler.onDisconnect(connectionId);
-                break;
+                return offset + DisconnectDecoder.BLOCK_LENGTH;
             }
         }
+
+        return UNKNOWN_TEMPLATE;
     }
 }

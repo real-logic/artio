@@ -15,33 +15,41 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
-import uk.co.real_logic.aeron.logbuffer.Header;
-import uk.co.real_logic.aeron.logbuffer.TermReader;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
+import uk.co.real_logic.fix_gateway.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.io.File;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
 
+import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.logger.LoggerUtil.newArchiveMetaData;
 
-public class ArchivePrinter
+public class ArchivePrinter implements SessionHandler
 {
-    private final FixMessageDecoder messageFrame = new FixMessageDecoder();
+    public static final int UNKNOWN = -1;
 
-    private final ArchiveMetaDataDecoder metaDataDecoder;
+    private final DataSubscriber subscriber = new DataSubscriber(this);
+    private final AsciiFlyweight ascii = new AsciiFlyweight();
+
     private final LogDirectoryDescriptor directoryDescriptor;
-    private final int initialTermId;
     private final ExistingBufferFactory bufferFactory;
     private final int streamId;
     private final PrintStream output;
 
     public static void main(String[] args)
     {
+        if (args.length < 1)
+        {
+            System.err.println("Usage: ArchivePrinter <streamId>");
+            System.exit(-1);
+        }
+
         final int streamId = Integer.parseInt(args[0]);
         final StaticConfiguration configuration = new StaticConfiguration();
         final String logFileDir = configuration.logFileDir();
@@ -62,36 +70,47 @@ public class ArchivePrinter
         this.streamId = streamId;
         this.output = output;
 
-        metaDataDecoder = metaData.read(streamId);
+        final ArchiveMetaDataDecoder metaDataDecoder = metaData.read(streamId);
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
-        initialTermId = metaDataDecoder.initialTermId();
     }
 
     public void print()
     {
         final UnsafeBuffer termBuffer = new UnsafeBuffer(0, 0);
-        final TermReader reader = new TermReader(initialTermId, termBuffer);
 
-        for (int termId = initialTermId; true; termId++)
+        for (final File logFile : directoryDescriptor.listLogFiles(streamId))
         {
-            final File logFile = directoryDescriptor.logFile(streamId, termId);
-            if (logFile.exists() && logFile.isFile() && logFile.canRead())
+            final ByteBuffer byteBuffer = bufferFactory.map(logFile);
+            if (byteBuffer.capacity() > 0)
             {
-                final ByteBuffer byteBuffer = bufferFactory.map(logFile);
                 termBuffer.wrap(byteBuffer);
-                reader.read(0, this::printData, Integer.MAX_VALUE);
-            }
-            else
-            {
-                break;
+
+                for (int offset = HEADER_LENGTH; offset > 0 && offset < termBuffer.capacity(); offset += HEADER_LENGTH)
+                {
+                    if (termBuffer.getByte(offset) == 0)
+                    {
+                        break;
+                    }
+
+                    offset = subscriber.readFragment(termBuffer, offset);
+                }
             }
         }
     }
 
-    private void printData(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    public void onMessage(final DirectBuffer buffer,
+                          final int offset,
+                          final int length,
+                          final long connectionId,
+                          final long sessionId,
+                          final int messageType)
     {
-        messageFrame.wrap(buffer, offset, metaDataDecoder.sbeBlockLength(), metaDataDecoder.sbeSchemaVersion());
-        // Technically US-ASCII, but that's a subset of UTF-8
-        output.println(messageFrame.body());
+        ascii.wrap(buffer);
+        output.println(ascii.getAscii(offset, length));
+    }
+
+    public void onDisconnect(final long connectionId)
+    {
+        System.out.println("disconnect");
     }
 }

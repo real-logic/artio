@@ -16,9 +16,13 @@
 package uk.co.real_logic.fix_gateway.logger;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 
 public class LogDirectoryDescriptor
 {
+
+    private static final int EXTENSION_LENGTH = ".log".length();
 
     private final String logFileDir;
 
@@ -35,6 +39,24 @@ public class LogDirectoryDescriptor
     public File metaDataLogFile(final int streamId)
     {
         return new File(String.format(logFileDir + File.separator + "meta-data-%d.log", streamId));
+    }
+
+    public List<File> listLogFiles(final int streamId)
+    {
+        final String prefix = String.format("archive-%d", streamId);
+        final File logFileDir = new File(this.logFileDir);
+        return Arrays.asList(logFileDir.listFiles(file ->
+        {
+            return file.getName().startsWith(prefix);
+        }));
+    }
+
+    public int computeTermId(final File logFile)
+    {
+        final String logFileName = logFile.getName();
+        final int startOfTermId = logFileName.lastIndexOf('-');
+        final int endOfTermId = logFileName.length() - EXTENSION_LENGTH;
+        return Integer.parseInt(logFileName.substring(startOfTermId, endOfTermId));
     }
 
 }

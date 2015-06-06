@@ -22,12 +22,13 @@ import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
 import java.nio.ByteBuffer;
 
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.aeron.protocol.HeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOGGER_CACHE_CAPACITY_DEFAULT;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOG_FILE_DIR_DEFAULT;
 import static uk.co.real_logic.fix_gateway.messages.FixMessageDecoder.BLOCK_LENGTH;
@@ -36,9 +37,11 @@ public class ArchiveReaderTest
 {
 
     private static final byte DATA = (byte) 4;
-    private static final int DATA_POSITION = HEADER_LENGTH + 1;
-    private static final int LENGTH = HEADER_LENGTH + 40;
+    private static final int POSITION = 1;
+    private static final int DATA_POSITION = HEADER_LENGTH + POSITION;
+    private static final int LENGTH = 100;
     private static final int STREAM_ID = 1;
+    public static final int SBE_BLOCK = MessageHeaderDecoder.SIZE + BLOCK_LENGTH;
 
     private ByteBuffer byteBuffer = ByteBuffer.allocate(16 * 1024);
     private UnsafeBuffer inputBuffer = new UnsafeBuffer(new byte[16 * 1024]);
@@ -63,7 +66,7 @@ public class ArchiveReaderTest
         mockHeader.initialTermId(0);
         mockHeader.offset(0);
 
-        headerFlyweight.wrap(inputBuffer, 0);
+        headerFlyweight.wrap(inputBuffer, POSITION);
         headerFlyweight.frameLength(LENGTH);
 
         inputBuffer.putByte(DATA_POSITION, DATA);
@@ -76,18 +79,18 @@ public class ArchiveReaderTest
     {
         dataStored();
 
-        archiveReader.read(STREAM_ID, 0, mockHandler);
+        archiveReader.read(STREAM_ID, POSITION, mockHandler);
 
         verify(mockHandler).onLogEntry(
             notNull(FixMessageDecoder.class),
             notNull(UnsafeBuffer.class),
-            eq(HEADER_LENGTH),
-            eq(HEADER_LENGTH + 8 + BLOCK_LENGTH),
-            eq(LENGTH - (8 + BLOCK_LENGTH + HEADER_LENGTH)));
+            eq(DATA_POSITION),
+            eq(DATA_POSITION + SBE_BLOCK),
+            eq(LENGTH - (SBE_BLOCK + HEADER_LENGTH)));
     }
 
     private void dataStored()
     {
-        archiver.onFragment(inputBuffer, 0, LENGTH, mockHeader);
+        archiver.onFragment(inputBuffer, DATA_POSITION, LENGTH, mockHeader);
     }
 }

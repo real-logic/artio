@@ -15,13 +15,14 @@
  */
 package uk.co.real_logic.fix_gateway.logger;
 
-import uk.co.real_logic.aeron.logbuffer.Header;
+import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.collections.IntLruCache;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -30,11 +31,11 @@ import java.util.function.IntFunction;
 import static java.lang.Integer.numberOfTrailingZeros;
 import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
 import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
-import static uk.co.real_logic.aeron.protocol.HeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 public class ArchiveReader
 {
-    public static final int MESSAGE_FRAME_BLOCK_LENGTH = 8 + FixMessageDecoder.BLOCK_LENGTH;
+    public static final int MESSAGE_FRAME_BLOCK_LENGTH = MessageHeaderDecoder.SIZE + FixMessageDecoder.BLOCK_LENGTH;
 
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
 
@@ -68,15 +69,13 @@ public class ArchiveReader
         private final Int2ObjectHashMap<ByteBuffer> termIdToBuffer = new Int2ObjectHashMap<>();
         private final IntFunction<ByteBuffer> newBuffer = this::newBuffer;
         private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
-        private final Header header = new Header();
+        private final DataHeaderFlyweight dataHeader = new DataHeaderFlyweight();
         private final int initialTermId;
         private final int positionBitsToShift;
 
         private StreamReader(final int streamId)
         {
             this.streamId = streamId;
-            header.buffer(buffer);
-
             final ArchiveMetaDataDecoder streamMetaData = metaData.read(streamId);
             initialTermId = streamMetaData.initialTermId();
             positionBitsToShift = numberOfTrailingZeros(streamMetaData.termBufferLength());
@@ -91,14 +90,14 @@ public class ArchiveReader
         {
             final int termId = computeTermIdFromPosition(position, positionBitsToShift, initialTermId);
             final ByteBuffer termBuffer = termIdToBuffer.computeIfAbsent(termId, newBuffer);
-            final int aeronFrameOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
+            final int aeronTermOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
 
             buffer.wrap(termBuffer);
-            header.offset(aeronFrameOffset);
+            dataHeader.wrap(buffer, aeronTermOffset);
 
-            final int startOffset = aeronFrameOffset + HEADER_LENGTH;
+            final int startOffset = aeronTermOffset + HEADER_LENGTH;
             final int messageOffset = startOffset + MESSAGE_FRAME_BLOCK_LENGTH;
-            final int length = header.frameLength() - (HEADER_LENGTH + MESSAGE_FRAME_BLOCK_LENGTH);
+            final int length = dataHeader.frameLength() - (HEADER_LENGTH + MESSAGE_FRAME_BLOCK_LENGTH);
 
             return handler.onLogEntry(messageFrame, buffer, startOffset, messageOffset, length);
         }

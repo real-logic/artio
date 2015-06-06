@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 
+import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
 
 public class Archiver implements Agent, FragmentHandler
@@ -94,7 +95,9 @@ public class Archiver implements Agent, FragmentHandler
                 currentTermId = termId;
             }
 
-            currentBuffer.putBytes(offset, buffer, offset, length);
+            final int headerOffset = offset - HEADER_LENGTH;
+            final int totalLength = length + HEADER_LENGTH;
+            currentBuffer.putBytes(headerOffset, buffer, headerOffset, totalLength);
         }
 
         public void close()

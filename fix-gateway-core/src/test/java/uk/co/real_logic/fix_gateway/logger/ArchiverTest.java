@@ -27,7 +27,7 @@ import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.aeron.protocol.HeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOGGER_CACHE_CAPACITY_DEFAULT;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOG_FILE_DIR_DEFAULT;
 
@@ -35,7 +35,7 @@ public class ArchiverTest
 {
     private static final byte DATA = (byte) 4;
     private static final int DATA_POSITION = HEADER_LENGTH + 1;
-    private static final int LENGTH = HEADER_LENGTH + 10;
+    private static final int LENGTH = 10;
     private static final int STREAM_ID = 1;
 
     private DataHeaderFlyweight headerFlyweight = new DataHeaderFlyweight();
@@ -112,7 +112,7 @@ public class ArchiverTest
 
     private void onData()
     {
-        archiver.onFragment(inputBuffer, 0, LENGTH, mockHeader);
+        archiver.onFragment(inputBuffer, DATA_POSITION, LENGTH, mockHeader);
     }
 
 }
