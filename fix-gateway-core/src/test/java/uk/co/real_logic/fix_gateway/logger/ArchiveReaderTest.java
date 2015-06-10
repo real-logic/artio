@@ -47,7 +47,7 @@ public class ArchiveReaderTest
     private UnsafeBuffer inputBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
     private DataHeaderFlyweight headerFlyweight = new DataHeaderFlyweight();
-    private Header mockHeader = new Header();
+    private Header mockHeader = new Header(0, 0);
     private ReplicationStreams mockStreams = mock(ReplicationStreams.class);
     private LogHandler mockHandler = mock(LogHandler.class);
     private ArchiveMetaData mockMetaData = mock(ArchiveMetaData.class);
@@ -63,8 +63,6 @@ public class ArchiveReaderTest
     public void setUp()
     {
         mockHeader.buffer(inputBuffer);
-        mockHeader.initialTermId(0);
-        mockHeader.offset(0);
 
         headerFlyweight.wrap(inputBuffer, POSITION);
         headerFlyweight.frameLength(LENGTH);

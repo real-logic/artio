@@ -39,7 +39,7 @@ public class ArchiverTest
     private static final int STREAM_ID = 1;
 
     private DataHeaderFlyweight headerFlyweight = new DataHeaderFlyweight();
-    private Header mockHeader = new Header();
+    private Header mockHeader = new Header(0, 0);
     private ReplicationStreams mockStreams = mock(ReplicationStreams.class);
     private BufferFactory mockBufferFactory = mock(BufferFactory.class);
     private ArchiveMetaData mockMetaData = mock(ArchiveMetaData.class);
@@ -55,8 +55,6 @@ public class ArchiverTest
     public void setUp()
     {
         mockHeader.buffer(inputBuffer);
-        mockHeader.initialTermId(0);
-        mockHeader.offset(0);
 
         when(mockBufferFactory.map(any(File.class), anyInt())).thenReturn(byteBuffer);
 
