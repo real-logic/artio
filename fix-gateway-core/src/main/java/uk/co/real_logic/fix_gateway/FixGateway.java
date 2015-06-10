@@ -121,7 +121,8 @@ public class FixGateway implements AutoCloseable
             sessionIds,
             inboundStreams,
             outboundStreams,
-            idleStrategy);
+            idleStrategy,
+            fixCounters);
 
         final Framer framer = new Framer(systemClock, configuration, handler, framerCommands,
             multiplexer, this, dataSubscription);
@@ -131,16 +132,14 @@ public class FixGateway implements AutoCloseable
 
     private void initReplicationStreams(final StaticConfiguration configuration)
     {
-        final AtomicCounter failedPublications = fixCounters.failedDataPublications();
-
         aeron = Aeron.connect(new Aeron.Context());
 
         final String channel = configuration.aeronChannel();
 
         inboundStreams = new ReplicationStreams(
-            channel, aeron, failedPublications, INBOUND_DATA_STREAM, INBOUND_CONTROL_STREAM);
+            channel, aeron, fixCounters.failedInboundPublications(), INBOUND_DATA_STREAM, INBOUND_CONTROL_STREAM);
         outboundStreams = new ReplicationStreams(
-            channel, aeron, failedPublications, OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
+            channel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
     }
 
     private BackoffIdleStrategy backoffIdleStrategy()

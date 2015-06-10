@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
+import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
@@ -36,7 +37,9 @@ public class InitiatorSession extends Session
         final long sessionId,
         final char[] beginString,
         final long sendingTimeWindow,
-        final SessionIds sessionIds)
+        final SessionIds sessionIds,
+        final AtomicCounter receivedMsgSeqNo,
+        final AtomicCounter sentMsgSeqNo)
     {
         super(
             heartbeatInterval,
@@ -48,7 +51,10 @@ public class InitiatorSession extends Session
             sessionIdStrategy,
             beginString,
             sendingTimeWindow,
-            sessionIds);
+            sessionIds,
+            receivedMsgSeqNo,
+            sentMsgSeqNo);
+
         this.gateway = gateway;
         id(sessionId);
     }

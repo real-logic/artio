@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 
@@ -28,12 +29,18 @@ public class SenderEndPoint
     private final long connectionId;
     private final SocketChannel channel;
     private final IdleStrategy idleStrategy;
+    private final AtomicCounter messagesWritten;
 
-    public SenderEndPoint(final long connectionId, final SocketChannel channel, final IdleStrategy idleStrategy)
+    public SenderEndPoint(
+        final long connectionId,
+        final SocketChannel channel,
+        final IdleStrategy idleStrategy,
+        final AtomicCounter messagesWritten)
     {
         this.connectionId = connectionId;
         this.channel = channel;
         this.idleStrategy = idleStrategy;
+        this.messagesWritten = messagesWritten;
     }
 
     public void onFramedMessage(final DirectBuffer directBuffer, final int offset, final int length)
@@ -49,6 +56,7 @@ public class SenderEndPoint
             {
                 final int written = channel.write(buffer);
                 DebugLogger.log("Written  %s\n", buffer, written);
+                messagesWritten.orderedIncrement();
                 bytesWritten += written;
                 idleStrategy.idle(1);
             }

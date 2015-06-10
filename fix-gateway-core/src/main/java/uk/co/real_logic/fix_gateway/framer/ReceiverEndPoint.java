@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
@@ -54,6 +55,7 @@ public class ReceiverEndPoint
     private final GatewayPublication publication;
     private final long connectionId;
     private final SessionParser session;
+    private final AtomicCounter messagesRead;
     private final AtomicBuffer buffer;
     private final AsciiFlyweight string;
     private final ByteBuffer byteBuffer;
@@ -65,12 +67,14 @@ public class ReceiverEndPoint
         final int bufferSize,
         final GatewayPublication publication,
         final long connectionId,
-        final SessionParser session)
+        final SessionParser session,
+        final AtomicCounter messagesRead)
     {
         this.channel = channel;
         this.publication = publication;
         this.connectionId = connectionId;
         this.session = session;
+        this.messagesRead = messagesRead;
 
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new AsciiFlyweight(buffer);
@@ -172,6 +176,7 @@ public class ReceiverEndPoint
                 final long sessionId = session.onMessage(buffer, offset, length, messageType);
                 if (sessionId != UNKNOWN_ID)
                 {
+                    messagesRead.orderedIncrement();
                     publication.saveMessage(buffer, offset, length, sessionId, messageType);
                 }
                 else
@@ -232,7 +237,6 @@ public class ReceiverEndPoint
     private void invalidateMessage(final int offset)
     {
         DebugLogger.log("%s", buffer, offset, COMMON_PREFIX_LENGTH);
-        System.err.println("Invalid message");
     }
 
     public void close()

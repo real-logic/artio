@@ -19,7 +19,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.CountersManager;
 import uk.co.real_logic.agrona.concurrent.SigInt;
 
-import java.util.Date;
+import java.time.LocalTime;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -45,7 +45,7 @@ public class FixStat
             while (running.get())
             {
                 System.out.print("\033[H\033[2J");
-                System.out.format("%1$tH:%1$tM:%1$tS - Fix Stat\n", new Date());
+                System.out.format("%1$tH:%1$tM:%1$tS - Fix Stat\n", LocalTime.now());
                 System.out.println("=========================");
 
                 countersManager.forEach(

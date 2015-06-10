@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.session;
 
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.Verify;
+import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
@@ -50,6 +51,8 @@ public class Session
     private final char[] expectedBeginString;
     private final long sendingTimeWindow;
     private final SessionIds sessionIds;
+    private final AtomicCounter receivedMsgSeqNo;
+    private final AtomicCounter sentMsgSeqNo;
     protected Object sessionKey;
 
     private SessionState state;
@@ -72,7 +75,9 @@ public class Session
         final SessionIdStrategy sessionIdStrategy,
         final char[] expectedBeginString,
         final long sendingTimeWindow,
-        final SessionIds sessionIds)
+        final SessionIds sessionIds,
+        final AtomicCounter receivedMsgSeqNo,
+        final AtomicCounter sentMsgSeqNo)
     {
         Verify.notNull(sessionIds, "sessionIds");
         Verify.notNull(clock, "clock");
@@ -80,6 +85,8 @@ public class Session
         Verify.notNull(proxy, "session proxy");
         Verify.notNull(publication, "publication");
         Verify.notNull(expectedBeginString, "expected begin string");
+        Verify.notNull(receivedMsgSeqNo, "received MsgSeqNo counter");
+        Verify.notNull(sentMsgSeqNo, "sent MsgSeqNo counter");
 
         this.clock = clock;
         this.proxy = proxy;
@@ -89,6 +96,8 @@ public class Session
         this.expectedBeginString = expectedBeginString;
         this.sendingTimeWindow = sendingTimeWindow;
         this.sessionIds = sessionIds;
+        this.receivedMsgSeqNo = receivedMsgSeqNo;
+        this.sentMsgSeqNo = sentMsgSeqNo;
 
         buffer = new UnsafeBuffer(new byte[8 * 1024]);
         string = new MutableAsciiFlyweight(buffer);
@@ -402,6 +411,7 @@ public class Session
     Session lastReceivedMsgSeqNum(final int value)
     {
         this.lastReceivedMsgSeqNum = value;
+        receivedMsgSeqNo.setOrdered(value);
         return this;
     }
 
@@ -417,7 +427,9 @@ public class Session
 
     int newSentSeqNum()
     {
-        return ++lastSentMsgSeqNum;
+        final int lastSentMsgSeqNum = ++this.lastSentMsgSeqNum;
+        sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
+        return lastSentMsgSeqNum;
     }
 
     void incReceivedSeqNum()

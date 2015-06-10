@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.Test;
+import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.framer.FakeMilliClock;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 
@@ -36,6 +37,8 @@ public abstract class AbstractSessionTest
     protected GatewayPublication mockPublication = mock(GatewayPublication.class);
     protected FakeMilliClock fakeClock = new FakeMilliClock();
     protected SessionIds mockSessionIds = mock(SessionIds.class);
+    protected AtomicCounter mockReceivedMsgSeqNo = mock(AtomicCounter.class);
+    protected AtomicCounter mockSentMsgSeqNo = mock(AtomicCounter.class);
 
     public void verifyNoFurtherMessages()
     {

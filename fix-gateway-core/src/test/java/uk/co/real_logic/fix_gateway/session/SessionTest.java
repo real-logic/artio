@@ -35,7 +35,9 @@ public class SessionTest extends AbstractSessionTest
         null,
         BEGIN_STRING,
         SENDING_TIME_WINDOW,
-        mockSessionIds);
+        mockSessionIds,
+        mockReceivedMsgSeqNo,
+        mockSentMsgSeqNo);
 
     @Test
     public void shouldReplyToValidLogout()

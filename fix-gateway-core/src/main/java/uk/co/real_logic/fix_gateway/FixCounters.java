@@ -18,16 +18,22 @@ package uk.co.real_logic.fix_gateway;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.CountersManager;
 
+import java.net.SocketAddress;
+
 public final class FixCounters
 {
+    private final CountersManager countersManager;
     private final AtomicCounter framerProxyFails;
-    private final AtomicCounter failedDataPublications;
+    private final AtomicCounter failedInboundPublications;
+    private final AtomicCounter failedOutboundPublications;
     private final AtomicCounter exceptions;
 
     public FixCounters(final CountersManager countersManager)
     {
+        this.countersManager = countersManager;
         framerProxyFails = countersManager.newCounter("Failed offers to Framer Proxy");
-        failedDataPublications = countersManager.newCounter("Failed offer to data publication");
+        failedInboundPublications = countersManager.newCounter("Failed offer to inbound publication");
+        failedOutboundPublications = countersManager.newCounter("Failed offer to outbound publication");
         exceptions = countersManager.newCounter("Gateway Exceptions");
     }
 
@@ -36,13 +42,38 @@ public final class FixCounters
         return framerProxyFails;
     }
 
-    public AtomicCounter failedDataPublications()
+    public AtomicCounter failedInboundPublications()
     {
-        return failedDataPublications;
+        return failedInboundPublications;
+    }
+
+    public AtomicCounter failedOutboundPublications()
+    {
+        return failedOutboundPublications;
     }
 
     public AtomicCounter exceptions()
     {
         return exceptions;
+    }
+
+    public AtomicCounter messagesRead(final SocketAddress address)
+    {
+        return countersManager.newCounter("Messages Read from " + address);
+    }
+
+    public AtomicCounter messagesWritten(final SocketAddress address)
+    {
+        return countersManager.newCounter("Messages Written to " + address);
+    }
+
+    public AtomicCounter sentMsgSeqNo(final long connectionId)
+    {
+        return countersManager.newCounter("Last Sent MsgSeqNo for " + connectionId);
+    }
+
+    public AtomicCounter receivedMsgSeqNo(final long connectionId)
+    {
+        return countersManager.newCounter("Last Received MsgSeqNo for " + connectionId);
     }
 }

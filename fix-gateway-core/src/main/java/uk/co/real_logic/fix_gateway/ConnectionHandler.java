@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
+import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -44,6 +45,7 @@ public class ConnectionHandler
     private final ReplicationStreams inboundStreams;
     private final ReplicationStreams outboundStreams;
     private final IdleStrategy idleStrategy;
+    private final FixCounters fixCounters;
 
     public ConnectionHandler(
         final MilliClock clock,
@@ -52,7 +54,8 @@ public class ConnectionHandler
         final SessionIds sessionIds,
         final ReplicationStreams inboundStreams,
         final ReplicationStreams outboundStreams,
-        final IdleStrategy idleStrategy)
+        final IdleStrategy idleStrategy,
+        final FixCounters fixCounters)
     {
         this.clock = clock;
         this.configuration = configuration;
@@ -61,10 +64,11 @@ public class ConnectionHandler
         this.inboundStreams = inboundStreams;
         this.outboundStreams = outboundStreams;
         this.idleStrategy = idleStrategy;
+        this.fixCounters = fixCounters;
     }
 
     public ReceiverEndPoint receiverEndPoint(
-        final SocketChannel channel, final long connectionId, final Session session)
+        final SocketChannel channel, final long connectionId, final Session session) throws IOException
     {
         final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy, sessionIds,
             configuration.authenticationStrategy());
@@ -76,22 +80,38 @@ public class ConnectionHandler
             configuration.receiverBufferSize(),
             inboundStreams.gatewayPublication(),
             connectionId,
-            sessionParser
+            sessionParser,
+            fixCounters.messagesRead(channel.getRemoteAddress())
         );
     }
 
-    public SenderEndPoint senderEndPoint(final SocketChannel channel, final long connectionId)
+    public SenderEndPoint senderEndPoint(final SocketChannel channel, final long connectionId) throws IOException
     {
-        return new SenderEndPoint(connectionId, channel, idleStrategy);
+        return new SenderEndPoint(
+            connectionId,
+            channel,
+            idleStrategy,
+            fixCounters.messagesWritten(channel.getRemoteAddress()));
     }
 
     public Session acceptSession()
     {
         final GatewayPublication publication = outboundStreams.gatewayPublication();
         final int defaultInterval = configuration.defaultHeartbeatInterval();
+        final long connectionId = nextConnectionId();
         return new AcceptorSession(
-            defaultInterval, nextConnectionId(), clock, sessionProxy(), publication, sessionIdStrategy,
-            configuration.beginString(), configuration.sendingTimeWindow(), sessionIds, acceptedSessions);
+            defaultInterval,
+            connectionId,
+            clock,
+            sessionProxy(),
+            publication,
+            sessionIdStrategy,
+            configuration.beginString(),
+            configuration.sendingTimeWindow(),
+            sessionIds,
+            acceptedSessions,
+            fixCounters.receivedMsgSeqNo(connectionId),
+            fixCounters.sentMsgSeqNo(connectionId));
     }
 
     public Session initiateSession(final FixGateway gateway, final SessionConfiguration sessionConfiguration)
@@ -100,10 +120,11 @@ public class ConnectionHandler
         final long sessionId = sessionIds.onLogon(key);
         final int defaultInterval = configuration.defaultHeartbeatInterval();
         final GatewayPublication gatewayPublication = outboundStreams.gatewayPublication();
+        final long connectionId = nextConnectionId();
 
         return new InitiatorSession(
             defaultInterval,
-            nextConnectionId(),
+            connectionId,
             clock,
             sessionProxy().setupSession(sessionId, key),
             gatewayPublication,
@@ -112,7 +133,9 @@ public class ConnectionHandler
             sessionId,
             configuration.beginString(),
             configuration.sendingTimeWindow(),
-            sessionIds);
+            sessionIds,
+            fixCounters.receivedMsgSeqNo(connectionId),
+            fixCounters.sentMsgSeqNo(connectionId));
     }
 
     private SessionProxy sessionProxy()
