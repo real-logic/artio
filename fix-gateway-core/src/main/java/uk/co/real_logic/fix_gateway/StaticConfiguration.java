@@ -68,6 +68,7 @@ public final class StaticConfiguration
     public static final int LOGGER_CACHE_CAPACITY_DEFAULT = 10;
 
     public static final long SENDING_TIME_WINDOW_DEFAULT = MINUTES.toMillis(2);
+    public static final String DEFAULT_BEGIN_STRING = "FIX.4.4";
 
     private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
 
@@ -94,7 +95,7 @@ public final class StaticConfiguration
 
     public StaticConfiguration()
     {
-        beginString("FIX.4.4");
+        beginString(DEFAULT_BEGIN_STRING);
     }
 
     public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)

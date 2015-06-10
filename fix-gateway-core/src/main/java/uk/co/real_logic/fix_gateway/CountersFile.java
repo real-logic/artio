@@ -31,24 +31,45 @@ import java.nio.MappedByteBuffer;
 public final class CountersFile implements AutoCloseable
 {
     private final MappedByteBuffer mappedByteBuffer;
-    private final int length;
+    private final AtomicBuffer labelsBuffer;
+    private final AtomicBuffer countersBuffer;
 
-    public CountersFile(final StaticConfiguration configuration)
+    public CountersFile(final boolean newFile, final StaticConfiguration configuration)
     {
         final File file = new File(configuration.counterBuffersFile());
-        IoUtil.deleteIfExists(file);
-        length = configuration.counterBuffersLength();
-        mappedByteBuffer = IoUtil.mapNewFile(file, length * 2);
+        final int length;
+        if (newFile)
+        {
+            IoUtil.deleteIfExists(file);
+
+            length = configuration.counterBuffersLength();
+            mappedByteBuffer = IoUtil.mapNewFile(file, length * 2);
+        }
+        else
+        {
+            if (!file.exists() || !file.canRead() || !file.isFile())
+            {
+                throw new IllegalStateException("Unable to read from file: " + file);
+            }
+
+            mappedByteBuffer = IoUtil.mapExistingFile(file, "counters file");
+            length = mappedByteBuffer.capacity() / 2;
+        }
+
+        final AtomicBuffer mappedFile = new UnsafeBuffer(mappedByteBuffer);
+        labelsBuffer = new UnsafeBuffer(mappedFile, 0, length);
+        countersBuffer = new UnsafeBuffer(mappedFile, length, length);
     }
 
     public CountersManager createCountersManager()
     {
-        final AtomicBuffer mappedFile = new UnsafeBuffer(mappedByteBuffer);
-        final AtomicBuffer labelsBuffer = new UnsafeBuffer(mappedFile, 0, length);
-        final AtomicBuffer countersBuffer = new UnsafeBuffer(mappedFile, length, length);
         return new CountersManager(labelsBuffer, countersBuffer);
     }
 
+    public AtomicBuffer countersBuffer()
+    {
+        return countersBuffer;
+    }
 
     @Override
     public void close()

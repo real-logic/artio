@@ -63,7 +63,7 @@ public class FixGateway implements AutoCloseable
     {
         connectionTimeout = configuration.connectionTimeout();
 
-        countersFile = new CountersFile(configuration);
+        countersFile = new CountersFile(true, configuration);
         fixCounters = new FixCounters(countersFile.createCountersManager());
 
         initReplicationStreams(configuration);
