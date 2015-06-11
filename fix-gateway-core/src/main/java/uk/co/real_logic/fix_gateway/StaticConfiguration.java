@@ -38,37 +38,42 @@ import static java.util.concurrent.TimeUnit.MINUTES;
  */
 public final class StaticConfiguration
 {
+    // ------------------------------------------------
+    //          Configuration Properties
+    // ------------------------------------------------
+
+    /** Property name for the flag to enable or disable debug logging */
     public static final String DEBUG_PRINT_MESSAGES_PROPERTY = "fix.core.debug";
-    /** This is static final field in order to give the optimiser scope to remove references to it. */
-    public static final boolean DEBUG_PRINT_MESSAGES = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
-
-    private static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
-    private static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
-    private static final long DEFAULT_CONNECTION_TIMEOUT = 1000;
-    private static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
-
+    /** Property name for the file to log debug messages to, default is standard output */
+    public static final String DEBUG_FILE_PROPERTY = "fix.core.debug.file";
     /** Property name for length of the memory mapped buffers for the counters file */
     public static final String COUNTER_BUFFERS_LENGTH_PROP_NAME = "fix.counters.length";
-    /** Length of the memory mapped buffers for the counters file */
-    public static final int COUNTERS_BUFFER_LENGTH_DEFAULT = 64 * 1024 * 1024;
-
+    /** Property name for directory of the conductor buffers */
+    public static final String COUNTERS_FILE_PROP_NAME = "fix.counters.file";
+    /** Property name for the directory to log archive data into */
+    public static final String LOG_FILE_DIR_PROP = "logging.dir";
+    /** Property name for size of logging index files */
     public static final String INDEX_FILE_SIZE_PROP = "logging.index.size";
 
-    public static final int INDEX_FILE_SIZE_DEFAULT = 2 * 1024 * 1024;
+    // ------------------------------------------------
+    //          Configuration Defaults
+    // ------------------------------------------------
 
-    /** Directory of the conductor buffers */
-    public static final String COUNTERS_FILE_PROP_NAME = "fix.counters.file";
-    /** Default directory for conductor buffers */
-    public static final String COUNTERS_FILE_PROP_DEFAULT = IoUtil.tmpDirName() + "fix" + File.separator + "counters";
-
-    public static final String LOG_FILE_DIR_PROP = "logging.dir";
-
-    public static final String LOG_FILE_DIR_DEFAULT = "logs";
-
-    public static final int LOGGER_CACHE_CAPACITY_DEFAULT = 10;
-
-    public static final long SENDING_TIME_WINDOW_DEFAULT = MINUTES.toMillis(2);
+    public static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
+    public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
+    public static final long DEFAULT_CONNECTION_TIMEOUT = 1000;
+    public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
+    public static final int DEFAULT_COUNTERS_BUFFER_LENGTH = 64 * 1024 * 1024;
+    public static final int DEFAULT_INDEX_FILE_SIZE = 2 * 1024 * 1024;
+    public static final String DEFAULT_COUNTERS_FILE_PROP = IoUtil.tmpDirName() + "fix" + File.separator + "counters";
+    public static final String DEFAULT_LOG_FILE_DIR = "logs";
+    public static final int DEFAULT_LOGGER_CACHE_CAPACITY = 10;
+    public static final long DEFAULT_SENDING_TIME_WINDOW = MINUTES.toMillis(2);
     public static final String DEFAULT_BEGIN_STRING = "FIX.4.4";
+
+    /** This is static final field in order to give the optimiser scope to remove references to it. */
+    public static final boolean DEBUG_PRINT_MESSAGES = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
+    public static final String DEBUG_FILE = System.getProperty(DEBUG_FILE_PROPERTY);
 
     private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
 
@@ -83,15 +88,15 @@ public final class StaticConfiguration
 
     private String host;
     private int port;
-    private int indexFileSize = getInteger(INDEX_FILE_SIZE_PROP, INDEX_FILE_SIZE_DEFAULT);
-    private String logFileDir = getProperty(LOG_FILE_DIR_PROP, LOG_FILE_DIR_DEFAULT);
-    private int counterBuffersLength = getInteger(COUNTER_BUFFERS_LENGTH_PROP_NAME, COUNTERS_BUFFER_LENGTH_DEFAULT);
-    private String counterBuffersFile = getProperty(COUNTERS_FILE_PROP_NAME, COUNTERS_FILE_PROP_DEFAULT);
+    private int indexFileSize = getInteger(INDEX_FILE_SIZE_PROP, DEFAULT_INDEX_FILE_SIZE);
+    private String logFileDir = getProperty(LOG_FILE_DIR_PROP, DEFAULT_LOG_FILE_DIR);
+    private int counterBuffersLength = getInteger(COUNTER_BUFFERS_LENGTH_PROP_NAME, DEFAULT_COUNTERS_BUFFER_LENGTH);
+    private String counterBuffersFile = getProperty(COUNTERS_FILE_PROP_NAME, DEFAULT_COUNTERS_FILE_PROP);
     private String aeronChannel;
     private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
     private NewSessionHandler newSessionHandler;
-    private int loggerCacheCapacity = LOGGER_CACHE_CAPACITY_DEFAULT;
-    private long sendingTimeWindow = SENDING_TIME_WINDOW_DEFAULT;
+    private int loggerCacheCapacity = DEFAULT_LOGGER_CACHE_CAPACITY;
+    private long sendingTimeWindow = DEFAULT_SENDING_TIME_WINDOW;
 
     public StaticConfiguration()
     {
@@ -213,6 +218,18 @@ public final class StaticConfiguration
     public StaticConfiguration setSendingTimeWindow(long sendingTimeWindow)
     {
         this.sendingTimeWindow = sendingTimeWindow;
+        return this;
+    }
+
+    public StaticConfiguration connectionTimeout(final long connectionTimeout)
+    {
+        this.connectionTimeout = connectionTimeout;
+        return this;
+    }
+
+    public StaticConfiguration encoderBufferSize(final int encoderBufferSize)
+    {
+        this.encoderBufferSize = encoderBufferSize;
         return this;
     }
 

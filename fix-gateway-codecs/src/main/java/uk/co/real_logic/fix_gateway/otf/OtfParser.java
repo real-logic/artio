@@ -40,7 +40,6 @@ public final class OtfParser
 {
     private static final int NO_CHECKSUM = 0;
     private static final int UNKNOWN = -1;
-    private static final int CHECKSUM_BACK = "10=".length();
 
     private final AsciiFlyweight string = new AsciiFlyweight(null);
     private final AsciiFieldFlyweight stringField = new AsciiFieldFlyweight();
@@ -256,10 +255,6 @@ public final class OtfParser
         {
             return false;
         }
-
-        /*System.out.printf("Expected Checksum: %s, Actual: %s\n",
-            string.computeChecksum(offset, checksumOffset), expectedChecksum);
-        string.log(offset, checksumOffset- offset);*/
 
         return string.computeChecksum(offset, checksumOffset) == expectedChecksum;
     }

@@ -111,6 +111,6 @@ public class ArchivePrinter implements SessionHandler
 
     public void onDisconnect(final long connectionId)
     {
-        System.out.println("disconnect");
+        output.printf("%d Disconnected", connectionId);
     }
 }

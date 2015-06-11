@@ -241,7 +241,6 @@ public class AsciiFlyweight
         for (int i = startInclusive; i <= endExclusive; i++)
         {
             final byte value = buffer.getByte(i);
-            //System.out.println(value + " @ " + i);
             if (value == terminator)
             {
                 indexValue = i;

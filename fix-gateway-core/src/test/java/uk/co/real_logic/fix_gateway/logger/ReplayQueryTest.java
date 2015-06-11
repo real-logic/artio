@@ -22,9 +22,9 @@ import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.INDEX_FILE_SIZE_DEFAULT;
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOGGER_CACHE_CAPACITY_DEFAULT;
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.LOG_FILE_DIR_DEFAULT;
+import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEFAULT_INDEX_FILE_SIZE;
+import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEFAULT_LOGGER_CACHE_CAPACITY;
+import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEFAULT_LOG_FILE_DIR;
 import static uk.co.real_logic.fix_gateway.logger.ReplayIndex.logFile;
 
 public class ReplayQueryTest extends AbstractMessageTest
@@ -34,10 +34,10 @@ public class ReplayQueryTest extends AbstractMessageTest
     private LogHandler mockHandler = mock(LogHandler.class);
     private ArchiveReader mockReader = mock(ArchiveReader.class);
     private ReplayIndex replayIndex = new ReplayIndex(
-        LOG_FILE_DIR_DEFAULT, INDEX_FILE_SIZE_DEFAULT, LOGGER_CACHE_CAPACITY_DEFAULT, (name, size) -> indexBuffer);
+        DEFAULT_LOG_FILE_DIR, DEFAULT_INDEX_FILE_SIZE, DEFAULT_LOGGER_CACHE_CAPACITY, (name, size) -> indexBuffer);
 
     private ReplayQuery query = new ReplayQuery(
-        LOG_FILE_DIR_DEFAULT, LOGGER_CACHE_CAPACITY_DEFAULT, mockBufferFactory, mockReader);
+        DEFAULT_LOG_FILE_DIR, DEFAULT_LOGGER_CACHE_CAPACITY, mockBufferFactory, mockReader);
 
     @Before
     public void setUp()
@@ -102,12 +102,12 @@ public class ReplayQueryTest extends AbstractMessageTest
 
     private void returnBuffer(final ByteBuffer buffer, final long sessionId)
     {
-        when(mockBufferFactory.map(logFile(LOG_FILE_DIR_DEFAULT, sessionId))).thenReturn(buffer);
+        when(mockBufferFactory.map(logFile(DEFAULT_LOG_FILE_DIR, sessionId))).thenReturn(buffer);
     }
 
     private void verifyMappedFile(final long sessionId, final int wantedNumberOfInvocations)
     {
-        verify(mockBufferFactory, times(wantedNumberOfInvocations)).map(logFile(LOG_FILE_DIR_DEFAULT, sessionId));
+        verify(mockBufferFactory, times(wantedNumberOfInvocations)).map(logFile(DEFAULT_LOG_FILE_DIR, sessionId));
     }
 
     private void indexSecondRecord()

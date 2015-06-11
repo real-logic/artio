@@ -18,9 +18,13 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.ByteBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEBUG_FILE;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEBUG_PRINT_MESSAGES;
 
 /**
@@ -29,6 +33,34 @@ import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEBUG_PRINT_MESSA
  */
 public final class DebugLogger
 {
+
+    private static final PrintStream OUTPUT;
+
+    static
+    {
+        if (DEBUG_FILE == null)
+        {
+            OUTPUT = System.out;
+        }
+        else
+        {
+            PrintStream output = null;
+            try
+            {
+                output = new PrintStream(new FileOutputStream(DEBUG_FILE));
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+                System.exit(-1);
+            }
+            finally
+            {
+                OUTPUT = output;
+            }
+        }
+    }
+
     public static void log(
         final String formatString, final Object value, final DirectBuffer buffer, final int offset, final int length)
     {
@@ -36,7 +68,7 @@ public final class DebugLogger
         {
             final byte[] data = new byte[length];
             buffer.getBytes(offset, data);
-            System.out.printf(formatString, value, new String(data, US_ASCII));
+            OUTPUT.printf(formatString, value, new String(data, US_ASCII));
         }
     }
 
