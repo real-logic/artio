@@ -184,6 +184,7 @@ public abstract class Generator
             case LENGTH:
             case SEQNUM:
             case NUMINGROUP:
+            case DAYOFMONTH:
             case LOCALMKTDATE:
                 return resetFieldValue(name, "MISSING_INT");
 
@@ -311,6 +312,13 @@ public abstract class Generator
         switch (field.type())
         {
             case STRING:
+            case MULTIPLEVALUESTRING:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+            case MONTHYEAR:
                 return generateStringToString(fieldName);
 
             case DATA:

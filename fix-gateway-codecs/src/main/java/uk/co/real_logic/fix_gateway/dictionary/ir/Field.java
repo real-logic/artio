@@ -93,38 +93,62 @@ public final class Field implements Element
     public static enum Type
     {
         // int types
-        INT,
-        LENGTH,
-        SEQNUM,
-        NUMINGROUP,
+        INT(false),
+        LENGTH(false),
+        SEQNUM(false),
+        NUMINGROUP(false),
+        DAYOFMONTH(false),
 
         // float types
-        FLOAT,
-        PRICE,
-        PRICEOFFSET,
-        QTY,
-        PERCENTAGE, // Percentage represented as a float
-        AMT, // Float amount, not to be confused with boolean Y/N AMT
+        FLOAT(false),
+        PRICE(false),
+        PRICEOFFSET(false),
+        QTY(false),
+        PERCENTAGE(false), // Percentage represented as a float
+        AMT(false), // Float amount, not to be confused with boolean Y/N AMT
 
-        CHAR,
+        CHAR(false),
 
-        STRING,
-        MULTIPLEVALUESTRING,
+        STRING(true),
+        MULTIPLEVALUESTRING(true),
 
-        CURRENCY, // String using ISO 4217 (3 chars)
-        EXCHANGE, // String using ISO 10383 (2 chars)
-        COUNTRY, // String using ISO 3166
+        CURRENCY(true), // String using ISO 4217 (3 chars)
+        EXCHANGE(true), // String using ISO 10383 (2 chars)
+        COUNTRY(true), // String using ISO 3166
 
-        DATA,
+        DATA(false),
 
         // Boolean types
-        BOOLEAN,
+        BOOLEAN(false),
 
-        UTCTIMESTAMP, // YYYYMMDD-HH:MM:SS or YYYYMMDD-HH:MM:SS.sss
-        UTCTIMEONLY, // HH:MM:SS or HH:MM:SS.sss
-        UTCDATEONLY, // YYYYMMDD
-        LOCALMKTDATE, // YYYYMMDD
-        MONTHYEAR, // YYYYMM or YYYYMMDD or YYYYMMWW
+        UTCTIMESTAMP(false), // YYYYMMDD-HH:MM:SS or YYYYMMDD-HH:MM:SS.sss
+        UTCTIMEONLY(true), // HH:MM:SS or HH:MM:SS.sss
+        UTCDATEONLY(true), // YYYYMMDD
+        LOCALMKTDATE(false), // YYYYMMDD
+        MONTHYEAR(true); // YYYYMM or YYYYMMDD or YYYYMMWW
+
+        private final boolean isStringBased;
+
+        Type(final boolean isStringBased)
+        {
+            this.isStringBased = isStringBased;
+        }
+
+        public boolean isStringBased()
+        {
+            return isStringBased;
+        }
+
+        public static Type lookup(final String name)
+        {
+            // Renamed from FIX 4.2 to Fix 4.4 spec
+            if ("UTCDATE".equals(name))
+            {
+                return UTCDATEONLY;
+            }
+
+            return valueOf(name);
+        }
     }
 
     // TODO: properly provide parsing support for:

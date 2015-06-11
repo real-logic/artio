@@ -229,6 +229,7 @@ public class EncoderGenerator extends Generator
             case LENGTH:
             case SEQNUM:
             case NUMINGROUP:
+            case DAYOFMONTH:
             case LOCALMKTDATE:
                 return generateSetter.apply("int");
 
@@ -461,6 +462,7 @@ public class EncoderGenerator extends Generator
             case LENGTH:
             case SEQNUM:
             case NUMINGROUP:
+            case DAYOFMONTH:
                 return generatePut(fieldName, tag, "Int", optionalSuffix);
 
             case FLOAT:

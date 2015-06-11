@@ -48,6 +48,7 @@ public final class EnumGenerator
             .values()
             .stream()
             .filter(Field::isEnum)
+            .filter(field -> field.type() != Type.BOOLEAN)
             .forEach(this::generateEnum);
     }
 
@@ -125,6 +126,7 @@ public final class EnumGenerator
             case LENGTH:
             case SEQNUM:
             case NUMINGROUP:
+            case DAYOFMONTH:
                 Integer.parseInt(representation);
                 return representation;
 

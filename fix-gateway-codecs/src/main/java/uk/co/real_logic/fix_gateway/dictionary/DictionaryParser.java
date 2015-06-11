@@ -120,7 +120,7 @@ public final class DictionaryParser
 
                 final String name = name(attributes);
                 final int number = getInt(attributes, "number");
-                final Type type = Type.valueOf(getValue(attributes, "type"));
+                final Type type = Type.lookup(getValue(attributes, "type"));
                 final Field field = new Field(number, name, type);
 
                 extractEnumValues(field.values(), node.getChildNodes());

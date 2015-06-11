@@ -167,7 +167,7 @@ public class DecoderGenerator extends Generator
         final Type type = field.type();
         final String optionalCheck = optionalCheck(entry);
 
-        final String suffix = type == STRING
+        final String suffix = type.isStringBased()
             ? String.format(
                 "    private int %s;\n\n" +
                 "    public int %1$s()\n" +
@@ -230,6 +230,7 @@ public class DecoderGenerator extends Generator
             case LENGTH:
             case SEQNUM:
             case NUMINGROUP:
+            case DAYOFMONTH:
             case CHAR:
             case LOCALMKTDATE:
             case UTCTIMESTAMP:
@@ -268,6 +269,7 @@ public class DecoderGenerator extends Generator
             case LENGTH:
             case SEQNUM:
             case NUMINGROUP:
+            case DAYOFMONTH:
             case LOCALMKTDATE:
                 return "int";
 
@@ -284,6 +286,12 @@ public class DecoderGenerator extends Generator
 
             case STRING:
             case MULTIPLEVALUESTRING:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case UTCDATEONLY:
+            case UTCTIMEONLY:
+            case MONTHYEAR:
                 return "char[]";
 
             case BOOLEAN:
@@ -440,6 +448,7 @@ public class DecoderGenerator extends Generator
             case LENGTH:
             case SEQNUM:
             case NUMINGROUP:
+            case DAYOFMONTH:
                 return "getInt(valueOffset, endOfField";
 
             case FLOAT:
