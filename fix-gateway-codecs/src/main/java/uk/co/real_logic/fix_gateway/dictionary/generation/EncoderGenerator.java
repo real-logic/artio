@@ -565,7 +565,7 @@ public class EncoderGenerator extends Generator
             {
                 generatePrecomputedFieldHeader(out, (Field) element);
             }
-            else
+            else if (element instanceof Group)
             {
                 final Group group = (Group) element;
                 generatePrecomputedFieldHeader(out, (Field) group.numberField().element());
