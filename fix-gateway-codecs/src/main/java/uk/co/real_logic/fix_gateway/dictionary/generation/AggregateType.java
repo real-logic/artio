@@ -15,10 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+// TODO: refactor away this enum
 enum AggregateType
 {
     HEADER,
     TRAILER,
     MESSAGE,
-    GROUP
+    GROUP,
+    COMPONENT
 }

@@ -190,7 +190,12 @@ public class EncoderGenerator extends Generator
         {
             return generateGroupSetter(className, (Group) element);
         }
-        return "";
+        else if (element instanceof Component)
+        {
+            return generateComponentField(encoderClassName(entry.name()), (Component) element);
+        }
+
+        throw unknownElement(element);
     }
 
     private String generateFieldSetter(final String className, final Entry entry, final Field field)
@@ -258,21 +263,21 @@ public class EncoderGenerator extends Generator
 
         return String.format(
             "%1$s\n" +
-                "    public void inc%4$s()\n" +
-                "    {\n" +
-                "        %5$s++;\n" +
-                "    }\n\n" +
-                "    private %2$s %3$s = null;\n\n" +
-                "    public %2$s %3$s()\n" +
-                "    {\n" +
-                "        if (%3$s == null)\n" +
-                "        {\n" +
-                "            has%4$s = true;\n" +
-                "            %5$s = 1;" +
-                "            %3$s = new %2$s(this::inc%4$s);\n" +
-                "        }\n" +
-                "        return %3$s;\n" +
-                "    }\n\n",
+            "    public void inc%4$s()\n" +
+            "    {\n" +
+            "        %5$s++;\n" +
+            "    }\n\n" +
+            "    private %2$s %3$s = null;\n\n" +
+            "    public %2$s %3$s()\n" +
+            "    {\n" +
+            "        if (%3$s == null)\n" +
+            "        {\n" +
+            "            has%4$s = true;\n" +
+            "            %5$s = 1;" +
+            "            %3$s = new %2$s(this::inc%4$s);\n" +
+            "        }\n" +
+            "        return %3$s;\n" +
+            "    }\n\n",
             setter,
             encoderClassName(group.name()),
             formatPropertyName(group.name()),
@@ -410,8 +415,12 @@ public class EncoderGenerator extends Generator
         {
             return encodeGroup(entry);
         }
+        else if (entry.element() instanceof Component)
+        {
+            return encodeComponent(entry);
+        }
 
-        return "";
+        throw unknownElement(entry.element());
     }
 
     private String encodeBodyLength()
@@ -533,6 +542,14 @@ public class EncoderGenerator extends Generator
             "        }\n",
             encodeField(group.numberField()),
             formatPropertyName(group.name())
+        );
+    }
+
+    private String encodeComponent(final Entry entry)
+    {
+        return String.format(
+            "            position += %1$s.encode(buffer, position);\n",
+            formatPropertyName(entry.name())
         );
     }
 

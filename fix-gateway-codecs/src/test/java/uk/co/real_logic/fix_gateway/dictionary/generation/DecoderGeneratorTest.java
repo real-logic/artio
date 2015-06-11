@@ -178,7 +178,7 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(NO_OPTIONAL_MESSAGE_EXAMPLE);
 
-        assertEquals(STRING_NO_OPTIONAL_MESSAGE_EXAMPLE, decoder.toString());
+        assertThat(decoder.toString(), containsString(STRING_NO_OPTIONAL_MESSAGE_EXAMPLE));
     }
 
     @Test
@@ -186,7 +186,7 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE_EXAMPLE);
 
-        assertEquals(STRING_ENCODED_MESSAGE_EXAMPLE, decoder.toString());
+        assertThat(decoder.toString(), containsString(STRING_ENCODED_MESSAGE_EXAMPLE));
     }
 
     @Test
@@ -240,7 +240,7 @@ public class DecoderGeneratorTest
         assertThat(decoder, hasToString(containsString(STRING_FOR_GROUP)));
     }
 
-    // TODO: compound types
+    // TODO: component types
     // TODO: validation
 
     private Object getNoEgGroup(final Decoder decoder) throws Exception

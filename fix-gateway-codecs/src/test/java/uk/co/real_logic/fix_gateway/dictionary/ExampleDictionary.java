@@ -30,6 +30,10 @@ import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.registerField;
 
 public final class ExampleDictionary
 {
+
+    public static final String NO_EG_GROUP = "NoEgGroup";
+    public static final String EG_COMPONENT = "EgComponent";
+
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
     public static final String OTHER_ENUM = PARENT_PACKAGE + "." + "OtherEnum";
     public static final String STRING_ENUM = PARENT_PACKAGE + "." + "stringEnum";
@@ -37,6 +41,7 @@ public final class ExampleDictionary
     public static final String TEST_PACKAGE = ENCODER_PACKAGE + ".test";
 
     public static final String HEARTBEAT_ENCODER = TEST_PACKAGE + ".HeartbeatEncoder";
+    public static final String COMPONENT_ENCODER = TEST_PACKAGE + "." + EG_COMPONENT + "Encoder";
     public static final String HEADER_ENCODER = TEST_PACKAGE + ".HeaderEncoder";
 
     public static final String HEARTBEAT_DECODER = TEST_PACKAGE + ".HeartbeatDecoder";
@@ -79,8 +84,7 @@ public final class ExampleDictionary
         "  \"IntField\": \"2\",\n" +
         "  \"FloatField\": \"1.1\",\n" +
         "  \"BooleanField\": \"true\",\n" +
-        "  \"DataField\": \"[49, 50, 51]\",\n" +
-        "}";
+        "  \"DataField\": \"[49, 50, 51]\",\n";
 
     public static final String STRING_FOR_GROUP =
         "  \"EgGroup\": [\n" +
@@ -100,23 +104,28 @@ public final class ExampleDictionary
         String.format(HEADER_TO_STRING, 49) +
         STRING_ENCODED_MESSAGE_SUFFIX;
 
+    public static final String STRING_NO_OPTIONAL_MESSAGE_SUFFIX =
+        "  \"OnBehalfOfCompID\": \"abc\",\n" +
+            "  \"IntField\": \"2\",\n" +
+            "  \"FloatField\": \"1.1\",\n";
+
+    public static final String STRING_NO_OPTIONAL_MESSAGE_EXAMPLE =
+        "{\n" +
+            "  \"MsgType\": \"Heartbeat\",\n" +
+            String.format(HEADER_TO_STRING, 27) +
+            STRING_NO_OPTIONAL_MESSAGE_SUFFIX;
+
+    public static final String COMPONENT_TO_STRING =
+        "  \"EgComponent\":  {\n" +
+        "    \"MsgType\": \"EgComponent\",\n" +
+        "    \"ComponentField\": \"2\",\n" +
+        "  }";
+
     public static final String ENCODED_MESSAGE_EXAMPLE =
         "8=FIX.4.4\0019=0049\00135=0\001115=abc\001112=abc\001116=2\001117=1.1\001118=Y\001119=123\00110=061\001";
 
     public static final String NO_OPTIONAL_MESSAGE_EXAMPLE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=161\001";
-
-    public static final String STRING_NO_OPTIONAL_MESSAGE_SUFFIX =
-        "  \"OnBehalfOfCompID\": \"abc\",\n" +
-        "  \"IntField\": \"2\",\n" +
-        "  \"FloatField\": \"1.1\",\n" +
-        "}";
-
-    public static final String STRING_NO_OPTIONAL_MESSAGE_EXAMPLE =
-        "{\n" +
-        "  \"MsgType\": \"Heartbeat\",\n" +
-        String.format(HEADER_TO_STRING, 27) +
-        STRING_NO_OPTIONAL_MESSAGE_SUFFIX;
 
     public static final String DERIVED_FIELDS_EXAMPLE =
             "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=161\001";
@@ -130,33 +139,19 @@ public final class ExampleDictionary
     public static final String NESTED_GROUP_EXAMPLE =
         "8=FIX.4.4\0019=0051\00135=0\001115=abc\001116=2\001117=1.1\001120=1\001121=1\001122=1\001123=1\00110=172\001";
 
-    public static final int TEST_REQ_ID_TAG = 112;
+    public static final String COMPONENT_MESSAGE_EXAMPLE =
+        "8=FIX.4.4\0019=0033\00135=0\001115=abc\001116=2\001117=1.1\001124=2\00110=165\001";
 
-    public static final String NO_EG_GROUP = "NoEgGroup";
+    public static final int TEST_REQ_ID_TAG = 112;
 
     static
     {
-        final Field egEnum = new Field(123, "EgEnum", Type.CHAR)
-            .addValue("a", "AnEntry")
-            .addValue("b", "AnotherEntry");
+        FIELD_EXAMPLE = buildFieldExample();
+        MESSAGE_EXAMPLE = buildMessageExample();
+    }
 
-        final Field otherEnum = new Field(124, "OtherEnum", Type.INT)
-            .addValue("1", "AnEntry")
-            .addValue("12", "AnotherEntry");
-
-        final Field stringEnum = new Field(126, "stringEnum", Type.STRING)
-            .addValue("0", "_0")
-            .addValue("A", "_A")
-            .addValue("AA", "_AA");
-
-        final Map<String, Field> fieldEgFields = new HashMap<>();
-        fieldEgFields.put("EgEnum", egEnum);
-        fieldEgFields.put("OtherEnum", otherEnum);
-        fieldEgFields.put("stringEnum", stringEnum);
-        fieldEgFields.put("egNotEnum", new Field(125, "EgNotEnum", Type.CHAR));
-
-        FIELD_EXAMPLE = new Dictionary(emptyList(), fieldEgFields, emptyMap(), null, null, 4, 4);
-
+    private static Dictionary buildMessageExample()
+    {
         final Map<String, Field> messageEgFields = new HashMap<>();
 
         final Field beginString = registerField(messageEgFields, 8, "BeginString", Type.STRING);
@@ -179,6 +174,9 @@ public final class ExampleDictionary
         egGroup.optionalEntry(registerField(messageEgFields, 121, "GroupField", Type.INT));
         egGroup.optionalEntry(nestedGroup);
 
+        final Component egComponent = new Component(EG_COMPONENT);
+        egComponent.optionalEntry(registerField(messageEgFields, 124, "ComponentField", Type.INT));
+
         final Message heartbeat = new Message("Heartbeat", HEARTBEAT_TYPE, ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);
         heartbeat.optionalEntry(testReqID);
@@ -187,6 +185,7 @@ public final class ExampleDictionary
         heartbeat.optionalEntry(booleanField);
         heartbeat.optionalEntry(dataField);
         heartbeat.optionalEntry(egGroup);
+        heartbeat.requiredEntry(egComponent);
 
         final Component header = new Component("Header");
         header.requiredEntry(beginString)
@@ -198,6 +197,33 @@ public final class ExampleDictionary
 
         final List<Message> messages = singletonList(heartbeat);
 
-        MESSAGE_EXAMPLE = new Dictionary(messages, messageEgFields, emptyMap(), header, trailer, 4, 4);
+        final Map<String, Component> components = new HashMap<>();
+        components.put(EG_COMPONENT, egComponent);
+
+        return new Dictionary(messages, messageEgFields, components, header, trailer, 4, 4);
+    }
+
+    private static Dictionary buildFieldExample()
+    {
+        final Field egEnum = new Field(123, "EgEnum", Type.CHAR)
+            .addValue("a", "AnEntry")
+            .addValue("b", "AnotherEntry");
+
+        final Field otherEnum = new Field(124, "OtherEnum", Type.INT)
+            .addValue("1", "AnEntry")
+            .addValue("12", "AnotherEntry");
+
+        final Field stringEnum = new Field(126, "stringEnum", Type.STRING)
+            .addValue("0", "_0")
+            .addValue("A", "_A")
+            .addValue("AA", "_AA");
+
+        final Map<String, Field> fieldEgFields = new HashMap<>();
+        fieldEgFields.put("EgEnum", egEnum);
+        fieldEgFields.put("OtherEnum", otherEnum);
+        fieldEgFields.put("stringEnum", stringEnum);
+        fieldEgFields.put("egNotEnum", new Field(125, "EgNotEnum", Type.CHAR));
+
+        return new Dictionary(emptyList(), fieldEgFields, emptyMap(), null, null, 4, 4);
     }
 }

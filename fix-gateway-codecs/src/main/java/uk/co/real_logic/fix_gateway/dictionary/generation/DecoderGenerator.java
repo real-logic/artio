@@ -131,8 +131,12 @@ public class DecoderGenerator extends Generator
         {
             return generateGroupGetter((Group) element);
         }
+        else if (element instanceof Component)
+        {
+            return generateComponentField(decoderClassName(entry.name()), (Component) element);
+        }
 
-        return "";
+        throw unknownElement(element);
     }
 
     private String generateGroupGetter(final Group element)

@@ -24,7 +24,8 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 
@@ -57,7 +58,7 @@ public class PrinterGeneratorTest
 
         final String string = printer.toString(buffer, 1, ENCODED_MESSAGE_EXAMPLE.length(), HEARTBEAT_TYPE);
 
-        assertEquals(STRING_ENCODED_MESSAGE_EXAMPLE, string);
+        assertThat(string, containsString(STRING_ENCODED_MESSAGE_EXAMPLE));
     }
 
     private Printer printer() throws InstantiationException, IllegalAccessException

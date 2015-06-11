@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static java.util.stream.Collectors.joining;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.COMPONENT;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.MESSAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importStaticFor;
@@ -79,8 +80,8 @@ public abstract class Generator
         generateAggregate(dictionary.header(), AggregateType.HEADER);
         generateAggregate(dictionary.trailer(), AggregateType.TRAILER);
 
-        dictionary.messages()
-                .forEach(msg -> generateAggregate(msg, AggregateType.MESSAGE));
+        dictionary.components().forEach((name, component) -> generateAggregate(component, COMPONENT));
+        dictionary.messages().forEach(msg -> generateAggregate(msg, MESSAGE));
     }
 
     protected abstract void generateAggregate(final Aggregate aggregate, final AggregateType type);
@@ -302,11 +303,19 @@ public abstract class Generator
                 formatPropertyName(name)
             );
         }
+        else if (element instanceof Component)
+        {
+            return String.format(
+                "                String.format(\"  \\\"%1$s\\\":  %%s\\n\", %2$s" + EXPAND_INDENT + ")",
+                name,
+                formatPropertyName(name)
+            );
+        }
 
         return "\"\"";
     }
 
-    protected String generateValueToString(Field field)
+    protected String generateValueToString(final Field field)
     {
         final String fieldName = JavaUtil.formatPropertyName(field.name());
         switch (field.type())
@@ -327,6 +336,24 @@ public abstract class Generator
             default:
                 return fieldName;
         }
+    }
+
+    protected IllegalStateException unknownElement(final Element element)
+    {
+        return new IllegalStateException("Unknown type of element: " + element);
+    }
+
+    protected String generateComponentField(final String className, final Component element)
+    {
+        return String.format(
+            "    private final %1$s %2$s = new %1$s();\n" +
+            "    public %1$s %2$s()\n" +
+            "    {" +
+            "        return %2$s;" +
+            "    }",
+            className,
+            formatPropertyName(element.name())
+        );
     }
 
     protected abstract String generateStringToString(String fieldName);

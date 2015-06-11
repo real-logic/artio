@@ -205,7 +205,7 @@ public class EncoderGeneratorTest
 
         setRequiredFields(encoder);
 
-        assertThat(encoder.toString(), endsWith(STRING_NO_OPTIONAL_MESSAGE_SUFFIX));
+        assertThat(encoder.toString(), containsString(STRING_NO_OPTIONAL_MESSAGE_SUFFIX));
     }
 
     @Test
@@ -216,7 +216,7 @@ public class EncoderGeneratorTest
         setRequiredFields(encoder);
         setOptionalFields(encoder);
 
-        assertThat(encoder.toString(), endsWith(STRING_ENCODED_MESSAGE_SUFFIX));
+        assertThat(encoder.toString(), containsString(STRING_ENCODED_MESSAGE_SUFFIX));
     }
 
     @Test
@@ -291,11 +291,44 @@ public class EncoderGeneratorTest
         setRequiredFields(encoder);
         setGroup(encoder);
 
-        //System.out.println(STRING_FOR_GROUP);
         assertThat(encoder, hasToString(containsString(STRING_FOR_GROUP)));
     }
 
-    // TODO: compound types
+    @Test
+    public void shouldGenerateComponentClass() throws Exception
+    {
+        final Class<?> component = compileInMemory(COMPONENT_ENCODER, OUTPUT_MANAGER.getSources());
+
+        assertNotNull(component);
+    }
+
+    @Test
+    public void shouldBeAbleToEncodeComponentValues() throws Exception
+    {
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        setRequiredFields(encoder);
+
+        setupComponent(encoder);
+
+        assertEncodesTo(encoder, COMPONENT_MESSAGE_EXAMPLE);
+    }
+
+    @Test
+    public void shouldBeAbleToToStringComponentValues() throws Exception
+    {
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        setRequiredFields(encoder);
+
+        setupComponent(encoder);
+
+        assertThat(encoder.toString(), containsString(COMPONENT_TO_STRING));
+    }
+
+    private void setupComponent(final Encoder encoder) throws Exception
+    {
+        final Object egComponent = get(encoder, "egComponent");
+        setInt(egComponent, "componentField", 2);
+    }
 
     private void setGroup(final Encoder encoder) throws Exception
     {
