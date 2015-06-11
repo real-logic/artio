@@ -338,11 +338,6 @@ public abstract class Generator
         }
     }
 
-    protected IllegalStateException unknownElement(final Element element)
-    {
-        return new IllegalStateException("Unknown type of element: " + element);
-    }
-
     protected String generateComponentField(final String className, final Component element)
     {
         return String.format(

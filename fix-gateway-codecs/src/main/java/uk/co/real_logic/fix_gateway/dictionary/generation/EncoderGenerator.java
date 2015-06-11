@@ -195,7 +195,7 @@ public class EncoderGenerator extends Generator
             return generateComponentField(encoderClassName(entry.name()), (Component) element);
         }
 
-        throw unknownElement(element);
+        return "";
     }
 
     private String generateFieldSetter(final String className, final Entry entry, final Field field)
@@ -420,7 +420,7 @@ public class EncoderGenerator extends Generator
             return encodeComponent(entry);
         }
 
-        throw unknownElement(entry.element());
+        return "";
     }
 
     private String encodeBodyLength()
@@ -450,7 +450,7 @@ public class EncoderGenerator extends Generator
 
     private boolean isBodyLength(final Entry entry)
     {
-        return isBodyLength(entry.name());
+        return entry != null && isBodyLength(entry.name());
     }
 
     private String encodeField(final Entry entry)

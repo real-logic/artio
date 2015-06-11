@@ -79,10 +79,13 @@ public final class DictionaryParser
     {
         final Document document = documentBuilder.parse(in);
         final Map<String, Field> fields = parseFields(document);
-        final Map<String, Component> components = parseComponents(document, fields);
-        final List<Message> messages = parseMessages(document, fields, components);
-        final Component header = extractComponent(document, fields, findHeader, "Header", components);
-        final Component trailer = extractComponent(document, fields, findTrailer, "Trailer", components);
+        final Map<Entry, String> forwardReferences = new HashMap<>();
+        final Map<String, Component> components = parseComponents(document, fields, forwardReferences);
+        final List<Message> messages = parseMessages(document, fields, components, forwardReferences);
+        final Component header = extractComponent(document, fields, findHeader, "Header", components, forwardReferences);
+        final Component trailer = extractComponent(document, fields, findTrailer, "Trailer", components, forwardReferences);
+
+        reconnectForwardReferences(forwardReferences, components);
 
         final NamedNodeMap fixAttributes = document.getElementsByTagName("fix").item(0).getAttributes();
         final int majorVersion = getInt(fixAttributes, "major");
@@ -91,7 +94,15 @@ public final class DictionaryParser
         return new Dictionary(messages, fields, components, header, trailer, majorVersion, minorVersion);
     }
 
-    private Map<String, Component> parseComponents(final Document document, final Map<String, Field> fields)
+    private void reconnectForwardReferences(final Map<Entry, String> forwardReferences,
+                                            final Map<String, Component> components)
+    {
+        forwardReferences.forEach((entry, name) -> entry.element(components.get(name)));
+    }
+
+    private Map<String, Component> parseComponents(final Document document,
+                                                   final Map<String, Field> fields,
+                                                   final Map<Entry, String> forwardReferences)
         throws XPathExpressionException
     {
         final Map<String, Component> components = new HashMap<>();
@@ -102,7 +113,7 @@ public final class DictionaryParser
                 final String name = name(attributes);
                 final Component component = new Component(name);
 
-                extractEntries(node.getChildNodes(), fields, component.entries(), components);
+                extractEntries(node.getChildNodes(), fields, component.entries(), components, forwardReferences);
 
                 components.put(name, component);
             });
@@ -150,7 +161,8 @@ public final class DictionaryParser
     private List<Message> parseMessages(
         final Document document,
         final Map<String, Field> fields,
-        final Map<String, Component> components) throws XPathExpressionException
+        final Map<String, Component> components,
+        final Map<Entry, String> forwardReferences) throws XPathExpressionException
     {
         final ArrayList<Message> messages = new ArrayList<>();
 
@@ -164,7 +176,7 @@ public final class DictionaryParser
                 final Category category = parseCategory(getValue(attributes, "msgcat"));
                 final Message message = new Message(name, type, category);
 
-                extractEntries(node.getChildNodes(), fields, message.entries(), components);
+                extractEntries(node.getChildNodes(), fields, message.entries(), components, forwardReferences);
 
                 messages.add(message);
             });
@@ -182,7 +194,7 @@ public final class DictionaryParser
         final NodeList childNodes,
         final Map<String, Field> fields,
         final List<Entry> entries,
-        final Map<String, Component> components)
+        final Map<String, Component> components, final Map<Entry, String> forwardReferences)
     {
         forEach(childNodes,
             (node) ->
@@ -200,28 +212,35 @@ public final class DictionaryParser
 
                     case "group":
                         final Group group = Group.of(fields.get(name));
-                        extractEntries(node.getChildNodes(), fields, group.entries(), components);
+                        extractEntries(node.getChildNodes(), fields, group.entries(), components, forwardReferences);
                         newEntry.accept(group);
                         break;
 
                     case "component":
-                        newEntry.accept(components.get(name));
+                        final Component component = components.get(name);
+                        final Entry entry = new Entry(required, component);
+                        if (component == null)
+                        {
+                            forwardReferences.put(entry, name);
+                        }
+                        entries.add(entry);
                         break;
                 }
             });
     }
 
     private Component extractComponent(
-            final Document document,
-            final Map<String, Field> fields,
-            final XPathExpression expression,
-            final String name,
-            final Map<String, Component> components)
+        final Document document,
+        final Map<String, Field> fields,
+        final XPathExpression expression,
+        final String name,
+        final Map<String, Component> components,
+        final Map<Entry, String> forwardReferences)
         throws XPathExpressionException
     {
         final Component component = new Component(name);
         final NodeList nodes = evaluate(document, expression);
-        extractEntries(nodes, fields, component.entries(), components);
+        extractEntries(nodes, fields, component.entries(), components, forwardReferences);
         return component;
     }
 

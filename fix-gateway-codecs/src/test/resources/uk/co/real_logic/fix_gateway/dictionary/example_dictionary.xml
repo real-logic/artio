@@ -55,6 +55,10 @@
                     <field name="MemberSubID" required="N"/>
                 </group>
             </group>
+            <component name="NextComponent" required="N"/>
+        </component>
+        <component name="NextComponent">
+            <field name="MemberSubID" required="N"/>
         </component>
     </components>
     <fields>
@@ -188,5 +192,6 @@
         <field number="101" name="NoMemberIDs" type="NUMINGROUP"/>
         <field number="102" name="NoMemberSubIDs" type="NUMINGROUP"/>
         <field number="103" name="MemberSubIDType" type="INT"/>
+        <field number="104" name="MemberSubID" type="INT"/>
     </fields>
 </fix>

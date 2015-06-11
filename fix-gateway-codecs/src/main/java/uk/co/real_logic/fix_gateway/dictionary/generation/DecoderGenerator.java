@@ -136,7 +136,7 @@ public class DecoderGenerator extends Generator
             return generateComponentField(decoderClassName(entry.name()), (Component) element);
         }
 
-        throw unknownElement(element);
+        return "";
     }
 
     private String generateGroupGetter(final Group element)

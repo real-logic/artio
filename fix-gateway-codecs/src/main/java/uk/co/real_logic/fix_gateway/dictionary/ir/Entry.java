@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.dictionary.ir;
 public final class Entry
 {
     private final boolean required;
-    private final Element element;
+    private Element element;
 
     public static Entry required(final Element element)
     {
@@ -44,6 +44,12 @@ public final class Entry
     public Element element()
     {
         return this.element;
+    }
+
+    public Entry element(final Element element)
+    {
+        this.element = element;
+        return this;
     }
 
     public boolean isField()
