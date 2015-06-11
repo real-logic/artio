@@ -84,8 +84,6 @@ public final class OtfParser
         }
         catch (final IllegalArgumentException ex)
         {
-            // Error parsing the message
-            // ex.printStackTrace();
             parseError(this.messageType, tag);
         }
     }
