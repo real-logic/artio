@@ -206,9 +206,14 @@ public class EncoderGenerator extends Generator
 
         switch (field.type())
         {
-            // TODO: other type cases
-            // TODO: how do we reset optional fields - clear method?
             case STRING:
+            case MULTIPLEVALUESTRING:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+            case MONTHYEAR:
                 return generateStringSetter(className, fieldName, optionalField, optionalAssign);
 
             case BOOLEAN:
@@ -217,19 +222,27 @@ public class EncoderGenerator extends Generator
             case DATA:
                 return generateSetter.apply("byte[]");
 
+            case CHAR:
+                return generateSetter.apply("char");
+
             case INT:
             case LENGTH:
             case SEQNUM:
+            case NUMINGROUP:
             case LOCALMKTDATE:
                 return generateSetter.apply("int");
+
+            case FLOAT:
+            case PRICE:
+            case PRICEOFFSET:
+            case QTY:
+            case PERCENTAGE:
+            case AMT:
+                return generateSetter.apply("DecimalFloat");
 
             case UTCTIMESTAMP:
                 return generateSetter.apply("long");
 
-            case QTY:
-            case PRICE:
-            case PRICEOFFSET:
-                return generateSetter.apply("DecimalFloat");
 
             default: throw new UnsupportedOperationException("Unknown type: " + field.type());
         }
@@ -444,7 +457,31 @@ public class EncoderGenerator extends Generator
 
         switch (field.type())
         {
+            case INT:
+            case LENGTH:
+            case SEQNUM:
+            case NUMINGROUP:
+                return generatePut(fieldName, tag, "Int", optionalSuffix);
+
+            case FLOAT:
+            case PRICE:
+            case PRICEOFFSET:
+            case QTY:
+            case PERCENTAGE:
+            case AMT:
+                return generatePut(fieldName, tag, "Float", optionalSuffix);
+
+            case CHAR:
+                return generatePut(fieldName, tag, "Char", optionalSuffix);
+
             case STRING:
+            case MULTIPLEVALUESTRING:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+            case MONTHYEAR:
                 return String.format(
                     "%s" +
                         "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
@@ -459,16 +496,6 @@ public class EncoderGenerator extends Generator
 
             case DATA:
                 return generatePut(fieldName, tag, "Bytes", optionalSuffix);
-
-            case INT:
-            case LENGTH:
-            case SEQNUM:
-                return generatePut(fieldName, tag, "Int", optionalSuffix);
-
-            case QTY:
-            case PRICE:
-            case PRICEOFFSET:
-                return generatePut(fieldName, tag, "Float", optionalSuffix);
 
             case LOCALMKTDATE:
                 return String.format(

@@ -183,25 +183,38 @@ public abstract class Generator
             case INT:
             case LENGTH:
             case SEQNUM:
+            case NUMINGROUP:
             case LOCALMKTDATE:
                 return resetFieldValue(name, "MISSING_INT");
+
+            case FLOAT:
+            case PRICE:
+            case PRICEOFFSET:
+            case QTY:
+            case PERCENTAGE:
+            case AMT:
+                return resetFieldValue(name, "null");
+
+            case CHAR:
+                return resetFieldValue(name, "MISSING_CHAR");
 
             case UTCTIMESTAMP:
                 return resetFieldValue(name, "MISSING_LONG");
 
-
-            case QTY:
-            case PRICE:
-            case PRICEOFFSET:
-                return resetFieldValue(name, "null");
-
             // TODO
             case STRING:
+            case MULTIPLEVALUESTRING:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+            case MONTHYEAR:
             case BOOLEAN:
             case DATA:
                 return String.format(
                     "    public void %1$s()\n" +
-                    "    {\n" +
+                        "    {\n" +
                     "    }\n\n",
                     resetMethodName(name)
                 );

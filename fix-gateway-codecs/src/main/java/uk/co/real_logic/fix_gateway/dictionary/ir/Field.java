@@ -96,26 +96,46 @@ public final class Field implements Element
         INT,
         LENGTH,
         SEQNUM,
-
-        STRING,
+        NUMINGROUP,
 
         // float types
+        FLOAT,
         PRICE,
         PRICEOFFSET,
         QTY,
+        PERCENTAGE, // Percentage represented as a float
+        AMT, // Float amount, not to be confused with boolean Y/N AMT
 
         CHAR,
-        LOCALMKTDATE,
-        AMT, // AlternativeMinimumTax, boolean
+
+        STRING,
+        MULTIPLEVALUESTRING,
+
+        CURRENCY, // String using ISO 4217 (3 chars)
+        EXCHANGE, // String using ISO 10383 (2 chars)
+        COUNTRY, // String using ISO 3166
 
         DATA,
+
+        // Boolean types
         BOOLEAN,
 
-        CURRENCY,
-        NUMINGROUP,
-        MULTIPLEVALUESTRING,
-        UTCTIMESTAMP
+        UTCTIMESTAMP, // YYYYMMDD-HH:MM:SS or YYYYMMDD-HH:MM:SS.sss
+        UTCTIMEONLY, // HH:MM:SS or HH:MM:SS.sss
+        UTCDATEONLY, // YYYYMMDD
+        LOCALMKTDATE, // YYYYMMDD
+        MONTHYEAR, // YYYYMM or YYYYMMDD or YYYYMMWW
     }
+
+    // TODO: properly provide parsing support for:
+    // UTCTIMEONLY
+    // UTCDATEONLY
+    // MONTHYEAR
+
+    // TODO: provide lookup table support for:
+    // CURRENCY
+    // EXCHANGE
+    // COUNTRY
 
     public static class Value
     {

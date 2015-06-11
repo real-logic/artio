@@ -205,20 +205,32 @@ public class DecoderGenerator extends Generator
         switch (type)
         {
             case STRING:
+            case MULTIPLEVALUESTRING:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+            case MONTHYEAR:
                 return String.format(" = new char[%d]", initialBufferSize);
 
             case DATA:
                 return String.format(" = new byte[%d]", initialBufferSize);
 
-            case QTY:
+            case FLOAT:
             case PRICE:
             case PRICEOFFSET:
+            case QTY:
+            case PERCENTAGE:
+            case AMT:
                 return " = new DecimalFloat()";
 
             case BOOLEAN:
             case INT:
             case LENGTH:
             case SEQNUM:
+            case NUMINGROUP:
+            case CHAR:
             case LOCALMKTDATE:
             case UTCTIMESTAMP:
                 return "";
@@ -252,7 +264,26 @@ public class DecoderGenerator extends Generator
     {
         switch (type)
         {
+            case INT:
+            case LENGTH:
+            case SEQNUM:
+            case NUMINGROUP:
+            case LOCALMKTDATE:
+                return "int";
+
+            case FLOAT:
+            case PRICE:
+            case PRICEOFFSET:
+            case QTY:
+            case PERCENTAGE:
+            case AMT:
+                return "DecimalFloat";
+
+            case CHAR:
+                return "char";
+
             case STRING:
+            case MULTIPLEVALUESTRING:
                 return "char[]";
 
             case BOOLEAN:
@@ -261,19 +292,8 @@ public class DecoderGenerator extends Generator
             case DATA:
                 return "byte[]";
 
-            case INT:
-            case LENGTH:
-            case SEQNUM:
-            case LOCALMKTDATE:
-                return "int";
-
             case UTCTIMESTAMP:
                 return "long";
-
-            case QTY:
-            case PRICE:
-            case PRICEOFFSET:
-                return "DecimalFloat";
 
             default:
                 throw new UnsupportedOperationException("Unknown type: " + type);
@@ -416,7 +436,31 @@ public class DecoderGenerator extends Generator
     {
         switch (type)
         {
+            case INT:
+            case LENGTH:
+            case SEQNUM:
+            case NUMINGROUP:
+                return "getInt(valueOffset, endOfField";
+
+            case FLOAT:
+            case PRICE:
+            case PRICEOFFSET:
+            case QTY:
+            case PERCENTAGE:
+            case AMT:
+                return String.format("getFloat(%s, valueOffset, valueLength", fieldName);
+
+            case CHAR:
+                return "getChar(valueOffset, endOfField";
+
             case STRING:
+            case MULTIPLEVALUESTRING:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+            case MONTHYEAR:
                 return String.format("getChars(%s, valueOffset, valueLength", fieldName);
 
             case BOOLEAN:
@@ -424,16 +468,6 @@ public class DecoderGenerator extends Generator
 
             case DATA:
                 return String.format("getBytes(%s, valueOffset, valueLength", fieldName);
-
-            case INT:
-            case LENGTH:
-            case SEQNUM:
-                return "getInt(valueOffset, endOfField";
-
-            case QTY:
-            case PRICE:
-            case PRICEOFFSET:
-                return String.format("getFloat(%s, valueOffset, valueLength", fieldName);
 
             case LOCALMKTDATE:
                 return "getLocalMktDate(valueOffset, valueLength";

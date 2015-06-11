@@ -28,6 +28,7 @@ public final class CodecUtil
     public static final byte[] BODY_LENGTH = "9=0000\001".getBytes(US_ASCII);
 
     public static final int MISSING_INT = -1;
+    public static final char MISSING_CHAR = '\001';
     public static final long MISSING_LONG = -1L;
 
     /**

@@ -124,10 +124,18 @@ public final class EnumGenerator
             case INT:
             case LENGTH:
             case SEQNUM:
+            case NUMINGROUP:
                 Integer.parseInt(representation);
                 return representation;
 
             case STRING:
+            case MULTIPLEVALUESTRING:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+            case MONTHYEAR:
                 return String.valueOf(getMessageType(representation));
 
             case CHAR:
