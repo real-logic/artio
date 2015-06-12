@@ -107,10 +107,6 @@ public final class StaticConfiguration
     {
     }
 
-    public void registerAcceptor(final uk.co.real_logic.fix_gateway.reactive_api.OrderSingleAcceptor orderSingleAcceptor)
-    {
-    }
-
     public StaticConfiguration registerAcceptor(
         final OtfMessageAcceptor messageAcceptor, int firstTag, final int... tags)
     {
