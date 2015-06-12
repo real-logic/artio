@@ -35,4 +35,18 @@ public interface SessionHandler
         // Optional method, implement if you care about this type of message.
     }
 
+    default void onConnect(
+        final long connectionId,
+        final DirectBuffer buffer,
+        final int addressOffset,
+        final int addressLength)
+    {
+        // Optional method, implement if you care about this type of message.
+    }
+
+    default void onLogon(final long connectionId, final long sessionId)
+    {
+        // Optional method, implement if you care about this type of message.
+    }
+
 }

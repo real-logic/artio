@@ -30,6 +30,9 @@ import java.nio.ByteBuffer;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.logger.LoggerUtil.newArchiveMetaData;
 
+/**
+ * Eg: -Dlogging.dir=/home/richard/monotonic/Fix-Engine/fix-gateway-system-tests/initiator-logs ArchivePrinter 0
+ */
 public class ArchivePrinter implements SessionHandler
 {
     public static final int UNKNOWN = -1;
@@ -80,6 +83,7 @@ public class ArchivePrinter implements SessionHandler
 
         for (final File logFile : directoryDescriptor.listLogFiles(streamId))
         {
+            // System.out.printf("Printing %s\n", logFile);
             final ByteBuffer byteBuffer = bufferFactory.map(logFile);
             if (byteBuffer.capacity() > 0)
             {
@@ -111,6 +115,20 @@ public class ArchivePrinter implements SessionHandler
 
     public void onDisconnect(final long connectionId)
     {
-        output.printf("%d Disconnected", connectionId);
+        output.printf("%d Disconnected\n", connectionId);
+    }
+
+    public void onLogon(final long connectionId, final long sessionId)
+    {
+        output.printf("connection %d has logged in as session %d\n", connectionId, sessionId);
+    }
+
+    public void onConnect(final long connectionId,
+                          final DirectBuffer buffer,
+                          final int addressOffset,
+                          final int addressLength)
+    {
+        final String address = buffer.getStringUtf8(addressOffset, addressLength);
+        output.printf("Connected to %s as connection %d\n", address, connectionId);
     }
 }

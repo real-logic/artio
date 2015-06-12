@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
 
 /**
  * A proxy for publishing messages fix related messages
@@ -115,9 +116,10 @@ public class GatewayPublication
 
     public void saveConnect(final long connectionId, final SocketAddress address)
     {
-        final String addressString = address.toString();
+        final byte[] addressString = address.toString().getBytes(StandardCharsets.UTF_8);
 
-        claim(header.size() + CONNECT_SIZE + addressString.length());
+        final int length = header.size() + CONNECT_SIZE + addressString.length;
+        claim(length);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -134,7 +136,7 @@ public class GatewayPublication
         connect
             .wrap(buffer, offset)
             .connection(connectionId)
-            .address(addressString);
+            .putAddress(addressString, 0, addressString.length);
 
         bufferClaim.commit();
     }

@@ -19,9 +19,7 @@ import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.messages.DisconnectDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
 
 import static uk.co.real_logic.fix_gateway.replication.GatewayPublication.FRAME_SIZE;
@@ -30,6 +28,8 @@ public class DataSubscriber implements FragmentHandler
 {
     public static final int UNKNOWN_TEMPLATE = -1;
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
+    private final LogonDecoder logon = new LogonDecoder();
+    private final ConnectDecoder connect = new ConnectDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final SessionHandler sessionHandler;
@@ -48,13 +48,15 @@ public class DataSubscriber implements FragmentHandler
     {
         messageHeader.wrap(buffer, offset);
 
+        final int blockLength = messageHeader.blockLength();
+        final int version = messageHeader.version();
         offset += messageHeader.size();
 
         switch (messageHeader.templateId())
         {
             case FixMessageDecoder.TEMPLATE_ID:
             {
-                messageFrame.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
+                messageFrame.wrap(buffer, offset, blockLength, version);
                 final int messageLength = messageFrame.bodyLength();
                 sessionHandler.onMessage(
                     buffer,
@@ -69,11 +71,26 @@ public class DataSubscriber implements FragmentHandler
 
             case DisconnectDecoder.TEMPLATE_ID:
             {
-                disconnect.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
+                disconnect.wrap(buffer, offset, blockLength, version);
                 final long connectionId = disconnect.connection();
                 DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
                 sessionHandler.onDisconnect(connectionId);
                 return offset + DisconnectDecoder.BLOCK_LENGTH;
+            }
+
+            case LogonDecoder.TEMPLATE_ID:
+            {
+                logon.wrap(buffer, offset, blockLength, version);
+                sessionHandler.onLogon(logon.connection(), logon.session());
+                return logon.limit();
+            }
+
+            case ConnectDecoder.TEMPLATE_ID:
+            {
+                connect.wrap(buffer, offset, blockLength, version);
+                final int addressOffset = offset + ConnectDecoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderSize();
+                sessionHandler.onConnect(connect.connection(), buffer, addressOffset, connect.addressLength());
+                return connect.limit();
             }
         }
 
