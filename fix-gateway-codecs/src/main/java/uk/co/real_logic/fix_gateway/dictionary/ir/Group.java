@@ -32,12 +32,16 @@ public final class Group extends Aggregate implements Element
         return numberField;
     }
 
-    public static Group of(final Field field)
+    public static Group of(Field field)
     {
         String name = field.name();
         if (name.startsWith("No"))
         {
             name = name.substring(2);
+        }
+        else
+        {
+            field = new Field(field.number(), "No" + field.name(), field.type());
         }
         return new Group(name, new Entry(false, field));
     }
