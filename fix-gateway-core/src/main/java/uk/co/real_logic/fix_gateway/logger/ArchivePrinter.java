@@ -31,7 +31,7 @@ import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.logger.LoggerUtil.newArchiveMetaData;
 
 /**
- * Eg: -Dlogging.dir=/home/richard/monotonic/Fix-Engine/fix-gateway-system-tests/initiator-logs ArchivePrinter 0
+ * Eg: -Dlogging.dir=/home/richard/monotonic/Fix-Engine/fix-gateway-system-tests/client-logs ArchivePrinter 0
  */
 public class ArchivePrinter implements SessionHandler
 {

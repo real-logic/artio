@@ -13,13 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.otf_api;
+package uk.co.real_logic.message_examples;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 
+// You register the acceptor - which is your custom application hook
+// Your generic acceptor then gets callbacks for each field of the tag or tags that it
+// gets registered for
 public class SampleOtfAcceptor implements OtfMessageAcceptor
 {
     private boolean wantsToSell;

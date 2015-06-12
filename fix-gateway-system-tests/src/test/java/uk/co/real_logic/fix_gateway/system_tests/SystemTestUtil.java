@@ -141,8 +141,8 @@ public final class SystemTestUtil
             .bind("localhost", unusedPort())
             .aeronChannel("udp://localhost:" + unusedPort())
             .newSessionHandler(sessionHandler)
-            .counterBuffersFile(IoUtil.tmpDirName() + "fix-initiator" + File.separator + "counters")
-            .logFileDir("initiator-logs");
+            .counterBuffersFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "counters")
+            .logFileDir("client-logs");
         return FixGateway.launch(initiatingConfig);
     }
 

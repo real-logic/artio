@@ -36,4 +36,4 @@ hs_err_pid*
 
 *-logs
 fix-gateway-system-tests/logs/
-
+logs/

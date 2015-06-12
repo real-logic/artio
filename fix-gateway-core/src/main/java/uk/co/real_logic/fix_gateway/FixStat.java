@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>
  * Takes the same configuration properties as the gateway, for example:
  *
- * -Dfix.counters.file=/tmp/fix-initiator/counters
+ * -Dfix.counters.file=/tmp/fix-client/counters
  */
 public class FixStat
 {

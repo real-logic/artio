@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.otf_api;
+package uk.co.real_logic.message_examples;
 
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
@@ -26,14 +26,15 @@ import static uk.co.real_logic.fix_gateway.flyweight_api.OrdType.Market;
 import static uk.co.real_logic.fix_gateway.flyweight_api.Side.Sell;
 
 /**
- * .
+ * Example of what sending an OrderSingle message would be like using the API.
  */
-public class SampleOtfMain
+public class MessageApiExamples
 {
-    public static void main(final String[] args) throws Exception
+    public static void main(String[] args) throws Exception
     {
         // Static configuration lasts the duration of a FIX-Gateway instance
-        final StaticConfiguration configuration = new StaticConfiguration();
+        final StaticConfiguration configuration = new StaticConfiguration()
+            .aeronChannel("udp://localhost:9999");
 
         // You register the acceptor - which is your custom application hook
         // Your generic acceptor then gets callbacks for each field of the tag or tags that it
@@ -58,14 +59,14 @@ public class SampleOtfMain
 
             final OrderSingleEncoder orderSingle = new OrderSingleEncoder();
             orderSingle.clOrdID("1")
-                       .handlInst('1')
-                       .ordType(Market)
-                        // The API would follow a fluent style for setting up the different FIX message fields.
-                       .side(Sell)
-                       .symbol("MSFT")
-                       .price(price)
-                       .orderQty(quantity)
-                       .transactTime(System.currentTimeMillis());
+                .handlInst('1')
+                .ordType(Market)
+                    // The API would follow a fluent style for setting up the different FIX message fields.
+                .side(Sell)
+                .symbol("MSFT")
+                .price(price)
+                .orderQty(quantity)
+                .transactTime(System.currentTimeMillis());
 
             // Having encoded the message, you can send it to the exchange via the session object.
             session.send(orderSingle);
@@ -74,12 +75,12 @@ public class SampleOtfMain
             // need to update the fields in question and the other remain the side as your previous
             // usage.
             orderSingle.price(price.value(2010))
-                       .orderQty(quantity.value(20));
+                .orderQty(quantity.value(20));
 
             session.send(orderSingle);
 
             orderSingle.price(price.value(2020))
-                       .orderQty(quantity.value(30));
+                .orderQty(quantity.value(30));
 
             session.send(orderSingle);
         }

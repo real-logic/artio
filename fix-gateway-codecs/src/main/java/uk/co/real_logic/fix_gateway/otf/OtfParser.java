@@ -41,7 +41,7 @@ public final class OtfParser
     private static final int NO_CHECKSUM = 0;
     private static final int UNKNOWN = -1;
 
-    private final AsciiFlyweight string = new AsciiFlyweight(null);
+    private final AsciiFlyweight string = new AsciiFlyweight();
     private final AsciiFieldFlyweight stringField = new AsciiFieldFlyweight();
 
     private final OtfMessageAcceptor acceptor;
