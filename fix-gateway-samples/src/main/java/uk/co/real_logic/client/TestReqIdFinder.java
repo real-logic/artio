@@ -24,8 +24,7 @@ import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
-import static uk.co.real_logic.fix_gateway.decoder.Constants.HEARTBEAT;
-import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQ_ID;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.*;
 
 public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
 {
@@ -33,7 +32,6 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
     private final OtfParser parser = new OtfParser(this, new IntDictionary());
     final AsciiFlyweight string = new AsciiFlyweight();
 
-    private boolean isHeartbeat;
     private String testReqId;
 
     public void onMessage(final DirectBuffer buffer,
@@ -51,24 +49,17 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
 
     public void onNext()
     {
-
     }
 
     public void onComplete()
     {
-
     }
 
     public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
     {
-
-        if (tag == HEARTBEAT)
+        string.wrap(buffer);
+        if (tag == TEST_REQ_ID)
         {
-            this.isHeartbeat = true;
-        }
-        else if (tag == TEST_REQ_ID && isHeartbeat)
-        {
-            string.wrap(buffer);
             this.testReqId = string.getAscii(offset, length);
         }
     }

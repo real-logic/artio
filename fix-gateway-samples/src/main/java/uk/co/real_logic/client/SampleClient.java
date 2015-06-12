@@ -27,7 +27,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import static uk.co.real_logic.server.SampleServer.ACCEPTOR_COMP_ID;
 import static uk.co.real_logic.server.SampleServer.INITIATOR_COMP_ID;
 
-public final class SampleOtfMain
+public final class SampleClient
 {
     private static Subscription subscription;
 
@@ -37,7 +37,7 @@ public final class SampleOtfMain
         final StaticConfiguration configuration = new StaticConfiguration()
             .aeronChannel("udp://localhost:10002")
             .bind("localhost", 10001)
-            .newSessionHandler(SampleOtfMain::onConnect);
+            .newSessionHandler(SampleClient::onConnect);
 
         try (final FixGateway gateway = FixGateway.launch(configuration))
         {
@@ -64,10 +64,10 @@ public final class SampleOtfMain
             {
                 subscription.poll(subscriber, 1);
                 Thread.sleep(1000);
-                System.out.println(testReqIdFinder.testReqId());
             }
 
             System.out.println("Success, received reply!");
+            System.out.println(testReqIdFinder.testReqId());
 
             session.startLogout();
             session.disconnect();
@@ -76,6 +76,6 @@ public final class SampleOtfMain
 
     private static void onConnect(final Session session, final Subscription subscription)
     {
-        SampleOtfMain.subscription = subscription;
+        SampleClient.subscription = subscription;
     }
 }
