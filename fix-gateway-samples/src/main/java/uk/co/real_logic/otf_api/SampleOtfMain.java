@@ -18,7 +18,6 @@ package uk.co.real_logic.otf_api;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
-import uk.co.real_logic.fix_gateway.builder.DataDictionary;
 import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
@@ -44,25 +43,21 @@ public class SampleOtfMain
 
         try (final FixGateway gateway = FixGateway.launch(configuration))
         {
-            // The data dictionary is generated from the standard FIX XML dictionary specification.
-            final DataDictionary dictionary = new DataDictionary();
-
             // Each outbound session with an Exchange or broker is represented by
             // a Session object. Each session object can be configured with connection
             // details and credentials.
             final SessionConfiguration sessionConfig = SessionConfiguration.builder()
                 .address("broker.example.com", 9999)
-                .credentials("username", "password")
                 .build();
 
-            final InitiatorSession session = gateway.initiate(sessionConfig, dictionary);
+            final InitiatorSession session = gateway.initiate(sessionConfig);
 
             // Specific encoders are generated for each type of message
             // from the same dictionary as the decoders.
             final DecimalFloat price = new DecimalFloat(2000, 2);
             final DecimalFloat quantity = new DecimalFloat(10, 0);
 
-            final OrderSingleEncoder orderSingle = dictionary.newOrderSingleEncoder();
+            final OrderSingleEncoder orderSingle = new OrderSingleEncoder();
             orderSingle.clOrdID("1")
                        .handlInst('1')
                        .ordType(Market)

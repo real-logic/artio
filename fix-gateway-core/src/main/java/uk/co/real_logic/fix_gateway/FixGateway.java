@@ -167,7 +167,7 @@ public class FixGateway implements AutoCloseable
     }
 
     // TODO: figure out correct type for dictionary
-    public synchronized InitiatorSession initiate(final SessionConfiguration configuration, final Object dictionary)
+    public synchronized InitiatorSession initiate(final SessionConfiguration configuration)
     {
         framerProxy.connect(configuration);
         signal.await(connectionTimeout);
