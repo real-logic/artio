@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -94,11 +95,14 @@ public class ConnectionHandler
             fixCounters.messagesWritten(channel.getRemoteAddress()));
     }
 
-    public Session acceptSession()
+    public Session acceptSession(final SocketAddress address)
     {
         final GatewayPublication publication = outboundStreams.gatewayPublication();
         final int defaultInterval = configuration.defaultHeartbeatInterval();
         final long connectionId = nextConnectionId();
+
+        publication.saveConnect(connectionId, address);
+
         return new AcceptorSession(
             defaultInterval,
             connectionId,
@@ -114,20 +118,24 @@ public class ConnectionHandler
             fixCounters.sentMsgSeqNo(connectionId));
     }
 
-    public Session initiateSession(final FixGateway gateway, final SessionConfiguration sessionConfiguration)
+    public Session initiateSession(final SocketAddress address,
+                                   final FixGateway gateway,
+                                   final SessionConfiguration sessionConfiguration)
     {
         final Object key = sessionIdStrategy.onInitiatorLogon(sessionConfiguration);
         final long sessionId = sessionIds.onLogon(key);
         final int defaultInterval = configuration.defaultHeartbeatInterval();
-        final GatewayPublication gatewayPublication = outboundStreams.gatewayPublication();
+        final GatewayPublication publication = outboundStreams.gatewayPublication();
         final long connectionId = nextConnectionId();
+
+        publication.saveConnect(connectionId, address);
 
         return new InitiatorSession(
             defaultInterval,
             connectionId,
             clock,
             sessionProxy().setupSession(sessionId, key),
-            gatewayPublication,
+            publication,
             sessionIdStrategy,
             gateway,
             sessionId,

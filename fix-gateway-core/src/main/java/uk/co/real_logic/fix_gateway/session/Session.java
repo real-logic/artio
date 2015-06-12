@@ -240,7 +240,7 @@ public class Session
             id(sessionId);
             heartbeatIntervalInS(heartbeatInterval);
             onMessage(msgSeqNo);
-            publication.saveConnect(connectionId, sessionId);
+            publication.saveLogon(connectionId, sessionId);
         }
     }
 

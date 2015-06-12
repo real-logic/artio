@@ -119,7 +119,7 @@ public class Framer implements Agent
             if (key.isAcceptable())
             {
                 final SocketChannel channel = listeningChannel.accept();
-                onNewSession(channel, connectionHandler.acceptSession());
+                onNewSession(channel, connectionHandler.acceptSession(channel.getRemoteAddress()));
             }
             else if (key.isReadable())
             {
@@ -174,7 +174,7 @@ public class Framer implements Agent
             final SocketChannel channel = SocketChannel.open();
             channel.connect(address);
 
-            onNewSession(channel, connectionHandler.initiateSession(gateway, configuration));
+            onNewSession(channel, connectionHandler.initiateSession(address, gateway, configuration));
         }
         catch (final Exception e)
         {

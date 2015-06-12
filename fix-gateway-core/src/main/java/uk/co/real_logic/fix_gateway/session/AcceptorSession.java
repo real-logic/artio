@@ -94,7 +94,7 @@ public final class AcceptorSession extends Session
                 state(SessionState.AWAITING_RESEND);
                 replyToLogon(heartbeatInterval);
             }
-            publication.saveConnect(connectionId, sessionId);
+            publication.saveLogon(connectionId, sessionId);
         }
         onMessage(msgSeqNo);
     }

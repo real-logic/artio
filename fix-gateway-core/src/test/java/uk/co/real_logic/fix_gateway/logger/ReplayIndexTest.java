@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.logger;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.messages.ConnectEncoder;
+import uk.co.real_logic.fix_gateway.messages.LogonEncoder;
 import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordDecoder;
 
 import java.io.File;
@@ -26,9 +26,7 @@ import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEFAULT_INDEX_FILE_SIZE;
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEFAULT_LOGGER_CACHE_CAPACITY;
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEFAULT_LOG_FILE_DIR;
+import static uk.co.real_logic.fix_gateway.StaticConfiguration.*;
 import static uk.co.real_logic.fix_gateway.logger.ReplayIndex.logFile;
 
 public class ReplayIndexTest extends AbstractMessageTest
@@ -37,7 +35,7 @@ public class ReplayIndexTest extends AbstractMessageTest
     private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024);
     private BufferFactory mockBufferFactory = mock(BufferFactory.class);
 
-    private ConnectEncoder connect = new ConnectEncoder();
+    private LogonEncoder logon = new LogonEncoder();
     private ReplayIndex replayIndex = new ReplayIndex(
         DEFAULT_LOG_FILE_DIR, DEFAULT_INDEX_FILE_SIZE, DEFAULT_LOGGER_CACHE_CAPACITY, mockBufferFactory);
 
@@ -91,31 +89,31 @@ public class ReplayIndexTest extends AbstractMessageTest
     @Test
     public void shouldIgnoreOtherMessageTypes()
     {
-        bufferContainsConnect();
+        bufferContainsLogon();
 
         indexRecord();
 
         verifyNoMoreInteractions(mockBufferFactory);
     }
 
-    private void bufferContainsConnect()
+    private void bufferContainsLogon()
     {
         offset = START;
         header
             .wrap(buffer, offset)
-            .blockLength(connect.sbeBlockLength())
-            .templateId(connect.sbeTemplateId())
-            .schemaId(connect.sbeSchemaId())
-            .version(connect.sbeSchemaVersion());
+            .blockLength(logon.sbeBlockLength())
+            .templateId(logon.sbeTemplateId())
+            .schemaId(logon.sbeSchemaId())
+            .version(logon.sbeSchemaVersion());
 
         offset += header.size();
 
-        connect
+        logon
             .wrap(buffer, offset)
             .connection(CONNECTION_ID)
             .session(SESSION_ID);
 
-        offset += connect.size();
+        offset += logon.size();
     }
 
     private void verifyMappedFile(final long sessionId)

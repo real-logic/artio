@@ -31,6 +31,7 @@ import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -86,10 +87,10 @@ public class FramerTest
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong()))
             .thenReturn(mockSenderEndPoint);
 
-        when(mockConnectionHandler.initiateSession(mockGateway, CONFIGURATION))
+        when(mockConnectionHandler.initiateSession(any(SocketAddress.class), eq(mockGateway), eq(CONFIGURATION)))
             .thenReturn(mockSession);
 
-        when(mockConnectionHandler.acceptSession()).thenReturn(mockSession);
+        when(mockConnectionHandler.acceptSession(any(SocketAddress.class))).thenReturn(mockSession);
 
         when(mockReceiverEndPoint.connectionId()).thenReturn(CONNECTION_ID);
     }

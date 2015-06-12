@@ -24,14 +24,18 @@ import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.*;
 
+import java.net.SocketAddress;
+
 /**
  * A proxy for publishing messages fix related messages
  */
 public class GatewayPublication
 {
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderSize();
+    public static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderSize();
 
     private final MessageHeaderEncoder header = new MessageHeaderEncoder();
+    private final LogonEncoder logon = new LogonEncoder();
     private final ConnectEncoder connect = new ConnectEncoder();
     private final DisconnectEncoder disconnect = new DisconnectEncoder();
     private final FixMessageEncoder messageFrame = new FixMessageEncoder();
@@ -85,9 +89,35 @@ public class GatewayPublication
         DebugLogger.log("Enqueued %s\n", srcBuffer, srcOffset, srcLength);
     }
 
-    public void saveConnect(final long connectionId, final long sessionId)
+    public void saveLogon(final long connectionId, final long sessionId)
     {
-        claim(header.size() + ConnectEncoder.BLOCK_LENGTH);
+        claim(header.size() + LogonEncoder.BLOCK_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(logon.sbeBlockLength())
+            .templateId(logon.sbeTemplateId())
+            .schemaId(logon.sbeSchemaId())
+            .version(logon.sbeSchemaVersion());
+
+        offset += header.size();
+
+        logon
+            .wrap(buffer, offset)
+            .connection(connectionId)
+            .session(sessionId);
+
+        bufferClaim.commit();
+    }
+
+    public void saveConnect(final long connectionId, final SocketAddress address)
+    {
+        final String addressString = address.toString();
+
+        claim(header.size() + CONNECT_SIZE + addressString.length());
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -104,7 +134,7 @@ public class GatewayPublication
         connect
             .wrap(buffer, offset)
             .connection(connectionId)
-            .session(sessionId);
+            .address(addressString);
 
         bufferClaim.commit();
     }

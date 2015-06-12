@@ -38,7 +38,7 @@
     <sbe:message name="Disconnect" id="7" description="A connection has disconnected">
         <field name="connection" id="8" type="ConnectionId"/>
     </sbe:message>
-    <sbe:message name="Connect" id="9" description="A session has connected">
+    <sbe:message name="Logon" id="9" description="A session has connected">
         <field name="connection" id="10" type="ConnectionId"/>
         <field name="session" id="11" type="FixSessionId"/>
     </sbe:message>
@@ -50,5 +50,9 @@
     <sbe:message name="ArchiveMetaData" id="6" description="Meta data about 1 stream's archive">
         <field name="initialTermId" id="15" type="int32"/>
         <field name="termBufferLength" id="16" type="int32"/>
+    </sbe:message>
+    <sbe:message name="Connect" id="10" description="A TCP Connection has connected">
+        <field name="connection" id="17" type="ConnectionId"/>
+        <data name="address" id="18" type="varDataEncoding"/>
     </sbe:message>
 </sbe:messageSchema>
