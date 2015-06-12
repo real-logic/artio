@@ -188,6 +188,10 @@ public class SessionProxy
         {
             heartbeat.testReqID(testReqId, testReqIdLength);
         }
+        else
+        {
+            heartbeat.resetTestReqID();
+        }
         send(heartbeat.encode(string, 0), HeartbeatDecoder.MESSAGE_TYPE);
     }
 
