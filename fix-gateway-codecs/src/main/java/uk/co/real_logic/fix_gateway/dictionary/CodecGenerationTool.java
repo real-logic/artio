@@ -25,12 +25,19 @@ import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.ENCODER_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 
-public final class GenerationTool
+public final class CodecGenerationTool
 {
     public static void main(String[] args) throws Exception
     {
         final String outputPath = args[0];
         final String xmlPath = args[1];
+
+        if (args.length < 2)
+        {
+            System.err.println("Usage: CodecGenerationTool </path/to/output-directory> </path/to/xml/dictionary>");
+            System.exit(-1);
+        }
+
         final DictionaryParser parser = new DictionaryParser();
         try (final FileInputStream input = new FileInputStream(xmlPath))
         {

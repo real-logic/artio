@@ -76,7 +76,7 @@ public final class SampleServer
         }
     }
 
-    private synchronized static void onConnect(final Session session, final Subscription subscription)
+    private static synchronized void onConnect(final Session session, final Subscription subscription)
     {
         // Simple server just handles a single connection on a single thread
         // You choose how to manage threads for your application.

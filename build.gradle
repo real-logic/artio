@@ -156,7 +156,7 @@ project(':fix-gateway-codecs') {
     compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
 
     task (generateCodecs, type: JavaExec) {
-        main = 'uk.co.real_logic.fix_gateway.dictionary.GenerationTool'
+        main = 'uk.co.real_logic.fix_gateway.dictionary.CodecGenerationTool'
         classpath = sourceSets.main.runtimeClasspath
         args generatedDir, 'src/main/resources/session_dictionary.xml'
         outputs.dir generatedDir
