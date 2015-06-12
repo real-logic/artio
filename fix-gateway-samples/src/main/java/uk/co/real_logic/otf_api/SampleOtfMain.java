@@ -24,7 +24,6 @@ import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 
 import static uk.co.real_logic.fix_gateway.flyweight_api.OrdType.Market;
 import static uk.co.real_logic.fix_gateway.flyweight_api.Side.Sell;
-import static uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor.NEW_ORDER_SINGLE;
 
 /**
  * .
@@ -39,7 +38,7 @@ public class SampleOtfMain
         // You register the acceptor - which is your custom application hook
         // Your generic acceptor then gets callbacks for each field of the tag or tags that it
         // gets registered for
-        configuration.registerAcceptor(new SampleOtfAcceptor(), NEW_ORDER_SINGLE);
+        configuration.registerAcceptor(new SampleOtfAcceptor(), (int) 'D');
 
         try (final FixGateway gateway = FixGateway.launch(configuration))
         {
