@@ -60,17 +60,31 @@ public final class EnumGenerator
 
         try (final Writer out = outputManager.createOutput(enumName))
         {
-            out.append(fileHeader(PARENT_PACKAGE));
-            out.append(generateEnumDeclaration(enumName));
+            try
+            {
+                out.append(fileHeader(PARENT_PACKAGE));
+                out.append(generateEnumDeclaration(enumName));
 
-            out.append(generateEnumValues(values, type));
+                out.append(generateEnumValues(values, type));
 
-            out.append(generateEnumBody(enumName));
-            out.append(generateEnumLookupMethod(enumName, values, type));
-
-            out.append("}\n");
+                out.append(generateEnumBody(enumName, type));
+                out.append(generateEnumLookupMethod(enumName, values, type));
+            }
+            catch (final IOException e)
+            {
+                LangUtil.rethrowUnchecked(e);
+            }
+            catch (final IllegalArgumentException e)
+            {
+                System.err.printf("Unable to generate an enum for type: %s\n", enumName);
+                System.err.println(e.getMessage());
+            }
+            finally
+            {
+                out.append("}\n");
+            }
         }
-        catch (final IOException e)
+        catch (IOException e)
         {
             LangUtil.rethrowUnchecked(e);
         }
@@ -88,9 +102,9 @@ public final class EnumGenerator
                         .collect(joining(",\n"));
     }
 
-    private String generateEnumBody(final String name)
+    private String generateEnumBody(final String name, final Type type)
     {
-        final Var representation = new Var("int", "representation");
+        final Var representation = representation(type);
 
         return ";\n\n" +
             representation.field() +
@@ -100,7 +114,12 @@ public final class EnumGenerator
 
     private String generateEnumLookupMethod(final String name, final List<Value> allValues, final Type type)
     {
-        final Var representation = new Var("int", "representation");
+        if (hasGeneratedValueOf(type))
+        {
+            return "";
+        }
+
+        final Var representation = representation(type);
 
         final String cases = allValues
             .stream()
@@ -114,6 +133,48 @@ public final class EnumGenerator
             "        default: throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
             "        }\n" +
             "    }\n";
+    }
+
+    private boolean hasGeneratedValueOf(final Type type)
+    {
+        switch (type)
+        {
+            case STRING:
+            case MULTIPLEVALUESTRING:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+            case MONTHYEAR:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    private Var representation(final Type type)
+    {
+        final String typeValue;
+        switch (type)
+        {
+            case STRING:
+            case MULTIPLEVALUESTRING:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+            case MONTHYEAR:
+                typeValue = "String";
+                break;
+
+            default:
+                typeValue = "int";
+        }
+
+        return new Var(typeValue, "representation");
     }
 
     private String literal(final Value value, final Type type)
@@ -138,9 +199,14 @@ public final class EnumGenerator
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case MONTHYEAR:
-                return String.valueOf(getMessageType(representation));
+                return '"' + representation + '"';
 
             case CHAR:
+                if (representation.length() > 1)
+                {
+                    throw new IllegalArgumentException(
+                        representation + " has a length of 2 and thus won't fit into a char");
+                }
                 return "'" + representation + "'";
 
             default:

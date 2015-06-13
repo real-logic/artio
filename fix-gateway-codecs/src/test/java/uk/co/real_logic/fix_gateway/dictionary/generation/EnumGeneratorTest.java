@@ -94,15 +94,14 @@ public class EnumGeneratorTest
     @Test
     public void generatesStringBasedEnumField() throws Exception
     {
-        final int a = (int) 'A';
         final Class<?> clazz = compile(STRING_ENUM);
         final Enum[] values = (Enum[])clazz.getEnumConstants();
 
-        final Method valueOf = clazz.getMethod("valueOf", int.class);
+        final Method valueOf = clazz.getMethod("valueOf", String.class);
 
-        assertEquals(values[0], valueOf.invoke(null, '0'));
-        assertEquals(values[1], valueOf.invoke(null, a));
-        assertEquals(values[2], valueOf.invoke(null, a + (a >> 1)));
+        assertEquals(values[0], valueOf.invoke(null, "_0"));
+        assertEquals(values[1], valueOf.invoke(null, "_A"));
+        assertEquals(values[2], valueOf.invoke(null, "_AAA"));
     }
 
     private Class<?> compileEgEnum() throws Exception

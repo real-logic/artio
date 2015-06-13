@@ -216,7 +216,7 @@ public final class ExampleDictionary
         final Field stringEnum = new Field(126, "stringEnum", Type.STRING)
             .addValue("0", "_0")
             .addValue("A", "_A")
-            .addValue("AA", "_AA");
+            .addValue("AA", "_AAA");
 
         final Map<String, Field> fieldEgFields = new HashMap<>();
         fieldEgFields.put("EgEnum", egEnum);
