@@ -17,6 +17,8 @@ package uk.co.real_logic.fix_gateway.dictionary.ir;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 /**
  * A Aggregate is either a group, a message or a component.
@@ -40,6 +42,11 @@ public abstract class Aggregate
     public List<Entry> entries()
     {
         return entries;
+    }
+
+    public Stream<Entry> entriesWith(final Predicate<Entry.Element> predicate)
+    {
+        return entries.stream().filter(entry -> predicate.test(entry.element()));
     }
 
     public Aggregate optionalEntry(final Entry.Element element)

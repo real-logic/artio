@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary;
 
 import org.w3c.dom.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 
@@ -28,10 +29,7 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 
 import static javax.xml.xpath.XPathConstants.NODESET;
@@ -91,7 +89,50 @@ public final class DictionaryParser
         final int majorVersion = getInt(fixAttributes, "major");
         final int minorVersion = getInt(fixAttributes, "minor");
 
+        simplifyComponentsThatAreJustGroups(components, messages);
+
         return new Dictionary(messages, fields, components, header, trailer, majorVersion, minorVersion);
+    }
+
+    private void simplifyComponentsThatAreJustGroups(final Map<String, Component> components,
+                                                     final List<Message> messages)
+    {
+        final List<String> toRemove = new ArrayList<>();
+        components.forEach((name, component) ->
+        {
+            if (isJustGroup(component))
+            {
+                toRemove.add(name);
+                final Entry.Element group = extractFirst(component);
+                messages.forEach(aggregate -> replaceComponent(aggregate, component, group));
+                components.values().forEach(aggregate -> replaceComponent(aggregate, component, group));
+            }
+        });
+
+        toRemove.forEach(components::remove);
+    }
+
+    private void replaceComponent(
+        final Aggregate aggregate,
+        final Component component,
+        final Entry.Element group)
+    {
+        aggregate.entriesWith(element -> element == component)
+                 .forEach(entry -> entry.element(group));
+
+        aggregate.entriesWith(element -> element instanceof Aggregate)
+                 .forEach(entry -> replaceComponent((Aggregate) entry.element(), component, group));
+    }
+
+    private Entry.Element extractFirst(final Component component)
+    {
+        return component.entries().get(0).element();
+    }
+
+    private boolean isJustGroup(final Component component)
+    {
+        final List<Entry> entries = component.entries();
+        return entries.size() == 1 && entries.get(0).element() instanceof Group;
     }
 
     private void reconnectForwardReferences(final Map<Entry, String> forwardReferences,

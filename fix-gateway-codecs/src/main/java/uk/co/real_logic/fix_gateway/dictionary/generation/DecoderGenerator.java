@@ -139,11 +139,11 @@ public class DecoderGenerator extends Generator
         return "";
     }
 
-    private String generateGroupGetter(final Group element)
+    private String generateGroupGetter(final Group group)
     {
-        generateAggregate(element, AggregateType.GROUP);
+        generateGroup(group);
 
-        final Entry numberField = element.numberField();
+        final Entry numberField = group.numberField();
         final String prefix = generateFieldGetter(numberField, (Field) numberField.element());
 
         return String.format(
@@ -153,8 +153,8 @@ public class DecoderGenerator extends Generator
             "        return %2$s;" +
             "    }\n\n" +
             "%3$s",
-            decoderClassName(element.name()),
-            formatPropertyName(element.name()),
+            decoderClassName(group.name()),
+            formatPropertyName(group.name()),
             prefix
         );
     }

@@ -256,7 +256,7 @@ public class EncoderGenerator extends Generator
 
     private String generateGroupSetter(final String className, final Group group)
     {
-        generateAggregate(group, GROUP);
+        generateGroup(group);
 
         final Entry numberField = group.numberField();
         final String setter = generateSetter(className, numberField);
@@ -273,7 +273,7 @@ public class EncoderGenerator extends Generator
             "        if (%3$s == null)\n" +
             "        {\n" +
             "            has%4$s = true;\n" +
-            "            %5$s = 1;" +
+            "            %5$s = 1;\n" +
             "            %3$s = new %2$s(this::inc%4$s);\n" +
             "        }\n" +
             "        return %3$s;\n" +

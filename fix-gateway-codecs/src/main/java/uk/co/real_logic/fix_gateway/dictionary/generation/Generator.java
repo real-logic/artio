@@ -30,10 +30,13 @@ import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.COMPONENT;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.GROUP;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.MESSAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importStaticFor;
@@ -68,6 +71,8 @@ public abstract class Generator
     protected final String builderPackage;
     protected final OutputManager outputManager;
 
+    private final Set<String> groupNames = new HashSet<>();
+
     protected Generator(final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
     {
         this.dictionary = dictionary;
@@ -85,6 +90,15 @@ public abstract class Generator
     }
 
     protected abstract void generateAggregate(final Aggregate aggregate, final AggregateType type);
+
+    protected void generateGroup(final Group group)
+    {
+        final String name = group.name();
+        if (groupNames.add(name))
+        {
+            generateAggregate(group, GROUP);
+        }
+    }
 
     protected String generateClassDeclaration(
         final String className,
@@ -128,7 +142,10 @@ public abstract class Generator
             .map(entry -> generateFieldReset(entry.required(), (Field) entry.element()))
             .collect(joining());
 
-        final String resetHeaderAndTrailer = isMessage ? "    header.reset();\n    trailer.reset();\n" : "";
+        final String resetHeaderAndTrailer = isMessage
+            ? "        header.reset();\n" +
+              "        trailer.reset();\n"
+            : "";
 
         return String.format(
             "    public void reset() {\n" +
