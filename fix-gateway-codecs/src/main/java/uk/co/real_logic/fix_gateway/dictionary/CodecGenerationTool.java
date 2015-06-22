@@ -44,16 +44,17 @@ public final class CodecGenerationTool
             final Dictionary dictionary = parser.parse(input);
 
             final PackageOutputManager parent = new PackageOutputManager(outputPath, PARENT_PACKAGE);
+            final PackageOutputManager decoder = new PackageOutputManager(outputPath, DECODER_PACKAGE);
+
             final EnumGenerator enumGenerator = new EnumGenerator(dictionary, parent);
             final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, DECODER_PACKAGE, parent);
 
             final EncoderGenerator encoderGenerator = new EncoderGenerator(dictionary, 1, ENCODER_PACKAGE,
                 new PackageOutputManager(outputPath, ENCODER_PACKAGE));
 
-            final PackageOutputManager decoder = new PackageOutputManager(outputPath, DECODER_PACKAGE);
             final DecoderGenerator decoderGenerator = new DecoderGenerator(dictionary, 1, DECODER_PACKAGE, decoder);
             final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE, decoder);
-
+            final AcceptorGenerator acceptorGenerator = new AcceptorGenerator(dictionary, DECODER_PACKAGE, decoder);
 
             enumGenerator.generate();
             constantGenerator.generate();
@@ -62,6 +63,7 @@ public final class CodecGenerationTool
 
             decoderGenerator.generate();
             printerGenerator.generate();
+            acceptorGenerator.generate();
         }
     }
 }

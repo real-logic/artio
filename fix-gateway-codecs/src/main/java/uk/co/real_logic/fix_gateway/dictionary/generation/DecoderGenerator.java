@@ -45,7 +45,12 @@ public class DecoderGenerator extends Generator
 
     public static String decoderClassName(final Aggregate aggregate)
     {
-        return aggregate.name() + "Decoder";
+        return decoderClassName(aggregate.name());
+    }
+
+    public static String decoderClassName(final String name)
+    {
+        return name + "Decoder";
     }
 
     private final int initialBufferSize;
@@ -153,15 +158,10 @@ public class DecoderGenerator extends Generator
             "        return %2$s;" +
             "    }\n\n" +
             "%3$s",
-            decoderClassName(group.name()),
+            decoderClassName(group),
             formatPropertyName(group.name()),
             prefix
         );
-    }
-
-    private String decoderClassName(final String name)
-    {
-        return name + "Decoder";
     }
 
     private String generateFieldGetter(final Entry entry, final Field field)
@@ -327,7 +327,7 @@ public class DecoderGenerator extends Generator
                 "            }\n" +
                 "            return next.decode(buffer, position, end - position);\n" +
                 "        }\n",
-                decoderClassName(aggregate.name())
+                decoderClassName(aggregate)
             );
         }
         else

@@ -53,7 +53,13 @@ public class EncoderGenerator extends Generator
         "    {\n" +
         "        int position = offset;\n\n";
 
+    public static String encoderClassName(final String name)
+    {
+        return formatClassName(name + "Encoder");
+    }
+
     private final byte[] buffer = new byte[LONGEST_INT_LENGTH + 1];
+
     private final MutableAsciiFlyweight string = new MutableAsciiFlyweight(new UnsafeBuffer(buffer));
 
     private final int initialArraySize;
@@ -116,11 +122,6 @@ public class EncoderGenerator extends Generator
             "    }\n\n",
             encoderClassName(group.name())
         );
-    }
-
-    private String encoderClassName(final String name)
-    {
-        return formatClassName(name + "Encoder");
     }
 
     private String generateConstructor(final Aggregate aggregate, final Dictionary dictionary)
