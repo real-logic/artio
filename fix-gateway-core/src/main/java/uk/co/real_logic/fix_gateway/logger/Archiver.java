@@ -28,8 +28,8 @@ import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 
-import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
+import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 public class Archiver implements Agent, FragmentHandler
 {

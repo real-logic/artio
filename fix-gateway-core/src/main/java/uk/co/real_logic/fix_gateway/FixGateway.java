@@ -31,6 +31,7 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIds;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
+import java.nio.channels.ClosedByInterruptException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -66,6 +67,7 @@ public class FixGateway implements AutoCloseable
         countersFile = new CountersFile(true, configuration);
         fixCounters = new FixCounters(countersFile.createCountersManager());
 
+        initAeron();
         initReplicationStreams(configuration);
         initFramer(configuration, fixCounters);
         initLogger(configuration);
@@ -132,14 +134,25 @@ public class FixGateway implements AutoCloseable
 
     private void initReplicationStreams(final StaticConfiguration configuration)
     {
-        aeron = Aeron.connect(new Aeron.Context());
-
         final String channel = configuration.aeronChannel();
 
         inboundStreams = new ReplicationStreams(
             channel, aeron, fixCounters.failedInboundPublications(), INBOUND_DATA_STREAM, INBOUND_CONTROL_STREAM);
         outboundStreams = new ReplicationStreams(
             channel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
+    }
+
+    private void initAeron()
+    {
+        final Aeron.Context ctx = new Aeron.Context();
+        ctx.errorHandler(throwable ->
+        {
+            if (!(throwable instanceof ClosedByInterruptException))
+            {
+                Aeron.DEFAULT_ERROR_HANDLER.accept(throwable);
+            }
+        });
+        aeron = Aeron.connect(ctx);
     }
 
     private BackoffIdleStrategy backoffIdleStrategy()
