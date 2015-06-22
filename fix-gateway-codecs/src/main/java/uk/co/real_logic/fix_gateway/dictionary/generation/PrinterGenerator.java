@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
-import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
@@ -24,8 +23,6 @@ import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
-import java.io.IOException;
-import java.io.Writer;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.joining;
@@ -56,18 +53,14 @@ public class PrinterGenerator
 
     public void generate()
     {
-        try (final Writer out = outputManager.createOutput(CLASS_NAME))
+        outputManager.withOutput(CLASS_NAME, out ->
         {
             out.append(fileHeader(builderPackage));
             out.append(CLASS_DECLARATION);
             out.append(generateDecoderFields());
             out.append(generateToString());
             out.append("}\n");
-        }
-        catch (IOException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-        }
+        });
     }
 
     private String generateDecoderFields()

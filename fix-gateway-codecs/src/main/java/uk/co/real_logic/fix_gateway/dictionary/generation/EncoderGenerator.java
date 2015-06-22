@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
-import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
@@ -79,7 +78,7 @@ public class EncoderGenerator extends Generator
         final String className = encoderClassName(aggregate.name());
         final boolean isMessage = aggregateType == AggregateType.MESSAGE;
 
-        try (final Writer out = outputManager.createOutput(className))
+        outputManager.withOutput(className, out ->
         {
             out.append(fileHeader(builderPackage));
             final Class<?> type = isMessage ? MessageEncoder.class : Encoder.class;
@@ -100,11 +99,7 @@ public class EncoderGenerator extends Generator
             out.append(generateResetMethods(isMessage, aggregate.entries()));
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
-        }
-        catch (final IOException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-        }
+        });
     }
 
     private String generateNextMethod(final Group group)

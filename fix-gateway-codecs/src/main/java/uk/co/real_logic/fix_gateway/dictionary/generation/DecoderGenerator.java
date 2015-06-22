@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
-import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
@@ -70,7 +69,7 @@ public class DecoderGenerator extends Generator
         final String className = decoderClassName(aggregate);
         final boolean isMessage = type == MESSAGE;
 
-        try (final Writer out = outputManager.createOutput(className))
+        outputManager.withOutput(className, out ->
         {
             out.append(fileHeader(builderPackage));
             out.append(generateClassDeclaration(className, type, Decoder.class, Decoder.class));
@@ -86,11 +85,7 @@ public class DecoderGenerator extends Generator
             out.append(generateResetMethods(isMessage, aggregate.entries()));
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
-        }
-        catch (final IOException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-        }
+        });
     }
 
     private void generateGroupMethods(final Writer out, final Aggregate aggregate) throws IOException

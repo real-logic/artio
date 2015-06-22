@@ -23,7 +23,6 @@ import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 
 import java.io.IOException;
-import java.io.Writer;
 import java.util.List;
 
 import static java.lang.String.format;
@@ -58,7 +57,7 @@ public final class EnumGenerator
         final Type type = field.type();
         final List<Value> values = field.values();
 
-        try (final Writer out = outputManager.createOutput(enumName))
+        outputManager.withOutput(enumName, out ->
         {
             try
             {
@@ -83,11 +82,7 @@ public final class EnumGenerator
             {
                 out.append("}\n");
             }
-        }
-        catch (IOException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-        }
+        });
     }
 
     private String generateEnumDeclaration(final String name)

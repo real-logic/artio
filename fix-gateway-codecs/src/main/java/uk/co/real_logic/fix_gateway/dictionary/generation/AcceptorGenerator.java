@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
-import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
@@ -56,7 +55,7 @@ public class AcceptorGenerator
 
     private void generateAcceptor()
     {
-        try (final Writer acceptorOutput = outputManager.createOutput(DICTIONARY_ACCEPTOR))
+        outputManager.withOutput(DICTIONARY_ACCEPTOR, acceptorOutput ->
         {
             generateAcceptorClass(acceptorOutput);
 
@@ -66,11 +65,7 @@ public class AcceptorGenerator
             }
 
             generateAcceptorSuffix(acceptorOutput);
-        }
-        catch (IOException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-        }
+        });
     }
 
     private void generateAcceptorCallback(final Writer acceptorOutput, final Message message) throws IOException
@@ -99,7 +94,7 @@ public class AcceptorGenerator
 
     private void generateDecoder()
     {
-        try (final Writer decoderOutput = outputManager.createOutput(DICTIONARY_DECODER))
+        outputManager.withOutput(DICTIONARY_DECODER, decoderOutput ->
         {
             generateDecoderClass(decoderOutput);
 
@@ -116,11 +111,7 @@ public class AcceptorGenerator
             }
 
             generateDecoderSuffix(decoderOutput);
-        }
-        catch (IOException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-        }
+        });
     }
 
     private void generateDecoderSuffix(final Writer decoderOutput) throws IOException

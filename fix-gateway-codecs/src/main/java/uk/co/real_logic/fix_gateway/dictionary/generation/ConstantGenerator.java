@@ -15,12 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
-import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
-
-import java.io.IOException;
-import java.io.Writer;
 
 import static java.lang.Character.isUpperCase;
 import static java.lang.Character.toUpperCase;
@@ -48,18 +44,14 @@ public class ConstantGenerator
 
     public void generate()
     {
-        try (final Writer out = outputManager.createOutput(CLASS_NAME))
+        outputManager.withOutput(CLASS_NAME, out ->
         {
             out.append(fileHeader(builderPackage));
             out.append(BODY);
             out.append(generateMessageTypes());
             out.append(generateFieldTags());
             out.append("}\n");
-        }
-        catch (final IOException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-        }
+        });
     }
 
     private String generateMessageTypes()
