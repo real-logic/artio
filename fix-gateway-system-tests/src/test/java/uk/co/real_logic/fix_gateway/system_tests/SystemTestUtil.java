@@ -53,7 +53,6 @@ public final class SystemTestUtil
     }
 
     public static void assertDisconnected(final FakeSessionHandler sessionHandler, final Session session)
-        throws InterruptedException
     {
         assertSessionDisconnected(session);
 
