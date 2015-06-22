@@ -169,7 +169,7 @@ public class Session
         state(DISCONNECTED);
     }
 
-    public void send(final MessageEncoder encoder)
+    public long send(final MessageEncoder encoder)
     {
         final HeaderEncoder header = (HeaderEncoder) encoder.header();
         header
@@ -180,17 +180,18 @@ public class Session
 
         final int length = encoder.encode(string, 0);
 
-        publication.saveMessage(buffer, 0, length, id(), encoder.messageType());
+        return publication.saveMessage(buffer, 0, length, id(), encoder.messageType());
     }
 
-    public void send(
+    public long send(
         final MutableDirectBuffer buffer,
         final int offset,
         final int length,
         final int messageType)
     {
-        publication.saveMessage(buffer, offset, length, id(), messageType);
+        final long position = publication.saveMessage(buffer, offset, length, id(), messageType);
         newSentSeqNum();
+        return position;
     }
 
     // ---------- Event Handlers ----------

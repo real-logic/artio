@@ -55,7 +55,7 @@ public class GatewayPublication
         this.fails = fails;
     }
 
-    public void saveMessage(
+    public long saveMessage(
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength,
@@ -63,7 +63,7 @@ public class GatewayPublication
         final int messageType)
     {
         final int framedLength = header.size() + FRAME_SIZE + srcLength;
-        claim(framedLength);
+        final long position = claim(framedLength);
 
         int offset = bufferClaim.offset();
 
@@ -88,11 +88,13 @@ public class GatewayPublication
         bufferClaim.commit();
 
         DebugLogger.log("Enqueued %s\n", srcBuffer, srcOffset, srcLength);
+
+        return position;
     }
 
-    public void saveLogon(final long connectionId, final long sessionId)
+    public long saveLogon(final long connectionId, final long sessionId)
     {
-        claim(header.size() + LogonEncoder.BLOCK_LENGTH);
+        final long position = claim(header.size() + LogonEncoder.BLOCK_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -112,14 +114,16 @@ public class GatewayPublication
             .session(sessionId);
 
         bufferClaim.commit();
+
+        return position;
     }
 
-    public void saveConnect(final long connectionId, final SocketAddress address)
+    public long saveConnect(final long connectionId, final SocketAddress address)
     {
         final byte[] addressString = address.toString().getBytes(StandardCharsets.UTF_8);
 
         final int length = header.size() + CONNECT_SIZE + addressString.length;
-        claim(length);
+        final long position = claim(length);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -139,11 +143,13 @@ public class GatewayPublication
             .putAddress(addressString, 0, addressString.length);
 
         bufferClaim.commit();
+
+        return position;
     }
 
-    public void saveDisconnect(final long connectionId)
+    public long saveDisconnect(final long connectionId)
     {
-        claim(header.size() + DisconnectEncoder.BLOCK_LENGTH);
+        final long position = claim(header.size() + DisconnectEncoder.BLOCK_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -162,14 +168,18 @@ public class GatewayPublication
             .connection(connectionId);
 
         bufferClaim.commit();
+
+        return position;
     }
 
-    private void claim(final int framedLength)
+    private long claim(final int framedLength)
     {
-        while (dataPublication.tryClaim(framedLength, bufferClaim) < 0L)
+        long position;
+        while ((position = dataPublication.tryClaim(framedLength, bufferClaim)) < 0L)
         {
             idleStrategy.idle(0);
             fails.increment();
         }
+        return position;
     }
 }
