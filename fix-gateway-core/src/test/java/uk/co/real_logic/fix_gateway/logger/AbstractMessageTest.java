@@ -69,7 +69,7 @@ public class AbstractMessageTest
             .schemaId(messageFrame.sbeSchemaId())
             .version(messageFrame.sbeSchemaVersion());
 
-        offset += header.size();
+        offset += header.encodedLength();
 
         messageFrame
             .wrap(buffer, offset)

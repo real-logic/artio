@@ -31,7 +31,6 @@ import static uk.co.real_logic.fix_gateway.logger.ReplayIndex.logFile;
 
 public class ReplayIndexTest extends AbstractMessageTest
 {
-
     private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024);
     private BufferFactory mockBufferFactory = mock(BufferFactory.class);
 
@@ -106,14 +105,14 @@ public class ReplayIndexTest extends AbstractMessageTest
             .schemaId(logon.sbeSchemaId())
             .version(logon.sbeSchemaVersion());
 
-        offset += header.size();
+        offset += header.encodedLength();
 
         logon
             .wrap(buffer, offset)
             .connection(CONNECTION_ID)
             .session(SESSION_ID);
 
-        offset += logon.size();
+        offset += logon.encodedLength();
     }
 
     private void verifyMappedFile(final long sessionId)
@@ -125,5 +124,4 @@ public class ReplayIndexTest extends AbstractMessageTest
     {
         replayIndex.indexRecord(buffer, START, messageLength(), STREAM_ID);
     }
-
 }

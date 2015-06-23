@@ -43,7 +43,8 @@ public class ReplayQuery implements AutoCloseable
 
     public ReplayQuery(
         final String logFileDir,
-        final int loggerCacheCapacity, final ExistingBufferFactory indexBufferFactory,
+        final int loggerCacheCapacity,
+        final ExistingBufferFactory indexBufferFactory,
         final ArchiveReader archiveReader)
     {
         this.logFileDir = logFileDir;
@@ -55,8 +56,9 @@ public class ReplayQuery implements AutoCloseable
     public int query(
         final LogHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
     {
-        return sessionToIndex.lookup(sessionId)
-                             .query(handler, beginSeqNo, endSeqNo);
+        return sessionToIndex
+            .lookup(sessionId)
+            .query(handler, beginSeqNo, endSeqNo);
     }
 
     public void close()
@@ -80,7 +82,7 @@ public class ReplayQuery implements AutoCloseable
         private int query(final LogHandler handler, final int beginSeqNo, final int endSeqNo)
         {
             messageFrameHeader.wrap(buffer, 0);
-            int index = messageFrameHeader.size();
+            int index = messageFrameHeader.encodedLength();
             final int actingBlockLength = messageFrameHeader.blockLength();
             final int actingVersion = messageFrameHeader.version();
             int count = 0;
@@ -112,7 +114,7 @@ public class ReplayQuery implements AutoCloseable
         {
             if (wrappedBuffer instanceof MappedByteBuffer)
             {
-                IoUtil.unmap((MappedByteBuffer) wrappedBuffer);
+                IoUtil.unmap((MappedByteBuffer)wrappedBuffer);
             }
         }
     }

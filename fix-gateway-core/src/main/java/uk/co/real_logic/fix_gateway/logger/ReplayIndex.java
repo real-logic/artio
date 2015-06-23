@@ -33,7 +33,6 @@ import java.nio.MappedByteBuffer;
  */
 public class ReplayIndex implements Index
 {
-
     static File logFile(final String logFileDir, final long sessionId)
     {
         return new File(String.format(logFileDir + File.separator + "replay-index-%d", sessionId));
@@ -55,7 +54,8 @@ public class ReplayIndex implements Index
     public ReplayIndex(
         final String logFileDir,
         final int indexFileSize,
-        final int loggerCacheCapacity, final BufferFactory bufferFactory)
+        final int loggerCacheCapacity,
+        final BufferFactory bufferFactory)
     {
         this.logFileDir = logFileDir;
         this.indexFileSize = indexFileSize;
@@ -70,7 +70,7 @@ public class ReplayIndex implements Index
         if (frameHeaderDecoder.templateId() == FixMessageEncoder.TEMPLATE_ID)
         {
             final int actingBlockLength = frameHeaderDecoder.blockLength();
-            offset += frameHeaderDecoder.size();
+            offset += frameHeaderDecoder.encodedLength();
 
             messageFrame.wrap(srcBuffer, offset, actingBlockLength, frameHeaderDecoder.version());
 
@@ -95,7 +95,7 @@ public class ReplayIndex implements Index
         private final ByteBuffer wrappedBuffer;
         private final MutableDirectBuffer buffer;
 
-        private int offset = indexHeaderEncoder.size();
+        private int offset = indexHeaderEncoder.encodedLength();
 
         private SessionIndex(final long sessionId)
         {

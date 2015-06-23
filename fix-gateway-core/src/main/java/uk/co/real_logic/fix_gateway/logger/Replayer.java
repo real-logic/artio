@@ -174,11 +174,10 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         updateMessageBodyLength(srcOffset, claimBuffer);
     }
 
-    private void updateFrameBodyLength(final int messageLength,
-                                       final MutableDirectBuffer claimBuffer,
-                                       final int claimOffset)
+    private void updateFrameBodyLength(
+        final int messageLength, final MutableDirectBuffer claimBuffer, final int claimOffset)
     {
-        final int frameBodyLengthOffset = claimOffset + MessageHeaderDecoder.SIZE + FixMessageDecoder.BLOCK_LENGTH;
+        final int frameBodyLengthOffset = claimOffset + MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH;
         CodecUtil.uint16Put(claimBuffer, frameBodyLengthOffset, messageLength + POSS_DUP_FIELD.length, LITTLE_ENDIAN);
     }
 
@@ -201,10 +200,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         mutableAsciiFlyweight.putChar(possDupClaimOffset, 'Y');
     }
 
-    private int srcToClaim(
-        final int srcIndexedOffset,
-        final int srcOffset,
-        final int claimOffset)
+    private int srcToClaim(final int srcIndexedOffset, final int srcOffset, final int claimOffset)
     {
         return srcIndexedOffset - srcOffset + claimOffset;
     }
