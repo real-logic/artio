@@ -79,13 +79,13 @@ public class FixGateway implements AutoCloseable
         final String logFileDir = configuration.logFileDir();
 
         final Archiver archiver = new Archiver(
-            LoggerUtil::map, inboundStreams, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
+            LoggerUtil::map, outboundStreams, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
         final ArchiveReader archiveReader = new ArchiveReader(
             LoggerUtil::mapExistingFile, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
 
         final List<Index> indices = Arrays.asList(
             new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, LoggerUtil::map));
-        final Indexer indexer = new Indexer(indices, inboundStreams);
+        final Indexer indexer = new Indexer(indices, outboundStreams);
 
         final ReplayQuery replayQuery = new ReplayQuery(
             logFileDir, loggerCacheCapacity, LoggerUtil::mapExistingFile, archiveReader);

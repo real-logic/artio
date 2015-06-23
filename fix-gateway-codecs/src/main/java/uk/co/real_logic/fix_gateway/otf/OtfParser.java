@@ -26,8 +26,6 @@ import static uk.co.real_logic.fix_gateway.ValidationError.PARSE_ERROR;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.*;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
-// TODO: what should we do if the callbacks throw an exception?
-
 /**
  * Zero allocation generic parser for fix messages.
  *
@@ -82,7 +80,7 @@ public final class OtfParser
                 invalidChecksum(this.messageType);
             }
         }
-        catch (final IllegalArgumentException ex)
+        catch (final Exception ex)
         {
             parseError(this.messageType, tag);
         }

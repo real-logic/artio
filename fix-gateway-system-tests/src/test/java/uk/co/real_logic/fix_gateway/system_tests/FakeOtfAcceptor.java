@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.ValidationError;
+import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
@@ -33,9 +34,12 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
     private final List<Integer> messageTypes = new ArrayList<>();
     private final AsciiFlyweight string = new AsciiFlyweight();
 
+    private String senderCompId;
+
     public void onNext()
     {
         DebugLogger.log("Next Message");
+        senderCompId = null;
     }
 
     public void onComplete()
@@ -46,10 +50,15 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
     public synchronized void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
     {
         DebugLogger.log("Field: %s=%s\n", tag, buffer, offset, length);
-        if (tag == 35)
+        if (tag == Constants.MSG_TYPE)
         {
             string.wrap(buffer);
             messageTypes.add(string.getMessageType(offset, length));
+        }
+        else if (tag == Constants.SENDER_COMP_ID)
+        {
+            string.wrap(buffer);
+            senderCompId = string.getAscii(offset, length);
         }
     }
 
@@ -83,4 +92,8 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         return messageTypes;
     }
 
+    public String lastSenderCompId()
+    {
+        return senderCompId;
+    }
 }

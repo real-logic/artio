@@ -21,7 +21,7 @@ import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
-import uk.co.real_logic.fix_gateway.decoder.HeartbeatDecoder;
+import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.Session;
 
@@ -114,7 +114,8 @@ public class GatewayToGatewaySystemTest
     private void assertMessageResent()
     {
         assertEventuallyEquals("Failed to receive the reply", 1, acceptingSessionHandler::poll);
-        assertThat(acceptingOtfAcceptor.messageTypes(), hasItem(HeartbeatDecoder.MESSAGE_TYPE));
+        assertThat(acceptingOtfAcceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
+        assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
     }
 
     private void sendResendRequest()
