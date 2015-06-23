@@ -64,7 +64,7 @@ public final class AcceptorSession extends Session
         final long sessionId,
         final Object sessionKey,
         final long sendingTime,
-        final boolean isPossDup)
+        final boolean isPossDupOrResend)
     {
         id(sessionId);
         this.sessionKey = sessionKey;
@@ -97,7 +97,7 @@ public final class AcceptorSession extends Session
             }
             publication.saveLogon(connectionId, sessionId);
         }
-        onMessage(msgSeqNo, isPossDup);
+        onMessage(msgSeqNo, isPossDupOrResend);
     }
 
     private void replyToLogon(int heartbeatInterval)

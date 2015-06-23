@@ -65,17 +65,17 @@ public class InitiatorSession extends Session
         final long sessionId,
         final Object sessionKey,
         final long sendingTime,
-        final boolean isPossDup)
+        final boolean isPossDupOrResend)
     {
         if (msgSeqNo == expectedReceivedSeqNum() && state() == SENT_LOGON)
         {
             state(ACTIVE);
-            super.onLogon(heartbeatInterval, msgSeqNo, sessionId, sessionKey, sendingTime, isPossDup);
+            super.onLogon(heartbeatInterval, msgSeqNo, sessionId, sessionKey, sendingTime, isPossDupOrResend);
             gateway.onInitiatorSessionActive(this);
         }
         else
         {
-            onMessage(msgSeqNo, isPossDup);
+            onMessage(msgSeqNo, isPossDupOrResend);
         }
     }
 

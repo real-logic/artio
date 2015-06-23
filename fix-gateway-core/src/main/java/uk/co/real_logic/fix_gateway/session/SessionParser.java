@@ -139,7 +139,8 @@ public class SessionParser
 
     private boolean isPossDup(final HeaderDecoder header)
     {
-        return header.hasPossDupFlag() && this.header.possDupFlag();
+        return (header.hasPossDupFlag() && header.possDupFlag())
+            || (header.hasPossResend() && header.possResend());
     }
 
     public Session session()

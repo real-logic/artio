@@ -37,7 +37,9 @@ public class Session
 {
     public static final long UNKNOWN_ID = -1;
 
-    /** The proportion of the maximum heartbeat interval before you send your heartbeat */
+    /**
+     * The proportion of the maximum heartbeat interval before you send your heartbeat
+     */
     public static final double HEARTBEAT_PAUSE_FACTOR = 0.8;
 
     private final MilliClock clock;
@@ -197,7 +199,7 @@ public class Session
 
     // ---------- Event Handlers ----------
 
-    void onMessage(final int msgSeqNo, final boolean isPossDup)
+    void onMessage(final int msgSeqNo, final boolean isPossDupOrResend)
     {
         if (state() == CONNECTED)
         {
@@ -225,7 +227,7 @@ public class Session
                 proxy.resendRequest(newSentSeqNum(), expectedSeqNo, msgSeqNo - 1);
                 incReceivedSeqNum();
             }
-            else if (expectedSeqNo > msgSeqNo && !isPossDup)
+            else if (expectedSeqNo > msgSeqNo && !isPossDupOrResend)
             {
                 proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedSeqNo, msgSeqNo);
                 disconnect();
@@ -238,7 +240,7 @@ public class Session
                  final long sessionId,
                  final Object sessionKey,
                  long sendingTime,
-                 final boolean isPossDup)
+                 final boolean isPossDupOrResend)
     {
         this.sessionKey = sessionKey;
         proxy.setupSession(sessionId, sessionKey);
@@ -246,7 +248,7 @@ public class Session
         {
             id(sessionId);
             heartbeatIntervalInS(heartbeatInterval);
-            onMessage(msgSeqNo, isPossDup);
+            onMessage(msgSeqNo, isPossDupOrResend);
             publication.saveLogon(connectionId, sessionId);
         }
     }
@@ -279,9 +281,9 @@ public class Session
         }
     }
 
-    void onLogout(final int msgSeqNo, final boolean isPossDup)
+    void onLogout(final int msgSeqNo, final boolean isPossDupOrResend)
     {
-        onMessage(msgSeqNo, isPossDup);
+        onMessage(msgSeqNo, isPossDupOrResend);
         if (state() == AWAITING_LOGOUT)
         {
             disconnect();
@@ -293,13 +295,14 @@ public class Session
         }
     }
 
-    void onTestRequest(final char[] testReqId, final int testReqIdLength, final int msgSeqNo, final boolean isPossDup)
+    void onTestRequest(
+        final char[] testReqId, final int testReqIdLength, final int msgSeqNo, final boolean isPossDupOrResend)
     {
         if (msgSeqNo != MISSING_INT)
         {
             proxy.heartbeat(testReqId, testReqIdLength, newSentSeqNum());
         }
-        onMessage(msgSeqNo, isPossDup);
+        onMessage(msgSeqNo, isPossDupOrResend);
     }
 
     void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
@@ -348,10 +351,10 @@ public class Session
         }
     }
 
-    void onReject(final int msgSeqNo, final boolean isPossDup)
+    void onReject(final int msgSeqNo, final boolean isPossDupOrResend)
     {
         // TODO:
-        onMessage(msgSeqNo, isPossDup);
+        onMessage(msgSeqNo, isPossDupOrResend);
     }
 
     public boolean onBeginString(final char[] value, final int length)
