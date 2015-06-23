@@ -149,7 +149,7 @@ public class FixGateway implements AutoCloseable
         {
             if (!(throwable instanceof ClosedByInterruptException))
             {
-                Aeron.DEFAULT_ERROR_HANDLER.accept(throwable);
+                Aeron.DEFAULT_ERROR_HANDLER.onError(throwable);
             }
         });
         aeron = Aeron.connect(ctx);
