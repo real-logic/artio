@@ -65,7 +65,7 @@ public class ArchiveMetaData
                 .version(metaDataEncoder.sbeSchemaVersion());
 
             metaDataEncoder
-                .wrap(metaDataBuffer, headerEncoder.size())
+                .wrap(metaDataBuffer, headerEncoder.encodedLength())
                 .initialTermId(initialTermId)
                 .termBufferLength(termBufferLength);
         }
@@ -76,7 +76,8 @@ public class ArchiveMetaData
         ensureBufferNotMapped();
         metaDataBuffer.wrap(existingBufferFactory.map(directoryDescriptor.metaDataLogFile(streamId)));
         headerDecoder.wrap(metaDataBuffer, 0);
-        decoder.wrap(metaDataBuffer, headerDecoder.size(), headerDecoder.blockLength(), headerDecoder.version());
+        decoder.wrap(metaDataBuffer, headerDecoder.encodedLength(), headerDecoder.blockLength(), headerDecoder.version());
+
         return decoder;
     }
 

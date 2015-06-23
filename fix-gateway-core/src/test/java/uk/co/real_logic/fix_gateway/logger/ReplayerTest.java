@@ -39,7 +39,7 @@ public class ReplayerTest extends AbstractMessageTest
     private static final int BEGIN_SEQ_NO = 2;
     private static final int END_SEQ_NO = 2;
     public static final int SIZE_OF_FRAME =
-        FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderSize() + MessageHeaderDecoder.SIZE;
+        FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength() + MessageHeaderDecoder.ENCODED_LENGTH;
 
     private ReplayQuery mockReplayQuery = mock(ReplayQuery.class);
     private Publication mockPublication = mock(Publication.class);

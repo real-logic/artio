@@ -32,8 +32,8 @@ import java.nio.charset.StandardCharsets;
  */
 public class GatewayPublication
 {
-    public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderSize();
-    public static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderSize();
+    public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
+    public static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
 
     private final MessageHeaderEncoder header = new MessageHeaderEncoder();
     private final LogonEncoder logon = new LogonEncoder();
@@ -62,7 +62,7 @@ public class GatewayPublication
         final long sessionId,
         final int messageType)
     {
-        final int framedLength = header.size() + FRAME_SIZE + srcLength;
+        final int framedLength = header.encodedLength() + FRAME_SIZE + srcLength;
         final long position = claim(framedLength);
 
         int offset = bufferClaim.offset();
@@ -76,7 +76,7 @@ public class GatewayPublication
             .schemaId(messageFrame.sbeSchemaId())
             .version(messageFrame.sbeSchemaVersion());
 
-        offset += header.size();
+        offset += header.encodedLength();
 
         messageFrame
             .wrap(destBuffer, offset)
@@ -94,7 +94,7 @@ public class GatewayPublication
 
     public long saveLogon(final long connectionId, final long sessionId)
     {
-        final long position = claim(header.size() + LogonEncoder.BLOCK_LENGTH);
+        final long position = claim(header.encodedLength() + LogonEncoder.BLOCK_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -106,7 +106,7 @@ public class GatewayPublication
             .schemaId(logon.sbeSchemaId())
             .version(logon.sbeSchemaVersion());
 
-        offset += header.size();
+        offset += header.encodedLength();
 
         logon
             .wrap(buffer, offset)
@@ -122,7 +122,7 @@ public class GatewayPublication
     {
         final byte[] addressString = address.toString().getBytes(StandardCharsets.UTF_8);
 
-        final int length = header.size() + CONNECT_SIZE + addressString.length;
+        final int length = header.encodedLength() + CONNECT_SIZE + addressString.length;
         final long position = claim(length);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
@@ -135,7 +135,7 @@ public class GatewayPublication
             .schemaId(connect.sbeSchemaId())
             .version(connect.sbeSchemaVersion());
 
-        offset += header.size();
+        offset += header.encodedLength();
 
         connect
             .wrap(buffer, offset)
@@ -149,7 +149,7 @@ public class GatewayPublication
 
     public long saveDisconnect(final long connectionId)
     {
-        final long position = claim(header.size() + DisconnectEncoder.BLOCK_LENGTH);
+        final long position = claim(header.encodedLength() + DisconnectEncoder.BLOCK_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -161,7 +161,7 @@ public class GatewayPublication
             .schemaId(disconnect.sbeSchemaId())
             .version(disconnect.sbeSchemaVersion());
 
-        offset += header.size();
+        offset += header.encodedLength();
 
         disconnect
             .wrap(buffer, offset)
@@ -180,6 +180,7 @@ public class GatewayPublication
             idleStrategy.idle(0);
             fails.increment();
         }
+
         return position;
     }
 }

@@ -50,7 +50,7 @@ public class DataSubscriber implements FragmentHandler
 
         final int blockLength = messageHeader.blockLength();
         final int version = messageHeader.version();
-        offset += messageHeader.size();
+        offset += messageHeader.encodedLength();
 
         switch (messageHeader.templateId())
         {
@@ -88,7 +88,7 @@ public class DataSubscriber implements FragmentHandler
             case ConnectDecoder.TEMPLATE_ID:
             {
                 connect.wrap(buffer, offset, blockLength, version);
-                final int addressOffset = offset + ConnectDecoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderSize();
+                final int addressOffset = offset + ConnectDecoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
                 sessionHandler.onConnect(connect.connection(), buffer, addressOffset, connect.addressLength());
                 return connect.limit();
             }

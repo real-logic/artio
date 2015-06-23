@@ -32,7 +32,7 @@ import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEFAULT_LOGGER_CACHE_CAPACITY;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEFAULT_LOG_FILE_DIR;
 import static uk.co.real_logic.fix_gateway.messages.FixMessageDecoder.BLOCK_LENGTH;
-import static uk.co.real_logic.fix_gateway.messages.FixMessageDecoder.bodyHeaderSize;
+import static uk.co.real_logic.fix_gateway.messages.FixMessageDecoder.bodyHeaderLength;
 
 public class ArchiveReaderTest
 {
@@ -43,7 +43,7 @@ public class ArchiveReaderTest
     private static final int LENGTH = 100;
     private static final int STREAM_ID = 1;
 
-    public static final int SBE_BLOCK = MessageHeaderDecoder.SIZE + BLOCK_LENGTH + bodyHeaderSize();
+    public static final int SBE_BLOCK = MessageHeaderDecoder.ENCODED_LENGTH + BLOCK_LENGTH + bodyHeaderLength();
 
     private ByteBuffer byteBuffer = ByteBuffer.allocate(16 * 1024);
     private UnsafeBuffer inputBuffer = new UnsafeBuffer(new byte[16 * 1024]);

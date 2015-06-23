@@ -36,7 +36,7 @@ import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 public class ArchiveReader
 {
     public static final int MESSAGE_FRAME_BLOCK_LENGTH =
-        MessageHeaderDecoder.SIZE + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderSize();
+        MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
 
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
 
