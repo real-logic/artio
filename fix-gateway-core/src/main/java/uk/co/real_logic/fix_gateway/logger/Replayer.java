@@ -36,7 +36,6 @@ import uk.co.real_logic.sbe.codec.java.CodecUtil;
 import java.nio.charset.StandardCharsets;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
-import static uk.co.real_logic.fix_gateway.logger.PossDupFinder.LENGTH_OF_BODY_LENGTH_VALUE;
 import static uk.co.real_logic.fix_gateway.logger.PossDupFinder.NO_ENTRY;
 
 public class Replayer implements SessionHandler, LogHandler, Agent
@@ -188,7 +187,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         mutableAsciiFlyweight.wrap(claimBuffer);
         final int newBodyLength = possDupFinder.bodyLength() + POSS_DUP_FIELD.length;
         final int bodyLengthOffset = srcToClaim(possDupFinder.bodyLengthOffset(), srcOffset, claim.offset());
-        mutableAsciiFlyweight.putNatural(bodyLengthOffset, LENGTH_OF_BODY_LENGTH_VALUE, newBodyLength);
+        mutableAsciiFlyweight.putNatural(bodyLengthOffset, possDupFinder.lengthOfBodyLength(), newBodyLength);
     }
 
     private void setPossDupFlag(

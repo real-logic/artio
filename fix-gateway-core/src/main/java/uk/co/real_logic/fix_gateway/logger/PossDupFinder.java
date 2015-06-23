@@ -25,7 +25,6 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 class PossDupFinder implements OtfMessageAcceptor
 {
     public static final int NO_ENTRY = -1;
-    public static final int LENGTH_OF_BODY_LENGTH_VALUE = 4;
 
     private final AsciiFlyweight ascii = new AsciiFlyweight();
 
@@ -33,6 +32,7 @@ class PossDupFinder implements OtfMessageAcceptor
     private int sendingTimeEnd;
     private int bodyLength;
     private int bodyLengthOffset;
+    private int lengthOfBodyLength;
 
     public void onNext()
     {
@@ -40,6 +40,7 @@ class PossDupFinder implements OtfMessageAcceptor
         sendingTimeEnd = NO_ENTRY;
         bodyLength = NO_ENTRY;
         bodyLengthOffset = NO_ENTRY;
+        lengthOfBodyLength = NO_ENTRY;
     }
 
     public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
@@ -57,7 +58,8 @@ class PossDupFinder implements OtfMessageAcceptor
             case Constants.BODY_LENGTH:
                 ascii.wrap(buffer);
                 bodyLengthOffset = offset;
-                bodyLength = ascii.getInt(offset, offset + LENGTH_OF_BODY_LENGTH_VALUE);
+                lengthOfBodyLength = length;
+                bodyLength = ascii.getInt(offset, offset + length);
                 break;
         }
     }
@@ -108,5 +110,10 @@ class PossDupFinder implements OtfMessageAcceptor
     public int bodyLengthOffset()
     {
         return bodyLengthOffset;
+    }
+
+    public int lengthOfBodyLength()
+    {
+        return lengthOfBodyLength;
     }
 }

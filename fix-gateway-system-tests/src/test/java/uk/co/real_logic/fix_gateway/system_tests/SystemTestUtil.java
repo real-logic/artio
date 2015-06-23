@@ -46,6 +46,8 @@ public final class SystemTestUtil
     public static final long CONNECTION_ID = 0L;
     public static final String ACCEPTOR_ID = "CCG";
     public static final String INITIATOR_ID = "LEH_LZJ02";
+    public static final String CLIENT_LOGS = "client-logs";
+    public static final String ACCEPTOR_LOGS = "acceptor-logs";
 
     public static MediaDriver launchMediaDriver()
     {
@@ -136,13 +138,20 @@ public final class SystemTestUtil
 
     public static FixGateway launchInitiatingGateway(final NewSessionHandler sessionHandler)
     {
+        delete(CLIENT_LOGS);
+
         final StaticConfiguration initiatingConfig = new StaticConfiguration()
             .bind("localhost", unusedPort())
             .aeronChannel("udp://localhost:" + unusedPort())
             .newSessionHandler(sessionHandler)
             .counterBuffersFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "counters")
-            .logFileDir("client-logs");
+            .logFileDir(CLIENT_LOGS);
         return FixGateway.launch(initiatingConfig);
+    }
+
+    private static void delete(final String dir)
+    {
+        IoUtil.delete(new File(dir), true);
     }
 
     public static FixGateway launchAcceptingGateway(
@@ -151,6 +160,8 @@ public final class SystemTestUtil
         final String acceptorId,
         final String initiatorId)
     {
+        delete(ACCEPTOR_LOGS);
+
         final AuthenticationStrategy authenticationStrategy = new CompIdAuthenticationStrategy(acceptorId)
                 .and(new SenderIdAuthenticationStrategy(Arrays.asList(initiatorId)));
 
@@ -160,7 +171,7 @@ public final class SystemTestUtil
             .authenticationStrategy(authenticationStrategy)
             .newSessionHandler(sessionHandler)
             .counterBuffersFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + "counters")
-            .logFileDir("acceptor-logs");
+            .logFileDir(ACCEPTOR_LOGS);
         return FixGateway.launch(acceptingConfig);
     }
 
