@@ -31,6 +31,7 @@ import static java.util.Arrays.asList;
 /**
  * Encapsulates sending messages relating to sessions
  */
+// TODO: inject a clock
 public class SessionProxy
 {
     private static final byte[] INCORRECT_BEGIN_STRING = "Incorrect BeginString".getBytes(US_ASCII);

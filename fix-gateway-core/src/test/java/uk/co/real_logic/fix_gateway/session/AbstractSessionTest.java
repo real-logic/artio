@@ -51,7 +51,7 @@ public abstract class AbstractSessionTest
         session().state(ACTIVE);
         session().lastReceivedMsgSeqNum(2);
 
-        session().onMessage(1);
+        session().onMessage(1, false);
         verify(mockProxy).lowSequenceNumberLogout(1, 3, 1);
         verifyDisconnect();
     }
@@ -85,7 +85,7 @@ public abstract class AbstractSessionTest
 
     public void onLogon(final int msgSeqNo)
     {
-       session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID, SESSION_KEY, fakeClock.time());
+       session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID, SESSION_KEY, fakeClock.time(), false);
     }
 
     protected abstract Session session();

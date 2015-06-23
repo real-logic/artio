@@ -20,12 +20,16 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
+import uk.co.real_logic.fix_gateway.decoder.HeartbeatDecoder;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.Session;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.Matchers.hasItem;
+import static org.junit.Assert.*;
+import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyEquals;
 import static uk.co.real_logic.fix_gateway.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -66,7 +70,7 @@ public class GatewayToGatewaySystemTest
     }
 
     @Test
-    public void messagesCanBeSentFromInitiatorToAcceptor() throws InterruptedException
+    public void messagesCanBeSentFromInitiatorToAcceptor()
     {
         sendTestRequest(initiatedSession);
 
@@ -74,7 +78,7 @@ public class GatewayToGatewaySystemTest
     }
 
     @Test
-    public void messagesCanBeSentFromAcceptorToInitiator() throws InterruptedException
+    public void messagesCanBeSentFromAcceptorToInitiator()
     {
         sendTestRequest(acceptingSession);
 
@@ -82,7 +86,7 @@ public class GatewayToGatewaySystemTest
     }
 
     @Test
-    public void initiatorSessionCanBeDisconnected() throws InterruptedException
+    public void initiatorSessionCanBeDisconnected()
     {
         initiatedSession.startLogout();
 
@@ -90,30 +94,47 @@ public class GatewayToGatewaySystemTest
     }
 
     @Test
-    public void acceptorSessionCanBeDisconnected() throws InterruptedException
+    public void acceptorSessionCanBeDisconnected()
     {
         acceptingSession.startLogout();
 
         assertDisconnected(initiatingSessionHandler, acceptingSession);
     }
 
+    @Test
+    public void gatewayProcessesResendRequests()
+    {
+        messagesCanBeSentFromInitiatorToAcceptor();
+
+        sendResendRequest();
+
+        assertMessageResent();
+    }
+
+    private void assertMessageResent()
+    {
+        assertEventuallyEquals("Failed to receive the reply", 1, acceptingSessionHandler::poll);
+        assertThat(acceptingOtfAcceptor.messageTypes(), hasItem(HeartbeatDecoder.MESSAGE_TYPE));
+    }
+
+    private void sendResendRequest()
+    {
+        final int seqNum = acceptingSession.lastReceivedMsgSeqNum();
+        final ResendRequestEncoder resendRequest = new ResendRequestEncoder()
+            .beginSeqNo(seqNum)
+            .endSeqNo(seqNum);
+
+        acceptingOtfAcceptor.messageTypes().clear();
+
+        acceptingSession.send(resendRequest);
+    }
+
     @After
     public void close() throws Exception
     {
-        if (acceptingGateway != null)
-        {
-            acceptingGateway.close();
-        }
-
-        if (initiatingGateway != null)
-        {
-            initiatingGateway.close();
-        }
-
-        if (mediaDriver != null)
-        {
-            mediaDriver.close();
-        }
+        quietClose(acceptingGateway);
+        quietClose(initiatingGateway);
+        quietClose(mediaDriver);
     }
 
 }

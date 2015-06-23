@@ -20,29 +20,45 @@ import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 class PossDupFinder implements OtfMessageAcceptor
 {
     public static final int NO_ENTRY = -1;
+    public static final int LENGTH_OF_BODY_LENGTH_VALUE = 4;
+
+    private final AsciiFlyweight ascii = new AsciiFlyweight();
 
     private int possDupOffset;
-    private int sendingTimeOffset;
+    private int sendingTimeEnd;
+    private int bodyLength;
+    private int bodyLengthOffset;
 
     public void onNext()
     {
         possDupOffset = NO_ENTRY;
-        sendingTimeOffset = NO_ENTRY;
+        sendingTimeEnd = NO_ENTRY;
+        bodyLength = NO_ENTRY;
+        bodyLengthOffset = NO_ENTRY;
     }
 
     public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
     {
-        if (tag == Constants.POSS_DUP_FLAG)
+        switch (tag)
         {
-            possDupOffset = offset;
-        }
-        else if (tag == Constants.SENDING_TIME)
-        {
-            sendingTimeOffset = offset;
+            case Constants.POSS_DUP_FLAG:
+                possDupOffset = offset;
+                break;
+
+            case Constants.SENDING_TIME:
+                sendingTimeEnd = offset + length + 1;
+                break;
+
+            case Constants.BODY_LENGTH:
+                ascii.wrap(buffer);
+                bodyLengthOffset = offset;
+                bodyLength = ascii.getInt(offset, offset + LENGTH_OF_BODY_LENGTH_VALUE);
+                break;
         }
     }
 
@@ -79,8 +95,18 @@ class PossDupFinder implements OtfMessageAcceptor
         return possDupOffset;
     }
 
-    public int sendingTimeOffset()
+    public int sendingTimeEnd()
     {
-        return sendingTimeOffset;
+        return sendingTimeEnd;
+    }
+
+    public int bodyLength()
+    {
+        return bodyLength;
+    }
+
+    public int bodyLengthOffset()
+    {
+        return bodyLengthOffset;
     }
 }

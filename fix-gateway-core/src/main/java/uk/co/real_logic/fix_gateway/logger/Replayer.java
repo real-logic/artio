@@ -25,14 +25,18 @@ import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.sbe.codec.java.CodecUtil;
 
 import java.nio.charset.StandardCharsets;
 
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
+import static uk.co.real_logic.fix_gateway.logger.PossDupFinder.LENGTH_OF_BODY_LENGTH_VALUE;
 import static uk.co.real_logic.fix_gateway.logger.PossDupFinder.NO_ENTRY;
 
 public class Replayer implements SessionHandler, LogHandler, Agent
@@ -42,16 +46,20 @@ public class Replayer implements SessionHandler, LogHandler, Agent
     public static final int POLL_LIMIT = 10;
 
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
+
+    // Used in onMessage
     private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
+    // Used in when updating the poss dup field
     private final MutableAsciiFlyweight mutableAsciiFlyweight = new MutableAsciiFlyweight();
+
     private final Subscription subscription;
     private final ReplayQuery replayQuery;
     private final Publication publication;
     private final BufferClaim claim;
     private final IdleStrategy idleStrategy;
 
-    private final PossDupFinder acceptor = new PossDupFinder();
-    private final OtfParser parser = new OtfParser(acceptor, new IntDictionary());
+    private final PossDupFinder possDupFinder = new PossDupFinder();
+    private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
     private final DataSubscriber dataSubscriber = new DataSubscriber(this);
 
     public Replayer(
@@ -85,6 +93,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
             final int endSeqNo = resendRequest.endSeqNo();
             if (endSeqNo < beginSeqNo)
             {
+                // TODO: log error
                 return;
             }
 
@@ -102,34 +111,29 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int messageOffset,
-        final int srcLength)
+        final int messageLength)
     {
-        final int messageLength = srcLength - (messageOffset - srcOffset);
         parser.onMessage(srcBuffer, messageOffset, messageLength);
-        final int possDupSrcOffset = acceptor.possDupOffset();
-        try
+        final int possDupSrcOffset = possDupFinder.possDupOffset();
+        if (possDupSrcOffset == NO_ENTRY)
         {
-            if (possDupSrcOffset == NO_ENTRY)
-            {
-                final int newLength = srcLength + POSS_DUP_FIELD.length;
-                claimBuffer(newLength);
-                copyPossDupField(srcBuffer, srcOffset, srcLength, claim.buffer(), claim.offset());
-            }
-            else
-            {
-                claimBuffer(srcLength);
+            final int fullLength = (messageOffset - srcOffset) + messageLength;
+            final int newLength = fullLength + POSS_DUP_FIELD.length;
+            claimBuffer(newLength);
+            addPossDupField(srcBuffer, srcOffset, fullLength, messageLength, claim.buffer(), claim.offset());
+        }
+        else
+        {
+            claimBuffer(messageLength);
 
-                final MutableDirectBuffer claimBuffer = claim.buffer();
-                final int claimOffset = claim.offset();
-                claimBuffer.putBytes(claimOffset, srcBuffer, srcOffset, srcLength);
-                setPossDupFlag(srcOffset, possDupSrcOffset, claimBuffer, claimOffset);
-            }
+            final MutableDirectBuffer claimBuffer = claim.buffer();
+            final int claimOffset = claim.offset();
+            claimBuffer.putBytes(claimOffset, srcBuffer, srcOffset, messageLength);
+            setPossDupFlag(srcOffset, possDupSrcOffset, claimBuffer, claimOffset);
         }
-        finally
-        {
-            // TODO: tombstone the claim on exception
-            claim.commit();
-        }
+
+        // TODO: tombstone the claim on exception
+        claim.commit();
 
         return true;
     }
@@ -142,21 +146,49 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         }
     }
 
-    private void copyPossDupField(
+    private void addPossDupField(
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength,
+        final int messageLength,
         final MutableDirectBuffer claimBuffer,
         final int claimOffset)
     {
-        final int sendingTimeSrcOffset = acceptor.sendingTimeOffset();
-        final int firstLength = sendingTimeSrcOffset - srcOffset;
-        final int sendingTimeClaimOffset = srcToClaim(sendingTimeSrcOffset, srcOffset, claimOffset);
-        final int remainingClaimOffset = sendingTimeClaimOffset + POSS_DUP_FIELD.length;
+        // Sending time is a required field just before the poss dup field
+        final int sendingTimeSrcEnd = possDupFinder.sendingTimeEnd();
+        if (sendingTimeSrcEnd == NO_ENTRY)
+        {
+            // TODO: log error
+            // TODO: probably should disconnect the client
+            System.err.println("Missing sending time field in resend request");
+            return;
+        }
+        final int lengthToPossDup = sendingTimeSrcEnd - srcOffset;
+        final int possDupClaimOffset = claimOffset + lengthToPossDup;
+        final int remainingClaimOffset = possDupClaimOffset + POSS_DUP_FIELD.length;
 
-        claimBuffer.putBytes(claimOffset, srcBuffer, srcOffset, firstLength);
-        claimBuffer.putBytes(sendingTimeClaimOffset, POSS_DUP_FIELD);
-        claimBuffer.putBytes(remainingClaimOffset, srcBuffer, sendingTimeSrcOffset, srcLength - firstLength);
+        claimBuffer.putBytes(claimOffset, srcBuffer, srcOffset, lengthToPossDup);
+        claimBuffer.putBytes(possDupClaimOffset, POSS_DUP_FIELD);
+        claimBuffer.putBytes(remainingClaimOffset, srcBuffer, sendingTimeSrcEnd, srcLength - lengthToPossDup);
+
+        updateFrameBodyLength(messageLength, claimBuffer, claimOffset);
+        updateMessageBodyLength(srcOffset, claimBuffer);
+    }
+
+    private void updateFrameBodyLength(final int messageLength,
+                                       final MutableDirectBuffer claimBuffer,
+                                       final int claimOffset)
+    {
+        final int frameBodyLengthOffset = claimOffset + MessageHeaderDecoder.SIZE + FixMessageDecoder.BLOCK_LENGTH;
+        CodecUtil.uint16Put(claimBuffer, frameBodyLengthOffset, messageLength + POSS_DUP_FIELD.length, LITTLE_ENDIAN);
+    }
+
+    private void updateMessageBodyLength(final int srcOffset, final MutableDirectBuffer claimBuffer)
+    {
+        mutableAsciiFlyweight.wrap(claimBuffer);
+        final int newBodyLength = possDupFinder.bodyLength() + POSS_DUP_FIELD.length;
+        final int bodyLengthOffset = srcToClaim(possDupFinder.bodyLengthOffset(), srcOffset, claim.offset());
+        mutableAsciiFlyweight.putNatural(bodyLengthOffset, LENGTH_OF_BODY_LENGTH_VALUE, newBodyLength);
     }
 
     private void setPossDupFlag(

@@ -35,7 +35,8 @@ import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 public class ArchiveReader
 {
-    public static final int MESSAGE_FRAME_BLOCK_LENGTH = MessageHeaderDecoder.SIZE + FixMessageDecoder.BLOCK_LENGTH;
+    public static final int MESSAGE_FRAME_BLOCK_LENGTH =
+        MessageHeaderDecoder.SIZE + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderSize();
 
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
 
@@ -90,16 +91,16 @@ public class ArchiveReader
         {
             final int termId = computeTermIdFromPosition(position, positionBitsToShift, initialTermId);
             final ByteBuffer termBuffer = termIdToBuffer.computeIfAbsent(termId, newBuffer);
-            final int aeronTermOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
+            final int aeronHeaderOffset = computeTermOffsetFromPosition(position, positionBitsToShift) - HEADER_LENGTH;
 
             buffer.wrap(termBuffer);
-            dataHeader.wrap(buffer, aeronTermOffset);
+            dataHeader.wrap(buffer, aeronHeaderOffset);
 
-            final int startOffset = aeronTermOffset + HEADER_LENGTH;
-            final int messageOffset = startOffset + MESSAGE_FRAME_BLOCK_LENGTH;
-            final int length = dataHeader.frameLength() - (HEADER_LENGTH + MESSAGE_FRAME_BLOCK_LENGTH);
+            final int aeronDataOffset = aeronHeaderOffset + HEADER_LENGTH;
+            final int fixMessageOffset = aeronDataOffset + MESSAGE_FRAME_BLOCK_LENGTH;
+            final int messageLength = dataHeader.frameLength() - (HEADER_LENGTH + MESSAGE_FRAME_BLOCK_LENGTH);
 
-            return handler.onLogEntry(messageFrame, buffer, startOffset, messageOffset, length);
+            return handler.onLogEntry(messageFrame, buffer, aeronDataOffset, fixMessageOffset, messageLength);
         }
 
         @Override

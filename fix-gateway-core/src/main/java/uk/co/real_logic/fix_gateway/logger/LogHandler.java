@@ -27,7 +27,7 @@ public interface LogHandler
      * @param srcBuffer the buffer where the message is stored.
      * @param startOffset the offset denoting the start of the messageFrame
      * @param messageOffset the offset denoting the start of the message body
-     * @param length the length of message body.
+     * @param messageLength the length of message body.
      * @return true if you want to continue scanning, false if you want to stop.
      */
     boolean onLogEntry(
@@ -35,5 +35,5 @@ public interface LogHandler
         final DirectBuffer srcBuffer,
         final int startOffset,
         final int messageOffset,
-        final int length);
+        final int messageLength);
 }

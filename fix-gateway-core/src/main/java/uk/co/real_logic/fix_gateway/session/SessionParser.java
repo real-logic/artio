@@ -74,7 +74,12 @@ public class SessionParser
                     if (session.onBeginString(header.beginString(), header.beginStringLength()))
                     {
                         session.onLogon(
-                            logon.heartBtInt(), header.msgSeqNum(), sessionId, sessionKey, header.sendingTime());
+                            logon.heartBtInt(),
+                            header.msgSeqNum(),
+                            sessionId,
+                            sessionKey,
+                            header.sendingTime(),
+                            isPossDup(header));
                     }
                 }
                 else
@@ -84,29 +89,42 @@ public class SessionParser
                 break;
 
             case LogoutDecoder.MESSAGE_TYPE:
+            {
                 logout.reset();
                 logout.decode(string, offset, length);
-                session.onLogout(logout.header().msgSeqNum());
+                final HeaderDecoder header = logout.header();
+                session.onLogout(header.msgSeqNum(), isPossDup(header));
                 break;
+            }
 
             case RejectDecoder.MESSAGE_TYPE:
+            {
                 reject.reset();
                 reject.decode(string, offset, length);
-                session.onReject(reject.header().msgSeqNum());
+                final HeaderDecoder header = reject.header();
+                session.onReject(header.msgSeqNum(), isPossDup(header));
                 break;
+            }
 
             case TestRequestDecoder.MESSAGE_TYPE:
+            {
                 testRequest.reset();
                 testRequest.decode(string, offset, length);
-                final int msgSeqNo = testRequest.header().msgSeqNum();
-                session.onTestRequest(testRequest.testReqID(), testRequest.testReqIDLength(), msgSeqNo);
+                final HeaderDecoder header = testRequest.header();
+                final int msgSeqNo = header.msgSeqNum();
+                session.onTestRequest(
+                    testRequest.testReqID(), testRequest.testReqIDLength(), msgSeqNo, isPossDup(header));
                 break;
+            }
 
             default:
+            {
+                final HeaderDecoder header = this.header;
                 header.reset();
-                this.header.decode(string, offset, length);
-                session.onMessage(this.header.msgSeqNum());
+                header.decode(string, offset, length);
+                session.onMessage(header.msgSeqNum(), isPossDup(header));
                 break;
+            }
         }
 
         if (session.isConnected())
@@ -117,6 +135,11 @@ public class SessionParser
         {
             return UNKNOWN_ID;
         }
+    }
+
+    private boolean isPossDup(final HeaderDecoder header)
+    {
+        return header.hasPossDupFlag() && this.header.possDupFlag();
     }
 
     public Session session()

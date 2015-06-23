@@ -57,6 +57,7 @@ public class Session
 
     private SessionState state;
     private long id = UNKNOWN_ID;
+    // TODO: unify this with the atomic counter
     private int lastReceivedMsgSeqNum = 0;
     private int lastSentMsgSeqNum = 0;
 
@@ -196,7 +197,7 @@ public class Session
 
     // ---------- Event Handlers ----------
 
-    void onMessage(final int msgSeqNo)
+    void onMessage(final int msgSeqNo, final boolean isPossDup)
     {
         if (state() == CONNECTED)
         {
@@ -224,7 +225,7 @@ public class Session
                 proxy.resendRequest(newSentSeqNum(), expectedSeqNo, msgSeqNo - 1);
                 incReceivedSeqNum();
             }
-            else if (expectedSeqNo > msgSeqNo)
+            else if (expectedSeqNo > msgSeqNo && !isPossDup)
             {
                 proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedSeqNo, msgSeqNo);
                 disconnect();
@@ -232,7 +233,12 @@ public class Session
         }
     }
 
-    void onLogon(final int heartbeatInterval, final int msgSeqNo, final long sessionId, final Object sessionKey, long sendingTime)
+    void onLogon(final int heartbeatInterval,
+                 final int msgSeqNo,
+                 final long sessionId,
+                 final Object sessionKey,
+                 long sendingTime,
+                 final boolean isPossDup)
     {
         this.sessionKey = sessionKey;
         proxy.setupSession(sessionId, sessionKey);
@@ -240,7 +246,7 @@ public class Session
         {
             id(sessionId);
             heartbeatIntervalInS(heartbeatInterval);
-            onMessage(msgSeqNo);
+            onMessage(msgSeqNo, isPossDup);
             publication.saveLogon(connectionId, sessionId);
         }
     }
@@ -273,9 +279,9 @@ public class Session
         }
     }
 
-    void onLogout(final int msgSeqNo)
+    void onLogout(final int msgSeqNo, final boolean isPossDup)
     {
-        onMessage(msgSeqNo);
+        onMessage(msgSeqNo, isPossDup);
         if (state() == AWAITING_LOGOUT)
         {
             disconnect();
@@ -287,13 +293,13 @@ public class Session
         }
     }
 
-    void onTestRequest(final char[] testReqId, final int testReqIdLength, final int msgSeqNo)
+    void onTestRequest(final char[] testReqId, final int testReqIdLength, final int msgSeqNo, final boolean isPossDup)
     {
         if (msgSeqNo != MISSING_INT)
         {
             proxy.heartbeat(testReqId, testReqIdLength, newSentSeqNum());
         }
-        onMessage(msgSeqNo);
+        onMessage(msgSeqNo, isPossDup);
     }
 
     void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
@@ -342,10 +348,10 @@ public class Session
         }
     }
 
-    void onReject(final int msgSeqNo)
+    void onReject(final int msgSeqNo, final boolean isPossDup)
     {
         // TODO:
-        onMessage(msgSeqNo);
+        onMessage(msgSeqNo, isPossDup);
     }
 
     public boolean onBeginString(final char[] value, final int length)
@@ -409,33 +415,39 @@ public class Session
         return clock.time();
     }
 
-    Session lastReceivedMsgSeqNum(final int value)
+    public Session lastReceivedMsgSeqNum(final int value)
     {
         this.lastReceivedMsgSeqNum = value;
         receivedMsgSeqNo.setOrdered(value);
         return this;
     }
 
-    int expectedReceivedSeqNum()
+    public int expectedReceivedSeqNum()
     {
         return lastReceivedMsgSeqNum + 1;
     }
 
-    int sentSeqNum()
+    public int sentSeqNum()
     {
         return lastSentMsgSeqNum;
     }
 
-    int newSentSeqNum()
+    public int newSentSeqNum()
     {
         final int lastSentMsgSeqNum = ++this.lastSentMsgSeqNum;
         sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
         return lastSentMsgSeqNum;
     }
 
-    void incReceivedSeqNum()
+    public void incReceivedSeqNum()
     {
         lastReceivedMsgSeqNum++;
+        receivedMsgSeqNo.increment();
+    }
+
+    public int lastReceivedMsgSeqNum()
+    {
+        return lastReceivedMsgSeqNum;
     }
 
     public long connectionId()

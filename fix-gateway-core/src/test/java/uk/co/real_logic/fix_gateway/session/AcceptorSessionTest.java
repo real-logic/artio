@@ -64,7 +64,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     @Test
     public void shouldLogoutIfFirstMessageNotALogon()
     {
-        session.onMessage(1);
+        session.onMessage(1, false);
 
         verifyDisconnect();
         verifyNoFurtherMessages();
@@ -77,7 +77,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     {
         fakeClock.advanceMilliSeconds(2 * SENDING_TIME_WINDOW);
 
-        session().onLogon(HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1);
+        session().onLogon(HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1, false);
 
         verify(mockProxy).rejectWhilstNotLoggedOn(1, SENDINGTIME_ACCURACY_PROBLEM);
     }
@@ -91,7 +91,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
             HEARTBEAT_INTERVAL, 4L, fakeClock, mockProxy, mockPublication, null,
             BEGIN_STRING, SENDING_TIME_WINDOW, mockSessionIds, acceptedSessions, mockReceivedMsgSeqNo, mockSentMsgSeqNo);
 
-        secondSession.onLogon(HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, fakeClock.time());
+        secondSession.onLogon(HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, fakeClock.time(), false);
 
         verify(mockProxy).disconnect(4L);
     }

@@ -44,7 +44,7 @@ public class SessionTest extends AbstractSessionTest
     {
         session.state(ACTIVE);
 
-        session.onLogout(1);
+        session.onLogout(1, false);
 
         verifyLogout();
         verifyDisconnect();
@@ -55,7 +55,7 @@ public class SessionTest extends AbstractSessionTest
     {
         session.state(AWAITING_LOGOUT);
 
-        session.onLogout(1);
+        session.onLogout(1, false);
 
         verifyDisconnect();
     }
@@ -68,7 +68,7 @@ public class SessionTest extends AbstractSessionTest
 
         session.id(SESSION_ID);
 
-        session.onTestRequest(testReqId, testReqIdLength, 1);
+        session.onTestRequest(testReqId, testReqIdLength, 1, false);
 
         verify(mockProxy).heartbeat(testReqId, testReqIdLength, 1);
     }
@@ -79,7 +79,7 @@ public class SessionTest extends AbstractSessionTest
         session.id(SESSION_ID);
 
         session.onSequenceReset(3, 4, false);
-        session.onMessage(3);
+        session.onMessage(3, false);
 
         verify(mockProxy).resendRequest(5, 1, 2);
     }
@@ -151,7 +151,7 @@ public class SessionTest extends AbstractSessionTest
         session.state(ACTIVE);
         session.lastReceivedMsgSeqNum(9);
 
-        session.onMessage(10);
+        session.onMessage(10, false);
 
         fakeClock.advanceSeconds(HEARTBEAT_INTERVAL * 2);
 
@@ -166,12 +166,12 @@ public class SessionTest extends AbstractSessionTest
         session.state(ACTIVE);
         session.lastReceivedMsgSeqNum(9);
 
-        session.onMessage(10);
+        session.onMessage(10, false);
 
         fakeClock.advanceSeconds(1);
 
         session.poll(fakeClock.time());
-        session.onMessage(11);
+        session.onMessage(11, false);
 
         fakeClock.advanceSeconds(1);
 
@@ -191,7 +191,7 @@ public class SessionTest extends AbstractSessionTest
         session.state(ACTIVE);
         session.id(SESSION_ID);
 
-        session.onMessage(3);
+        session.onMessage(3, false);
 
         verify(mockProxy).resendRequest(1, 1, 2);
         assertState(AWAITING_RESEND);
@@ -202,7 +202,7 @@ public class SessionTest extends AbstractSessionTest
     {
         final int heartbeatInterval = -1;
 
-        session().onLogon(heartbeatInterval, 0, SESSION_ID, SESSION_KEY, fakeClock.time());
+        session().onLogon(heartbeatInterval, 0, SESSION_ID, SESSION_KEY, fakeClock.time(), false);
 
         verify(mockProxy).negativeHeartbeatLogout(1);
     }
@@ -218,8 +218,8 @@ public class SessionTest extends AbstractSessionTest
     @Test
     public void shouldSendHeartbeatAfterLogonSpecifiedInterval()
     {
-        session().onLogon(1, 0, SESSION_ID, null, fakeClock.time());
-        session().onMessage(0);
+        session().onLogon(1, 0, SESSION_ID, null, fakeClock.time(), false);
+        session().onMessage(0, false);
 
         heartbeatSentAfterInterval(1, 4);
     }
@@ -252,7 +252,7 @@ public class SessionTest extends AbstractSessionTest
     {
         onLogon(1);
 
-        session.onMessage(MISSING_INT);
+        session.onMessage(MISSING_INT, false);
 
         verify(mockProxy).receivedMessageWithoutSequenceNumber(1);
         verifyDisconnect();
