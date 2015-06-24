@@ -149,9 +149,13 @@ public final class SystemTestUtil
         return FixGateway.launch(initiatingConfig);
     }
 
-    private static void delete(final String dir)
+    private static void delete(final String dirPath)
     {
-        IoUtil.delete(new File(dir), true);
+        final File dir = new File(dirPath);
+        if (dir.exists())
+        {
+            IoUtil.delete(dir, false);
+        }
     }
 
     public static FixGateway launchAcceptingGateway(
