@@ -123,5 +123,6 @@ public class Archiver implements Agent, FragmentHandler
     {
         subscription.close();
         streamIdToArchive.close();
+        metaData.close();
     }
 }

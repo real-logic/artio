@@ -26,7 +26,7 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 
-public class ArchiveMetaData
+public class ArchiveMetaData implements AutoCloseable
 {
     private static final int META_DATA_FILE_SIZE = 8 + ArchiveMetaDataDecoder.BLOCK_LENGTH;
 
@@ -88,5 +88,11 @@ public class ArchiveMetaData
         {
             IoUtil.unmap((MappedByteBuffer) buffer);
         }
+    }
+
+    @Override
+    public void close()
+    {
+        ensureBufferNotMapped();
     }
 }
