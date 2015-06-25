@@ -15,19 +15,27 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
+import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
+import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
+import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static java.util.stream.Collectors.joining;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.GROUP;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.MESSAGE;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
+import static java.util.stream.Collectors.toList;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.*;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
@@ -66,13 +74,25 @@ public class DecoderGenerator extends Generator
 
     protected void generateAggregate(final Aggregate aggregate, final AggregateType type)
     {
+        if (type == COMPONENT)
+        {
+            generateComponentInterface((Component) aggregate);
+            return;
+        }
+
         final String className = decoderClassName(aggregate);
         final boolean isMessage = type == MESSAGE;
 
         outputManager.withOutput(className, out ->
         {
             out.append(fileHeader(builderPackage));
-            out.append(generateClassDeclaration(className, type, Decoder.class, Decoder.class));
+
+            final List<String> interfaces =
+                aggregate.entriesWith(element -> element instanceof Component)
+                         .map(comp -> decoderClassName((Aggregate) comp.element()))
+                         .collect(toList());
+
+            out.append(generateClassDeclaration(className, type, interfaces, "Decoder", Decoder.class));
             if (isMessage)
             {
                 final Message message = (Message)aggregate;
@@ -86,6 +106,101 @@ public class DecoderGenerator extends Generator
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         });
+    }
+
+    private void generateComponentInterface(final Component component)
+    {
+        final String className = decoderClassName(component);
+        outputManager.withOutput(className, out ->
+        {
+            out.append(fileHeader(builderPackage));
+
+            out.append(String.format(
+                importFor(MutableDirectBuffer.class) +
+                importStaticFor(CodecUtil.class) +
+                importStaticFor(StandardFixConstants.class) +
+                importFor(DecimalFloat.class) +
+                importFor(MutableAsciiFlyweight.class) +
+                importFor(AsciiFlyweight.class) +
+                importFor(LocalMktDateEncoder.class) +
+                importFor(UtcTimestampEncoder.class) +
+                importFor(StandardCharsets.class) +
+                "\npublic interface %1$s\n" +
+                "{\n\n",
+                className));
+
+            for (final Entry entry : component.entries())
+            {
+                out.append(generateInterfaceGetter(entry));
+            }
+            out.append("\n}\n");
+        });
+    }
+
+    private String generateInterfaceGetter(final Entry entry)
+    {
+        final Entry.Element element = entry.element();
+        if (element instanceof Field)
+        {
+            final String name = element.name();
+            final String fieldName = formatPropertyName(name);
+            final Type type = ((Field) element).type();
+
+            final String length = type.isStringBased()
+                                ? String.format("    public int %1$sLength();\n", fieldName) : "";
+
+            final String optional = !entry.required()
+                                  ? String.format("    public boolean has%1$s();\n", name) : "";
+
+            return String.format(
+                    "    public %1$s %2$s();\n" +
+                    "%3$s" +
+                    "%4$s",
+                javaTypeOf(type),
+                fieldName,
+                optional,
+                length
+            );
+        }
+        else if (element instanceof Group)
+        {
+            final Group group = (Group) element;
+
+            return String.format(
+                "    public %1$s %2$s();\n",
+                decoderClassName(group),
+                formatPropertyName(group.name())
+            );
+        }
+        else if (element instanceof Component)
+        {
+            final Component component = (Component) element;
+            return component.entries()
+                            .stream()
+                            .map(this::generateInterfaceGetter)
+                            .collect(joining("\n", "", "\n"));
+        }
+
+        return "";
+    }
+
+    private String generateGetter(final Entry entry)
+    {
+        final Entry.Element element = entry.element();
+        if (element instanceof Field)
+        {
+            return generateFieldGetter(entry, (Field) element);
+        }
+        else if (element instanceof Group)
+        {
+            return generateGroupGetter((Group) element);
+        }
+        else if (element instanceof Component)
+        {
+            return generateComponentField((Component) element);
+        }
+
+        return "";
     }
 
     private void generateGroupMethods(final Writer out, final Aggregate aggregate) throws IOException
@@ -120,23 +235,12 @@ public class DecoderGenerator extends Generator
         }
     }
 
-    private String generateGetter(final Entry entry) throws IOException
+    private String generateComponentField(final Component component)
     {
-        final Entry.Element element = entry.element();
-        if (element instanceof Field)
-        {
-            return generateFieldGetter(entry, (Field) element);
-        }
-        else if (element instanceof Group)
-        {
-            return generateGroupGetter((Group) element);
-        }
-        else if (element instanceof Component)
-        {
-            return generateComponentField(decoderClassName(entry.name()), (Component) element);
-        }
-
-        return "";
+        return component.entries()
+                        .stream()
+                        .map(this::generateGetter)
+                        .collect(joining("\n", "", "\n"));
     }
 
     private String generateGroupGetter(final Group group)
@@ -370,12 +474,6 @@ public class DecoderGenerator extends Generator
 
     private String decodeEntry(final Entry entry)
     {
-        // Uses variables from surrounding context:
-        // int tag = the tag number of the field
-        // int valueOffset = starting index of the value
-        // int valueLength = the number of bytes for the value
-        // int endOfField = the end index of the value
-
         if (entry.element() instanceof Field)
         {
             return decodeField(entry, "");
@@ -384,8 +482,29 @@ public class DecoderGenerator extends Generator
         {
             return decodeGroup(entry);
         }
+        else if (entry.element() instanceof Component)
+        {
+            return decodeComponent(entry);
+        }
 
         return "";
+    }
+
+    private String decodeComponent(final Entry entry)
+    {
+        final Component component = (Component) entry.element();
+        return component.entries()
+                        .stream()
+                        .map(this::decodeEntry)
+                        .collect(joining("\n", "", "\n"));
+    }
+
+    protected String generateComponentToString(final Component component)
+    {
+        return component.entries()
+                        .stream()
+                        .map(this::generateEntryToString)
+                        .collect(joining(" + \n"));
     }
 
     private String decodeGroup(final Entry entry)
@@ -406,6 +525,12 @@ public class DecoderGenerator extends Generator
 
     private String decodeField(final Entry entry, final String suffix)
     {
+        // Uses variables from surrounding context:
+        // int tag = the tag number of the field
+        // int valueOffset = starting index of the value
+        // int valueLength = the number of bytes for the value
+        // int endOfField = the end index of the value
+
         final Field field = (Field)entry.element();
         final int tag = field.number();
         final String name = entry.name();

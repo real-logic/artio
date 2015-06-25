@@ -115,4 +115,9 @@ public final class Reflection
     {
         return get(group, "nestedGroup");
     }
+
+    public static Object getEgComponent(final Object object) throws Exception
+    {
+        return get(object, "egComponent");
+    }
 }

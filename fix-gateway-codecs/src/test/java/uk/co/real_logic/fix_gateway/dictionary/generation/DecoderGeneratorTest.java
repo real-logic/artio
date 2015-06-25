@@ -31,8 +31,7 @@ import java.util.Map;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasToString;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
@@ -48,6 +47,7 @@ public class DecoderGeneratorTest
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
     private static DecoderGenerator decoderGenerator = new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager);
     private static Class<?> heartbeat;
+    private static Class<?> component;
 
     private MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
 
@@ -57,11 +57,13 @@ public class DecoderGeneratorTest
         decoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sources);
-        if (heartbeat == null)
+        component = heartbeat.getClassLoader().loadClass(COMPONENT_DECODER);
+        if (heartbeat == null || component == null)
         {
             System.out.println(sources);
         }
         compileInMemory(HEADER_DECODER, sources);
+
     }
 
     @Test
@@ -240,7 +242,36 @@ public class DecoderGeneratorTest
         assertThat(decoder, hasToString(containsString(STRING_FOR_GROUP)));
     }
 
-    // TODO: component types
+    @Test
+    public void shouldDecodeComponents() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(COMPONENT_MESSAGE_EXAMPLE);
+
+        assertEquals(2, get(decoder, "componentField"));
+    }
+
+    @Test
+    public void shouldGenerateComponentToString() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(COMPONENT_MESSAGE_EXAMPLE);
+
+        assertThat(decoder.toString(), containsString("  \"ComponentField\": \"2\""));
+    }
+
+    @Test
+    public void shouldGenerateComponentInterface() throws NoSuchMethodException
+    {
+        assertTrue("heartbeat doesn't implement its component", component.isAssignableFrom(heartbeat));
+
+        assertHasComponentFieldGetter();
+    }
+
+    private void assertHasComponentFieldGetter() throws NoSuchMethodException
+    {
+        final Method method = component.getMethod("componentField");
+        assertEquals(int.class, method.getReturnType());
+    }
+
     // TODO: validation
 
     private Object getNoEgGroup(final Decoder decoder) throws Exception
@@ -263,7 +294,7 @@ public class DecoderGeneratorTest
         return (Decoder) get(decoder, "header");
     }
 
-    private Decoder decodeHeartbeat(final String example) throws InstantiationException, IllegalAccessException
+    private Decoder decodeHeartbeat(final String example) throws Exception
     {
         final Decoder decoder = (Decoder) heartbeat.newInstance();
         decode(example, decoder);
@@ -301,7 +332,7 @@ public class DecoderGeneratorTest
         return get(decoder, FLOAT_FIELD);
     }
 
-    private Object getIntField(Decoder decoder) throws Exception
+    private Object getIntField(Object decoder) throws Exception
     {
         return get(decoder, INT_FIELD);
     }

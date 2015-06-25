@@ -303,7 +303,7 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void shouldBeAbleToEncodeComponentValues() throws Exception
+    public void shouldEncodeComponents() throws Exception
     {
         final Encoder encoder = (Encoder) heartbeat.newInstance();
         setRequiredFields(encoder);
@@ -326,7 +326,7 @@ public class EncoderGeneratorTest
 
     private void setupComponent(final Encoder encoder) throws Exception
     {
-        final Object egComponent = get(encoder, "egComponent");
+        final Object egComponent = getEgComponent(encoder);
         setInt(egComponent, "componentField", 2);
     }
 

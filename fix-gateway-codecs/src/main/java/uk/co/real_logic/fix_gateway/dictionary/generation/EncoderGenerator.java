@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
+import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.GROUP;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
@@ -82,7 +83,7 @@ public class EncoderGenerator extends Generator
         {
             out.append(fileHeader(builderPackage));
             final Class<?> type = isMessage ? MessageEncoder.class : Encoder.class;
-            out.append(generateClassDeclaration(className, aggregateType, type, Encoder.class));
+            out.append(generateClassDeclaration(className, aggregateType, emptyList(), "Encoder", type));
             out.append(generateConstructor(aggregate, dictionary));
             if (isMessage)
             {
@@ -615,5 +616,28 @@ public class EncoderGenerator extends Generator
     protected String generateStringToString(String fieldName)
     {
         return String.format("new String(%s, 0, %1$sLength, StandardCharsets.US_ASCII)", fieldName);
+    }
+
+    protected String generateComponentToString(final Component component)
+    {
+        final String name = component.name();
+        return String.format(
+            "                String.format(\"  \\\"%1$s\\\":  %%s\\n\", %2$s" + EXPAND_INDENT + ")",
+            name,
+            formatPropertyName(name)
+        );
+    }
+
+    protected String generateComponentField(final String className, final Component element)
+    {
+        return String.format(
+            "    private final %1$s %2$s = new %1$s();\n" +
+                "    public %1$s %2$s()\n" +
+                "    {" +
+                "        return %2$s;" +
+                "    }",
+            className,
+            formatPropertyName(element.name())
+        );
     }
 }

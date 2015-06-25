@@ -84,7 +84,6 @@ public abstract class Generator
     {
         generateAggregate(dictionary.header(), AggregateType.HEADER);
         generateAggregate(dictionary.trailer(), AggregateType.TRAILER);
-
         dictionary.components().forEach((name, component) -> generateAggregate(component, COMPONENT));
         dictionary.messages().forEach(msg -> generateAggregate(msg, MESSAGE));
     }
@@ -103,14 +102,17 @@ public abstract class Generator
     protected String generateClassDeclaration(
         final String className,
         final AggregateType type,
-        final Class<?> parent,
+        final List<String> interfaces,
+        final String compoundSuffix,
         final Class<?> topType)
     {
+        final String interfaceList = interfaces.isEmpty() ? "" : (", " + String.join(", ", interfaces));
+
         return String.format(
             importFor(MutableDirectBuffer.class) +
             importStaticFor(CodecUtil.class) +
             importStaticFor(StandardFixConstants.class) +
-            importFor(parent) +
+            importFor(topType) +
             (type == MESSAGE ? COMMON_COMPOUND_IMPORTS : "") +
             importFor(DecimalFloat.class) +
             importFor(MutableAsciiFlyweight.class) +
@@ -120,11 +122,12 @@ public abstract class Generator
             importFor(StandardCharsets.class) +
             importFor(Arrays.class) +
             importFor(IntHashSet.class) +
-            "\npublic class %2$s implements %3$s\n" +
+            "\npublic class %2$s implements %5$s%3$s\n" +
             "{\n\n",
             builderPackage,
             className,
-            parent.getSimpleName(),
+            interfaceList,
+            compoundSuffix,
             topType.getSimpleName());
     }
 
@@ -276,7 +279,7 @@ public abstract class Generator
               "        }\n";
 
         return String.format(
-                "    public String toString()\n" +
+            "    public String toString()\n" +
                 "    {\n" +
                 "        String entries =%1$s\n" +
                 "%2$s;\n\n" +
@@ -284,10 +287,10 @@ public abstract class Generator
                 "%3$s" +
                 "        return entries;\n" +
                 "    }\n\n",
-                prefix,
-                entriesToString,
-                suffix,
-                aggregate.name());
+            prefix,
+            entriesToString,
+            suffix,
+            aggregate.name());
     }
 
     protected String generateEntryToString(final Entry entry)
@@ -322,15 +325,13 @@ public abstract class Generator
         }
         else if (element instanceof Component)
         {
-            return String.format(
-                "                String.format(\"  \\\"%1$s\\\":  %%s\\n\", %2$s" + EXPAND_INDENT + ")",
-                name,
-                formatPropertyName(name)
-            );
+            return generateComponentToString((Component)element);
         }
 
         return "\"\"";
     }
+
+    protected abstract String generateComponentToString(final Component component);
 
     protected String generateValueToString(final Field field)
     {
@@ -353,19 +354,6 @@ public abstract class Generator
             default:
                 return fieldName;
         }
-    }
-
-    protected String generateComponentField(final String className, final Component element)
-    {
-        return String.format(
-            "    private final %1$s %2$s = new %1$s();\n" +
-            "    public %1$s %2$s()\n" +
-            "    {" +
-            "        return %2$s;" +
-            "    }",
-            className,
-            formatPropertyName(element.name())
-        );
     }
 
     protected abstract String generateStringToString(String fieldName);
