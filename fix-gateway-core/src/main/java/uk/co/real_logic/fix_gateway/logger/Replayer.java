@@ -43,6 +43,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
     public static final int SIZE_OF_LENGTH_FIELD = 2;
     public static final byte[] POSS_DUP_FIELD = "43=Y\001".getBytes(StandardCharsets.US_ASCII);
     public static final int POLL_LIMIT = 10;
+    public static final int CHECKSUM_TAG_SIZE = 3;
 
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
 
@@ -119,7 +120,8 @@ public class Replayer implements SessionHandler, LogHandler, Agent
             final int fullLength = (messageOffset - srcOffset) + messageLength;
             final int newLength = fullLength + POSS_DUP_FIELD.length;
             claimBuffer(newLength);
-            addPossDupField(srcBuffer, srcOffset, fullLength, messageLength, claim.buffer(), claim.offset());
+            addPossDupField(
+                srcBuffer, srcOffset, fullLength, messageOffset, messageLength, claim.buffer(), claim.offset());
         }
         else
         {
@@ -149,6 +151,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength,
+        final int messageOffset,
         final int messageLength,
         final MutableDirectBuffer claimBuffer,
         final int claimOffset)
@@ -171,7 +174,8 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         claimBuffer.putBytes(remainingClaimOffset, srcBuffer, sendingTimeSrcEnd, srcLength - lengthToPossDup);
 
         updateFrameBodyLength(messageLength, claimBuffer, claimOffset);
-        updateMessageBodyLength(srcOffset, claimBuffer);
+        final int messageClaimOffset = srcToClaim(messageOffset, srcOffset, claimOffset);
+        updateMessage(srcOffset, messageClaimOffset, claimBuffer, claimOffset);
     }
 
     private void updateFrameBodyLength(
@@ -181,12 +185,32 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         CodecUtil.uint16Put(claimBuffer, frameBodyLengthOffset, messageLength + POSS_DUP_FIELD.length, LITTLE_ENDIAN);
     }
 
-    private void updateMessageBodyLength(final int srcOffset, final MutableDirectBuffer claimBuffer)
+    private void updateMessage(
+        final int srcOffset, final int messageClaimOffset, final MutableDirectBuffer claimBuffer, int claimOffset)
     {
         mutableAsciiFlyweight.wrap(claimBuffer);
+
+        // Update Body Length
         final int newBodyLength = possDupFinder.bodyLength() + POSS_DUP_FIELD.length;
-        final int bodyLengthOffset = srcToClaim(possDupFinder.bodyLengthOffset(), srcOffset, claim.offset());
+        final int bodyLengthClaimOffset = srcToClaim(possDupFinder.bodyLengthOffset(), srcOffset, claimOffset);
+        mutableAsciiFlyweight.putNatural(bodyLengthClaimOffset, possDupFinder.lengthOfBodyLength(), newBodyLength);
+
+        updateChecksum(messageClaimOffset, newBodyLength, bodyLengthClaimOffset);
+    }
+
+    private void updateChecksum(int messageClaimOffset, int newBodyLength, int bodyLengthClaimOffset)
+    {
+        final int beforeChecksum = bodyLengthClaimOffset + newBodyLength + POSS_DUP_FIELD.length;
+        final int checksum = mutableAsciiFlyweight.computeChecksum(messageClaimOffset, beforeChecksum);
+        mutableAsciiFlyweight.putNatural(beforeChecksum + CHECKSUM_TAG_SIZE, 3, checksum);
+    }
+
+    private int updateBodyLength(int srcOffset, int claimOffset)
+    {
+        final int newBodyLength = possDupFinder.bodyLength() + POSS_DUP_FIELD.length;
+        final int bodyLengthOffset = srcToClaim(possDupFinder.bodyLengthOffset(), srcOffset, claimOffset);
         mutableAsciiFlyweight.putNatural(bodyLengthOffset, possDupFinder.lengthOfBodyLength(), newBodyLength);
+        return newBodyLength;
     }
 
     private void setPossDupFlag(

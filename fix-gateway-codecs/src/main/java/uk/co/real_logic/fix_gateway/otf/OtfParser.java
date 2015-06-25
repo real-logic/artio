@@ -224,6 +224,7 @@ public final class OtfParser
 
     private void parseError(final int messageType, final int tag)
     {
+
         acceptor.onError(PARSE_ERROR, messageType, tag, stringField);
     }
 
@@ -245,13 +246,14 @@ public final class OtfParser
         return true;
     }
 
-    private boolean validChecksum(final int offset, final int expectedChecksum)
+    private boolean validChecksum(final int offset, final int messageChecksum)
     {
-        if (expectedChecksum == NO_CHECKSUM)
+        if (messageChecksum == NO_CHECKSUM)
         {
             return false;
         }
 
-        return string.computeChecksum(offset, checksumOffset) == expectedChecksum;
+        final int correctChecksum = string.computeChecksum(offset, checksumOffset);
+        return correctChecksum == messageChecksum;
     }
 }

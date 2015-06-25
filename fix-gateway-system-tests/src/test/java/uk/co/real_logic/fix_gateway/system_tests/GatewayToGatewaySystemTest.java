@@ -116,6 +116,8 @@ public class GatewayToGatewaySystemTest
         assertEventuallyEquals("Failed to receive the reply", 1, acceptingSessionHandler::poll);
         assertThat(acceptingOtfAcceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
         assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
+        assertNull("Detected Error", acceptingOtfAcceptor.lastError());
+        assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
     }
 
     private void sendResendRequest()

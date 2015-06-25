@@ -34,17 +34,22 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
     private final List<Integer> messageTypes = new ArrayList<>();
     private final AsciiFlyweight string = new AsciiFlyweight();
 
+    private ValidationError error;
+    private boolean isCompleted;
     private String senderCompId;
 
     public void onNext()
     {
         DebugLogger.log("Next Message");
         senderCompId = null;
+        error = null;
+        isCompleted = false;
     }
 
     public void onComplete()
     {
         DebugLogger.log("Message Complete");
+        isCompleted = true;
     }
 
     public synchronized void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
@@ -83,6 +88,7 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         final int tagNumber,
         final AsciiFieldFlyweight value)
     {
+        this.error = error;
         System.err.printf("%s for %d @ %d", error, messageType, tagNumber);
         return false;
     }
@@ -95,5 +101,15 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
     public String lastSenderCompId()
     {
         return senderCompId;
+    }
+
+    public ValidationError lastError()
+    {
+        return error;
+    }
+
+    public boolean isCompleted()
+    {
+        return isCompleted;
     }
 }
