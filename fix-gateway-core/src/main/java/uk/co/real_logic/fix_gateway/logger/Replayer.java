@@ -22,6 +22,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
@@ -93,7 +94,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
             final int endSeqNo = resendRequest.endSeqNo();
             if (endSeqNo < beginSeqNo)
             {
-                // TODO: log error
+                DebugLogger.log("Error in resend request, endSeqNo (%d) < beginSeqNo (%d)", endSeqNo, beginSeqNo);
                 return;
             }
 
@@ -101,7 +102,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
             final int count = replayQuery.query(this, sessionId, beginSeqNo, endSeqNo);
             if (count != expectedCount)
             {
-                // TODO: figure out the scenario where there's a requested replay of missing messages.
+                DebugLogger.log("Error in resend request, count(%d) < expectedCount (%d)", count, expectedCount);
             }
         }
     }
@@ -160,9 +161,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         final int sendingTimeSrcEnd = possDupFinder.sendingTimeEnd();
         if (sendingTimeSrcEnd == NO_ENTRY)
         {
-            // TODO: log error
-            // TODO: probably should disconnect the client
-            System.err.println("Missing sending time field in resend request");
+            DebugLogger.log("Missing sending time field in resend request");
             return;
         }
         final int lengthToPossDup = sendingTimeSrcEnd - srcOffset;
