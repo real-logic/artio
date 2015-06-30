@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.builder.*;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiFormatter;
+import uk.co.real_logic.fix_gateway.util.MilliClock;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.util.List;
@@ -31,7 +32,6 @@ import static java.util.Arrays.asList;
 /**
  * Encapsulates sending messages relating to sessions
  */
-// TODO: inject a clock
 public class SessionProxy
 {
     private static final byte[] INCORRECT_BEGIN_STRING = "Incorrect BeginString".getBytes(US_ASCII);
@@ -67,17 +67,20 @@ public class SessionProxy
     private final GatewayPublication gatewayPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionCustomisationStrategy customisationStrategy;
+    private final MilliClock clock;
     private long sessionId;
 
     public SessionProxy(
         final int bufferSize,
         final GatewayPublication gatewayPublication,
         final SessionIdStrategy sessionIdStrategy,
-        final SessionCustomisationStrategy customisationStrategy)
+        final SessionCustomisationStrategy customisationStrategy,
+        final MilliClock clock)
     {
         this.gatewayPublication = gatewayPublication;
         this.sessionIdStrategy = sessionIdStrategy;
         this.customisationStrategy = customisationStrategy;
+        this.clock = clock;
         buffer = new UnsafeBuffer(new byte[bufferSize]);
         string = new MutableAsciiFlyweight(buffer);
         logSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
@@ -215,7 +218,7 @@ public class SessionProxy
 
     private void setupHeader(final HeaderEncoder header)
     {
-        header.sendingTime(System.currentTimeMillis());
+        header.sendingTime(clock.time());
     }
 
     private void send(final int length, final int messageType)

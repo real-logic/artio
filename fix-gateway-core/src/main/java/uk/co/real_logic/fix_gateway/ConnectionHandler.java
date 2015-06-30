@@ -150,7 +150,7 @@ public class ConnectionHandler
     {
         return new SessionProxy(
             configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy,
-            configuration.sessionCustomisationStrategy());
+            configuration.sessionCustomisationStrategy(), System::currentTimeMillis);
     }
 
     private long nextConnectionId()
