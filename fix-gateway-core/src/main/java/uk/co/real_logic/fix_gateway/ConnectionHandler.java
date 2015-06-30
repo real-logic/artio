@@ -71,7 +71,7 @@ public class ConnectionHandler
     public ReceiverEndPoint receiverEndPoint(
         final SocketChannel channel, final long connectionId, final Session session) throws IOException
     {
-        final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy, sessionIds,
+        final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy,
             configuration.authenticationStrategy());
 
         configuration.newSessionHandler().onConnect(session, inboundStreams.dataSubscription());
@@ -81,6 +81,8 @@ public class ConnectionHandler
             configuration.receiverBufferSize(),
             inboundStreams.gatewayPublication(),
             connectionId,
+            sessionIdStrategy,
+            sessionIds,
             sessionParser,
             fixCounters.messagesRead(channel.getRemoteAddress())
         );

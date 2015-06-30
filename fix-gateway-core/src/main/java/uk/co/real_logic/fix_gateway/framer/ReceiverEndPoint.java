@@ -19,9 +19,9 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
-import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.session.SessionParser;
+import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.io.IOException;
@@ -51,15 +51,20 @@ public class ReceiverEndPoint
     private static final int MIN_CHECKSUM_SIZE = " 10=".length() + 1;
     public static final int DISCONNECTED = -1;
 
+    private final LogonDecoder logon = new LogonDecoder();
+
     private final SocketChannel channel;
     private final GatewayPublication publication;
     private final long connectionId;
-    private final SessionParser session;
+    private final SessionIdStrategy sessionIdStrategy;
+    private final SessionIds sessionIds;
+    private final SessionParser sessionParser;
     private final AtomicCounter messagesRead;
     private final AtomicBuffer buffer;
     private final AsciiFlyweight string;
     private final ByteBuffer byteBuffer;
 
+    private long sessionId = UNKNOWN_ID;
     private int usedBufferData = 0;
 
     public ReceiverEndPoint(
@@ -67,14 +72,23 @@ public class ReceiverEndPoint
         final int bufferSize,
         final GatewayPublication publication,
         final long connectionId,
-        final SessionParser session,
+        final SessionIdStrategy sessionIdStrategy,
+        final SessionIds sessionIds,
+        final SessionParser sessionParser,
         final AtomicCounter messagesRead)
     {
         this.channel = channel;
         this.publication = publication;
         this.connectionId = connectionId;
-        this.session = session;
+        this.sessionIdStrategy = sessionIdStrategy;
+        this.sessionIds = sessionIds;
+        this.sessionParser = sessionParser;
         this.messagesRead = messagesRead;
+        // TODO:
+        if (sessionParser.session() instanceof InitiatorSession)
+        {
+            sessionId = sessionParser.session().id();
+        }
 
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new AsciiFlyweight(buffer);
@@ -112,7 +126,7 @@ public class ReceiverEndPoint
 
     public Session session()
     {
-        return session.session();
+        return sessionParser.session();
     }
 
     private void onDisconnect()
@@ -173,8 +187,15 @@ public class ReceiverEndPoint
 
                 final int messageType = getMessageType(endOfBodyLength, indexOfLastByteOfMessage);
                 final int length = (indexOfLastByteOfMessage + 1) - offset;
-                final long sessionId = session.onMessage(buffer, offset, length, messageType);
-                if (sessionId != UNKNOWN_ID)
+                if (sessionId == UNKNOWN_ID)
+                {
+                    logon.decode(string, offset, length);
+                    final Object compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
+                    sessionId = sessionIds.onLogon(compositeKey);
+                }
+
+                // TODO: remove
+                if (sessionParser.onMessage(buffer, offset, length, messageType, sessionId))
                 {
                     messagesRead.orderedIncrement();
                     publication.saveMessage(buffer, offset, length, sessionId, messageType);

@@ -30,11 +30,10 @@ public class SessionParserTest
 
     private Session mockSession = mock(Session.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
-    private SessionIds mockSessionIds = mock(SessionIds.class);
     private AuthenticationStrategy mockAuthenticationStrategy = mock(AuthenticationStrategy.class);
 
     private SessionParser parser = new SessionParser(
-        mockSession, mockSessionIdStrategy, mockSessionIds, mockAuthenticationStrategy);
+        mockSession, mockSessionIdStrategy, mockAuthenticationStrategy);
 
     @Before
     public void setUp()
@@ -48,7 +47,7 @@ public class SessionParserTest
         final UnsafeBuffer buffer = bufferOf(
             "8=FIX.4.4\00135=B\00149=TW\00152=00000101-00:00:00.000\00156=ISLD\001112=TEST\001");
 
-        parser.onMessage(buffer, 0, buffer.capacity(), 'B');
+        parser.onMessage(buffer, 0, buffer.capacity(), 'B', 1);
 
         verify(mockSession).onMessage(MISSING_INT, false);
     }

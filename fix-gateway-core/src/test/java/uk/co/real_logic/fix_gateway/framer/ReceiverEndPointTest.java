@@ -24,6 +24,8 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.session.SessionIds;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
 
 import java.io.IOException;
@@ -35,7 +37,6 @@ import java.util.function.ToIntFunction;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN_ID;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
 public class ReceiverEndPointTest
@@ -48,16 +49,21 @@ public class ReceiverEndPointTest
     private GatewayPublication mockPub = mock(GatewayPublication.class);
     private SessionParser mockSessionParser = mock(SessionParser.class);
     private Session mockSession = mock(Session.class);
+    private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
+    private SessionIds mockSessionIds = mock(SessionIds.class);
     private AtomicCounter messagesRead = mock(AtomicCounter.class);
 
     private ReceiverEndPoint endPoint =
-        new ReceiverEndPoint(mockChannel, 16 * 1024, mockPub, CONNECTION_ID, mockSessionParser, messagesRead);
+        new ReceiverEndPoint(
+            mockChannel, 16 * 1024, mockPub, CONNECTION_ID, mockSessionIdStrategy, mockSessionIds, mockSessionParser,
+            messagesRead);
 
     @Before
     public void setUp()
     {
-        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyInt())).thenReturn(SESSION_ID);
+        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyInt(), anyLong())).thenReturn(true);
         when(mockSessionParser.session()).thenReturn(mockSession);
+        when(mockSessionIds.onLogon(any())).thenReturn(SESSION_ID);
     }
 
     @Test
@@ -146,7 +152,7 @@ public class ReceiverEndPointTest
     public void shouldOnlyFrameMessagesWhenConnected()
     {
         given:
-        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyInt())).thenReturn(UNKNOWN_ID);
+        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyInt(), eq(SESSION_ID))).thenReturn(false);
         theEndpointReceivesACompleteMessage();
 
         when:

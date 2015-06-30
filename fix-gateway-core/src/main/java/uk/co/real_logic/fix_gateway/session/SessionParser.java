@@ -20,8 +20,6 @@ import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
-import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN_ID;
-
 public class SessionParser
 {
 
@@ -35,28 +33,24 @@ public class SessionParser
 
     private final Session session;
     private final SessionIdStrategy sessionIdStrategy;
-    private final SessionIds sessionIds;
     private final AuthenticationStrategy authenticationStrategy;
-
-    private long sessionId;
 
     public SessionParser(
         final Session session,
         final SessionIdStrategy sessionIdStrategy,
-        final SessionIds sessionIds,
         final AuthenticationStrategy authenticationStrategy)
     {
         this.session = session;
         this.sessionIdStrategy = sessionIdStrategy;
-        this.sessionIds = sessionIds;
         this.authenticationStrategy = authenticationStrategy;
     }
 
-    public long onMessage(
+    public boolean onMessage(
         final DirectBuffer buffer,
         final int offset,
         final int length,
-        final int messageType)
+        final int messageType,
+        final long sessionId)
     {
         string.wrap(buffer);
 
@@ -69,7 +63,6 @@ public class SessionParser
                 {
                     final HeaderDecoder header = logon.header();
                     final Object sessionKey = sessionIdStrategy.onAcceptorLogon(header);
-                    sessionId = sessionIds.onLogon(sessionKey);
 
                     if (session.onBeginString(header.beginString(), header.beginStringLength()))
                     {
@@ -127,14 +120,7 @@ public class SessionParser
             }
         }
 
-        if (session.isConnected())
-        {
-            return sessionId;
-        }
-        else
-        {
-            return UNKNOWN_ID;
-        }
+        return session.isConnected();
     }
 
     private boolean isPossDup(final HeaderDecoder header)
