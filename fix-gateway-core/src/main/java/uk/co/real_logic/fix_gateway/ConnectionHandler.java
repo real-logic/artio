@@ -103,7 +103,7 @@ public class ConnectionHandler
         final int defaultInterval = configuration.defaultHeartbeatInterval();
         final long connectionId = nextConnectionId();
 
-        publication.saveConnect(connectionId, address, 0);
+        publication.saveConnect(connectionId, address.toString(), 0);
 
         return new AcceptorSession(
             defaultInterval,
@@ -130,7 +130,7 @@ public class ConnectionHandler
         final GatewayPublication publication = outboundStreams.gatewayPublication();
         final long connectionId = nextConnectionId();
 
-        publication.saveConnect(connectionId, address, 0);
+        publication.saveConnect(connectionId, address.toString(), 0);
 
         return new InitiatorSession(
             defaultInterval,

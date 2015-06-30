@@ -24,7 +24,6 @@ import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.*;
 
-import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -120,9 +119,9 @@ public class GatewayPublication
         return position;
     }
 
-    public long saveConnect(final long connectionId, final SocketAddress address, final int streadId)
+    public long saveConnect(final long connectionId, final String address, final int streadId)
     {
-        final byte[] addressString = address.toString().getBytes(StandardCharsets.UTF_8);
+        final byte[] addressString = address.getBytes(StandardCharsets.UTF_8);
 
         final int length = header.encodedLength() + CONNECT_SIZE + addressString.length;
         final long position = claim(length);

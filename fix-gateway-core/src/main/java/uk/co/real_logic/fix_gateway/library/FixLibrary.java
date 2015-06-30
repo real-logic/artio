@@ -19,22 +19,24 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.FixEngine;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
-import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.*;
+import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 public class FixLibrary extends GatewayProcess
 {
     private final Subscription inboundSubscription;
     private final GatewayPublication outboundPublication;
     private final Long2ObjectHashMap<SessionSubscriber> sessions = new Long2ObjectHashMap<>();
-    private final NewSessionHandler newSessionHandler;
+    private final MilliClock clock;
+    private final StaticConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
-    private final AuthenticationStrategy authenticationStrategy;
+    private final SessionIds sessionIds = new SessionIds();
 
     private Session incomingSession;
 
@@ -42,12 +44,13 @@ public class FixLibrary extends GatewayProcess
     {
         super(configuration);
 
-        newSessionHandler = configuration.newSessionHandler();
+        this.configuration = configuration;
         sessionIdStrategy = configuration.sessionIdStrategy();
-        authenticationStrategy = configuration.authenticationStrategy();
 
         inboundSubscription = inboundStreams.dataSubscription();
         outboundPublication = outboundStreams.gatewayPublication();
+
+        clock = System::currentTimeMillis;
     }
 
     public int poll(final int fragmentLimit)
@@ -84,9 +87,11 @@ public class FixLibrary extends GatewayProcess
         {
             if (streamId == outboundPublication.streamId())
             {
-                final InitiatorSession session = null; //new InitiatorSession();
-                final SessionParser parser = new SessionParser(session, sessionIdStrategy, authenticationStrategy);
-                final SessionHandler handler = newSessionHandler.onConnect(session);
+                final String address = buffer.getStringUtf8(addressOffset, addressLength);
+                final Session session = initiateSession(address, null, null, connectionId);
+                final SessionParser parser = new SessionParser(
+                    session, sessionIdStrategy, configuration.authenticationStrategy());
+                final SessionHandler handler = configuration.newSessionHandler().onConnect(session);
                 final SessionSubscriber subscriber = new SessionSubscriber(parser, session, handler);
                 sessions.put(connectionId, subscriber);
             }
@@ -123,5 +128,41 @@ public class FixLibrary extends GatewayProcess
             }
         }
     });
+
+    public Session initiateSession(final String address,
+                                   final FixEngine gateway,
+                                   final SessionConfiguration sessionConfiguration,
+                                   final long connectionId)
+    {
+        final Object key = sessionIdStrategy.onInitiatorLogon(sessionConfiguration);
+        final long sessionId = sessionIds.onLogon(key);
+        final int defaultInterval = configuration.defaultHeartbeatInterval();
+        final GatewayPublication publication = outboundStreams.gatewayPublication();
+
+        publication.saveConnect(connectionId, address, 0);
+
+        return new InitiatorSession(
+            defaultInterval,
+            connectionId,
+            clock,
+            sessionProxy(connectionId).setupSession(sessionId, key),
+            publication,
+            sessionIdStrategy,
+            gateway,
+            sessionId,
+            configuration.beginString(),
+            configuration.sendingTimeWindow(),
+            sessionIds,
+            fixCounters.receivedMsgSeqNo(connectionId),
+            fixCounters.sentMsgSeqNo(connectionId));
+    }
+
+
+    private SessionProxy sessionProxy(final long connectionId)
+    {
+        return new SessionProxy(
+            configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy,
+            configuration.sessionCustomisationStrategy(), System::currentTimeMillis, connectionId);
+    }
 
 }
