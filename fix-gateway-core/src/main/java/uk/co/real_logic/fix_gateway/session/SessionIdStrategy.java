@@ -19,6 +19,9 @@ import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
+/**
+ * Should be stateless.
+ */
 public interface SessionIdStrategy
 {
     Object onAcceptorLogon(final HeaderDecoder header);
