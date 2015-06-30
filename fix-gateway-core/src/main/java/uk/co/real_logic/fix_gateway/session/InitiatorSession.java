@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.FixEngine;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -24,7 +24,7 @@ import static uk.co.real_logic.fix_gateway.session.SessionState.*;
 
 public class InitiatorSession extends Session
 {
-    private final FixGateway gateway;
+    private final FixEngine gateway;
 
     public InitiatorSession(
         final int heartbeatInterval,
@@ -33,7 +33,7 @@ public class InitiatorSession extends Session
         final SessionProxy proxy,
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
-        final FixGateway gateway,
+        final FixEngine gateway,
         final long sessionId,
         final char[] beginString,
         final long sendingTimeWindow,

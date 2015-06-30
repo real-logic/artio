@@ -74,7 +74,7 @@ public class ConnectionHandler
         final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy,
             configuration.authenticationStrategy());
 
-        configuration.newSessionHandler().onConnect(session, inboundStreams.dataSubscription());
+        final SessionHandler handler = configuration.newSessionHandler().onConnect(session);
 
         return new ReceiverEndPoint(
             channel,
@@ -121,7 +121,7 @@ public class ConnectionHandler
     }
 
     public Session initiateSession(final SocketAddress address,
-                                   final FixGateway gateway,
+                                   final FixEngine gateway,
                                    final SessionConfiguration sessionConfiguration)
     {
         final Object key = sessionIdStrategy.onInitiatorLogon(sessionConfiguration);

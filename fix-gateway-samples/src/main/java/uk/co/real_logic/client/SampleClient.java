@@ -16,13 +16,14 @@
 package uk.co.real_logic.client;
 
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.FixEngine;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.session.SessionHandler;
 
 import static uk.co.real_logic.server.SampleServer.ACCEPTOR_COMP_ID;
 import static uk.co.real_logic.server.SampleServer.INITIATOR_COMP_ID;
@@ -39,7 +40,7 @@ public final class SampleClient
             .bind("localhost", 10001)
             .newSessionHandler(SampleClient::onConnect);
 
-        try (final FixGateway gateway = FixGateway.launch(configuration))
+        try (final FixEngine gateway = FixEngine.launch(configuration))
         {
             // Each outbound session with an Exchange or broker is represented by
             // a Session object. Each session object can be configured with connection
@@ -74,8 +75,9 @@ public final class SampleClient
         }
     }
 
-    private static void onConnect(final Session session, final Subscription subscription)
+    private static SessionHandler onConnect(final Session session)
     {
         SampleClient.subscription = subscription;
+        return null;
     }
 }

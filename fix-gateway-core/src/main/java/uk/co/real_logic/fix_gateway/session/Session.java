@@ -188,17 +188,6 @@ public class Session
         return publication.saveMessage(buffer, 0, length, encoder.messageType(), id(), connectionId);
     }
 
-    public long send(
-        final MutableDirectBuffer buffer,
-        final int offset,
-        final int length,
-        final int messageType)
-    {
-        final long position = publication.saveMessage(buffer, offset, length, messageType, id(), connectionId);
-        newSentSeqNum();
-        return position;
-    }
-
     // ---------- Event Handlers ----------
 
     void onMessage(final int msgSeqNo, final boolean isPossDupOrResend)

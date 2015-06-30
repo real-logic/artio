@@ -19,7 +19,7 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
 import uk.co.real_logic.fix_gateway.ConnectionHandler;
-import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.FixEngine;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
@@ -58,7 +58,7 @@ public class Framer implements Agent
     private final ConnectionHandler connectionHandler;
     private final SequencedContainerQueue<FramerCommand> commandQueue;
     private final Multiplexer multiplexer;
-    private final FixGateway gateway;
+    private final FixEngine gateway;
     private final Subscription dataSubscription;
     private final Selector selector;
 
@@ -68,7 +68,7 @@ public class Framer implements Agent
         final ConnectionHandler connectionHandler,
         final SequencedContainerQueue<FramerCommand> commandQueue,
         final Multiplexer multiplexer,
-        final FixGateway gateway,
+        final FixEngine gateway,
         final Subscription dataSubscription)
     {
         this.clock = clock;

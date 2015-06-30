@@ -32,6 +32,7 @@ public class DataSubscriber implements FragmentHandler
     private final ConnectDecoder connect = new ConnectDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
+
     private final SessionHandler sessionHandler;
 
     public DataSubscriber(final SessionHandler sessionHandler)

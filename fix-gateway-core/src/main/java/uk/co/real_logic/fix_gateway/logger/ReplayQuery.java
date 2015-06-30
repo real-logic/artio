@@ -24,7 +24,7 @@ import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordDecoder;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 
-import static uk.co.real_logic.fix_gateway.FixGateway.OUTBOUND_DATA_STREAM;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_DATA_STREAM;
 import static uk.co.real_logic.fix_gateway.logger.ReplayIndex.logFile;
 
 /**

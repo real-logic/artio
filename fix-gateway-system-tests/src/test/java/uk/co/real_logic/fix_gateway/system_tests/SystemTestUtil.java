@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.FixEngine;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
@@ -122,7 +122,7 @@ public final class SystemTestUtil
     }
 
     public static InitiatorSession initiate(
-        final FixGateway gateway,
+        final FixEngine gateway,
         final int port,
         final String initiatorId,
         final String acceptorId)
@@ -136,7 +136,7 @@ public final class SystemTestUtil
         return gateway.initiate(config);
     }
 
-    public static FixGateway launchInitiatingGateway(final NewSessionHandler sessionHandler)
+    public static FixEngine launchInitiatingGateway(final NewSessionHandler sessionHandler)
     {
         delete(CLIENT_LOGS);
 
@@ -146,7 +146,7 @@ public final class SystemTestUtil
             .newSessionHandler(sessionHandler)
             .counterBuffersFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "counters")
             .logFileDir(CLIENT_LOGS);
-        return FixGateway.launch(initiatingConfig);
+        return FixEngine.launch(initiatingConfig);
     }
 
     private static void delete(final String dirPath)
@@ -158,7 +158,7 @@ public final class SystemTestUtil
         }
     }
 
-    public static FixGateway launchAcceptingGateway(
+    public static FixEngine launchAcceptingGateway(
         final int port,
         final NewSessionHandler sessionHandler,
         final String acceptorId,
@@ -176,7 +176,7 @@ public final class SystemTestUtil
             .newSessionHandler(sessionHandler)
             .counterBuffersFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + "counters")
             .logFileDir(ACCEPTOR_LOGS);
-        return FixGateway.launch(acceptingConfig);
+        return FixEngine.launch(acceptingConfig);
     }
 
 }

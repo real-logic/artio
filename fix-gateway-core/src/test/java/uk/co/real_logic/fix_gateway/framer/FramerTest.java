@@ -23,7 +23,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.ConnectionHandler;
-import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.FixEngine;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -61,7 +61,7 @@ public class FramerTest
     private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
     private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
-    private FixGateway mockGateway = mock(FixGateway.class);
+    private FixEngine mockGateway = mock(FixEngine.class);
     private OneToOneConcurrentArrayQueue<FramerCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private Session mockSession = mock(Session.class);
     private MilliClock mockClock = mock(MilliClock.class);

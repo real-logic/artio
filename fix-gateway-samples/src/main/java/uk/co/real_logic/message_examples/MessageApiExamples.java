@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.message_examples;
 
-import uk.co.real_logic.fix_gateway.FixGateway;
+import uk.co.real_logic.fix_gateway.FixEngine;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
@@ -41,7 +41,7 @@ public class MessageApiExamples
         // gets registered for
         configuration.registerAcceptor(new SampleOtfAcceptor(), (int) 'D');
 
-        try (final FixGateway gateway = FixGateway.launch(configuration))
+        try (final FixEngine gateway = FixEngine.launch(configuration))
         {
             // Each outbound session with an Exchange or broker is represented by
             // a Session object. Each session object can be configured with connection

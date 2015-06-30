@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.LangUtil;
@@ -25,29 +24,16 @@ import uk.co.real_logic.fix_gateway.framer.FramerCommand;
 import uk.co.real_logic.fix_gateway.framer.FramerProxy;
 import uk.co.real_logic.fix_gateway.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.logger.*;
-import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIds;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
-import java.nio.channels.ClosedByInterruptException;
 import java.util.Arrays;
 import java.util.List;
 
-public class FixGateway implements AutoCloseable
+public class FixEngine extends GatewayProcess
 {
-    public static final int INBOUND_DATA_STREAM = 0;
-    public static final int INBOUND_CONTROL_STREAM = 1;
-    public static final int OUTBOUND_DATA_STREAM = 2;
-    public static final int OUTBOUND_CONTROL_STREAM = 3;
-
-    private CountersFile countersFile;
-    private FixCounters fixCounters;
-
-    private Aeron aeron;
-    private ReplicationStreams inboundStreams;
-    private ReplicationStreams outboundStreams;
 
     private FramerProxy framerProxy;
 
@@ -60,15 +46,11 @@ public class FixGateway implements AutoCloseable
     private InitiatorSession addedSession;
     private Exception exception;
 
-    FixGateway(final StaticConfiguration configuration)
+    FixEngine(final StaticConfiguration configuration)
     {
+        super(configuration);
         connectionTimeout = configuration.connectionTimeout();
 
-        countersFile = new CountersFile(true, configuration);
-        fixCounters = new FixCounters(countersFile.createCountersManager());
-
-        initAeron();
-        initReplicationStreams(configuration);
         initFramer(configuration, fixCounters);
         initLogger(configuration);
     }
@@ -132,40 +114,18 @@ public class FixGateway implements AutoCloseable
         framerRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace, fixCounters.exceptions(), framer);
     }
 
-    private void initReplicationStreams(final StaticConfiguration configuration)
-    {
-        final String channel = configuration.aeronChannel();
-
-        inboundStreams = new ReplicationStreams(
-            channel, aeron, fixCounters.failedInboundPublications(), INBOUND_DATA_STREAM, INBOUND_CONTROL_STREAM);
-        outboundStreams = new ReplicationStreams(
-            channel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
-    }
-
-    private void initAeron()
-    {
-        final Aeron.Context ctx = new Aeron.Context();
-        ctx.errorHandler(throwable ->
-        {
-            if (!(throwable instanceof ClosedByInterruptException))
-            {
-                Aeron.DEFAULT_ERROR_HANDLER.onError(throwable);
-            }
-        });
-        aeron = Aeron.connect(ctx);
-    }
 
     private BackoffIdleStrategy backoffIdleStrategy()
     {
         return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
     }
 
-    public static FixGateway launch(final StaticConfiguration configuration)
+    public static FixEngine launch(final StaticConfiguration configuration)
     {
-        return new FixGateway(configuration.conclude()).start();
+        return new FixEngine(configuration.conclude()).start();
     }
 
-    private FixGateway start()
+    private FixEngine start()
     {
         start(framerRunner);
         start(loggingRunner);
@@ -199,15 +159,12 @@ public class FixGateway implements AutoCloseable
             "Connection timed out connecting to: " + configuration.host() + ":" + configuration.port());
     }
 
-    public synchronized void close() throws Exception
+    public synchronized void close()
     {
         framerRunner.close();
         loggingRunner.close();
 
-        inboundStreams.close();
-        outboundStreams.close();
-        aeron.close();
-        countersFile.close();
+        super.close();
     }
 
     public void onInitiatorSessionActive(final InitiatorSession session)

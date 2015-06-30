@@ -15,10 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import uk.co.real_logic.aeron.Subscription;
-
 @FunctionalInterface
 public interface NewSessionHandler
 {
-    void onConnect(Session session, Subscription subscription);
+    SessionHandler onConnect(Session session);
 }

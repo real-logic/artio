@@ -46,10 +46,10 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
         return connectionId;
     }
 
-    public void onConnect(final Session session, final Subscription subscription)
+    public SessionHandler onConnect(final Session session)
     {
         this.session = session;
-        this.subscription = subscription;
+        return this;
     }
 
     public Subscription subscription()

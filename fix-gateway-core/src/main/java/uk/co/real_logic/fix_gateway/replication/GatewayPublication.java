@@ -182,4 +182,15 @@ public class GatewayPublication
 
         return position;
     }
+
+    public long saveInitiateConnection(
+        final int correlationId,
+        final String host,
+        final int port,
+        final String senderCompId,
+        final String targetCompId)
+    {
+        // TODO
+        return 0;
+    }
 }
