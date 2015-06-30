@@ -66,15 +66,18 @@ public class SessionProxy
     private final MutableAsciiFlyweight string;
     private final GatewayPublication gatewayPublication;
     private final SessionIdStrategy sessionIdStrategy;
+    private final SessionCustomisationStrategy customisationStrategy;
     private long sessionId;
 
     public SessionProxy(
         final int bufferSize,
         final GatewayPublication gatewayPublication,
-        final SessionIdStrategy sessionIdStrategy)
+        final SessionIdStrategy sessionIdStrategy,
+        final SessionCustomisationStrategy customisationStrategy)
     {
         this.gatewayPublication = gatewayPublication;
         this.sessionIdStrategy = sessionIdStrategy;
+        this.customisationStrategy = customisationStrategy;
         buffer = new UnsafeBuffer(new byte[bufferSize]);
         string = new MutableAsciiFlyweight(buffer);
         logSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
@@ -117,10 +120,11 @@ public class SessionProxy
         header.msgSeqNum(msgSeqNo);
 
         logon.heartBtInt(heartbeatInterval);
+        customisationStrategy.configureLogon(logon, sessionId);
+
         send(logon.encode(string, 0), LogonDecoder.MESSAGE_TYPE);
     }
 
-    // TODO: remove this method once everything has messages
     public void logout(final int msgSeqNo)
     {
         logout(msgSeqNo, null, 0);
@@ -141,6 +145,8 @@ public class SessionProxy
         {
             logout.text(text, length);
         }
+
+        customisationStrategy.configureLogout(logout, sessionId);
 
         send(logout.encode(string, 0), LogoutDecoder.MESSAGE_TYPE);
     }

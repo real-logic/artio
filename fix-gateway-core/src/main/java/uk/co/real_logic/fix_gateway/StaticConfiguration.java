@@ -21,9 +21,7 @@ import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.auth.NoAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
-import uk.co.real_logic.fix_gateway.session.NewSessionHandler;
-import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
-import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.session.*;
 
 import java.io.File;
 import java.net.InetSocketAddress;
@@ -97,6 +95,7 @@ public final class StaticConfiguration
     private NewSessionHandler newSessionHandler;
     private int loggerCacheCapacity = DEFAULT_LOGGER_CACHE_CAPACITY;
     private long sendingTimeWindow = DEFAULT_SENDING_TIME_WINDOW;
+    private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
 
     public StaticConfiguration()
     {
@@ -229,6 +228,12 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration sessionCustomisationStrategy(final SessionCustomisationStrategy value)
+    {
+        this.sessionCustomisationStrategy = value;
+        return this;
+    }
+
     public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -322,5 +327,10 @@ public final class StaticConfiguration
     public long sendingTimeWindow()
     {
         return sendingTimeWindow;
+    }
+
+    public SessionCustomisationStrategy sessionCustomisationStrategy()
+    {
+        return sessionCustomisationStrategy;
     }
 }

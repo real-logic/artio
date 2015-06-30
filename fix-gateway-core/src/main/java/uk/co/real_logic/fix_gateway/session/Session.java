@@ -31,7 +31,9 @@ import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSI
 import static uk.co.real_logic.fix_gateway.session.SessionState.*;
 
 /**
- * Stores information about the current state of a session - no matter whether outbound or inbound
+ * Stores information about the current state of a session - no matter whether outbound or inbound.
+ *
+ * Should only be accessed on a single thread.
  */
 public class Session
 {

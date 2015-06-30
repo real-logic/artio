@@ -149,7 +149,8 @@ public class ConnectionHandler
     private SessionProxy sessionProxy()
     {
         return new SessionProxy(
-            configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy);
+            configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy,
+            configuration.sessionCustomisationStrategy());
     }
 
     private long nextConnectionId()
