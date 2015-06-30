@@ -27,6 +27,8 @@ import uk.co.real_logic.fix_gateway.messages.*;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
+
 /**
  * A proxy for publishing messages fix related messages
  */
@@ -38,6 +40,7 @@ public class GatewayPublication
     private final MessageHeaderEncoder header = new MessageHeaderEncoder();
     private final LogonEncoder logon = new LogonEncoder();
     private final ConnectEncoder connect = new ConnectEncoder();
+    private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
     private final DisconnectEncoder disconnect = new DisconnectEncoder();
     private final FixMessageEncoder messageFrame = new FixMessageEncoder();
 
@@ -117,7 +120,7 @@ public class GatewayPublication
         return position;
     }
 
-    public long saveConnect(final long connectionId, final SocketAddress address)
+    public long saveConnect(final long connectionId, final SocketAddress address, final int streadId)
     {
         final byte[] addressString = address.toString().getBytes(StandardCharsets.UTF_8);
 
@@ -139,6 +142,7 @@ public class GatewayPublication
         connect
             .wrap(buffer, offset)
             .connection(connectionId)
+            .streamId(streadId)
             .putAddress(addressString, 0, addressString.length);
 
         bufferClaim.commit();
@@ -171,6 +175,53 @@ public class GatewayPublication
         return position;
     }
 
+    public long saveInitiateConnection(
+        final String host,
+        final int port,
+        final String senderCompId,
+        final String targetCompId)
+    {
+        final byte[] hostBytes = host.getBytes(US_ASCII);
+        final byte[] senderCompIdBytes = senderCompId.getBytes(US_ASCII);
+        final byte[] targetCompIdBytes = targetCompId.getBytes(US_ASCII);
+
+        final long position = claim(
+            InitiateConnectionEncoder.BLOCK_LENGTH +
+            InitiateConnectionDecoder.hostHeaderLength() * 3 +
+            hostBytes.length +
+            senderCompIdBytes.length +
+            targetCompIdBytes.length);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(initiateConnection.sbeBlockLength())
+            .templateId(initiateConnection.sbeTemplateId())
+            .schemaId(initiateConnection.sbeSchemaId())
+            .version(initiateConnection.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        initiateConnection
+            .wrap(buffer, offset)
+            .port(port)
+            .putHost(hostBytes, 0, hostBytes.length);
+
+        initiateConnection.putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length);
+        initiateConnection.putTargetCompId(targetCompIdBytes, 0, targetCompIdBytes.length);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public int streamId()
+    {
+        return dataPublication.streamId();
+    }
+
     private long claim(final int framedLength)
     {
         long position;
@@ -181,16 +232,5 @@ public class GatewayPublication
         }
 
         return position;
-    }
-
-    public long saveInitiateConnection(
-        final int correlationId,
-        final String host,
-        final int port,
-        final String senderCompId,
-        final String targetCompId)
-    {
-        // TODO
-        return 0;
     }
 }

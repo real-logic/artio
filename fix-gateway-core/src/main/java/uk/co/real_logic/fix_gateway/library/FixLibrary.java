@@ -18,9 +18,11 @@ package uk.co.real_logic.fix_gateway.library;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.*;
@@ -31,15 +33,19 @@ public class FixLibrary extends GatewayProcess
     private final GatewayPublication outboundPublication;
     private final Long2ObjectHashMap<SessionSubscriber> sessions = new Long2ObjectHashMap<>();
     private final NewSessionHandler newSessionHandler;
+    private final SessionIdStrategy sessionIdStrategy;
+    private final AuthenticationStrategy authenticationStrategy;
 
     private Session incomingSession;
-    private int correlationId = 0;
 
     public FixLibrary(final StaticConfiguration configuration)
     {
         super(configuration);
 
         newSessionHandler = configuration.newSessionHandler();
+        sessionIdStrategy = configuration.sessionIdStrategy();
+        authenticationStrategy = configuration.authenticationStrategy();
+
         inboundSubscription = inboundStreams.dataSubscription();
         outboundPublication = outboundStreams.gatewayPublication();
     }
@@ -49,10 +55,9 @@ public class FixLibrary extends GatewayProcess
         return inboundSubscription.poll(dataSubscriber, fragmentLimit);
     }
 
-    public Session initiate(final SessionConfiguration configuration)
+    public Session initiate(final SessionConfiguration configuration, final IdleStrategy idleStrategy)
     {
         outboundPublication.saveInitiateConnection(
-            correlationId,
             configuration.host(),
             configuration.port(),
             configuration.senderCompId(),
@@ -60,8 +65,8 @@ public class FixLibrary extends GatewayProcess
 
         while (incomingSession == null)
         {
-            poll(1);
-            // TODO: backoff.
+            final int workCount = poll(1);
+            idleStrategy.idle(workCount);
         }
 
         final Session session = incomingSession;
@@ -71,24 +76,26 @@ public class FixLibrary extends GatewayProcess
 
     private final DataSubscriber dataSubscriber = new DataSubscriber(new SessionHandler()
     {
-        public void onConnect(final long connectionId,
+        public void onConnect(final int streamId,
+                              final long connectionId,
                               final DirectBuffer buffer,
                               final int addressOffset,
                               final int addressLength)
         {
-            if (correlationId != correlationId) // TODO
+            if (streamId == outboundPublication.streamId())
             {
                 final InitiatorSession session = null; //new InitiatorSession();
-                final SessionParser parser = new SessionParser(session, null, null);
+                final SessionParser parser = new SessionParser(session, sessionIdStrategy, authenticationStrategy);
                 final SessionHandler handler = newSessionHandler.onConnect(session);
                 final SessionSubscriber subscriber = new SessionSubscriber(parser, session, handler);
+                sessions.put(connectionId, subscriber);
             }
             else
             {
                 final SessionSubscriber subscriber = sessions.get(connectionId);
                 if (subscriber != null)
                 {
-                    subscriber.onConnect(connectionId, buffer, addressOffset, addressLength);
+                    subscriber.onConnect(streamId, connectionId, buffer, addressOffset, addressLength);
                 }
             }
         }

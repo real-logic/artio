@@ -53,6 +53,13 @@
     </sbe:message>
     <sbe:message name="Connect" id="10" description="A TCP Connection has connected">
         <field name="connection" id="17" type="ConnectionId"/>
+        <field name="streamId" id="19" type="int32"/>
         <data name="address" id="18" type="varDataEncoding"/>
+    </sbe:message>
+    <sbe:message name="InitiateConnection" id="11" description="Try to make an outbound connection">
+        <field name="port" id="20" type="int32"/>
+        <data name="host" id="21" type="varDataEncoding"/>
+        <data name="senderCompId" id="22" type="varDataEncoding"/>
+        <data name="targetCompId" id="23" type="varDataEncoding"/>
     </sbe:message>
 </sbe:messageSchema>

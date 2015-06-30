@@ -30,6 +30,7 @@ public class DataSubscriber implements FragmentHandler
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final LogonDecoder logon = new LogonDecoder();
     private final ConnectDecoder connect = new ConnectDecoder();
+    private final InitiateConnectionDecoder initiateConnection = new InitiateConnectionDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
 
@@ -42,10 +43,10 @@ public class DataSubscriber implements FragmentHandler
 
     public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
-        readFragment(buffer, offset);
+        readFragment(buffer, offset, header.streamId());
     }
 
-    public int readFragment(final DirectBuffer buffer, int offset)
+    public int readFragment(final DirectBuffer buffer, int offset, final int streamId)
     {
         messageHeader.wrap(buffer, offset);
 
@@ -90,8 +91,22 @@ public class DataSubscriber implements FragmentHandler
             {
                 connect.wrap(buffer, offset, blockLength, version);
                 final int addressOffset = offset + ConnectDecoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
-                sessionHandler.onConnect(connect.connection(), buffer, addressOffset, connect.addressLength());
+                sessionHandler.onConnect(
+                    connect.streamId(), connect.connection(), buffer, addressOffset, connect.addressLength());
                 return connect.limit();
+            }
+
+            case InitiateConnectionDecoder.TEMPLATE_ID:
+            {
+                initiateConnection.wrap(buffer, offset, blockLength, version);
+                sessionHandler.onInitiateConnection(
+                    streamId,
+                    initiateConnection.port(),
+                    initiateConnection.host(),
+                    initiateConnection.senderCompId(),
+                    initiateConnection.targetCompId()
+                );
+                return initiateConnection.limit();
             }
         }
 

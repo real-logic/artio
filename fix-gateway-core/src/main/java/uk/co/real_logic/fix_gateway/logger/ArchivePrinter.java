@@ -96,7 +96,7 @@ public class ArchivePrinter implements SessionHandler
                         break;
                     }
 
-                    offset = subscriber.readFragment(termBuffer, offset);
+                   offset = subscriber.readFragment(termBuffer, offset, streamId);
                 }
             }
         }
@@ -123,12 +123,20 @@ public class ArchivePrinter implements SessionHandler
         output.printf("connection %d has logged in as session %d\n", connectionId, sessionId);
     }
 
-    public void onConnect(final long connectionId,
+    public void onConnect(final int streamId, final long connectionId,
                           final DirectBuffer buffer,
                           final int addressOffset,
                           final int addressLength)
     {
         final String address = buffer.getStringUtf8(addressOffset, addressLength);
         output.printf("Connected to %s as connection %d\n", address, connectionId);
+    }
+
+    public void onInitiateConnection(final int streamId, final int port,
+                                     final String host,
+                                     final String senderCompId,
+                                     final String targetCompId)
+    {
+        output.printf("Initiate Connection to %s:%d as %s to %s", host, port, senderCompId, targetCompId);
     }
 }

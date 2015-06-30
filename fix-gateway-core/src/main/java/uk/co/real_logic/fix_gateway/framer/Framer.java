@@ -182,6 +182,27 @@ public class Framer implements Agent
         }
     }
 
+
+    public void onInitiateConnection(final int streamId,
+                                     final int port,
+                                     final String host,
+                                     final String senderCompId,
+                                     final String targetCompId)
+    {
+        try
+        {
+            final InetSocketAddress address = new InetSocketAddress(host, port);
+            final SocketChannel channel = SocketChannel.open();
+            channel.connect(address);
+
+            onNewSession(channel, connectionHandler.initiateSession(address, gateway, null)); // TODO
+        }
+        catch (final Exception e)
+        {
+            e.printStackTrace(); // TODO: reply to message
+        }
+    }
+
     public void onDisconnect(final long connectionId)
     {
         final Iterator<ReceiverEndPoint> it = receiverEndPoints.iterator();
@@ -198,7 +219,6 @@ public class Framer implements Agent
         }
     }
 
-    @Override
     public void onClose()
     {
         try
@@ -218,7 +238,6 @@ public class Framer implements Agent
         }
     }
 
-    @Override
     public String roleName()
     {
         return "Framer";

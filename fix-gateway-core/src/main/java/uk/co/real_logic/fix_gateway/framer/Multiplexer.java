@@ -30,6 +30,12 @@ public class Multiplexer implements SessionHandler
 
     private Framer framer;
 
+    public Multiplexer framer(final Framer framer)
+    {
+        this.framer = framer;
+        return this;
+    }
+
     public void onNewConnection(final SenderEndPoint senderEndPoint)
     {
         endpoints.put(senderEndPoint.connectionId(), senderEndPoint);
@@ -59,9 +65,12 @@ public class Multiplexer implements SessionHandler
         framer.onDisconnect(connectionId);
     }
 
-    public Multiplexer framer(final Framer framer)
+    public void onInitiateConnection(final int streamId,
+                                     final int port,
+                                     final String host,
+                                     final String senderCompId,
+                                     final String targetCompId)
     {
-        this.framer = framer;
-        return this;
+        framer.onInitiateConnection(streamId, port, host, senderCompId, targetCompId);
     }
 }
