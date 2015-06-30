@@ -109,7 +109,7 @@ public class ConnectionHandler
             defaultInterval,
             connectionId,
             clock,
-            sessionProxy(),
+            sessionProxy(connectionId),
             publication,
             sessionIdStrategy,
             configuration.beginString(),
@@ -136,7 +136,7 @@ public class ConnectionHandler
             defaultInterval,
             connectionId,
             clock,
-            sessionProxy().setupSession(sessionId, key),
+            sessionProxy(connectionId).setupSession(sessionId, key),
             publication,
             sessionIdStrategy,
             gateway,
@@ -148,11 +148,11 @@ public class ConnectionHandler
             fixCounters.sentMsgSeqNo(connectionId));
     }
 
-    private SessionProxy sessionProxy()
+    private SessionProxy sessionProxy(final long connectionId)
     {
         return new SessionProxy(
             configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy,
-            configuration.sessionCustomisationStrategy(), System::currentTimeMillis);
+            configuration.sessionCustomisationStrategy(), System::currentTimeMillis, connectionId);
     }
 
     private long nextConnectionId()

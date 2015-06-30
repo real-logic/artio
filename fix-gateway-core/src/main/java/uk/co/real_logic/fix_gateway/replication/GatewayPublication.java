@@ -59,8 +59,7 @@ public class GatewayPublication
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength,
-        final long sessionId,
-        final int messageType)
+        final int messageType, final long sessionId, final long connectionId)
     {
         final int framedLength = header.encodedLength() + FRAME_SIZE + srcLength;
         final long position = claim(framedLength);
@@ -82,7 +81,7 @@ public class GatewayPublication
             .wrap(destBuffer, offset)
             .messageType(messageType)
             .session(sessionId)
-            .connection(0L)
+            .connection(connectionId)
             .putBody(srcBuffer, srcOffset, srcLength);
 
         bufferClaim.commit();

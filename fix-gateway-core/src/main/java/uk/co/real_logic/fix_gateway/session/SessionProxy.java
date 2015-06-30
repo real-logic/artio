@@ -68,6 +68,7 @@ public class SessionProxy
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionCustomisationStrategy customisationStrategy;
     private final MilliClock clock;
+    private final long connectionId;
     private long sessionId;
 
     public SessionProxy(
@@ -75,12 +76,14 @@ public class SessionProxy
         final GatewayPublication gatewayPublication,
         final SessionIdStrategy sessionIdStrategy,
         final SessionCustomisationStrategy customisationStrategy,
-        final MilliClock clock)
+        final MilliClock clock,
+        final long connectionId)
     {
         this.gatewayPublication = gatewayPublication;
         this.sessionIdStrategy = sessionIdStrategy;
         this.customisationStrategy = customisationStrategy;
         this.clock = clock;
+        this.connectionId = connectionId;
         buffer = new UnsafeBuffer(new byte[bufferSize]);
         string = new MutableAsciiFlyweight(buffer);
         logSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
@@ -223,6 +226,6 @@ public class SessionProxy
 
     private void send(final int length, final int messageType)
     {
-        gatewayPublication.saveMessage(buffer, 0, length, this.sessionId, messageType);
+        gatewayPublication.saveMessage(buffer, 0, length, messageType, sessionId, connectionId);
     }
 }

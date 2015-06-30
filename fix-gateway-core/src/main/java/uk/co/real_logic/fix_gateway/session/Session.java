@@ -185,7 +185,7 @@ public class Session
 
         final int length = encoder.encode(string, 0);
 
-        return publication.saveMessage(buffer, 0, length, id(), encoder.messageType());
+        return publication.saveMessage(buffer, 0, length, encoder.messageType(), id(), connectionId);
     }
 
     public long send(
@@ -194,7 +194,7 @@ public class Session
         final int length,
         final int messageType)
     {
-        final long position = publication.saveMessage(buffer, offset, length, id(), messageType);
+        final long position = publication.saveMessage(buffer, offset, length, messageType, id(), connectionId);
         newSentSeqNum();
         return position;
     }

@@ -198,7 +198,7 @@ public class ReceiverEndPoint
                 if (sessionParser.onMessage(buffer, offset, length, messageType, sessionId))
                 {
                     messagesRead.orderedIncrement();
-                    publication.saveMessage(buffer, offset, length, sessionId, messageType);
+                    publication.saveMessage(buffer, offset, length, messageType, sessionId, connectionId);
                 }
                 else
                 {
