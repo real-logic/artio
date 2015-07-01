@@ -27,9 +27,9 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class SenderIdAuthenticationStrategyTest
+public class SenderCompIdAuthenticationStrategyTest
 {
-    private SenderIdAuthenticationStrategy authenticationStrategy = new SenderIdAuthenticationStrategy(
+    private SenderCompIdAuthenticationStrategy authenticationStrategy = new SenderCompIdAuthenticationStrategy(
         Arrays.asList("ab", "a"));
 
     private char[] examples = "abcdef".toCharArray();

@@ -44,7 +44,7 @@ public class DataSubscriber implements FragmentHandler
 
     public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
-        readFragment(buffer, offset, header.streamId());
+        readFragment(buffer, offset, header.sessionId());
     }
 
     public int readFragment(final DirectBuffer buffer, int offset, final int libraryId)

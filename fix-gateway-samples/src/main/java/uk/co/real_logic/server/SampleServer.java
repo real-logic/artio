@@ -20,8 +20,8 @@ import uk.co.real_logic.agrona.concurrent.SigInt;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.auth.CompIdAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.auth.SenderIdAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.auth.TargetCompIdAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.auth.SenderCompIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
 
@@ -40,8 +40,8 @@ public final class SampleServer
 
     public static void main(final String[] args) throws Exception
     {
-        final AuthenticationStrategy authenticationStrategy = new CompIdAuthenticationStrategy(ACCEPTOR_COMP_ID)
-            .and(new SenderIdAuthenticationStrategy(Arrays.asList(INITIATOR_COMP_ID)));
+        final AuthenticationStrategy authenticationStrategy = new TargetCompIdAuthenticationStrategy(ACCEPTOR_COMP_ID)
+            .and(new SenderCompIdAuthenticationStrategy(Arrays.asList(INITIATOR_COMP_ID)));
 
         // Static configuration lasts the duration of a FIX-Gateway instance
         final StaticConfiguration configuration = new StaticConfiguration()

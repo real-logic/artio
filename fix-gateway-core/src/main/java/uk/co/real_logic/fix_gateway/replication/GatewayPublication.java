@@ -252,6 +252,11 @@ public class GatewayPublication
         return dataPublication.streamId();
     }
 
+    public int sessionId()
+    {
+        return dataPublication.sessionId();
+    }
+
     private long claim(final int framedLength)
     {
         long position;

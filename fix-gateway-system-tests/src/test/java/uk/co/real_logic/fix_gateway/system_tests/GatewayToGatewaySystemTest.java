@@ -26,6 +26,8 @@ import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.session.Session;
 
+import java.util.concurrent.locks.LockSupport;
+
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
@@ -35,7 +37,6 @@ import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-@Ignore
 public class GatewayToGatewaySystemTest
 {
 
@@ -65,11 +66,20 @@ public class GatewayToGatewaySystemTest
         acceptingGateway = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID, acceptAeronPort);
 
         initiatingLibrary = new FixLibrary(initiatingConfig(initiatingSessionHandler, initAeronPort));
-        acceptingLibrary = new FixLibrary(acceptingConfig(port, acceptingSessionHandler, INITIATOR_ID, ACCEPTOR_ID,
+        acceptingLibrary = new FixLibrary(acceptingConfig(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID,
             acceptAeronPort));
 
         initiatedSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
-        acceptingSession = acceptingSessionHandler.session();
+    }
+
+    private Session acceptSession()
+    {
+        while (acceptingSessionHandler.session() == null)
+        {
+            acceptingLibrary.poll(1);
+            LockSupport.parkNanos(10_000);
+        }
+        return acceptingSessionHandler.session();
     }
 
     @Test
@@ -83,10 +93,11 @@ public class GatewayToGatewaySystemTest
             assertEquals(ACTIVE, initiatedSession.state());
         });
 
+        acceptingSession = acceptSession();
         assertNotNull("Accepting Session not been setup", acceptingSession);
-        assertNotNull("Accepting Session not been passed a subscription", acceptingSessionHandler.subscription());
     }
 
+    @Ignore
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptor()
     {
@@ -95,6 +106,7 @@ public class GatewayToGatewaySystemTest
         assertReceivedMessage(acceptingSessionHandler, acceptingOtfAcceptor);
     }
 
+    @Ignore
     @Test
     public void messagesCanBeSentFromAcceptorToInitiator()
     {
@@ -103,6 +115,7 @@ public class GatewayToGatewaySystemTest
         assertReceivedMessage(initiatingSessionHandler, initiatingOtfAcceptor);
     }
 
+    @Ignore
     @Test
     public void initiatorSessionCanBeDisconnected()
     {
@@ -111,6 +124,7 @@ public class GatewayToGatewaySystemTest
         assertDisconnected(acceptingSessionHandler, initiatedSession);
     }
 
+    @Ignore
     @Test
     public void acceptorSessionCanBeDisconnected()
     {
@@ -119,6 +133,7 @@ public class GatewayToGatewaySystemTest
         assertDisconnected(initiatingSessionHandler, acceptingSession);
     }
 
+    @Ignore
     @Test
     public void gatewayProcessesResendRequests()
     {
@@ -131,7 +146,7 @@ public class GatewayToGatewaySystemTest
 
     private void assertMessageResent()
     {
-        assertEventuallyEquals("Failed to receive the reply", 1, acceptingSessionHandler::poll);
+        assertEventuallyEquals("Failed to receive the reply", 1, () -> acceptingLibrary.poll(1));
         assertThat(acceptingOtfAcceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
         assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
         assertNull("Detected Error", acceptingOtfAcceptor.lastError());

@@ -19,16 +19,16 @@ import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 
-public final class CompIdAuthenticationStrategy implements AuthenticationStrategy
+public final class TargetCompIdAuthenticationStrategy implements AuthenticationStrategy
 {
     private final char[] gatewayCompId;
 
-    public CompIdAuthenticationStrategy(final String gatewayCompId)
+    public TargetCompIdAuthenticationStrategy(final String gatewayCompId)
     {
         this(gatewayCompId.toCharArray());
     }
 
-    public CompIdAuthenticationStrategy(final char[] gatewayCompId)
+    public TargetCompIdAuthenticationStrategy(final char[] gatewayCompId)
     {
         this.gatewayCompId = gatewayCompId;
     }

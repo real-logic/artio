@@ -111,7 +111,7 @@ public class FixLibrary extends GatewayProcess
                               final int addressOffset,
                               final int addressLength)
         {
-            if (libraryId == outboundPublication.streamId())
+            if (libraryId == outboundPublication.sessionId())
             {
                 if (type == INITIATOR)
                 {

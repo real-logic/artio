@@ -1,6 +1,5 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
-import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
@@ -17,7 +16,6 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
     private final DataSubscriber subscriber = new DataSubscriber(this);
 
     private Session session;
-    private Subscription subscription;
     private long connectionId = -1;
 
     public FakeSessionHandler(final OtfMessageAcceptor acceptor)
@@ -52,18 +50,9 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
         return this;
     }
 
-    public Subscription subscription()
-    {
-        return subscription;
-    }
-
     public Session session()
     {
         return session;
     }
 
-    public int poll()
-    {
-        return subscription.poll(subscriber, 1);
-    }
 }

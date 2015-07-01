@@ -24,12 +24,12 @@ import java.util.Set;
 
 import static java.util.stream.Collectors.toSet;
 
-public class SenderIdAuthenticationStrategy implements AuthenticationStrategy
+public class SenderCompIdAuthenticationStrategy implements AuthenticationStrategy
 {
     private final CharArrayWrapper wrapper = new CharArrayWrapper();
     private final Set<CharArrayWrapper> validSenderIds;
 
-    public SenderIdAuthenticationStrategy(final List<String> validSenderIds)
+    public SenderCompIdAuthenticationStrategy(final List<String> validSenderIds)
     {
         this.validSenderIds = validSenderIds
             .stream()
