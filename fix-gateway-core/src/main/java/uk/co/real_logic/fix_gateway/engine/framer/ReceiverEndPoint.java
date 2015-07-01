@@ -64,6 +64,7 @@ public class ReceiverEndPoint
     private final ByteBuffer byteBuffer;
 
     private long sessionId = UNKNOWN_ID;
+    private Object compositeKey = null;
     private int usedBufferData = 0;
 
     public ReceiverEndPoint(
@@ -172,7 +173,7 @@ public class ReceiverEndPoint
                 if (sessionId == UNKNOWN_ID)
                 {
                     logon.decode(string, offset, length);
-                    final Object compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
+                    compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
                     sessionId = sessionIds.onLogon(compositeKey);
                     publication.saveLogon(connectionId, sessionId);
                 }
@@ -251,6 +252,8 @@ public class ReceiverEndPoint
 
     private void onDisconnect()
     {
+        sessionIds.onDisconnect(compositeKey);
         publication.saveDisconnect(connectionId);
     }
+
 }

@@ -131,7 +131,7 @@ public class FramerTest
         framer.doWork();
 
         when:
-        framer.onRequestDisconnect(CONNECTION_ID, LIBRARY_ID);
+        framer.onDisconnect(CONNECTION_ID);
         framer.doWork();
 
         then:

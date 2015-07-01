@@ -79,20 +79,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
         verify(mockProxy).rejectWhilstNotLoggedOn(1, SENDINGTIME_ACCURACY_PROBLEM);
     }
 
-    @Test
-    public void shouldDisconnectSecondAcceptedSession()
-    {
-        onLogon(1);
-
-        final AcceptorSession secondSession = new AcceptorSession(
-            HEARTBEAT_INTERVAL, 4L, fakeClock, mockProxy, mockPublication, null,
-            BEGIN_STRING, SENDING_TIME_WINDOW, mockReceivedMsgSeqNo, mockSentMsgSeqNo);
-
-        secondSession.onLogon(HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, fakeClock.time(), false);
-
-        verify(mockProxy).disconnect(4L);
-    }
-
     protected Session session()
     {
         return session;

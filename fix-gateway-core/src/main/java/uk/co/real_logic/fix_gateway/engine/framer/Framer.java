@@ -195,10 +195,6 @@ public class Framer implements Agent, SessionHandler
                 break;
             }
         }
-    }
-
-    public void onRequestDisconnect(final long connectionId, final long sessionId)
-    {
 
     }
 

@@ -82,7 +82,7 @@ public class MultiplexerTest
         connectedId(CONNECTION_ID);
 
         when:
-        multiplexer.onDisconnect(CONNECTION_ID);
+        multiplexer.onRequestDisconnect(CONNECTION_ID);
 
         then:
         verify(mockFramer).onDisconnect(CONNECTION_ID);

@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
@@ -23,10 +24,8 @@ import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
-import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIds;
-import uk.co.real_logic.fix_gateway.session.SessionParser;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,7 +34,6 @@ import java.nio.channels.SocketChannel;
 import java.util.function.ToIntFunction;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
@@ -46,23 +44,19 @@ public class ReceiverEndPointTest
     private static final long SESSION_ID = 4L;
 
     private SocketChannel mockChannel = mock(SocketChannel.class);
-    private GatewayPublication mockPub = mock(GatewayPublication.class);
-    private SessionParser mockSessionParser = mock(SessionParser.class);
-    private Session mockSession = mock(Session.class);
+    private GatewayPublication mockPublication = mock(GatewayPublication.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private SessionIds mockSessionIds = mock(SessionIds.class);
     private AtomicCounter messagesRead = mock(AtomicCounter.class);
 
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
-            mockChannel, 16 * 1024, mockPub, CONNECTION_ID, mockSessionIdStrategy, mockSessionIds,
+            mockChannel, 16 * 1024, mockPublication, CONNECTION_ID, mockSessionIdStrategy, mockSessionIds,
             messagesRead);
 
     @Before
     public void setUp()
     {
-        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyInt(), anyLong())).thenReturn(true);
-        when(mockSessionParser.session()).thenReturn(mockSession);
         when(mockSessionIds.onLogon(any())).thenReturn(SESSION_ID);
     }
 
@@ -79,6 +73,7 @@ public class ReceiverEndPointTest
         handlerReceivesAFramedMessage();
     }
 
+    @Ignore
     @Test
     public void shouldOnlyFrameCompleteFixMessage()
     {
@@ -149,21 +144,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldOnlyFrameMessagesWhenConnected()
-    {
-        given:
-        when(mockSessionParser.onMessage(any(), anyInt(), anyInt(), anyInt(), eq(SESSION_ID))).thenReturn(false);
-        theEndpointReceivesACompleteMessage();
-
-        when:
-        endPoint.receiveData();
-
-        then:
-        handlerNotCalled();
-    }
-
-    @Test
-    public void aClosedSocketDisconnectsItsSession() throws IOException
+    public void aClosedSocketSavesItsDisconnect() throws IOException
     {
         given:
         theChannelIsClosedByException();
@@ -172,7 +153,8 @@ public class ReceiverEndPointTest
         endPoint.receiveData();
 
         then:
-        verify(mockSession).disconnect();
+        verify(mockSessionIds).onDisconnect(any());
+        assertSavesDisconnect();
     }
 
     @Test
@@ -185,25 +167,16 @@ public class ReceiverEndPointTest
         endPoint.receiveData();
 
         then:
-        verify(mockSession).disconnect();
-    }
-
-    @Test
-    public void shouldNotFrameGarbageMessage() throws IOException
-    {
-        given:
-        theEndpointReceivesAnInvalidMessage();
-
-        when:
-        endPoint.receiveData();
-
-        then:
-        handlerNotCalled();
-        verify(mockSession).disconnect();
+        assertSavesDisconnect();
     }
 
     // TODO: more garbage cases - Invalid checksum
     // TODO: log not authenticated messages
+
+    private void assertSavesDisconnect()
+    {
+        verify(mockPublication).saveDisconnect(CONNECTION_ID);
+    }
 
     private void theEndpointReceivesAnInvalidMessage()
     {
@@ -227,18 +200,18 @@ public class ReceiverEndPointTest
 
     private void handlerReceivesFramedMessages(int numberOfMessages)
     {
-        verify(mockPub, times(numberOfMessages))
+        verify(mockPublication, times(numberOfMessages))
             .saveMessage(
                 any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID));
     }
 
     private void handlerReceivesTwoFramedMessages()
     {
-        final InOrder inOrder = Mockito.inOrder(mockPub);
-        inOrder.verify(mockPub, times(1))
+        final InOrder inOrder = Mockito.inOrder(mockPublication);
+        inOrder.verify(mockPublication, times(1))
             .saveMessage(
                 any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID));
-        inOrder.verify(mockPub, times(1))
+        inOrder.verify(mockPublication, times(1))
             .saveMessage(
                 any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID));
         inOrder.verifyNoMoreInteractions();
@@ -246,7 +219,7 @@ public class ReceiverEndPointTest
 
     private void handlerNotCalled()
     {
-        verifyNoMoreInteractions(mockPub);
+        verifyNoMoreInteractions(mockPublication);
     }
 
     private void theEndpointReceivesACompleteMessage()
