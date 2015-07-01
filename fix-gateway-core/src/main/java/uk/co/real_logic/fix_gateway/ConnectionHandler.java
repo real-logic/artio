@@ -15,19 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.agrona.collections.LongHashSet;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.framer.ReceiverEndPoint;
 import uk.co.real_logic.fix_gateway.framer.SenderEndPoint;
-import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
-import uk.co.real_logic.fix_gateway.session.*;
-import uk.co.real_logic.fix_gateway.util.MilliClock;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.session.SessionIds;
 
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Handles incoming connections including setting up framers.
@@ -36,46 +32,32 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class ConnectionHandler
 {
-    private final AtomicLong idSource = new AtomicLong(0);
-    private final LongHashSet acceptedSessions = new LongHashSet(40, -1);
-
-    private final MilliClock clock;
     private final StaticConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
     private final ReplicationStreams inboundStreams;
-    private final ReplicationStreams outboundStreams;
     private final IdleStrategy idleStrategy;
     private final FixCounters fixCounters;
 
     public ConnectionHandler(
-        final MilliClock clock,
         final StaticConfiguration configuration,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
         final ReplicationStreams inboundStreams,
-        final ReplicationStreams outboundStreams,
         final IdleStrategy idleStrategy,
         final FixCounters fixCounters)
     {
-        this.clock = clock;
         this.configuration = configuration;
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
         this.inboundStreams = inboundStreams;
-        this.outboundStreams = outboundStreams;
         this.idleStrategy = idleStrategy;
         this.fixCounters = fixCounters;
     }
 
     public ReceiverEndPoint receiverEndPoint(
-        final SocketChannel channel, final long connectionId, final Session session) throws IOException
+        final SocketChannel channel, final long connectionId) throws IOException
     {
-        final SessionParser sessionParser = new SessionParser(session, sessionIdStrategy,
-            configuration.authenticationStrategy());
-
-        final SessionHandler handler = configuration.newSessionHandler().onConnect(session);
-
         return new ReceiverEndPoint(
             channel,
             configuration.receiverBufferSize(),
@@ -94,67 +76,5 @@ public class ConnectionHandler
             channel,
             idleStrategy,
             fixCounters.messagesWritten(channel.getRemoteAddress()));
-    }
-
-    public Session acceptSession(final SocketAddress address)
-    {
-        final GatewayPublication publication = outboundStreams.gatewayPublication();
-        final int defaultInterval = configuration.defaultHeartbeatInterval();
-        final long connectionId = nextConnectionId();
-
-        publication.saveConnect(connectionId, address.toString(), 0);
-
-        return new AcceptorSession(
-            defaultInterval,
-            connectionId,
-            clock,
-            sessionProxy(connectionId),
-            publication,
-            sessionIdStrategy,
-            configuration.beginString(),
-            configuration.sendingTimeWindow(),
-            sessionIds,
-            acceptedSessions,
-            fixCounters.receivedMsgSeqNo(connectionId),
-            fixCounters.sentMsgSeqNo(connectionId));
-    }
-
-    public Session initiateSession(final SocketAddress address,
-                                   final FixEngine gateway,
-                                   final SessionConfiguration sessionConfiguration)
-    {
-        final Object key = sessionIdStrategy.onInitiatorLogon(sessionConfiguration);
-        final long sessionId = sessionIds.onLogon(key);
-        final int defaultInterval = configuration.defaultHeartbeatInterval();
-        final GatewayPublication publication = outboundStreams.gatewayPublication();
-        final long connectionId = nextConnectionId();
-
-        publication.saveConnect(connectionId, address.toString(), 0);
-
-        return new InitiatorSession(
-            defaultInterval,
-            connectionId,
-            clock,
-            sessionProxy(connectionId).setupSession(sessionId, key),
-            publication,
-            sessionIdStrategy,
-            sessionId,
-            configuration.beginString(),
-            configuration.sendingTimeWindow(),
-            sessionIds,
-            fixCounters.receivedMsgSeqNo(connectionId),
-            fixCounters.sentMsgSeqNo(connectionId));
-    }
-
-    private SessionProxy sessionProxy(final long connectionId)
-    {
-        return new SessionProxy(
-            configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy,
-            configuration.sessionCustomisationStrategy(), System::currentTimeMillis, connectionId);
-    }
-
-    private long nextConnectionId()
-    {
-        return idSource.getAndIncrement();
     }
 }

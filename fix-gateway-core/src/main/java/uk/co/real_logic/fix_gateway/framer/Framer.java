@@ -17,14 +17,9 @@ package uk.co.real_logic.fix_gateway.framer;
 
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.Agent;
-import uk.co.real_logic.agrona.concurrent.SequencedContainerQueue;
 import uk.co.real_logic.fix_gateway.ConnectionHandler;
-import uk.co.real_logic.fix_gateway.FixEngine;
-import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
-import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -36,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
 
 import static java.net.StandardSocketOptions.SO_RCVBUF;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
@@ -47,36 +41,28 @@ import static java.nio.channels.SelectionKey.OP_READ;
  */
 public class Framer implements Agent
 {
-    private final Consumer<FramerCommand> onCommandFunc = this::onCommand;
     private final List<ReceiverEndPoint> receiverEndPoints = new ArrayList<>();
     private final DataSubscriber dataSubscriber;
 
     private final ServerSocketChannel listeningChannel;
-    private final MilliClock clock;
     private final StaticConfiguration configuration;
     private final ConnectionHandler connectionHandler;
-    private final SequencedContainerQueue<FramerCommand> commandQueue;
     private final Multiplexer multiplexer;
-    private final FixEngine gateway;
-    private final Subscription dataSubscription;
+    private final Subscription outboundDataSubscription;
     private final Selector selector;
 
+    private long connectionId = 0;
+
     public Framer(
-        final MilliClock clock,
         final StaticConfiguration configuration,
         final ConnectionHandler connectionHandler,
-        final SequencedContainerQueue<FramerCommand> commandQueue,
         final Multiplexer multiplexer,
-        final FixEngine gateway,
-        final Subscription dataSubscription)
+        final Subscription outboundDataSubscription)
     {
-        this.clock = clock;
         this.configuration = configuration;
         this.connectionHandler = connectionHandler;
-        this.commandQueue = commandQueue;
         this.multiplexer = multiplexer;
-        this.gateway = gateway;
-        this.dataSubscription = dataSubscription;
+        this.outboundDataSubscription = outboundDataSubscription;
         dataSubscriber = new DataSubscriber(multiplexer);
 
         try
@@ -96,14 +82,7 @@ public class Framer implements Agent
     @Override
     public int doWork() throws Exception
     {
-        return commandQueue.drain(onCommandFunc) +
-            pollSockets() +
-            dataSubscription.poll(dataSubscriber, 5);
-    }
-
-    private void onCommand(final FramerCommand command)
-    {
-        command.execute(this);
+        return pollSockets() + outboundDataSubscription.poll(dataSubscriber, 5);
     }
 
     private int pollSockets() throws IOException
@@ -117,7 +96,7 @@ public class Framer implements Agent
             if (key.isAcceptable())
             {
                 final SocketChannel channel = listeningChannel.accept();
-                onNewSession(channel, connectionHandler.acceptSession(channel.getRemoteAddress()));
+                setupConnection(channel);
             }
             else if (key.isReadable())
             {
@@ -130,7 +109,7 @@ public class Framer implements Agent
         return count;
     }
 
-    private void onNewSession(final SocketChannel channel, final Session session)
+    private void setupConnection(final SocketChannel channel)
         throws IOException
     {
         channel.configureBlocking(false);
@@ -144,30 +123,13 @@ public class Framer implements Agent
             channel.setOption(SO_RCVBUF, configuration.senderSocketBufferSize());
         }
 
-        final long connectionId = session.connectionId();
-        final ReceiverEndPoint receiverEndPoint = connectionHandler.receiverEndPoint(channel, connectionId, session);
+        final long connectionId = this.connectionId++;
+        final ReceiverEndPoint receiverEndPoint = connectionHandler.receiverEndPoint(channel, connectionId);
         receiverEndPoints.add(receiverEndPoint);
         channel.register(selector, OP_READ, receiverEndPoint);
 
         multiplexer.onNewConnection(connectionHandler.senderEndPoint(channel, connectionId));
     }
-
-    public void onConnect(final SessionConfiguration configuration)
-    {
-        try
-        {
-            final InetSocketAddress address = new InetSocketAddress(configuration.host(), configuration.port());
-            final SocketChannel channel = SocketChannel.open();
-            channel.connect(address);
-
-            onNewSession(channel, connectionHandler.initiateSession(address, gateway, configuration));
-        }
-        catch (final Exception e)
-        {
-            gateway.onInitiationError(e);
-        }
-    }
-
 
     public void onInitiateConnection(final int streamId,
                                      final int port,
@@ -180,8 +142,8 @@ public class Framer implements Agent
             final InetSocketAddress address = new InetSocketAddress(host, port);
             final SocketChannel channel = SocketChannel.open();
             channel.connect(address);
-
-            onNewSession(channel, connectionHandler.initiateSession(address, gateway, null)); // TODO
+            setupConnection(channel);
+            // TODO: Identify session
         }
         catch (final Exception e)
         {

@@ -50,7 +50,7 @@ public class MessageApiExamples
                 .address("broker.example.com", 9999)
                 .build();
 
-            final InitiatorSession session = gateway.initiate(sessionConfig);
+            final InitiatorSession session = null; // TODO: gateway.initiate(sessionConfig);
 
             // Specific encoders are generated for each type of message
             // from the same dictionary as the decoders.

@@ -51,7 +51,7 @@ public final class SampleClient
                 .senderCompId(INITIATOR_COMP_ID)
                 .build();
 
-            final InitiatorSession session = gateway.initiate(sessionConfig);
+            final InitiatorSession session = null; // TODO: gateway.initiate(sessionConfig);
 
             final TestReqIdFinder testReqIdFinder = new TestReqIdFinder();
             final DataSubscriber subscriber = new DataSubscriber(testReqIdFinder);

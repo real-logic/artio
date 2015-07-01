@@ -17,17 +17,13 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BufferClaim;
-import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.framer.Framer;
-import uk.co.real_logic.fix_gateway.framer.FramerCommand;
-import uk.co.real_logic.fix_gateway.framer.FramerProxy;
 import uk.co.real_logic.fix_gateway.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.logger.*;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIds;
-import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.util.Arrays;
 import java.util.List;
@@ -35,13 +31,8 @@ import java.util.List;
 public class FixEngine extends GatewayProcess
 {
 
-    private FramerProxy framerProxy;
-
     private AgentRunner framerRunner;
     private AgentRunner loggingRunner;
-
-    private final Signal signal = new Signal();
-    private final long connectionTimeout;
 
     private InitiatorSession addedSession;
     private Exception exception;
@@ -49,7 +40,6 @@ public class FixEngine extends GatewayProcess
     FixEngine(final StaticConfiguration configuration)
     {
         super(configuration);
-        connectionTimeout = configuration.connectionTimeout();
 
         initFramer(configuration, fixCounters);
         initLogger(configuration);
@@ -86,9 +76,6 @@ public class FixEngine extends GatewayProcess
 
     private void initFramer(final StaticConfiguration configuration, final FixCounters fixCounters)
     {
-        final SequencedContainerQueue<FramerCommand> framerCommands = new ManyToOneConcurrentArrayQueue<>(10);
-        framerProxy = new FramerProxy(framerCommands, fixCounters.framerProxyFails(), backoffIdleStrategy());
-
         final SessionIds sessionIds = new SessionIds();
 
         final IdleStrategy idleStrategy = backoffIdleStrategy();
@@ -96,24 +83,18 @@ public class FixEngine extends GatewayProcess
         final Subscription dataSubscription = outboundStreams.dataSubscription();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
 
-        final MilliClock systemClock = System::currentTimeMillis;
-
         final ConnectionHandler handler = new ConnectionHandler(
-            systemClock,
             configuration,
             sessionIdStrategy,
             sessionIds,
             inboundStreams,
-            outboundStreams,
             idleStrategy,
             fixCounters);
 
-        final Framer framer = new Framer(systemClock, configuration, handler, framerCommands,
-            multiplexer, this, dataSubscription);
+        final Framer framer = new Framer(configuration, handler, multiplexer, dataSubscription);
         multiplexer.framer(framer);
         framerRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace, fixCounters.exceptions(), framer);
     }
-
 
     private BackoffIdleStrategy backoffIdleStrategy()
     {
@@ -139,26 +120,6 @@ public class FixEngine extends GatewayProcess
         thread.start();
     }
 
-    // TODO: figure out correct type for dictionary
-    public synchronized InitiatorSession initiate(final SessionConfiguration configuration)
-    {
-        framerProxy.connect(configuration);
-        signal.await(connectionTimeout);
-        final InitiatorSession addedSession = this.addedSession;
-        if (addedSession == null)
-        {
-            LangUtil.rethrowUnchecked(this.exception != null ? this.exception : timeout(configuration));
-        }
-        this.addedSession = null;
-        return addedSession;
-    }
-
-    private ConnectionTimeoutException timeout(final SessionConfiguration configuration)
-    {
-        return new ConnectionTimeoutException(
-            "Connection timed out connecting to: " + configuration.host() + ":" + configuration.port());
-    }
-
     public synchronized void close()
     {
         framerRunner.close();
@@ -167,15 +128,4 @@ public class FixEngine extends GatewayProcess
         super.close();
     }
 
-    public void onInitiatorSessionActive(final InitiatorSession session)
-    {
-        addedSession = session;
-        signal.signal();
-    }
-
-    public void onInitiationError(final Exception exception)
-    {
-        this.exception = exception;
-        signal.signal();
-    }
 }

@@ -19,19 +19,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
-import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.fix_gateway.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.FixEngine;
-import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -46,12 +40,6 @@ public class FramerTest
     private static final InetSocketAddress TEST_ADDRESS = new InetSocketAddress("localhost", 9998);
     private static final InetSocketAddress FRAMER_ADDRESS = new InetSocketAddress("localhost", 9999);
     private static final long CONNECTION_ID = 2L;
-    private static final SessionConfiguration CONFIGURATION = SessionConfiguration
-        .builder()
-        .address(TEST_ADDRESS.getHostName(), TEST_ADDRESS.getPort())
-        .senderCompId("LEH_LZJ02")
-        .targetCompId("CCG")
-        .build();
 
     private ServerSocketChannel server;
 
@@ -62,17 +50,13 @@ public class FramerTest
     private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private FixEngine mockGateway = mock(FixEngine.class);
-    private OneToOneConcurrentArrayQueue<FramerCommand> commandQueue = new OneToOneConcurrentArrayQueue<>(10);
     private Session mockSession = mock(Session.class);
-    private MilliClock mockClock = mock(MilliClock.class);
 
-    private FramerProxy proxy = new FramerProxy(commandQueue, mock(AtomicCounter.class),
-        new NoOpIdleStrategy());
     private StaticConfiguration staticConfiguration = new StaticConfiguration()
         .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort());
 
-    private Framer framer = new Framer(mockClock, staticConfiguration, mockConnectionHandler, commandQueue,
-        mock(Multiplexer.class), mockGateway, mock(Subscription.class));
+    private Framer framer = new Framer(staticConfiguration, mockConnectionHandler,
+        mock(Multiplexer.class), mock(Subscription.class));
 
     @Before
     public void setUp() throws IOException
@@ -81,16 +65,11 @@ public class FramerTest
 
         clientBuffer.putInt(10, 5);
 
-        when(mockConnectionHandler.receiverEndPoint(any(SocketChannel.class), anyLong(), any(Session.class)))
+        when(mockConnectionHandler.receiverEndPoint(any(SocketChannel.class), anyLong()))
             .thenReturn(mockReceiverEndPoint);
 
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong()))
             .thenReturn(mockSenderEndPoint);
-
-        when(mockConnectionHandler.initiateSession(any(SocketAddress.class), eq(mockGateway), eq(CONFIGURATION)))
-            .thenReturn(mockSession);
-
-        when(mockConnectionHandler.acceptSession(any(SocketAddress.class))).thenReturn(mockSession);
 
         when(mockReceiverEndPoint.connectionId()).thenReturn(CONNECTION_ID);
     }
@@ -122,7 +101,7 @@ public class FramerTest
         framer.doWork();
 
         then:
-        verify(mockConnectionHandler).receiverEndPoint(notNull(SocketChannel.class), anyLong(), any(Session.class));
+        verify(mockConnectionHandler).receiverEndPoint(notNull(SocketChannel.class), anyLong());
     }
 
     @Test
@@ -161,7 +140,7 @@ public class FramerTest
         framer.doWork();
 
         when:
-        proxy.disconnect(CONNECTION_ID);
+        //proxy.disconnect(CONNECTION_ID); TODO
         framer.doWork();
 
         then:
@@ -171,7 +150,7 @@ public class FramerTest
     private void connect() throws Exception
     {
         given:
-        proxy.connect(CONFIGURATION);
+        //proxy.connect(CONFIGURATION); TODO
 
         when:
         framer.doWork();
@@ -193,7 +172,7 @@ public class FramerTest
 
         connect();
 
-        verify(mockGateway).onInitiationError(any(IOException.class));
+        // TODO: reply with error
     }
 
     private void aClientConnects() throws IOException

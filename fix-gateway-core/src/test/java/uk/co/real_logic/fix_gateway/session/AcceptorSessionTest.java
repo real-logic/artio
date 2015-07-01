@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.Test;
-import uk.co.real_logic.agrona.collections.LongHashSet;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.verify;
@@ -25,11 +24,9 @@ import static uk.co.real_logic.fix_gateway.session.SessionState.*;
 
 public class AcceptorSessionTest extends AbstractSessionTest
 {
-    private final LongHashSet acceptedSessions = new LongHashSet(40, -1);
-
     private AcceptorSession session = new AcceptorSession(
         HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy, mockPublication, null,
-        BEGIN_STRING, SENDING_TIME_WINDOW, mockSessionIds, acceptedSessions, mockReceivedMsgSeqNo,
+        BEGIN_STRING, SENDING_TIME_WINDOW, mockSessionIds, mockReceivedMsgSeqNo,
         mockSentMsgSeqNo);
 
     @Test
@@ -89,7 +86,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
         final AcceptorSession secondSession = new AcceptorSession(
             HEARTBEAT_INTERVAL, 4L, fakeClock, mockProxy, mockPublication, null,
-            BEGIN_STRING, SENDING_TIME_WINDOW, mockSessionIds, acceptedSessions, mockReceivedMsgSeqNo, mockSentMsgSeqNo);
+            BEGIN_STRING, SENDING_TIME_WINDOW, mockSessionIds, mockReceivedMsgSeqNo, mockSentMsgSeqNo);
 
         secondSession.onLogon(HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, fakeClock.time(), false);
 

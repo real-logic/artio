@@ -133,7 +133,9 @@ public final class SystemTestUtil
             .senderCompId(initiatorId)
             .targetCompId(acceptorId)
             .build();
-        return gateway.initiate(config);
+
+        return null;
+        // TODO: return gateway.initiate(config);
     }
 
     public static FixEngine launchInitiatingGateway(final NewSessionHandler sessionHandler)

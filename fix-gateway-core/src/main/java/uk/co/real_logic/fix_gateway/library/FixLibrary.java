@@ -19,6 +19,7 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.ConnectionTimeoutException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
@@ -166,11 +167,38 @@ public class FixLibrary extends GatewayProcess
             fixCounters.sentMsgSeqNo(connectionId));
     }
 
+    // TODO: refactor to callback
+    public Session acceptSession(final String address, final long connectionId)
+    {
+        final GatewayPublication publication = outboundStreams.gatewayPublication();
+        final int defaultInterval = configuration.defaultHeartbeatInterval();
+
+        return new AcceptorSession(
+            defaultInterval,
+            connectionId,
+            clock,
+            sessionProxy(connectionId),
+            publication,
+            sessionIdStrategy,
+            configuration.beginString(),
+            configuration.sendingTimeWindow(),
+            sessionIds,
+            fixCounters.receivedMsgSeqNo(connectionId),
+            fixCounters.sentMsgSeqNo(connectionId));
+    }
+
     private SessionProxy sessionProxy(final long connectionId)
     {
         return new SessionProxy(
             configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy,
             configuration.sessionCustomisationStrategy(), System::currentTimeMillis, connectionId);
+    }
+
+    // TODO
+    private ConnectionTimeoutException timeout(final SessionConfiguration configuration)
+    {
+        return new ConnectionTimeoutException(
+            "Connection timed out connecting to: " + configuration.host() + ":" + configuration.port());
     }
 
 }
