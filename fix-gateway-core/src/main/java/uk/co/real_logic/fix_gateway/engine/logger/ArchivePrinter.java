@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
+import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
@@ -123,7 +124,9 @@ public class ArchivePrinter implements SessionHandler
         output.printf("connection %d has logged in as session %d\n", connectionId, sessionId);
     }
 
-    public void onConnect(final int streamId, final long connectionId,
+    public void onConnect(final int sessionId,
+                          final long connectionId,
+                          final ConnectionType type,
                           final DirectBuffer buffer,
                           final int addressOffset,
                           final int addressLength)
@@ -132,7 +135,8 @@ public class ArchivePrinter implements SessionHandler
         output.printf("Connected to %s as connection %d\n", address, connectionId);
     }
 
-    public void onInitiateConnection(final int streamId, final int port,
+    public void onInitiateConnection(final int streamId,
+                                     final int port,
                                      final String host,
                                      final String senderCompId,
                                      final String targetCompId)

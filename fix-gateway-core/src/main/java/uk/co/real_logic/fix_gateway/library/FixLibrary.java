@@ -21,6 +21,7 @@ import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.*;
@@ -34,7 +35,6 @@ public class FixLibrary extends GatewayProcess
     private final MilliClock clock;
     private final StaticConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
-    private final SessionIds sessionIds = new SessionIds();
 
     private Session incomingSession;
     private SessionConfiguration sessionConfiguration;
@@ -86,27 +86,33 @@ public class FixLibrary extends GatewayProcess
 
     private final DataSubscriber dataSubscriber = new DataSubscriber(new SessionHandler()
     {
-        public void onConnect(final int streamId,
+        public void onConnect(final int sessionId,
                               final long connectionId,
+                              final ConnectionType type,
                               final DirectBuffer buffer,
                               final int addressOffset,
                               final int addressLength)
         {
-            if (streamId == outboundPublication.streamId())
+            if (sessionId == outboundPublication.streamId())
             {
-                final Session session = initiateSession(connectionId);
-                final SessionParser parser = new SessionParser(
-                    session, sessionIdStrategy, configuration.authenticationStrategy());
-                final SessionHandler handler = configuration.newSessionHandler().onConnect(session);
-                final SessionSubscriber subscriber = new SessionSubscriber(parser, session, handler);
-                sessions.put(connectionId, subscriber);
+                if (type == ConnectionType.INITIATOR)
+                {
+                    final Session session = initiateSession(connectionId);
+                    newSession(connectionId, session);
+                }
+                else
+                {
+                    final String address = buffer.getStringUtf8(addressOffset, addressLength);
+                    final Session session = acceptSession(address, connectionId);
+                    newSession(connectionId, session);
+                }
             }
             else
             {
                 final SessionSubscriber subscriber = sessions.get(connectionId);
                 if (subscriber != null)
                 {
-                    subscriber.onConnect(streamId, connectionId, buffer, addressOffset, addressLength);
+                    subscriber.onConnect(sessionId, connectionId, type, buffer, addressOffset, addressLength);
                 }
             }
         }
@@ -143,6 +149,15 @@ public class FixLibrary extends GatewayProcess
             }
         }
     });
+
+    private void newSession(final long connectionId, final Session session)
+    {
+        final SessionParser parser = new SessionParser(
+            session, sessionIdStrategy, configuration.authenticationStrategy());
+        final SessionHandler handler = configuration.newSessionHandler().onConnect(session);
+        final SessionSubscriber subscriber = new SessionSubscriber(parser, session, handler);
+        sessions.put(connectionId, subscriber);
+    }
 
     public Session initiateSession(final long connectionId)
     {

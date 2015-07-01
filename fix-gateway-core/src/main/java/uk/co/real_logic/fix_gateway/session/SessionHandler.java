@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 
 public interface SessionHandler
 {
@@ -36,9 +37,9 @@ public interface SessionHandler
     }
 
     default void onConnect(
-        final int streamId,
+        final int sessionId,
         final long connectionId,
-        final DirectBuffer buffer,
+        final ConnectionType type, final DirectBuffer buffer,
         final int addressOffset,
         final int addressLength)
     {

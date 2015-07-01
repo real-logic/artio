@@ -92,7 +92,12 @@ public class DataSubscriber implements FragmentHandler
                 connect.wrap(buffer, offset, blockLength, version);
                 final int addressOffset = offset + ConnectDecoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
                 sessionHandler.onConnect(
-                    connect.streamId(), connect.connection(), buffer, addressOffset, connect.addressLength());
+                    connect.sessionId(),
+                    connect.connection(),
+                    connect.type(),
+                    buffer,
+                    addressOffset,
+                    connect.addressLength());
                 return connect.limit();
             }
 

@@ -19,9 +19,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
-import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
+import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.io.IOException;
@@ -49,14 +49,14 @@ public class FramerTest
     private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
     private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
-    private FixEngine mockGateway = mock(FixEngine.class);
+    private GatewayPublication mockGatewayPublication = mock(GatewayPublication.class);
     private Session mockSession = mock(Session.class);
 
     private StaticConfiguration staticConfiguration = new StaticConfiguration()
         .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort());
 
     private Framer framer = new Framer(staticConfiguration, mockConnectionHandler,
-        mock(Multiplexer.class), mock(Subscription.class));
+        mock(Multiplexer.class), mock(Subscription.class), mockGatewayPublication);
 
     @Before
     public void setUp() throws IOException

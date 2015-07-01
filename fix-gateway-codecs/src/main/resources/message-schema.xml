@@ -24,6 +24,10 @@
         <type name="TermId" primitiveType="int32"/>
         <type name="MessageType" primitiveType="int32"/>
         <type name="Timestamp" primitiveType="int64"/>
+        <enum name="ConnectionType" encodingType="uint8">
+            <validValue name="ACCEPTOR">0</validValue>
+            <validValue name="INITIATOR">1</validValue>
+        </enum>
     </types>
     <sbe:message name="FixMessage" id="1" description="A framed FIX message">
         <field name="messageType" id="1" type="MessageType"/>
@@ -53,7 +57,8 @@
     </sbe:message>
     <sbe:message name="Connect" id="10" description="A TCP Connection has connected">
         <field name="connection" id="17" type="ConnectionId"/>
-        <field name="streamId" id="19" type="int32"/>
+        <field name="sessionId" id="19" type="int32"/>
+        <field name="type" id="24" type="ConnectionType"/>
         <data name="address" id="18" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="InitiateConnection" id="11" description="Try to make an outbound connection">

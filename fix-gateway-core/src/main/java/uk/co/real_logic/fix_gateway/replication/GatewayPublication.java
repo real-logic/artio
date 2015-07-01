@@ -119,7 +119,10 @@ public class GatewayPublication
         return position;
     }
 
-    public long saveConnect(final long connectionId, final String address, final int streadId)
+    public long saveConnect(final long connectionId,
+                            final String address,
+                            final int sessionId,
+                            final ConnectionType type)
     {
         final byte[] addressString = address.getBytes(StandardCharsets.UTF_8);
 
@@ -141,7 +144,8 @@ public class GatewayPublication
         connect
             .wrap(buffer, offset)
             .connection(connectionId)
-            .streamId(streadId)
+            .sessionId(sessionId)
+            .type(type)
             .putAddress(addressString, 0, addressString.length);
 
         bufferClaim.commit();
