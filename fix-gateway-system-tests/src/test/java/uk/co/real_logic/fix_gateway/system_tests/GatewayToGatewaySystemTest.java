@@ -19,7 +19,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.fix_gateway.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.session.InitiatorSession;

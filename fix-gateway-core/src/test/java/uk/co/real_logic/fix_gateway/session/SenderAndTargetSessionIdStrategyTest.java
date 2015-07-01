@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.SessionConfiguration;
+import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 
 import java.util.Arrays;
 import java.util.List;

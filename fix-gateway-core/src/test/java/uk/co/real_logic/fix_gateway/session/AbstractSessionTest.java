@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.fix_gateway.framer.FakeMilliClock;
+import uk.co.real_logic.fix_gateway.engine.framer.FakeMilliClock;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 
 import static org.junit.Assert.assertEquals;

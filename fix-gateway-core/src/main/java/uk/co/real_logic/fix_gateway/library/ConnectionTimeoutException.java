@@ -13,20 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session;
+package uk.co.real_logic.fix_gateway.library;
 
-import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
-import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
-
-/**
- * Should be stateless.
- */
-public interface SessionIdStrategy
+public class ConnectionTimeoutException extends RuntimeException
 {
-    Object onAcceptorLogon(final HeaderDecoder header);
-
-    Object onInitiatorLogon(final SessionConfiguration configuration);
-
-    void setupSession(final Object compositeKey, final HeaderEncoder encoder);
+    public ConnectionTimeoutException(final String message)
+    {
+        super(message);
+    }
 }

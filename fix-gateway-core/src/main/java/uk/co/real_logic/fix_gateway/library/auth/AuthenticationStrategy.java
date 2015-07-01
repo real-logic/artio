@@ -13,20 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session;
+package uk.co.real_logic.fix_gateway.library.auth;
 
-import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
-import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
+import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 
-/**
- * Should be stateless.
- */
-public interface SessionIdStrategy
+public interface AuthenticationStrategy
 {
-    Object onAcceptorLogon(final HeaderDecoder header);
+    boolean authenticate(final LogonDecoder logon);
 
-    Object onInitiatorLogon(final SessionConfiguration configuration);
-
-    void setupSession(final Object compositeKey, final HeaderEncoder encoder);
+    default AuthenticationStrategy and(AuthenticationStrategy other)
+    {
+        return logon -> authenticate(logon) && other.authenticate(logon);
+    }
 }

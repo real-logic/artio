@@ -13,20 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session;
+package uk.co.real_logic.fix_gateway.engine.logger;
 
-import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
-import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
+import java.io.File;
+import java.nio.ByteBuffer;
 
-/**
- * Should be stateless.
- */
-public interface SessionIdStrategy
+public interface ExistingBufferFactory
 {
-    Object onAcceptorLogon(final HeaderDecoder header);
-
-    Object onInitiatorLogon(final SessionConfiguration configuration);
-
-    void setupSession(final Object compositeKey, final HeaderEncoder encoder);
+    ByteBuffer map(File fileName);
 }

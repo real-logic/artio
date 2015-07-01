@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;

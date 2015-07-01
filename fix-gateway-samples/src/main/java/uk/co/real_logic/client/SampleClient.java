@@ -16,8 +16,8 @@
 package uk.co.real_logic.client;
 
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.fix_gateway.FixEngine;
-import uk.co.real_logic.fix_gateway.SessionConfiguration;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;

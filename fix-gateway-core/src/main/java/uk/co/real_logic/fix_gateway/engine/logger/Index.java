@@ -13,20 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session;
+package uk.co.real_logic.fix_gateway.engine.logger;
 
-import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
-import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
+import uk.co.real_logic.agrona.DirectBuffer;
 
-/**
- * Should be stateless.
- */
-public interface SessionIdStrategy
+public interface Index extends AutoCloseable
 {
-    Object onAcceptorLogon(final HeaderDecoder header);
+    void indexRecord(final DirectBuffer buffer, final int offset, final int length, final int streamId);
 
-    Object onInitiatorLogon(final SessionConfiguration configuration);
+    default String getName()
+    {
+        return getClass().getSimpleName();
+    }
 
-    void setupSession(final Object compositeKey, final HeaderEncoder encoder);
+    void close();
 }

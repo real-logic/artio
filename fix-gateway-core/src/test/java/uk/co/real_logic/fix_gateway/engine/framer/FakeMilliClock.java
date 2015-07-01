@@ -13,20 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session;
+package uk.co.real_logic.fix_gateway.engine.framer;
 
-import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
-import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
+import uk.co.real_logic.fix_gateway.util.MilliClock;
 
-/**
- * Should be stateless.
- */
-public interface SessionIdStrategy
+public class FakeMilliClock implements MilliClock
 {
-    Object onAcceptorLogon(final HeaderDecoder header);
+    private long time;
 
-    Object onInitiatorLogon(final SessionConfiguration configuration);
+    public FakeMilliClock()
+    {
+        time = 0;
+    }
 
-    void setupSession(final Object compositeKey, final HeaderEncoder encoder);
+    public void advanceSeconds(final int timeInSeconds)
+    {
+        advanceMilliSeconds(MilliClock.fromSeconds(timeInSeconds));
+    }
+
+    public void advanceMilliSeconds(final long duration)
+    {
+        time += duration;
+    }
+
+    public long time()
+    {
+        return time;
+    }
 }

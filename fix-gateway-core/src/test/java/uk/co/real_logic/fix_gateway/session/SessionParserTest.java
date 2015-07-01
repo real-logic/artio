@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.session;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;

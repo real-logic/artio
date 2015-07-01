@@ -17,11 +17,11 @@ package uk.co.real_logic.server;
 
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.concurrent.SigInt;
-import uk.co.real_logic.fix_gateway.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
-import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.auth.CompIdAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.auth.SenderIdAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.auth.CompIdAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.auth.SenderIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
 

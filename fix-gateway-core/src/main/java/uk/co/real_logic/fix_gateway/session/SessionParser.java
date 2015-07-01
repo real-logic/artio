@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
