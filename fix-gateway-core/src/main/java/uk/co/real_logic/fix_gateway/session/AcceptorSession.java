@@ -33,7 +33,6 @@ public final class AcceptorSession extends Session
         final SessionIdStrategy sessionIdStrategy,
         final char[] beginString,
         final long sendingTimeWindow,
-        final SessionIds sessionIds,
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo)
     {
@@ -47,7 +46,6 @@ public final class AcceptorSession extends Session
             sessionIdStrategy,
             beginString,
             sendingTimeWindow,
-            sessionIds,
             receivedMsgSeqNo,
             sentMsgSeqNo);
 

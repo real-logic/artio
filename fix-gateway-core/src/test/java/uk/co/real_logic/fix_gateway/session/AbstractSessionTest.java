@@ -36,7 +36,6 @@ public abstract class AbstractSessionTest
     protected SessionProxy mockProxy = mock(SessionProxy.class);
     protected GatewayPublication mockPublication = mock(GatewayPublication.class);
     protected FakeMilliClock fakeClock = new FakeMilliClock();
-    protected SessionIds mockSessionIds = mock(SessionIds.class);
     protected AtomicCounter mockReceivedMsgSeqNo = mock(AtomicCounter.class);
     protected AtomicCounter mockSentMsgSeqNo = mock(AtomicCounter.class);
 

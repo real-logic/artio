@@ -54,7 +54,6 @@ public class Session
     protected final MutableAsciiFlyweight string;
     private final char[] expectedBeginString;
     private final long sendingTimeWindow;
-    private final SessionIds sessionIds;
     private final AtomicCounter receivedMsgSeqNo;
     private final AtomicCounter sentMsgSeqNo;
     protected Object sessionKey;
@@ -80,11 +79,9 @@ public class Session
         final SessionIdStrategy sessionIdStrategy,
         final char[] expectedBeginString,
         final long sendingTimeWindow,
-        final SessionIds sessionIds,
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo)
     {
-        Verify.notNull(sessionIds, "sessionIds");
         Verify.notNull(clock, "clock");
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
@@ -100,7 +97,6 @@ public class Session
         this.sessionIdStrategy = sessionIdStrategy;
         this.expectedBeginString = expectedBeginString;
         this.sendingTimeWindow = sendingTimeWindow;
-        this.sessionIds = sessionIds;
         this.receivedMsgSeqNo = receivedMsgSeqNo;
         this.sentMsgSeqNo = sentMsgSeqNo;
 
@@ -169,7 +165,6 @@ public class Session
 
     public void disconnect()
     {
-        sessionIds.onDisconnect(sessionKey);
         proxy.disconnect(connectionId);
         state(DISCONNECTED);
     }

@@ -35,7 +35,6 @@ public class SessionTest extends AbstractSessionTest
         null,
         BEGIN_STRING,
         SENDING_TIME_WINDOW,
-        mockSessionIds,
         mockReceivedMsgSeqNo,
         mockSentMsgSeqNo);
 

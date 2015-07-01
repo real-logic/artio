@@ -26,7 +26,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
 {
     private AcceptorSession session = new AcceptorSession(
         HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy, mockPublication, null,
-        BEGIN_STRING, SENDING_TIME_WINDOW, mockSessionIds, mockReceivedMsgSeqNo,
+        BEGIN_STRING, SENDING_TIME_WINDOW, mockReceivedMsgSeqNo,
         mockSentMsgSeqNo);
 
     @Test
@@ -86,7 +86,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
         final AcceptorSession secondSession = new AcceptorSession(
             HEARTBEAT_INTERVAL, 4L, fakeClock, mockProxy, mockPublication, null,
-            BEGIN_STRING, SENDING_TIME_WINDOW, mockSessionIds, mockReceivedMsgSeqNo, mockSentMsgSeqNo);
+            BEGIN_STRING, SENDING_TIME_WINDOW, mockReceivedMsgSeqNo, mockSentMsgSeqNo);
 
         secondSession.onLogon(HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, fakeClock.time(), false);
 

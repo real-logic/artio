@@ -30,10 +30,8 @@ public class InitiatorSession extends Session
         final SessionProxy proxy,
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
-        final long sessionId,
         final char[] beginString,
         final long sendingTimeWindow,
-        final SessionIds sessionIds,
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo)
     {
@@ -47,11 +45,8 @@ public class InitiatorSession extends Session
             sessionIdStrategy,
             beginString,
             sendingTimeWindow,
-            sessionIds,
             receivedMsgSeqNo,
             sentMsgSeqNo);
-
-        id(sessionId);
     }
 
     void onLogon(

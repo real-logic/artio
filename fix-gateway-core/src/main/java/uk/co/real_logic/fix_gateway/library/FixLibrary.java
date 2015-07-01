@@ -157,10 +157,8 @@ public class FixLibrary extends GatewayProcess
             sessionProxy(connectionId).setupSession(-1, key),
             publication,
             sessionIdStrategy,
-            -1,
             configuration.beginString(),
             configuration.sendingTimeWindow(),
-            sessionIds,
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId));
     }
@@ -180,7 +178,6 @@ public class FixLibrary extends GatewayProcess
             sessionIdStrategy,
             configuration.beginString(),
             configuration.sendingTimeWindow(),
-            sessionIds,
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId));
     }
