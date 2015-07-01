@@ -20,7 +20,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
 
-public class SessionSubscriber implements SessionHandler
+public class SessionSubscriber implements SessionHandler, AutoCloseable
 {
     private final SessionParser parser;
     private final Session session;
@@ -60,5 +60,10 @@ public class SessionSubscriber implements SessionHandler
     public int poll(final long time)
     {
         return session.poll(time);
+    }
+
+    public void close()
+    {
+        session.logoutAndDisconnect();
     }
 }

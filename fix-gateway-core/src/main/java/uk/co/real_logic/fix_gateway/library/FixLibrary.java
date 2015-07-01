@@ -230,4 +230,9 @@ public class FixLibrary extends GatewayProcess
             "Connection timed out connecting to: " + configuration.host() + ":" + configuration.port());
     }
 
+    public void close()
+    {
+        sessions.values().forEach(SessionSubscriber::close);
+        super.close();
+    }
 }

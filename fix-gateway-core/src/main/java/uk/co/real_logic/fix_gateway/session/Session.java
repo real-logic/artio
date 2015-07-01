@@ -276,9 +276,14 @@ public class Session
         }
         else
         {
-            sendLogout();
-            disconnect();
+            logoutAndDisconnect();
         }
+    }
+
+    public void logoutAndDisconnect()
+    {
+        sendLogout();
+        disconnect();
     }
 
     void onTestRequest(

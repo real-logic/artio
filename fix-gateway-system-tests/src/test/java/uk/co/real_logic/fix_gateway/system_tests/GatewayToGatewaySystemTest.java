@@ -168,10 +168,11 @@ public class GatewayToGatewaySystemTest
     @After
     public void close() throws Exception
     {
-        quietClose(acceptingGateway);
-        quietClose(initiatingGateway);
-        quietClose(acceptingLibrary);
         quietClose(initiatingLibrary);
+        quietClose(acceptingLibrary);
+
+        quietClose(initiatingGateway);
+        quietClose(acceptingGateway);
         quietClose(mediaDriver);
     }
 
