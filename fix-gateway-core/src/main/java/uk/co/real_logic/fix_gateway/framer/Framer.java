@@ -48,7 +48,6 @@ import static java.nio.channels.SelectionKey.OP_READ;
 public class Framer implements Agent
 {
     private final Consumer<FramerCommand> onCommandFunc = this::onCommand;
-    private final List<Session> sessions = new ArrayList<>();
     private final List<ReceiverEndPoint> receiverEndPoints = new ArrayList<>();
     private final DataSubscriber dataSubscriber;
 
@@ -99,7 +98,6 @@ public class Framer implements Agent
     {
         return commandQueue.drain(onCommandFunc) +
             pollSockets() +
-            pollSessions() +
             dataSubscription.poll(dataSubscriber, 5);
     }
 
@@ -151,19 +149,7 @@ public class Framer implements Agent
         receiverEndPoints.add(receiverEndPoint);
         channel.register(selector, OP_READ, receiverEndPoint);
 
-        sessions.add(session);
         multiplexer.onNewConnection(connectionHandler.senderEndPoint(channel, connectionId));
-    }
-
-    private int pollSessions()
-    {
-        final long time = clock.time();
-        int stateChanges = 0;
-        for (final Session session: sessions)
-        {
-            stateChanges += session.poll(time);
-        }
-        return stateChanges;
     }
 
     public void onConnect(final SessionConfiguration configuration)
@@ -213,7 +199,6 @@ public class Framer implements Agent
             {
                 endPoint.close();
                 it.remove();
-                sessions.remove(endPoint.session());
                 break;
             }
         }
@@ -223,7 +208,7 @@ public class Framer implements Agent
     {
         try
         {
-            sessions.forEach(Session::disconnect);
+            receiverEndPoints.forEach(ReceiverEndPoint::close);
             if (selector.isOpen())
             {
                 // JDK on Windows - sigh

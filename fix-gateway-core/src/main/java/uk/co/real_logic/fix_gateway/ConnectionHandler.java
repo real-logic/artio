@@ -83,7 +83,6 @@ public class ConnectionHandler
             connectionId,
             sessionIdStrategy,
             sessionIds,
-            sessionParser,
             fixCounters.messagesRead(channel.getRemoteAddress())
         );
     }
@@ -139,7 +138,6 @@ public class ConnectionHandler
             sessionProxy(connectionId).setupSession(sessionId, key),
             publication,
             sessionIdStrategy,
-            gateway,
             sessionId,
             configuration.beginString(),
             configuration.sendingTimeWindow(),

@@ -36,7 +36,8 @@ public interface SessionHandler
     }
 
     default void onConnect(
-        final int streamId, final long connectionId,
+        final int streamId,
+        final long connectionId,
         final DirectBuffer buffer,
         final int addressOffset,
         final int addressLength)

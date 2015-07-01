@@ -58,7 +58,6 @@ public class ReceiverEndPoint
     private final long connectionId;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
-    private final SessionParser sessionParser;
     private final AtomicCounter messagesRead;
     private final AtomicBuffer buffer;
     private final AsciiFlyweight string;
@@ -74,7 +73,6 @@ public class ReceiverEndPoint
         final long connectionId,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
-        final SessionParser sessionParser,
         final AtomicCounter messagesRead)
     {
         this.channel = channel;
@@ -82,13 +80,7 @@ public class ReceiverEndPoint
         this.connectionId = connectionId;
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
-        this.sessionParser = sessionParser;
         this.messagesRead = messagesRead;
-        // TODO:
-        if (sessionParser.session() instanceof InitiatorSession)
-        {
-            sessionId = sessionParser.session().id();
-        }
 
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new AsciiFlyweight(buffer);
@@ -122,16 +114,6 @@ public class ReceiverEndPoint
             // TODO: log
             ex.printStackTrace();
         }
-    }
-
-    public Session session()
-    {
-        return sessionParser.session();
-    }
-
-    private void onDisconnect()
-    {
-        session().disconnect();
     }
 
     private void readData() throws IOException
@@ -192,18 +174,11 @@ public class ReceiverEndPoint
                     logon.decode(string, offset, length);
                     final Object compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
                     sessionId = sessionIds.onLogon(compositeKey);
+                    publication.saveLogon(connectionId, sessionId);
                 }
 
-                // TODO: remove
-                if (sessionParser.onMessage(buffer, offset, length, messageType, sessionId))
-                {
-                    messagesRead.orderedIncrement();
-                    publication.saveMessage(buffer, offset, length, messageType, sessionId, connectionId);
-                }
-                else
-                {
-                    DebugLogger.log("Message not authenticated %s", string, offset, length);
-                }
+                messagesRead.orderedIncrement();
+                publication.saveMessage(buffer, offset, length, messageType, sessionId, connectionId);
 
                 offset += length;
             }
@@ -271,6 +246,11 @@ public class ReceiverEndPoint
             e.printStackTrace();
         }
 
+        onDisconnect();
+    }
+
+    private void onDisconnect()
+    {
         publication.saveDisconnect(connectionId);
     }
 }

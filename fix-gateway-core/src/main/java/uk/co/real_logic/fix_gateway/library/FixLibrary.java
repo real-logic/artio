@@ -19,7 +19,6 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.fix_gateway.FixEngine;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
@@ -39,6 +38,7 @@ public class FixLibrary extends GatewayProcess
     private final SessionIds sessionIds = new SessionIds();
 
     private Session incomingSession;
+    private SessionConfiguration sessionConfiguration;
 
     public FixLibrary(final StaticConfiguration configuration)
     {
@@ -60,6 +60,13 @@ public class FixLibrary extends GatewayProcess
 
     public Session initiate(final SessionConfiguration configuration, final IdleStrategy idleStrategy)
     {
+        if (sessionConfiguration != null || incomingSession != null)
+        {
+            throw new IllegalStateException("You can't initiate a session whilst initiating a session");
+        }
+
+        sessionConfiguration = configuration;
+
         outboundPublication.saveInitiateConnection(
             configuration.host(),
             configuration.port(),
@@ -74,6 +81,7 @@ public class FixLibrary extends GatewayProcess
 
         final Session session = incomingSession;
         incomingSession = null;
+        sessionConfiguration = null;
         return session;
     }
 
@@ -87,8 +95,7 @@ public class FixLibrary extends GatewayProcess
         {
             if (streamId == outboundPublication.streamId())
             {
-                final String address = buffer.getStringUtf8(addressOffset, addressLength);
-                final Session session = initiateSession(address, null, null, connectionId);
+                final Session session = initiateSession(connectionId);
                 final SessionParser parser = new SessionParser(
                     session, sessionIdStrategy, configuration.authenticationStrategy());
                 final SessionHandler handler = configuration.newSessionHandler().onConnect(session);
@@ -102,6 +109,15 @@ public class FixLibrary extends GatewayProcess
                 {
                     subscriber.onConnect(streamId, connectionId, buffer, addressOffset, addressLength);
                 }
+            }
+        }
+
+        public void onLogon(final long connectionId, final long sessionId)
+        {
+            final SessionSubscriber subscriber = sessions.get(connectionId);
+            if (subscriber != null)
+            {
+                subscriber.onLogon(connectionId, sessionId);
             }
         }
 
@@ -129,34 +145,26 @@ public class FixLibrary extends GatewayProcess
         }
     });
 
-    public Session initiateSession(final String address,
-                                   final FixEngine gateway,
-                                   final SessionConfiguration sessionConfiguration,
-                                   final long connectionId)
+    public Session initiateSession(final long connectionId)
     {
         final Object key = sessionIdStrategy.onInitiatorLogon(sessionConfiguration);
-        final long sessionId = sessionIds.onLogon(key);
         final int defaultInterval = configuration.defaultHeartbeatInterval();
         final GatewayPublication publication = outboundStreams.gatewayPublication();
-
-        publication.saveConnect(connectionId, address, 0);
 
         return new InitiatorSession(
             defaultInterval,
             connectionId,
             clock,
-            sessionProxy(connectionId).setupSession(sessionId, key),
+            sessionProxy(connectionId).setupSession(-1, key),
             publication,
             sessionIdStrategy,
-            gateway,
-            sessionId,
+            -1,
             configuration.beginString(),
             configuration.sendingTimeWindow(),
             sessionIds,
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId));
     }
-
 
     private SessionProxy sessionProxy(final long connectionId)
     {

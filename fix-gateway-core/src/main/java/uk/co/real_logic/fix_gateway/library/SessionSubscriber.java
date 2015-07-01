@@ -51,4 +51,9 @@ public class SessionSubscriber implements SessionHandler
         session.disconnect();
         handler.onDisconnect(connectionId);
     }
+
+    public void onLogon(final long connectionId, final long sessionId)
+    {
+        session.id(sessionId);
+    }
 }
