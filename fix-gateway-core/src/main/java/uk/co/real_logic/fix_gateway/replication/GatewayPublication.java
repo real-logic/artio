@@ -40,6 +40,7 @@ public class GatewayPublication
     private final LogonEncoder logon = new LogonEncoder();
     private final ConnectEncoder connect = new ConnectEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
+    private final RequestDisconnectEncoder requestDisconnect = new RequestDisconnectEncoder();
     private final DisconnectEncoder disconnect = new DisconnectEncoder();
     private final FixMessageEncoder messageFrame = new FixMessageEncoder();
 
@@ -121,7 +122,7 @@ public class GatewayPublication
 
     public long saveConnect(final long connectionId,
                             final String address,
-                            final int sessionId,
+                            final int libraryId,
                             final ConnectionType type)
     {
         final byte[] addressString = address.getBytes(StandardCharsets.UTF_8);
@@ -144,7 +145,7 @@ public class GatewayPublication
         connect
             .wrap(buffer, offset)
             .connection(connectionId)
-            .sessionId(sessionId)
+            .libraryId(libraryId)
             .type(type)
             .putAddress(addressString, 0, addressString.length);
 
@@ -170,6 +171,31 @@ public class GatewayPublication
         offset += header.encodedLength();
 
         disconnect
+            .wrap(buffer, offset)
+            .connection(connectionId);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long saveRequestDisconnect(final long connectionId)
+    {
+        final long position = claim(header.encodedLength() + RequestDisconnectDecoder.BLOCK_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(requestDisconnect.sbeBlockLength())
+            .templateId(requestDisconnect.sbeTemplateId())
+            .schemaId(requestDisconnect.sbeSchemaId())
+            .version(requestDisconnect.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        requestDisconnect
             .wrap(buffer, offset)
             .connection(connectionId);
 

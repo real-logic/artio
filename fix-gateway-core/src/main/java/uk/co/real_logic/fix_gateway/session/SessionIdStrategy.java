@@ -26,7 +26,12 @@ public interface SessionIdStrategy
 {
     Object onAcceptorLogon(final HeaderDecoder header);
 
+    // TODO: remove
     Object onInitiatorLogon(final SessionConfiguration configuration);
 
+    // TODO: add other parameters
+    Object onInitiatorLogon(String senderCompId, String targetCompId);
+
     void setupSession(final Object compositeKey, final HeaderEncoder encoder);
+
 }

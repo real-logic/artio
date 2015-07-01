@@ -49,7 +49,7 @@ public class ReplicationStreams implements AutoCloseable
         this.failedDataPublications = failedDataPublications;
         this.dataStream = dataStream;
         this.controlStream = controlStream;
-        dataPublication = aeron.addPublication(channel, dataStream, Framer.ACCEPTOR_SESSION_ID);
+        dataPublication = aeron.addPublication(channel, dataStream, Framer.ACCEPTOR_LIBRARY_ID);
     }
 
     public GatewayPublication gatewayPublication()

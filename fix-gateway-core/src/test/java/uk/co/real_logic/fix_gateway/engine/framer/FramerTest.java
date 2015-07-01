@@ -17,12 +17,14 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
-import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.session.SessionIds;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -40,6 +42,7 @@ public class FramerTest
     private static final InetSocketAddress TEST_ADDRESS = new InetSocketAddress("localhost", 9998);
     private static final InetSocketAddress FRAMER_ADDRESS = new InetSocketAddress("localhost", 9999);
     private static final long CONNECTION_ID = 2L;
+    private static final int LIBRARY_ID = 3;
 
     private ServerSocketChannel server;
 
@@ -50,13 +53,14 @@ public class FramerTest
     private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private GatewayPublication mockGatewayPublication = mock(GatewayPublication.class);
-    private Session mockSession = mock(Session.class);
+    private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
+    private SessionIds mockSessionIds = mock(SessionIds.class);
 
     private StaticConfiguration staticConfiguration = new StaticConfiguration()
         .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort());
 
-    private Framer framer = new Framer(staticConfiguration, mockConnectionHandler,
-        mock(Multiplexer.class), mock(Subscription.class), mockGatewayPublication);
+    private Framer framer = new Framer(staticConfiguration, mockConnectionHandler, mock(Multiplexer.class),
+        mock(Subscription.class), mockGatewayPublication, mockSessionIdStrategy, mockSessionIds);
 
     @Before
     public void setUp() throws IOException
@@ -105,19 +109,6 @@ public class FramerTest
     }
 
     @Test
-    public void shouldPollSessionOfConnectedClient() throws Exception
-    {
-        given:
-        aClientConnects();
-
-        when:
-        framer.doWork();
-
-        then:
-        verify(mockSession).poll(0);
-    }
-
-    @Test
     public void shouldPassDataToEndPointWhenSent() throws Exception
     {
         given:
@@ -140,7 +131,7 @@ public class FramerTest
         framer.doWork();
 
         when:
-        //proxy.disconnect(CONNECTION_ID); TODO
+        framer.onRequestDisconnect(CONNECTION_ID, LIBRARY_ID);
         framer.doWork();
 
         then:
@@ -150,7 +141,8 @@ public class FramerTest
     private void connect() throws Exception
     {
         given:
-        //proxy.connect(CONFIGURATION); TODO
+        framer.onInitiateConnection(LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02",
+            "CCG");
 
         when:
         framer.doWork();
@@ -165,6 +157,7 @@ public class FramerTest
         assertNotNull("Sender hasn't connected to server", server.accept());
     }
 
+    @Ignore
     @Test
     public void shouldReplyWithSocketConnectionError() throws Exception
     {

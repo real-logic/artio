@@ -95,7 +95,7 @@ public class FixEngine extends GatewayProcess
             fixCounters);
 
         final Framer framer = new Framer(configuration, handler, multiplexer, dataSubscription,
-            inboundStreams.gatewayPublication());
+            inboundStreams.gatewayPublication(), sessionIdStrategy, sessionIds);
         multiplexer.framer(framer);
         framerRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace, fixCounters.exceptions(), framer);
     }

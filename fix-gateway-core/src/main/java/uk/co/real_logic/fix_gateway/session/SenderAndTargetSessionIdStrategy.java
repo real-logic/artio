@@ -41,6 +41,11 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         return new CompositeKey(senderCompID, targetCompID);
     }
 
+    public Object onInitiatorLogon(final String senderCompId, final String targetCompId)
+    {
+        return new CompositeKey(senderCompId.toCharArray(), targetCompId.toCharArray());
+    }
+
     public void setupSession(final Object compositeKey, final HeaderEncoder encoder)
     {
         final CompositeKey composite = (CompositeKey)compositeKey;

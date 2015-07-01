@@ -37,9 +37,10 @@ public interface SessionHandler
     }
 
     default void onConnect(
-        final int sessionId,
+        final long libraryId,
         final long connectionId,
-        final ConnectionType type, final DirectBuffer buffer,
+        final ConnectionType type,
+        final DirectBuffer buffer,
         final int addressOffset,
         final int addressLength)
     {
@@ -53,6 +54,11 @@ public interface SessionHandler
 
     default void onInitiateConnection(
         final int streamId, final int port, final String host, final String senderCompId, final String targetCompId)
+    {
+        // Optional method, implement if you care about this type of message.
+    }
+
+    default void onRequestDisconnect(final long connectionId)
     {
         // Optional method, implement if you care about this type of message.
     }

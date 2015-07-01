@@ -57,7 +57,7 @@
     </sbe:message>
     <sbe:message name="Connect" id="10" description="A TCP Connection has connected">
         <field name="connection" id="17" type="ConnectionId"/>
-        <field name="sessionId" id="19" type="int32"/>
+        <field name="libraryId" id="19" type="int32"/>
         <field name="type" id="24" type="ConnectionType"/>
         <data name="address" id="18" type="varDataEncoding"/>
     </sbe:message>
@@ -66,5 +66,8 @@
         <data name="host" id="21" type="varDataEncoding"/>
         <data name="senderCompId" id="22" type="varDataEncoding"/>
         <data name="targetCompId" id="23" type="varDataEncoding"/>
+    </sbe:message>
+    <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">
+        <field name="connection" id="24" type="ConnectionId"/>
     </sbe:message>
 </sbe:messageSchema>

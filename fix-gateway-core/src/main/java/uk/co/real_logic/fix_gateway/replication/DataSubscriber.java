@@ -31,6 +31,7 @@ public class DataSubscriber implements FragmentHandler
     private final LogonDecoder logon = new LogonDecoder();
     private final ConnectDecoder connect = new ConnectDecoder();
     private final InitiateConnectionDecoder initiateConnection = new InitiateConnectionDecoder();
+    private final RequestDisconnectDecoder requestDisconnect = new RequestDisconnectDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
 
@@ -92,13 +93,20 @@ public class DataSubscriber implements FragmentHandler
                 connect.wrap(buffer, offset, blockLength, version);
                 final int addressOffset = offset + ConnectDecoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
                 sessionHandler.onConnect(
-                    connect.sessionId(),
+                    connect.libraryId(),
                     connect.connection(),
                     connect.type(),
                     buffer,
                     addressOffset,
                     connect.addressLength());
                 return connect.limit();
+            }
+
+            case RequestDisconnectDecoder.TEMPLATE_ID:
+            {
+                requestDisconnect.wrap(buffer, offset, blockLength, version);
+                sessionHandler.onRequestDisconnect(requestDisconnect.connection());
+                return requestDisconnect.limit();
             }
 
             case InitiateConnectionDecoder.TEMPLATE_ID:

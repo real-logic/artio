@@ -22,6 +22,8 @@ import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.session.SessionIds;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -46,7 +48,7 @@ import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 public class Framer implements Agent, SessionHandler
 {
     // TODO: remove this and identify sensible configuraion/load balancing for acceptor sessions
-    public static final int ACCEPTOR_SESSION_ID = 42;
+    public static final int ACCEPTOR_LIBRARY_ID = 42;
 
     private final List<ReceiverEndPoint> receiverEndPoints = new ArrayList<>();
     private final DataSubscriber dataSubscriber;
@@ -57,6 +59,8 @@ public class Framer implements Agent, SessionHandler
     private final Multiplexer multiplexer;
     private final Subscription outboundDataSubscription;
     private final GatewayPublication inboundPublication;
+    private final SessionIdStrategy sessionIdStrategy;
+    private final SessionIds sessionIds;
     private final Selector selector;
 
     private long nextConnectionId = 0;
@@ -66,13 +70,17 @@ public class Framer implements Agent, SessionHandler
         final ConnectionHandler connectionHandler,
         final Multiplexer multiplexer,
         final Subscription outboundDataSubscription,
-        final GatewayPublication inboundPublication)
+        final GatewayPublication inboundPublication,
+        final SessionIdStrategy sessionIdStrategy,
+        final SessionIds sessionIds)
     {
         this.configuration = configuration;
         this.connectionHandler = connectionHandler;
         this.multiplexer = multiplexer;
         this.outboundDataSubscription = outboundDataSubscription;
         this.inboundPublication = inboundPublication;
+        this.sessionIdStrategy = sessionIdStrategy;
+        this.sessionIds = sessionIds;
         dataSubscriber = new DataSubscriber(multiplexer);
 
         try
@@ -125,10 +133,10 @@ public class Framer implements Agent, SessionHandler
         setupConnection(channel, connectionId);
 
         final String address = channel.getRemoteAddress().toString();
-        inboundPublication.saveConnect(connectionId, address, ACCEPTOR_SESSION_ID, ACCEPTOR);
+        inboundPublication.saveConnect(connectionId, address, ACCEPTOR_LIBRARY_ID, ACCEPTOR);
     }
 
-    public void onInitiateConnection(final int streamId,
+    public void onInitiateConnection(final int libraryId,
                                      final int port,
                                      final String host,
                                      final String senderCompId,
@@ -141,9 +149,11 @@ public class Framer implements Agent, SessionHandler
             channel.connect(address);
             final long connectionId = this.nextConnectionId++;
             setupConnection(channel, connectionId);
-            inboundPublication.saveConnect(connectionId, address.toString(), ACCEPTOR_SESSION_ID, INITIATOR);
+            inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR);
 
-            // TODO: Identify session
+            final Object sessionKey = sessionIdStrategy.onInitiatorLogon(senderCompId, targetCompId);
+            final long sessionId = sessionIds.onLogon(sessionKey);
+            inboundPublication.saveLogon(connectionId, sessionId);
         }
         catch (final Exception e)
         {
@@ -185,6 +195,11 @@ public class Framer implements Agent, SessionHandler
                 break;
             }
         }
+    }
+
+    public void onRequestDisconnect(final long connectionId, final long sessionId)
+    {
+
     }
 
     public void onClose()
