@@ -70,12 +70,12 @@ public class Multiplexer implements SessionHandler
         framer.onDisconnect(connectionId);
     }
 
-    public void onInitiateConnection(final int streamId,
+    public void onInitiateConnection(final int libraryId,
                                      final int port,
                                      final String host,
                                      final String senderCompId,
                                      final String targetCompId)
     {
-        framer.onInitiateConnection(streamId, port, host, senderCompId, targetCompId);
+        framer.onInitiateConnection(libraryId, port, host, senderCompId, targetCompId);
     }
 }

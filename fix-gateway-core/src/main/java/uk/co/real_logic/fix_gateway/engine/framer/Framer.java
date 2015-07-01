@@ -41,6 +41,7 @@ import static java.net.StandardSocketOptions.TCP_NODELAY;
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
+import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN_ID;
 
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
@@ -100,7 +101,7 @@ public class Framer implements Agent, SessionHandler
     @Override
     public int doWork() throws Exception
     {
-        return pollSockets() + outboundDataSubscription.poll(dataSubscriber, 5);
+        return outboundDataSubscription.poll(dataSubscriber, 5) + pollSockets();
     }
 
     private int pollSockets() throws IOException
@@ -130,7 +131,7 @@ public class Framer implements Agent, SessionHandler
     private void onAcceptConnection(final SocketChannel channel) throws IOException
     {
         final long connectionId = this.nextConnectionId++;
-        setupConnection(channel, connectionId);
+        setupConnection(channel, connectionId, UNKNOWN_ID);
 
         final String address = channel.getRemoteAddress().toString();
         inboundPublication.saveConnect(connectionId, address, ACCEPTOR_LIBRARY_ID, ACCEPTOR);
@@ -148,11 +149,12 @@ public class Framer implements Agent, SessionHandler
             final SocketChannel channel = SocketChannel.open();
             channel.connect(address);
             final long connectionId = this.nextConnectionId++;
-            setupConnection(channel, connectionId);
-            inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR);
 
             final Object sessionKey = sessionIdStrategy.onInitiatorLogon(senderCompId, targetCompId);
             final long sessionId = sessionIds.onLogon(sessionKey);
+
+            setupConnection(channel, connectionId, sessionId);
+            inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR);
             inboundPublication.saveLogon(connectionId, sessionId);
         }
         catch (final Exception e)
@@ -161,7 +163,7 @@ public class Framer implements Agent, SessionHandler
         }
     }
 
-    private void setupConnection(final SocketChannel channel, final long connectionId)
+    private void setupConnection(final SocketChannel channel, final long connectionId, final long sessionId)
         throws IOException
     {
         channel.configureBlocking(false);
@@ -175,7 +177,7 @@ public class Framer implements Agent, SessionHandler
             channel.setOption(SO_RCVBUF, configuration.senderSocketBufferSize());
         }
 
-        final ReceiverEndPoint receiverEndPoint = connectionHandler.receiverEndPoint(channel, connectionId);
+        final ReceiverEndPoint receiverEndPoint = connectionHandler.receiverEndPoint(channel, connectionId, sessionId);
         receiverEndPoints.add(receiverEndPoint);
         channel.register(selector, OP_READ, receiverEndPoint);
 

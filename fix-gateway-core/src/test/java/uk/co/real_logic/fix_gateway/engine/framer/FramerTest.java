@@ -69,7 +69,7 @@ public class FramerTest
 
         clientBuffer.putInt(10, 5);
 
-        when(mockConnectionHandler.receiverEndPoint(any(SocketChannel.class), anyLong()))
+        when(mockConnectionHandler.receiverEndPoint(any(SocketChannel.class), anyLong(), anyLong()))
             .thenReturn(mockReceiverEndPoint);
 
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong()))
@@ -105,7 +105,7 @@ public class FramerTest
         framer.doWork();
 
         then:
-        verify(mockConnectionHandler).receiverEndPoint(notNull(SocketChannel.class), anyLong());
+        verify(mockConnectionHandler).receiverEndPoint(notNull(SocketChannel.class), anyLong(), anyLong());
     }
 
     @Test

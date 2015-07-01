@@ -63,7 +63,7 @@ public class ReceiverEndPoint
     private final AsciiFlyweight string;
     private final ByteBuffer byteBuffer;
 
-    private long sessionId = UNKNOWN_ID;
+    private long sessionId;
     private Object compositeKey = null;
     private int usedBufferData = 0;
 
@@ -72,6 +72,7 @@ public class ReceiverEndPoint
         final int bufferSize,
         final GatewayPublication publication,
         final long connectionId,
+        final long sessionId,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
         final AtomicCounter messagesRead)
@@ -79,6 +80,7 @@ public class ReceiverEndPoint
         this.channel = channel;
         this.publication = publication;
         this.connectionId = connectionId;
+        this.sessionId = sessionId;
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
         this.messagesRead = messagesRead;

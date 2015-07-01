@@ -138,18 +138,18 @@ public final class SystemTestUtil
         return library.initiate(config, new SleepingIdleStrategy(10));
     }
 
-    public static FixEngine launchInitiatingGateway(final NewSessionHandler sessionHandler)
+    public static FixEngine launchInitiatingGateway(final NewSessionHandler sessionHandler, final int initAeronPort)
     {
         delete(CLIENT_LOGS);
-        final StaticConfiguration initiatingConfig = initiatingConfig(sessionHandler);
+        final StaticConfiguration initiatingConfig = initiatingConfig(sessionHandler, initAeronPort);
         return FixEngine.launch(initiatingConfig);
     }
 
-    public static StaticConfiguration initiatingConfig(final NewSessionHandler sessionHandler)
+    public static StaticConfiguration initiatingConfig(final NewSessionHandler sessionHandler, final int initAeronPort)
     {
         return new StaticConfiguration()
             .bind("localhost", unusedPort())
-            .aeronChannel("udp://localhost:" + unusedPort())
+            .aeronChannel("udp://localhost:" + initAeronPort)
             .newSessionHandler(sessionHandler)
             .counterBuffersFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "counters")
             .logFileDir(CLIENT_LOGS);
@@ -168,25 +168,26 @@ public final class SystemTestUtil
         final int port,
         final NewSessionHandler sessionHandler,
         final String acceptorId,
-        final String initiatorId)
+        final String initiatorId, final int acceptAeronPort)
     {
         delete(ACCEPTOR_LOGS);
-        final StaticConfiguration acceptingConfig = acceptingConfig(port, sessionHandler, acceptorId, initiatorId);
-        return FixEngine.launch(acceptingConfig);
+        final StaticConfiguration config = acceptingConfig(port, sessionHandler, acceptorId, initiatorId, acceptAeronPort);
+        return FixEngine.launch(config);
     }
 
     public static StaticConfiguration acceptingConfig(
         final int port,
         final NewSessionHandler sessionHandler,
         final String acceptorId,
-        final String initiatorId)
+        final String initiatorId,
+        final int acceptAeronPort)
     {
         final AuthenticationStrategy authenticationStrategy = new CompIdAuthenticationStrategy(acceptorId)
                 .and(new SenderIdAuthenticationStrategy(Arrays.asList(initiatorId)));
 
         return new StaticConfiguration()
             .bind("localhost", port)
-            .aeronChannel("udp://localhost:" + unusedPort())
+            .aeronChannel("udp://localhost:" + acceptAeronPort)
             .authenticationStrategy(authenticationStrategy)
             .newSessionHandler(sessionHandler)
             .counterBuffersFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + "counters")

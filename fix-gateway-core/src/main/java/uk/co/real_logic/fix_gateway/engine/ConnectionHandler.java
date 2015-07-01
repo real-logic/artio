@@ -58,13 +58,14 @@ public class ConnectionHandler
     }
 
     public ReceiverEndPoint receiverEndPoint(
-        final SocketChannel channel, final long connectionId) throws IOException
+        final SocketChannel channel, final long connectionId, final long sessionId) throws IOException
     {
         return new ReceiverEndPoint(
             channel,
             configuration.receiverBufferSize(),
             inboundStreams.gatewayPublication(),
             connectionId,
+            sessionId,
             sessionIdStrategy,
             sessionIds,
             fixCounters.messagesRead(channel.getRemoteAddress())

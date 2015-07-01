@@ -71,7 +71,7 @@ public class InitiatorSession extends Session
     public int poll(final long time)
     {
         int actions = 0;
-        if (state() == CONNECTED)
+        if (state() == CONNECTED && id() != UNKNOWN_ID)
         {
             state(SENT_LOGON);
             proxy.logon((int) (heartbeatIntervalInMs() / 1000), newSentSeqNum());

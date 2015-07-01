@@ -47,7 +47,7 @@ public class DataSubscriber implements FragmentHandler
         readFragment(buffer, offset, header.streamId());
     }
 
-    public int readFragment(final DirectBuffer buffer, int offset, final int streamId)
+    public int readFragment(final DirectBuffer buffer, int offset, final int libraryId)
     {
         messageHeader.wrap(buffer, offset);
 
@@ -113,7 +113,7 @@ public class DataSubscriber implements FragmentHandler
             {
                 initiateConnection.wrap(buffer, offset, blockLength, version);
                 sessionHandler.onInitiateConnection(
-                    streamId,
+                    libraryId,
                     initiateConnection.port(),
                     initiateConnection.host(),
                     initiateConnection.senderCompId(),

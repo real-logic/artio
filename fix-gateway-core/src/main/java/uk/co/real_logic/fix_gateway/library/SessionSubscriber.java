@@ -56,4 +56,9 @@ public class SessionSubscriber implements SessionHandler
     {
         session.id(sessionId);
     }
+
+    public int poll(final long time)
+    {
+        return session.poll(time);
+    }
 }

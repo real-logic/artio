@@ -31,6 +31,7 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyEquals;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -56,12 +57,16 @@ public class GatewayToGatewaySystemTest
     public void launch()
     {
         final int port = unusedPort();
-        mediaDriver = launchMediaDriver();
-        initiatingGateway = launchInitiatingGateway(initiatingSessionHandler);
-        acceptingGateway = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID);
+        final int initAeronPort = unusedPort();
+        final int acceptAeronPort = unusedPort();
 
-        initiatingLibrary = new FixLibrary(initiatingConfig(initiatingSessionHandler));
-        acceptingLibrary = new FixLibrary(acceptingConfig(port, acceptingSessionHandler, INITIATOR_ID, ACCEPTOR_ID));
+        mediaDriver = launchMediaDriver();
+        initiatingGateway = launchInitiatingGateway(initiatingSessionHandler, initAeronPort);
+        acceptingGateway = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID, acceptAeronPort);
+
+        initiatingLibrary = new FixLibrary(initiatingConfig(initiatingSessionHandler, initAeronPort));
+        acceptingLibrary = new FixLibrary(acceptingConfig(port, acceptingSessionHandler, INITIATOR_ID, ACCEPTOR_ID,
+            acceptAeronPort));
 
         initiatedSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
         acceptingSession = acceptingSessionHandler.session();
@@ -71,7 +76,12 @@ public class GatewayToGatewaySystemTest
     public void sessionHasBeenInitiated() throws InterruptedException
     {
         assertTrue("Session has failed to connect", initiatedSession.isConnected());
-        assertTrue("Session has failed to logon", initiatedSession.state() == ACTIVE);
+        assertEventuallyTrue("Session has failed to logon", () ->
+        {
+            initiatingLibrary.poll(1);
+            acceptingLibrary.poll(1);
+            assertEquals(ACTIVE, initiatedSession.state());
+        });
 
         assertNotNull("Accepting Session not been setup", acceptingSession);
         assertNotNull("Accepting Session not been passed a subscription", acceptingSessionHandler.subscription());

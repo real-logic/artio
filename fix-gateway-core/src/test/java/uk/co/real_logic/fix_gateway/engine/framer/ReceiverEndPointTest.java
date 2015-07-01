@@ -35,6 +35,7 @@ import java.util.function.ToIntFunction;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN_ID;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
 public class ReceiverEndPointTest
@@ -51,7 +52,7 @@ public class ReceiverEndPointTest
 
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
-            mockChannel, 16 * 1024, mockPublication, CONNECTION_ID, mockSessionIdStrategy, mockSessionIds,
+            mockChannel, 16 * 1024, mockPublication, CONNECTION_ID, UNKNOWN_ID, mockSessionIdStrategy, mockSessionIds,
             messagesRead);
 
     @Before

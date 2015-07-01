@@ -27,6 +27,8 @@ import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
+import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
+
 public class FixLibrary extends GatewayProcess
 {
     private final Subscription inboundSubscription;
@@ -54,7 +56,23 @@ public class FixLibrary extends GatewayProcess
 
     public int poll(final int fragmentLimit)
     {
-        return inboundSubscription.poll(dataSubscriber, fragmentLimit);
+        return inboundSubscription.poll(dataSubscriber, fragmentLimit) + pollSessions();
+    }
+
+    private int pollSessions()
+    {
+        if (sessions.isEmpty())
+        {
+            return 0;
+        }
+
+        final long time = clock.time();
+        int total = 0;
+        for (final SessionSubscriber session : sessions.values())
+        {
+            total += session.poll(time);
+        }
+        return total;
     }
 
     public Session initiate(final SessionConfiguration configuration, final IdleStrategy idleStrategy)
@@ -86,19 +104,20 @@ public class FixLibrary extends GatewayProcess
 
     private final DataSubscriber dataSubscriber = new DataSubscriber(new SessionHandler()
     {
-        public void onConnect(final int sessionId,
+        public void onConnect(final int libraryId,
                               final long connectionId,
                               final ConnectionType type,
                               final DirectBuffer buffer,
                               final int addressOffset,
                               final int addressLength)
         {
-            if (sessionId == outboundPublication.streamId())
+            if (libraryId == outboundPublication.streamId())
             {
-                if (type == ConnectionType.INITIATOR)
+                if (type == INITIATOR)
                 {
                     final Session session = initiateSession(connectionId);
                     newSession(connectionId, session);
+                    incomingSession = session;
                 }
                 else
                 {
@@ -112,7 +131,7 @@ public class FixLibrary extends GatewayProcess
                 final SessionSubscriber subscriber = sessions.get(connectionId);
                 if (subscriber != null)
                 {
-                    subscriber.onConnect(sessionId, connectionId, type, buffer, addressOffset, addressLength);
+                    subscriber.onConnect(libraryId, connectionId, type, buffer, addressOffset, addressLength);
                 }
             }
         }

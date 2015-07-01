@@ -135,7 +135,7 @@ public class ArchivePrinter implements SessionHandler
         output.printf("Connected to %s as connection %d\n", address, connectionId);
     }
 
-    public void onInitiateConnection(final int streamId,
+    public void onInitiateConnection(final int libraryId,
                                      final int port,
                                      final String host,
                                      final String senderCompId,
