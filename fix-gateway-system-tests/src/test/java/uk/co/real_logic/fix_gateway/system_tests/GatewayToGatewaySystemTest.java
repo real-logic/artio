@@ -20,10 +20,10 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
-import uk.co.real_logic.fix_gateway.session.InitiatorSession;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import static org.hamcrest.Matchers.hasItem;
@@ -41,7 +41,9 @@ public class GatewayToGatewaySystemTest
     private MediaDriver mediaDriver;
     private FixEngine acceptingGateway;
     private FixEngine initiatingGateway;
-    private InitiatorSession initiatedSession;
+    private FixLibrary acceptingLibrary;
+    private FixLibrary initiatingLibrary;
+    private Session initiatedSession;
     private Session acceptingSession;
 
     private FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
@@ -57,7 +59,11 @@ public class GatewayToGatewaySystemTest
         mediaDriver = launchMediaDriver();
         initiatingGateway = launchInitiatingGateway(initiatingSessionHandler);
         acceptingGateway = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID);
-        initiatedSession = initiate(initiatingGateway, port, INITIATOR_ID, ACCEPTOR_ID);
+
+        initiatingLibrary = new FixLibrary(initiatingConfig(initiatingSessionHandler));
+        acceptingLibrary = new FixLibrary(acceptingConfig(port, acceptingSessionHandler, INITIATOR_ID, ACCEPTOR_ID));
+
+        initiatedSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
         acceptingSession = acceptingSessionHandler.session();
     }
 
@@ -139,6 +145,8 @@ public class GatewayToGatewaySystemTest
     {
         quietClose(acceptingGateway);
         quietClose(initiatingGateway);
+        quietClose(acceptingLibrary);
+        quietClose(initiatingLibrary);
         quietClose(mediaDriver);
     }
 

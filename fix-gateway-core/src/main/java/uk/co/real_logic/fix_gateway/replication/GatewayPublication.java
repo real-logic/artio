@@ -215,6 +215,7 @@ public class GatewayPublication
         final byte[] targetCompIdBytes = targetCompId.getBytes(US_ASCII);
 
         final long position = claim(
+            header.encodedLength() +
             InitiateConnectionEncoder.BLOCK_LENGTH +
             InitiateConnectionDecoder.hostHeaderLength() * 3 +
             hostBytes.length +

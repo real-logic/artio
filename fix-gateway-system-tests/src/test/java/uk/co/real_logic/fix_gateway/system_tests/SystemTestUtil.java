@@ -18,15 +18,16 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
+import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.auth.CompIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.auth.SenderIdAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
-import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
-import uk.co.real_logic.fix_gateway.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.session.Session;
 
@@ -121,8 +122,8 @@ public final class SystemTestUtil
         return hasProperty("senderCompID", equalTo(senderCompId));
     }
 
-    public static InitiatorSession initiate(
-        final FixEngine gateway,
+    public static Session initiate(
+        final FixLibrary library,
         final int port,
         final String initiatorId,
         final String acceptorId)
@@ -134,21 +135,24 @@ public final class SystemTestUtil
             .targetCompId(acceptorId)
             .build();
 
-        return null;
-        // TODO: return gateway.initiate(config);
+        return library.initiate(config, new SleepingIdleStrategy(10));
     }
 
     public static FixEngine launchInitiatingGateway(final NewSessionHandler sessionHandler)
     {
         delete(CLIENT_LOGS);
+        final StaticConfiguration initiatingConfig = initiatingConfig(sessionHandler);
+        return FixEngine.launch(initiatingConfig);
+    }
 
-        final StaticConfiguration initiatingConfig = new StaticConfiguration()
+    public static StaticConfiguration initiatingConfig(final NewSessionHandler sessionHandler)
+    {
+        return new StaticConfiguration()
             .bind("localhost", unusedPort())
             .aeronChannel("udp://localhost:" + unusedPort())
             .newSessionHandler(sessionHandler)
             .counterBuffersFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "counters")
             .logFileDir(CLIENT_LOGS);
-        return FixEngine.launch(initiatingConfig);
     }
 
     private static void delete(final String dirPath)
@@ -167,18 +171,26 @@ public final class SystemTestUtil
         final String initiatorId)
     {
         delete(ACCEPTOR_LOGS);
+        final StaticConfiguration acceptingConfig = acceptingConfig(port, sessionHandler, acceptorId, initiatorId);
+        return FixEngine.launch(acceptingConfig);
+    }
 
+    public static StaticConfiguration acceptingConfig(
+        final int port,
+        final NewSessionHandler sessionHandler,
+        final String acceptorId,
+        final String initiatorId)
+    {
         final AuthenticationStrategy authenticationStrategy = new CompIdAuthenticationStrategy(acceptorId)
                 .and(new SenderIdAuthenticationStrategy(Arrays.asList(initiatorId)));
 
-        final StaticConfiguration acceptingConfig = new StaticConfiguration()
+        return new StaticConfiguration()
             .bind("localhost", port)
             .aeronChannel("udp://localhost:" + unusedPort())
             .authenticationStrategy(authenticationStrategy)
             .newSessionHandler(sessionHandler)
             .counterBuffersFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + "counters")
             .logFileDir(ACCEPTOR_LOGS);
-        return FixEngine.launch(acceptingConfig);
     }
 
 }
