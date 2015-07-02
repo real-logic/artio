@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
@@ -32,7 +31,6 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
-import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyEquals;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
@@ -136,7 +134,6 @@ public class GatewayToGatewaySystemTest
         assertSessionDisconnected(initiatingLibrary, acceptingLibrary, acceptingSession);
     }
 
-    @Ignore
     @Test
     public void gatewayProcessesResendRequests()
     {
@@ -149,11 +146,16 @@ public class GatewayToGatewaySystemTest
 
     private void assertMessageResent()
     {
-        assertEventuallyEquals("Failed to receive the reply", 1, () -> acceptingLibrary.poll(1));
-        assertThat(acceptingOtfAcceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
-        assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
-        assertNull("Detected Error", acceptingOtfAcceptor.lastError());
-        assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
+        assertEventuallyTrue("Failed to receive the reply", () ->
+        {
+            acceptingLibrary.poll(1);
+            initiatingLibrary.poll(1);
+
+            assertThat(acceptingOtfAcceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
+            assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
+            assertNull("Detected Error", acceptingOtfAcceptor.lastError());
+            assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
+        });
     }
 
     private void sendResendRequest()
