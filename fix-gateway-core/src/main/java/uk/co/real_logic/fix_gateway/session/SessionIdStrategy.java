@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
+import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 
 /**
  * Should be stateless.

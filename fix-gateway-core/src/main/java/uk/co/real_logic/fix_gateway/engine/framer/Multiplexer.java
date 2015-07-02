@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
-import uk.co.real_logic.fix_gateway.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 
 /**
  * Responsible for splitting the data coming out of the replication

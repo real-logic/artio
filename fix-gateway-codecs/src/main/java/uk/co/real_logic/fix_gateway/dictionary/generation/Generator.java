@@ -35,9 +35,7 @@ import java.util.List;
 import java.util.Set;
 
 import static java.util.stream.Collectors.joining;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.COMPONENT;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.GROUP;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.MESSAGE;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importStaticFor;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;

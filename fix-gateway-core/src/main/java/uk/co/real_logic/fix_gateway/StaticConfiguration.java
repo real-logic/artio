@@ -17,11 +17,15 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
+import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
 import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.auth.NoAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
+import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
+import uk.co.real_logic.fix_gateway.library.session.NoSessionCustomisationStrategy;
+import uk.co.real_logic.fix_gateway.library.session.SessionCustomisationStrategy;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
-import uk.co.real_logic.fix_gateway.session.*;
+import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.File;
 import java.net.InetSocketAddress;

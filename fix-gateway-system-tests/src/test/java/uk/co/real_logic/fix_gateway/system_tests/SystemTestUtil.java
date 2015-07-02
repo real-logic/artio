@@ -28,8 +28,8 @@ import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.auth.SenderCompIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.auth.TargetCompIdAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.session.NewSessionHandler;
-import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
+import uk.co.real_logic.fix_gateway.library.session.Session;
 
 import java.io.File;
 import java.util.Arrays;
@@ -40,7 +40,7 @@ import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.fix_gateway.session.SessionState.DISCONNECTED;
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
 
 public final class SystemTestUtil
 {

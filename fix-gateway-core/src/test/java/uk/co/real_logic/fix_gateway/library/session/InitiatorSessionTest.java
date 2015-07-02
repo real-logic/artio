@@ -13,19 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session;
+package uk.co.real_logic.fix_gateway.library.session;
 
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.engine.FixEngine;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.session.SessionState.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
 
 public class InitiatorSessionTest extends AbstractSessionTest
 {
-    private final FixEngine mockGateway = mock(FixEngine.class);
-
     private InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy,
         mockPublication, null, BEGIN_STRING, SENDING_TIME_WINDOW,
         mockReceivedMsgSeqNo, mockSentMsgSeqNo);

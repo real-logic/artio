@@ -23,10 +23,10 @@ import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.engine.framer.Framer;
 import uk.co.real_logic.fix_gateway.engine.framer.Multiplexer;
+import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
-import uk.co.real_logic.fix_gateway.session.InitiatorSession;
+import uk.co.real_logic.fix_gateway.library.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.session.SessionIds;
 
 import java.util.Arrays;
 import java.util.List;

@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session;
+package uk.co.real_logic.fix_gateway.library.session;
 
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
-import static uk.co.real_logic.fix_gateway.session.SessionState.*;
-
-public class InitiatorSession extends Session
+public final class AcceptorSession extends Session
 {
-    public InitiatorSession(
-        final int heartbeatInterval,
+
+    public AcceptorSession(
+        final int defaultInterval,
         final long connectionId,
         final MilliClock clock,
         final SessionProxy proxy,
@@ -36,10 +36,10 @@ public class InitiatorSession extends Session
         final AtomicCounter sentMsgSeqNo)
     {
         super(
-            heartbeatInterval,
+            defaultInterval,
             connectionId,
             clock,
-            CONNECTED,
+            SessionState.CONNECTED,
             proxy,
             publication,
             sessionIdStrategy,
@@ -47,9 +47,10 @@ public class InitiatorSession extends Session
             sendingTimeWindow,
             receivedMsgSeqNo,
             sentMsgSeqNo);
+
     }
 
-    void onLogon(
+    public void onLogon(
         final int heartbeatInterval,
         final int msgSeqNo,
         final long sessionId,
@@ -57,27 +58,37 @@ public class InitiatorSession extends Session
         final long sendingTime,
         final boolean isPossDupOrResend)
     {
-        if (msgSeqNo == expectedReceivedSeqNum() && state() == SENT_LOGON)
+        id(sessionId);
+        this.sessionKey = sessionKey;
+        proxy.setupSession(sessionId, sessionKey);
+
+        if (state() == SessionState.CONNECTED)
         {
-            state(ACTIVE);
-            super.onLogon(heartbeatInterval, msgSeqNo, sessionId, sessionKey, sendingTime, isPossDupOrResend);
+            if (!validateHeartbeat(heartbeatInterval) || !validateSendingTime(sendingTime))
+            {
+                return;
+            }
+
+            final int expectedSeqNo = expectedReceivedSeqNum();
+            if (expectedSeqNo == msgSeqNo)
+            {
+                heartbeatIntervalInS(heartbeatInterval);
+                state(SessionState.ACTIVE);
+                replyToLogon(heartbeatInterval);
+            }
+            else if (expectedSeqNo < msgSeqNo)
+            {
+                state(SessionState.AWAITING_RESEND);
+                replyToLogon(heartbeatInterval);
+            }
+            publication.saveLogon(connectionId, sessionId);
         }
-        else
-        {
-            onMessage(msgSeqNo, isPossDupOrResend);
-        }
+        onMessage(msgSeqNo, isPossDupOrResend);
     }
 
-    public int poll(final long time)
+    private void replyToLogon(int heartbeatInterval)
     {
-        int actions = 0;
-        if (state() == CONNECTED && id() != UNKNOWN_ID)
-        {
-            state(SENT_LOGON);
-            proxy.logon((int) (heartbeatIntervalInMs() / 1000), newSentSeqNum());
-            actions++;
-        }
-        return actions + super.poll(time);
+        proxy.logon(heartbeatInterval, newSentSeqNum());
     }
 
 }

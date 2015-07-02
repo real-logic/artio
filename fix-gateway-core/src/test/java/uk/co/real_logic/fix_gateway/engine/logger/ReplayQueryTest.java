@@ -22,9 +22,7 @@ import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEFAULT_INDEX_FILE_SIZE;
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEFAULT_LOGGER_CACHE_CAPACITY;
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEFAULT_LOG_FILE_DIR;
+import static uk.co.real_logic.fix_gateway.StaticConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
 public class ReplayQueryTest extends AbstractMessageTest

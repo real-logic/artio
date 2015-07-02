@@ -16,9 +16,9 @@
 package uk.co.real_logic.fix_gateway.library;
 
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.session.SessionHandler;
-import uk.co.real_logic.fix_gateway.session.SessionParser;
+import uk.co.real_logic.fix_gateway.library.session.Session;
+import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.library.session.SessionParser;
 
 public class SessionSubscriber implements SessionHandler, AutoCloseable
 {

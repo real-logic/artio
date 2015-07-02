@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session;
+package uk.co.real_logic.fix_gateway.library.session;
 
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
@@ -22,7 +22,7 @@ import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.session.SessionState.*;
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
 
 public abstract class AbstractSessionTest
 {

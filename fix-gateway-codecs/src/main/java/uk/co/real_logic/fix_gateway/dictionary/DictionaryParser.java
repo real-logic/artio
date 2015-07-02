@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.dictionary;
 
 import org.w3c.dom.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 
@@ -29,7 +28,10 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static javax.xml.xpath.XPathConstants.NODESET;

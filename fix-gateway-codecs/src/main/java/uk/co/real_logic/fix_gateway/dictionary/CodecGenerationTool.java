@@ -21,9 +21,7 @@ import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 
 import java.io.FileInputStream;
 
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.DECODER_PACKAGE;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.ENCODER_PACKAGE;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.*;
 
 public final class CodecGenerationTool
 {

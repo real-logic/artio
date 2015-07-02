@@ -13,27 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session;
+package uk.co.real_logic.fix_gateway.engine.framer;
 
-import org.junit.Test;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-
-public class SessionIdsTest
+public class SessionIds
 {
-    private SessionIds sessionIds = new SessionIds();
 
-    @Test
-    public void sessionIdsAreUnique()
+    private static final AtomicLong COUNTER = new AtomicLong(0);
+
+    private final Map<Object, Long> compositeToSurrogate = new HashMap<>();
+
+    public long onLogon(final Object compositeKey)
     {
-        assertNotEquals(sessionIds.onLogon("a"), sessionIds.onLogon("b"));
+        return compositeToSurrogate.computeIfAbsent(compositeKey, key -> COUNTER.getAndIncrement());
     }
 
-    @Test
-    public void duplicateSessionsReturnSameId()
+    public void onDisconnect(final Object compositeKey)
     {
-        assertEquals(sessionIds.onLogon("a"), sessionIds.onLogon("a"));
+        compositeToSurrogate.remove(compositeKey);
     }
 
 }

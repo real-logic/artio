@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session;
+package uk.co.real_logic.fix_gateway.library.session;
 
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.Verify;
@@ -23,12 +23,12 @@ import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.SENDINGTIME_ACCURACY_PROBLEM;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
-import static uk.co.real_logic.fix_gateway.session.SessionState.*;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound.
@@ -112,7 +112,7 @@ public class Session
 
     public boolean isConnected()
     {
-        return state() != CONNECTING && state() != DISCONNECTED && state() != DISABLED;
+        return state() != SessionState.CONNECTING && state() != SessionState.DISCONNECTED && state() != SessionState.DISABLED;
     }
 
     public SessionState state()
@@ -126,7 +126,7 @@ public class Session
 
         if (time >= nextRequiredMessageTimeInMs)
         {
-            if (state() == AWAITING_LOGOUT)
+            if (state() == SessionState.AWAITING_LOGOUT)
             {
                 requestDisconnect();
             }
@@ -155,7 +155,7 @@ public class Session
 
     private void awaitLogout()
     {
-        state(AWAITING_LOGOUT);
+        state(SessionState.AWAITING_LOGOUT);
     }
 
     private void sendLogout()
@@ -165,10 +165,10 @@ public class Session
 
     public void requestDisconnect()
     {
-        if (state() != DISCONNECTED)
+        if (state() != SessionState.DISCONNECTED)
         {
             proxy.requestDisconnect(connectionId);
-            state(DISCONNECTED);
+            state(SessionState.DISCONNECTED);
         }
     }
 
@@ -190,7 +190,7 @@ public class Session
 
     void onMessage(final int msgSeqNo, final boolean isPossDupOrResend)
     {
-        if (state() == CONNECTED)
+        if (state() == SessionState.CONNECTED)
         {
             // Disconnect if the first message isn't a logon message
             requestDisconnect();
@@ -212,7 +212,7 @@ public class Session
             }
             else if (expectedSeqNo < msgSeqNo)
             {
-                state(AWAITING_RESEND);
+                state(SessionState.AWAITING_RESEND);
                 proxy.resendRequest(newSentSeqNum(), expectedSeqNo, msgSeqNo - 1);
                 incReceivedSeqNum();
             }
@@ -273,7 +273,7 @@ public class Session
     void onLogout(final int msgSeqNo, final boolean isPossDupOrResend)
     {
         onMessage(msgSeqNo, isPossDupOrResend);
-        if (state() == AWAITING_LOGOUT)
+        if (state() == SessionState.AWAITING_LOGOUT)
         {
             requestDisconnect();
         }
@@ -291,7 +291,7 @@ public class Session
 
     public void onDisconnect()
     {
-        state(DISCONNECTED);
+        state(SessionState.DISCONNECTED);
     }
 
     void onTestRequest(

@@ -20,9 +20,9 @@ import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.engine.framer.ReceiverEndPoint;
 import uk.co.real_logic.fix_gateway.engine.framer.SenderEndPoint;
+import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
 import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.session.SessionIds;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;

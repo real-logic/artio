@@ -25,7 +25,6 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.session.SessionIds;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,7 +34,7 @@ import java.util.function.ToIntFunction;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN_ID;
+import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN_ID;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
 public class ReceiverEndPointTest
