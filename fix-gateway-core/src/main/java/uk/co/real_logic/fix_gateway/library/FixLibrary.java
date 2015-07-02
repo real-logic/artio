@@ -204,7 +204,8 @@ public class FixLibrary extends GatewayProcess
 
     public Session initiateSession(final long connectionId)
     {
-        final Object key = sessionIdStrategy.onInitiatorLogon(sessionConfiguration);
+        final Object key = sessionIdStrategy.onInitiatorLogon(
+            sessionConfiguration.senderCompId(), sessionConfiguration.targetCompId());
         final int defaultInterval = configuration.defaultHeartbeatInterval();
         final GatewayPublication publication = outboundStreams.gatewayPublication();
 

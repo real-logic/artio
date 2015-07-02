@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.session;
 
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
-import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 
 import java.util.Arrays;
 
@@ -32,13 +31,6 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
     public Object onAcceptorLogon(final HeaderDecoder header)
     {
         return new CompositeKey(header.targetCompID(), header.senderCompID());
-    }
-
-    public Object onInitiatorLogon(final SessionConfiguration configuration)
-    {
-        final char[] targetCompID = configuration.targetCompId().toCharArray();
-        final char[] senderCompID = configuration.senderCompId().toCharArray();
-        return new CompositeKey(senderCompID, targetCompID);
     }
 
     public Object onInitiatorLogon(final String senderCompId, final String targetCompId)

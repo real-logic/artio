@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.session;
 
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
-import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 
 /**
  * Should be stateless.
@@ -25,9 +24,6 @@ import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 public interface SessionIdStrategy
 {
     Object onAcceptorLogon(final HeaderDecoder header);
-
-    // TODO: remove
-    Object onInitiatorLogon(final SessionConfiguration configuration);
 
     // TODO: add other parameters
     Object onInitiatorLogon(String senderCompId, String targetCompId);
