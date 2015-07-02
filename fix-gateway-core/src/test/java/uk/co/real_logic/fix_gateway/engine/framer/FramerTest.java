@@ -55,11 +55,12 @@ public class FramerTest
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private GatewayPublication mockGatewayPublication = mock(GatewayPublication.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
+    private final Multiplexer mockMultiplexer = mock(Multiplexer.class);
 
     private StaticConfiguration staticConfiguration = new StaticConfiguration()
         .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort());
 
-    private Framer framer = new Framer(staticConfiguration, mockConnectionHandler, mock(Multiplexer.class),
+    private Framer framer = new Framer(staticConfiguration, mockConnectionHandler, mockMultiplexer,
         mock(Subscription.class), mockGatewayPublication, mockSessionIdStrategy, new SessionIds());
 
     @Before
@@ -136,12 +137,11 @@ public class FramerTest
     }
 
     @Test
-    public void shouldNotifyInitiatorOfSuccess() throws Exception
+    public void shouldNotifyLibraryOfInitiatedConnection() throws Exception
     {
         intiateConnection();
 
-        verify(mockGatewayPublication).saveConnect(anyLong(), anyString(), eq(LIBRARY_ID), eq(INITIATOR));
-        verify(mockGatewayPublication).saveLogon(anyLong(), anyLong());
+        notifyLibraryOfConnection();
     }
 
     @Test
@@ -159,9 +159,24 @@ public class FramerTest
     {
         intiateConnection();
 
+        notifyLibraryOfConnection();
+
         intiateConnection();
 
         verify(mockGatewayPublication).saveError(DUPLICATE_SESSION, LIBRARY_ID, "");
+    }
+
+    @Test
+    public void shouldRemoveDisconnectedEndpoint() throws Exception
+    {
+        intiateConnection();
+        notifyLibraryOfConnection();
+
+        when(mockReceiverEndPoint.hasDisconnected()).thenReturn(true);
+
+        framer.doWork();
+
+        verify(mockMultiplexer).onDisconnect(CONNECTION_ID);
     }
 
     private void intiateConnection() throws Exception
@@ -174,6 +189,12 @@ public class FramerTest
     private void aClientConnects() throws IOException
     {
         client = SocketChannel.open(FRAMER_ADDRESS);
+    }
+
+    private void notifyLibraryOfConnection()
+    {
+        verify(mockGatewayPublication).saveConnect(anyLong(), anyString(), eq(LIBRARY_ID), eq(INITIATOR));
+        verify(mockGatewayPublication).saveLogon(anyLong(), anyLong());
     }
 
     private void aClientSendsData() throws IOException

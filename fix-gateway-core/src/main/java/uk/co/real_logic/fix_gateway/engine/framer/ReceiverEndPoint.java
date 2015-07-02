@@ -30,6 +30,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
+import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN_ID;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
@@ -49,7 +50,7 @@ public class ReceiverEndPoint
     private static final byte CHECKSUM3 = (byte) '=';
 
     private static final int MIN_CHECKSUM_SIZE = " 10=".length() + 1;
-    public static final int DISCONNECTED = -1;
+    public static final int SOCKET_DISCONNECTED = -1;
 
     private final LogonDecoder logon = new LogonDecoder();
 
@@ -64,8 +65,8 @@ public class ReceiverEndPoint
     private final ByteBuffer byteBuffer;
 
     private long sessionId;
-    private Object compositeKey = null;
     private int usedBufferData = 0;
+    private boolean hasDisconnected = false;
 
     public ReceiverEndPoint(
         final SocketChannel channel,
@@ -122,7 +123,7 @@ public class ReceiverEndPoint
     private void readData() throws IOException
     {
         final int dataRead = channel.read(byteBuffer);
-        if (dataRead != DISCONNECTED)
+        if (dataRead != SOCKET_DISCONNECTED)
         {
             DebugLogger.log("Read     %s\n", byteBuffer, dataRead);
             usedBufferData += dataRead;
@@ -175,8 +176,12 @@ public class ReceiverEndPoint
                 if (sessionId == UNKNOWN_ID)
                 {
                     logon.decode(string, offset, length);
-                    compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
+                    final Object compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
                     sessionId = sessionIds.onLogon(compositeKey);
+                    if (sessionId == DUPLICATE_SESSION)
+                    {
+                        onDisconnect();
+                    }
                     publication.saveLogon(connectionId, sessionId);
                 }
 
@@ -256,6 +261,11 @@ public class ReceiverEndPoint
     {
         sessionIds.onDisconnect(connectionId);
         publication.saveDisconnect(connectionId);
+        hasDisconnected = true;
     }
 
+    public boolean hasDisconnected()
+    {
+        return hasDisconnected;
+    }
 }

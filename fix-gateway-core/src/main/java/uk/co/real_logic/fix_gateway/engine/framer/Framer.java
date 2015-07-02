@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
@@ -102,7 +103,28 @@ public class Framer implements Agent, SessionHandler
     @Override
     public int doWork() throws Exception
     {
-        return outboundDataSubscription.poll(dataSubscriber, 5) + pollSockets();
+        return outboundDataSubscription.poll(dataSubscriber, 5) + pollSockets() + pollEndpoints();
+    }
+
+    /**
+     * Scans for endpoints which have been disconnected and then removes them.
+     */
+    private int pollEndpoints()
+    {
+        int disconnected = 0;
+        final Iterator<ReceiverEndPoint> iterator = receiverEndPoints.iterator();
+        while (iterator.hasNext())
+        {
+            final ReceiverEndPoint endPoint = iterator.next();
+            if (endPoint.hasDisconnected())
+            {
+                multiplexer.onDisconnect(endPoint.connectionId());
+                iterator.remove();
+                disconnected++;
+            }
+        }
+
+        return disconnected;
     }
 
     private int pollSockets() throws IOException
@@ -203,7 +225,6 @@ public class Framer implements Agent, SessionHandler
                 break;
             }
         }
-
     }
 
     public void onClose()
@@ -221,7 +242,7 @@ public class Framer implements Agent, SessionHandler
         }
         catch (final IOException ex)
         {
-            throw new IllegalStateException(ex);
+            LangUtil.rethrowUnchecked(ex);
         }
     }
 
