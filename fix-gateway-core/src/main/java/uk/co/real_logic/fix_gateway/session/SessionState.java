@@ -26,8 +26,8 @@ package uk.co.real_logic.fix_gateway.session;
  *
  * Successful Hijack: * -> ACTIVE (same as regular login)
  * Hijack with high sequence number: * -> AWAITING_RESEND (same as regular login)
- * Hijack with low sequence number: disconnect the hijacker and leave main system ACTIVE
- * Hijack with wrong credentials: disconnect the hijacker and leave main system ACTIVE
+ * Hijack with low sequence number: requestDisconnect the hijacker and leave main system ACTIVE
+ * Hijack with wrong credentials: requestDisconnect the hijacker and leave main system ACTIVE
  *
  * Successful resend: AWAITING_RESEND -> ACTIVE
  *

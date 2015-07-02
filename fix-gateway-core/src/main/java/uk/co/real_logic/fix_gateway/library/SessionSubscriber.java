@@ -48,7 +48,7 @@ public class SessionSubscriber implements SessionHandler, AutoCloseable
 
     public void onDisconnect(final long connectionId)
     {
-        session.disconnect();
+        session.onDisconnect();
         handler.onDisconnect(connectionId);
     }
 
@@ -64,6 +64,6 @@ public class SessionSubscriber implements SessionHandler, AutoCloseable
 
     public void close()
     {
-        session.logoutAndDisconnect();
+        session.requestDisconnect();
     }
 }

@@ -77,7 +77,7 @@ public class SessionParser
                 }
                 else
                 {
-                    session.disconnect();
+                    session.requestDisconnect();
                 }
                 break;
 

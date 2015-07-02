@@ -71,7 +71,7 @@ public final class SampleClient
             System.out.println(testReqIdFinder.testReqId());
 
             session.startLogout();
-            session.disconnect();
+            session.requestDisconnect();
         }
     }
 

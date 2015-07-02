@@ -161,7 +161,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         if (sendingTimeSrcEnd == NO_ENTRY)
         {
             // TODO: log error
-            // TODO: probably should disconnect the client
+            // TODO: probably should requestDisconnect the client
             System.err.println("Missing sending time field in resend request");
             return;
         }

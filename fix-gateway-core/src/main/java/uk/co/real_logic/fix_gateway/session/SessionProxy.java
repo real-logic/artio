@@ -109,14 +109,14 @@ public class SessionProxy
     }
 
     /**
-     * NB: Refers to a connectionId because the session may disconnect before a session id is associated
+     * NB: Refers to a connectionId because the session may requestDisconnect before a session id is associated
      * with it.
      *
      * @param connectionId
      */
-    public void disconnect(final long connectionId)
+    public void requestDisconnect(final long connectionId)
     {
-        gatewayPublication.saveDisconnect(connectionId);
+        gatewayPublication.saveRequestDisconnect(connectionId);
     }
 
     public void logon(final int heartbeatInterval, final int msgSeqNo)

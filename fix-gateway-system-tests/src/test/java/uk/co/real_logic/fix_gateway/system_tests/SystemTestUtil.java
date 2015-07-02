@@ -40,6 +40,7 @@ import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.fix_gateway.session.SessionState.DISCONNECTED;
 
 public final class SystemTestUtil
 {
@@ -54,26 +55,37 @@ public final class SystemTestUtil
         return MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
     }
 
-    public static void assertDisconnected(final FakeSessionHandler sessionHandler, final Session session)
+    public static void assertDisconnected(final FixLibrary handlerLibrary,
+                                          final FakeSessionHandler sessionHandler,
+                                          final FixLibrary sessionLibrary,
+                                          final Session session)
     {
-        assertSessionDisconnected(session);
+        assertAcceptorDisconnected(handlerLibrary, sessionHandler);
 
-        assertAcceptorDisconnected(sessionHandler);
+        assertSessionDisconnected(handlerLibrary, sessionLibrary, session);
     }
 
-    public static void assertAcceptorDisconnected(final FakeSessionHandler sessionHandler)
+    public static void assertAcceptorDisconnected(final FixLibrary library,
+                                                  final FakeSessionHandler sessionHandler)
     {
-        assertEventuallyTrue("Failed to disconnect",
+        assertEventuallyTrue("Failed to requestDisconnect",
             () ->
             {
-                // TODO: sessionHandler.poll();
+                library.poll(1);
                 assertEquals(CONNECTION_ID, sessionHandler.connectionId());
             });
     }
 
-    private static void assertSessionDisconnected(final Session session)
+    public static void assertSessionDisconnected(final FixLibrary library1,
+                                                 final FixLibrary library2,
+                                                 final Session session)
     {
-        assertEventuallyTrue("Session is still connected", () -> !session.isConnected());
+        assertEventuallyTrue("Session is still connected", () ->
+        {
+            library1.poll(1);
+            library2.poll(1);
+            return session.state() == DISCONNECTED;
+        });
     }
 
     public static void sendTestRequest(final Session session)

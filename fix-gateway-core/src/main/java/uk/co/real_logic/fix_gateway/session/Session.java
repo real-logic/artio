@@ -103,7 +103,7 @@ public class Session
         buffer = new UnsafeBuffer(new byte[8 * 1024]);
         string = new MutableAsciiFlyweight(buffer);
 
-        this.state = state;
+        state(state);
 
         heartbeatIntervalInS(heartbeatIntervalInS);
     }
@@ -117,7 +117,7 @@ public class Session
 
     public SessionState state()
     {
-        return this.state;
+        return state;
     }
 
     public int poll(final long time)
@@ -128,7 +128,7 @@ public class Session
         {
             if (state() == AWAITING_LOGOUT)
             {
-                disconnect();
+                requestDisconnect();
             }
             else
             {
@@ -163,10 +163,13 @@ public class Session
         proxy.logout(newSentSeqNum());
     }
 
-    public void disconnect()
+    public void requestDisconnect()
     {
-        proxy.disconnect(connectionId);
-        state(DISCONNECTED);
+        if (state() != DISCONNECTED)
+        {
+            proxy.requestDisconnect(connectionId);
+            state(DISCONNECTED);
+        }
     }
 
     public long send(final MessageEncoder encoder)
@@ -190,14 +193,14 @@ public class Session
         if (state() == CONNECTED)
         {
             // Disconnect if the first message isn't a logon message
-            disconnect();
+            requestDisconnect();
         }
         else
         {
             if (msgSeqNo == MISSING_INT)
             {
                 proxy.receivedMessageWithoutSequenceNumber(newSentSeqNum());
-                disconnect();
+                requestDisconnect();
                 return;
             }
 
@@ -216,7 +219,7 @@ public class Session
             else if (expectedSeqNo > msgSeqNo && !isPossDupOrResend)
             {
                 proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedSeqNo, msgSeqNo);
-                disconnect();
+                requestDisconnect();
             }
         }
     }
@@ -247,7 +250,7 @@ public class Session
         if (!isValid)
         {
             proxy.rejectWhilstNotLoggedOn(newSentSeqNum(), SENDINGTIME_ACCURACY_PROBLEM);
-            disconnect();
+            requestDisconnect();
         }
 
         return isValid;
@@ -258,7 +261,7 @@ public class Session
         if (heartbeatInterval < 0)
         {
             proxy.negativeHeartbeatLogout(newSentSeqNum());
-            disconnect();
+            requestDisconnect();
             return false;
         }
         else
@@ -272,7 +275,7 @@ public class Session
         onMessage(msgSeqNo, isPossDupOrResend);
         if (state() == AWAITING_LOGOUT)
         {
-            disconnect();
+            requestDisconnect();
         }
         else
         {
@@ -283,7 +286,12 @@ public class Session
     public void logoutAndDisconnect()
     {
         sendLogout();
-        disconnect();
+        requestDisconnect();
+    }
+
+    public void onDisconnect()
+    {
+        state(DISCONNECTED);
     }
 
     void onTestRequest(
@@ -353,7 +361,7 @@ public class Session
         final boolean isValid = CodecUtil.equals(value, expectedBeginString, length);
         if (!isValid)
         {
-            disconnect();
+            requestDisconnect();
         }
         return isValid;
     }

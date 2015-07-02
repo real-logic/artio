@@ -143,7 +143,7 @@ public class SessionTest extends AbstractSessionTest
         verify(mockProxy).reject(4, 2);
     }
 
-    // NB: differs from the spec to disconnect, rather than test request.
+    // NB: differs from the spec to requestDisconnect, rather than test request.
     @Test
     public void shouldLogoutUponTimeout()
     {
@@ -181,7 +181,7 @@ public class SessionTest extends AbstractSessionTest
 
     private void verifyConnected()
     {
-        verify(mockProxy, never()).disconnect(CONNECTION_ID);
+        verify(mockProxy, never()).requestDisconnect(CONNECTION_ID);
     }
 
     @Test

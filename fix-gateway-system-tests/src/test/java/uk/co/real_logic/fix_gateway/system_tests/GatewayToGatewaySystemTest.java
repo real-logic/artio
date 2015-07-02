@@ -70,6 +70,16 @@ public class GatewayToGatewaySystemTest
             acceptAeronPort));
 
         initiatedSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+
+        assertTrue("Session has failed to connect", initiatedSession.isConnected());
+        assertEventuallyTrue("Session has failed to logon", () ->
+        {
+            initiatingLibrary.poll(1);
+            acceptingLibrary.poll(1);
+            assertEquals(ACTIVE, initiatedSession.state());
+        });
+
+        acceptingSession = acceptSession();
     }
 
     private Session acceptSession()
@@ -85,15 +95,6 @@ public class GatewayToGatewaySystemTest
     @Test
     public void sessionHasBeenInitiated() throws InterruptedException
     {
-        assertTrue("Session has failed to connect", initiatedSession.isConnected());
-        assertEventuallyTrue("Session has failed to logon", () ->
-        {
-            initiatingLibrary.poll(1);
-            acceptingLibrary.poll(1);
-            assertEquals(ACTIVE, initiatedSession.state());
-        });
-
-        acceptingSession = acceptSession();
         assertNotNull("Accepting Session not been setup", acceptingSession);
     }
 
@@ -115,22 +116,26 @@ public class GatewayToGatewaySystemTest
         assertReceivedMessage(initiatingSessionHandler, initiatingOtfAcceptor);
     }
 
-    @Ignore
     @Test
     public void initiatorSessionCanBeDisconnected()
     {
         initiatedSession.startLogout();
 
-        assertDisconnected(acceptingSessionHandler, initiatedSession);
+        assertSessionsDisconnected();
     }
 
-    @Ignore
     @Test
     public void acceptorSessionCanBeDisconnected()
     {
         acceptingSession.startLogout();
 
-        assertDisconnected(initiatingSessionHandler, acceptingSession);
+        assertSessionsDisconnected();
+    }
+
+    private void assertSessionsDisconnected()
+    {
+        assertSessionDisconnected(initiatingLibrary, acceptingLibrary, initiatedSession);
+        assertSessionDisconnected(initiatingLibrary, acceptingLibrary, acceptingSession);
     }
 
     @Ignore
