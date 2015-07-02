@@ -41,6 +41,8 @@ import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
+import static uk.co.real_logic.fix_gateway.messages.GatewayError.DUPLICATE_SESSION;
+import static uk.co.real_logic.fix_gateway.messages.GatewayError.EXCEPTION;
 
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
@@ -151,6 +153,11 @@ public class Framer implements Agent, SessionHandler
 
             final Object sessionKey = sessionIdStrategy.onInitiatorLogon(senderCompId, targetCompId);
             final long sessionId = sessionIds.onLogon(sessionKey);
+            if (sessionId == SessionIds.DUPLICATE_SESSION)
+            {
+                inboundPublication.saveError(DUPLICATE_SESSION, libraryId, "");
+                return;
+            }
 
             setupConnection(channel, connectionId, sessionId);
             inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR);
@@ -158,7 +165,7 @@ public class Framer implements Agent, SessionHandler
         }
         catch (final Exception e)
         {
-            e.printStackTrace(); // TODO: reply to message
+            inboundPublication.saveError(EXCEPTION, libraryId, e.getMessage());
         }
     }
 

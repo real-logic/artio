@@ -15,25 +15,37 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import uk.co.real_logic.agrona.collections.LongHashSet;
+
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class SessionIds
 {
+    private static final long MISSING = -2;
 
-    private static final AtomicLong COUNTER = new AtomicLong(0);
+    public static final long DUPLICATE_SESSION = -1;
 
+    private static long counter = 0L;
+
+    private final LongHashSet currentlyAuthenticated = new LongHashSet(40, MISSING);
     private final Map<Object, Long> compositeToSurrogate = new HashMap<>();
 
     public long onLogon(final Object compositeKey)
     {
-        return compositeToSurrogate.computeIfAbsent(compositeKey, key -> COUNTER.getAndIncrement());
+        final Long sessionId = compositeToSurrogate.computeIfAbsent(compositeKey, key -> counter++);
+
+        if (!currentlyAuthenticated.add(sessionId))
+        {
+            return DUPLICATE_SESSION;
+        }
+
+        return sessionId;
     }
 
-    public void onDisconnect(final Object compositeKey)
+    public void onDisconnect(final long compositeKey)
     {
-        compositeToSurrogate.remove(compositeKey);
+        currentlyAuthenticated.remove(compositeKey);
     }
 
 }

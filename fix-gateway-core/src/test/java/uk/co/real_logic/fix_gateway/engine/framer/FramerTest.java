@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
@@ -35,6 +34,9 @@ import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
+import static uk.co.real_logic.fix_gateway.messages.GatewayError.DUPLICATE_SESSION;
+import static uk.co.real_logic.fix_gateway.messages.GatewayError.EXCEPTION;
 
 public class FramerTest
 {
@@ -53,13 +55,12 @@ public class FramerTest
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private GatewayPublication mockGatewayPublication = mock(GatewayPublication.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
-    private SessionIds mockSessionIds = mock(SessionIds.class);
 
     private StaticConfiguration staticConfiguration = new StaticConfiguration()
         .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort());
 
     private Framer framer = new Framer(staticConfiguration, mockConnectionHandler, mock(Multiplexer.class),
-        mock(Subscription.class), mockGatewayPublication, mockSessionIdStrategy, mockSessionIds);
+        mock(Subscription.class), mockGatewayPublication, mockSessionIdStrategy, new SessionIds());
 
     @Before
     public void setUp() throws IOException
@@ -87,84 +88,87 @@ public class FramerTest
     @Test
     public void shouldListenOnSpecifiedPort() throws IOException
     {
-        when:
         aClientConnects();
 
-        then:
         assertTrue("Client has failed to connect", client.finishConnect());
     }
 
     @Test
     public void shouldCreateEndPointWhenClientConnects() throws Exception
     {
-        given:
         aClientConnects();
 
-        when:
         framer.doWork();
 
-        then:
         verify(mockConnectionHandler).receiverEndPoint(notNull(SocketChannel.class), anyLong(), anyLong());
     }
 
     @Test
     public void shouldPassDataToEndPointWhenSent() throws Exception
     {
-        given:
         aClientConnects();
         framer.doWork();
 
-        when:
         aClientSendsData();
         framer.doWork();
 
-        then:
         verify(mockReceiverEndPoint).receiveData();
     }
 
     @Test
     public void shouldCloseSocketUponDisconnect() throws Exception
     {
-        given:
         aClientConnects();
         framer.doWork();
 
-        when:
         framer.onDisconnect(CONNECTION_ID);
         framer.doWork();
 
-        then:
         verify(mockReceiverEndPoint).close();
-    }
-
-    private void connect() throws Exception
-    {
-        given:
-        framer.onInitiateConnection(LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02",
-            "CCG");
-
-        when:
-        framer.doWork();
     }
 
     @Test
     public void shouldConnectToAddress() throws Exception
     {
-        connect();
+        intiateConnection();
 
-        then:
         assertNotNull("Sender hasn't connected to server", server.accept());
     }
 
-    @Ignore
+    @Test
+    public void shouldNotifyInitiatorOfSuccess() throws Exception
+    {
+        intiateConnection();
+
+        verify(mockGatewayPublication).saveConnect(anyLong(), anyString(), eq(LIBRARY_ID), eq(INITIATOR));
+        verify(mockGatewayPublication).saveLogon(anyLong(), anyLong());
+    }
+
     @Test
     public void shouldReplyWithSocketConnectionError() throws Exception
     {
         server.close();
 
-        connect();
+        intiateConnection();
 
-        // TODO: reply with error
+        verify(mockGatewayPublication).saveError(eq(EXCEPTION), eq(LIBRARY_ID), anyString());
+    }
+
+    @Test
+    public void shouldIdentifyDuplicateInitiatedSessions() throws Exception
+    {
+        intiateConnection();
+
+        intiateConnection();
+
+        verify(mockGatewayPublication).saveError(DUPLICATE_SESSION, LIBRARY_ID, "");
+    }
+
+    private void intiateConnection() throws Exception
+    {
+        framer.onInitiateConnection(LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", "CCG");
+
+        framer.doWork();
     }
 
     private void aClientConnects() throws IOException

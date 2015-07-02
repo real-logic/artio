@@ -28,6 +28,10 @@
             <validValue name="ACCEPTOR">0</validValue>
             <validValue name="INITIATOR">1</validValue>
         </enum>
+        <enum name="GatewayError" encodingType="uint16">
+            <validValue name="EXCEPTION">0</validValue>
+            <validValue name="DUPLICATE_SESSION">1</validValue>
+        </enum>
     </types>
     <sbe:message name="FixMessage" id="1" description="A framed FIX message">
         <field name="messageType" id="1" type="MessageType"/>
@@ -69,5 +73,10 @@
     </sbe:message>
     <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">
         <field name="connection" id="24" type="ConnectionId"/>
+    </sbe:message>
+    <sbe:message name="Error" id="13" description="An error has occurred">
+        <field name="type" id="25" type="GatewayError"/>
+        <field name="libraryId" id="19" type="int32"/>
+        <data name="message" id="26" type="varDataEncoding"/>
     </sbe:message>
 </sbe:messageSchema>

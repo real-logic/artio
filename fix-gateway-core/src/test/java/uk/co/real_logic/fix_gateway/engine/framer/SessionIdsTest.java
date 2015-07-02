@@ -31,9 +31,20 @@ public class SessionIdsTest
     }
 
     @Test
-    public void duplicateSessionsReturnSameId()
+    public void findsDuplicateSessions()
     {
-        assertEquals(sessionIds.onLogon("a"), sessionIds.onLogon("a"));
+        sessionIds.onLogon("a");
+
+        assertEquals(SessionIds.DUPLICATE_SESSION, sessionIds.onLogon("a"));
+    }
+
+    @Test
+    public void handsOutSameSessionIdAfterDisconnect()
+    {
+        final long sessionId = sessionIds.onLogon("a");
+        sessionIds.onDisconnect(sessionId);
+
+        assertEquals(sessionId, sessionIds.onLogon("a"));
     }
 
 }

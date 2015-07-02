@@ -19,10 +19,12 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.library.session.*;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
+import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -41,6 +43,9 @@ public class FixLibrary extends GatewayProcess
 
     private Session incomingSession;
     private SessionConfiguration sessionConfiguration;
+
+    private GatewayError errorType;
+    private String errorMessage;
 
     public FixLibrary(final StaticConfiguration configuration)
     {
@@ -91,20 +96,29 @@ public class FixLibrary extends GatewayProcess
             configuration.senderCompId(),
             configuration.targetCompId());
 
-        while (incomingSession == null)
+        while (incomingSession == null && errorType == null)
         {
             final int workCount = poll(1);
             idleStrategy.idle(workCount);
         }
 
-        final Session session = incomingSession;
-        incomingSession = null;
         sessionConfiguration = null;
-        return session;
+
+        if (incomingSession != null)
+        {
+            final Session session = incomingSession;
+            incomingSession = null;
+            return session;
+        }
+        else
+        {
+            throw new FixGatewayException(String.format("%s: %s", errorType, errorMessage));
+        }
     }
 
     private final DataSubscriber dataSubscriber = new DataSubscriber(new SessionHandler()
     {
+
         public void onConnect(final int libraryId,
                               final long connectionId,
                               final ConnectionType type,
@@ -166,6 +180,15 @@ public class FixLibrary extends GatewayProcess
             if (subscriber != null)
             {
                 subscriber.onDisconnect(connectionId);
+            }
+        }
+
+        public void onError(final GatewayError errorType, final int libraryId, final String message)
+        {
+            if (libraryId == outboundPublication.sessionId())
+            {
+                FixLibrary.this.errorType = errorType;
+                FixLibrary.this.errorMessage = message;
             }
         }
     });

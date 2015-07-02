@@ -153,7 +153,7 @@ public class ReceiverEndPointTest
         endPoint.receiveData();
 
         then:
-        verify(mockSessionIds).onDisconnect(any());
+        verify(mockSessionIds).onDisconnect(anyLong());
         assertSavesDisconnect();
     }
 

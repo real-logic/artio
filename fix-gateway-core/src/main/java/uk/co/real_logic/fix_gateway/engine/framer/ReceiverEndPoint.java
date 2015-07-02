@@ -254,7 +254,7 @@ public class ReceiverEndPoint
 
     private void onDisconnect()
     {
-        sessionIds.onDisconnect(compositeKey);
+        sessionIds.onDisconnect(connectionId);
         publication.saveDisconnect(connectionId);
     }
 

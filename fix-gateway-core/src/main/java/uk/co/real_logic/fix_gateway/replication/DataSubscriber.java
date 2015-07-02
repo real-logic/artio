@@ -34,6 +34,7 @@ public class DataSubscriber implements FragmentHandler
     private final RequestDisconnectDecoder requestDisconnect = new RequestDisconnectDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
+    private final ErrorDecoder error = new ErrorDecoder();
 
     private final SessionHandler sessionHandler;
 
@@ -120,6 +121,18 @@ public class DataSubscriber implements FragmentHandler
                     initiateConnection.targetCompId()
                 );
                 return initiateConnection.limit();
+            }
+
+            case ErrorDecoder.TEMPLATE_ID:
+            {
+                error.wrap(buffer, offset, blockLength, version);
+                sessionHandler.onError(
+                    error.type(),
+                    error.libraryId(),
+                    error.message()
+                );
+
+                return error.limit();
             }
         }
 

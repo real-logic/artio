@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.library.session;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
+import uk.co.real_logic.fix_gateway.messages.GatewayError;
 
 public interface SessionHandler
 {
@@ -59,6 +60,11 @@ public interface SessionHandler
     }
 
     default void onRequestDisconnect(final long connectionId)
+    {
+        // Optional method, implement if you care about this type of message.
+    }
+
+    default void onError(final GatewayError errorType, final int libraryId, final String message)
     {
         // Optional method, implement if you care about this type of message.
     }

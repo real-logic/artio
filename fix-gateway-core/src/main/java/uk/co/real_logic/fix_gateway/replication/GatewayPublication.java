@@ -24,9 +24,8 @@ import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.*;
 
-import java.nio.charset.StandardCharsets;
-
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * A proxy for publishing messages fix related messages
@@ -43,6 +42,7 @@ public class GatewayPublication
     private final RequestDisconnectEncoder requestDisconnect = new RequestDisconnectEncoder();
     private final DisconnectEncoder disconnect = new DisconnectEncoder();
     private final FixMessageEncoder messageFrame = new FixMessageEncoder();
+    private final ErrorEncoder error = new ErrorEncoder();
 
     private final BufferClaim bufferClaim;
     private final Publication dataPublication;
@@ -125,7 +125,7 @@ public class GatewayPublication
                             final int libraryId,
                             final ConnectionType type)
     {
-        final byte[] addressString = address.getBytes(StandardCharsets.UTF_8);
+        final byte[] addressString = address.getBytes(UTF_8);
 
         final int length = header.encodedLength() + CONNECT_SIZE + addressString.length;
         final long position = claim(length);
@@ -241,6 +241,36 @@ public class GatewayPublication
 
         initiateConnection.putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length);
         initiateConnection.putTargetCompId(targetCompIdBytes, 0, targetCompIdBytes.length);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long saveError(final GatewayError errorType, final int libraryId, final String message)
+    {
+        final byte[] messageBytes = message.getBytes(UTF_8);
+        final int length = header.encodedLength() + ErrorEncoder.BLOCK_LENGTH + ErrorDecoder.messageHeaderLength() +
+            messageBytes.length;
+        final long position = claim(length);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(error.sbeBlockLength())
+            .templateId(error.sbeTemplateId())
+            .schemaId(error.sbeSchemaId())
+            .version(error.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        error
+            .wrap(buffer, offset)
+            .type(errorType)
+            .libraryId(libraryId)
+            .putMessage(messageBytes, 0, messageBytes.length);
 
         bufferClaim.commit();
 
