@@ -98,22 +98,20 @@ public class GatewayToGatewaySystemTest
         assertNotNull("Accepting Session not been setup", acceptingSession);
     }
 
-    @Ignore
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptor()
     {
         sendTestRequest(initiatedSession);
 
-        assertReceivedMessage(acceptingSessionHandler, acceptingOtfAcceptor);
+        assertReceivedMessage(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
     }
 
-    @Ignore
     @Test
     public void messagesCanBeSentFromAcceptorToInitiator()
     {
         sendTestRequest(acceptingSession);
 
-        assertReceivedMessage(initiatingSessionHandler, initiatingOtfAcceptor);
+        assertReceivedMessage(initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
     }
 
     @Test

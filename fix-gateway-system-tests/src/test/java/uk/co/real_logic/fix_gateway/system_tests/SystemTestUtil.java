@@ -99,11 +99,15 @@ public final class SystemTestUtil
     }
 
     public static void assertReceivedMessage(
-        final FakeSessionHandler sessionHandler, final FakeOtfAcceptor acceptor)
+        final FixLibrary library1, final FixLibrary library2, final FakeOtfAcceptor acceptor)
     {
-        // TODO: assertEventuallyEquals("Failed to receive a logon and test request message", 2, sessionHandler::poll);
-        assertEquals(2, acceptor.messageTypes().size());
-        assertThat(acceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
+        assertEventuallyTrue("Failed to receive a logon and test request message", () ->
+        {
+            library1.poll(2);
+            library2.poll(2);
+            assertEquals(2, acceptor.messageTypes().size());
+            assertThat(acceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
+        });
     }
 
     public static <T> Matcher<Iterable<? super T>> containsInitiator()

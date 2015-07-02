@@ -110,12 +110,12 @@ public class ReceiverEndPoint
         catch (final ClosedChannelException ex)
         {
             onDisconnect();
-            // TODO: log
         }
         catch (final IOException ex)
         {
             // TODO: log
             ex.printStackTrace();
+            onDisconnect();
         }
     }
 
