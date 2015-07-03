@@ -30,7 +30,6 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest
@@ -68,13 +67,7 @@ public class GatewayToGatewaySystemTest
         initiatedSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
 
         assertTrue("Session has failed to connect", initiatedSession.isConnected());
-        assertEventuallyTrue("Session has failed to logon", () ->
-        {
-            initiatingLibrary.poll(1);
-            acceptingLibrary.poll(1);
-            assertEquals(ACTIVE, initiatedSession.state());
-        });
-
+        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatedSession);
         acceptingSession = acceptSession(acceptingSessionHandler, acceptingLibrary);
     }
 

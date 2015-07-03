@@ -41,6 +41,7 @@ import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
 
 public final class SystemTestUtil
@@ -106,7 +107,7 @@ public final class SystemTestUtil
     public static void assertReceivedMessage(
         final FixLibrary library, final FakeOtfAcceptor acceptor)
     {
-        assertReceivedMessage(library, acceptor);
+        assertReceivedMessage(library, null, acceptor);
     }
 
     public static void assertReceivedMessage(
@@ -237,5 +238,16 @@ public final class SystemTestUtil
             LockSupport.parkNanos(10_000);
         }
         return acceptingSessionHandler.session();
+    }
+
+    public static void sessionLogsOn(final FixLibrary library1,
+                                     final FixLibrary library2,
+                                     final Session session)
+    {
+        assertEventuallyTrue("Session has failed to logon", () ->
+        {
+            poll(library1, library2);
+            assertEquals(ACTIVE, session.state());
+        });
     }
 }
