@@ -33,6 +33,7 @@ import uk.co.real_logic.fix_gateway.library.session.Session;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
@@ -76,14 +77,18 @@ public final class SystemTestUtil
             });
     }
 
+    public static void assertSessionDisconnected(final FixLibrary library1, final Session session)
+    {
+        assertSessionDisconnected(library1, null, session);
+    }
+
     public static void assertSessionDisconnected(final FixLibrary library1,
                                                  final FixLibrary library2,
                                                  final Session session)
     {
         assertEventuallyTrue("Session is still connected", () ->
         {
-            library1.poll(1);
-            library2.poll(1);
+            poll(library1, library2);
             return session.state() == DISCONNECTED;
         });
     }
@@ -99,15 +104,29 @@ public final class SystemTestUtil
     }
 
     public static void assertReceivedMessage(
+        final FixLibrary library, final FakeOtfAcceptor acceptor)
+    {
+        assertReceivedMessage(library, acceptor);
+    }
+
+    public static void assertReceivedMessage(
         final FixLibrary library1, final FixLibrary library2, final FakeOtfAcceptor acceptor)
     {
         assertEventuallyTrue("Failed to receive a logon and test request message", () ->
         {
-            library1.poll(2);
-            library2.poll(2);
+            poll(library1, library2);
             assertEquals(2, acceptor.messageTypes().size());
             assertThat(acceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
         });
+    }
+
+    private static void poll(final FixLibrary library1, final FixLibrary library2)
+    {
+        library1.poll(1);
+        if (library2 != null)
+        {
+            library2.poll(1);
+        }
     }
 
     public static <T> Matcher<Iterable<? super T>> containsInitiator()
@@ -210,4 +229,13 @@ public final class SystemTestUtil
             .logFileDir(ACCEPTOR_LOGS);
     }
 
+    public static Session acceptSession(final FakeSessionHandler acceptingSessionHandler, final FixLibrary acceptingLibrary)
+    {
+        while (acceptingSessionHandler.session() == null)
+        {
+            acceptingLibrary.poll(1);
+            LockSupport.parkNanos(10_000);
+        }
+        return acceptingSessionHandler.session();
+    }
 }

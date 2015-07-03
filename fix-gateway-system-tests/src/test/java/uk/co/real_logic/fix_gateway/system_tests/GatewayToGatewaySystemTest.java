@@ -25,8 +25,6 @@ import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 
-import java.util.concurrent.locks.LockSupport;
-
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
@@ -39,8 +37,8 @@ public class GatewayToGatewaySystemTest
 {
 
     private MediaDriver mediaDriver;
-    private FixEngine acceptingGateway;
-    private FixEngine initiatingGateway;
+    private FixEngine acceptingEngine;
+    private FixEngine initiatingEngine;
     private FixLibrary acceptingLibrary;
     private FixLibrary initiatingLibrary;
     private Session initiatedSession;
@@ -60,8 +58,8 @@ public class GatewayToGatewaySystemTest
         final int acceptAeronPort = unusedPort();
 
         mediaDriver = launchMediaDriver();
-        initiatingGateway = launchInitiatingGateway(initiatingSessionHandler, initAeronPort);
-        acceptingGateway = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID, acceptAeronPort);
+        initiatingEngine = launchInitiatingGateway(initiatingSessionHandler, initAeronPort);
+        acceptingEngine = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID, acceptAeronPort);
 
         initiatingLibrary = new FixLibrary(initiatingConfig(initiatingSessionHandler, initAeronPort));
         acceptingLibrary = new FixLibrary(acceptingConfig(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID,
@@ -77,17 +75,7 @@ public class GatewayToGatewaySystemTest
             assertEquals(ACTIVE, initiatedSession.state());
         });
 
-        acceptingSession = acceptSession();
-    }
-
-    private Session acceptSession()
-    {
-        while (acceptingSessionHandler.session() == null)
-        {
-            acceptingLibrary.poll(1);
-            LockSupport.parkNanos(10_000);
-        }
-        return acceptingSessionHandler.session();
+        acceptingSession = acceptSession(acceptingSessionHandler, acceptingLibrary);
     }
 
     @Test
@@ -176,8 +164,8 @@ public class GatewayToGatewaySystemTest
         quietClose(initiatingLibrary);
         quietClose(acceptingLibrary);
 
-        quietClose(initiatingGateway);
-        quietClose(acceptingGateway);
+        quietClose(initiatingEngine);
+        quietClose(acceptingEngine);
         quietClose(mediaDriver);
     }
 
