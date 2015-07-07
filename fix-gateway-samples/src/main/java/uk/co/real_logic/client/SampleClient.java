@@ -31,7 +31,7 @@ import static uk.co.real_logic.server.SampleServer.INITIATOR_COMP_ID;
 
 public final class SampleClient
 {
-    private static final TestReqIdFinder testReqIdFinder = new TestReqIdFinder();;
+    private static final TestReqIdFinder TEST_REQ_ID_FINDER = new TestReqIdFinder();;
 
     public static void main(final String[] args) throws Exception
     {
@@ -66,13 +66,13 @@ public final class SampleClient
 
             session.send(testRequest);
 
-            while (!"Hello World".equals(testReqIdFinder.testReqId()))
+            while (!"Hello World".equals(TEST_REQ_ID_FINDER.testReqId()))
             {
                 idleStrategy.idle(library.poll(1));
             }
 
             System.out.println("Success, received reply!");
-            System.out.println(testReqIdFinder.testReqId());
+            System.out.println(TEST_REQ_ID_FINDER.testReqId());
 
             session.startLogout();
             session.requestDisconnect();
@@ -90,6 +90,6 @@ public final class SampleClient
 
     private static SessionHandler onConnect(final Session session)
     {
-        return testReqIdFinder;
+        return TEST_REQ_ID_FINDER;
     }
 }
