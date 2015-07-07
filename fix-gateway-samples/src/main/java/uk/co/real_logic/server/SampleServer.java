@@ -19,6 +19,7 @@ import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.concurrent.SigInt;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.auth.SenderCompIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.auth.TargetCompIdAuthenticationStrategy;
@@ -29,14 +30,14 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
 
 public final class SampleServer
 {
 
     public static final String ACCEPTOR_COMP_ID = "acceptor";
     public static final String INITIATOR_COMP_ID = "initiator";
-
-    private static SampleSessionHandler sessionHandler;
+    private static Session session;
 
     public static void main(final String[] args) throws Exception
     {
@@ -56,33 +57,35 @@ public final class SampleServer
         try (final MediaDriver driver = MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
              final FixEngine gateway = FixEngine.launch(configuration))
         {
-            // This would be the same as the SampleOtfMain sample code for sending a message.
+            final FixLibrary library = new FixLibrary(configuration);
 
             final AtomicBoolean running = new AtomicBoolean(true);
             SigInt.register(() -> running.set(false));
 
             while (running.get())
             {
-                synchronized (SampleServer.class)
+                library.poll(1);
+
+                if (session != null && session.state() == DISCONNECTED)
                 {
-                    if (sessionHandler != null)
-                    {
-                        sessionHandler.run();
-                    }
+                    break;
                 }
 
                 Thread.sleep(100);
             }
         }
+
+        System.exit(0);
     }
 
-    private static synchronized SessionHandler onConnect(final Session session)
+    private static SessionHandler onConnect(final Session session)
     {
+        SampleServer.session = session;
+
         // Simple server just handles a single connection on a single thread
         // You choose how to manage threads for your application.
 
-        sessionHandler = new SampleSessionHandler(session, null);
-        return sessionHandler;
+        return new SampleSessionHandler(session);
     }
 
 }

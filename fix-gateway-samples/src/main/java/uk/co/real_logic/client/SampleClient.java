@@ -15,22 +15,23 @@
  */
 package uk.co.real_logic.client;
 
-import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.library.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
-import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
 import static uk.co.real_logic.server.SampleServer.ACCEPTOR_COMP_ID;
 import static uk.co.real_logic.server.SampleServer.INITIATOR_COMP_ID;
 
 public final class SampleClient
 {
-    private static Subscription subscription;
+    private static final TestReqIdFinder testReqIdFinder = new TestReqIdFinder();;
 
     public static void main(final String[] args) throws Exception
     {
@@ -51,10 +52,14 @@ public final class SampleClient
                 .senderCompId(INITIATOR_COMP_ID)
                 .build();
 
-            final InitiatorSession session = null; // TODO: gateway.initiate(sessionConfig);
+            final FixLibrary library = new FixLibrary(configuration);
+            final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
+            final Session session = library.initiate(sessionConfig, idleStrategy);
 
-            final TestReqIdFinder testReqIdFinder = new TestReqIdFinder();
-            final DataSubscriber subscriber = new DataSubscriber(testReqIdFinder);
+            while (session.state() != ACTIVE)
+            {
+                idleStrategy.idle(library.poll(1));
+            }
 
             final TestRequestEncoder testRequest = new TestRequestEncoder();
             testRequest.testReqID("Hello World");
@@ -63,8 +68,7 @@ public final class SampleClient
 
             while (!"Hello World".equals(testReqIdFinder.testReqId()))
             {
-                subscription.poll(subscriber, 1);
-                Thread.sleep(1000);
+                idleStrategy.idle(library.poll(1));
             }
 
             System.out.println("Success, received reply!");
@@ -72,12 +76,20 @@ public final class SampleClient
 
             session.startLogout();
             session.requestDisconnect();
+
+            while (session.state() != DISCONNECTED)
+            {
+                idleStrategy.idle(library.poll(1));
+            }
+
+            System.out.println("Disconnected");
         }
+
+        System.exit(0);
     }
 
     private static SessionHandler onConnect(final Session session)
     {
-        SampleClient.subscription = subscription;
-        return null;
+        return testReqIdFinder;
     }
 }

@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.SENDINGTIME_ACCURACY_PROBLEM;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound.
@@ -174,6 +175,11 @@ public class Session
 
     public long send(final MessageEncoder encoder)
     {
+        if (state() != ACTIVE)
+        {
+            throw new IllegalStateException("Session isn't active, and thus can't send a message");
+        }
+
         final HeaderEncoder header = (HeaderEncoder) encoder.header();
         header
             .msgSeqNum(newSentSeqNum())

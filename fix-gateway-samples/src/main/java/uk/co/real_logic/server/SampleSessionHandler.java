@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.server;
 
-import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.decoder.PrinterImpl;
@@ -26,20 +25,13 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 public class SampleSessionHandler implements SessionHandler
 {
-    private final Subscription subscription;
 
     private final AsciiFlyweight string = new AsciiFlyweight();
     private final Printer printer = new PrinterImpl();
     private final DataSubscriber subscriber = new DataSubscriber(this);
 
-    public SampleSessionHandler(final Session session, final Subscription subscription)
+    public SampleSessionHandler(final Session session)
     {
-        this.subscription = subscription;
-    }
-
-    public void run()
-    {
-        subscription.poll(subscriber, 10);
     }
 
     public void onMessage(final DirectBuffer buffer,
