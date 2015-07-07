@@ -54,7 +54,11 @@ public final class SystemTestUtil
 
     public static MediaDriver launchMediaDriver()
     {
-        return MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
+        final MediaDriver.Context context = new MediaDriver.Context()
+            .threadingMode(SHARED)
+            .dirsDeleteOnStart(true);
+
+        return MediaDriver.launch(context);
     }
 
     public static void assertDisconnected(final FixLibrary handlerLibrary,
