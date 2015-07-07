@@ -180,17 +180,20 @@ public final class SystemTestUtil
     public static FixEngine launchInitiatingGateway(final NewSessionHandler sessionHandler, final int initAeronPort)
     {
         delete(CLIENT_LOGS);
-        final StaticConfiguration initiatingConfig = initiatingConfig(sessionHandler, initAeronPort);
+        final StaticConfiguration initiatingConfig = initiatingConfig(sessionHandler, initAeronPort, "engineCounters");
         return FixEngine.launch(initiatingConfig);
     }
 
-    public static StaticConfiguration initiatingConfig(final NewSessionHandler sessionHandler, final int initAeronPort)
+    public static StaticConfiguration initiatingConfig(
+        final NewSessionHandler sessionHandler,
+        final int initAeronPort,
+        final String countersSuffix)
     {
         return new StaticConfiguration()
             .bind("localhost", unusedPort())
             .aeronChannel("udp://localhost:" + initAeronPort)
             .newSessionHandler(sessionHandler)
-            .counterBuffersFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "counters")
+            .counterBuffersFile(IoUtil.tmpDirName() + "fix-client" + File.separator + countersSuffix)
             .logFileDir(CLIENT_LOGS);
     }
 
@@ -211,7 +214,8 @@ public final class SystemTestUtil
         final int acceptAeronPort)
     {
         delete(ACCEPTOR_LOGS);
-        final StaticConfiguration config = acceptingConfig(port, sessionHandler, acceptorId, initiatorId, acceptAeronPort);
+        final StaticConfiguration config = acceptingConfig(
+            port, sessionHandler, acceptorId, initiatorId, acceptAeronPort, "engineCounters");
         return FixEngine.launch(config);
     }
 
@@ -220,7 +224,8 @@ public final class SystemTestUtil
         final NewSessionHandler sessionHandler,
         final String acceptorId,
         final String initiatorId,
-        final int acceptAeronPort)
+        final int acceptAeronPort,
+        final String countersSuffix)
     {
         final AuthenticationStrategy authenticationStrategy = new TargetCompIdAuthenticationStrategy(acceptorId)
                 .and(new SenderCompIdAuthenticationStrategy(Arrays.asList(initiatorId)));
@@ -230,7 +235,7 @@ public final class SystemTestUtil
             .aeronChannel("udp://localhost:" + acceptAeronPort)
             .authenticationStrategy(authenticationStrategy)
             .newSessionHandler(sessionHandler)
-            .counterBuffersFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + "counters")
+            .counterBuffersFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + countersSuffix)
             .logFileDir(ACCEPTOR_LOGS);
     }
 

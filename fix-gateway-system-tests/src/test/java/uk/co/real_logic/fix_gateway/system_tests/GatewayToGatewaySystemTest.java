@@ -59,9 +59,9 @@ public class GatewayToGatewaySystemTest
         initiatingEngine = launchInitiatingGateway(initiatingSessionHandler, initAeronPort);
         acceptingEngine = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID, acceptAeronPort);
 
-        initiatingLibrary = new FixLibrary(initiatingConfig(initiatingSessionHandler, initAeronPort));
+        initiatingLibrary = new FixLibrary(initiatingConfig(initiatingSessionHandler, initAeronPort, "libraryCounters"));
         acceptingLibrary = new FixLibrary(acceptingConfig(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID,
-            acceptAeronPort));
+            acceptAeronPort, "libraryCounters"));
 
         initiatedSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
 
