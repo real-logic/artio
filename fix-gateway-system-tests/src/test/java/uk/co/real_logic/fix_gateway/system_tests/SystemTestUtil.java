@@ -254,4 +254,19 @@ public final class SystemTestUtil
             assertEquals(ACTIVE, session.state());
         });
     }
+
+    public static void closeIfOpen(final AutoCloseable closable)
+    {
+        try
+        {
+            if (closable != null)
+            {
+                closable.close();
+            }
+        }
+        catch (final Exception ex)
+        {
+            ex.printStackTrace();
+        }
+    }
 }

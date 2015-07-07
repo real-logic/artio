@@ -71,7 +71,6 @@ public final class CountersFile implements AutoCloseable
         return countersBuffer;
     }
 
-    @Override
     public void close()
     {
         IoUtil.unmap(mappedByteBuffer);

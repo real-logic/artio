@@ -27,7 +27,6 @@ import uk.co.real_logic.fix_gateway.library.session.Session;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
@@ -154,12 +153,12 @@ public class GatewayToGatewaySystemTest
     @After
     public void close() throws Exception
     {
-        quietClose(initiatingLibrary);
-        quietClose(acceptingLibrary);
+        closeIfOpen(initiatingLibrary);
+        closeIfOpen(acceptingLibrary);
 
-        quietClose(initiatingEngine);
-        quietClose(acceptingEngine);
-        quietClose(mediaDriver);
+        closeIfOpen(initiatingEngine);
+        closeIfOpen(acceptingEngine);
+        closeIfOpen(mediaDriver);
     }
 
 }
