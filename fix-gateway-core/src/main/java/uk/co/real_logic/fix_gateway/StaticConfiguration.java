@@ -65,7 +65,7 @@ public final class StaticConfiguration
     public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
     public static final long DEFAULT_CONNECTION_TIMEOUT = 1000;
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
-    public static final int DEFAULT_COUNTERS_BUFFER_LENGTH = 64 * 1024 * 1024;
+    public static final int DEFAULT_COUNTERS_BUFFER_LENGTH = 8 * 1024 * 1024;
     public static final int DEFAULT_INDEX_FILE_SIZE = 2 * 1024 * 1024;
     public static final String DEFAULT_COUNTERS_FILE_PROP = IoUtil.tmpDirName() + "fix" + File.separator + "counters";
     public static final String DEFAULT_LOG_FILE_DIR = "logs";
