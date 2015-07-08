@@ -241,12 +241,14 @@ public final class SystemTestUtil
 
     public static Session acceptSession(final FakeSessionHandler acceptingSessionHandler, final FixLibrary acceptingLibrary)
     {
-        while (acceptingSessionHandler.session() == null)
+        Session session;
+        while ((session = acceptingSessionHandler.session()) == null)
         {
             acceptingLibrary.poll(1);
             LockSupport.parkNanos(10_000);
         }
-        return acceptingSessionHandler.session();
+        acceptingSessionHandler.resetSession();
+        return session;
     }
 
     public static void sessionLogsOn(final FixLibrary library1,

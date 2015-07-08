@@ -55,4 +55,9 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
         return session;
     }
 
+    public void resetSession()
+    {
+        session = null;
+    }
+
 }

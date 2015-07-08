@@ -159,7 +159,7 @@ public class ReceiverEndPoint
 
                 if (!validateBodyLength(startOfChecksum))
                 {
-                    onDisconnect();
+                    close();
                     break;
                 }
 
@@ -180,7 +180,7 @@ public class ReceiverEndPoint
                     sessionId = sessionIds.onLogon(compositeKey);
                     if (sessionId == DUPLICATE_SESSION)
                     {
-                        onDisconnect();
+                        close();
                     }
                     publication.saveLogon(connectionId, sessionId);
                 }
