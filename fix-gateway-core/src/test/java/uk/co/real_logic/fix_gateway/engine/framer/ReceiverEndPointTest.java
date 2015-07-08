@@ -32,6 +32,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.util.function.ToIntFunction;
 
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN_ID;
@@ -71,6 +72,20 @@ public class ReceiverEndPointTest
 
         then:
         handlerReceivesAFramedMessage();
+    }
+
+    @Test
+    public void shouldIgnoreGarbledMessages() throws IOException
+    {
+        given:
+        theEndpointReceives(GARBLED_MESSAGE, 0, GARBLED_MESSAGE.length);
+
+        when:
+        endPoint.receiveData();
+
+        then:
+        handlerNotCalled();
+        assertFalse("Endpoint Disconnected", endPoint.hasDisconnected());
     }
 
     @Ignore
