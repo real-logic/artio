@@ -31,6 +31,7 @@ public class SessionParser
     private final RejectDecoder reject = new RejectDecoder();
     private final TestRequestDecoder testRequest = new TestRequestDecoder();
     private final HeaderDecoder header = new HeaderDecoder();
+    private final SequenceResetDecoder sequenceReset = new SequenceResetDecoder();
 
     private final Session session;
     private final SessionIdStrategy sessionIdStrategy;
@@ -108,6 +109,15 @@ public class SessionParser
                 final int msgSeqNo = header.msgSeqNum();
                 session.onTestRequest(
                     testRequest.testReqID(), testRequest.testReqIDLength(), msgSeqNo, isPossDup(header));
+                break;
+            }
+
+            case SequenceResetDecoder.MESSAGE_TYPE:
+            {
+                sequenceReset.reset();
+                sequenceReset.decode(string, offset, length);
+                final HeaderDecoder header = sequenceReset.header();
+                session.onSequenceReset(header.msgSeqNum(), sequenceReset.newSeqNo(), isPossDup(header));
                 break;
             }
 
