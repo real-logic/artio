@@ -25,15 +25,17 @@ public class LogDirectoryDescriptor
     private static final int EXTENSION_LENGTH = ".log".length();
 
     private final String logFileDir;
+    private final String logFileFormat;
 
     public LogDirectoryDescriptor(final String logFileDir)
     {
         this.logFileDir = logFileDir;
+        logFileFormat = logFileDir + File.separator + "archive-%d-%d-%d.log";
     }
 
-    public File logFile(final int streamId, final int termId)
+    public File logFile(final int streamId, final int sessionId, final int termId)
     {
-        return new File(String.format(logFileDir + File.separator + "archive-%d-%d.log", streamId, termId));
+        return new File(String.format(logFileFormat, streamId, sessionId, termId));
     }
 
     public File metaDataLogFile(final int streamId)

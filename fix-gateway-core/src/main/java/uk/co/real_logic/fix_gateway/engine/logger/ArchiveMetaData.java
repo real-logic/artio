@@ -49,7 +49,10 @@ public class ArchiveMetaData implements AutoCloseable
         this.newBufferFactory = newBufferFactory;
     }
 
-    public void write(final int streamId, final int initialTermId, final int termBufferLength)
+    public void write(final int streamId,
+                      final int sessionId,
+                      final int initialTermId,
+                      final int termBufferLength)
     {
         ensureBufferNotMapped();
         final File metaDataFile = directoryDescriptor.metaDataLogFile(streamId);
