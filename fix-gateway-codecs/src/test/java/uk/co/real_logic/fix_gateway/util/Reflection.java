@@ -82,7 +82,7 @@ public final class Reflection
         return field(object, fieldName).get(object);
     }
 
-    private static Field field(Object object, String fieldName) throws NoSuchFieldException
+    public static Field field(Object object, String fieldName) throws NoSuchFieldException
     {
         final Field field = object.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);

@@ -19,7 +19,16 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 public interface Decoder
 {
+    int NO_ERROR = -1;
+
     int decode(final AsciiFlyweight buffer, final int offset, final int length);
 
     void reset();
+
+    boolean validate();
+
+    int invalidTagId();
+
+    // Not enum to avoid cyclic compilation dependency
+    int rejectReason();
 }

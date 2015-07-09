@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
@@ -28,15 +29,16 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasToString;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.DecoderGenerator.REQUIRED_FIELDS;
 import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class DecoderGeneratorTest
@@ -265,6 +267,19 @@ public class DecoderGeneratorTest
         assertTrue("heartbeat doesn't implement its component", component.isAssignableFrom(heartbeat));
 
         assertHasComponentFieldGetter();
+    }
+
+    @Test
+    public void shouldGenerateRequiredFieldsDictionary() throws Exception
+    {
+        final Object allFieldsField = heartbeat.getField(REQUIRED_FIELDS).get(null);
+        assertThat(allFieldsField, instanceOf(IntHashSet.class));
+
+        @SuppressWarnings("unchecked")
+        final Set<Integer> allFields = (Set<Integer>) allFieldsField;
+        assertThat(allFields, hasItem(116));
+        assertThat(allFields, not(hasItem(112)));
+        assertThat(allFields, not(hasItem(999)));
     }
 
     private void assertHasComponentFieldGetter() throws NoSuchMethodException

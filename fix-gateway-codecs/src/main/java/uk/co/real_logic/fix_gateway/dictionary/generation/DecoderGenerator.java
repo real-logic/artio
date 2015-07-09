@@ -31,10 +31,12 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.*;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.generateFieldDictionary;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
@@ -49,6 +51,7 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 public class DecoderGenerator extends Generator
 {
     private static final double HASHSET_SIZE_FACTOR = 1.0 / 0.6;
+    public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
 
     public static String decoderClassName(final Aggregate aggregate)
     {
@@ -93,6 +96,7 @@ public class DecoderGenerator extends Generator
                          .collect(toList());
 
             out.append(generateClassDeclaration(className, type, interfaces, "Decoder", Decoder.class));
+            generateValidation(out, aggregate);
             if (isMessage)
             {
                 final Message message = (Message)aggregate;
@@ -106,6 +110,55 @@ public class DecoderGenerator extends Generator
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         });
+    }
+
+    private void generateValidation(final Writer out, final Aggregate aggregate) throws IOException
+    {
+        final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
+        out.append(generateFieldDictionary(requiredFields, REQUIRED_FIELDS));
+
+        out.append(
+            "    private int invalidTagId = NO_ERROR;\n\n" +
+            "    public int invalidTagId()\n" +
+            "    {\n" +
+            "        return invalidTagId;\n" +
+            "    }\n\n" +
+            "    private int rejectReason = NO_ERROR;\n\n" +
+            "    public int rejectReason()\n" +
+            "    {\n" +
+            "        return rejectReason;\n" +
+            "    }\n\n" +
+            "    public boolean validate()\n" +
+            "    {\n" +
+            "        return true;\n" +
+            "    }\n\n");
+    }
+
+    private Stream<Field> requiredFields(final List<Entry> entries)
+    {
+        return entries
+            .stream()
+            .filter(Entry::required)
+            .flatMap(this::extractFields);
+    }
+
+    private Stream<Field> extractFields(final Entry entry)
+    {
+        final Entry.Element element = entry.element();
+        if (element instanceof Field)
+        {
+            return Stream.of((Field) element);
+        }
+        else if (element instanceof Group)
+        {
+            final Entry numberField = ((Group) element).numberField();
+            return Stream.of((Field) numberField.element());
+        }
+        else if (element instanceof Component)
+        {
+            return requiredFields(((Component) element).entries());
+        }
+        throw new IllegalStateException();
     }
 
     private void generateComponentInterface(final Component component)

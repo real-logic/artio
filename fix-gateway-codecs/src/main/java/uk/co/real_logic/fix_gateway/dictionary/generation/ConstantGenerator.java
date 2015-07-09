@@ -20,7 +20,7 @@ import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 
-import java.util.stream.Stream;
+import java.util.Collection;
 
 import static java.lang.Character.isUpperCase;
 import static java.lang.Character.toUpperCase;
@@ -64,25 +64,33 @@ public class ConstantGenerator
 
     private String generateFieldDictionary()
     {
-        final String addFields =
-            fields().map(this::addField)
-                    .collect(joining());
-        final int hashMapSize = (int) (((double) fields().count()) / 0.6);
+        return generateFieldDictionary(fields(), ALL_FIELDS);
+    }
+
+    public static String generateFieldDictionary(final Collection<Field> fields, final String name)
+    {
+        final String addFields = fields
+            .stream()
+            .map((field) -> addField(field, name))
+            .collect(joining());
+
+        final int hashMapSize = (int) (((double) fields.size()) / 0.6);
         return String.format(
-            "    public static final IntHashSet " + ALL_FIELDS + " = new IntHashSet(%1$d, -1);\n\n" +
+            "    public static final IntHashSet %3$s = new IntHashSet(%1$d, -1);\n\n" +
             "    static\n" +
             "    {\n" +
             "%2$s" +
             "    }\n\n",
             hashMapSize,
-            addFields);
+            addFields,
+            name);
     }
 
-    private String addField(final Field field)
+    private static String addField(final Field field, final String name)
     {
         return String.format(
             "        %1$s.add(%2$d);\n",
-            ALL_FIELDS,
+            name,
             field.number()
         );
     }
@@ -99,16 +107,16 @@ public class ConstantGenerator
     private String generateFieldTags()
     {
         return fields()
+            .stream()
             .map(field -> generateIntConstant(field.name(), field.number()))
             .collect(joining());
     }
 
-    private Stream<Field> fields()
+    private Collection<Field> fields()
     {
         return dictionary
             .fields()
-            .values()
-            .stream();
+            .values();
     }
 
     private String generateIntConstant(final String name, final int number)
