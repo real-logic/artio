@@ -120,6 +120,7 @@ public abstract class Generator
             importFor(StandardCharsets.class) +
             importFor(Arrays.class) +
             importFor(IntHashSet.class) +
+            importStaticFor(StandardCharsets.class, "US_ASCII") +
             "\npublic class %2$s implements %5$s%3$s\n" +
             "{\n\n",
             builderPackage,

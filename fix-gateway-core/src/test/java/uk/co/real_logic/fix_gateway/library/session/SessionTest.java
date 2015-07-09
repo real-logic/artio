@@ -16,10 +16,13 @@
 package uk.co.real_logic.fix_gateway.library.session;
 
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.SessionRejectReason.VALUE_IS_INCORRECT;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
 
@@ -77,7 +80,7 @@ public class SessionTest extends AbstractSessionTest
     {
         session.id(SESSION_ID);
 
-        session.onSequenceReset(3, 4, false);
+        session.onSequenceReset(3, 4, true, false);
         session.onMessage(3, false);
 
         verify(mockProxy).resendRequest(5, 1, 2);
@@ -88,7 +91,7 @@ public class SessionTest extends AbstractSessionTest
     {
         session.lastReceivedMsgSeqNum(2);
 
-        session.onSequenceReset(1, 4, true);
+        session.onSequenceReset(1, 4, false, true);
 
         verifyNoFurtherMessages();
     }
@@ -98,24 +101,40 @@ public class SessionTest extends AbstractSessionTest
     {
         session.lastReceivedMsgSeqNum(2);
 
-        session.onSequenceReset(1, 4, false);
+        session.onSequenceReset(1, 4, true, false);
 
-        verifyLogoutStarted();
+        verify(mockProxy).lowSequenceNumberLogout(anyInt(), eq(3), eq(1));
+        verifyDisconnect();
     }
 
     @Test
     public void shouldUpdateSequenceNumberOnValidGapFill()
     {
-        session.onSequenceReset(1, 4, false);
+        session.onSequenceReset(1, 4, true, false);
 
         assertEquals(4, session.expectedReceivedSeqNum());
         verifyNoFurtherMessages();
+        verifyConnected();
+
+        verifyCanRoundtripTestMessage();
+    }
+
+    @Test
+    public void shouldIgnoreMsgSeqNumWithoutGapFillFlag()
+    {
+        session.onSequenceReset(0, 4, false, false);
+
+        assertEquals(4, session.expectedReceivedSeqNum());
+        verifyNoFurtherMessages();
+        verifyConnected();
+
+        verifyCanRoundtripTestMessage();
     }
 
     @Test
     public void shouldUpdateSequenceNumberOnSequenceReset()
     {
-        session.onSequenceReset(4, 4, false);
+        session.onSequenceReset(4, 4, false, false);
 
         assertEquals(4, session.expectedReceivedSeqNum());
         verifyNoFurtherMessages();
@@ -126,7 +145,7 @@ public class SessionTest extends AbstractSessionTest
     {
         session.lastReceivedMsgSeqNum(3);
 
-        session.onSequenceReset(4, 4, false);
+        session.onSequenceReset(4, 4, false, false);
 
         assertEquals(4, session.expectedReceivedSeqNum());
         verifyNoFurtherMessages();
@@ -137,10 +156,10 @@ public class SessionTest extends AbstractSessionTest
     {
         session.lastReceivedMsgSeqNum(3);
 
-        session.onSequenceReset(2, 1, false);
+        session.onSequenceReset(2, 1, false, false);
 
         assertEquals(4, session.expectedReceivedSeqNum());
-        verify(mockProxy).reject(4, 2);
+        verify(mockProxy).reject(1, 2, NEW_SEQ_NO, SequenceResetDecoder.MESSAGE_TYPE_BYTES, VALUE_IS_INCORRECT);
     }
 
     // NB: differs from the spec to requestDisconnect, rather than test request.
@@ -177,11 +196,6 @@ public class SessionTest extends AbstractSessionTest
         session.poll(fakeClock.time());
 
         verifyConnected();
-    }
-
-    private void verifyConnected()
-    {
-        verify(mockProxy, never()).requestDisconnect(CONNECTION_ID);
     }
 
     @Test
@@ -257,9 +271,24 @@ public class SessionTest extends AbstractSessionTest
         verifyDisconnect();
     }
 
+    private void verifyConnected()
+    {
+        verify(mockProxy, never()).requestDisconnect(CONNECTION_ID);
+    }
+
     private void heartbeatSentAfterInterval(final int msgSeqNo)
     {
         heartbeatSentAfterInterval(HEARTBEAT_INTERVAL, msgSeqNo);
+    }
+
+    private void verifyCanRoundtripTestMessage()
+    {
+        final char[] testReqId = "Hello".toCharArray();
+        final int testReqIdLength = 5;
+
+        session.onTestRequest(testReqId, testReqIdLength, 4, false);
+        verify(mockProxy).heartbeat(eq(testReqId), eq(testReqIdLength), anyInt());
+        verifyConnected();
     }
 
     private void heartbeatSentAfterInterval(final int heartbeatInterval, final int msgSeqNo)

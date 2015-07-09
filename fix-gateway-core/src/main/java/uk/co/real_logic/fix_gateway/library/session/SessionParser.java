@@ -117,7 +117,9 @@ public class SessionParser
                 sequenceReset.reset();
                 sequenceReset.decode(string, offset, length);
                 final HeaderDecoder header = sequenceReset.header();
-                session.onSequenceReset(header.msgSeqNum(), sequenceReset.newSeqNo(), isPossDup(header));
+                final boolean gapFillFlag = sequenceReset.hasGapFillFlag() && sequenceReset.gapFillFlag();
+                session.onSequenceReset(
+                    header.msgSeqNum(), sequenceReset.newSeqNo(), gapFillFlag, isPossDup(header));
                 break;
             }
 

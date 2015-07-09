@@ -223,8 +223,10 @@ public class DecoderGenerator extends Generator
     private String generateMessageType(final int type)
     {
         return String.format(
-            "    public static final int MESSAGE_TYPE = %d;\n\n",
-            type);
+            "    public static final int MESSAGE_TYPE = %1$d;\n\n" +
+            "    public static final byte[] MESSAGE_TYPE_BYTES = \"%2$s\".getBytes(US_ASCII);\n\n",
+            type,
+            (char) type); // TODO: larger message types
     }
 
     private void generateGetters(final Writer out, final String className, final List<Entry> entries) throws IOException

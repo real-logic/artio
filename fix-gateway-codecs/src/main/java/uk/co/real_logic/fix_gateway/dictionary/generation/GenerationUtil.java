@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import uk.co.real_logic.agrona.Verify;
+
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.joining;
@@ -46,7 +48,7 @@ public final class GenerationUtil
 
         if (representation.length() == 2)
         {
-            final byte second = (byte) representation.charAt(0);
+            final byte second = (byte) representation.charAt(1);
             packed |= second >> 1;
         }
         return packed;
@@ -102,14 +104,20 @@ public final class GenerationUtil
                 .collect(joining(", "));
     }
 
-    public static String importFor(Class<?> cls)
+    public static String importFor(final Class<?> cls)
     {
         return String.format("import %s;\n", cls.getCanonicalName());
     }
 
-    public static String importStaticFor(Class<?> cls)
+    public static String importStaticFor(final Class<?> cls)
     {
         return String.format("import static %s.*;\n", cls.getCanonicalName());
+    }
+
+    public static String importStaticFor(final Class<?> cls, final String name)
+    {
+        Verify.notNull(name, "name");
+        return String.format("import static %s.%s;\n", cls.getCanonicalName(), name);
     }
 
 }

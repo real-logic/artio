@@ -19,8 +19,10 @@ import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.Verify;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.SessionRejectReason;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
+import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -28,6 +30,7 @@ import uk.co.real_logic.fix_gateway.util.MilliClock;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.SENDINGTIME_ACCURACY_PROBLEM;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
 
@@ -310,9 +313,13 @@ public class Session
         onMessage(msgSeqNo, isPossDupOrResend);
     }
 
-    void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
+    void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean gapFillFlag, final boolean possDupFlag)
     {
-        if (newSeqNo > msgSeqNo)
+        if (!gapFillFlag)
+        {
+            sequenceReset(msgSeqNo, newSeqNo);
+        }
+        else if (newSeqNo > msgSeqNo)
         {
             gapFill(msgSeqNo, newSeqNo, possDupFlag);
         }
@@ -322,7 +329,7 @@ public class Session
         }
     }
 
-    private void sequenceReset(final int msgSeqNo, final int newSeqNo)
+    private void sequenceReset(final int receivedMsgSeqNo, final int newSeqNo)
     {
         final int expectedMsgSeqNo = expectedReceivedSeqNum();
         if (newSeqNo > expectedMsgSeqNo)
@@ -331,23 +338,29 @@ public class Session
         }
         else if (newSeqNo < expectedMsgSeqNo)
         {
-            proxy.reject(expectedMsgSeqNo, msgSeqNo);
+            proxy.reject(
+                newSentSeqNum(),
+                receivedMsgSeqNo,
+                NEW_SEQ_NO,
+                SequenceResetDecoder.MESSAGE_TYPE_BYTES,
+                SessionRejectReason.VALUE_IS_INCORRECT);
         }
     }
 
-    private void gapFill(final int msgSeqNo, final int newSeqNo, final boolean possDupFlag)
+    private void gapFill(final int receivedMsgSeqNo, final int newSeqNo, final boolean possDupFlag)
     {
         final int expectedMsgSeqNo = expectedReceivedSeqNum();
-        if (msgSeqNo > expectedMsgSeqNo)
+        if (receivedMsgSeqNo > expectedMsgSeqNo)
         {
-            proxy.resendRequest(newSeqNo + 1, expectedMsgSeqNo, msgSeqNo - 1);
+            proxy.resendRequest(newSeqNo + 1, expectedMsgSeqNo, receivedMsgSeqNo - 1);
             lastReceivedMsgSeqNum(newSeqNo - 1);
         }
-        else if (msgSeqNo < expectedMsgSeqNo)
+        else if (receivedMsgSeqNo < expectedMsgSeqNo)
         {
             if (!possDupFlag)
             {
-                startLogout();
+                proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedMsgSeqNo, receivedMsgSeqNo);
+                requestDisconnect();
             }
         }
         else
