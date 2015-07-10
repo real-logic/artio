@@ -55,8 +55,8 @@ public class ArchiveReaderTest
     private ArchiveMetaData mockMetaData = mock(ArchiveMetaData.class);
     private ArchiveMetaDataDecoder mockMetaDataDecoder = mock(ArchiveMetaDataDecoder.class);
 
-    private Archiver archiver = new Archiver((file, size) -> byteBuffer, mockStreams, mockMetaData,
-        DEFAULT_LOG_FILE_DIR, DEFAULT_LOGGER_CACHE_CAPACITY);
+    private Archiver archiver = new Archiver(mockMetaData,
+        DEFAULT_LOG_FILE_DIR, DEFAULT_LOGGER_CACHE_CAPACITY, mockStreams.dataSubscription());
 
     private ArchiveReader archiveReader = new ArchiveReader(file -> byteBuffer, mockMetaData,
         DEFAULT_LOG_FILE_DIR, DEFAULT_LOGGER_CACHE_CAPACITY);

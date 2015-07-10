@@ -54,7 +54,7 @@ public class FixEngine extends GatewayProcess
         final String logFileDir = configuration.logFileDir();
 
         final Archiver archiver = new Archiver(
-            LoggerUtil::map, outboundStreams, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
+            LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity, outboundStreams.dataSubscription());
         final ArchiveReader archiveReader = new ArchiveReader(
             LoggerUtil::mapExistingFile, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
 

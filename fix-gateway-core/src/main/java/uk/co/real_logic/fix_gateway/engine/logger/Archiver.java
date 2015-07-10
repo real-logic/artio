@@ -15,103 +15,123 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
-import uk.co.real_logic.aeron.logbuffer.Header;
-import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.IoUtil;
+import uk.co.real_logic.aeron.logbuffer.FileBlockHandler;
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.collections.IntLruCache;
 import uk.co.real_logic.agrona.concurrent.Agent;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
 
-import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
 
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
-public class Archiver implements Agent, FragmentHandler
+public class Archiver implements Agent, FileBlockHandler
 {
     private static final int FRAGMENT_LIMIT = 10;
 
-    private final IntLruCache<StreamArchive> streamIdToArchive;
-    private final BufferFactory bufferFactory;
+    private final IntLruCache<SessionArchive> sessionIdToArchive;
     private final ArchiveMetaData metaData;
     private final Subscription subscription;
     private final LogDirectoryDescriptor directoryDescriptor;
 
     public Archiver(
-        final BufferFactory bufferFactory,
-        final ReplicationStreams streams,
         final ArchiveMetaData metaData,
         final String logFileDir,
-        final int loggerCacheCapacity)
+        final int loggerCacheCapacity,
+        final Subscription subscription)
     {
-        this.bufferFactory = bufferFactory;
         this.metaData = metaData;
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
-        this.subscription = streams.dataSubscription();
-        streamIdToArchive = new IntLruCache<>(loggerCacheCapacity, StreamArchive::new);
+        this.subscription = subscription;
+        sessionIdToArchive = new IntLruCache<>(loggerCacheCapacity, sessionId ->
+            new SessionArchive(this.subscription.streamId(), sessionId));
     }
 
-    public void onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    public void onBlock(
+        final FileChannel fileChannel,
+        final long offset,
+        final int length,
+        final int sessionId,
+        final int termId)
     {
-        streamIdToArchive
-            .lookup(header.streamId())
-            .archive(buffer, offset, length, header);
+        sessionIdToArchive
+            .lookup(sessionId)
+            .archive(fileChannel, offset, length, termId);
     }
 
-    private final class StreamArchive implements AutoCloseable
+    // TODO: move this to the stream archive constructor, once polling images has been
+    // added to subscription
+    public void onNewImage(
+        final Image image,
+        final String channel,
+        final int streamId,
+        final int sessionId,
+        final long joiningPosition,
+        final String sourceIdentity)
+    {
+        metaData.write(streamId, sessionId, image.initialTermId(), termBufferLength());
+    }
+
+    private final class SessionArchive implements AutoCloseable
     {
         public static final int UNKNOWN = -1;
-        private final UnsafeBuffer currentBuffer = new UnsafeBuffer(0, 0);
         private final int streamId;
+        private final int sessionId;
 
-        private ByteBuffer wrappedBuffer = null;
-
-        private int initialTermId = UNKNOWN;
         private int currentTermId = UNKNOWN;
+        private FileChannel currentLogFile;
 
-        private StreamArchive(final int streamId)
+        private SessionArchive(final int streamId, final int sessionId)
         {
             this.streamId = streamId;
+            this.sessionId = sessionId;
         }
 
-        private void archive(final DirectBuffer buffer, final int offset, final int length, final Header header)
+        private void archive(
+            final FileChannel fileChannel, final long offset, final int length, final int termId)
         {
-            if (initialTermId == UNKNOWN)
+            try
             {
-                initialTermId = header.initialTermId();
-                metaData.write(streamId, initialTermId, termBufferLength());
-            }
+                if (termId != currentTermId)
+                {
+                    close();
+                    currentLogFile = FileChannel.open(directoryDescriptor.logFile(streamId, sessionId, termId).toPath());
+                    currentTermId = termId;
+                }
 
-            final int termId = header.termId();
-            if (termId != currentTermId)
+                final long headerOffset = offset - HEADER_LENGTH;
+                final int totalLength = length + HEADER_LENGTH;
+                if (fileChannel.transferTo(headerOffset, totalLength, currentLogFile) != totalLength)
+                {
+                    // TODO
+                    System.err.println("Transfer to failure");
+                }
+            }
+            catch (IOException e)
             {
-                close();
-                wrappedBuffer = bufferFactory.map(directoryDescriptor.logFile(streamId, termId), termBufferLength());
-                currentBuffer.wrap(wrappedBuffer);
-                currentTermId = termId;
+                LangUtil.rethrowUnchecked(e);
             }
-
-            final int headerOffset = offset - HEADER_LENGTH;
-            final int totalLength = length + HEADER_LENGTH;
-            currentBuffer.putBytes(headerOffset, buffer, headerOffset, totalLength);
         }
 
         public void close()
         {
-            if (wrappedBuffer != null && wrappedBuffer instanceof MappedByteBuffer)
+            try
             {
-                IoUtil.unmap((MappedByteBuffer)wrappedBuffer);
+                currentLogFile.close();
+            }
+            catch (IOException e)
+            {
+                LangUtil.rethrowUnchecked(e);
             }
         }
     }
 
     public int doWork() throws Exception
     {
-        return subscription.poll(this, FRAGMENT_LIMIT);
+        return (int) subscription.filePoll(this, FRAGMENT_LIMIT);
     }
 
     public String roleName()
@@ -122,7 +142,7 @@ public class Archiver implements Agent, FragmentHandler
     public void onClose()
     {
         subscription.close();
-        streamIdToArchive.close();
+        sessionIdToArchive.close();
         metaData.close();
     }
 }
