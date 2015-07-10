@@ -22,10 +22,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Collections.*;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.ENCODER_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
+import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.INT;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.registerField;
 
 public final class ExampleDictionary
@@ -135,6 +138,9 @@ public final class ExampleDictionary
     public static final String INVALID_TAG_NUMBER_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\0019999=9999\00110=161\001";
 
+    public static final String TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE =
+        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00199=9999\00110=161\001";
+
     public static final String DERIVED_FIELDS_MESSAGE =
             "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=161\001";
 
@@ -163,7 +169,7 @@ public final class ExampleDictionary
         final Map<String, Field> messageEgFields = new HashMap<>();
 
         final Field beginString = registerField(messageEgFields, 8, "BeginString", Type.STRING);
-        final Field bodyLength = registerField(messageEgFields, 9, "BodyLength", Type.INT);
+        final Field bodyLength = registerField(messageEgFields, 9, "BodyLength", INT);
         final Field msgType = registerField(messageEgFields, 35, "MsgType", Type.STRING);
 
         final Field checkSum = registerField(messageEgFields, 10, "CheckSum", Type.STRING);
@@ -175,15 +181,15 @@ public final class ExampleDictionary
         final Field booleanField = registerField(messageEgFields, 118, "BooleanField", Type.BOOLEAN);
         final Field dataField = registerField(messageEgFields, 119, "DataField", Type.DATA);
 
-        final Group nestedGroup = Group.of(registerField(messageEgFields, 122, "NoNestedGroup", Type.INT));
-        nestedGroup.optionalEntry(registerField(messageEgFields, 123, "NestedField", Type.INT));
+        final Group nestedGroup = Group.of(registerField(messageEgFields, 122, "NoNestedGroup", INT));
+        nestedGroup.optionalEntry(registerField(messageEgFields, 123, "NestedField", INT));
 
-        final Group egGroup = Group.of(registerField(messageEgFields, 120, NO_EG_GROUP, Type.INT));
-        egGroup.optionalEntry(registerField(messageEgFields, 121, "GroupField", Type.INT));
+        final Group egGroup = Group.of(registerField(messageEgFields, 120, NO_EG_GROUP, INT));
+        egGroup.optionalEntry(registerField(messageEgFields, 121, "GroupField", INT));
         egGroup.optionalEntry(nestedGroup);
 
         final Component egComponent = new Component(EG_COMPONENT);
-        egComponent.optionalEntry(registerField(messageEgFields, 124, "ComponentField", Type.INT));
+        egComponent.optionalEntry(registerField(messageEgFields, 124, "ComponentField", INT));
 
         final Message heartbeat = new Message("Heartbeat", HEARTBEAT_TYPE, ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);
@@ -203,7 +209,10 @@ public final class ExampleDictionary
         final Component trailer = new Component("Trailer");
         trailer.requiredEntry(checkSum);
 
-        final List<Message> messages = singletonList(heartbeat);
+        final Message otherMessage = new Message("OtherMessage", '1', ADMIN);
+        otherMessage.requiredEntry(registerField(messageEgFields, 99, "OtherField", INT));
+
+        final List<Message> messages = asList(heartbeat, otherMessage);
 
         final Map<String, Component> components = new HashMap<>();
         components.put(EG_COMPONENT, egComponent);
@@ -217,7 +226,7 @@ public final class ExampleDictionary
             .addValue("a", "AnEntry")
             .addValue("b", "AnotherEntry");
 
-        final Field otherEnum = new Field(124, "OtherEnum", Type.INT)
+        final Field otherEnum = new Field(124, "OtherEnum", INT)
             .addValue("1", "AnEntry")
             .addValue("12", "AnotherEntry");
 

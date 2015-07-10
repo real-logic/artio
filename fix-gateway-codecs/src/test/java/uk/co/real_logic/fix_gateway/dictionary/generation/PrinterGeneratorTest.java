@@ -32,10 +32,12 @@ import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 public class PrinterGeneratorTest
 {
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
-    private static PrinterGenerator printerGenerator =
-        new PrinterGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
+    private static ConstantGenerator constantGenerator =
+        new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static DecoderGenerator decoderGenerator =
         new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager);
+    private static PrinterGenerator printerGenerator =
+        new PrinterGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static Class<?> printer;
 
     private MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
@@ -43,8 +45,9 @@ public class PrinterGeneratorTest
     @BeforeClass
     public static void generate() throws Exception
     {
-        printerGenerator.generate();
+        constantGenerator.generate();
         decoderGenerator.generate();
+        printerGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
         //System.out.println(sources);
         printer = compileInMemory(PRINTER, sources);

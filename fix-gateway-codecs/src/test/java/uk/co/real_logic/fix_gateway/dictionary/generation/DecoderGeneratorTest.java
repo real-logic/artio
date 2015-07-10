@@ -38,9 +38,7 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.DecoderGenerator.INVALID_TAG_NUMBER;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.DecoderGenerator.REQUIRED_FIELDS;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.DecoderGenerator.REQUIRED_TAG_MISSING;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.DecoderGenerator.*;
 import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class DecoderGeneratorTest
@@ -50,6 +48,7 @@ public class DecoderGeneratorTest
     public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
 
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
+    private static ConstantGenerator constantGenerator = new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static DecoderGenerator decoderGenerator = new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager);
     private static Class<?> heartbeat;
     private static Class<?> component;
@@ -59,6 +58,7 @@ public class DecoderGeneratorTest
     @BeforeClass
     public static void generate() throws Exception
     {
+        constantGenerator.generate();
         decoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sources);
@@ -318,6 +318,16 @@ public class DecoderGeneratorTest
         assertFalse("Passed validation with invalid tag number", decoder.validate());
         assertEquals("Wrong tag id", 9999, decoder.invalidTagId());
         assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateTagNumbersDefinedForThisMessage() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE);
+
+        assertFalse("Passed validation with invalid tag number", decoder.validate());
+        assertEquals("Wrong tag id", 99, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE, decoder.rejectReason());
     }
 
     // TODO: validation

@@ -159,13 +159,14 @@ public class DecoderGenerator extends Generator
             "        else if (unknownFieldsIterator.hasNext())\n" +
             "        {\n" +
             "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
-            "            rejectReason = %3$d;\n" +
+            "            rejectReason = Constants.ALL_FIELDS.contains(invalidTagId) ? %3$d : %4$d;\n" +
             "            return false;\n" +
             "        }\n" +
             "    return true;\n" +
             "    }\n\n",
             sizeHashSet(requiredFields),
             REQUIRED_TAG_MISSING,
+            TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE,
             INVALID_TAG_NUMBER));
     }
 
