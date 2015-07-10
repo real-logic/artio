@@ -25,10 +25,20 @@ public interface Decoder
 
     void reset();
 
+    /**
+     * @return true if the message is valid, false otherwise
+     */
     boolean validate();
 
+    /**
+     * @return the tag id of the tag that failed validation, or {@code NO_ERROR} if there's no error
+     */
     int invalidTagId();
 
-    // Not enum to avoid cyclic compilation dependency
+    /**
+     * NB: Not enum to avoid cyclic compilation dependency
+     *
+     * @return the session reject reason error code corresponding to the validation error.
+     */
     int rejectReason();
 }

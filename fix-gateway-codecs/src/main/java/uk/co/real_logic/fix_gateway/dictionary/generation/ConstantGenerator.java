@@ -74,7 +74,7 @@ public class ConstantGenerator
             .map((field) -> addField(field, name))
             .collect(joining());
 
-        final int hashMapSize = (int) (((double) fields.size()) / 0.6);
+        final int hashMapSize = sizeHashSet(fields);
         return String.format(
             "    public static final IntHashSet %3$s = new IntHashSet(%1$d, -1);\n\n" +
             "    static\n" +
@@ -84,6 +84,11 @@ public class ConstantGenerator
             hashMapSize,
             addFields,
             name);
+    }
+
+    public static int sizeHashSet(final Collection<Field> fields)
+    {
+        return fields.size() * 2;
     }
 
     private static String addField(final Field field, final String name)

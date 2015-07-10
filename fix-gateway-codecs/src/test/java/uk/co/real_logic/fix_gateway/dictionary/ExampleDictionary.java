@@ -123,25 +123,31 @@ public final class ExampleDictionary
         "    \"ComponentField\": \"2\",\n" +
         "  }";
 
-    public static final String ENCODED_MESSAGE_EXAMPLE =
+    public static final String ENCODED_MESSAGE =
         "8=FIX.4.4\0019=0049\00135=0\001115=abc\001112=abc\001116=2\001117=1.1\001118=Y\001119=123\00110=061\001";
 
-    public static final String NO_OPTIONAL_MESSAGE_EXAMPLE =
+    public static final String NO_OPTIONAL_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=161\001";
 
-    public static final String DERIVED_FIELDS_EXAMPLE =
+    public static final String MISSING_REQUIRED_FIELDS_MESSAGE =
+        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001117=1.1\00110=161\001";
+
+    public static final String INVALID_TAG_NUMBER_MESSAGE =
+        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\0019999=9999\00110=161\001";
+
+    public static final String DERIVED_FIELDS_MESSAGE =
             "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=161\001";
 
-    public static final String SHORTER_STRING_EXAMPLE =
+    public static final String SHORTER_STRING_MESSAGE =
         "8=FIX.4.4\0019=0026\00135=0\001115=ab\001116=2\001117=1.1\00110=061\001";
 
-    public static final String REPEATING_GROUP_EXAMPLE =
+    public static final String REPEATING_GROUP_MESSAGE =
         "8=FIX.4.4\0019=0045\00135=0\001115=abc\001116=2\001117=1.1\001120=2\001121=1\001121=2\00110=171\001";
 
-    public static final String NESTED_GROUP_EXAMPLE =
+    public static final String NESTED_GROUP_MESSAGE =
         "8=FIX.4.4\0019=0051\00135=0\001115=abc\001116=2\001117=1.1\001120=1\001121=1\001122=1\001123=1\00110=172\001";
 
-    public static final String COMPONENT_MESSAGE_EXAMPLE =
+    public static final String COMPONENT_MESSAGE =
         "8=FIX.4.4\0019=0033\00135=0\001115=abc\001116=2\001117=1.1\001124=2\00110=165\001";
 
     public static final int TEST_REQ_ID_TAG = 112;

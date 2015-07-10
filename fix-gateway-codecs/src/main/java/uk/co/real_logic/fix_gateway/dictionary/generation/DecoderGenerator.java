@@ -37,6 +37,7 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.generateFieldDictionary;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
@@ -51,7 +52,13 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 public class DecoderGenerator extends Generator
 {
     private static final double HASHSET_SIZE_FACTOR = 1.0 / 0.6;
+
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
+
+    public static final int INVALID_TAG_NUMBER = 0;
+    public static final int REQUIRED_TAG_MISSING = 1;
+    public static final int TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE = 2;
+    public static final int TAG_SPECIFIED_WITHOUT_A_VALUE = 4;
 
     public static String decoderClassName(final Aggregate aggregate)
     {
@@ -106,10 +113,19 @@ public class DecoderGenerator extends Generator
             generateGroupMethods(out, aggregate);
             generateGetters(out, className, aggregate.entries());
             out.append(generateDecodeMethod(aggregate.entries(), aggregate, type));
-            out.append(generateResetMethods(isMessage, aggregate.entries()));
+            out.append(generateResetMethods(isMessage, aggregate.entries(), resetValidation()));
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         });
+    }
+
+    private String resetValidation()
+    {
+        return
+            "    invalidTagId = NO_ERROR;\n" +
+            "    rejectReason = NO_ERROR;\n" +
+            "    missingRequiredFields.clear();\n" +
+            "    unknownFields.clear();\n";
     }
 
     private void generateValidation(final Writer out, final Aggregate aggregate) throws IOException
@@ -117,7 +133,9 @@ public class DecoderGenerator extends Generator
         final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
         out.append(generateFieldDictionary(requiredFields, REQUIRED_FIELDS));
 
-        out.append(
+        out.append(String.format(
+            "    private IntHashSet missingRequiredFields = new IntHashSet(%1$d, -1);\n\n" +
+            "    private IntHashSet unknownFields = new IntHashSet(10, -1);\n\n" +
             "    private int invalidTagId = NO_ERROR;\n\n" +
             "    public int invalidTagId()\n" +
             "    {\n" +
@@ -130,8 +148,25 @@ public class DecoderGenerator extends Generator
             "    }\n\n" +
             "    public boolean validate()\n" +
             "    {\n" +
-            "        return true;\n" +
-            "    }\n\n");
+            "        final IntIterator missingFieldsIterator = missingRequiredFields.iterator();\n" +
+            "        final IntIterator unknownFieldsIterator = unknownFields.iterator();\n" +
+            "        if (missingFieldsIterator.hasNext())\n" +
+            "        {\n" +
+            "            invalidTagId = missingFieldsIterator.nextValue();\n" +
+            "            rejectReason = %2$d;\n" +
+            "            return false;\n" +
+            "        }\n" +
+            "        else if (unknownFieldsIterator.hasNext())\n" +
+            "        {\n" +
+            "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
+            "            rejectReason = %3$d;\n" +
+            "            return false;\n" +
+            "        }\n" +
+            "    return true;\n" +
+            "    }\n\n",
+            sizeHashSet(requiredFields),
+            REQUIRED_TAG_MISSING,
+            INVALID_TAG_NUMBER));
     }
 
     private Stream<Field> requiredFields(final List<Entry> entries)
@@ -307,11 +342,11 @@ public class DecoderGenerator extends Generator
 
         return String.format(
             "    private %1$s %2$s = null;\n" +
-            "    public %1$s %2$s()\n" +
-            "    {\n" +
-            "        return %2$s;" +
-            "    }\n\n" +
-            "%3$s",
+                "    public %1$s %2$s()\n" +
+                "    {\n" +
+                "        return %2$s;" +
+                "    }\n\n" +
+                "%3$s",
             decoderClassName(group),
             formatPropertyName(group.name()),
             prefix
@@ -491,22 +526,30 @@ public class DecoderGenerator extends Generator
 
         final String prefix =
             "    public int decode(final AsciiFlyweight buffer, final int offset, final int length)\n" +
-            "    {\n" +
-            "        final int end = offset + length;\n" +
-            "        int position = offset;\n" +
-            (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
-            (type == GROUP ? "        seenFields.clear();\n" : "") +
-            "        int tag;\n\n" +
-            "        while (position < end)\n" +
-            "        {\n" +
-            "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
-            "            tag = buffer.getNatural(position, equalsPosition);\n" +
-            endGroupCheck +
-            "            final int valueOffset = equalsPosition + 1;\n" +
-            "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
-            "            final int valueLength = endOfField - valueOffset;\n" +
-            "            switch (tag)\n" +
-            "            {\n\n";
+                "    {\n" +
+                "        if (" + ENABLE_VALIDATION + ")\n" +
+                "        {\n" +
+                "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");\n" +
+                "        }\n" +
+                "        final int end = offset + length;\n" +
+                "        int position = offset;\n" +
+                (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
+                (type == GROUP ? "        seenFields.clear();\n" : "") +
+                "        int tag;\n\n" +
+                "        while (position < end)\n" +
+                "        {\n" +
+                "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
+                "            tag = buffer.getNatural(position, equalsPosition);\n" +
+                endGroupCheck +
+                "            final int valueOffset = equalsPosition + 1;\n" +
+                "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
+                "            final int valueLength = endOfField - valueOffset;\n" +
+                "            if (" + ENABLE_VALIDATION + ")\n" +
+                "            {\n" +
+                "                missingRequiredFields.remove(tag);\n" +
+                "            }\n" +
+                "            switch (tag)\n" +
+                "            {\n\n";
 
         final String body =
             entries.stream()
@@ -515,11 +558,14 @@ public class DecoderGenerator extends Generator
 
         final String suffix =
             "            default:\n" +
+            "                if (" + ENABLE_VALIDATION + " && !TrailerDecoder.REQUIRED_FIELDS.contains(tag))\n" +
+            "                {\n" +
+            "                    unknownFields.add(tag);" +
+            "                }\n" +
             "                return position - offset;\n\n" +
-
             "            }\n\n" +
             "            position = endOfField + 1;\n" +
-            "        }\n\n" +
+        "            }\n\n" +
             (hasCommonCompounds ? "        position += trailer.decode(buffer, position, end - position);\n" : "") +
             "        return position - offset;\n" +
             "    }\n\n";
@@ -601,7 +647,7 @@ public class DecoderGenerator extends Generator
             tag,
             optionalAssign(entry),
             fieldName,
-            decodeMethod(field.type(), fieldName),
+            decodeMethodFor(field.type(), fieldName),
             optionalStringAssignment(field.type(), fieldName),
             suffix
         );
@@ -619,7 +665,7 @@ public class DecoderGenerator extends Generator
         return entry.required() ? "" : String.format("                has%s = true;\n", entry.name());
     }
 
-    private String decodeMethod(final Type type, String fieldName)
+    private String decodeMethodFor(final Type type, String fieldName)
     {
         switch (type)
         {

@@ -97,7 +97,7 @@ public class EncoderGenerator extends Generator
             generatePrecomputedHeaders(out, aggregate.entries());
             generateSetters(out, className, aggregate.entries());
             out.append(generateEncodeMethod(aggregate.entries(), aggregateType));
-            out.append(generateResetMethods(isMessage, aggregate.entries()));
+            out.append(generateResetMethods(isMessage, aggregate.entries(), ""));
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         });

@@ -105,9 +105,9 @@ public class AcceptorGeneratorTest
 
     private void onMessage(final Object inst) throws Exception
     {
-        buffer.putAscii(1, ENCODED_MESSAGE_EXAMPLE);
+        buffer.putAscii(1, ENCODED_MESSAGE);
         decoder.getMethod(ON_MESSAGE, AsciiFlyweight.class, int.class, int.class, int.class)
-               .invoke(inst, buffer, 1, ENCODED_MESSAGE_EXAMPLE.length(), '0');
+               .invoke(inst, buffer, 1, ENCODED_MESSAGE.length(), '0');
     }
 
 }

@@ -54,9 +54,9 @@ public class PrinterGeneratorTest
     public void shouldPrettyPrintAMessage() throws Exception
     {
         final Printer printer = printer();
-        buffer.putAscii(1, ENCODED_MESSAGE_EXAMPLE);
+        buffer.putAscii(1, ENCODED_MESSAGE);
 
-        final String string = printer.toString(buffer, 1, ENCODED_MESSAGE_EXAMPLE.length(), HEARTBEAT_TYPE);
+        final String string = printer.toString(buffer, 1, ENCODED_MESSAGE.length(), HEARTBEAT_TYPE);
 
         assertThat(string, containsString(STRING_ENCODED_MESSAGE_EXAMPLE));
     }

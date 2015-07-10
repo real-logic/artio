@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.builder;
 
 public class Validation
 {
-    public static final String ENABLE_VALIDATION_PROP = "fix.codecs.validation";
-    public static final boolean ENABLE_VALIDATION = Boolean.getBoolean(ENABLE_VALIDATION_PROP);
+    public static final String DISABLE_VALIDATION_PROP = "fix.codecs.no_validation";
+    public static final boolean DISABLE_VALIDATION = Boolean.getBoolean(DISABLE_VALIDATION_PROP);
+    public static final boolean ENABLE_VALIDATION = !DISABLE_VALIDATION;
 }

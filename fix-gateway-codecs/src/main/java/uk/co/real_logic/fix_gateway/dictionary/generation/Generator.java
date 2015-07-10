@@ -17,7 +17,9 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
+import uk.co.real_logic.agrona.collections.IntIterator;
 import uk.co.real_logic.agrona.generation.OutputManager;
+import uk.co.real_logic.fix_gateway.builder.Validation;
 import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
@@ -45,6 +47,7 @@ public abstract class Generator
 
     protected static final String MSG_TYPE = "MsgType";
     public static final String EXPAND_INDENT = ".toString().replace(\"\\n\", \"\\n  \")";
+    public static final String ENABLE_VALIDATION = "ENABLE_VALIDATION";
 
     protected String commonCompoundImports(final String form)
     {
@@ -120,7 +123,9 @@ public abstract class Generator
             importFor(StandardCharsets.class) +
             importFor(Arrays.class) +
             importFor(IntHashSet.class) +
+            importFor(IntIterator.class) +
             importStaticFor(StandardCharsets.class, "US_ASCII") +
+            importStaticFor(Validation.class, ENABLE_VALIDATION) +
             "\npublic class %2$s implements %5$s%3$s\n" +
             "{\n\n",
             builderPackage,
@@ -130,7 +135,9 @@ public abstract class Generator
             topType.getSimpleName());
     }
 
-    protected String generateResetMethods(final boolean isMessage, final List<Entry> entries)
+    protected String generateResetMethods(final boolean isMessage,
+                                          final List<Entry> entries,
+                                          final String additionalReset)
     {
         final String resetCalls = entries
             .stream()
@@ -153,10 +160,12 @@ public abstract class Generator
             "    public void reset() {\n" +
             "%s" +
             "%s" +
+            "%s" +
             "    }\n\n" +
             "%s",
             resetHeaderAndTrailer,
             resetCalls,
+            additionalReset,
             resetMethods
         );
     }
