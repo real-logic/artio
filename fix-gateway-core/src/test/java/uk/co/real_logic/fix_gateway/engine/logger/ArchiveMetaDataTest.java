@@ -25,7 +25,6 @@ import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -47,7 +46,7 @@ public class ArchiveMetaDataTest
     {
         final File tempFile = File.createTempFile("metadata", "txt");
         assertTrue(tempFile.delete());
-        when(mockDirectory.metaDataLogFile(anyInt())).thenReturn(tempFile);
+        when(mockDirectory.metaDataLogFile(STREAM_ID, SESSION_ID)).thenReturn(tempFile);
     }
 
     @Test
@@ -55,7 +54,7 @@ public class ArchiveMetaDataTest
     {
         archiveMetaData.write(STREAM_ID, SESSION_ID, INITIAL_TERM_ID, TERM_BUFFER_LENGTH);
 
-        final ArchiveMetaDataDecoder decoder = archiveMetaData.read(STREAM_ID);
+        final ArchiveMetaDataDecoder decoder = archiveMetaData.read(STREAM_ID, SESSION_ID);
         assertEquals(INITIAL_TERM_ID, decoder.initialTermId());
         assertEquals(TERM_BUFFER_LENGTH, decoder.termBufferLength());
     }

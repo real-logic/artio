@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.*;
+import static uk.co.real_logic.fix_gateway.engine.framer.Framer.ACCEPTOR_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
 public class ReplayQueryTest extends AbstractMessageTest
@@ -42,7 +43,7 @@ public class ReplayQueryTest extends AbstractMessageTest
     {
         returnBuffer(indexBuffer, SESSION_ID);
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
-        when(mockReader.read(anyInt(), anyLong(), any(LogHandler.class))).thenReturn(false);
+        when(mockReader.read(anyInt(), anyInt(), anyLong(), any(LogHandler.class))).thenReturn(false);
 
         bufferContainsMessage(true);
         indexRecord();
@@ -95,7 +96,7 @@ public class ReplayQueryTest extends AbstractMessageTest
 
     private void verifyOneMessageRead()
     {
-        verify(mockReader, times(1)).read(STREAM_ID, START, mockHandler);
+        verify(mockReader, times(1)).read(STREAM_ID, ACCEPTOR_LIBRARY_ID, START, mockHandler);
     }
 
     private void returnBuffer(final ByteBuffer buffer, final long sessionId)

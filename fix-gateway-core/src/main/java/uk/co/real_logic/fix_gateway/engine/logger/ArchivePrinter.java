@@ -19,7 +19,6 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
-import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
@@ -29,14 +28,12 @@ import java.io.PrintStream;
 import java.nio.ByteBuffer;
 
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
-import static uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil.newArchiveMetaData;
 
 /**
  * Eg: -Dlogging.dir=/home/richard/monotonic/Fix-Engine/fix-gateway-system-tests/client-logs ArchivePrinter 0
  */
 public class ArchivePrinter implements SessionHandler
 {
-    public static final int UNKNOWN = -1;
 
     private final DataSubscriber subscriber = new DataSubscriber(this);
     private final AsciiFlyweight ascii = new AsciiFlyweight();
@@ -57,9 +54,8 @@ public class ArchivePrinter implements SessionHandler
         final int streamId = Integer.parseInt(args[0]);
         final StaticConfiguration configuration = new StaticConfiguration();
         final String logFileDir = configuration.logFileDir();
-        final ArchiveMetaData metaData = newArchiveMetaData(configuration);
         final ArchivePrinter printer = new ArchivePrinter(
-            LoggerUtil::mapExistingFile, streamId, logFileDir, metaData, System.out);
+            LoggerUtil::mapExistingFile, streamId, logFileDir, System.out);
         printer.print();
     }
 
@@ -67,14 +63,12 @@ public class ArchivePrinter implements SessionHandler
         final ExistingBufferFactory bufferFactory,
         final int streamId,
         final String logFileDir,
-        final ArchiveMetaData metaData,
         final PrintStream output)
     {
         this.bufferFactory = bufferFactory;
         this.streamId = streamId;
         this.output = output;
 
-        final ArchiveMetaDataDecoder metaDataDecoder = metaData.read(streamId);
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
     }
 

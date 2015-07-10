@@ -60,7 +60,7 @@ public class ReplayIndex implements Index
         this.logFileDir = logFileDir;
         this.indexFileSize = indexFileSize;
         this.bufferFactory = bufferFactory;
-        sessionToIndex = new LongLruCache<>(loggerCacheCapacity, SessionIndex::new);
+        sessionToIndex = new LongLruCache<>(loggerCacheCapacity, SessionIndex::new, SessionIndex::close);
     }
 
     public void indexRecord(final DirectBuffer srcBuffer, final int srcOffset, final int srcLength, final int streamId)

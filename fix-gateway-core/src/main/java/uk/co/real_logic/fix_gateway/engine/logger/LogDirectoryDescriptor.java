@@ -38,9 +38,9 @@ public class LogDirectoryDescriptor
         return new File(String.format(logFileFormat, streamId, sessionId, termId));
     }
 
-    public File metaDataLogFile(final int streamId)
+    public File metaDataLogFile(final int streamId, final int sessionId)
     {
-        return new File(String.format(logFileDir + File.separator + "meta-data-%d.log", streamId));
+        return new File(String.format(logFileDir + File.separator + "meta-data-%d-%d.log", streamId, sessionId));
     }
 
     public List<File> listLogFiles(final int streamId)

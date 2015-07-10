@@ -17,7 +17,8 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
+import uk.co.real_logic.agrona.collections.BiInt2ObjectMap;
+import uk.co.real_logic.agrona.collections.BiInt2ObjectMap.EntryFunction;
 import uk.co.real_logic.agrona.collections.IntLruCache;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
@@ -26,7 +27,6 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.util.function.IntFunction;
 
 import static java.lang.Integer.numberOfTrailingZeros;
 import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
@@ -40,9 +40,11 @@ public class ArchiveReader
 
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
 
-    private final IntLruCache<StreamReader> streamIdToReader;
+    private final EntryFunction<SessionReader> newSessionReader = SessionReader::new;
+    private final BiInt2ObjectMap<SessionReader> streamAndSessionToReader;
     private final ExistingBufferFactory archiveBufferFactory;
     private final ArchiveMetaData metaData;
+    private final int loggerCacheCapacity;
     private final LogDirectoryDescriptor directoryDescriptor;
 
     public ArchiveReader(
@@ -53,44 +55,47 @@ public class ArchiveReader
     {
         this.archiveBufferFactory = archiveBufferFactory;
         this.metaData = metaData;
+        this.loggerCacheCapacity = loggerCacheCapacity;
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
-        streamIdToReader = new IntLruCache<>(loggerCacheCapacity, StreamReader::new);
+        streamAndSessionToReader = new BiInt2ObjectMap<>();
     }
 
-    public boolean read(final int streamId, final long position, final LogHandler handler)
+    public boolean read(final int streamId, final int sessionId, final long position, final LogHandler handler)
     {
-        return streamIdToReader
-            .lookup(streamId)
+        return streamAndSessionToReader
+            .computeIfAbsent(streamId, sessionId, newSessionReader)
             .read(position, handler);
     }
 
-    private final class StreamReader implements AutoCloseable
+    private final class SessionReader implements AutoCloseable
     {
         private final int streamId;
-        private final Int2ObjectHashMap<ByteBuffer> termIdToBuffer = new Int2ObjectHashMap<>();
-        private final IntFunction<ByteBuffer> newBuffer = this::newBuffer;
+        private final int sessionId;
+        private final IntLruCache<ByteBuffer> termIdToBuffer =
+            new IntLruCache<>(loggerCacheCapacity, this::newBuffer, this::closeBuffer);
         private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
         private final DataHeaderFlyweight dataHeader = new DataHeaderFlyweight();
         private final int initialTermId;
         private final int positionBitsToShift;
 
-        private StreamReader(final int streamId)
+        private SessionReader(final int streamId, final int sessionId)
         {
             this.streamId = streamId;
-            final ArchiveMetaDataDecoder streamMetaData = metaData.read(streamId);
+            this.sessionId = sessionId;
+            final ArchiveMetaDataDecoder streamMetaData = metaData.read(streamId, sessionId);
             initialTermId = streamMetaData.initialTermId();
             positionBitsToShift = numberOfTrailingZeros(streamMetaData.termBufferLength());
         }
 
         private ByteBuffer newBuffer(final int termId)
         {
-            return archiveBufferFactory.map(directoryDescriptor.logFile(streamId, termId));
+            return archiveBufferFactory.map(directoryDescriptor.logFile(streamId, sessionId, termId));
         }
 
         private boolean read(final long position, final LogHandler handler)
         {
             final int termId = computeTermIdFromPosition(position, positionBitsToShift, initialTermId);
-            final ByteBuffer termBuffer = termIdToBuffer.computeIfAbsent(termId, newBuffer);
+            final ByteBuffer termBuffer = termIdToBuffer.lookup(termId);
             final int aeronHeaderOffset = computeTermOffsetFromPosition(position, positionBitsToShift) - HEADER_LENGTH;
 
             buffer.wrap(termBuffer);
@@ -106,14 +111,15 @@ public class ArchiveReader
         @Override
         public void close() throws Exception
         {
-            termIdToBuffer.values().forEach(
-                (buffer) ->
-                {
-                    if (buffer instanceof MappedByteBuffer)
-                    {
-                        IoUtil.unmap((MappedByteBuffer)buffer);
-                    }
-                });
+            termIdToBuffer.close();
+        }
+
+        private void closeBuffer(final ByteBuffer buffer)
+        {
+            if (buffer instanceof MappedByteBuffer)
+            {
+                IoUtil.unmap((MappedByteBuffer)buffer);
+            }
         }
     }
 }

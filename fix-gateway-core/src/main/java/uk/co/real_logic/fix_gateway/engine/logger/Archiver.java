@@ -15,18 +15,19 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.FileBlockHandler;
+import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.collections.IntLruCache;
 import uk.co.real_logic.agrona.concurrent.Agent;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 
+import static java.nio.file.StandardOpenOption.*;
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
-import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 public class Archiver implements Agent, FileBlockHandler
 {
@@ -47,7 +48,12 @@ public class Archiver implements Agent, FileBlockHandler
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
         this.subscription = subscription;
         sessionIdToArchive = new IntLruCache<>(loggerCacheCapacity, sessionId ->
-            new SessionArchive(this.subscription.streamId(), sessionId));
+        {
+            final int streamId = this.subscription.streamId();
+            final int initialTermId = subscription.getImage(sessionId).initialTermId();
+            metaData.write(streamId, sessionId, initialTermId, termBufferLength());
+            return new SessionArchive(streamId, sessionId);
+        }, SessionArchive::close);
     }
 
     public void onBlock(
@@ -60,19 +66,6 @@ public class Archiver implements Agent, FileBlockHandler
         sessionIdToArchive
             .lookup(sessionId)
             .archive(fileChannel, offset, length, termId);
-    }
-
-    // TODO: move this to the stream archive constructor, once polling images has been
-    // added to subscription
-    public void onNewImage(
-        final Image image,
-        final String channel,
-        final int streamId,
-        final int sessionId,
-        final long joiningPosition,
-        final String sourceIdentity)
-    {
-        metaData.write(streamId, sessionId, image.initialTermId(), termBufferLength());
     }
 
     private final class SessionArchive implements AutoCloseable
@@ -98,13 +91,12 @@ public class Archiver implements Agent, FileBlockHandler
                 if (termId != currentTermId)
                 {
                     close();
-                    currentLogFile = FileChannel.open(directoryDescriptor.logFile(streamId, sessionId, termId).toPath());
+                    final File file = directoryDescriptor.logFile(streamId, sessionId, termId);
+                    currentLogFile = FileChannel.open(file.toPath(), CREATE, APPEND, WRITE);
                     currentTermId = termId;
                 }
 
-                final long headerOffset = offset - HEADER_LENGTH;
-                final int totalLength = length + HEADER_LENGTH;
-                if (fileChannel.transferTo(headerOffset, totalLength, currentLogFile) != totalLength)
+                if (fileChannel.transferTo(offset, length, currentLogFile) != length)
                 {
                     // TODO
                     System.err.println("Transfer to failure");
@@ -118,20 +110,13 @@ public class Archiver implements Agent, FileBlockHandler
 
         public void close()
         {
-            try
-            {
-                currentLogFile.close();
-            }
-            catch (IOException e)
-            {
-                LangUtil.rethrowUnchecked(e);
-            }
+            CloseHelper.close(currentLogFile);
         }
     }
 
     public int doWork() throws Exception
     {
-        return (int) subscription.filePoll(this, FRAGMENT_LIMIT);
+        return (int) subscription.filePoll(this, termBufferLength());
     }
 
     public String roleName()

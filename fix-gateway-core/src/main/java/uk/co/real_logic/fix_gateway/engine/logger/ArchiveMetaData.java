@@ -55,7 +55,7 @@ public class ArchiveMetaData implements AutoCloseable
                       final int termBufferLength)
     {
         ensureBufferNotMapped();
-        final File metaDataFile = directoryDescriptor.metaDataLogFile(streamId);
+        final File metaDataFile = directoryDescriptor.metaDataLogFile(streamId, sessionId);
         if (!metaDataFile.exists())
         {
             metaDataBuffer.wrap(newBufferFactory.map(metaDataFile, META_DATA_FILE_SIZE));
@@ -74,10 +74,10 @@ public class ArchiveMetaData implements AutoCloseable
         }
     }
 
-    public ArchiveMetaDataDecoder read(final int streamId)
+    public ArchiveMetaDataDecoder read(final int streamId, final int sessionId)
     {
         ensureBufferNotMapped();
-        metaDataBuffer.wrap(existingBufferFactory.map(directoryDescriptor.metaDataLogFile(streamId)));
+        metaDataBuffer.wrap(existingBufferFactory.map(directoryDescriptor.metaDataLogFile(streamId, sessionId)));
         headerDecoder.wrap(metaDataBuffer, 0);
         decoder.wrap(metaDataBuffer, headerDecoder.encodedLength(), headerDecoder.blockLength(), headerDecoder.version());
 
