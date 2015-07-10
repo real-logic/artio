@@ -148,26 +148,29 @@ public class DecoderGenerator extends Generator
             "    }\n\n" +
             "    public boolean validate()\n" +
             "    {\n" +
+            // validation for this tag performed in the decode method
+            "        if (rejectReason == " + TAG_SPECIFIED_WITHOUT_A_VALUE + ")\n" +
+            "        {\n" +
+            "            return false;\n" +
+            "        }\n" +
             "        final IntIterator missingFieldsIterator = missingRequiredFields.iterator();\n" +
             "        final IntIterator unknownFieldsIterator = unknownFields.iterator();\n" +
             "        if (missingFieldsIterator.hasNext())\n" +
             "        {\n" +
             "            invalidTagId = missingFieldsIterator.nextValue();\n" +
-            "            rejectReason = %2$d;\n" +
+            "            rejectReason = " + REQUIRED_TAG_MISSING + ";\n" +
             "            return false;\n" +
             "        }\n" +
             "        else if (unknownFieldsIterator.hasNext())\n" +
             "        {\n" +
             "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
-            "            rejectReason = Constants.ALL_FIELDS.contains(invalidTagId) ? %3$d : %4$d;\n" +
+            "            rejectReason = Constants.ALL_FIELDS.contains(invalidTagId) ? " +
+                TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE + " : " + INVALID_TAG_NUMBER + ";\n" +
             "            return false;\n" +
             "        }\n" +
             "    return true;\n" +
             "    }\n\n",
-            sizeHashSet(requiredFields),
-            REQUIRED_TAG_MISSING,
-            TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE,
-            INVALID_TAG_NUMBER));
+            sizeHashSet(requiredFields)));
     }
 
     private Stream<Field> requiredFields(final List<Entry> entries)
@@ -528,7 +531,7 @@ public class DecoderGenerator extends Generator
         final String prefix =
             "    public int decode(final AsciiFlyweight buffer, final int offset, final int length)\n" +
                 "    {\n" +
-                "        if (" + ENABLE_VALIDATION + ")\n" +
+                "        if (" + VALIDATION_ENABLED + ")\n" +
                 "        {\n" +
                 "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");\n" +
                 "        }\n" +
@@ -545,8 +548,13 @@ public class DecoderGenerator extends Generator
                 "            final int valueOffset = equalsPosition + 1;\n" +
                 "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
                 "            final int valueLength = endOfField - valueOffset;\n" +
-                "            if (" + ENABLE_VALIDATION + ")\n" +
+                "            if (" + VALIDATION_ENABLED + ")\n" +
                 "            {\n" +
+                "                if (valueLength == 0)\n" +
+                "                {\n" +
+                "                    invalidTagId = tag;\n" +
+                "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
+                "                }\n" +
                 "                missingRequiredFields.remove(tag);\n" +
                 "            }\n" +
                 "            switch (tag)\n" +
@@ -559,7 +567,7 @@ public class DecoderGenerator extends Generator
 
         final String suffix =
             "            default:\n" +
-            "                if (" + ENABLE_VALIDATION + " && !TrailerDecoder.REQUIRED_FIELDS.contains(tag))\n" +
+            "                if (" + VALIDATION_ENABLED + " && !TrailerDecoder.REQUIRED_FIELDS.contains(tag))\n" +
             "                {\n" +
             "                    unknownFields.add(tag);" +
             "                }\n" +

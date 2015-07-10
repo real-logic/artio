@@ -330,7 +330,19 @@ public class DecoderGeneratorTest
         assertEquals("Wrong reject reason", TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE, decoder.rejectReason());
     }
 
-    // TODO: validation
+    @Test
+    public void shouldValidateTagSpecifiedWithMissingValue() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WITHOUT_A_VALUE_MESSAGE);
+
+        assertFalse("Passed validation with missing value", decoder.validate());
+        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", TAG_SPECIFIED_WITHOUT_A_VALUE, decoder.rejectReason());
+    }
+
+    // TODO: validation for enum values out of range
+    // TODO: validation for data fields
+    // TODO: validation for groups
 
     private void assertHasComponentFieldGetter() throws NoSuchMethodException
     {

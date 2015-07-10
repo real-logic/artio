@@ -141,6 +141,9 @@ public final class ExampleDictionary
     public static final String TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00199=9999\00110=161\001";
 
+    public static final String TAG_SPECIFIED_WITHOUT_A_VALUE_MESSAGE =
+        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=\001117=1.1\00110=161\001";
+
     public static final String DERIVED_FIELDS_MESSAGE =
             "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=161\001";
 
