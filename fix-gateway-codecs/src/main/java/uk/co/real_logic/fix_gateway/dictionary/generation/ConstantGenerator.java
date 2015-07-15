@@ -86,9 +86,9 @@ public class ConstantGenerator
             name);
     }
 
-    public static int sizeHashSet(final Collection<Field> fields)
+    public static int sizeHashSet(final Collection<?> objects)
     {
-        return fields.size() * 2;
+        return objects.size() * 2;
     }
 
     private static String addField(final Field field, final String name)

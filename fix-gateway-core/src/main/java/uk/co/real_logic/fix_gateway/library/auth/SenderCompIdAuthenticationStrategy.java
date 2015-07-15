@@ -17,24 +17,17 @@ package uk.co.real_logic.fix_gateway.library.auth;
 
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
-import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
+import uk.co.real_logic.fix_gateway.dictionary.CharArraySet;
 
-import java.util.List;
-import java.util.Set;
-
-import static java.util.stream.Collectors.toSet;
+import java.util.Collection;
 
 public class SenderCompIdAuthenticationStrategy implements AuthenticationStrategy
 {
-    private final CharArrayWrapper wrapper = new CharArrayWrapper();
-    private final Set<CharArrayWrapper> validSenderIds;
+    private final CharArraySet validSenderIds;
 
-    public SenderCompIdAuthenticationStrategy(final List<String> validSenderIds)
+    public SenderCompIdAuthenticationStrategy(final Collection<String> validSenderIds)
     {
-        this.validSenderIds = validSenderIds
-            .stream()
-            .map(str -> new CharArrayWrapper().wrap(str))
-            .collect(toSet());
+        this.validSenderIds = new CharArraySet(validSenderIds);
     }
 
     public boolean authenticate(final LogonDecoder logon)
@@ -43,56 +36,6 @@ public class SenderCompIdAuthenticationStrategy implements AuthenticationStrateg
         final char[] senderCompID = header.senderCompID();
         final int senderCompIDLength = header.senderCompIDLength();
 
-        wrapper.wrap(senderCompID, senderCompIDLength);
-        return validSenderIds.contains(wrapper);
-    }
-
-    private final class CharArrayWrapper
-    {
-        private char[] values;
-        private int length;
-        private int hashcode;
-
-        public CharArrayWrapper wrap(final String string)
-        {
-            final char[] values = string.toCharArray();
-            wrap(values, values.length);
-            return this;
-        }
-
-        public void wrap(final char[] values, final int length)
-        {
-            this.values = values;
-            this.length = length;
-            hashcode = CodecUtil.hashCode(values, length);
-        }
-
-        public boolean equals(final Object o)
-        {
-            if (this == o)
-            {
-                return true;
-            }
-
-            if (o == null || getClass() != o.getClass())
-            {
-                return false;
-            }
-
-            final CharArrayWrapper that = (CharArrayWrapper) o;
-
-            final int length = this.length;
-            if (length != that.length)
-            {
-                return false;
-            }
-
-            return CodecUtil.equals(values, that.values, length);
-        }
-
-        public int hashCode()
-        {
-            return hashcode;
-        }
+        return validSenderIds.contains(senderCompID, senderCompIDLength);
     }
 }

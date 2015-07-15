@@ -144,6 +144,12 @@ public final class ExampleDictionary
     public static final String TAG_SPECIFIED_WITHOUT_A_VALUE_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=\001117=1.1\00110=161\001";
 
+    public static final String TAG_SPECIFIED_WHERE_INT_VALUE_IS_INCORRECT =
+        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=10\001117=1.1\00110=161\001";
+
+    public static final String TAG_SPECIFIED_WHERE_STRING_VALUE_IS_INCORRECT =
+        "8=FIX.4.4\0019=0027\00135=0\001115=ZZZZ\001116=2\001117=1.1\00110=161\001";
+
     public static final String DERIVED_FIELDS_MESSAGE =
             "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\00110=161\001";
 
@@ -177,9 +183,15 @@ public final class ExampleDictionary
 
         final Field checkSum = registerField(messageEgFields, 10, "CheckSum", Type.STRING);
 
-        final Field onBehalfOfCompID = registerField(messageEgFields, 115, "OnBehalfOfCompID", Type.STRING);
+        final Field onBehalfOfCompID = registerField(messageEgFields, 115, "OnBehalfOfCompID", Type.STRING)
+            .addValue("abc", "abc")
+            .addValue("def", "def");
+
         final Field testReqID = registerField(messageEgFields, TEST_REQ_ID_TAG, "TestReqID", Type.STRING);
-        final Field intField = registerField(messageEgFields, 116, "IntField", Type.LENGTH);
+        final Field intField = registerField(messageEgFields, 116, "IntField", Type.LENGTH)
+            .addValue("1", "ONE")
+            .addValue("2", "TWO");
+
         final Field floatField = registerField(messageEgFields, 117, "FloatField", Type.PRICE);
         final Field booleanField = registerField(messageEgFields, 118, "BooleanField", Type.BOOLEAN);
         final Field dataField = registerField(messageEgFields, 119, "DataField", Type.DATA);

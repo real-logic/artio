@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
@@ -59,6 +60,7 @@ public class DecoderGenerator extends Generator
     public static final int REQUIRED_TAG_MISSING = 1;
     public static final int TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE = 2;
     public static final int TAG_SPECIFIED_WITHOUT_A_VALUE = 4;
+    public static final int VALUE_IS_INCORRECT = 5;
 
     public static String decoderClassName(final Aggregate aggregate)
     {
@@ -133,44 +135,120 @@ public class DecoderGenerator extends Generator
         final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
         out.append(generateFieldDictionary(requiredFields, REQUIRED_FIELDS));
 
+        final String enumValidation =
+            aggregate.entriesWith(Entry.Element::isEnumField)
+                     .map((entry) -> validateEnum(entry, out))
+                     .collect(joining("\n"));
+
         out.append(String.format(
             "    private IntHashSet missingRequiredFields = new IntHashSet(%1$d, -1);\n\n" +
-            "    private IntHashSet unknownFields = new IntHashSet(10, -1);\n\n" +
-            "    private int invalidTagId = NO_ERROR;\n\n" +
-            "    public int invalidTagId()\n" +
-            "    {\n" +
-            "        return invalidTagId;\n" +
-            "    }\n\n" +
-            "    private int rejectReason = NO_ERROR;\n\n" +
-            "    public int rejectReason()\n" +
-            "    {\n" +
-            "        return rejectReason;\n" +
-            "    }\n\n" +
-            "    public boolean validate()\n" +
-            "    {\n" +
-            // validation for this tag performed in the decode method
-            "        if (rejectReason == " + TAG_SPECIFIED_WITHOUT_A_VALUE + ")\n" +
-            "        {\n" +
-            "            return false;\n" +
-            "        }\n" +
-            "        final IntIterator missingFieldsIterator = missingRequiredFields.iterator();\n" +
-            "        final IntIterator unknownFieldsIterator = unknownFields.iterator();\n" +
-            "        if (missingFieldsIterator.hasNext())\n" +
-            "        {\n" +
-            "            invalidTagId = missingFieldsIterator.nextValue();\n" +
-            "            rejectReason = " + REQUIRED_TAG_MISSING + ";\n" +
-            "            return false;\n" +
-            "        }\n" +
-            "        else if (unknownFieldsIterator.hasNext())\n" +
-            "        {\n" +
-            "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
-            "            rejectReason = Constants.ALL_FIELDS.contains(invalidTagId) ? " +
+                "    private IntHashSet unknownFields = new IntHashSet(10, -1);\n\n" +
+                "    private int invalidTagId = NO_ERROR;\n\n" +
+                "    public int invalidTagId()\n" +
+                "    {\n" +
+                "        return invalidTagId;\n" +
+                "    }\n\n" +
+                "    private int rejectReason = NO_ERROR;\n\n" +
+                "    public int rejectReason()\n" +
+                "    {\n" +
+                "        return rejectReason;\n" +
+                "    }\n\n" +
+                "    public boolean validate()\n" +
+                "    {\n" +
+                // validation for this tag performed in the decode method
+                "        if (rejectReason == " + TAG_SPECIFIED_WITHOUT_A_VALUE + ")\n" +
+                "        {\n" +
+                "            return false;\n" +
+                "        }\n" +
+                "        final IntIterator missingFieldsIterator = missingRequiredFields.iterator();\n" +
+                "        final IntIterator unknownFieldsIterator = unknownFields.iterator();\n" +
+                "        if (missingFieldsIterator.hasNext())\n" +
+                "        {\n" +
+                "            invalidTagId = missingFieldsIterator.nextValue();\n" +
+                "            rejectReason = " + REQUIRED_TAG_MISSING + ";\n" +
+                "            return false;\n" +
+                "        }\n" +
+                "        else if (unknownFieldsIterator.hasNext())\n" +
+                "        {\n" +
+                "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
+                "            rejectReason = Constants.ALL_FIELDS.contains(invalidTagId) ? " +
                 TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE + " : " + INVALID_TAG_NUMBER + ";\n" +
+                "            return false;\n" +
+                "        }\n" +
+                "%2$s" +
+                "    return true;\n" +
+                "    }\n\n",
+            sizeHashSet(requiredFields),
+            enumValidation));
+    }
+
+    private CharSequence validateEnum(final Entry entry, final Writer out)
+    {
+        final Field field = (Field) entry.element();
+        final String name = entry.name();
+        final String valuesField = "valuesOf" + entry.name();
+        final String optionalCheck = entry.required() ? "" : String.format("has%s && ", name);
+        final int tagNumber = field.number();
+        final Type type = field.type();
+        final String propertyName = formatPropertyName(name);
+
+        try
+        {
+            if (type.isIntBased())
+            {
+
+                final String addValues =
+                    field.values()
+                        .stream()
+                        .map(value -> String.format("%1$s.add(%2$s);\n", valuesField, value.representation()))
+                        .collect(joining());
+
+                out.append(String.format(
+                    "    public static final IntHashSet %1$s = new IntHashSet(%3$s, -1);\n" +
+                    "    static \n" +
+                    "    {\n" +
+                    "        %2$s\n" +
+                    "    }\n\n",
+                    valuesField,
+                    addValues,
+                    sizeHashSet(field.values())
+                ));
+            }
+            else if (type.isStringBased())
+            {
+                final String addValues =
+                    field.values()
+                        .stream()
+                        .map(value -> "\"" + value.representation() + '"')
+                        .collect(joining(", "));
+
+                out.append(String.format(
+                    "    public static final CharArraySet %1$s = new CharArraySet(%2$s);\n", valuesField, addValues));
+
+            }
+            else
+            {
+                return "";
+            }
+        }
+        catch (IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
+
+        return String.format(
+            "        if (%1$s!%2$s.contains(%3$s%5$s))\n" +
+            "        {\n" +
+            "            invalidTagId = %4$s;\n" +
+            "            rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
             "            return false;\n" +
-            "        }\n" +
-            "    return true;\n" +
-            "    }\n\n",
-            sizeHashSet(requiredFields)));
+            "        }\n",
+            optionalCheck,
+            valuesField,
+            propertyName,
+            tagNumber,
+            type.isIntBased() ? "" : ", " + propertyName + "Length"
+        );
     }
 
     private Stream<Field> requiredFields(final List<Entry> entries)

@@ -93,50 +93,57 @@ public final class Field implements Element
     public static enum Type
     {
         // int types
-        INT(false),
-        LENGTH(false),
-        SEQNUM(false),
-        NUMINGROUP(false),
-        DAYOFMONTH(false),
+        INT(false, true),
+        LENGTH(false, true),
+        SEQNUM(false, true),
+        NUMINGROUP(false, true),
+        DAYOFMONTH(false, true),
 
         // float types
-        FLOAT(false),
-        PRICE(false),
-        PRICEOFFSET(false),
-        QTY(false),
-        PERCENTAGE(false), // Percentage represented as a float
-        AMT(false), // Float amount, not to be confused with boolean Y/N AMT
+        FLOAT(false, false),
+        PRICE(false, false),
+        PRICEOFFSET(false, false),
+        QTY(false, false),
+        PERCENTAGE(false, false), // Percentage represented as a float
+        AMT(false, false), // Float amount, not to be confused with boolean Y/N AMT
 
-        CHAR(false),
+        CHAR(false, false),
 
-        STRING(true),
-        MULTIPLEVALUESTRING(true),
+        STRING(true, false),
+        MULTIPLEVALUESTRING(true, false),
 
-        CURRENCY(true), // String using ISO 4217 (3 chars)
-        EXCHANGE(true), // String using ISO 10383 (2 chars)
-        COUNTRY(true), // String using ISO 3166
+        CURRENCY(true, false), // String using ISO 4217 (3 chars)
+        EXCHANGE(true, false), // String using ISO 10383 (2 chars)
+        COUNTRY(true, false), // String using ISO 3166
 
-        DATA(false),
+        DATA(false, false),
 
         // Boolean types
-        BOOLEAN(false),
+        BOOLEAN(false, false),
 
-        UTCTIMESTAMP(false), // YYYYMMDD-HH:MM:SS or YYYYMMDD-HH:MM:SS.sss
-        UTCTIMEONLY(true), // HH:MM:SS or HH:MM:SS.sss
-        UTCDATEONLY(true), // YYYYMMDD
-        LOCALMKTDATE(false), // YYYYMMDD
-        MONTHYEAR(true); // YYYYMM or YYYYMMDD or YYYYMMWW
+        UTCTIMESTAMP(false, false), // YYYYMMDD-HH:MM:SS or YYYYMMDD-HH:MM:SS.sss
+        UTCTIMEONLY(true, false), // HH:MM:SS or HH:MM:SS.sss
+        UTCDATEONLY(true, false), // YYYYMMDD
+        LOCALMKTDATE(false, false), // YYYYMMDD
+        MONTHYEAR(true, false); // YYYYMM or YYYYMMDD or YYYYMMWW
 
         private final boolean isStringBased;
+        private final boolean isIntBased;
 
-        Type(final boolean isStringBased)
+        Type(final boolean isStringBased, final boolean isIntBased)
         {
             this.isStringBased = isStringBased;
+            this.isIntBased = isIntBased;
         }
 
         public boolean isStringBased()
         {
             return isStringBased;
+        }
+
+        public boolean isIntBased()
+        {
+            return isIntBased;
         }
 
         public static Type lookup(final String name)

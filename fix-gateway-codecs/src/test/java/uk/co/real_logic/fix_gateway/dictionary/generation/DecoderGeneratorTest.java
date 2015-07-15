@@ -184,8 +184,6 @@ public class DecoderGeneratorTest
         assertFalse(hasDataField(decoder));
 
         assertEquals(MISSING_INT, getIntField(decoder));
-
-        assertValid(decoder);
     }
 
     @Test
@@ -340,7 +338,26 @@ public class DecoderGeneratorTest
         assertEquals("Wrong reject reason", TAG_SPECIFIED_WITHOUT_A_VALUE, decoder.rejectReason());
     }
 
-    // TODO: validation for enum values out of range
+    @Test
+    public void shouldValidateIntBasedEnum() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WHERE_INT_VALUE_IS_INCORRECT);
+
+        assertFalse("Passed validation with incorrect value", decoder.validate());
+        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", VALUE_IS_INCORRECT, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateStringBasedEnum() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WHERE_STRING_VALUE_IS_INCORRECT);
+
+        assertFalse("Passed validation with incorrect value", decoder.validate());
+        assertEquals("Wrong tag id", 115, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", VALUE_IS_INCORRECT, decoder.rejectReason());
+    }
+
     // TODO: validation for data fields
     // TODO: validation for groups
 

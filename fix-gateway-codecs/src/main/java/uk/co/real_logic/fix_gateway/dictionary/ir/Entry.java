@@ -73,6 +73,11 @@ public final class Entry
 
     public interface Element
     {
+        default boolean isEnumField()
+        {
+            return this instanceof Field && ((Field)this).isEnum();
+        }
+
         String name();
     }
 }

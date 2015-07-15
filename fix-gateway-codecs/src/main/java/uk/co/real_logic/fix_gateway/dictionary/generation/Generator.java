@@ -20,6 +20,7 @@ import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.IntIterator;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Validation;
+import uk.co.real_logic.fix_gateway.dictionary.CharArraySet;
 import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
@@ -122,6 +123,7 @@ public abstract class Generator
             importFor(UtcTimestampEncoder.class) +
             importFor(StandardCharsets.class) +
             importFor(Arrays.class) +
+            importFor(CharArraySet.class) +
             importFor(IntHashSet.class) +
             importFor(IntIterator.class) +
             importStaticFor(StandardCharsets.class, "US_ASCII") +
