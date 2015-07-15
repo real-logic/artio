@@ -176,7 +176,7 @@ public class DecoderGenerator extends Generator
                 "            return false;\n" +
                 "        }\n" +
                 "%2$s" +
-                "    return true;\n" +
+                "        return true;\n" +
                 "    }\n\n",
             sizeHashSet(requiredFields),
             enumValidation));
