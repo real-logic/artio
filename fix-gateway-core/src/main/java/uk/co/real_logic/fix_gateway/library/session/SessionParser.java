@@ -33,6 +33,7 @@ public class SessionParser
     private final TestRequestDecoder testRequest = new TestRequestDecoder();
     private final HeaderDecoder header = new HeaderDecoder();
     private final SequenceResetDecoder sequenceReset = new SequenceResetDecoder();
+    private final HeartbeatDecoder heartbeat = new HeartbeatDecoder();
 
     private final Session session;
     private final SessionIdStrategy sessionIdStrategy;
@@ -69,6 +70,12 @@ public class SessionParser
                 break;
             }
 
+            case HeartbeatDecoder.MESSAGE_TYPE:
+            {
+                onHeartbeat(offset, length);
+                break;
+            }
+
             case RejectDecoder.MESSAGE_TYPE:
             {
                 onReject(offset, length);
@@ -95,6 +102,21 @@ public class SessionParser
         }
 
         return session.isConnected();
+    }
+
+    private void onHeartbeat(final int offset, final int length)
+    {
+        heartbeat.reset();
+        heartbeat.decode(string, offset, length);
+        final HeaderDecoder header = heartbeat.header();
+        if (VALIDATION_ENABLED && !heartbeat.validate())
+        {
+            session.onInvalidMessage(heartbeat, header);
+        }
+        else
+        {
+            session.onMessage(header.msgSeqNum(), isPossDup(header));
+        }
     }
 
     private void onAnyOtherMessage(final int offset, final int length)
