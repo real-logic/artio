@@ -24,7 +24,6 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.builder.Validation.VALIDATION_ENABLED;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
-import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 
 public class SessionParser
 {
@@ -207,13 +206,10 @@ public class SessionParser
         final HeaderDecoder header = logon.header();
         if (VALIDATION_ENABLED && !logon.validate())
         {
-            if (logon.invalidTagId() == MSG_SEQ_NUM)
+            if (!onInvalidMessage(logon, header))
             {
-                session.onMessage(MISSING_INT, false);
+                session.requestDisconnect();
             }
-
-            onInvalidMessage(logon, header);
-            session.requestDisconnect();
         }
         else
         {
@@ -239,14 +235,22 @@ public class SessionParser
         }
     }
 
-    private void onInvalidMessage(final Decoder decoder, final HeaderDecoder header)
+    private boolean onInvalidMessage(final Decoder decoder, final HeaderDecoder header)
     {
+        if (header.msgSeqNum() == MISSING_INT)
+        {
+            session.onMessage(MISSING_INT, false);
+            return true;
+        }
+
         session.onInvalidMessage(
             header.msgSeqNum(),
             decoder.invalidTagId(),
             header.msgType(),
             header.msgTypeLength(),
             decoder.rejectReason());
+
+        return false;
     }
 
     private boolean isPossDup(final HeaderDecoder header)
