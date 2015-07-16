@@ -483,6 +483,8 @@ public class Session
         final int refMsgTypeLength,
         final int rejectReason)
     {
+        incReceivedSeqNum();
+
         proxy.reject(
             newSentSeqNum(),
             refSeqNum,
