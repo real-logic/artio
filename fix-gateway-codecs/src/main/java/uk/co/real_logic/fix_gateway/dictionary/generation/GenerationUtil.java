@@ -23,6 +23,9 @@ import static java.util.stream.Collectors.joining;
 
 public final class GenerationUtil
 {
+
+    public static final int MESSAGE_TYPE_BITSHIFT = 8;
+
     private GenerationUtil()
     {
     }
@@ -44,13 +47,14 @@ public final class GenerationUtil
 
     public static int getMessageType(final String representation)
     {
-        int packed = representation.charAt(0);
+        int packed = (byte) representation.charAt(0);
 
         if (representation.length() == 2)
         {
-            final byte second = (byte) representation.charAt(1);
-            packed |= second >> 1;
+            final int second = (int) representation.charAt(1);
+            packed |= second << MESSAGE_TYPE_BITSHIFT;
         }
+
         return packed;
     }
 

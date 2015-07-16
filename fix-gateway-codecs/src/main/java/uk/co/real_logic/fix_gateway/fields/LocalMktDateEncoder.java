@@ -30,7 +30,7 @@ public final class LocalMktDateEncoder
     {
     }
 
-    public static void encode(final int localEpochDays, final MutableAsciiFlyweight string, final int offset)
+    public static int encode(final int localEpochDays, final MutableAsciiFlyweight string, final int offset)
     {
         if (localEpochDays < MIN_EPOCH_DAYS || localEpochDays > MAX_EPOCH_DAYS)
         {
@@ -38,5 +38,7 @@ public final class LocalMktDateEncoder
         }
 
         CalendricalUtil.encodeDate(localEpochDays, string, offset);
+
+        return LENGTH;
     }
 }

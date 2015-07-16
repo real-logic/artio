@@ -795,7 +795,7 @@ public class DecoderGenerator extends Generator
                 return String.format("getFloat(%s, valueOffset, valueLength", fieldName);
 
             case CHAR:
-                return "getChar(valueOffset, endOfField";
+                return "getChar(valueOffset";
 
             case STRING:
             case MULTIPLEVALUESTRING:

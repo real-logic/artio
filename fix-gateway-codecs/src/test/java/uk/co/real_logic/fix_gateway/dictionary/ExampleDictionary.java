@@ -92,13 +92,13 @@ public final class ExampleDictionary
         "  \"DataField\": \"[49, 50, 51]\",\n";
 
     public static final String STRING_FOR_GROUP =
-        "  \"EgGroup\": [\n" +
+        "  \"EgGroupGroup\": [\n" +
         "  {\n" +
-        "    \"MsgType\": \"EgGroup\",\n" +
+        "    \"MsgType\": \"EgGroupGroup\",\n" +
         "    \"GroupField\": \"1\",\n" +
         "  },\n" +
         "  {\n" +
-        "    \"MsgType\": \"EgGroup\",\n" +
+        "    \"MsgType\": \"EgGroupGroup\",\n" +
         "    \"GroupField\": \"2\",\n" +
         "  }\n" +
         "  ]";

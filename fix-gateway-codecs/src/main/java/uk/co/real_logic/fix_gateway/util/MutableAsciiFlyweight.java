@@ -82,9 +82,10 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
         return 1;
     }
 
-    public void putChar(final int index, final char value)
+    public int putChar(final int index, final char value)
     {
         buffer.putByte(index, (byte) value);
+        return 1;
     }
 
     public void putNatural(final int offset, final int length, final int value)

@@ -214,7 +214,7 @@ public class ReceiverEndPoint
         final int start = string.scan(endOfBodyLength, indexOfLastByteOfMessage, '=');
         if (string.getByte(start + 2) == START_OF_HEADER)
         {
-            string.getByte(start + 1);
+            return string.getByte(start + 1);
         }
         return string.getMessageType(start + 1, 2);
     }

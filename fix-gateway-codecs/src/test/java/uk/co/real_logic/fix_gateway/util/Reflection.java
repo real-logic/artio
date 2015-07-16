@@ -108,12 +108,12 @@ public final class Reflection
 
     public static Object getEgGroup(final Object stub) throws Exception
     {
-        return get(stub, "egGroup");
+        return get(stub, "egGroupGroup");
     }
 
     public static Object getNestedGroup(final Object group) throws Exception
     {
-        return get(group, "nestedGroup");
+        return get(group, "nestedGroupGroup");
     }
 
     public static Object getEgComponent(final Object object) throws Exception

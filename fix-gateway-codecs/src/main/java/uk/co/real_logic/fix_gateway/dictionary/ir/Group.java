@@ -21,7 +21,7 @@ public final class Group extends Aggregate implements Element
 {
     private final Entry numberField;
 
-    public Group(final String name, final Entry numberField)
+    private Group(final String name, final Entry numberField)
     {
         super(name);
         this.numberField = numberField;
@@ -34,15 +34,11 @@ public final class Group extends Aggregate implements Element
 
     public static Group of(Field field)
     {
-        String name = field.name();
-        if (name.startsWith("No"))
-        {
-            name = name.substring(2);
-        }
-        else
-        {
-            field = new Field(field.number(), "No" + field.name(), field.type());
-        }
-        return new Group(name, new Entry(false, field));
+        final String name = field.name();
+        final String normalisedName = name.startsWith("No") ? name.substring(2) : name;
+        final String fieldName =  "No" + normalisedName + "GroupCounter";
+        final String groupName =  normalisedName + "Group";
+        final Field numberField = new Field(field.number(), fieldName, Field.Type.NUMINGROUP);
+        return new Group(groupName, new Entry(false, numberField));
     }
 }

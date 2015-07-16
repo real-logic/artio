@@ -221,7 +221,7 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
 
-        assertEquals(2, getNoEgGroup(decoder));
+        assertEquals(2, getNoEgGroupGroupCounter(decoder));
 
         Object group = getEgGroup(decoder);
         assertEquals(1, getGroupField(group));
@@ -238,7 +238,7 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(NESTED_GROUP_MESSAGE);
 
-        assertEquals(1, getNoEgGroup(decoder));
+        assertEquals(1, getNoEgGroupGroupCounter(decoder));
 
         final Object group = getEgGroup(decoder);
         assertEquals(1, getGroupField(group));
@@ -367,9 +367,9 @@ public class DecoderGeneratorTest
         assertEquals(int.class, method.getReturnType());
     }
 
-    private Object getNoEgGroup(final Decoder decoder) throws Exception
+    private Object getNoEgGroupGroupCounter(final Decoder decoder) throws Exception
     {
-        return get(decoder, "noEgGroup");
+        return get(decoder, "noEgGroupGroupCounter");
     }
 
     private int getGroupField(final Object group) throws Exception

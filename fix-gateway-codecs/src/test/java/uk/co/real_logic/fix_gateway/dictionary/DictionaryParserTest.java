@@ -154,7 +154,7 @@ public class DictionaryParserTest
         final List<Entry> entries = newOrderSingle.entries();
 
         assertThat(entries,
-            hasItem(withElement(isGroup("TradingSessions",
+            hasItem(withElement(isGroup("TradingSessionsGroup",
                     withEntries(hasItems(isField("TradingSessionID")))))));
     }
 

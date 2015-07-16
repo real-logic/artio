@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.fields.LocalMktDateDecoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.MESSAGE_TYPE_BITSHIFT;
 
 /**
  * Mutable String class that flyweights a data buffer. This assumes a US-ASCII encoding
@@ -151,7 +152,7 @@ public class AsciiFlyweight
 
         if (length == 2)
         {
-            messageType |= buffer.getByte(offset + 1) >> 1;
+            messageType |= buffer.getByte(offset + 1) << MESSAGE_TYPE_BITSHIFT;
         }
 
         return messageType;
