@@ -105,7 +105,7 @@ public class DecoderGenerator extends Generator
                          .collect(toList());
 
             out.append(generateClassDeclaration(className, type, interfaces, "Decoder", Decoder.class));
-            generateValidation(out, aggregate);
+            generateValidation(out, aggregate, type);
             if (isMessage)
             {
                 final Message message = (Message)aggregate;
@@ -124,13 +124,13 @@ public class DecoderGenerator extends Generator
     private String resetValidation()
     {
         return
-            "    invalidTagId = NO_ERROR;\n" +
-            "    rejectReason = NO_ERROR;\n" +
-            "    missingRequiredFields.clear();\n" +
-            "    unknownFields.clear();\n";
+            "        invalidTagId = NO_ERROR;\n" +
+            "        rejectReason = NO_ERROR;\n" +
+            "        missingRequiredFields.clear();\n" +
+            "        unknownFields.clear();\n";
     }
 
-    private void generateValidation(final Writer out, final Aggregate aggregate) throws IOException
+    private void generateValidation(final Writer out, final Aggregate aggregate, final AggregateType type) throws IOException
     {
         final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
         out.append(generateFieldDictionary(requiredFields, REQUIRED_FIELDS));
@@ -139,6 +139,29 @@ public class DecoderGenerator extends Generator
             aggregate.entriesWith(Entry.Element::isEnumField)
                      .map((entry) -> validateEnum(entry, out))
                      .collect(joining("\n"));
+
+        final boolean isMessage = type == MESSAGE;
+        final String messageValidation = isMessage ?
+            "        else if (unknownFieldsIterator.hasNext())\n" +
+            "        {\n" +
+            "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
+            "            rejectReason = Constants.ALL_FIELDS.contains(invalidTagId) ? " +
+            TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE + " : " + INVALID_TAG_NUMBER + ";\n" +
+            "            return false;\n" +
+            "        }\n" +
+            "        else if (!header.validate())\n" +
+            "        {\n" +
+            "            invalidTagId = header.invalidTagId();System.out.println(invalidTagId);\n" +
+            "            rejectReason = header.rejectReason();System.out.println(rejectReason);\n" +
+            "            return false;\n" +
+            "        }\n" +
+            "        else if (!trailer.validate())\n" +
+            "        {\n" +
+            "            invalidTagId = trailer.invalidTagId();\n" +
+            "            rejectReason = trailer.rejectReason();\n" +
+            "            return false;\n" +
+            "        }\n"
+            : "";
 
         out.append(String.format(
             "    private IntHashSet missingRequiredFields = new IntHashSet(%1$d, -1);\n\n" +
@@ -161,24 +184,19 @@ public class DecoderGenerator extends Generator
                 "            return false;\n" +
                 "        }\n" +
                 "        final IntIterator missingFieldsIterator = missingRequiredFields.iterator();\n" +
-                "        final IntIterator unknownFieldsIterator = unknownFields.iterator();\n" +
+                (isMessage ? "        final IntIterator unknownFieldsIterator = unknownFields.iterator();\n" : "") +
                 "        if (missingFieldsIterator.hasNext())\n" +
                 "        {\n" +
                 "            invalidTagId = missingFieldsIterator.nextValue();\n" +
                 "            rejectReason = " + REQUIRED_TAG_MISSING + ";\n" +
                 "            return false;\n" +
                 "        }\n" +
-                "        else if (unknownFieldsIterator.hasNext())\n" +
-                "        {\n" +
-                "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
-                "            rejectReason = Constants.ALL_FIELDS.contains(invalidTagId) ? " +
-                TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE + " : " + INVALID_TAG_NUMBER + ";\n" +
-                "            return false;\n" +
-                "        }\n" +
                 "%2$s" +
+                "%3$s" +
                 "        return true;\n" +
                 "    }\n\n",
             sizeHashSet(requiredFields),
+            messageValidation,
             enumValidation));
     }
 
@@ -652,12 +670,12 @@ public class DecoderGenerator extends Generator
             "            default:\n" +
             "                if (" + VALIDATION_ENABLED + " && !TrailerDecoder.REQUIRED_FIELDS.contains(tag))\n" +
             "                {\n" +
-            "                    unknownFields.add(tag);" +
+            "                    unknownFields.add(tag);\n" +
             "                }\n" +
             "                return position - offset;\n\n" +
             "            }\n\n" +
             "            position = endOfField + 1;\n" +
-        "            }\n\n" +
+            "        }\n\n" +
             (hasCommonCompounds ? "        position += trailer.decode(buffer, position, end - position);\n" : "") +
             "        return position - offset;\n" +
             "    }\n\n";

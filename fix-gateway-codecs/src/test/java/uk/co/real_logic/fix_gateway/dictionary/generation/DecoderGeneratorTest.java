@@ -62,11 +62,11 @@ public class DecoderGeneratorTest
         decoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sources);
-        component = heartbeat.getClassLoader().loadClass(COMPONENT_DECODER);
-        if (heartbeat == null || component == null)
+        if (heartbeat == null)
         {
             System.out.println(sources);
         }
+        component = heartbeat.getClassLoader().loadClass(COMPONENT_DECODER);
         compileInMemory(HEADER_DECODER, sources);
     }
 
@@ -459,9 +459,9 @@ public class DecoderGeneratorTest
 
     private void assertValid(final Decoder decoder)
     {
+        final boolean isValid = decoder.validate();
         assertTrue(String.format(
-            "Decoder fails validation due to: %d for tag: %d",
-            decoder.rejectReason(),
-            decoder.invalidTagId()), decoder.validate());
+            "Decoder fails validation due to: %s for tag: %d", decoder.rejectReason(), decoder.invalidTagId()),
+            isValid);
     }
 }
