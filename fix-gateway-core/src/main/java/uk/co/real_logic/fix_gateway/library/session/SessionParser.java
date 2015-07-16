@@ -23,6 +23,8 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.builder.Validation.VALIDATION_ENABLED;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 
 public class SessionParser
 {
@@ -205,6 +207,11 @@ public class SessionParser
         final HeaderDecoder header = logon.header();
         if (VALIDATION_ENABLED && !logon.validate())
         {
+            if (logon.invalidTagId() == MSG_SEQ_NUM)
+            {
+                session.onMessage(MISSING_INT, false);
+            }
+
             onInvalidMessage(logon, header);
             session.requestDisconnect();
         }
