@@ -151,8 +151,8 @@ public class DecoderGenerator extends Generator
             "        }\n" +
             "        else if (!header.validate())\n" +
             "        {\n" +
-            "            invalidTagId = header.invalidTagId();System.out.println(invalidTagId);\n" +
-            "            rejectReason = header.rejectReason();System.out.println(rejectReason);\n" +
+            "            invalidTagId = header.invalidTagId();\n" +
+            "            rejectReason = header.rejectReason();\n" +
             "            return false;\n" +
             "        }\n" +
             "        else if (!trailer.validate())\n" +
