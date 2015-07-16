@@ -20,10 +20,8 @@ import uk.co.real_logic.agrona.Verify;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.SessionRejectReason;
-import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
-import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
@@ -478,14 +476,19 @@ public class Session
         return connectionId;
     }
 
-    public void onInvalidMessage(final Decoder decoder, final HeaderDecoder header)
+    public void onInvalidMessage(
+        final int refSeqNum,
+        final int refTagId,
+        final char[] refMsgType,
+        final int refMsgTypeLength,
+        final int rejectReason)
     {
         proxy.reject(
             newSentSeqNum(),
-            header.msgSeqNum(),
-            decoder.invalidTagId(),
-            header.msgType(),
-            header.msgTypeLength(),
-            decoder.rejectReason());
+            refSeqNum,
+            refTagId,
+            refMsgType,
+            refMsgTypeLength,
+            rejectReason);
     }
 }

@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.library.session;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -111,7 +112,7 @@ public class SessionParser
         final HeaderDecoder header = heartbeat.header();
         if (VALIDATION_ENABLED && !heartbeat.validate())
         {
-            session.onInvalidMessage(heartbeat, header);
+            onInvalidMessage(heartbeat, header);
         }
         else
         {
@@ -134,7 +135,7 @@ public class SessionParser
         final HeaderDecoder header = sequenceReset.header();
         if (VALIDATION_ENABLED && !sequenceReset.validate())
         {
-            session.onInvalidMessage(sequenceReset, header);
+            onInvalidMessage(sequenceReset, header);
         }
         else
         {
@@ -154,7 +155,7 @@ public class SessionParser
         final HeaderDecoder header = testRequest.header();
         if (VALIDATION_ENABLED && !testRequest.validate())
         {
-            session.onInvalidMessage(testRequest, header);
+            onInvalidMessage(testRequest, header);
         }
         else
         {
@@ -174,7 +175,7 @@ public class SessionParser
         final HeaderDecoder header = reject.header();
         if (VALIDATION_ENABLED && !reject.validate())
         {
-            session.onInvalidMessage(reject, header);
+            onInvalidMessage(reject, header);
         }
         else
         {
@@ -189,7 +190,7 @@ public class SessionParser
         final HeaderDecoder header = logout.header();
         if (VALIDATION_ENABLED && !logout.validate())
         {
-            session.onInvalidMessage(logout, header);
+            onInvalidMessage(logout, header);
         }
         else
         {
@@ -204,7 +205,7 @@ public class SessionParser
         final HeaderDecoder header = logon.header();
         if (VALIDATION_ENABLED && !logon.validate())
         {
-            session.onInvalidMessage(logon, header);
+            onInvalidMessage(logon, header);
             session.requestDisconnect();
         }
         else
@@ -229,6 +230,16 @@ public class SessionParser
                 session.requestDisconnect();
             }
         }
+    }
+
+    private void onInvalidMessage(final Decoder decoder, final HeaderDecoder header)
+    {
+        session.onInvalidMessage(
+            header.msgSeqNum(),
+            decoder.invalidTagId(),
+            header.msgType(),
+            header.msgTypeLength(),
+            decoder.rejectReason());
     }
 
     private boolean isPossDup(final HeaderDecoder header)
