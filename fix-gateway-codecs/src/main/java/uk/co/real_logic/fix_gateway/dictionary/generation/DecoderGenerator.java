@@ -155,8 +155,8 @@ public class DecoderGenerator extends Generator
                 "    }\n\n" +
                 "    public boolean validate()\n" +
                 "    {\n" +
-                // validation for this tag performed in the decode method
-                "        if (rejectReason == " + TAG_SPECIFIED_WITHOUT_A_VALUE + ")\n" +
+                // validation for some tags performed in the decode method
+                "        if (rejectReason != NO_ERROR)\n" +
                 "        {\n" +
                 "            return false;\n" +
                 "        }\n" +
@@ -621,14 +621,19 @@ public class DecoderGenerator extends Generator
                 "        while (position < end)\n" +
                 "        {\n" +
                 "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
-                "            tag = buffer.getNatural(position, equalsPosition);\n" +
+                "            tag = buffer.getInt(position, equalsPosition);\n" +
                 endGroupCheck +
                 "            final int valueOffset = equalsPosition + 1;\n" +
                 "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
                 "            final int valueLength = endOfField - valueOffset;\n" +
                 "            if (" + VALIDATION_ENABLED + ")\n" +
                 "            {\n" +
-                "                if (valueLength == 0)\n" +
+                "                if (tag <= 0)\n" +
+                "                {\n" +
+                "                    invalidTagId = tag;\n" +
+                "                    rejectReason = " + INVALID_TAG_NUMBER + ";\n" +
+                "                }\n" +
+                "                else if (valueLength == 0)\n" +
                 "                {\n" +
                 "                    invalidTagId = tag;\n" +
                 "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
