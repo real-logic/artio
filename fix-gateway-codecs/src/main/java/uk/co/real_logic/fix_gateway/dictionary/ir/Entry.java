@@ -15,6 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
+import uk.co.real_logic.agrona.Verify;
+
+import java.util.function.BiFunction;
+
 public final class Entry
 {
     private final boolean required;
@@ -30,6 +34,30 @@ public final class Entry
         return new Entry(false, element);
     }
 
+    // TODO: refactor ugly instanceofs to this
+    public <T> T match(
+        final BiFunction<Entry, Field, ? extends T> withField,
+        final BiFunction<Entry, Group, ? extends T> withGroup,
+        final BiFunction<Entry, Component, ? extends T> withComponent)
+    {
+        if (element instanceof Field)
+        {
+            return withField.apply(this, (Field) element);
+        }
+        else if (element instanceof Group)
+        {
+            return withGroup.apply(this, (Group) element);
+        }
+        else if (element instanceof Component)
+        {
+            return withComponent.apply(this, (Component) element);
+        }
+        throw new IllegalStateException("Unknown element type: " + element);
+    }
+
+    /**
+     * @param element nullable in the case of forward references
+     */
     public Entry(final boolean required, final Element element)
     {
         this.required = required;
@@ -48,6 +76,8 @@ public final class Entry
 
     public Entry element(final Element element)
     {
+        Verify.notNull(element, "element");
+
         this.element = element;
         return this;
     }

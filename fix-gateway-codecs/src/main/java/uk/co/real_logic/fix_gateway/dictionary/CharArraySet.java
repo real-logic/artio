@@ -90,6 +90,11 @@ public final class CharArraySet
             return CodecUtil.equals(values, that.values, length);
         }
 
+        public String toString()
+        {
+            return new String(values, 0, length);
+        }
+
         public int hashCode()
         {
             return hashcode;

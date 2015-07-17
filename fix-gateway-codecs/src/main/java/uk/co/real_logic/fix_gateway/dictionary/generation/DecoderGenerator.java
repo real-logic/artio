@@ -22,6 +22,7 @@ import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
@@ -136,7 +137,8 @@ public class DecoderGenerator extends Generator
         out.append(generateFieldDictionary(requiredFields, REQUIRED_FIELDS));
 
         final String enumValidation =
-            aggregate.entriesWith(Entry.Element::isEnumField)
+            aggregate.allChildEntries()
+                     .filter(entry -> entry.element().isEnumField())
                      .map((entry) -> validateEnum(entry, out))
                      .collect(joining("\n"));
 
@@ -210,22 +212,26 @@ public class DecoderGenerator extends Generator
         final Type type = field.type();
         final String propertyName = formatPropertyName(name);
 
+        final boolean isChar = type == Type.CHAR;
+        final boolean isPrimitive = type.isIntBased() || isChar;
         try
         {
-            if (type.isIntBased())
+            if (isPrimitive)
             {
 
                 final String addValues =
                     field.values()
                         .stream()
-                        .map(value -> String.format("%1$s.add(%2$s);\n", valuesField, value.representation()))
+                        .map(Value::representation)
+                        .map(repr -> isChar ? "'" + repr + "'" : repr)
+                        .map(repr -> String.format("        %1$s.add(%2$s);\n", valuesField, repr))
                         .collect(joining());
 
                 out.append(String.format(
                     "    public static final IntHashSet %1$s = new IntHashSet(%3$s, -1);\n" +
                     "    static \n" +
                     "    {\n" +
-                    "        %2$s\n" +
+                    "%2$s" +
                     "    }\n\n",
                     valuesField,
                     addValues,
@@ -265,7 +271,7 @@ public class DecoderGenerator extends Generator
             valuesField,
             propertyName,
             tagNumber,
-            type.isIntBased() ? "" : ", " + propertyName + "Length"
+            isPrimitive ? "" : ", " + propertyName + "Length"
         );
     }
 

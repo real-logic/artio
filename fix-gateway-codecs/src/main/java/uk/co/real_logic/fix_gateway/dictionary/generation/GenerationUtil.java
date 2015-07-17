@@ -30,7 +30,7 @@ public final class GenerationUtil
     {
     }
 
-    public static final String PARENT_PACKAGE = "uk.co.real_logic.fix_gateway";
+    public static final String PARENT_PACKAGE = System.getProperty("PARENT_PACKAGE", "uk.co.real_logic.fix_gateway");
     public static final String ENCODER_PACKAGE = PARENT_PACKAGE + ".builder";
     public static final String DECODER_PACKAGE = PARENT_PACKAGE + ".decoder";
 

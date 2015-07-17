@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.dictionary;
 
 import org.w3c.dom.*;
+import uk.co.real_logic.agrona.Verify;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
@@ -140,7 +141,10 @@ public final class DictionaryParser
     private void reconnectForwardReferences(final Map<Entry, String> forwardReferences,
                                             final Map<String, Component> components)
     {
-        forwardReferences.forEach((entry, name) -> entry.element(components.get(name)));
+        forwardReferences.forEach((entry, name) -> {
+            final Component component = components.get(name);
+            entry.element(component);
+        });
     }
 
     private Map<String, Component> parseComponents(final Document document,
@@ -244,8 +248,16 @@ public final class DictionaryParser
             {
                 final NamedNodeMap attributes = node.getAttributes();
                 final String name = name(attributes);
+                if (name.trim().length() == 0)
+                {
+                    return;
+                }
+
                 final boolean required = isRequired(attributes);
-                final Consumer<Entry.Element> newEntry = element -> entries.add(new Entry(required, element));
+                final Consumer<Entry.Element> newEntry = element -> {
+                    Verify.notNull(element, "element for " + name);
+                    entries.add(new Entry(required, element));
+                };
 
                 switch (node.getNodeName())
                 {
