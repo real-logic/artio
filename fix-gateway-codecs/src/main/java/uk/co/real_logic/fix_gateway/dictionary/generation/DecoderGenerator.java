@@ -62,6 +62,7 @@ public class DecoderGenerator extends Generator
     public static final int TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE = 2;
     public static final int TAG_SPECIFIED_WITHOUT_A_VALUE = 4;
     public static final int VALUE_IS_INCORRECT = 5;
+    public static final int TAG_APPEARS_MORE_THAN_ONCE = 13;
 
     public static String decoderClassName(final Aggregate aggregate)
     {
@@ -128,7 +129,8 @@ public class DecoderGenerator extends Generator
             "        invalidTagId = NO_ERROR;\n" +
             "        rejectReason = NO_ERROR;\n" +
             "        missingRequiredFields.clear();\n" +
-            "        unknownFields.clear();\n";
+            "        unknownFields.clear();\n" +
+            "        alreadyVisitedFields.clear();\n";
     }
 
     private void generateValidation(final Writer out, final Aggregate aggregate, final AggregateType type) throws IOException
@@ -166,40 +168,42 @@ public class DecoderGenerator extends Generator
             : "";
 
         out.append(String.format(
+            "    private IntHashSet alreadyVisitedFields = new IntHashSet(%4$d, -1);\n\n" +
             "    private IntHashSet missingRequiredFields = new IntHashSet(%1$d, -1);\n\n" +
-                "    private IntHashSet unknownFields = new IntHashSet(10, -1);\n\n" +
-                "    private int invalidTagId = NO_ERROR;\n\n" +
-                "    public int invalidTagId()\n" +
-                "    {\n" +
-                "        return invalidTagId;\n" +
-                "    }\n\n" +
-                "    private int rejectReason = NO_ERROR;\n\n" +
-                "    public int rejectReason()\n" +
-                "    {\n" +
-                "        return rejectReason;\n" +
-                "    }\n\n" +
-                "    public boolean validate()\n" +
-                "    {\n" +
-                // validation for some tags performed in the decode method
-                "        if (rejectReason != NO_ERROR)\n" +
-                "        {\n" +
-                "            return false;\n" +
-                "        }\n" +
-                "        final IntIterator missingFieldsIterator = missingRequiredFields.iterator();\n" +
-                (isMessage ? "        final IntIterator unknownFieldsIterator = unknownFields.iterator();\n" : "") +
-                "        if (missingFieldsIterator.hasNext())\n" +
-                "        {\n" +
-                "            invalidTagId = missingFieldsIterator.nextValue();\n" +
-                "            rejectReason = " + REQUIRED_TAG_MISSING + ";\n" +
-                "            return false;\n" +
-                "        }\n" +
-                "%2$s" +
-                "%3$s" +
-                "        return true;\n" +
-                "    }\n\n",
+            "    private IntHashSet unknownFields = new IntHashSet(10, -1);\n\n" +
+            "    private int invalidTagId = NO_ERROR;\n\n" +
+            "    public int invalidTagId()\n" +
+            "    {\n" +
+            "        return invalidTagId;\n" +
+            "    }\n\n" +
+            "    private int rejectReason = NO_ERROR;\n\n" +
+            "    public int rejectReason()\n" +
+            "    {\n" +
+            "        return rejectReason;\n" +
+            "    }\n\n" +
+            "    public boolean validate()\n" +
+            "    {\n" +
+            // validation for some tags performed in the decode method
+            "        if (rejectReason != NO_ERROR)\n" +
+            "        {\n" +
+            "            return false;\n" +
+            "        }\n" +
+            "        final IntIterator missingFieldsIterator = missingRequiredFields.iterator();\n" +
+            (isMessage ? "        final IntIterator unknownFieldsIterator = unknownFields.iterator();\n" : "") +
+            "        if (missingFieldsIterator.hasNext())\n" +
+            "        {\n" +
+            "            invalidTagId = missingFieldsIterator.nextValue();\n" +
+            "            rejectReason = " + REQUIRED_TAG_MISSING + ";\n" +
+            "            return false;\n" +
+            "        }\n" +
+            "%2$s" +
+            "%3$s" +
+            "        return true;\n" +
+            "    }\n\n",
             sizeHashSet(requiredFields),
             messageValidation,
-            enumValidation));
+            enumValidation,
+            2 * aggregate.allChildEntries().count()));
     }
 
     private CharSequence validateEnum(final Entry entry, final Writer out)
@@ -610,8 +614,9 @@ public class DecoderGenerator extends Generator
     private String generateDecodeMethod(final List<Entry> entries, final Aggregate aggregate, final AggregateType type)
     {
         final boolean hasCommonCompounds = type == MESSAGE;
+        final boolean isGroup = type == GROUP;
         final String endGroupCheck;
-        if (type == GROUP)
+        if (isGroup)
         {
             endGroupCheck = String.format(
                 "        if (!seenFields.add(tag))\n" +
@@ -640,7 +645,7 @@ public class DecoderGenerator extends Generator
                 "        final int end = offset + length;\n" +
                 "        int position = offset;\n" +
                 (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
-                (type == GROUP ? "        seenFields.clear();\n" : "") +
+                (isGroup ? "        seenFields.clear();\n" : "") +
                 "        int tag;\n\n" +
                 "        while (position < end)\n" +
                 "        {\n" +
@@ -662,6 +667,14 @@ public class DecoderGenerator extends Generator
                 "                    invalidTagId = tag;\n" +
                 "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
                 "                }\n" +
+
+                (isGroup ? "" :
+                "                if (!alreadyVisitedFields.add(tag))\n" +
+                "                {\n" +
+                "                    invalidTagId = tag;\n" +
+                "                    rejectReason = " + TAG_APPEARS_MORE_THAN_ONCE + ";\n" +
+                "                }\n") +
+
                 "                missingRequiredFields.remove(tag);\n" +
                 "            }\n" +
                 "            switch (tag)\n" +

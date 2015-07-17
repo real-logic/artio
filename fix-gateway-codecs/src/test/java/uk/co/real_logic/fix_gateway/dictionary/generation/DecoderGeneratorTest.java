@@ -341,7 +341,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldValidateIntBasedEnum() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WHERE_INT_VALUE_IS_INCORRECT);
+        final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WHERE_INT_VALUE_IS_INCORRECT_MESSAGE);
 
         assertFalse("Passed validation with incorrect value", decoder.validate());
         assertEquals("Wrong tag id", 116, decoder.invalidTagId());
@@ -351,11 +351,21 @@ public class DecoderGeneratorTest
     @Test
     public void shouldValidateStringBasedEnum() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WHERE_STRING_VALUE_IS_INCORRECT);
+        final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WHERE_STRING_VALUE_IS_INCORRECT_MESSAGE);
 
         assertFalse("Passed validation with incorrect value", decoder.validate());
         assertEquals("Wrong tag id", 115, decoder.invalidTagId());
         assertEquals("Wrong reject reason", VALUE_IS_INCORRECT, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateTagsAppearingMoreThanOnce() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_APPEARS_MORE_THAN_ONCE_MESSAGE);
+
+        assertFalse("Passed validation with incorrect value", decoder.validate());
+        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", TAG_APPEARS_MORE_THAN_ONCE, decoder.rejectReason());
     }
 
     // TODO: validation for data fields
