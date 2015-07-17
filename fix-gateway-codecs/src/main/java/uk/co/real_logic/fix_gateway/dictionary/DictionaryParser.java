@@ -37,6 +37,8 @@ import java.util.function.Consumer;
 
 import static javax.xml.xpath.XPathConstants.NODESET;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.getMessageType;
+import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.CHAR;
+import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 
 /**
  * Parses XML format dictionary files and into instances of
@@ -93,8 +95,24 @@ public final class DictionaryParser
         final int minorVersion = getInt(fixAttributes, "minor");
 
         simplifyComponentsThatAreJustGroups(components, messages);
+        correctMultiCharacterCharEnums(fields);
 
         return new Dictionary(messages, fields, components, header, trailer, majorVersion, minorVersion);
+    }
+
+    private void correctMultiCharacterCharEnums(final Map<String, Field> fields)
+    {
+        fields.values()
+              .stream()
+              .filter(Field::isEnum)
+              .filter(field -> field.type() == CHAR)
+              .filter(this::hasMultipleCharacters)
+              .forEach(field -> field.type(STRING));
+    }
+
+    private boolean hasMultipleCharacters(final Field field)
+    {
+        return field.values().stream().anyMatch(value -> value.representation().length() > 1);
     }
 
     private void simplifyComponentsThatAreJustGroups(final Map<String, Component> components,

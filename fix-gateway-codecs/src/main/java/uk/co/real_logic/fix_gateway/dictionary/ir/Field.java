@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
+import uk.co.real_logic.agrona.Verify;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
 
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ public final class Field implements Element
 {
     private final int number;
     private final String name;
-    private final Type type;
+    private Type type;
     private final List<Value> values;
 
     public static Field registerField(
@@ -51,6 +52,12 @@ public final class Field implements Element
     public Type type()
     {
         return type;
+    }
+
+    public void type(final Type type)
+    {
+        Verify.notNull(type, "type");
+        this.type = type;
     }
 
     public String name()
