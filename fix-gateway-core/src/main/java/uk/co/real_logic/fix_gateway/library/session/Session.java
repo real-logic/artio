@@ -132,6 +132,13 @@ public class Session
     {
         int actions = 0;
 
+        if (time >= nextRequiredHeartbeatTimeInMs)
+        {
+            proxy.heartbeat(newSentSeqNum());
+            incNextHeartbeatTime();
+            actions++;
+        }
+
         if (time >= nextRequiredInboundMessageTimeInMs)
         {
             if (state == AWAITING_LOGOUT || state == AWAITING_RESEND)
@@ -142,19 +149,17 @@ public class Session
             {
                 proxy.testRequest(newSentSeqNum(), TEST_REQ_ID);
                 state(AWAITING_RESEND);
-                incrementNextReceivedInboundMessageTime(time);
+                incNextReceivedInboundMessageTime(time);
             }
             actions++;
         }
 
-        if (time >= nextRequiredHeartbeatTimeInMs)
-        {
-            proxy.heartbeat(newSentSeqNum());
-            nextRequiredHeartbeatTimeInMs += sendingHeartbeatIntervalInMs;
-            actions++;
-        }
-
         return actions;
+    }
+
+    private void incNextHeartbeatTime()
+    {
+        nextRequiredHeartbeatTimeInMs += sendingHeartbeatIntervalInMs;
     }
 
     public void startLogout()
@@ -222,7 +227,7 @@ public class Session
             final int expectedSeqNo = expectedReceivedSeqNum();
             if (expectedSeqNo == msgSeqNo)
             {
-                incrementNextReceivedInboundMessageTime(time());
+                incNextReceivedInboundMessageTime(time());
                 lastReceivedMsgSeqNum(msgSeqNo);
             }
             else if (expectedSeqNo < msgSeqNo)
@@ -238,7 +243,7 @@ public class Session
         }
     }
 
-    private void incrementNextReceivedInboundMessageTime(final long time)
+    private void incNextReceivedInboundMessageTime(final long time)
     {
         nextRequiredMessageTime(time + heartbeatIntervalInMs());
     }
@@ -467,6 +472,7 @@ public class Session
     {
         final int lastSentMsgSeqNum = ++this.lastSentMsgSeqNum;
         sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
+        incNextHeartbeatTime();
         return lastSentMsgSeqNum;
     }
 

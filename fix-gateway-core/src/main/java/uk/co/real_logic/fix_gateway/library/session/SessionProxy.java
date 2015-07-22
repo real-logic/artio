@@ -257,7 +257,7 @@ public class SessionProxy
 
     public void testRequest(final int msgSeqNo, final CharSequence testReqID)
     {
-        final HeaderEncoder header = logon.header();
+        final HeaderEncoder header = testRequest.header();
         setupHeader(header);
         header.msgSeqNum(msgSeqNo);
 

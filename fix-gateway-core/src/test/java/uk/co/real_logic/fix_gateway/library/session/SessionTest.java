@@ -175,7 +175,7 @@ public class SessionTest extends AbstractSessionTest
 
         poll();
 
-        verify(mockProxy).testRequest(1, TEST_REQ_ID);
+        verify(mockProxy).testRequest(2, TEST_REQ_ID);
         assertEquals(AWAITING_RESEND, session.state());
     }
 
@@ -236,30 +236,30 @@ public class SessionTest extends AbstractSessionTest
     @Test
     public void shouldSendHeartbeatAfterInterval()
     {
-        onLogon(0);
+        onLogon(1);
 
-        heartbeatSentAfterInterval(3);
+        heartbeatSentAfterInterval(1, 2);
     }
 
     @Test
     public void shouldSendHeartbeatAfterLogonSpecifiedInterval()
     {
-        session().onLogon(1, 0, SESSION_ID, null, fakeClock.time(), false);
-        session().onMessage(0, false);
+        final int heartbeatInterval = 1;
+        session().onLogon(heartbeatInterval, 1, SESSION_ID, null, fakeClock.time(), false);
 
-        heartbeatSentAfterInterval(1, 4);
+        heartbeatSentAfterInterval(heartbeatInterval, 1, 2);
     }
 
     @Test
     public void shouldSendHeartbeatsAfterIntervalRepeatedly()
     {
-        onLogon(0);
+        onLogon(1);
 
-        heartbeatSentAfterInterval(3);
+        heartbeatSentAfterInterval(1, 2);
 
-        heartbeatSentAfterInterval(4);
+        heartbeatSentAfterInterval(2, 3);
 
-        heartbeatSentAfterInterval(6);
+        heartbeatSentAfterInterval(3, 4);
     }
 
     @Test
@@ -299,9 +299,9 @@ public class SessionTest extends AbstractSessionTest
         verify(mockProxy, never()).requestDisconnect(CONNECTION_ID);
     }
 
-    private void heartbeatSentAfterInterval(final int msgSeqNo)
+    private void heartbeatSentAfterInterval(final int heartbeatMsgSeqNo, final int msgSeqNo)
     {
-        heartbeatSentAfterInterval(HEARTBEAT_INTERVAL, msgSeqNo);
+        heartbeatSentAfterInterval(HEARTBEAT_INTERVAL, heartbeatMsgSeqNo, msgSeqNo);
     }
 
     private void verifyCanRoundtripTestMessage()
@@ -314,13 +314,19 @@ public class SessionTest extends AbstractSessionTest
         verifyConnected();
     }
 
-    private void heartbeatSentAfterInterval(final int heartbeatInterval, final int msgSeqNo)
+    private void heartbeatSentAfterInterval(final int heartbeatInterval,
+                                            final int heartbeatMsgSeqNo,
+                                            final int msgSeqNo)
     {
         fakeClock.advanceSeconds(heartbeatInterval);
 
+        session.onMessage(msgSeqNo, false);
+
+        fakeClock.advanceSeconds(1);
+
         poll();
 
-        verify(mockProxy).heartbeat(msgSeqNo);
+        verify(mockProxy).heartbeat(heartbeatMsgSeqNo);
         reset(mockProxy);
     }
 
