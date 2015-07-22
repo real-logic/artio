@@ -33,6 +33,7 @@ import static uk.co.real_logic.fix_gateway.SessionRejectReason.SENDINGTIME_ACCUR
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound.
@@ -192,7 +193,7 @@ public class Session
 
         final int length = encoder.encode(string, 0);
 
-        return publication.saveMessage(buffer, 0, length, encoder.messageType(), id(), connectionId);
+        return publication.saveMessage(buffer, 0, length, encoder.messageType(), id(), connectionId, OK);
     }
 
     // ---------- Event Handlers ----------

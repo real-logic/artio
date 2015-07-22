@@ -23,6 +23,7 @@ import org.mockito.Mockito;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
@@ -36,6 +37,8 @@ import static org.junit.Assert.assertFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN_ID;
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.INVALID_CHECKSUM;
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
 public class ReceiverEndPointTest
@@ -155,7 +158,7 @@ public class ReceiverEndPointTest
         endPoint.receiveData();
 
         then:
-        handlerReceivesFramedMessages(2);
+        handlerReceivesFramedMessages(2, OK, MSG_LEN);
     }
 
     @Test
@@ -185,7 +188,19 @@ public class ReceiverEndPointTest
         assertSavesDisconnect();
     }
 
-    // TODO: more garbage cases - Invalid checksum
+    @Test
+    public void invalidChecksumMessageRecorded() throws IOException
+    {
+        theEndpointReceives(INVALID_CHECKSUM_MSG, 0, INVALID_CHECKSUM_LEN);
+
+        endPoint.receiveData();
+
+        verify(mockPublication, times(1))
+            .saveMessage(
+                any(AtomicBuffer.class), eq(0), eq(INVALID_CHECKSUM_LEN), eq(MESSAGE_TYPE), anyLong(), eq(CONNECTION_ID),
+                    eq(INVALID_CHECKSUM));
+    }
+
     // TODO: log not authenticated messages
 
     private void assertSavesDisconnect()
@@ -210,14 +225,17 @@ public class ReceiverEndPointTest
 
     private void handlerReceivesAFramedMessage()
     {
-        handlerReceivesFramedMessages(1);
+        handlerReceivesFramedMessages(1, OK, MSG_LEN);
     }
 
-    private void handlerReceivesFramedMessages(int numberOfMessages)
+    private void handlerReceivesFramedMessages(int numberOfMessages,
+                                               final MessageStatus status,
+                                               final int msgLen)
     {
         verify(mockPublication, times(numberOfMessages))
             .saveMessage(
-                any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID));
+                any(AtomicBuffer.class), eq(0), eq(msgLen), eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
+                    eq(status));
     }
 
     private void handlerReceivesTwoFramedMessages()
@@ -225,10 +243,12 @@ public class ReceiverEndPointTest
         final InOrder inOrder = Mockito.inOrder(mockPublication);
         inOrder.verify(mockPublication, times(1))
             .saveMessage(
-                any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID));
+                any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
+                    eq(OK));
         inOrder.verify(mockPublication, times(1))
             .saveMessage(
-                any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID));
+                any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
+                    eq(OK));
         inOrder.verifyNoMoreInteractions();
     }
 

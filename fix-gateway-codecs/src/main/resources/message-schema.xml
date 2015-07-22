@@ -32,12 +32,18 @@
             <validValue name="EXCEPTION">0</validValue>
             <validValue name="DUPLICATE_SESSION">1</validValue>
         </enum>
+        <enum name="MessageStatus" encodingType="uint8">
+            <validValue name="OK">0</validValue>
+            <validValue name="INVALID_CHECKSUM">1</validValue>
+            <validValue name="INVALID_BODYLENGTH">2</validValue>
+        </enum>
     </types>
     <sbe:message name="FixMessage" id="1" description="A framed FIX message">
         <field name="messageType" id="1" type="MessageType"/>
         <field name="session" id="2" type="FixSessionId"/>
         <field name="connection" id="3" type="ConnectionId"/>
         <field name="timestamp" id="4" type="Timestamp"/>
+        <field name="status" id="28" type="MessageStatus"/>
         <data name="body" id="5" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="MessageAcknowledgement" id="2" description="An acknowledgement of a received FIX Message">

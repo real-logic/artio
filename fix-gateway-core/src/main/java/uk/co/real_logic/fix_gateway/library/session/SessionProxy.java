@@ -30,6 +30,7 @@ import java.util.List;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.VALUE_IS_INCORRECT;
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
 /**
  * Encapsulates sending messages relating to sessions
@@ -273,6 +274,6 @@ public class SessionProxy
 
     private void send(final int length, final int messageType)
     {
-        gatewayPublication.saveMessage(buffer, 0, length, messageType, sessionId, connectionId);
+        gatewayPublication.saveMessage(buffer, 0, length, messageType, sessionId, connectionId, OK);
     }
 }

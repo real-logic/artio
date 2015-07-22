@@ -32,6 +32,9 @@ import java.nio.channels.SocketChannel;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN_ID;
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.INVALID_BODYLENGTH;
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.INVALID_CHECKSUM;
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
 /**
@@ -51,6 +54,7 @@ public class ReceiverEndPoint
 
     private static final int MIN_CHECKSUM_SIZE = " 10=".length() + 1;
     public static final int SOCKET_DISCONNECTED = -1;
+    public static final int UNKNOWN_MESSAGE_TYPE = -1;
 
     private final LogonDecoder logon = new LogonDecoder();
 
@@ -155,16 +159,24 @@ public class ReceiverEndPoint
                 }
 
                 final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData, START_OF_HEADER);
-                final int startOfChecksum = endOfBodyLength + getBodyLength(offset, endOfBodyLength);
+                final int startOfChecksumTag = endOfBodyLength + getBodyLength(offset, endOfBodyLength);
 
-                if (!validateBodyLength(startOfChecksum))
+                if (!validateBodyLength(startOfChecksumTag))
                 {
+                    publication.saveMessage(
+                        buffer,
+                        offset,
+                        startOfChecksumTag,
+                        UNKNOWN_MESSAGE_TYPE,
+                        sessionId,
+                        connectionId,
+                        INVALID_BODYLENGTH);
                     close();
                     break;
                 }
 
-                final int earliestChecksumEnd = startOfChecksum + MIN_CHECKSUM_SIZE;
-                final int indexOfLastByteOfMessage = string.scan(earliestChecksumEnd, usedBufferData, START_OF_HEADER);
+                final int startOfChecksumValue = startOfChecksumTag + MIN_CHECKSUM_SIZE;
+                final int indexOfLastByteOfMessage = string.scan(startOfChecksumValue, usedBufferData, START_OF_HEADER);
                 if (indexOfLastByteOfMessage == UNKNOWN_INDEX)
                 {
                     // Need more data
@@ -173,20 +185,32 @@ public class ReceiverEndPoint
 
                 final int messageType = getMessageType(endOfBodyLength, indexOfLastByteOfMessage);
                 final int length = (indexOfLastByteOfMessage + 1) - offset;
-                if (sessionId == UNKNOWN_ID)
-                {
-                    logon.decode(string, offset, length);
-                    final Object compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
-                    sessionId = sessionIds.onLogon(compositeKey);
-                    if (sessionId == DUPLICATE_SESSION)
-                    {
-                        close();
-                    }
-                    publication.saveLogon(connectionId, sessionId);
-                }
 
-                messagesRead.orderedIncrement();
-                publication.saveMessage(buffer, offset, length, messageType, sessionId, connectionId);
+                final int expectedChecksum = string.getInt(startOfChecksumValue - 1, indexOfLastByteOfMessage);
+                final int computedChecksum = string.computeChecksum(offset, startOfChecksumTag + 1);
+                //System.out.printf("Computed: %d, Expected: %d\n", computedChecksum, expectedChecksum);
+                if (expectedChecksum != computedChecksum)
+                {
+                    publication.saveMessage(
+                        buffer, offset, length, messageType, sessionId, connectionId, INVALID_CHECKSUM);
+                }
+                else
+                {
+                    if (sessionId == UNKNOWN_ID)
+                    {
+                        logon.decode(string, offset, length);
+                        final Object compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
+                        sessionId = sessionIds.onLogon(compositeKey);
+                        if (sessionId == DUPLICATE_SESSION)
+                        {
+                            close();
+                        }
+                        publication.saveLogon(connectionId, sessionId);
+                    }
+
+                    messagesRead.orderedIncrement();
+                    publication.saveMessage(buffer, offset, length, messageType, sessionId, connectionId, OK);
+                }
 
                 offset += length;
             }
@@ -201,12 +225,12 @@ public class ReceiverEndPoint
         moveRemainingDataToBufferStart(offset);
     }
 
-    private boolean validateBodyLength(final int startOfChecksum)
+    private boolean validateBodyLength(final int startOfChecksumTag)
     {
-        return buffer.getByte(startOfChecksum) == CHECKSUM0
-            && buffer.getByte(startOfChecksum + 1) == CHECKSUM1
-            && buffer.getByte(startOfChecksum + 2) == CHECKSUM2
-            && buffer.getByte(startOfChecksum + 3) == CHECKSUM3;
+        return buffer.getByte(startOfChecksumTag) == CHECKSUM0
+            && buffer.getByte(startOfChecksumTag + 1) == CHECKSUM1
+            && buffer.getByte(startOfChecksumTag + 2) == CHECKSUM2
+            && buffer.getByte(startOfChecksumTag + 3) == CHECKSUM3;
     }
 
     private int getMessageType(final int endOfBodyLength, final int indexOfLastByteOfMessage)

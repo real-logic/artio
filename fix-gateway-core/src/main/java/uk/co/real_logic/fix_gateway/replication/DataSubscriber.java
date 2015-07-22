@@ -22,6 +22,7 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
 
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.replication.GatewayPublication.FRAME_SIZE;
 
 public class DataSubscriber implements FragmentHandler
@@ -62,13 +63,16 @@ public class DataSubscriber implements FragmentHandler
             {
                 messageFrame.wrap(buffer, offset, blockLength, version);
                 final int messageLength = messageFrame.bodyLength();
-                sessionHandler.onMessage(
-                    buffer,
-                    offset + FRAME_SIZE,
-                    messageLength,
-                    messageFrame.connection(),
-                    messageFrame.session(),
-                    messageFrame.messageType());
+                if (messageFrame.status() == OK)
+                {
+                    sessionHandler.onMessage(
+                        buffer,
+                        offset + FRAME_SIZE,
+                        messageLength,
+                        messageFrame.connection(),
+                        messageFrame.session(),
+                        messageFrame.messageType());
+                }
 
                 return offset + FRAME_SIZE + messageLength;
             }
