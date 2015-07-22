@@ -51,7 +51,7 @@ public class ArchiverTest
     private UnsafeBuffer inputBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
     private Archiver archiver = new Archiver(mockMetaData,
-        DEFAULT_LOG_FILE_DIR, DEFAULT_LOGGER_CACHE_CAPACITY, mockStreams.dataSubscription());
+        DEFAULT_LOG_FILE_DIR, DEFAULT_LOGGER_CACHE_CAPACITY, null);
 
     @Before
     public void setUp()

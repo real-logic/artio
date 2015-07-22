@@ -25,45 +25,72 @@ import uk.co.real_logic.agrona.concurrent.Agent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
+import java.util.List;
 
 import static java.nio.file.StandardOpenOption.*;
+import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
+import static uk.co.real_logic.agrona.collections.CollectionUtil.sum;
 
-public class Archiver implements Agent, FileBlockHandler
+public class Archiver implements Agent
 {
-    private final IntLruCache<SessionArchive> sessionIdToArchive;
     private final ArchiveMetaData metaData;
-    private final Subscription subscription;
+    private final List<SubscriptionArchive> subscriptions;
     private final LogDirectoryDescriptor directoryDescriptor;
 
     public Archiver(
         final ArchiveMetaData metaData,
         final String logFileDir,
         final int loggerCacheCapacity,
-        final Subscription subscription)
+        final List<Subscription> subscriptions)
     {
         this.metaData = metaData;
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
-        this.subscription = subscription;
-        sessionIdToArchive = new IntLruCache<>(loggerCacheCapacity, sessionId ->
-        {
-            final int streamId = this.subscription.streamId();
-            final int initialTermId = subscription.getImage(sessionId).initialTermId();
-            metaData.write(streamId, sessionId, initialTermId, termBufferLength());
-            return new SessionArchive(streamId, sessionId);
-        }, SessionArchive::close);
+        this.subscriptions = subscriptions
+            .stream()
+            .map(subscription -> new SubscriptionArchive(loggerCacheCapacity, subscription))
+            .collect(toList());
     }
 
-    public void onBlock(
-        final FileChannel fileChannel,
-        final long offset,
-        final int length,
-        final int sessionId,
-        final int termId)
+    private final class SubscriptionArchive implements FileBlockHandler, AutoCloseable
     {
-        sessionIdToArchive
-            .lookup(sessionId)
-            .archive(fileChannel, offset, length, termId);
+        private final IntLruCache<SessionArchive> sessionIdToArchive;
+        private final Subscription subscription;
+
+        private SubscriptionArchive(final int loggerCacheCapacity, final Subscription subscription)
+        {
+            this.subscription = subscription;
+            sessionIdToArchive = new IntLruCache<>(loggerCacheCapacity, sessionId ->
+            {
+                final int streamId = subscription.streamId();
+                final int initialTermId = subscription.getImage(sessionId).initialTermId();
+                metaData.write(streamId, sessionId, initialTermId, termBufferLength());
+                return new SessionArchive(streamId, sessionId);
+            }, SessionArchive::close);
+        }
+
+        public void onBlock(
+            final FileChannel fileChannel,
+            final long offset,
+            final int length,
+            final int sessionId,
+            final int termId)
+        {
+            sessionIdToArchive
+                .lookup(sessionId)
+                .archive(fileChannel, offset, length, termId);
+        }
+
+        private int poll()
+        {
+            return (int) subscription.filePoll(this, termBufferLength());
+        }
+
+        public void close()
+        {
+            subscription.close();
+            sessionIdToArchive.close();
+        }
     }
 
     private final class SessionArchive implements AutoCloseable
@@ -114,7 +141,7 @@ public class Archiver implements Agent, FileBlockHandler
 
     public int doWork() throws Exception
     {
-        return (int) subscription.filePoll(this, termBufferLength());
+        return sum(subscriptions, SubscriptionArchive::poll);
     }
 
     public String roleName()
@@ -124,8 +151,7 @@ public class Archiver implements Agent, FileBlockHandler
 
     public void onClose()
     {
-        subscription.close();
-        sessionIdToArchive.close();
+        subscriptions.forEach(SubscriptionArchive::close);
         metaData.close();
     }
 }

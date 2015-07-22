@@ -25,7 +25,6 @@ import uk.co.real_logic.fix_gateway.engine.framer.Framer;
 import uk.co.real_logic.fix_gateway.engine.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
-import uk.co.real_logic.fix_gateway.library.session.InitiatorSession;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.util.Arrays;
@@ -36,9 +35,6 @@ public class FixEngine extends GatewayProcess
 
     private AgentRunner framerRunner;
     private AgentRunner loggingRunner;
-
-    private InitiatorSession addedSession;
-    private Exception exception;
 
     FixEngine(final StaticConfiguration configuration)
     {
@@ -53,8 +49,10 @@ public class FixEngine extends GatewayProcess
         final int loggerCacheCapacity = configuration.loggerCacheCapacity();
         final String logFileDir = configuration.logFileDir();
 
+        final List<Subscription> subscriptions = Arrays.asList(
+            outboundStreams.dataSubscription(), inboundStreams.dataSubscription());
         final Archiver archiver = new Archiver(
-            LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity, outboundStreams.dataSubscription());
+            LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity, subscriptions);
         final ArchiveReader archiveReader = new ArchiveReader(
             LoggerUtil::mapExistingFile, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
 
