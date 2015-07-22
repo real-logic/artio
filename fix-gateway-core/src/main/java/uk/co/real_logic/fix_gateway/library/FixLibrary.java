@@ -126,28 +126,17 @@ public class FixLibrary extends GatewayProcess
                               final int addressOffset,
                               final int addressLength)
         {
-            if (libraryId == outboundPublication.sessionId())
+            if (type == INITIATOR)
             {
-                if (type == INITIATOR)
-                {
-                    final Session session = initiateSession(connectionId);
-                    newSession(connectionId, session);
-                    incomingSession = session;
-                }
-                else
-                {
-                    final String address = buffer.getStringUtf8(addressOffset, addressLength);
-                    final Session session = acceptSession(address, connectionId);
-                    newSession(connectionId, session);
-                }
+                final Session session = initiateSession(connectionId);
+                newSession(connectionId, session);
+                incomingSession = session;
             }
             else
             {
-                final SessionSubscriber subscriber = sessions.get(connectionId);
-                if (subscriber != null)
-                {
-                    subscriber.onConnect(libraryId, connectionId, type, buffer, addressOffset, addressLength);
-                }
+                final String address = buffer.getStringUtf8(addressOffset, addressLength);
+                final Session session = acceptSession(address, connectionId);
+                newSession(connectionId, session);
             }
         }
 

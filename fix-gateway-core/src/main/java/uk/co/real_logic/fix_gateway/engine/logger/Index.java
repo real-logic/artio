@@ -19,7 +19,11 @@ import uk.co.real_logic.agrona.DirectBuffer;
 
 public interface Index extends AutoCloseable
 {
-    void indexRecord(final DirectBuffer buffer, final int offset, final int length, final int streamId);
+    void indexRecord(final DirectBuffer buffer,
+                     final int offset,
+                     final int length,
+                     final int streamId,
+                     final int aeronSessionId);
 
     default String getName()
     {

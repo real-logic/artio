@@ -20,7 +20,6 @@ import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
-import uk.co.real_logic.fix_gateway.engine.framer.Framer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +48,7 @@ public class ReplicationStreams implements AutoCloseable
         this.failedDataPublications = failedDataPublications;
         this.dataStream = dataStream;
         this.controlStream = controlStream;
-        dataPublication = aeron.addPublication(channel, dataStream, Framer.ACCEPTOR_LIBRARY_ID);
+        dataPublication = aeron.addPublication(channel, dataStream);
     }
 
     public GatewayPublication gatewayPublication()

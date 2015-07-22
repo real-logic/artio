@@ -60,10 +60,10 @@ public class ArchiveReader
         streamAndSessionToReader = new BiInt2ObjectMap<>();
     }
 
-    public boolean read(final int streamId, final int sessionId, final long position, final LogHandler handler)
+    public boolean read(final int streamId, final int aeronSessionId, final long position, final LogHandler handler)
     {
         return streamAndSessionToReader
-            .computeIfAbsent(streamId, sessionId, newSessionReader)
+            .computeIfAbsent(streamId, aeronSessionId, newSessionReader)
             .read(position, handler);
     }
 

@@ -63,7 +63,11 @@ public class ReplayIndex implements Index
         sessionToIndex = new LongLruCache<>(loggerCacheCapacity, SessionIndex::new, SessionIndex::close);
     }
 
-    public void indexRecord(final DirectBuffer srcBuffer, final int srcOffset, final int srcLength, final int streamId)
+    public void indexRecord(final DirectBuffer srcBuffer,
+                            final int srcOffset,
+                            final int srcLength,
+                            final int streamId,
+                            final int aeronSessionId)
     {
         int offset = srcOffset;
         frameHeaderDecoder.wrap(srcBuffer, offset);
@@ -81,7 +85,7 @@ public class ReplayIndex implements Index
 
             sessionToIndex
                 .lookup(messageFrame.session())
-                .onRecord(streamId, srcOffset, fixHeader.msgSeqNum());
+                .onRecord(streamId, aeronSessionId, srcOffset, fixHeader.msgSeqNum());
         }
     }
 
@@ -109,11 +113,15 @@ public class ReplayIndex implements Index
                 .version(replayIndexRecord.sbeSchemaVersion());
         }
 
-        public void onRecord(final int streamId, final long position, final int sequenceNumber)
+        public void onRecord(final int streamId,
+                             final int aeronSessionId,
+                             final long position,
+                             final int sequenceNumber)
         {
             replayIndexRecord
                 .wrap(buffer, offset)
                 .streamId(streamId)
+                .aeronSessionId(aeronSessionId)
                 .position(position)
                 .sequenceNumber(sequenceNumber);
 

@@ -25,7 +25,6 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_DATA_STREAM;
-import static uk.co.real_logic.fix_gateway.engine.framer.Framer.ACCEPTOR_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
 /**
@@ -92,6 +91,7 @@ public class ReplayQuery implements AutoCloseable
             {
                 indexRecord.wrap(buffer, index, actingBlockLength, actingVersion);
                 final int streamId = indexRecord.streamId();
+                final int aeronSessionId = indexRecord.aeronSessionId();
                 final long position = indexRecord.position();
                 if (position == 0)
                 {
@@ -102,8 +102,7 @@ public class ReplayQuery implements AutoCloseable
                 if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo && streamId == OUTBOUND_DATA_STREAM)
                 {
                     count++;
-                    // TODO: parameterise library ID
-                    if (!archiveReader.read(streamId, ACCEPTOR_LIBRARY_ID, position, handler))
+                    if (!archiveReader.read(streamId, aeronSessionId, position, handler))
                     {
                         return count;
                     }

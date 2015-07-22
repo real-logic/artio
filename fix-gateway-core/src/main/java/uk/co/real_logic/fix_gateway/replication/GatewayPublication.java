@@ -122,7 +122,6 @@ public class GatewayPublication
 
     public long saveConnect(final long connectionId,
                             final String address,
-                            final int libraryId,
                             final ConnectionType type)
     {
         final byte[] addressString = address.getBytes(UTF_8);
@@ -145,7 +144,6 @@ public class GatewayPublication
         connect
             .wrap(buffer, offset)
             .connection(connectionId)
-            .libraryId(libraryId)
             .type(type)
             .putAddress(addressString, 0, addressString.length);
 

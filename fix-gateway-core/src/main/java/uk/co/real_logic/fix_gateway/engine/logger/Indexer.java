@@ -48,7 +48,7 @@ public class Indexer implements Agent, FragmentHandler
     {
         for (final Index index : indices)
         {
-            index.indexRecord(buffer, offset, length, header.streamId());
+            index.indexRecord(buffer, offset, length, header.streamId(), header.sessionId());
         }
     }
 

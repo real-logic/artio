@@ -57,6 +57,7 @@ public class ReplayIndexTest extends AbstractMessageTest
             .wrap(new UnsafeBuffer(indexBuffer), 8, 16, 0);
 
         assertEquals(STREAM_ID, replayIndexRecord.streamId());
+        assertEquals(AERON_STREAM_ID, replayIndexRecord.aeronSessionId());
         assertEquals(START, replayIndexRecord.position());
         assertEquals(SEQUENCE_NUMBER, replayIndexRecord.sequenceNumber());
     }
@@ -122,6 +123,6 @@ public class ReplayIndexTest extends AbstractMessageTest
 
     private void indexRecord()
     {
-        replayIndex.indexRecord(buffer, START, messageLength(), STREAM_ID);
+        replayIndex.indexRecord(buffer, START, messageLength(), STREAM_ID, AERON_STREAM_ID);
     }
 }

@@ -50,9 +50,6 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.EXCEPTION;
  */
 public class Framer implements Agent, SessionHandler
 {
-    // TODO: remove this and identify sensible configuraion/load balancing for acceptor sessions
-    public static final int ACCEPTOR_LIBRARY_ID = 42;
-
     private final List<ReceiverEndPoint> receiverEndPoints = new ArrayList<>();
     private final DataSubscriber dataSubscriber;
 
@@ -157,7 +154,7 @@ public class Framer implements Agent, SessionHandler
         setupConnection(channel, connectionId, UNKNOWN_ID);
 
         final String address = channel.getRemoteAddress().toString();
-        inboundPublication.saveConnect(connectionId, address, ACCEPTOR_LIBRARY_ID, ACCEPTOR);
+        inboundPublication.saveConnect(connectionId, address, ACCEPTOR);
     }
 
     public void onInitiateConnection(final int libraryId,
@@ -182,7 +179,7 @@ public class Framer implements Agent, SessionHandler
             }
 
             setupConnection(channel, connectionId, sessionId);
-            inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR);
+            inboundPublication.saveConnect(connectionId, address.toString(), INITIATOR);
             inboundPublication.saveLogon(connectionId, sessionId);
         }
         catch (final Exception e)

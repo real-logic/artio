@@ -32,6 +32,7 @@ public class AbstractMessageTest
     protected static final int CONNECTION_ID = 1;
     protected static final int START = 1;
     protected static final int SEQUENCE_NUMBER = 5;
+    protected static final int AERON_STREAM_ID = -10;
 
     protected MessageHeaderEncoder header = new MessageHeaderEncoder();
     protected FixMessageEncoder messageFrame = new FixMessageEncoder();

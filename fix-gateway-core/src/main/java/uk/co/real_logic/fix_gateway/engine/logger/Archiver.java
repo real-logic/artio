@@ -31,8 +31,6 @@ import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
 
 public class Archiver implements Agent, FileBlockHandler
 {
-    private static final int FRAGMENT_LIMIT = 10;
-
     private final IntLruCache<SessionArchive> sessionIdToArchive;
     private final ArchiveMetaData metaData;
     private final Subscription subscription;
