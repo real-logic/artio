@@ -115,10 +115,14 @@ public class SessionParser
         {
             onInvalidMessage(heartbeat, header);
         }
-        else
+        else if (heartbeat.hasTestReqID())
         {
             session.onHeartbeat(
                 header.msgSeqNum(), heartbeat.testReqID(), heartbeat.testReqIDLength(), isPossDup(header));
+        }
+        else
+        {
+            session.onMessage(header.msgSeqNum(), isPossDup(header));
         }
     }
 

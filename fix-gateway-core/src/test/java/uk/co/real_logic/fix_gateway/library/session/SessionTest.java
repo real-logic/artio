@@ -175,7 +175,7 @@ public class SessionTest extends AbstractSessionTest
 
         poll();
 
-        verify(mockProxy).testRequest(2, TEST_REQ_ID);
+        verify(mockProxy).testRequest(anyInt(), eq(TEST_REQ_ID));
         assertEquals(AWAITING_RESEND, session.state());
     }
 
@@ -247,15 +247,13 @@ public class SessionTest extends AbstractSessionTest
         final int heartbeatInterval = 1;
         session().onLogon(heartbeatInterval, 1, SESSION_ID, null, fakeClock.time(), false);
 
-        heartbeatSentAfterInterval(heartbeatInterval, 1, 2);
+        heartbeatSentAfterInterval(heartbeatInterval, 2);
     }
 
     @Test
     public void shouldSendHeartbeatsAfterIntervalRepeatedly()
     {
-        onLogon(1);
-
-        heartbeatSentAfterInterval(1, 2);
+        shouldSendHeartbeatAfterInterval();
 
         heartbeatSentAfterInterval(2, 3);
 
@@ -299,9 +297,9 @@ public class SessionTest extends AbstractSessionTest
         verify(mockProxy, never()).requestDisconnect(CONNECTION_ID);
     }
 
-    private void heartbeatSentAfterInterval(final int heartbeatMsgSeqNo, final int msgSeqNo)
+    private void heartbeatSentAfterInterval(final int msgSeqNo)
     {
-        heartbeatSentAfterInterval(HEARTBEAT_INTERVAL, heartbeatMsgSeqNo, msgSeqNo);
+        heartbeatSentAfterInterval(HEARTBEAT_INTERVAL, msgSeqNo);
     }
 
     private void verifyCanRoundtripTestMessage()
@@ -315,7 +313,6 @@ public class SessionTest extends AbstractSessionTest
     }
 
     private void heartbeatSentAfterInterval(final int heartbeatInterval,
-                                            final int heartbeatMsgSeqNo,
                                             final int msgSeqNo)
     {
         fakeClock.advanceSeconds(heartbeatInterval);
@@ -326,7 +323,7 @@ public class SessionTest extends AbstractSessionTest
 
         poll();
 
-        verify(mockProxy).heartbeat(heartbeatMsgSeqNo);
+        verify(mockProxy).heartbeat(anyInt());
         reset(mockProxy);
     }
 

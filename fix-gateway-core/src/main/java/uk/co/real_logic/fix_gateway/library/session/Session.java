@@ -29,12 +29,11 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.SENDINGTIME_ACCURACY_PROBLEM;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
-import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
-import static uk.co.real_logic.fix_gateway.library.session.SessionState.AWAITING_LOGOUT;
-import static uk.co.real_logic.fix_gateway.library.session.SessionState.AWAITING_RESEND;
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
 /**
@@ -53,6 +52,7 @@ public class Session
 
     public static final String TEST_REQ_ID = "TEST";
     public static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
+    private static final long REASONABLE_TRANSMISSION_TIME = SECONDS.toMillis(1);
 
     private final MilliClock clock;
 
@@ -137,7 +137,6 @@ public class Session
         if (time >= nextRequiredHeartbeatTimeInMs)
         {
             proxy.heartbeat(newSentSeqNum());
-            incNextHeartbeatTime();
             actions++;
         }
 
@@ -161,7 +160,7 @@ public class Session
 
     private void incNextHeartbeatTime()
     {
-        nextRequiredHeartbeatTimeInMs += sendingHeartbeatIntervalInMs;
+        nextRequiredHeartbeatTimeInMs = time() + sendingHeartbeatIntervalInMs;
     }
 
     public void startLogout()
@@ -247,7 +246,7 @@ public class Session
 
     private void incNextReceivedInboundMessageTime(final long time)
     {
-        nextRequiredMessageTime(time + heartbeatIntervalInMs());
+        nextRequiredMessageTime(time + REASONABLE_TRANSMISSION_TIME + heartbeatIntervalInMs());
     }
 
     void onLogon(final int heartbeatInterval,
@@ -419,7 +418,7 @@ public class Session
         this.heartbeatIntervalInMs = MilliClock.fromSeconds(heartbeatIntervalInS);
 
         final long time = time();
-        nextRequiredInboundMessageTimeInMs = time + heartbeatIntervalInMs;
+        incNextReceivedInboundMessageTime(time);
         sendingHeartbeatIntervalInMs = (long) (heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
         nextRequiredHeartbeatTimeInMs = time + sendingHeartbeatIntervalInMs;
         return this;
