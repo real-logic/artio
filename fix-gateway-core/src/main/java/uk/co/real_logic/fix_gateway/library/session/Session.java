@@ -134,14 +134,9 @@ public class Session
 
         if (time >= nextRequiredInboundMessageTimeInMs)
         {
-            if (state == AWAITING_LOGOUT)
+            if (state == AWAITING_LOGOUT || state == AWAITING_RESEND)
             {
                 requestDisconnect();
-            }
-            else if (state == AWAITING_RESEND)
-            {
-                startLogout();
-                incrementNextReceivedInboundMessageTime(time);
             }
             else
             {

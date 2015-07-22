@@ -188,12 +188,6 @@ public class SessionTest extends AbstractSessionTest
 
         poll();
 
-        verifyLogoutStarted();
-
-        twoHeartBeatIntervalsPass();
-
-        poll();
-
         verifyDisconnect();
     }
 
@@ -263,7 +257,7 @@ public class SessionTest extends AbstractSessionTest
 
         heartbeatSentAfterInterval(3);
 
-        heartbeatSentAfterInterval(5);
+        heartbeatSentAfterInterval(4);
 
         heartbeatSentAfterInterval(6);
     }
