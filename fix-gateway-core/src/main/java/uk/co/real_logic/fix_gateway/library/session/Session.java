@@ -224,7 +224,6 @@ public class Session
             {
                 state(SessionState.AWAITING_RESEND);
                 proxy.resendRequest(newSentSeqNum(), expectedSeqNo, msgSeqNo - 1);
-                incReceivedSeqNum();
             }
             else if (expectedSeqNo > msgSeqNo && !isPossDupOrResend)
             {
