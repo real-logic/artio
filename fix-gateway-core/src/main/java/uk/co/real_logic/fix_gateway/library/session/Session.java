@@ -50,7 +50,9 @@ public class Session
      * The proportion of the maximum heartbeat interval before you send your heartbeat
      */
     public static final double HEARTBEAT_PAUSE_FACTOR = 0.8;
+
     public static final String TEST_REQ_ID = "TEST";
+    public static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
 
     private final MilliClock clock;
 
@@ -508,5 +510,15 @@ public class Session
             refMsgType,
             refMsgTypeLength,
             rejectReason);
+    }
+
+    public void onHeartbeat(
+        final int msgSeqNum, final char[] testReqID, final int testReqIDLength, final boolean isPossDupOrResend)
+    {
+        if (state == AWAITING_RESEND && CodecUtil.equals(testReqID, TEST_REQ_ID_CHARS, testReqIDLength))
+        {
+            state(ACTIVE);
+        }
+        onMessage(msgSeqNum, isPossDupOrResend);
     }
 }

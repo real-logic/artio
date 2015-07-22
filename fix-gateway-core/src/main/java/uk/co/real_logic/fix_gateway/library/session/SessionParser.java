@@ -117,7 +117,8 @@ public class SessionParser
         }
         else
         {
-            session.onMessage(header.msgSeqNum(), isPossDup(header));
+            session.onHeartbeat(
+                header.msgSeqNum(), heartbeat.testReqID(), heartbeat.testReqIDLength(), isPossDup(header));
         }
     }
 
