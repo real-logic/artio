@@ -68,15 +68,15 @@ public enum SessionState
     AWAITING_RESEND,
 
     /**
+     * You've sent a test request after a timeout and are waiting for a reply.
+     */
+    AWAITING_TEST_RESPONSE,
+
+    /**
      * Linger between logout request and a logout acknowledgement. You can do resend processing at this point, but
      * no other messages.
      */
     AWAITING_LOGOUT,
-
-    /**
-     *  Disconnect the session, once you've sent remaining messages in the buffer.
-     */
-    DRAINING,
 
     /**
      * Session has been disconnected and can't send messages.

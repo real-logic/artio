@@ -33,6 +33,8 @@ import static uk.co.real_logic.fix_gateway.SessionRejectReason.SENDINGTIME_ACCUR
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.AWAITING_LOGOUT;
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.AWAITING_RESEND;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
 /**
@@ -48,6 +50,7 @@ public class Session
      * The proportion of the maximum heartbeat interval before you send your heartbeat
      */
     public static final double HEARTBEAT_PAUSE_FACTOR = 0.8;
+    public static final String TEST_REQ_ID = "TEST";
 
     private final MilliClock clock;
 
@@ -70,7 +73,7 @@ public class Session
     private int lastSentMsgSeqNum = 0;
 
     private long heartbeatIntervalInMs;
-    private long nextRequiredMessageTimeInMs;
+    private long nextRequiredInboundMessageTimeInMs;
     private long sendingHeartbeatIntervalInMs;
     private long nextRequiredHeartbeatTimeInMs;
 
@@ -129,15 +132,22 @@ public class Session
     {
         int actions = 0;
 
-        if (time >= nextRequiredMessageTimeInMs)
+        if (time >= nextRequiredInboundMessageTimeInMs)
         {
-            if (state() == SessionState.AWAITING_LOGOUT)
+            if (state == AWAITING_LOGOUT)
             {
                 requestDisconnect();
             }
-            else
+            else if (state == AWAITING_RESEND)
             {
                 startLogout();
+                incrementNextReceivedInboundMessageTime(time);
+            }
+            else
+            {
+                proxy.testRequest(newSentSeqNum(), TEST_REQ_ID);
+                state(AWAITING_RESEND);
+                incrementNextReceivedInboundMessageTime(time);
             }
             actions++;
         }
@@ -160,7 +170,7 @@ public class Session
 
     private void awaitLogout()
     {
-        state(SessionState.AWAITING_LOGOUT);
+        state(AWAITING_LOGOUT);
     }
 
     private void sendLogout()
@@ -217,12 +227,12 @@ public class Session
             final int expectedSeqNo = expectedReceivedSeqNum();
             if (expectedSeqNo == msgSeqNo)
             {
-                nextRequiredMessageTime(time() + heartbeatIntervalInMs());
+                incrementNextReceivedInboundMessageTime(time());
                 lastReceivedMsgSeqNum(msgSeqNo);
             }
             else if (expectedSeqNo < msgSeqNo)
             {
-                state(SessionState.AWAITING_RESEND);
+                state(AWAITING_RESEND);
                 proxy.resendRequest(newSentSeqNum(), expectedSeqNo, msgSeqNo - 1);
             }
             else if (expectedSeqNo > msgSeqNo && !isPossDupOrResend)
@@ -231,6 +241,11 @@ public class Session
                 requestDisconnect();
             }
         }
+    }
+
+    private void incrementNextReceivedInboundMessageTime(final long time)
+    {
+        nextRequiredMessageTime(time + heartbeatIntervalInMs());
     }
 
     void onLogon(final int heartbeatInterval,
@@ -282,7 +297,7 @@ public class Session
     void onLogout(final int msgSeqNo, final boolean isPossDupOrResend)
     {
         onMessage(msgSeqNo, isPossDupOrResend);
-        if (state() == SessionState.AWAITING_LOGOUT)
+        if (state() == AWAITING_LOGOUT)
         {
             requestDisconnect();
         }
@@ -389,12 +404,12 @@ public class Session
 
     long heartbeatIntervalInMs()
     {
-        return this.heartbeatIntervalInMs;
+        return heartbeatIntervalInMs;
     }
 
     long nextRequiredMessageTimeInMs()
     {
-        return this.nextRequiredMessageTimeInMs;
+        return nextRequiredInboundMessageTimeInMs;
     }
 
     Session heartbeatIntervalInS(final int heartbeatIntervalInS)
@@ -402,7 +417,7 @@ public class Session
         this.heartbeatIntervalInMs = MilliClock.fromSeconds(heartbeatIntervalInS);
 
         final long time = time();
-        nextRequiredMessageTimeInMs = time + heartbeatIntervalInMs;
+        nextRequiredInboundMessageTimeInMs = time + heartbeatIntervalInMs;
         sendingHeartbeatIntervalInMs = (long) (heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
         nextRequiredHeartbeatTimeInMs = time + sendingHeartbeatIntervalInMs;
         return this;
@@ -410,7 +425,7 @@ public class Session
 
     Session nextRequiredMessageTime(final long nextRequiredMessageTime)
     {
-        this.nextRequiredMessageTimeInMs = nextRequiredMessageTime;
+        this.nextRequiredInboundMessageTimeInMs = nextRequiredMessageTime;
         return this;
     }
 

@@ -74,8 +74,10 @@ public class SessionProxy
     private final LogoutEncoder logout = new LogoutEncoder();
     private final HeartbeatEncoder heartbeat = new HeartbeatEncoder();
     private final RejectEncoder reject = new RejectEncoder();
+    private final TestRequestEncoder testRequest = new TestRequestEncoder();
     private final List<HeaderEncoder> headers = asList(
-        logon.header(), resendRequest.header(), logout.header(), heartbeat.header(), reject.header());
+        logon.header(), resendRequest.header(), logout.header(), heartbeat.header(), reject.header(),
+        testRequest.header());
 
     private final AsciiFormatter lowSequenceNumber;
     private final UnsafeBuffer buffer;
@@ -251,6 +253,17 @@ public class SessionProxy
         reject.text(LOGGED_ON_SESSION_REJECT_REASONS[rejectReason]);
 
         sendReject(msgSeqNo, refSeqNum, refTagId, rejectReason);
+    }
+
+    public void testRequest(final int msgSeqNo, final CharSequence testReqID)
+    {
+        final HeaderEncoder header = logon.header();
+        setupHeader(header);
+        header.msgSeqNum(msgSeqNo);
+
+        testRequest.testReqID(testReqID);
+
+        send(testRequest.encode(string, 0), TestRequestDecoder.MESSAGE_TYPE);
     }
 
     private void sendReject(final int msgSeqNo, final int refSeqNum, final int refTagId, final int rejectReason)

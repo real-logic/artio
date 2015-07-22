@@ -24,6 +24,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.VALUE_IS_INCORRECT;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.fix_gateway.library.session.Session.TEST_REQ_ID;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
 
 public class SessionTest extends AbstractSessionTest
@@ -162,24 +163,42 @@ public class SessionTest extends AbstractSessionTest
         verify(mockProxy).reject(1, 2, NEW_SEQ_NO, SequenceResetDecoder.MESSAGE_TYPE_BYTES, VALUE_IS_INCORRECT);
     }
 
-    // NB: differs from the spec to requestDisconnect, rather than test request.
     @Test
-    public void shouldLogoutUponTimeout()
+    public void shouldSendTestRequestUponTimeout()
     {
         session.state(ACTIVE);
         session.lastReceivedMsgSeqNum(9);
 
         session.onMessage(10, false);
 
-        fakeClock.advanceSeconds(HEARTBEAT_INTERVAL * 2);
+        twoHeartBeatIntervalsPass();
 
-        session.poll(fakeClock.time());
+        poll();
 
-        verifyLogoutStarted();
+        verify(mockProxy).testRequest(1, TEST_REQ_ID);
+        assertEquals(AWAITING_RESEND, session.state());
     }
 
     @Test
-    public void shouldSuppressTimeout()
+    public void shouldLogoutAndDisconnectUponTimeout()
+    {
+        shouldSendTestRequestUponTimeout();
+
+        twoHeartBeatIntervalsPass();
+
+        poll();
+
+        verifyLogoutStarted();
+
+        twoHeartBeatIntervalsPass();
+
+        poll();
+
+        verifyDisconnect();
+    }
+
+    @Test
+    public void shouldSuppressTimeoutWhenMessageReceived()
     {
         session.state(ACTIVE);
         session.lastReceivedMsgSeqNum(9);
@@ -188,12 +207,12 @@ public class SessionTest extends AbstractSessionTest
 
         fakeClock.advanceSeconds(1);
 
-        session.poll(fakeClock.time());
+        poll();
         session.onMessage(11, false);
 
         fakeClock.advanceSeconds(1);
 
-        session.poll(fakeClock.time());
+        poll();
 
         verifyConnected();
     }
@@ -244,7 +263,7 @@ public class SessionTest extends AbstractSessionTest
 
         heartbeatSentAfterInterval(3);
 
-        heartbeatSentAfterInterval(4);
+        heartbeatSentAfterInterval(5);
 
         heartbeatSentAfterInterval(6);
     }
@@ -271,6 +290,16 @@ public class SessionTest extends AbstractSessionTest
         verifyDisconnect();
     }
 
+    private void poll()
+    {
+        session.poll(fakeClock.time());
+    }
+
+    private void twoHeartBeatIntervalsPass()
+    {
+        fakeClock.advanceSeconds(HEARTBEAT_INTERVAL * 2);
+    }
+
     private void verifyConnected()
     {
         verify(mockProxy, never()).requestDisconnect(CONNECTION_ID);
@@ -295,7 +324,7 @@ public class SessionTest extends AbstractSessionTest
     {
         fakeClock.advanceSeconds(heartbeatInterval);
 
-        session.poll(fakeClock.time());
+        poll();
 
         verify(mockProxy).heartbeat(msgSeqNo);
         reset(mockProxy);

@@ -208,11 +208,6 @@ public class ReceiverEndPointTest
         verify(mockPublication).saveDisconnect(CONNECTION_ID);
     }
 
-    private void theEndpointReceivesAnInvalidMessage()
-    {
-        theEndpointReceives(INVALID_LENGTH, 0, INVALID_LENGTH.length);
-    }
-
     private void theChannelIsClosed() throws IOException
     {
         when(mockChannel.read(any(ByteBuffer.class))).thenReturn(-1);
