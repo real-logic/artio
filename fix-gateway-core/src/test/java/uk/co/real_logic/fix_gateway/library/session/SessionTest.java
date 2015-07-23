@@ -299,6 +299,8 @@ public class SessionTest extends AbstractSessionTest
         messageWithWeirdTime(sendingTime() - TWO_MINUTES);
 
         verifySendingTimeProblem();
+        verifyLogout();
+        verifyDisconnect();
     }
 
     @Test
@@ -309,6 +311,8 @@ public class SessionTest extends AbstractSessionTest
         messageWithWeirdTime(sendingTime() + TWO_MINUTES);
 
         verifySendingTimeProblem();
+        verifyLogout();
+        verifyDisconnect();
     }
 
     @Test

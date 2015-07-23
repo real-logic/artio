@@ -257,7 +257,7 @@ public class Session
                 }
                 else if (origSendingTime > sendingTime)
                 {
-                    rejectDueToSendingTIme(msgSeqNo, msgType, msgTypeLength);
+                    rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
                     return;
                 }
             }
@@ -265,7 +265,8 @@ public class Session
             final long time = time();
             if ((sendingTime < time - SENDING_TIME_WINDOW) || (sendingTime > time + SENDING_TIME_WINDOW))
             {
-                rejectDueToSendingTIme(msgSeqNo, msgType, msgTypeLength);
+                rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
+                logoutAndDisconnect();
                 return;
             }
 
@@ -288,7 +289,7 @@ public class Session
         }
     }
 
-    private void rejectDueToSendingTIme(final int msgSeqNo, final byte[] msgType, final int msgTypeLength)
+    private void rejectDueToSendingTime(final int msgSeqNo, final byte[] msgType, final int msgTypeLength)
     {
         proxy.reject(
             newSentSeqNum(),
