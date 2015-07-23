@@ -39,7 +39,7 @@ import java.util.Set;
 import static java.net.StandardSocketOptions.SO_RCVBUF;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
 import static java.nio.channels.SelectionKey.OP_READ;
-import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN_ID;
+import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.DUPLICATE_SESSION;
@@ -151,7 +151,7 @@ public class Framer implements Agent, SessionHandler
     private void onAcceptConnection(final SocketChannel channel) throws IOException
     {
         final long connectionId = this.nextConnectionId++;
-        setupConnection(channel, connectionId, UNKNOWN_ID);
+        setupConnection(channel, connectionId, UNKNOWN);
 
         final String address = channel.getRemoteAddress().toString();
         inboundPublication.saveConnect(connectionId, address, ACCEPTOR);

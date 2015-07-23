@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.library.session;
 
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
@@ -54,23 +55,23 @@ public class InitiatorSession extends Session
         final long sessionId,
         final Object sessionKey,
         final long sendingTime,
-        final boolean isPossDupOrResend)
+        final long origSendingTime, final boolean isPossDupOrResend)
     {
         if (msgSeqNo == expectedReceivedSeqNum() && state() == SessionState.SENT_LOGON)
         {
             state(SessionState.ACTIVE);
-            super.onLogon(heartbeatInterval, msgSeqNo, sessionId, sessionKey, sendingTime, isPossDupOrResend);
+            super.onLogon(heartbeatInterval, msgSeqNo, sessionId, sessionKey, sendingTime, origSendingTime, isPossDupOrResend);
         }
         else
         {
-            onMessage(msgSeqNo, isPossDupOrResend);
+            onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
         }
     }
 
     public int poll(final long time)
     {
         int actions = 0;
-        if (state() == SessionState.CONNECTED && id() != UNKNOWN_ID)
+        if (state() == SessionState.CONNECTED && id() != UNKNOWN)
         {
             state(SessionState.SENT_LOGON);
             proxy.logon((int) (heartbeatIntervalInMs() / 1000), newSentSeqNum());

@@ -50,7 +50,7 @@ public class SessionParserTest
 
         parser.onMessage(buffer, 0, buffer.capacity(), 'B', 1);
 
-        verify(mockSession).onMessage(MISSING_INT, false);
+        verify(mockSession).onMessage(eq(MISSING_INT), any(), anyLong(), anyLong(), eq(false));
     }
 
     private UnsafeBuffer bufferOf(final String str)

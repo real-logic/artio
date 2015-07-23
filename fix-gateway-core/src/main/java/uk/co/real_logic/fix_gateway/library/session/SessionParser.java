@@ -18,12 +18,14 @@ package uk.co.real_logic.fix_gateway.library.session;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
+import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.builder.Validation.VALIDATION_ENABLED;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 
 public class SessionParser
 {
@@ -36,6 +38,9 @@ public class SessionParser
     private final HeaderDecoder header = new HeaderDecoder();
     private final SequenceResetDecoder sequenceReset = new SequenceResetDecoder();
     private final HeartbeatDecoder heartbeat = new HeartbeatDecoder();
+
+    // TODO: optimisation candidate to just move to copying bytes.
+    private byte[] msgTypeBuffer = new byte[2];
 
     private final Session session;
     private final SessionIdStrategy sessionIdStrategy;
@@ -117,12 +122,17 @@ public class SessionParser
         }
         else if (heartbeat.hasTestReqID())
         {
+            final long origSendingTime = getSendingTime(header);
+            final long sendingTime = header.sendingTime();
+            final int testReqIDLength = heartbeat.testReqIDLength();
+            final char[] testReqID = heartbeat.testReqID();
+            final int msgSeqNum = header.msgSeqNum();
             session.onHeartbeat(
-                header.msgSeqNum(), heartbeat.testReqID(), heartbeat.testReqIDLength(), isPossDup(header));
+                msgSeqNum, testReqID, testReqIDLength, sendingTime, origSendingTime, isPossDup(header));
         }
         else
         {
-            session.onMessage(header.msgSeqNum(), isPossDup(header));
+            onMessage(header);
         }
     }
 
@@ -131,7 +141,25 @@ public class SessionParser
         final HeaderDecoder header = this.header;
         header.reset();
         header.decode(string, offset, length);
-        session.onMessage(header.msgSeqNum(), isPossDup(header));
+        onMessage(header);
+    }
+
+    private void onMessage(final HeaderDecoder header)
+    {
+        final long origSendingTime = getSendingTime(header);
+        final long sendingTime = header.sendingTime();
+        session.onMessage(header.msgSeqNum(), extractMsgType(header), sendingTime, origSendingTime, isPossDup(header));
+    }
+
+    private byte[] extractMsgType(final HeaderDecoder header)
+    {
+        msgTypeBuffer = CodecUtil.toBytes(header.msgType(), msgTypeBuffer, header.msgTypeLength());
+        return msgTypeBuffer;
+    }
+
+    private long getSendingTime(final HeaderDecoder header)
+    {
+        return header.hasOrigSendingTime() ? header.origSendingTime() : UNKNOWN;
     }
 
     private void onSequenceReset(final int offset, final int length)
@@ -166,10 +194,14 @@ public class SessionParser
         else
         {
             final int msgSeqNo = header.msgSeqNum();
+            final long origSendingTime = getSendingTime(header);
+            final long sendingTime = header.sendingTime();
             session.onTestRequest(
+                msgSeqNo,
                 testRequest.testReqID(),
                 testRequest.testReqIDLength(),
-                msgSeqNo,
+                sendingTime,
+                origSendingTime,
                 isPossDup(header));
         }
     }
@@ -185,7 +217,9 @@ public class SessionParser
         }
         else
         {
-            session.onReject(header.msgSeqNum(), isPossDup(header));
+            final long origSendingTime = getSendingTime(header);
+            final long sendingTime = header.sendingTime();
+            session.onReject(header.msgSeqNum(), sendingTime, origSendingTime, isPossDup(header));
         }
     }
 
@@ -200,7 +234,9 @@ public class SessionParser
         }
         else
         {
-            session.onLogout(header.msgSeqNum(), isPossDup(header));
+            final long origSendingTime = getSendingTime(header);
+            final long sendingTime = header.sendingTime();
+            session.onLogout(header.msgSeqNum(), sendingTime, origSendingTime, isPossDup(header));
         }
     }
 
@@ -224,12 +260,14 @@ public class SessionParser
 
                 if (session.onBeginString(header.beginString(), header.beginStringLength()))
                 {
+                    final long origSendingTime = getSendingTime(header);
                     session.onLogon(
                         logon.heartBtInt(),
                         header.msgSeqNum(),
                         sessionId,
                         sessionKey,
                         header.sendingTime(),
+                        origSendingTime,
                         isPossDup(header));
                 }
             }
@@ -244,7 +282,9 @@ public class SessionParser
     {
         if (header.msgSeqNum() == MISSING_INT)
         {
-            session.onMessage(MISSING_INT, false);
+            final long origSendingTime = getSendingTime(header);
+            final long sendingTime = header.sendingTime();
+            session.onMessage(MISSING_INT, extractMsgType(header), sendingTime, origSendingTime, false);
             return true;
         }
 

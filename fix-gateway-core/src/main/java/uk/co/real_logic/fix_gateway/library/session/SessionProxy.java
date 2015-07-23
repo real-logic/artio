@@ -237,12 +237,22 @@ public class SessionProxy
         final byte[] refMsgType,
         final SessionRejectReason reason)
     {
+        reject.refTagID(refTagId);
+        reject(msgSeqNo, refTagId, refMsgType, reason);
+    }
+
+    public void reject(
+        final int msgSeqNo,
+        final int refSeqNum,
+        final byte[] refMsgType,
+        final SessionRejectReason reason)
+    {
         final int rejectReason = reason.representation();
 
         reject.refMsgType(refMsgType);
         reject.text(LOGGED_ON_SESSION_REJECT_REASONS[rejectReason]);
 
-        sendReject(msgSeqNo, refSeqNum, refTagId, rejectReason);
+        sendReject(msgSeqNo, refSeqNum, rejectReason);
     }
 
     public void reject(
@@ -253,10 +263,24 @@ public class SessionProxy
         final int refMsgTypeLength,
         final int rejectReason)
     {
+        reject.refSeqNum(refSeqNum);
         reject.refMsgType(refMsgType, refMsgTypeLength);
         reject.text(LOGGED_ON_SESSION_REJECT_REASONS[rejectReason]);
 
-        sendReject(msgSeqNo, refSeqNum, refTagId, rejectReason);
+        sendReject(msgSeqNo, refTagId, rejectReason);
+    }
+
+    private void sendReject(final int msgSeqNo, final int refSeqNum, final int rejectReason)
+    {
+        final HeaderEncoder header = reject.header();
+        setupHeader(header);
+        header.msgSeqNum(msgSeqNo);
+
+        reject.refSeqNum(refSeqNum);
+        reject.sessionRejectReason(rejectReason);
+
+        send(reject.encode(string, 0), RejectDecoder.MESSAGE_TYPE);
+        reject.reset();
     }
 
     public void testRequest(final int msgSeqNo, final CharSequence testReqID)
@@ -269,20 +293,6 @@ public class SessionProxy
 
         send(testRequest.encode(string, 0), TestRequestDecoder.MESSAGE_TYPE);
         testRequest.reset();
-    }
-
-    private void sendReject(final int msgSeqNo, final int refSeqNum, final int refTagId, final int rejectReason)
-    {
-        final HeaderEncoder header = reject.header();
-        setupHeader(header);
-        header.msgSeqNum(msgSeqNo);
-
-        reject.refTagID(refTagId);
-        reject.refSeqNum(refSeqNum);
-        reject.sessionRejectReason(rejectReason);
-
-        send(reject.encode(string, 0), RejectDecoder.MESSAGE_TYPE);
-        reject.reset();
     }
 
     private void setupHeader(final HeaderEncoder header)

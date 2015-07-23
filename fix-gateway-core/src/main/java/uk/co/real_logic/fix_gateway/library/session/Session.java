@@ -22,7 +22,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.SessionRejectReason;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
-import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
+import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -43,7 +43,7 @@ import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
  */
 public class Session
 {
-    public static final long UNKNOWN_ID = -1;
+    public static final long UNKNOWN = -1;
 
     /**
      * The proportion of the maximum heartbeat interval before you send your heartbeat
@@ -69,7 +69,7 @@ public class Session
     protected Object sessionKey;
 
     private SessionState state;
-    private long id = UNKNOWN_ID;
+    private long id = UNKNOWN;
     // TODO: unify this with the atomic counter
     private int lastReceivedMsgSeqNum = 0;
     private int lastSentMsgSeqNum = 0;
@@ -209,7 +209,11 @@ public class Session
 
     // ---------- Event Handlers ----------
 
-    void onMessage(final int msgSeqNo, final boolean isPossDupOrResend)
+    void onMessage(final int msgSeqNo,
+                   final byte[] msgType,
+                   final long sendingTime,
+                   final long origSendingTime,
+                   final boolean isPossDupOrResend)
     {
         if (state() == SessionState.CONNECTED)
         {
@@ -223,6 +227,15 @@ public class Session
                 proxy.receivedMessageWithoutSequenceNumber(newSentSeqNum());
                 requestDisconnect();
                 return;
+            }
+
+            if (isPossDupOrResend && origSendingTime > sendingTime)
+            {
+                proxy.reject(
+                    newSentSeqNum(),
+                    msgSeqNo,
+                    msgType,
+                    SENDINGTIME_ACCURACY_PROBLEM);
             }
 
             final int expectedSeqNo = expectedReceivedSeqNum();
@@ -254,7 +267,7 @@ public class Session
                  final long sessionId,
                  final Object sessionKey,
                  long sendingTime,
-                 final boolean isPossDupOrResend)
+                 final long origSendingTime, final boolean isPossDupOrResend)
     {
         this.sessionKey = sessionKey;
         proxy.setupSession(sessionId, sessionKey);
@@ -262,7 +275,7 @@ public class Session
         {
             id(sessionId);
             heartbeatIntervalInS(heartbeatInterval);
-            onMessage(msgSeqNo, isPossDupOrResend);
+            onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
             publication.saveLogon(connectionId, sessionId);
         }
     }
@@ -295,9 +308,13 @@ public class Session
         }
     }
 
-    void onLogout(final int msgSeqNo, final boolean isPossDupOrResend)
+    void onLogout(
+        final int msgSeqNo,
+        final long sendingTime,
+        final long origSendingTime,
+        final boolean isPossDupOrResend)
     {
-        onMessage(msgSeqNo, isPossDupOrResend);
+        onMessage(msgSeqNo, LogoutDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
         if (state() == AWAITING_LOGOUT)
         {
             requestDisconnect();
@@ -320,13 +337,18 @@ public class Session
     }
 
     void onTestRequest(
-        final char[] testReqId, final int testReqIdLength, final int msgSeqNo, final boolean isPossDupOrResend)
+        final int msgSeqNo,
+        final char[] testReqId,
+        final int testReqIdLength,
+        final long sendingTime,
+        final long origSendingTime,
+        final boolean isPossDupOrResend)
     {
         if (msgSeqNo != MISSING_INT)
         {
             proxy.heartbeat(testReqId, testReqIdLength, newSentSeqNum());
         }
-        onMessage(msgSeqNo, isPossDupOrResend);
+        onMessage(msgSeqNo, TestRequestDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }
 
     void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean gapFillFlag, final boolean possDupFlag)
@@ -385,10 +407,12 @@ public class Session
         }
     }
 
-    void onReject(final int msgSeqNo, final boolean isPossDupOrResend)
+    void onReject(final int msgSeqNo,
+                  final long sendingTime,
+                  final long origSendingTime,
+                  final boolean isPossDupOrResend)
     {
-        // TODO:
-        onMessage(msgSeqNo, isPossDupOrResend);
+        onMessage(msgSeqNo, RejectDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }
 
     public boolean onBeginString(final char[] value, final int length)
@@ -512,12 +536,17 @@ public class Session
     }
 
     public void onHeartbeat(
-        final int msgSeqNum, final char[] testReqID, final int testReqIDLength, final boolean isPossDupOrResend)
+        final int msgSeqNum,
+        final char[] testReqID,
+        final int testReqIDLength,
+        final long sendingTime,
+        final long origSendingTime,
+        final boolean isPossDupOrResend)
     {
         if (state == AWAITING_RESEND && CodecUtil.equals(testReqID, TEST_REQ_ID_CHARS, testReqIDLength))
         {
             state(ACTIVE);
         }
-        onMessage(msgSeqNum, isPossDupOrResend);
+        onMessage(msgSeqNum, HeartbeatDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }
 }

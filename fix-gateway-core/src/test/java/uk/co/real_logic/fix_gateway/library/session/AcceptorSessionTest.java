@@ -20,6 +20,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.SENDINGTIME_ACCURACY_PROBLEM;
+import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
 
 public class AcceptorSessionTest extends AbstractSessionTest
@@ -61,7 +62,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     @Test
     public void shouldLogoutIfFirstMessageNotALogon()
     {
-        session.onMessage(1, false);
+        onMessage(1);
 
         verifyDisconnect();
         verifyNoFurtherMessages();
@@ -74,7 +75,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     {
         fakeClock.advanceMilliSeconds(2 * SENDING_TIME_WINDOW);
 
-        session().onLogon(HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1, false);
+        session().onLogon(HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1, UNKNOWN, false);
 
         verify(mockProxy).rejectWhilstNotLoggedOn(1, SENDINGTIME_ACCURACY_PROBLEM);
     }

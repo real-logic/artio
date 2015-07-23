@@ -31,7 +31,7 @@ import java.nio.channels.SocketChannel;
 
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
-import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN_ID;
+import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.INVALID_BODYLENGTH;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.INVALID_CHECKSUM;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
@@ -196,7 +196,7 @@ public class ReceiverEndPoint
                 }
                 else
                 {
-                    if (sessionId == UNKNOWN_ID)
+                    if (sessionId == UNKNOWN)
                     {
                         logon.decode(string, offset, length);
                         final Object compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());

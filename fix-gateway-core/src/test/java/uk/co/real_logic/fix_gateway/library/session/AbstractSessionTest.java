@@ -20,8 +20,10 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.engine.framer.FakeMilliClock;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
 
 public abstract class AbstractSessionTest
@@ -31,6 +33,7 @@ public abstract class AbstractSessionTest
     public static final long CONNECTION_ID = 3L;
     public static final long SESSION_ID = 2L;
     public static final int HEARTBEAT_INTERVAL = 2;
+    public static final byte[] MSG_TYPE_BYTES = "D".getBytes(US_ASCII);
     public static final Object SESSION_KEY = new Object();
 
     protected SessionProxy mockProxy = mock(SessionProxy.class);
@@ -50,7 +53,7 @@ public abstract class AbstractSessionTest
         session().state(ACTIVE);
         session().lastReceivedMsgSeqNum(2);
 
-        session().onMessage(1, false);
+        onMessage(1);
         verify(mockProxy).lowSequenceNumberLogout(1, 3, 1);
         verifyDisconnect();
     }
@@ -84,7 +87,17 @@ public abstract class AbstractSessionTest
 
     public void onLogon(final int msgSeqNo)
     {
-       session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID, SESSION_KEY, fakeClock.time(), false);
+       session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID, SESSION_KEY, fakeClock.time(), UNKNOWN, false);
+    }
+
+    protected void onMessage(final int msgSeqNo)
+    {
+        session().onMessage(msgSeqNo, MSG_TYPE_BYTES, sendingTime(), UNKNOWN, false);
+    }
+
+    protected long sendingTime()
+    {
+        return fakeClock.time() - 1;
     }
 
     protected abstract Session session();
