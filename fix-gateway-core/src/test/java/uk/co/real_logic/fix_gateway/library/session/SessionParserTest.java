@@ -46,11 +46,22 @@ public class SessionParserTest
     public void shouldNotifySessionOfMissingMsgSeqNum()
     {
         final UnsafeBuffer buffer = bufferOf(
-            "8=FIX.4.4\00135=B\00149=TW\00152=00000101-00:00:00.000\00156=ISLD\001112=TEST\001");
+            "8=FIX.4.4\00135=B\00149=abc\00152=00000101-00:00:00.000\00156=dsa\001");
 
         parser.onMessage(buffer, 0, buffer.capacity(), 'B', 1);
 
         verify(mockSession).onMessage(eq(MISSING_INT), any(), anyInt(), anyLong(), anyLong(), eq(false));
+    }
+
+    @Test
+    public void shouldNotifySessionOfUnknownMessageType()
+    {
+        final UnsafeBuffer buffer = bufferOf(
+            "8=FIX.4.4\00135=*\00134=2\00149=abc\00152=00000101-00:00:00.000\00156=das\001");
+
+        parser.onMessage(buffer, 0, buffer.capacity(), '*', 1);
+
+        verify(mockSession).onInvalidMessageType(eq(2), any(char[].class), anyInt());
     }
 
     private UnsafeBuffer bufferOf(final String str)

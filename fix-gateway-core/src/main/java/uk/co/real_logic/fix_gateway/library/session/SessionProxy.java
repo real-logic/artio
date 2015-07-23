@@ -266,6 +266,16 @@ public class SessionProxy
         final int rejectReason)
     {
         reject.refTagID(refTagId);
+        reject(msgSeqNo, refSeqNum, refMsgType, refMsgTypeLength, rejectReason);
+    }
+
+    public void reject(
+        final int msgSeqNo,
+        final int refSeqNum,
+        final char[] refMsgType,
+        final int refMsgTypeLength,
+        final int rejectReason)
+    {
         reject.refMsgType(refMsgType, refMsgTypeLength);
         reject.text(LOGGED_ON_SESSION_REJECT_REASONS[rejectReason]);
 

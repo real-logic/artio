@@ -15,9 +15,21 @@
  */
 package uk.co.real_logic.fix_gateway.builder;
 
-public class Validation
+public final class Validation
 {
     public static final String VALIDATION_DISABLED_PROP = "fix.codecs.no_validation";
     public static final boolean VALIDATION_DISABLED = Boolean.getBoolean(VALIDATION_DISABLED_PROP);
     public static final boolean VALIDATION_ENABLED = !VALIDATION_DISABLED;
+
+    public static boolean isValidMsgType(final char[] msgType, final int msgTypeLength)
+    {
+        for (int i = 0; i < msgTypeLength; i++)
+        {
+            if (!Character.isLetterOrDigit(msgType[i]))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 }

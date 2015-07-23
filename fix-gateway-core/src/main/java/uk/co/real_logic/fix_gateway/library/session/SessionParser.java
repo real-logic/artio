@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.builder.Validation.VALIDATION_ENABLED;
+import static uk.co.real_logic.fix_gateway.builder.Validation.isValidMsgType;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 
@@ -141,7 +142,18 @@ public class SessionParser
         final HeaderDecoder header = this.header;
         header.reset();
         header.decode(string, offset, length);
-        onMessage(header);
+
+        final char[] msgType = header.msgType();
+        final int msgTypeLength = header.msgTypeLength();
+        if (isValidMsgType(msgType, msgTypeLength))
+        {
+            onMessage(header);
+        }
+        else
+        {
+            final int msgSeqNum = header.msgSeqNum();
+            session.onInvalidMessageType(msgSeqNum, msgType, msgTypeLength);
+        }
     }
 
     private void onMessage(final HeaderDecoder header)
