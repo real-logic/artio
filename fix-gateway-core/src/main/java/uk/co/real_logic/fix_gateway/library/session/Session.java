@@ -30,6 +30,7 @@ import uk.co.real_logic.fix_gateway.util.MilliClock;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static uk.co.real_logic.fix_gateway.SessionRejectReason.REQUIRED_TAG_MISSING;
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.SENDINGTIME_ACCURACY_PROBLEM;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
@@ -229,13 +230,24 @@ public class Session
                 return;
             }
 
-            if (isPossDupOrResend && origSendingTime > sendingTime)
+            if (isPossDupOrResend)
             {
-                proxy.reject(
-                    newSentSeqNum(),
-                    msgSeqNo,
-                    msgType,
-                    SENDINGTIME_ACCURACY_PROBLEM);
+                if (origSendingTime == UNKNOWN)
+                {
+                    proxy.reject(
+                        newSentSeqNum(),
+                        msgSeqNo,
+                        msgType,
+                        REQUIRED_TAG_MISSING);
+                }
+                else if (origSendingTime > sendingTime)
+                {
+                    proxy.reject(
+                        newSentSeqNum(),
+                        msgSeqNo,
+                        msgType,
+                        SENDINGTIME_ACCURACY_PROBLEM);
+                }
             }
 
             final int expectedSeqNo = expectedReceivedSeqNum();

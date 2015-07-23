@@ -21,8 +21,7 @@ import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.SessionRejectReason.SENDINGTIME_ACCURACY_PROBLEM;
-import static uk.co.real_logic.fix_gateway.SessionRejectReason.VALUE_IS_INCORRECT;
+import static uk.co.real_logic.fix_gateway.SessionRejectReason.*;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.library.session.Session.TEST_REQ_ID;
@@ -287,7 +286,7 @@ public class SessionTest extends AbstractSessionTest
     @Test
     public void shouldValidateOriginalSendingTimeBeforeSendingTime()
     {
-        final long sendingTime = fakeClock.time() - 1;
+        final long sendingTime = sendingTime();
         final long origSendingTime = sendingTime + 10;
 
         onLogon(1);
@@ -297,6 +296,18 @@ public class SessionTest extends AbstractSessionTest
         session.onMessage(2, MSG_TYPE_BYTES, sendingTime, origSendingTime, true);
 
         verify(mockProxy).reject(1, 2, MSG_TYPE_BYTES, SENDINGTIME_ACCURACY_PROBLEM);
+    }
+
+    @Test
+    public void shouldValidateOriginalSendingTimeExistsIfPossDupFlagIsSet()
+    {
+        onLogon(1);
+
+        onMessage(2);
+
+        session.onMessage(2, MSG_TYPE_BYTES, sendingTime(), UNKNOWN, true);
+
+        verify(mockProxy).reject(1, 2, MSG_TYPE_BYTES, REQUIRED_TAG_MISSING);
     }
 
     private void poll()
