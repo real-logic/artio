@@ -220,7 +220,7 @@ public class SessionTest extends AbstractSessionTest
 
         onMessage(3);
 
-        verify(mockProxy).resendRequest(1, 1, 2);
+        verify(mockProxy).resendRequest(1, 1, 0);
         assertState(AWAITING_RESEND);
     }
 

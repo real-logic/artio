@@ -259,7 +259,7 @@ public class Session
             else if (expectedSeqNo < msgSeqNo)
             {
                 state(AWAITING_RESEND);
-                proxy.resendRequest(newSentSeqNum(), expectedSeqNo, msgSeqNo - 1);
+                proxy.resendRequest(newSentSeqNum(), expectedSeqNo, 0);
             }
             else if (expectedSeqNo > msgSeqNo && !isPossDupOrResend)
             {

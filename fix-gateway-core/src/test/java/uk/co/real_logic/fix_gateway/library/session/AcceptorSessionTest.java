@@ -54,7 +54,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
         verifySessionSetup();
         verifyLogon();
-        verify(mockProxy).resendRequest(2, 1, 2);
+        verify(mockProxy).resendRequest(2, 1, 0);
         verifyNoFurtherMessages();
         assertState(AWAITING_RESEND);
     }
