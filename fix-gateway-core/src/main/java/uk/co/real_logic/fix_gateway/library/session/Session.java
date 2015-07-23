@@ -368,7 +368,7 @@ public class Session
         final int expectedMsgSeqNo = expectedReceivedSeqNum();
         if (receivedMsgSeqNo > expectedMsgSeqNo)
         {
-            proxy.resendRequest(newSeqNo + 1, expectedMsgSeqNo, receivedMsgSeqNo - 1);
+            proxy.resendRequest(newSentSeqNum(), expectedMsgSeqNo, 0);
             lastReceivedMsgSeqNum(newSeqNo - 1);
         }
         else if (receivedMsgSeqNo < expectedMsgSeqNo)

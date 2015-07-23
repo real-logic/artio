@@ -124,6 +124,7 @@ public class SessionProxy
         resendRequest.beginSeqNo(beginSeqNo)
                      .endSeqNo(endSeqNo);
         send(resendRequest.encode(string, 0), ResendRequestDecoder.MESSAGE_TYPE);
+        resendRequest.reset();
     }
 
     /**
@@ -147,6 +148,7 @@ public class SessionProxy
         customisationStrategy.configureLogon(logon, sessionId);
 
         send(logon.encode(string, 0), LogonDecoder.MESSAGE_TYPE);
+        logon.reset();
     }
 
     public void logout(final int msgSeqNo)
@@ -172,6 +174,7 @@ public class SessionProxy
 
         customisationStrategy.configureLogout(logout, sessionId);
         send(logout.encode(string, 0), LogoutDecoder.MESSAGE_TYPE);
+        logout.reset();
     }
 
     public void lowSequenceNumberLogout(final int msgSeqNo, final int expectedSeqNo, final int receivedSeqNo)
@@ -224,6 +227,7 @@ public class SessionProxy
             heartbeat.resetTestReqID();
         }
         send(heartbeat.encode(string, 0), HeartbeatDecoder.MESSAGE_TYPE);
+        heartbeat.reset();
     }
 
     public void reject(
@@ -264,6 +268,7 @@ public class SessionProxy
         testRequest.testReqID(testReqID);
 
         send(testRequest.encode(string, 0), TestRequestDecoder.MESSAGE_TYPE);
+        testRequest.reset();
     }
 
     private void sendReject(final int msgSeqNo, final int refSeqNum, final int refTagId, final int rejectReason)

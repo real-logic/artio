@@ -84,7 +84,7 @@ public class SessionTest extends AbstractSessionTest
         session.onSequenceReset(3, 4, true, false);
         session.onMessage(3, false);
 
-        verify(mockProxy).resendRequest(5, 1, 2);
+        verify(mockProxy).resendRequest(1, 1, 0);
     }
 
     @Test
