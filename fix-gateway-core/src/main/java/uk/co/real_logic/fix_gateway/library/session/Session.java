@@ -30,9 +30,9 @@ import uk.co.real_logic.fix_gateway.util.MilliClock;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static uk.co.real_logic.fix_gateway.SessionRejectReason.INVALID_MSGTYPE;
-import static uk.co.real_logic.fix_gateway.SessionRejectReason.REQUIRED_TAG_MISSING;
-import static uk.co.real_logic.fix_gateway.SessionRejectReason.SENDINGTIME_ACCURACY_PROBLEM;
+import static uk.co.real_logic.fix_gateway.SessionRejectReason.*;
+import static uk.co.real_logic.fix_gateway.builder.Validation.VALIDATION_DISABLED;
+import static uk.co.real_logic.fix_gateway.builder.Validation.VALIDATION_ENABLED;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
@@ -244,31 +244,35 @@ public class Session
                 return;
             }
 
-            if (isPossDupOrResend)
+            final long time = time();
+
+            if (VALIDATION_ENABLED)
             {
-                if (origSendingTime == UNKNOWN)
+                if (isPossDupOrResend)
                 {
-                    proxy.reject(
-                        newSentSeqNum(),
-                        msgSeqNo,
-                        msgType,
-                        msgTypeLength,
-                        REQUIRED_TAG_MISSING);
-                    return;
+                    if (origSendingTime == UNKNOWN)
+                    {
+                        proxy.reject(
+                            newSentSeqNum(),
+                            msgSeqNo,
+                            msgType,
+                            msgTypeLength,
+                            REQUIRED_TAG_MISSING);
+                        return;
+                    }
+                    else if (origSendingTime > sendingTime)
+                    {
+                        rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
+                        return;
+                    }
                 }
-                else if (origSendingTime > sendingTime)
+
+                if ((sendingTime < time - SENDING_TIME_WINDOW) || (sendingTime > time + SENDING_TIME_WINDOW))
                 {
                     rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
+                    logoutAndDisconnect();
                     return;
                 }
-            }
-
-            final long time = time();
-            if ((sendingTime < time - SENDING_TIME_WINDOW) || (sendingTime > time + SENDING_TIME_WINDOW))
-            {
-                rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
-                logoutAndDisconnect();
-                return;
             }
 
             final int expectedSeqNo = expectedReceivedSeqNum();
@@ -314,7 +318,7 @@ public class Session
     {
         this.sessionKey = sessionKey;
         proxy.setupSession(sessionId, sessionKey);
-        if (validateHeartbeat(heartbeatInterval) && validateSendingTime(sendingTime))
+        if (VALIDATION_DISABLED || (validateHeartbeat(heartbeatInterval) && validateSendingTime(sendingTime)))
         {
             id(sessionId);
             heartbeatIntervalInS(heartbeatInterval);

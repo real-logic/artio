@@ -145,14 +145,14 @@ public class SessionParser
 
         final char[] msgType = header.msgType();
         final int msgTypeLength = header.msgTypeLength();
-        if (isValidMsgType(msgType, msgTypeLength))
-        {
-            onMessage(header);
-        }
-        else
+        if (!isValidMsgType(msgType, msgTypeLength) && VALIDATION_ENABLED)
         {
             final int msgSeqNum = header.msgSeqNum();
             session.onInvalidMessageType(msgSeqNum, msgType, msgTypeLength);
+        }
+        else
+        {
+            onMessage(header);
         }
     }
 
