@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.library.session;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.*;
@@ -30,6 +31,7 @@ import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
 
 public class SessionTest extends AbstractSessionTest
 {
+    public static final long TWO_MINUTES = MINUTES.toMillis(2);
     private Session session = new Session(
         HEARTBEAT_INTERVAL,
         CONNECTION_ID,
@@ -161,7 +163,13 @@ public class SessionTest extends AbstractSessionTest
         session.onSequenceReset(2, 1, false, false);
 
         assertEquals(4, session.expectedReceivedSeqNum());
-        verify(mockProxy).reject(1, 2, NEW_SEQ_NO, SequenceResetDecoder.MESSAGE_TYPE_BYTES, VALUE_IS_INCORRECT);
+        verify(mockProxy).reject(
+            1,
+            2,
+            NEW_SEQ_NO,
+            SequenceResetDecoder.MESSAGE_TYPE_BYTES,
+            SequenceResetDecoder.MESSAGE_TYPE_BYTES.length,
+            VALUE_IS_INCORRECT);
     }
 
     @Test
@@ -284,6 +292,26 @@ public class SessionTest extends AbstractSessionTest
     }
 
     @Test
+    public void shouldValidateSendingTimeNotTooEarly()
+    {
+        onLogon(1);
+
+        messageWithWeirdTime(sendingTime() - TWO_MINUTES);
+
+        verifySendingTimeProblem();
+    }
+
+    @Test
+    public void shouldValidateSendingTimeNotTooLate()
+    {
+        onLogon(1);
+
+        messageWithWeirdTime(sendingTime() + TWO_MINUTES);
+
+        verifySendingTimeProblem();
+    }
+
+    @Test
     public void shouldValidateOriginalSendingTimeBeforeSendingTime()
     {
         final long sendingTime = sendingTime();
@@ -295,7 +323,7 @@ public class SessionTest extends AbstractSessionTest
 
         session.onMessage(2, MSG_TYPE_BYTES, sendingTime, origSendingTime, true);
 
-        verify(mockProxy).reject(1, 2, MSG_TYPE_BYTES, SENDINGTIME_ACCURACY_PROBLEM);
+        verifySendingTimeProblem();
     }
 
     @Test
@@ -307,7 +335,7 @@ public class SessionTest extends AbstractSessionTest
 
         session.onMessage(2, MSG_TYPE_BYTES, sendingTime(), UNKNOWN, true);
 
-        verify(mockProxy).reject(1, 2, MSG_TYPE_BYTES, REQUIRED_TAG_MISSING);
+        verify(mockProxy).reject(1, 2, MSG_TYPE_BYTES, MSG_TYPE_BYTES.length, REQUIRED_TAG_MISSING);
     }
 
     private void poll()
@@ -360,6 +388,15 @@ public class SessionTest extends AbstractSessionTest
         session.onLogout(1, sendingTime(), UNKNOWN, false);
     }
 
+    private void verifySendingTimeProblem()
+    {
+        verify(mockProxy).reject(1, 2, MSG_TYPE_BYTES, MSG_TYPE_BYTES.length, SENDINGTIME_ACCURACY_PROBLEM);
+    }
+
+    private void messageWithWeirdTime(final long sendingTime)
+    {
+        session().onMessage(2, MSG_TYPE_BYTES, sendingTime, UNKNOWN, false);
+    }
 
     protected Session session()
     {

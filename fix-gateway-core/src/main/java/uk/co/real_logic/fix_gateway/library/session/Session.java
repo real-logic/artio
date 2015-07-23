@@ -51,9 +51,12 @@ public class Session
      */
     public static final double HEARTBEAT_PAUSE_FACTOR = 0.8;
 
+    // TODO: make these configurable:
+    private static final long REASONABLE_TRANSMISSION_TIME = SECONDS.toMillis(1);
+    private static final long SENDING_TIME_WINDOW = SECONDS.toMillis(10);
+
     public static final String TEST_REQ_ID = "TEST";
     public static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
-    private static final long REASONABLE_TRANSMISSION_TIME = SECONDS.toMillis(1);
 
     private final MilliClock clock;
 
@@ -216,6 +219,16 @@ public class Session
                    final long origSendingTime,
                    final boolean isPossDupOrResend)
     {
+        onMessage(msgSeqNo, msgType, msgType.length, sendingTime, origSendingTime, isPossDupOrResend);
+    }
+
+    void onMessage(final int msgSeqNo,
+                   final byte[] msgType,
+                   final int msgTypeLength,
+                   final long sendingTime,
+                   final long origSendingTime,
+                   final boolean isPossDupOrResend)
+    {
         if (state() == SessionState.CONNECTED)
         {
             // Disconnect if the first message isn't a logon message
@@ -238,22 +251,28 @@ public class Session
                         newSentSeqNum(),
                         msgSeqNo,
                         msgType,
+                        msgTypeLength,
                         REQUIRED_TAG_MISSING);
+                    return;
                 }
                 else if (origSendingTime > sendingTime)
                 {
-                    proxy.reject(
-                        newSentSeqNum(),
-                        msgSeqNo,
-                        msgType,
-                        SENDINGTIME_ACCURACY_PROBLEM);
+                    rejectDueToSendingTIme(msgSeqNo, msgType, msgTypeLength);
+                    return;
                 }
+            }
+
+            final long time = time();
+            if ((sendingTime < time - SENDING_TIME_WINDOW) || (sendingTime > time + SENDING_TIME_WINDOW))
+            {
+                rejectDueToSendingTIme(msgSeqNo, msgType, msgTypeLength);
+                return;
             }
 
             final int expectedSeqNo = expectedReceivedSeqNum();
             if (expectedSeqNo == msgSeqNo)
             {
-                incNextReceivedInboundMessageTime(time());
+                incNextReceivedInboundMessageTime(time);
                 lastReceivedMsgSeqNum(msgSeqNo);
             }
             else if (expectedSeqNo < msgSeqNo)
@@ -267,6 +286,16 @@ public class Session
                 requestDisconnect();
             }
         }
+    }
+
+    private void rejectDueToSendingTIme(final int msgSeqNo, final byte[] msgType, final int msgTypeLength)
+    {
+        proxy.reject(
+            newSentSeqNum(),
+            msgSeqNo,
+            msgType,
+            msgTypeLength,
+            SENDINGTIME_ACCURACY_PROBLEM);
     }
 
     private void incNextReceivedInboundMessageTime(final long time)
@@ -393,6 +422,7 @@ public class Session
                 receivedMsgSeqNo,
                 NEW_SEQ_NO,
                 SequenceResetDecoder.MESSAGE_TYPE_BYTES,
+                SequenceResetDecoder.MESSAGE_TYPE_BYTES.length,
                 SessionRejectReason.VALUE_IS_INCORRECT);
         }
     }

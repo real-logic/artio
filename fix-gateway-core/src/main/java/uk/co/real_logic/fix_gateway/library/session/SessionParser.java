@@ -148,12 +148,15 @@ public class SessionParser
     {
         final long origSendingTime = getSendingTime(header);
         final long sendingTime = header.sendingTime();
-        session.onMessage(header.msgSeqNum(), extractMsgType(header), sendingTime, origSendingTime, isPossDup(header));
+        final int msgTypeLength = header.msgTypeLength();
+        final byte[] msgType = extractMsgType(header, msgTypeLength);
+        session.onMessage(
+            header.msgSeqNum(), msgType, msgTypeLength, sendingTime, origSendingTime, isPossDup(header));
     }
 
-    private byte[] extractMsgType(final HeaderDecoder header)
+    private byte[] extractMsgType(final HeaderDecoder header, final int length)
     {
-        msgTypeBuffer = CodecUtil.toBytes(header.msgType(), msgTypeBuffer, header.msgTypeLength());
+        msgTypeBuffer = CodecUtil.toBytes(header.msgType(), msgTypeBuffer, length);
         return msgTypeBuffer;
     }
 
@@ -280,11 +283,14 @@ public class SessionParser
 
     private boolean onInvalidMessage(final Decoder decoder, final HeaderDecoder header)
     {
+        final int msgTypeLength = header.msgTypeLength();
+
         if (header.msgSeqNum() == MISSING_INT)
         {
             final long origSendingTime = getSendingTime(header);
             final long sendingTime = header.sendingTime();
-            session.onMessage(MISSING_INT, extractMsgType(header), sendingTime, origSendingTime, false);
+            final byte[] msgType = extractMsgType(header, msgTypeLength);
+            session.onMessage(MISSING_INT, msgType, msgTypeLength, sendingTime, origSendingTime, false);
             return true;
         }
 
@@ -292,7 +298,7 @@ public class SessionParser
             header.msgSeqNum(),
             decoder.invalidTagId(),
             header.msgType(),
-            header.msgTypeLength(),
+            msgTypeLength,
             decoder.rejectReason());
 
         return false;
