@@ -31,7 +31,7 @@ plugins {
 apply plugin: 'maven'
 apply plugin: 'signing'
 
-def aeronVersion = '0.1.1'
+def aeronVersion = '0.1.2'
 
 defaultTasks 'clean', 'build', 'install'
 
@@ -143,8 +143,8 @@ project(':fix-gateway-codecs') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
     dependencies {
-        compile 'uk.co.real-logic:Agrona:0.4.2-SNAPSHOT'
-        compile 'uk.co.real-logic:sbe:1.1-RC2-SNAPSHOT'
+        compile 'uk.co.real-logic:Agrona:0.4.2'
+        compile 'uk.co.real-logic:sbe:1.1.1-RC2'
     }
 
     def generatedDir = file("$buildDir/generated-src")
@@ -331,6 +331,6 @@ uploadArchives {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '2.4'
+    gradleVersion = '2.5'
 }
 
