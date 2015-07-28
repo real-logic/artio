@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
 import static java.net.StandardSocketOptions.TCP_NODELAY;
@@ -34,6 +35,9 @@ import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.*;
 
 public final class FixBenchmarkClient
 {
+    private static final byte START_BYTE = (byte) '8';
+    private static final byte NEXT_BYTE = (byte) '=';
+
     private static final String HOST = System.getProperty("fix.benchmark.host", "localhost");
     private static final int BUFFER_SIZE = 16 * 1024;
 
@@ -45,7 +49,8 @@ public final class FixBenchmarkClient
     private static final MutableAsciiFlyweight READ_FLYWEIGHT =
         new MutableAsciiFlyweight(new UnsafeBuffer(READ_BUFFER));
 
-    private static final long[] SENDING_TIMES = new long[MESSAGES];
+    private static final long[] SENDING_TIMES = new long[MESSAGES_EXCHANGED];
+    private static final long[] RETURN_TIMES = new long[MESSAGES_EXCHANGED];
 
     private static volatile boolean authenticated = false;
 
@@ -70,6 +75,7 @@ public final class FixBenchmarkClient
 
             readerThread.join();
         }
+
     }
 
     private static void logon(final SocketChannel socketChannel) throws IOException
@@ -94,7 +100,9 @@ public final class FixBenchmarkClient
             .senderCompID(INITIATOR_ID)
             .targetCompID(ACCEPTOR_ID);
 
-        for (int i = 0; i < MESSAGES; i++)
+        testRequest.testReqID("a");
+
+        for (int i = 0; i < MESSAGES_EXCHANGED; i++)
         {
             header.sendingTime(System.currentTimeMillis()).msgSeqNum(i + 2);
 
@@ -102,8 +110,6 @@ public final class FixBenchmarkClient
 
             SENDING_TIMES[i] = System.nanoTime();
             writeBuffer(socketChannel, length);
-
-            //LockSupport.parkNanos(100_000);
         }
     }
 
@@ -114,9 +120,9 @@ public final class FixBenchmarkClient
         socketChannel.write(WRITE_BUFFER);
     }
 
-    private static class ReaderThread extends Thread
+    public static class ReaderThread extends Thread
     {
-        private final Histogram histogram = new Histogram(100_000_000, 2);
+        private final Histogram histogram = new Histogram(TimeUnit.SECONDS.toNanos(10), 5);
         private final SocketChannel socketChannel;
 
         public ReaderThread(final SocketChannel socketChannel)
@@ -126,8 +132,8 @@ public final class FixBenchmarkClient
 
         public void run()
         {
+            histogram.reset();
             int messageCount = 0;
-            long timeTaken = 0;
             try
             {
                 int length = read();
@@ -138,57 +144,62 @@ public final class FixBenchmarkClient
                 System.out.println("Authenticated: " + logonDecoder);
                 authenticated = true;
 
-                int expectedLength = 0;
-                while (messageCount < MESSAGES)
+                while (messageCount < 100)
                 {
                     length = read();
                     final long returnTime = System.nanoTime();
 
-                    if (expectedLength == 0)
-                    {
-                        expectedLength = calculateLength(length, expectedLength);
-                    }
-                    else
-                    {
-                        final int numberOfMessages = length / expectedLength;
-                        messageCount += numberOfMessages;
-                    }
+                    final int numberOfMessages = getNumberOfMessages(length);
 
-                    timeTaken = returnTime - SENDING_TIMES[messageCount];
-                    histogram.recordValue(timeTaken);
+                    for (int i = 0; i < numberOfMessages; i++)
+                    {
+                        RETURN_TIMES[messageCount + i] = returnTime;
+                    }
+                    messageCount += numberOfMessages;
                 }
             }
             catch (Exception e)
             {
                 e.printStackTrace(System.out);
-                System.out.println(timeTaken);
-                System.out.println();
+            }
+            finally
+            {
+                for (int i = WARMUP_MESSAGES; i < messageCount; i++)
+                {
+                    final long time = RETURN_TIMES[i] - SENDING_TIMES[i];
+                    //System.out.println(time);
+                    histogram.recordValue(time);
+                }
+
+                histogram.outputPercentileDistribution(System.out, 1000.0);
+                System.out.println("Number of messages: " + messageCount);
             }
         }
 
-        private int calculateLength(final int length, int expectedLength)
+        private int getNumberOfMessages(final int length)
         {
-            if (length > 140)
+            int numberOfMessages = 0;
+            final MutableAsciiFlyweight readFlyweight = READ_FLYWEIGHT;
+            for (int i = 0; i < length; i++)
             {
-                System.out.println("Unexpected Initial Length: " + length);
-                System.exit(0);
+                if (readFlyweight.getByte(i) == START_BYTE && readFlyweight.getByte(i) == NEXT_BYTE)
+                {
+                    numberOfMessages++;
+                }
             }
-            else
-            {
-                expectedLength = length;
-            }
-            return expectedLength;
+
+            return numberOfMessages;
         }
 
         private int read() throws IOException
         {
+            READ_BUFFER.clear();
             int length = 0;
             while (length == 0)
             {
                 length = socketChannel.read(READ_BUFFER);
             }
             //System.out.printf("Read Data: %d\n", length
-            READ_BUFFER.clear();
             return length;
         }
     }

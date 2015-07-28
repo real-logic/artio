@@ -34,9 +34,9 @@ public final class BenchmarkSessionHandler implements SessionHandler
                           final long sessionId,
                           final int messageType)
     {
-        flyweight.wrap(buffer);
-        System.out.printf("Received Message: ");
-        System.out.println(printer.toString(flyweight, offset, length, messageType));
+        //flyweight.wrap(buffer);
+        //System.out.printf("Received Message: ");
+        //System.out.println(printer.toString(flyweight, offset, length, messageType));
     }
 
     public void onLogon(final long connectionId, final long sessionId)
