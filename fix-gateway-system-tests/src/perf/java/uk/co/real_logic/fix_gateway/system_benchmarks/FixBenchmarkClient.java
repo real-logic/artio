@@ -57,7 +57,7 @@ public final class FixBenchmarkClient
             socketChannel.configureBlocking(false);
 
             final ReaderThread readerThread = new ReaderThread(socketChannel);
-            //readerThread.start();
+            readerThread.start();
 
             logon(socketChannel);
 
@@ -75,16 +75,15 @@ public final class FixBenchmarkClient
     private static void logon(final SocketChannel socketChannel) throws IOException
     {
         final LogonEncoder logon = new LogonEncoder();
+        logon.heartBtInt(10);
         logon
             .header()
             .sendingTime(System.currentTimeMillis())
             .senderCompID(INITIATOR_ID)
             .targetCompID(ACCEPTOR_ID)
-            .msgSeqNum(0);
+            .msgSeqNum(1);
 
         writeBuffer(socketChannel, logon.encode(WRITE_FLYWEIGHT, 0));
-
-        LockSupport.parkNanos(100_000_000);
     }
 
     private static void sendMessages(final SocketChannel socketChannel) throws IOException
@@ -97,14 +96,14 @@ public final class FixBenchmarkClient
 
         for (int i = 0; i < MESSAGES; i++)
         {
-            header.sendingTime(System.currentTimeMillis()).msgSeqNum(i + 1);
+            header.sendingTime(System.currentTimeMillis()).msgSeqNum(i + 2);
 
             final int length = testRequest.encode(WRITE_FLYWEIGHT, 0);
 
             SENDING_TIMES[i] = System.nanoTime();
             writeBuffer(socketChannel, length);
 
-            LockSupport.parkNanos(100_000);
+            //LockSupport.parkNanos(100_000);
         }
     }
 
@@ -117,7 +116,7 @@ public final class FixBenchmarkClient
 
     private static class ReaderThread extends Thread
     {
-        private final Histogram histogram = new Histogram(10_000_000, 5);
+        private final Histogram histogram = new Histogram(100_000_000, 2);
         private final SocketChannel socketChannel;
 
         public ReaderThread(final SocketChannel socketChannel)
@@ -127,34 +126,58 @@ public final class FixBenchmarkClient
 
         public void run()
         {
+            int messageCount = 0;
+            long timeTaken = 0;
             try
             {
                 int length = read();
 
                 final LogonDecoder logonDecoder = new LogonDecoder();
-                final int amountDecoded = logonDecoder.decode(READ_FLYWEIGHT, 0, length);
-                if (amountDecoded != length)
-                {
-                    System.out.printf("Leftover Data: %d\n", (length - amountDecoded));
-                }
+                logonDecoder.decode(READ_FLYWEIGHT, 0, length);
 
                 System.out.println("Authenticated: " + logonDecoder);
                 authenticated = true;
 
-                for (int i = 0; i < MESSAGES; i++)
+                int expectedLength = 0;
+                while (messageCount < MESSAGES)
                 {
                     length = read();
                     final long returnTime = System.nanoTime();
-                    final long timeTaken = returnTime - SENDING_TIMES[i];
-                    System.out.println(timeTaken);
+
+                    if (expectedLength == 0)
+                    {
+                        expectedLength = calculateLength(length, expectedLength);
+                    }
+                    else
+                    {
+                        final int numberOfMessages = length / expectedLength;
+                        messageCount += numberOfMessages;
+                    }
+
+                    timeTaken = returnTime - SENDING_TIMES[messageCount];
                     histogram.recordValue(timeTaken);
-                    System.out.println(length);
                 }
             }
-            catch (IOException e)
+            catch (Exception e)
             {
                 e.printStackTrace(System.out);
+                System.out.println(timeTaken);
+                System.out.println();
             }
+        }
+
+        private int calculateLength(final int length, int expectedLength)
+        {
+            if (length > 140)
+            {
+                System.out.println("Unexpected Initial Length: " + length);
+                System.exit(0);
+            }
+            else
+            {
+                expectedLength = length;
+            }
+            return expectedLength;
         }
 
         private int read() throws IOException
@@ -164,7 +187,8 @@ public final class FixBenchmarkClient
             {
                 length = socketChannel.read(READ_BUFFER);
             }
-            System.out.printf("Read Data: %d\n", length);
+            //System.out.printf("Read Data: %d\n", length
+            READ_BUFFER.clear();
             return length;
         }
     }

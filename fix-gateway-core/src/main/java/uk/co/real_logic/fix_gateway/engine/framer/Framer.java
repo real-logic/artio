@@ -204,7 +204,8 @@ public class Framer implements Agent, SessionHandler
 
         final ReceiverEndPoint receiverEndPoint = connectionHandler.receiverEndPoint(channel, connectionId, sessionId);
         receiverEndPoints.add(receiverEndPoint);
-        channel.register(selector, OP_READ, receiverEndPoint);
+        final SelectionKey selectionKey = channel.register(selector, OP_READ, receiverEndPoint);
+        receiverEndPoint.selectionKey(selectionKey);
 
         multiplexer.onNewConnection(connectionHandler.senderEndPoint(channel, connectionId));
     }

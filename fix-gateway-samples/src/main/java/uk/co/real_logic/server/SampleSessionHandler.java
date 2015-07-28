@@ -20,7 +20,6 @@ import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.decoder.PrinterImpl;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
-import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 public class SampleSessionHandler implements SessionHandler
@@ -28,7 +27,6 @@ public class SampleSessionHandler implements SessionHandler
 
     private final AsciiFlyweight string = new AsciiFlyweight();
     private final Printer printer = new PrinterImpl();
-    private final DataSubscriber subscriber = new DataSubscriber(this);
 
     public SampleSessionHandler(final Session session)
     {

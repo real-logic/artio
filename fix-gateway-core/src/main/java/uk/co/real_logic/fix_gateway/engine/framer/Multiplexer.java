@@ -66,7 +66,7 @@ public class Multiplexer implements SessionHandler
 
     public void onRequestDisconnect(final long connectionId)
     {
-        endpoints.remove(connectionId);
+        onDisconnect(connectionId);
         framer.onDisconnect(connectionId);
     }
 

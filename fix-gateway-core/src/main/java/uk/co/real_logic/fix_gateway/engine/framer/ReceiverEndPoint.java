@@ -27,6 +27,7 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
@@ -71,6 +72,7 @@ public class ReceiverEndPoint
     private long sessionId;
     private int usedBufferData = 0;
     private boolean hasDisconnected = false;
+    private SelectionKey selectionKey;
 
     public ReceiverEndPoint(
         final SocketChannel channel,
@@ -268,24 +270,36 @@ public class ReceiverEndPoint
 
     public void close()
     {
-        try
+        if (!hasDisconnected)
         {
-            channel.close();
-        }
-        catch (IOException e)
-        {
-            // TODO:
-            e.printStackTrace();
-        }
+            try
+            {
+                channel.close();
+            }
+            catch (IOException e)
+            {
+                // TODO:
+                e.printStackTrace();
+            }
 
-        onDisconnect();
+            onDisconnect();
+        }
     }
 
     private void onDisconnect()
     {
         sessionIds.onDisconnect(connectionId);
         publication.saveDisconnect(connectionId);
+        if (selectionKey != null)
+        {
+            selectionKey.cancel();
+        }
         hasDisconnected = true;
+    }
+
+    public void selectionKey(final SelectionKey selectionKey)
+    {
+        this.selectionKey = selectionKey;
     }
 
     public boolean hasDisconnected()

@@ -17,7 +17,8 @@ package uk.co.real_logic.fix_gateway.system_benchmarks;
 
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -44,10 +45,11 @@ public final class FixBenchmarkServer
              final FixEngine engine = FixEngine.launch(configuration);
              final FixLibrary library = new FixLibrary(configuration))
         {
-            final BackoffIdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 20, 20);
+            final IdleStrategy idleStrategy = new SleepingIdleStrategy(1000);
+            //new BackoffIdleStrategy(1, 1, 1, 1 << 20);;
             while (true)
             {
-                idleStrategy.idle(library.poll(10));
+                idleStrategy.idle(library.poll(1));
             }
         }
     }
