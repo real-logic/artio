@@ -15,43 +15,157 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
+import org.HdrHistogram.Histogram;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
+import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.locks.LockSupport;
 
 import static java.net.StandardSocketOptions.TCP_NODELAY;
+import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.*;
 
 public final class FixBenchmarkClient
 {
     private static final String HOST = System.getProperty("fix.benchmark.host", "localhost");
-    private static final int PORT = Integer.getInteger("fix.benchmark.port", 9999);
-    private static final ByteBuffer BUFFER = ByteBuffer.allocateDirect(16 * 1024);
-    private static final UnsafeBuffer UNSAFE_BUFFER = new UnsafeBuffer(BUFFER);
-    private static final MutableAsciiFlyweight ASCII_FLYWEIGHT = new MutableAsciiFlyweight(UNSAFE_BUFFER);
+    private static final int BUFFER_SIZE = 16 * 1024;
 
-    public static void main(String[] args) throws IOException
+    private static final ByteBuffer WRITE_BUFFER = ByteBuffer.allocateDirect(BUFFER_SIZE);
+    private static final MutableAsciiFlyweight WRITE_FLYWEIGHT =
+        new MutableAsciiFlyweight(new UnsafeBuffer(WRITE_BUFFER));
+
+    private static final ByteBuffer READ_BUFFER = ByteBuffer.allocateDirect(BUFFER_SIZE);
+    private static final MutableAsciiFlyweight READ_FLYWEIGHT =
+        new MutableAsciiFlyweight(new UnsafeBuffer(READ_BUFFER));
+
+    private static final long[] SENDING_TIMES = new long[MESSAGES];
+
+    private static volatile boolean authenticated = false;
+
+    public static void main(String[] args) throws IOException, InterruptedException
     {
-        final SocketChannel socketChannel = SocketChannel.open(new InetSocketAddress(HOST, PORT));
-        socketChannel.setOption(TCP_NODELAY, true);
-        socketChannel.configureBlocking(false);
+        try (final SocketChannel socketChannel = SocketChannel.open(new InetSocketAddress(HOST, PORT)))
+        {
+            socketChannel.setOption(TCP_NODELAY, true);
+            socketChannel.configureBlocking(false);
 
-        final LogonEncoder encoder = new LogonEncoder();
-        final HeaderEncoder header = encoder.header();
-        // header.senderCompID();
-        final int length = encoder.encode(ASCII_FLYWEIGHT, 0);
-        writeBuffer(socketChannel, length);
+            final ReaderThread readerThread = new ReaderThread(socketChannel);
+            //readerThread.start();
+
+            logon(socketChannel);
+
+            while (!authenticated)
+            {
+                LockSupport.parkNanos(100);
+            }
+
+            sendMessages(socketChannel);
+
+            readerThread.join();
+        }
+    }
+
+    private static void logon(final SocketChannel socketChannel) throws IOException
+    {
+        final LogonEncoder logon = new LogonEncoder();
+        logon
+            .header()
+            .sendingTime(System.currentTimeMillis())
+            .senderCompID(INITIATOR_ID)
+            .targetCompID(ACCEPTOR_ID)
+            .msgSeqNum(0);
+
+        writeBuffer(socketChannel, logon.encode(WRITE_FLYWEIGHT, 0));
+
+        LockSupport.parkNanos(100_000_000);
+    }
+
+    private static void sendMessages(final SocketChannel socketChannel) throws IOException
+    {
+        final TestRequestEncoder testRequest = new TestRequestEncoder();
+        final HeaderEncoder header = testRequest
+            .header()
+            .senderCompID(INITIATOR_ID)
+            .targetCompID(ACCEPTOR_ID);
+
+        for (int i = 0; i < MESSAGES; i++)
+        {
+            header.sendingTime(System.currentTimeMillis()).msgSeqNum(i + 1);
+
+            final int length = testRequest.encode(WRITE_FLYWEIGHT, 0);
+
+            SENDING_TIMES[i] = System.nanoTime();
+            writeBuffer(socketChannel, length);
+
+            LockSupport.parkNanos(100_000);
+        }
     }
 
     private static void writeBuffer(final SocketChannel socketChannel, final int amount) throws IOException
     {
-        BUFFER.position(0);
-        BUFFER.limit(amount);
-        socketChannel.write(BUFFER);
+        WRITE_BUFFER.position(0);
+        WRITE_BUFFER.limit(amount);
+        socketChannel.write(WRITE_BUFFER);
+    }
+
+    private static class ReaderThread extends Thread
+    {
+        private final Histogram histogram = new Histogram(10_000_000, 5);
+        private final SocketChannel socketChannel;
+
+        public ReaderThread(final SocketChannel socketChannel)
+        {
+            this.socketChannel = socketChannel;
+        }
+
+        public void run()
+        {
+            try
+            {
+                int length = read();
+
+                final LogonDecoder logonDecoder = new LogonDecoder();
+                final int amountDecoded = logonDecoder.decode(READ_FLYWEIGHT, 0, length);
+                if (amountDecoded != length)
+                {
+                    System.out.printf("Leftover Data: %d\n", (length - amountDecoded));
+                }
+
+                System.out.println("Authenticated: " + logonDecoder);
+                authenticated = true;
+
+                for (int i = 0; i < MESSAGES; i++)
+                {
+                    length = read();
+                    final long returnTime = System.nanoTime();
+                    final long timeTaken = returnTime - SENDING_TIMES[i];
+                    System.out.println(timeTaken);
+                    histogram.recordValue(timeTaken);
+                    System.out.println(length);
+                }
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace(System.out);
+            }
+        }
+
+        private int read() throws IOException
+        {
+            int length = 0;
+            while (length == 0)
+            {
+                length = socketChannel.read(READ_BUFFER);
+            }
+            System.out.printf("Read Data: %d\n", length);
+            return length;
+        }
     }
 }

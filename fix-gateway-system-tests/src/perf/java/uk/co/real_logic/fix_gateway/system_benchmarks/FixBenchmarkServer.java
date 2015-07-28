@@ -38,12 +38,12 @@ public final class FixBenchmarkServer
 
     public static void main(String[] args)
     {
-        try (final MediaDriver mediaDriver = newMediaDriver())
-        {
-            final StaticConfiguration configuration = staticConfiguration();
-            final FixEngine engine = FixEngine.launch(configuration);
-            final FixLibrary library = new FixLibrary(configuration);
+        final StaticConfiguration configuration = staticConfiguration();
 
+        try (final MediaDriver mediaDriver = newMediaDriver();
+             final FixEngine engine = FixEngine.launch(configuration);
+             final FixLibrary library = new FixLibrary(configuration))
+        {
             final BackoffIdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 20, 20);
             while (true)
             {
@@ -77,7 +77,7 @@ public final class FixBenchmarkServer
             .bind("localhost", Configuration.PORT)
             .aeronChannel("udp://localhost:" + AERON_PORT)
             .authenticationStrategy(authenticationStrategy)
-            .newSessionHandler(null)
+            .newSessionHandler(session -> new BenchmarkSessionHandler())
             .logFileDir(acceptorLogs);
     }
 }

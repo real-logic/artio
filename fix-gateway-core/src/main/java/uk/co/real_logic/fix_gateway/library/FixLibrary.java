@@ -165,7 +165,7 @@ public class FixLibrary extends GatewayProcess
 
         public void onDisconnect(final long connectionId)
         {
-            final SessionSubscriber subscriber = sessions.get(connectionId);
+            final SessionSubscriber subscriber = sessions.remove(connectionId);
             if (subscriber != null)
             {
                 subscriber.onDisconnect(connectionId);
