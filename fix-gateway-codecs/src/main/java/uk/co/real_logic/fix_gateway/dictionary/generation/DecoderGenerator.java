@@ -15,19 +15,32 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import uk.co.real_logic.agrona.LangUtil;
+import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
+import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
+import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
+import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.joining;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.GROUP;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.MESSAGE;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
+import static java.util.stream.Collectors.toList;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.*;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.generateFieldDictionary;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.sizeHashSet;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
@@ -41,6 +54,15 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 public class DecoderGenerator extends Generator
 {
     private static final double HASHSET_SIZE_FACTOR = 1.0 / 0.6;
+
+    public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
+
+    public static final int INVALID_TAG_NUMBER = 0;
+    public static final int REQUIRED_TAG_MISSING = 1;
+    public static final int TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE = 2;
+    public static final int TAG_SPECIFIED_WITHOUT_A_VALUE = 4;
+    public static final int VALUE_IS_INCORRECT = 5;
+    public static final int TAG_APPEARS_MORE_THAN_ONCE = 13;
 
     public static String decoderClassName(final Aggregate aggregate)
     {
@@ -66,13 +88,26 @@ public class DecoderGenerator extends Generator
 
     protected void generateAggregate(final Aggregate aggregate, final AggregateType type)
     {
+        if (type == COMPONENT)
+        {
+            generateComponentInterface((Component) aggregate);
+            return;
+        }
+
         final String className = decoderClassName(aggregate);
         final boolean isMessage = type == MESSAGE;
 
         outputManager.withOutput(className, out ->
         {
             out.append(fileHeader(builderPackage));
-            out.append(generateClassDeclaration(className, type, Decoder.class, Decoder.class));
+
+            final List<String> interfaces =
+                aggregate.entriesWith(element -> element instanceof Component)
+                         .map(comp -> decoderClassName((Aggregate) comp.element()))
+                         .collect(toList());
+
+            out.append(generateClassDeclaration(className, type, interfaces, "Decoder", Decoder.class));
+            generateValidation(out, aggregate, type);
             if (isMessage)
             {
                 final Message message = (Message)aggregate;
@@ -82,10 +117,288 @@ public class DecoderGenerator extends Generator
             generateGroupMethods(out, aggregate);
             generateGetters(out, className, aggregate.entries());
             out.append(generateDecodeMethod(aggregate.entries(), aggregate, type));
-            out.append(generateResetMethods(isMessage, aggregate.entries()));
+            out.append(generateResetMethods(isMessage, aggregate.entries(), resetValidation()));
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         });
+    }
+
+    private String resetValidation()
+    {
+        return
+            "        invalidTagId = NO_ERROR;\n" +
+            "        rejectReason = NO_ERROR;\n" +
+            "        missingRequiredFields.clear();\n" +
+            "        unknownFields.clear();\n" +
+            "        alreadyVisitedFields.clear();\n";
+    }
+
+    private void generateValidation(final Writer out, final Aggregate aggregate, final AggregateType type) throws IOException
+    {
+        final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
+        out.append(generateFieldDictionary(requiredFields, REQUIRED_FIELDS));
+
+        final String enumValidation =
+            aggregate.allChildEntries()
+                     .filter(entry -> entry.element().isEnumField())
+                     .map((entry) -> validateEnum(entry, out))
+                     .collect(joining("\n"));
+
+        final boolean isMessage = type == MESSAGE;
+        final String messageValidation = isMessage ?
+            "        else if (unknownFieldsIterator.hasNext())\n" +
+            "        {\n" +
+            "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
+            "            rejectReason = Constants.ALL_FIELDS.contains(invalidTagId) ? " +
+            TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE + " : " + INVALID_TAG_NUMBER + ";\n" +
+            "            return false;\n" +
+            "        }\n" +
+            "        else if (!header.validate())\n" +
+            "        {\n" +
+            "            invalidTagId = header.invalidTagId();\n" +
+            "            rejectReason = header.rejectReason();\n" +
+            "            return false;\n" +
+            "        }\n" +
+            "        else if (!trailer.validate())\n" +
+            "        {\n" +
+            "            invalidTagId = trailer.invalidTagId();\n" +
+            "            rejectReason = trailer.rejectReason();\n" +
+            "            return false;\n" +
+            "        }\n"
+            : "";
+
+        out.append(String.format(
+            "    private IntHashSet alreadyVisitedFields = new IntHashSet(%4$d, -1);\n\n" +
+            "    private IntHashSet missingRequiredFields = new IntHashSet(%1$d, -1);\n\n" +
+            "    private IntHashSet unknownFields = new IntHashSet(10, -1);\n\n" +
+            "    private int invalidTagId = NO_ERROR;\n\n" +
+            "    public int invalidTagId()\n" +
+            "    {\n" +
+            "        return invalidTagId;\n" +
+            "    }\n\n" +
+            "    private int rejectReason = NO_ERROR;\n\n" +
+            "    public int rejectReason()\n" +
+            "    {\n" +
+            "        return rejectReason;\n" +
+            "    }\n\n" +
+            "    public boolean validate()\n" +
+            "    {\n" +
+            // validation for some tags performed in the decode method
+            "        if (rejectReason != NO_ERROR)\n" +
+            "        {\n" +
+            "            return false;\n" +
+            "        }\n" +
+            "        final IntIterator missingFieldsIterator = missingRequiredFields.iterator();\n" +
+            (isMessage ? "        final IntIterator unknownFieldsIterator = unknownFields.iterator();\n" : "") +
+            "        if (missingFieldsIterator.hasNext())\n" +
+            "        {\n" +
+            "            invalidTagId = missingFieldsIterator.nextValue();\n" +
+            "            rejectReason = " + REQUIRED_TAG_MISSING + ";\n" +
+            "            return false;\n" +
+            "        }\n" +
+            "%2$s" +
+            "%3$s" +
+            "        return true;\n" +
+            "    }\n\n",
+            sizeHashSet(requiredFields),
+            messageValidation,
+            enumValidation,
+            2 * aggregate.allChildEntries().count()));
+    }
+
+    private CharSequence validateEnum(final Entry entry, final Writer out)
+    {
+        final Field field = (Field) entry.element();
+        final String name = entry.name();
+        final String valuesField = "valuesOf" + entry.name();
+        final String optionalCheck = entry.required() ? "" : String.format("has%s && ", name);
+        final int tagNumber = field.number();
+        final Type type = field.type();
+        final String propertyName = formatPropertyName(name);
+
+        final boolean isChar = type == Type.CHAR;
+        final boolean isPrimitive = type.isIntBased() || isChar;
+        try
+        {
+            if (isPrimitive)
+            {
+
+                final String addValues =
+                    field.values()
+                        .stream()
+                        .map(Value::representation)
+                        .map(repr -> isChar ? "'" + repr + "'" : repr)
+                        .map(repr -> String.format("        %1$s.add(%2$s);\n", valuesField, repr))
+                        .collect(joining());
+
+                out.append(String.format(
+                    "    public static final IntHashSet %1$s = new IntHashSet(%3$s, -1);\n" +
+                    "    static \n" +
+                    "    {\n" +
+                    "%2$s" +
+                    "    }\n\n",
+                    valuesField,
+                    addValues,
+                    sizeHashSet(field.values())
+                ));
+            }
+            else if (type.isStringBased())
+            {
+                final String addValues =
+                    field.values()
+                        .stream()
+                        .map(value -> "\"" + value.representation() + '"')
+                        .collect(joining(", "));
+
+                out.append(String.format(
+                    "    public static final CharArraySet %1$s = new CharArraySet(%2$s);\n", valuesField, addValues));
+
+            }
+            else
+            {
+                return "";
+            }
+        }
+        catch (IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
+
+        return String.format(
+            "        if (%1$s!%2$s.contains(%3$s%5$s))\n" +
+            "        {\n" +
+            "            invalidTagId = %4$s;\n" +
+            "            rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
+            "            return false;\n" +
+            "        }\n",
+            optionalCheck,
+            valuesField,
+            propertyName,
+            tagNumber,
+            isPrimitive ? "" : ", " + propertyName + "Length"
+        );
+    }
+
+    private Stream<Field> requiredFields(final List<Entry> entries)
+    {
+        return entries
+            .stream()
+            .filter(Entry::required)
+            .flatMap(this::extractFields);
+    }
+
+    private Stream<Field> extractFields(final Entry entry)
+    {
+        final Entry.Element element = entry.element();
+        if (element instanceof Field)
+        {
+            return Stream.of((Field) element);
+        }
+        else if (element instanceof Group)
+        {
+            final Entry numberField = ((Group) element).numberField();
+            return Stream.of((Field) numberField.element());
+        }
+        else if (element instanceof Component)
+        {
+            return requiredFields(((Component) element).entries());
+        }
+        throw new IllegalStateException();
+    }
+
+    private void generateComponentInterface(final Component component)
+    {
+        final String className = decoderClassName(component);
+        outputManager.withOutput(className, out ->
+        {
+            out.append(fileHeader(builderPackage));
+
+            out.append(String.format(
+                importFor(MutableDirectBuffer.class) +
+                importStaticFor(CodecUtil.class) +
+                importStaticFor(StandardFixConstants.class) +
+                importFor(DecimalFloat.class) +
+                importFor(MutableAsciiFlyweight.class) +
+                importFor(AsciiFlyweight.class) +
+                importFor(LocalMktDateEncoder.class) +
+                importFor(UtcTimestampEncoder.class) +
+                importFor(StandardCharsets.class) +
+                "\npublic interface %1$s\n" +
+                "{\n\n",
+                className));
+
+            for (final Entry entry : component.entries())
+            {
+                out.append(generateInterfaceGetter(entry));
+            }
+            out.append("\n}\n");
+        });
+    }
+
+    private String generateInterfaceGetter(final Entry entry)
+    {
+        final Entry.Element element = entry.element();
+        if (element instanceof Field)
+        {
+            final String name = element.name();
+            final String fieldName = formatPropertyName(name);
+            final Type type = ((Field) element).type();
+
+            final String length = type.isStringBased()
+                                ? String.format("    public int %1$sLength();\n", fieldName) : "";
+
+            final String optional = !entry.required()
+                                  ? String.format("    public boolean has%1$s();\n", name) : "";
+
+            return String.format(
+                    "    public %1$s %2$s();\n" +
+                    "%3$s" +
+                    "%4$s",
+                javaTypeOf(type),
+                fieldName,
+                optional,
+                length
+            );
+        }
+        else if (element instanceof Group)
+        {
+            final Group group = (Group) element;
+
+            return String.format(
+                "    public %1$s %2$s();\n",
+                decoderClassName(group),
+                formatPropertyName(group.name())
+            );
+        }
+        else if (element instanceof Component)
+        {
+            final Component component = (Component) element;
+            return component.entries()
+                            .stream()
+                            .map(this::generateInterfaceGetter)
+                            .collect(joining("\n", "", "\n"));
+        }
+
+        return "";
+    }
+
+    private String generateGetter(final Entry entry)
+    {
+        final Entry.Element element = entry.element();
+        if (element instanceof Field)
+        {
+            return generateFieldGetter(entry, (Field) element);
+        }
+        else if (element instanceof Group)
+        {
+            return generateGroupGetter((Group) element);
+        }
+        else if (element instanceof Component)
+        {
+            return generateComponentField((Component) element);
+        }
+
+        return "";
     }
 
     private void generateGroupMethods(final Writer out, final Aggregate aggregate) throws IOException
@@ -108,8 +421,10 @@ public class DecoderGenerator extends Generator
     private String generateMessageType(final int type)
     {
         return String.format(
-            "    public static final int MESSAGE_TYPE = %d;\n\n",
-            type);
+            "    public static final int MESSAGE_TYPE = %1$d;\n\n" +
+            "    public static final byte[] MESSAGE_TYPE_BYTES = \"%2$s\".getBytes(US_ASCII);\n\n",
+            type,
+            (char) type); // TODO: larger message types
     }
 
     private void generateGetters(final Writer out, final String className, final List<Entry> entries) throws IOException
@@ -120,23 +435,12 @@ public class DecoderGenerator extends Generator
         }
     }
 
-    private String generateGetter(final Entry entry) throws IOException
+    private String generateComponentField(final Component component)
     {
-        final Entry.Element element = entry.element();
-        if (element instanceof Field)
-        {
-            return generateFieldGetter(entry, (Field) element);
-        }
-        else if (element instanceof Group)
-        {
-            return generateGroupGetter((Group) element);
-        }
-        else if (element instanceof Component)
-        {
-            return generateComponentField(decoderClassName(entry.name()), (Component) element);
-        }
-
-        return "";
+        return component.entries()
+                        .stream()
+                        .map(this::generateGetter)
+                        .collect(joining("\n", "", "\n"));
     }
 
     private String generateGroupGetter(final Group group)
@@ -148,11 +452,11 @@ public class DecoderGenerator extends Generator
 
         return String.format(
             "    private %1$s %2$s = null;\n" +
-            "    public %1$s %2$s()\n" +
-            "    {\n" +
-            "        return %2$s;" +
-            "    }\n\n" +
-            "%3$s",
+                "    public %1$s %2$s()\n" +
+                "    {\n" +
+                "        return %2$s;" +
+                "    }\n\n" +
+                "%3$s",
             decoderClassName(group),
             formatPropertyName(group.name()),
             prefix
@@ -310,8 +614,9 @@ public class DecoderGenerator extends Generator
     private String generateDecodeMethod(final List<Entry> entries, final Aggregate aggregate, final AggregateType type)
     {
         final boolean hasCommonCompounds = type == MESSAGE;
+        final boolean isGroup = type == GROUP;
         final String endGroupCheck;
-        if (type == GROUP)
+        if (isGroup)
         {
             endGroupCheck = String.format(
                 "        if (!seenFields.add(tag))\n" +
@@ -332,22 +637,48 @@ public class DecoderGenerator extends Generator
 
         final String prefix =
             "    public int decode(final AsciiFlyweight buffer, final int offset, final int length)\n" +
-            "    {\n" +
-            "        final int end = offset + length;\n" +
-            "        int position = offset;\n" +
-            (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
-            (type == GROUP ? "        seenFields.clear();\n" : "") +
-            "        int tag;\n\n" +
-            "        while (position < end)\n" +
-            "        {\n" +
-            "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
-            "            tag = buffer.getNatural(position, equalsPosition);\n" +
-            endGroupCheck +
-            "            final int valueOffset = equalsPosition + 1;\n" +
-            "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
-            "            final int valueLength = endOfField - valueOffset;\n" +
-            "            switch (tag)\n" +
-            "            {\n\n";
+                "    {\n" +
+                "        if (" + VALIDATION_ENABLED + ")\n" +
+                "        {\n" +
+                "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");\n" +
+                "        }\n" +
+                "        final int end = offset + length;\n" +
+                "        int position = offset;\n" +
+                (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
+                (isGroup ? "        seenFields.clear();\n" : "") +
+                "        int tag;\n\n" +
+                "        while (position < end)\n" +
+                "        {\n" +
+                "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
+                "            tag = buffer.getInt(position, equalsPosition);\n" +
+                endGroupCheck +
+                "            final int valueOffset = equalsPosition + 1;\n" +
+                "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
+                "            final int valueLength = endOfField - valueOffset;\n" +
+                "            if (" + VALIDATION_ENABLED + ")\n" +
+                "            {\n" +
+                "                if (tag <= 0)\n" +
+                "                {\n" +
+                "                    invalidTagId = tag;\n" +
+                "                    rejectReason = " + INVALID_TAG_NUMBER + ";\n" +
+                "                }\n" +
+                "                else if (valueLength == 0)\n" +
+                "                {\n" +
+                "                    invalidTagId = tag;\n" +
+                "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
+                "                }\n" +
+
+                (isGroup ? "" :
+                "                if (!alreadyVisitedFields.add(tag))\n" +
+                "                {\n" +
+                "                    invalidTagId = tag;\n" +
+                "                    rejectReason = " + TAG_APPEARS_MORE_THAN_ONCE + ";\n" +
+                "                }\n") +
+
+                "                missingRequiredFields.remove(tag);\n" +
+                "            }\n" +
+                "            switch (tag)\n" +
+                "            {\n\n";
 
         final String body =
             entries.stream()
@@ -356,8 +687,11 @@ public class DecoderGenerator extends Generator
 
         final String suffix =
             "            default:\n" +
+            "                if (" + VALIDATION_ENABLED + " && !TrailerDecoder.REQUIRED_FIELDS.contains(tag))\n" +
+            "                {\n" +
+            "                    unknownFields.add(tag);\n" +
+            "                }\n" +
             "                return position - offset;\n\n" +
-
             "            }\n\n" +
             "            position = endOfField + 1;\n" +
             "        }\n\n" +
@@ -370,12 +704,6 @@ public class DecoderGenerator extends Generator
 
     private String decodeEntry(final Entry entry)
     {
-        // Uses variables from surrounding context:
-        // int tag = the tag number of the field
-        // int valueOffset = starting index of the value
-        // int valueLength = the number of bytes for the value
-        // int endOfField = the end index of the value
-
         if (entry.element() instanceof Field)
         {
             return decodeField(entry, "");
@@ -384,8 +712,29 @@ public class DecoderGenerator extends Generator
         {
             return decodeGroup(entry);
         }
+        else if (entry.element() instanceof Component)
+        {
+            return decodeComponent(entry);
+        }
 
         return "";
+    }
+
+    private String decodeComponent(final Entry entry)
+    {
+        final Component component = (Component) entry.element();
+        return component.entries()
+                        .stream()
+                        .map(this::decodeEntry)
+                        .collect(joining("\n", "", "\n"));
+    }
+
+    protected String generateComponentToString(final Component component)
+    {
+        return component.entries()
+                        .stream()
+                        .map(this::generateEntryToString)
+                        .collect(joining(" + \n"));
     }
 
     private String decodeGroup(final Entry entry)
@@ -406,6 +755,12 @@ public class DecoderGenerator extends Generator
 
     private String decodeField(final Entry entry, final String suffix)
     {
+        // Uses variables from surrounding context:
+        // int tag = the tag number of the field
+        // int valueOffset = starting index of the value
+        // int valueLength = the number of bytes for the value
+        // int endOfField = the end index of the value
+
         final Field field = (Field)entry.element();
         final int tag = field.number();
         final String name = entry.name();
@@ -421,7 +776,7 @@ public class DecoderGenerator extends Generator
             tag,
             optionalAssign(entry),
             fieldName,
-            decodeMethod(field.type(), fieldName),
+            decodeMethodFor(field.type(), fieldName),
             optionalStringAssignment(field.type(), fieldName),
             suffix
         );
@@ -439,7 +794,7 @@ public class DecoderGenerator extends Generator
         return entry.required() ? "" : String.format("                has%s = true;\n", entry.name());
     }
 
-    private String decodeMethod(final Type type, String fieldName)
+    private String decodeMethodFor(final Type type, String fieldName)
     {
         switch (type)
         {
@@ -459,7 +814,7 @@ public class DecoderGenerator extends Generator
                 return String.format("getFloat(%s, valueOffset, valueLength", fieldName);
 
             case CHAR:
-                return "getChar(valueOffset, endOfField";
+                return "getChar(valueOffset";
 
             case STRING:
             case MULTIPLEVALUESTRING:

@@ -17,11 +17,13 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
-import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.auth.NoAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
+import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.auth.NoAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
+import uk.co.real_logic.fix_gateway.library.session.NoSessionCustomisationStrategy;
+import uk.co.real_logic.fix_gateway.library.session.SessionCustomisationStrategy;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
-import uk.co.real_logic.fix_gateway.session.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
@@ -63,7 +65,7 @@ public final class StaticConfiguration
     public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
     public static final long DEFAULT_CONNECTION_TIMEOUT = 1000;
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
-    public static final int DEFAULT_COUNTERS_BUFFER_LENGTH = 64 * 1024 * 1024;
+    public static final int DEFAULT_COUNTERS_BUFFER_LENGTH = 8 * 1024 * 1024;
     public static final int DEFAULT_INDEX_FILE_SIZE = 2 * 1024 * 1024;
     public static final String DEFAULT_COUNTERS_FILE_PROP = IoUtil.tmpDirName() + "fix" + File.separator + "counters";
     public static final String DEFAULT_LOG_FILE_DIR = "logs";
@@ -97,6 +99,7 @@ public final class StaticConfiguration
     private NewSessionHandler newSessionHandler;
     private int loggerCacheCapacity = DEFAULT_LOGGER_CACHE_CAPACITY;
     private long sendingTimeWindow = DEFAULT_SENDING_TIME_WINDOW;
+    private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
 
     public StaticConfiguration()
     {
@@ -229,6 +232,12 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration sessionCustomisationStrategy(final SessionCustomisationStrategy value)
+    {
+        this.sessionCustomisationStrategy = value;
+        return this;
+    }
+
     public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -322,5 +331,10 @@ public final class StaticConfiguration
     public long sendingTimeWindow()
     {
         return sendingTimeWindow;
+    }
+
+    public SessionCustomisationStrategy sessionCustomisationStrategy()
+    {
+        return sessionCustomisationStrategy;
     }
 }

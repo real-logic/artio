@@ -49,6 +49,20 @@ public abstract class Aggregate
         return entries.stream().filter(entry -> predicate.test(entry.element()));
     }
 
+    /**
+     * @return all entries including those of nested components
+     */
+    public Stream<Entry> allChildEntries()
+    {
+        return entries.stream()
+                      .flatMap(entry ->
+                          entry.match(
+                              (ele, field) -> Stream.of(ele),
+                              (ele, group) -> Stream.empty(),
+                              (ele, component) -> component.allChildEntries()
+                          ));
+    }
+
     public Aggregate optionalEntry(final Entry.Element element)
     {
         entries().add(Entry.optional(element));

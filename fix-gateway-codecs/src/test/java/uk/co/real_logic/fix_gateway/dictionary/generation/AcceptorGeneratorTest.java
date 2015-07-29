@@ -35,6 +35,8 @@ public class AcceptorGeneratorTest
 {
 
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
+    private static ConstantGenerator constantGenerator =
+        new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static DecoderGenerator decoderGenerator = new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager);
     private static AcceptorGenerator acceptorGenerator = new AcceptorGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static Class<?> acceptor;
@@ -45,6 +47,7 @@ public class AcceptorGeneratorTest
     @BeforeClass
     public static void generate() throws Exception
     {
+        constantGenerator.generate();
         decoderGenerator.generate();
         acceptorGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
@@ -105,9 +108,9 @@ public class AcceptorGeneratorTest
 
     private void onMessage(final Object inst) throws Exception
     {
-        buffer.putAscii(1, ENCODED_MESSAGE_EXAMPLE);
+        buffer.putAscii(1, ENCODED_MESSAGE);
         decoder.getMethod(ON_MESSAGE, AsciiFlyweight.class, int.class, int.class, int.class)
-               .invoke(inst, buffer, 1, ENCODED_MESSAGE_EXAMPLE.length(), '0');
+               .invoke(inst, buffer, 1, ENCODED_MESSAGE.length(), '0');
     }
 
 }

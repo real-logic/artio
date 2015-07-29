@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.SessionConfiguration;
 
 import java.util.Arrays;
 import java.util.List;
@@ -39,17 +38,7 @@ public class SenderAndTargetSessionIdStrategyTest
         final Set<Object> compositeKeys = IDS.stream()
             .flatMap((sender) ->
                 IDS.stream()
-                    .map((target) ->
-                    {
-                        final SessionConfiguration configuration = SessionConfiguration
-                            .builder()
-                            .address("", 0)
-                            .senderCompId(sender)
-                            .targetCompId(target)
-                            .build();
-
-                        return strategy.onInitiatorLogon(configuration);
-                    }))
+                   .map((target) -> strategy.onInitiatorLogon(sender, target)))
             .collect(toSet());
 
         assertThat(compositeKeys, hasSize(IDS.size() * IDS.size()));
@@ -61,15 +50,8 @@ public class SenderAndTargetSessionIdStrategyTest
         IDS.forEach((sender) ->
             IDS.forEach((target) ->
             {
-                final SessionConfiguration configuration = SessionConfiguration
-                    .builder()
-                    .address("", 0)
-                    .senderCompId(sender)
-                    .targetCompId(target)
-                    .build();
-
-                final Object first = strategy.onInitiatorLogon(configuration);
-                final Object second = strategy.onInitiatorLogon(configuration);
+                final Object first = strategy.onInitiatorLogon(sender, target);
+                final Object second = strategy.onInitiatorLogon(sender, target);
                 assertEquals(first, second);
                 assertEquals(first.hashCode(), second.hashCode());
             }));

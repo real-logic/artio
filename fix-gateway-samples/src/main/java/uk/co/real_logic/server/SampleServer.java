@@ -15,33 +15,34 @@
  */
 package uk.co.real_logic.server;
 
-import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.concurrent.SigInt;
-import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
-import uk.co.real_logic.fix_gateway.auth.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.auth.CompIdAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.auth.SenderIdAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.auth.SenderCompIdAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.auth.TargetCompIdAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.session.Session;
+import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
 
 public final class SampleServer
 {
 
     public static final String ACCEPTOR_COMP_ID = "acceptor";
     public static final String INITIATOR_COMP_ID = "initiator";
-
-    private static SampleSessionHandler sessionHandler;
+    private static Session session;
 
     public static void main(final String[] args) throws Exception
     {
-        final AuthenticationStrategy authenticationStrategy = new CompIdAuthenticationStrategy(ACCEPTOR_COMP_ID)
-            .and(new SenderIdAuthenticationStrategy(Arrays.asList(INITIATOR_COMP_ID)));
+        final AuthenticationStrategy authenticationStrategy = new TargetCompIdAuthenticationStrategy(ACCEPTOR_COMP_ID)
+            .and(new SenderCompIdAuthenticationStrategy(Arrays.asList(INITIATOR_COMP_ID)));
 
         // Static configuration lasts the duration of a FIX-Gateway instance
         final StaticConfiguration configuration = new StaticConfiguration()
@@ -54,34 +55,37 @@ public final class SampleServer
             .newSessionHandler(SampleServer::onConnect);
 
         try (final MediaDriver driver = MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
-             final FixGateway gateway = FixGateway.launch(configuration))
+             final FixEngine gateway = FixEngine.launch(configuration))
         {
-            // This would be the same as the SampleOtfMain sample code for sending a message.
+            final FixLibrary library = new FixLibrary(configuration);
 
             final AtomicBoolean running = new AtomicBoolean(true);
             SigInt.register(() -> running.set(false));
 
             while (running.get())
             {
-                synchronized (SampleServer.class)
+                library.poll(1);
+
+                if (session != null && session.state() == DISCONNECTED)
                 {
-                    if (sessionHandler != null)
-                    {
-                        sessionHandler.run();
-                    }
+                    break;
                 }
 
                 Thread.sleep(100);
             }
         }
+
+        System.exit(0);
     }
 
-    private static synchronized void onConnect(final Session session, final Subscription subscription)
+    private static SessionHandler onConnect(final Session session)
     {
+        SampleServer.session = session;
+
         // Simple server just handles a single connection on a single thread
         // You choose how to manage threads for your application.
 
-        sessionHandler = new SampleSessionHandler(session, subscription);
+        return new SampleSessionHandler(session);
     }
 
 }

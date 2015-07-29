@@ -1,14 +1,13 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
-import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
+import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
+import uk.co.real_logic.fix_gateway.library.session.Session;
+import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
-import uk.co.real_logic.fix_gateway.session.NewSessionHandler;
-import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.session.SessionHandler;
 
 public class FakeSessionHandler implements SessionHandler, NewSessionHandler
 {
@@ -17,7 +16,6 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
     private final DataSubscriber subscriber = new DataSubscriber(this);
 
     private Session session;
-    private Subscription subscription;
     private long connectionId = -1;
 
     public FakeSessionHandler(final OtfMessageAcceptor acceptor)
@@ -46,15 +44,10 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
         return connectionId;
     }
 
-    public void onConnect(final Session session, final Subscription subscription)
+    public SessionHandler onConnect(final Session session)
     {
         this.session = session;
-        this.subscription = subscription;
-    }
-
-    public Subscription subscription()
-    {
-        return subscription;
+        return this;
     }
 
     public Session session()
@@ -62,8 +55,9 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
         return session;
     }
 
-    public int poll()
+    public void resetSession()
     {
-        return subscription.poll(subscriber, 1);
+        session = null;
     }
+
 }

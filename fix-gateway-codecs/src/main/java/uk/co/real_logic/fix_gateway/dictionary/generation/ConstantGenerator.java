@@ -15,13 +15,18 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
+
+import java.util.Collection;
 
 import static java.lang.Character.isUpperCase;
 import static java.lang.Character.toUpperCase;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 
 public class ConstantGenerator
 {
@@ -29,6 +34,7 @@ public class ConstantGenerator
 
     private static final String BODY =
         "public class " + CLASS_NAME + "\n" + "{\n\n";
+    public static final String ALL_FIELDS = "ALL_FIELDS";
 
     private final Dictionary dictionary;
     private final String builderPackage;
@@ -47,11 +53,51 @@ public class ConstantGenerator
         outputManager.withOutput(CLASS_NAME, out ->
         {
             out.append(fileHeader(builderPackage));
+            out.append(importFor(IntHashSet.class));
             out.append(BODY);
             out.append(generateMessageTypes());
             out.append(generateFieldTags());
+            out.append(generateFieldDictionary());
             out.append("}\n");
         });
+    }
+
+    private String generateFieldDictionary()
+    {
+        return generateFieldDictionary(fields(), ALL_FIELDS);
+    }
+
+    public static String generateFieldDictionary(final Collection<Field> fields, final String name)
+    {
+        final String addFields = fields
+            .stream()
+            .map((field) -> addField(field, name))
+            .collect(joining());
+
+        final int hashMapSize = sizeHashSet(fields);
+        return String.format(
+            "    public static final IntHashSet %3$s = new IntHashSet(%1$d, -1);\n\n" +
+            "    static\n" +
+            "    {\n" +
+            "%2$s" +
+            "    }\n\n",
+            hashMapSize,
+            addFields,
+            name);
+    }
+
+    public static int sizeHashSet(final Collection<?> objects)
+    {
+        return objects.size() * 2;
+    }
+
+    private static String addField(final Field field, final String name)
+    {
+        return String.format(
+            "        %1$s.add(%2$d);\n",
+            name,
+            field.number()
+        );
     }
 
     private String generateMessageTypes()
@@ -65,12 +111,17 @@ public class ConstantGenerator
 
     private String generateFieldTags()
     {
-        return dictionary
-            .fields()
-            .values()
+        return fields()
             .stream()
             .map(field -> generateIntConstant(field.name(), field.number()))
             .collect(joining());
+    }
+
+    private Collection<Field> fields()
+    {
+        return dictionary
+            .fields()
+            .values();
     }
 
     private String generateIntConstant(final String name, final int number)

@@ -19,27 +19,27 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.fix_gateway.FixGateway;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
-import uk.co.real_logic.fix_gateway.session.InitiatorSession;
-import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.session.Session;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
-import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyEquals;
-import static uk.co.real_logic.fix_gateway.session.SessionState.ACTIVE;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest
 {
 
     private MediaDriver mediaDriver;
-    private FixGateway acceptingGateway;
-    private FixGateway initiatingGateway;
-    private InitiatorSession initiatedSession;
+    private FixEngine acceptingEngine;
+    private FixEngine initiatingEngine;
+    private FixLibrary acceptingLibrary;
+    private FixLibrary initiatingLibrary;
+    private Session initiatedSession;
     private Session acceptingSession;
 
     private FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
@@ -52,21 +52,28 @@ public class GatewayToGatewaySystemTest
     public void launch()
     {
         final int port = unusedPort();
+        final int initAeronPort = unusedPort();
+        final int acceptAeronPort = unusedPort();
+
         mediaDriver = launchMediaDriver();
-        initiatingGateway = launchInitiatingGateway(initiatingSessionHandler);
-        acceptingGateway = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID);
-        initiatedSession = initiate(initiatingGateway, port, INITIATOR_ID, ACCEPTOR_ID);
-        acceptingSession = acceptingSessionHandler.session();
+        initiatingEngine = launchInitiatingGateway(initiatingSessionHandler, initAeronPort);
+        acceptingEngine = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID, acceptAeronPort);
+
+        initiatingLibrary = new FixLibrary(initiatingConfig(initiatingSessionHandler, initAeronPort, "libraryCounters"));
+        acceptingLibrary = new FixLibrary(acceptingConfig(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID,
+            acceptAeronPort, "libraryCounters"));
+
+        initiatedSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+
+        assertTrue("Session has failed to connect", initiatedSession.isConnected());
+        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatedSession);
+        acceptingSession = acceptSession(acceptingSessionHandler, acceptingLibrary);
     }
 
     @Test
     public void sessionHasBeenInitiated() throws InterruptedException
     {
-        assertTrue("Session has failed to connect", initiatedSession.isConnected());
-        assertTrue("Session has failed to logon", initiatedSession.state() == ACTIVE);
-
         assertNotNull("Accepting Session not been setup", acceptingSession);
-        assertNotNull("Accepting Session not been passed a subscription", acceptingSessionHandler.subscription());
     }
 
     @Test
@@ -74,7 +81,7 @@ public class GatewayToGatewaySystemTest
     {
         sendTestRequest(initiatedSession);
 
-        assertReceivedMessage(acceptingSessionHandler, acceptingOtfAcceptor);
+        assertReceivedMessage(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
     }
 
     @Test
@@ -82,7 +89,7 @@ public class GatewayToGatewaySystemTest
     {
         sendTestRequest(acceptingSession);
 
-        assertReceivedMessage(initiatingSessionHandler, initiatingOtfAcceptor);
+        assertReceivedMessage(initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
     }
 
     @Test
@@ -90,7 +97,7 @@ public class GatewayToGatewaySystemTest
     {
         initiatedSession.startLogout();
 
-        assertDisconnected(acceptingSessionHandler, initiatedSession);
+        assertSessionsDisconnected();
     }
 
     @Test
@@ -98,7 +105,13 @@ public class GatewayToGatewaySystemTest
     {
         acceptingSession.startLogout();
 
-        assertDisconnected(initiatingSessionHandler, acceptingSession);
+        assertSessionsDisconnected();
+    }
+
+    private void assertSessionsDisconnected()
+    {
+        assertSessionDisconnected(initiatingLibrary, acceptingLibrary, initiatedSession);
+        assertSessionDisconnected(initiatingLibrary, acceptingLibrary, acceptingSession);
     }
 
     @Test
@@ -113,11 +126,16 @@ public class GatewayToGatewaySystemTest
 
     private void assertMessageResent()
     {
-        assertEventuallyEquals("Failed to receive the reply", 1, acceptingSessionHandler::poll);
-        assertThat(acceptingOtfAcceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
-        assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
-        assertNull("Detected Error", acceptingOtfAcceptor.lastError());
-        assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
+        assertEventuallyTrue("Failed to receive the reply", () ->
+        {
+            acceptingLibrary.poll(1);
+            initiatingLibrary.poll(1);
+
+            assertThat(acceptingOtfAcceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
+            assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
+            assertNull("Detected Error", acceptingOtfAcceptor.lastError());
+            assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
+        });
     }
 
     private void sendResendRequest()
@@ -135,9 +153,12 @@ public class GatewayToGatewaySystemTest
     @After
     public void close() throws Exception
     {
-        quietClose(acceptingGateway);
-        quietClose(initiatingGateway);
-        quietClose(mediaDriver);
+        closeIfOpen(initiatingLibrary);
+        closeIfOpen(acceptingLibrary);
+
+        closeIfOpen(initiatingEngine);
+        closeIfOpen(acceptingEngine);
+        closeIfOpen(mediaDriver);
     }
 
 }

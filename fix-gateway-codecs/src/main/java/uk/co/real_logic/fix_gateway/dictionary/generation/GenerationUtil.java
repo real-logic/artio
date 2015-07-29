@@ -15,17 +15,22 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import uk.co.real_logic.agrona.Verify;
+
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.joining;
 
 public final class GenerationUtil
 {
+
+    public static final int MESSAGE_TYPE_BITSHIFT = 8;
+
     private GenerationUtil()
     {
     }
 
-    public static final String PARENT_PACKAGE = "uk.co.real_logic.fix_gateway";
+    public static final String PARENT_PACKAGE = System.getProperty("PARENT_PACKAGE", "uk.co.real_logic.fix_gateway");
     public static final String ENCODER_PACKAGE = PARENT_PACKAGE + ".builder";
     public static final String DECODER_PACKAGE = PARENT_PACKAGE + ".decoder";
 
@@ -42,13 +47,14 @@ public final class GenerationUtil
 
     public static int getMessageType(final String representation)
     {
-        int packed = representation.charAt(0);
+        int packed = (byte) representation.charAt(0);
 
         if (representation.length() == 2)
         {
-            final byte second = (byte) representation.charAt(0);
-            packed |= second >> 1;
+            final int second = (int) representation.charAt(1);
+            packed |= second << MESSAGE_TYPE_BITSHIFT;
         }
+
         return packed;
     }
 
@@ -102,14 +108,20 @@ public final class GenerationUtil
                 .collect(joining(", "));
     }
 
-    public static String importFor(Class<?> cls)
+    public static String importFor(final Class<?> cls)
     {
         return String.format("import %s;\n", cls.getCanonicalName());
     }
 
-    public static String importStaticFor(Class<?> cls)
+    public static String importStaticFor(final Class<?> cls)
     {
         return String.format("import static %s.*;\n", cls.getCanonicalName());
+    }
+
+    public static String importStaticFor(final Class<?> cls, final String name)
+    {
+        Verify.notNull(name, "name");
+        return String.format("import static %s.%s;\n", cls.getCanonicalName(), name);
     }
 
 }

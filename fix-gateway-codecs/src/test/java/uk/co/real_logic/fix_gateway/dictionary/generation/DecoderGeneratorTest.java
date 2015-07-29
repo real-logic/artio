@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
@@ -28,15 +29,16 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasToString;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.DecoderGenerator.*;
 import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class DecoderGeneratorTest
@@ -46,14 +48,17 @@ public class DecoderGeneratorTest
     public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
 
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
+    private static ConstantGenerator constantGenerator = new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static DecoderGenerator decoderGenerator = new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager);
     private static Class<?> heartbeat;
+    private static Class<?> component;
 
     private MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
 
     @BeforeClass
     public static void generate() throws Exception
     {
+        constantGenerator.generate();
         decoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sources);
@@ -61,6 +66,7 @@ public class DecoderGeneratorTest
         {
             System.out.println(sources);
         }
+        component = heartbeat.getClassLoader().loadClass(COMPONENT_DECODER);
         compileInMemory(HEADER_DECODER, sources);
     }
 
@@ -110,27 +116,32 @@ public class DecoderGeneratorTest
     @Test
     public void decodesValues() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_EXAMPLE);
+        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
 
         assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
         assertEquals(2, getIntField(decoder));
         assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
+
+        assertValid(decoder);
     }
+
 
     @Test
     public void ignoresMissingOptionalValues() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_EXAMPLE);
+        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
 
         assertFalse(hasTestReqId(decoder));
         assertFalse(hasBooleanField(decoder));
         assertFalse(hasDataField(decoder));
+
+        assertValid(decoder);
     }
 
     @Test
     public void setsMissingOptionalValues() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE_EXAMPLE);
+        final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE);
 
         assertTrue(hasTestReqId(decoder));
         assertTrue(hasBooleanField(decoder));
@@ -139,6 +150,8 @@ public class DecoderGeneratorTest
         assertArrayEquals(ABC, getTestReqId(decoder));
         assertEquals(true, getBooleanField(decoder));
         assertArrayEquals(new byte[]{'1', '2', '3'}, getDataField(decoder));
+
+        assertValid(decoder);
     }
 
     @Test
@@ -152,7 +165,7 @@ public class DecoderGeneratorTest
     @Test
     public void decodesCommonComponents() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE_EXAMPLE);
+        final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE);
 
         final Decoder header = getHeader(decoder);
 
@@ -162,7 +175,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldResetFields() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE_EXAMPLE);
+        final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE);
 
         decoder.reset();
 
@@ -176,15 +189,17 @@ public class DecoderGeneratorTest
     @Test
     public void shouldGenerateHumanReadableToString() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(NO_OPTIONAL_MESSAGE_EXAMPLE);
+        final Decoder decoder = decodeHeartbeat(NO_OPTIONAL_MESSAGE);
 
         assertThat(decoder.toString(), containsString(STRING_NO_OPTIONAL_MESSAGE_EXAMPLE));
+
+        assertValid(decoder);
     }
 
     @Test
     public void shouldIncludeOptionalFieldsInToString() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE_EXAMPLE);
+        final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE);
 
         assertThat(decoder.toString(), containsString(STRING_ENCODED_MESSAGE_EXAMPLE));
     }
@@ -192,11 +207,11 @@ public class DecoderGeneratorTest
     @Test
     public void shouldDecodeShorterStringsAfterLongerStrings() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_EXAMPLE);
+        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
 
         assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
 
-        decode(SHORTER_STRING_EXAMPLE, decoder);
+        decode(SHORTER_STRING_MESSAGE, decoder);
 
         assertArrayEquals(AB, getOnBehalfOfCompId(decoder));
     }
@@ -204,9 +219,9 @@ public class DecoderGeneratorTest
     @Test
     public void shouldDecodeRepeatingGroups() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_EXAMPLE);
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
 
-        assertEquals(2, getNoEgGroup(decoder));
+        assertEquals(2, getNoEgGroupGroupCounter(decoder));
 
         Object group = getEgGroup(decoder);
         assertEquals(1, getGroupField(group));
@@ -214,14 +229,16 @@ public class DecoderGeneratorTest
         group = next(group);
         assertEquals(2, getGroupField(group));
         assertNull(next(group));
+
+        // TODO: assertValid(decoder);
     }
 
     @Test
     public void shouldDecodeNestedRepeatingGroups() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(NESTED_GROUP_EXAMPLE);
+        final Decoder decoder = decodeHeartbeat(NESTED_GROUP_MESSAGE);
 
-        assertEquals(1, getNoEgGroup(decoder));
+        assertEquals(1, getNoEgGroupGroupCounter(decoder));
 
         final Object group = getEgGroup(decoder);
         assertEquals(1, getGroupField(group));
@@ -230,22 +247,139 @@ public class DecoderGeneratorTest
         final Object nestedGroup = getNestedGroup(group);
         assertEquals(1, get(nestedGroup, "nestedField"));
         assertNull(next(nestedGroup));
+
+        // TODO: assertValid(decoder);
     }
 
     @Test
     public void shouldToStringRepeatingGroups() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_EXAMPLE);
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
 
         assertThat(decoder, hasToString(containsString(STRING_FOR_GROUP)));
     }
 
-    // TODO: component types
-    // TODO: validation
-
-    private Object getNoEgGroup(final Decoder decoder) throws Exception
+    @Test
+    public void shouldDecodeComponents() throws Exception
     {
-        return get(decoder, "noEgGroup");
+        final Decoder decoder = decodeHeartbeat(COMPONENT_MESSAGE);
+
+        assertEquals(2, get(decoder, "componentField"));
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void shouldGenerateComponentToString() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(COMPONENT_MESSAGE);
+
+        assertThat(decoder.toString(), containsString("  \"ComponentField\": \"2\""));
+    }
+
+    @Test
+    public void shouldGenerateComponentInterface() throws NoSuchMethodException
+    {
+        assertTrue("heartbeat doesn't implement its component", component.isAssignableFrom(heartbeat));
+
+        assertHasComponentFieldGetter();
+    }
+
+    @Test
+    public void shouldGenerateRequiredFieldsDictionary() throws Exception
+    {
+        final Object allFieldsField = heartbeat.getField(REQUIRED_FIELDS).get(null);
+        assertThat(allFieldsField, instanceOf(IntHashSet.class));
+
+        @SuppressWarnings("unchecked")
+        final Set<Integer> allFields = (Set<Integer>) allFieldsField;
+        assertThat(allFields, hasItem(116));
+        assertThat(allFields, not(hasItem(112)));
+        assertThat(allFields, not(hasItem(999)));
+    }
+
+    @Test
+    public void shouldValidateMissingRequiredFields() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MISSING_REQUIRED_FIELDS_MESSAGE);
+
+        assertFalse("Passed validation with missing fields", decoder.validate());
+        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", REQUIRED_TAG_MISSING, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateTagNumbers() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(INVALID_TAG_NUMBER_MESSAGE);
+
+        assertFalse("Passed validation with invalid tag number", decoder.validate());
+        assertEquals("Wrong tag id", 9999, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateTagNumbersDefinedForThisMessage() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE);
+
+        assertFalse("Passed validation with invalid tag number", decoder.validate());
+        assertEquals("Wrong tag id", 99, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateTagSpecifiedWithMissingValue() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WITHOUT_A_VALUE_MESSAGE);
+
+        assertFalse("Passed validation with missing value", decoder.validate());
+        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", TAG_SPECIFIED_WITHOUT_A_VALUE, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateIntBasedEnum() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WHERE_INT_VALUE_IS_INCORRECT_MESSAGE);
+
+        assertFalse("Passed validation with incorrect value", decoder.validate());
+        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", VALUE_IS_INCORRECT, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateStringBasedEnum() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WHERE_STRING_VALUE_IS_INCORRECT_MESSAGE);
+
+        assertFalse("Passed validation with incorrect value", decoder.validate());
+        assertEquals("Wrong tag id", 115, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", VALUE_IS_INCORRECT, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateTagsAppearingMoreThanOnce() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_APPEARS_MORE_THAN_ONCE_MESSAGE);
+
+        assertFalse("Passed validation with incorrect value", decoder.validate());
+        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", TAG_APPEARS_MORE_THAN_ONCE, decoder.rejectReason());
+    }
+
+    // TODO: validation for data fields
+    // TODO: validation for groups
+
+    private void assertHasComponentFieldGetter() throws NoSuchMethodException
+    {
+        final Method method = component.getMethod("componentField");
+        assertEquals(int.class, method.getReturnType());
+    }
+
+    private Object getNoEgGroupGroupCounter(final Decoder decoder) throws Exception
+    {
+        return get(decoder, "noEgGroupGroupCounter");
     }
 
     private int getGroupField(final Object group) throws Exception
@@ -263,7 +397,7 @@ public class DecoderGeneratorTest
         return (Decoder) get(decoder, "header");
     }
 
-    private Decoder decodeHeartbeat(final String example) throws InstantiationException, IllegalAccessException
+    private Decoder decodeHeartbeat(final String example) throws Exception
     {
         final Decoder decoder = (Decoder) heartbeat.newInstance();
         decode(example, decoder);
@@ -301,7 +435,7 @@ public class DecoderGeneratorTest
         return get(decoder, FLOAT_FIELD);
     }
 
-    private Object getIntField(Decoder decoder) throws Exception
+    private Object getIntField(Object decoder) throws Exception
     {
         return get(decoder, INT_FIELD);
     }
@@ -331,5 +465,13 @@ public class DecoderGeneratorTest
         final char[] value = (char[]) get(decoder, name);
         final int length = (int) get(decoder, name + "Length");
         return Arrays.copyOf(value, length);
+    }
+
+    private void assertValid(final Decoder decoder)
+    {
+        final boolean isValid = decoder.validate();
+        assertTrue(String.format(
+            "Decoder fails validation due to: %s for tag: %d", decoder.rejectReason(), decoder.invalidTagId()),
+            isValid);
     }
 }

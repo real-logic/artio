@@ -82,7 +82,7 @@ public final class Reflection
         return field(object, fieldName).get(object);
     }
 
-    private static Field field(Object object, String fieldName) throws NoSuchFieldException
+    public static Field field(Object object, String fieldName) throws NoSuchFieldException
     {
         final Field field = object.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -108,11 +108,16 @@ public final class Reflection
 
     public static Object getEgGroup(final Object stub) throws Exception
     {
-        return get(stub, "egGroup");
+        return get(stub, "egGroupGroup");
     }
 
     public static Object getNestedGroup(final Object group) throws Exception
     {
-        return get(group, "nestedGroup");
+        return get(group, "nestedGroupGroup");
+    }
+
+    public static Object getEgComponent(final Object object) throws Exception
+    {
+        return get(object, "egComponent");
     }
 }

@@ -19,9 +19,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.MESSAGE_SIZE;
-import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.readByteBuffer;
-import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.writeByteBuffer;
+import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.*;
 
 // TODO: alter the send/receive buffer sizes
 // TODO: look at aeron buffer sizes

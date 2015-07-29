@@ -15,12 +15,12 @@
  */
 package uk.co.real_logic.message_examples;
 
-import uk.co.real_logic.fix_gateway.FixGateway;
-import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
-import uk.co.real_logic.fix_gateway.session.InitiatorSession;
+import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
+import uk.co.real_logic.fix_gateway.library.session.InitiatorSession;
 
 import static uk.co.real_logic.fix_gateway.flyweight_api.OrdType.Market;
 import static uk.co.real_logic.fix_gateway.flyweight_api.Side.Sell;
@@ -41,7 +41,7 @@ public class MessageApiExamples
         // gets registered for
         configuration.registerAcceptor(new SampleOtfAcceptor(), (int) 'D');
 
-        try (final FixGateway gateway = FixGateway.launch(configuration))
+        try (final FixEngine gateway = FixEngine.launch(configuration))
         {
             // Each outbound session with an Exchange or broker is represented by
             // a Session object. Each session object can be configured with connection
@@ -50,7 +50,7 @@ public class MessageApiExamples
                 .address("broker.example.com", 9999)
                 .build();
 
-            final InitiatorSession session = gateway.initiate(sessionConfig);
+            final InitiatorSession session = null; // TODO: gateway.initiate(sessionConfig);
 
             // Specific encoders are generated for each type of message
             // from the same dictionary as the decoders.

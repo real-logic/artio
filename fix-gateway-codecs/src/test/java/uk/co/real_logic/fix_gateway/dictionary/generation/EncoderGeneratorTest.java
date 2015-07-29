@@ -173,7 +173,7 @@ public class EncoderGeneratorTest
         setupHeader(encoder);
         setupTrailer(encoder);
 
-        assertEncodesTo(encoder, ENCODED_MESSAGE_EXAMPLE);
+        assertEncodesTo(encoder, ENCODED_MESSAGE);
     }
 
     @Test
@@ -185,7 +185,7 @@ public class EncoderGeneratorTest
         setupHeader(encoder);
         setupTrailer(encoder);
 
-        assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE_EXAMPLE);
+        assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE);
     }
 
     @Test
@@ -195,7 +195,7 @@ public class EncoderGeneratorTest
 
         setRequiredFields(encoder);
 
-        assertEncodesTo(encoder, DERIVED_FIELDS_EXAMPLE);
+        assertEncodesTo(encoder, DERIVED_FIELDS_MESSAGE);
     }
 
     @Test
@@ -230,7 +230,7 @@ public class EncoderGeneratorTest
 
         setCharSequence(encoder, "onBehalfOfCompID", "ab");
 
-        assertEncodesTo(encoder, SHORTER_STRING_EXAMPLE);
+        assertEncodesTo(encoder, SHORTER_STRING_MESSAGE);
     }
 
     @Test
@@ -253,7 +253,7 @@ public class EncoderGeneratorTest
         setRequiredFields(encoder);
         setGroup(encoder);
 
-        assertEncodesTo(encoder, REPEATING_GROUP_EXAMPLE);
+        assertEncodesTo(encoder, REPEATING_GROUP_MESSAGE);
     }
 
     @Test
@@ -268,7 +268,7 @@ public class EncoderGeneratorTest
         final Object nestedGroup = getNestedGroup(group);
         setInt(nestedGroup, "nestedField", 1);
 
-        assertEncodesTo(encoder, NESTED_GROUP_EXAMPLE);
+        assertEncodesTo(encoder, NESTED_GROUP_MESSAGE);
     }
 
     @Test
@@ -281,7 +281,7 @@ public class EncoderGeneratorTest
 
         setRequiredFields(encoder);
 
-        assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE_EXAMPLE);
+        assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE);
     }
 
     @Test
@@ -303,14 +303,14 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void shouldBeAbleToEncodeComponentValues() throws Exception
+    public void shouldEncodeComponents() throws Exception
     {
         final Encoder encoder = (Encoder) heartbeat.newInstance();
         setRequiredFields(encoder);
 
         setupComponent(encoder);
 
-        assertEncodesTo(encoder, COMPONENT_MESSAGE_EXAMPLE);
+        assertEncodesTo(encoder, COMPONENT_MESSAGE);
     }
 
     @Test
@@ -326,7 +326,7 @@ public class EncoderGeneratorTest
 
     private void setupComponent(final Encoder encoder) throws Exception
     {
-        final Object egComponent = get(encoder, "egComponent");
+        final Object egComponent = getEgComponent(encoder);
         setInt(egComponent, "componentField", 2);
     }
 

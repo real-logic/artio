@@ -16,8 +16,8 @@
 package uk.co.real_logic.fix_gateway.dictionary;
 
 import org.w3c.dom.*;
+import uk.co.real_logic.agrona.Verify;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 
@@ -29,11 +29,16 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static javax.xml.xpath.XPathConstants.NODESET;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.getMessageType;
+import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.CHAR;
+import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 
 /**
  * Parses XML format dictionary files and into instances of
@@ -90,8 +95,24 @@ public final class DictionaryParser
         final int minorVersion = getInt(fixAttributes, "minor");
 
         simplifyComponentsThatAreJustGroups(components, messages);
+        correctMultiCharacterCharEnums(fields);
 
         return new Dictionary(messages, fields, components, header, trailer, majorVersion, minorVersion);
+    }
+
+    private void correctMultiCharacterCharEnums(final Map<String, Field> fields)
+    {
+        fields.values()
+              .stream()
+              .filter(Field::isEnum)
+              .filter(field -> field.type() == CHAR)
+              .filter(this::hasMultipleCharacters)
+              .forEach(field -> field.type(STRING));
+    }
+
+    private boolean hasMultipleCharacters(final Field field)
+    {
+        return field.values().stream().anyMatch(value -> value.representation().length() > 1);
     }
 
     private void simplifyComponentsThatAreJustGroups(final Map<String, Component> components,
@@ -138,7 +159,10 @@ public final class DictionaryParser
     private void reconnectForwardReferences(final Map<Entry, String> forwardReferences,
                                             final Map<String, Component> components)
     {
-        forwardReferences.forEach((entry, name) -> entry.element(components.get(name)));
+        forwardReferences.forEach((entry, name) -> {
+            final Component component = components.get(name);
+            entry.element(component);
+        });
     }
 
     private Map<String, Component> parseComponents(final Document document,
@@ -242,8 +266,16 @@ public final class DictionaryParser
             {
                 final NamedNodeMap attributes = node.getAttributes();
                 final String name = name(attributes);
+                if (name.trim().length() == 0)
+                {
+                    return;
+                }
+
                 final boolean required = isRequired(attributes);
-                final Consumer<Entry.Element> newEntry = element -> entries.add(new Entry(required, element));
+                final Consumer<Entry.Element> newEntry = element -> {
+                    Verify.notNull(element, "element for " + name);
+                    entries.add(new Entry(required, element));
+                };
 
                 switch (node.getNodeName())
                 {

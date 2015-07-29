@@ -19,7 +19,26 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 public interface Decoder
 {
+    int NO_ERROR = -1;
+
     int decode(final AsciiFlyweight buffer, final int offset, final int length);
 
     void reset();
+
+    /**
+     * @return true if the message is valid, false otherwise
+     */
+    boolean validate();
+
+    /**
+     * @return the tag id of the tag that failed validation, or {@code NO_ERROR} if there's no error
+     */
+    int invalidTagId();
+
+    /**
+     * NB: Not enum to avoid cyclic compilation dependency
+     *
+     * @return the session reject reason error code corresponding to the validation error.
+     */
+    int rejectReason();
 }

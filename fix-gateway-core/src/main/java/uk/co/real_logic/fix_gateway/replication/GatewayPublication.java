@@ -24,8 +24,8 @@ import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.*;
 
-import java.net.SocketAddress;
-import java.nio.charset.StandardCharsets;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * A proxy for publishing messages fix related messages
@@ -38,8 +38,11 @@ public class GatewayPublication
     private final MessageHeaderEncoder header = new MessageHeaderEncoder();
     private final LogonEncoder logon = new LogonEncoder();
     private final ConnectEncoder connect = new ConnectEncoder();
+    private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
+    private final RequestDisconnectEncoder requestDisconnect = new RequestDisconnectEncoder();
     private final DisconnectEncoder disconnect = new DisconnectEncoder();
     private final FixMessageEncoder messageFrame = new FixMessageEncoder();
+    private final ErrorEncoder error = new ErrorEncoder();
 
     private final BufferClaim bufferClaim;
     private final Publication dataPublication;
@@ -59,8 +62,10 @@ public class GatewayPublication
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength,
+        final int messageType,
         final long sessionId,
-        final int messageType)
+        final long connectionId,
+        final MessageStatus status)
     {
         final int framedLength = header.encodedLength() + FRAME_SIZE + srcLength;
         final long position = claim(framedLength);
@@ -82,7 +87,8 @@ public class GatewayPublication
             .wrap(destBuffer, offset)
             .messageType(messageType)
             .session(sessionId)
-            .connection(0L)
+            .connection(connectionId)
+            .status(status)
             .putBody(srcBuffer, srcOffset, srcLength);
 
         bufferClaim.commit();
@@ -118,9 +124,11 @@ public class GatewayPublication
         return position;
     }
 
-    public long saveConnect(final long connectionId, final SocketAddress address)
+    public long saveConnect(final long connectionId,
+                            final String address,
+                            final ConnectionType type)
     {
-        final byte[] addressString = address.toString().getBytes(StandardCharsets.UTF_8);
+        final byte[] addressString = address.getBytes(UTF_8);
 
         final int length = header.encodedLength() + CONNECT_SIZE + addressString.length;
         final long position = claim(length);
@@ -140,6 +148,7 @@ public class GatewayPublication
         connect
             .wrap(buffer, offset)
             .connection(connectionId)
+            .type(type)
             .putAddress(addressString, 0, addressString.length);
 
         bufferClaim.commit();
@@ -170,6 +179,114 @@ public class GatewayPublication
         bufferClaim.commit();
 
         return position;
+    }
+
+    public long saveRequestDisconnect(final long connectionId)
+    {
+        final long position = claim(header.encodedLength() + RequestDisconnectDecoder.BLOCK_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(requestDisconnect.sbeBlockLength())
+            .templateId(requestDisconnect.sbeTemplateId())
+            .schemaId(requestDisconnect.sbeSchemaId())
+            .version(requestDisconnect.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        requestDisconnect
+            .wrap(buffer, offset)
+            .connection(connectionId);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long saveInitiateConnection(
+        final String host,
+        final int port,
+        final String senderCompId,
+        final String targetCompId)
+    {
+        final byte[] hostBytes = host.getBytes(US_ASCII);
+        final byte[] senderCompIdBytes = senderCompId.getBytes(US_ASCII);
+        final byte[] targetCompIdBytes = targetCompId.getBytes(US_ASCII);
+
+        final long position = claim(
+            header.encodedLength() +
+            InitiateConnectionEncoder.BLOCK_LENGTH +
+            InitiateConnectionDecoder.hostHeaderLength() * 3 +
+            hostBytes.length +
+            senderCompIdBytes.length +
+            targetCompIdBytes.length);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(initiateConnection.sbeBlockLength())
+            .templateId(initiateConnection.sbeTemplateId())
+            .schemaId(initiateConnection.sbeSchemaId())
+            .version(initiateConnection.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        initiateConnection
+            .wrap(buffer, offset)
+            .port(port)
+            .putHost(hostBytes, 0, hostBytes.length);
+
+        initiateConnection.putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length);
+        initiateConnection.putTargetCompId(targetCompIdBytes, 0, targetCompIdBytes.length);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long saveError(final GatewayError errorType, final int libraryId, final String message)
+    {
+        final byte[] messageBytes = message.getBytes(UTF_8);
+        final int length = header.encodedLength() + ErrorEncoder.BLOCK_LENGTH + ErrorDecoder.messageHeaderLength() +
+            messageBytes.length;
+        final long position = claim(length);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(error.sbeBlockLength())
+            .templateId(error.sbeTemplateId())
+            .schemaId(error.sbeSchemaId())
+            .version(error.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        error
+            .wrap(buffer, offset)
+            .type(errorType)
+            .libraryId(libraryId)
+            .putMessage(messageBytes, 0, messageBytes.length);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public int streamId()
+    {
+        return dataPublication.streamId();
+    }
+
+    public int sessionId()
+    {
+        return dataPublication.sessionId();
     }
 
     private long claim(final int framedLength)

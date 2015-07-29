@@ -19,11 +19,13 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.CountersManager;
 
 import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 
-public final class FixCounters
+public final class FixCounters implements AutoCloseable
 {
+    private final List<AtomicCounter> otherCounters = new ArrayList<>();
     private final CountersManager countersManager;
-    private final AtomicCounter framerProxyFails;
     private final AtomicCounter failedInboundPublications;
     private final AtomicCounter failedOutboundPublications;
     private final AtomicCounter exceptions;
@@ -31,15 +33,9 @@ public final class FixCounters
     public FixCounters(final CountersManager countersManager)
     {
         this.countersManager = countersManager;
-        framerProxyFails = countersManager.newCounter("Failed offers to Framer Proxy");
         failedInboundPublications = countersManager.newCounter("Failed offer to inbound publication");
         failedOutboundPublications = countersManager.newCounter("Failed offer to outbound publication");
         exceptions = countersManager.newCounter("Gateway Exceptions");
-    }
-
-    public AtomicCounter framerProxyFails()
-    {
-        return framerProxyFails;
     }
 
     public AtomicCounter failedInboundPublications()
@@ -59,21 +55,36 @@ public final class FixCounters
 
     public AtomicCounter messagesRead(final SocketAddress address)
     {
-        return countersManager.newCounter("Messages Read from " + address);
+        return newCounter("Messages Read from " + address);
     }
 
     public AtomicCounter messagesWritten(final SocketAddress address)
     {
-        return countersManager.newCounter("Messages Written to " + address);
+        return newCounter("Messages Written to " + address);
     }
 
     public AtomicCounter sentMsgSeqNo(final long connectionId)
     {
-        return countersManager.newCounter("Last Sent MsgSeqNo for " + connectionId);
+        return newCounter("Last Sent MsgSeqNo for " + connectionId);
     }
 
     public AtomicCounter receivedMsgSeqNo(final long connectionId)
     {
-        return countersManager.newCounter("Last Received MsgSeqNo for " + connectionId);
+        return newCounter("Last Received MsgSeqNo for " + connectionId);
+    }
+
+    private AtomicCounter newCounter(final String label)
+    {
+        final AtomicCounter counter = countersManager.newCounter(label);
+        otherCounters.add(counter);
+        return counter;
+    }
+
+    public void close()
+    {
+        failedInboundPublications.close();
+        failedOutboundPublications.close();
+        exceptions.close();
+        otherCounters.forEach(AtomicCounter::close);
     }
 }

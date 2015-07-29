@@ -15,15 +15,19 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import uk.co.real_logic.fix_gateway.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
+/**
+ * Should be stateless.
+ */
 public interface SessionIdStrategy
 {
     Object onAcceptorLogon(final HeaderDecoder header);
 
-    Object onInitiatorLogon(final SessionConfiguration configuration);
+    // TODO: add other parameters
+    Object onInitiatorLogon(String senderCompId, String targetCompId);
 
     void setupSession(final Object compositeKey, final HeaderEncoder encoder);
+
 }
