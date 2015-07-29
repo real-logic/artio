@@ -34,9 +34,6 @@ import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.*;
 
 public final class FixBenchmarkClient
 {
-    private static final byte START_BYTE = (byte) '8';
-    private static final byte NEXT_BYTE = (byte) '=';
-
     private static final String HOST = System.getProperty("fix.benchmark.host", "localhost");
     private static final int BUFFER_SIZE = 16 * 1024;
 
@@ -138,7 +135,7 @@ public final class FixBenchmarkClient
     private static int read(final SocketChannel socketChannel) throws IOException
     {
         READ_BUFFER.clear();
-        int length = 0;
+        int length;
         do
         {
             length = socketChannel.read(READ_BUFFER);
