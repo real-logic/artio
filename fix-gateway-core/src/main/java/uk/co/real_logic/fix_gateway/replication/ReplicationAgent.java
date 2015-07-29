@@ -30,10 +30,10 @@ public class ReplicationAgent implements Agent
     private final FragmentHandler onDataMessageFunc = this::onDataMessage;
 
     public ReplicationAgent(
-        final ReplicationStreams replicationStreams)
+        final ReplicatedStream replicatedStream)
     {
-        dataSubscription = replicationStreams.dataSubscription();
-        controlSubscription = replicationStreams.controlSubscription();
+        dataSubscription = replicatedStream.dataSubscription();
+        controlSubscription = replicatedStream.controlSubscription();
     }
 
     private void onDataMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)

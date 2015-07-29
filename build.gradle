@@ -227,15 +227,11 @@ project(':fix-gateway-system-tests') {
 
         compile project(path: ':fix-gateway-core'),
                 "uk.co.real-logic:aeron-client:${aeronVersion}",
-                'org.hdrhistogram:HdrHistogram:1.2.1'
+                'org.hdrhistogram:HdrHistogram:2.1.6'
 
         perfCompile project,
                     'org.openjdk.jmh:jmh-core:1.9.2',
                     'org.openjdk.jmh:jmh-generator-annprocess:1.9.2'
-    }
-
-    test {
-        systemProperties('java.net.preferIPv4Stack': true)
     }
 
     idea.module {

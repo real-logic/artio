@@ -24,7 +24,7 @@ import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ReplicationStreams implements AutoCloseable
+public class ReplicatedStream implements AutoCloseable
 {
     private final List<Subscription> subscriptions = new ArrayList<>();
 
@@ -36,7 +36,7 @@ public class ReplicationStreams implements AutoCloseable
     private final AtomicCounter failedDataPublications;
     private final Publication dataPublication;
 
-    public ReplicationStreams(
+    public ReplicatedStream(
         final String channel,
         final Aeron aeron,
         final AtomicCounter failedDataPublications,

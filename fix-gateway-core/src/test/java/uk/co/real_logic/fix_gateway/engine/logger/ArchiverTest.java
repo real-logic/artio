@@ -21,7 +21,7 @@ import org.junit.Test;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
+import uk.co.real_logic.fix_gateway.replication.ReplicatedStream;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -42,7 +42,7 @@ public class ArchiverTest
 
     private DataHeaderFlyweight headerFlyweight = new DataHeaderFlyweight();
     private Header mockHeader = new Header(0, 0);
-    private ReplicationStreams mockStreams = mock(ReplicationStreams.class);
+    private ReplicatedStream mockStreams = mock(ReplicatedStream.class);
     private BufferFactory mockBufferFactory = mock(BufferFactory.class);
     private ArchiveMetaData mockMetaData = mock(ArchiveMetaData.class);
 

@@ -24,7 +24,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
-import uk.co.real_logic.fix_gateway.replication.ReplicationStreams;
+import uk.co.real_logic.fix_gateway.replication.ReplicatedStream;
 
 import java.nio.ByteBuffer;
 
@@ -52,7 +52,7 @@ public class ArchiveReaderTest
 
     private DataHeaderFlyweight headerFlyweight = new DataHeaderFlyweight();
     private Header mockHeader = new Header(0, 0);
-    private ReplicationStreams mockStreams = mock(ReplicationStreams.class);
+    private ReplicatedStream mockStreams = mock(ReplicatedStream.class);
     private LogHandler mockHandler = mock(LogHandler.class);
     private ArchiveMetaData mockMetaData = mock(ArchiveMetaData.class);
     private ArchiveMetaDataDecoder mockMetaDataDecoder = mock(ArchiveMetaDataDecoder.class);
