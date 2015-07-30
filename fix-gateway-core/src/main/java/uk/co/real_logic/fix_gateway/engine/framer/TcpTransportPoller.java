@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import uk.co.real_logic.aeron.driver.media.UdpChannelTransport;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.collections.ArrayUtil;
 import uk.co.real_logic.agrona.nio.TransportPoller;
@@ -34,9 +33,9 @@ public class TcpTransportPoller extends TransportPoller
             transports = ArrayUtil.add(transports, channelTransport);
             channelTransport.register(selector);
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
-            LangUtil.rethrowUnchecked(e);
+            LangUtil.rethrowUnchecked(ex);
         }
     }
 
@@ -66,7 +65,7 @@ public class TcpTransportPoller extends TransportPoller
                 final SelectionKey[] keys = selectedKeySet.keys();
                 for (int i = selectedKeySet.size() - 1; i >= 0; i--)
                 {
-                    bytesReceived += ((UdpChannelTransport)keys[i].attachment()).pollForData();
+                    bytesReceived += ((TcpChannelTransport)keys[i].attachment()).pollForData();
                 }
 
                 selectedKeySet.reset();
@@ -76,6 +75,7 @@ public class TcpTransportPoller extends TransportPoller
         {
             LangUtil.rethrowUnchecked(ex);
         }
+
         return bytesReceived;
     }
 }
