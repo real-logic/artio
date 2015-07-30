@@ -28,20 +28,20 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 
+import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
-import static uk.co.real_logic.fix_gateway.messages.MessageStatus.INVALID_BODYLENGTH;
-import static uk.co.real_logic.fix_gateway.messages.MessageStatus.INVALID_CHECKSUM;
-import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
 /**
  * Handles incoming data from sockets
  */
-public class ReceiverEndPoint
+public class ReceiverEndPoint extends TcpChannelTransport
 {
     private static final byte BODY_LENGTH_FIELD = 9;
 
@@ -107,26 +107,29 @@ public class ReceiverEndPoint
         return connectionId;
     }
 
-    public void receiveData()
+    public int pollForData()
     {
         try
         {
-            readData();
+            final int bytesReceived = readData();
             frameMessages();
+            return bytesReceived;
         }
         catch (final ClosedChannelException ex)
         {
             onDisconnect();
+            return 1;
         }
         catch (final IOException ex)
         {
             // TODO: log
             ex.printStackTrace();
             onDisconnect();
+            return 1;
         }
     }
 
-    private void readData() throws IOException
+    private int readData() throws IOException
     {
         final int dataRead = channel.read(byteBuffer);
         if (dataRead != SOCKET_DISCONNECTED)
@@ -138,6 +141,7 @@ public class ReceiverEndPoint
         {
             onDisconnect();
         }
+        return dataRead;
     }
 
     private void frameMessages()
@@ -297,13 +301,14 @@ public class ReceiverEndPoint
         hasDisconnected = true;
     }
 
-    public void selectionKey(final SelectionKey selectionKey)
-    {
-        this.selectionKey = selectionKey;
-    }
-
     public boolean hasDisconnected()
     {
         return hasDisconnected;
     }
+
+    public void register(final Selector selector) throws IOException
+    {
+        selectionKey = channel.register(selector, OP_READ, this);
+    }
+
 }

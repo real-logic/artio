@@ -71,7 +71,7 @@ public class ReceiverEndPointTest
         theEndpointReceivesACompleteMessage();
 
         when:
-        endPoint.receiveData();
+        endPoint.pollForData();
 
         then:
         handlerReceivesAFramedMessage();
@@ -84,7 +84,7 @@ public class ReceiverEndPointTest
         theEndpointReceives(GARBLED_MESSAGE, 0, GARBLED_MESSAGE.length);
 
         when:
-        endPoint.receiveData();
+        endPoint.pollForData();
 
         then:
         handlerNotCalled();
@@ -99,7 +99,7 @@ public class ReceiverEndPointTest
         theEndpointReceivesAnIncompleteMessage();
 
         when:
-        endPoint.receiveData();
+        endPoint.pollForData();
 
         then:
         handlerNotCalled();
@@ -110,11 +110,11 @@ public class ReceiverEndPointTest
     {
         given:
         theEndpointReceivesAnIncompleteMessage();
-        endPoint.receiveData();
+        endPoint.pollForData();
 
         when:
         theEndpointReceivesTheRestOfTheMessage();
-        endPoint.receiveData();
+        endPoint.pollForData();
 
         then:
         handlerReceivesAFramedMessage();
@@ -127,7 +127,7 @@ public class ReceiverEndPointTest
         theEndpointReceivesTwoCompleteMessages();
 
         when:
-        endPoint.receiveData();
+        endPoint.pollForData();
 
         then:
         handlerReceivesTwoFramedMessages();
@@ -140,7 +140,7 @@ public class ReceiverEndPointTest
         theEndpointReceivesACompleteAndAnIncompleteMessage();
 
         when:
-        endPoint.receiveData();
+        endPoint.pollForData();
 
         then:
         handlerReceivesAFramedMessage();
@@ -151,11 +151,11 @@ public class ReceiverEndPointTest
     {
         given:
         theEndpointReceivesACompleteAndAnIncompleteMessage();
-        endPoint.receiveData();
+        endPoint.pollForData();
 
         when:
         theEndpointReceivesTheRestOfTheMessage();
-        endPoint.receiveData();
+        endPoint.pollForData();
 
         then:
         handlerReceivesFramedMessages(2, OK, MSG_LEN);
@@ -168,7 +168,7 @@ public class ReceiverEndPointTest
         theChannelIsClosedByException();
 
         when:
-        endPoint.receiveData();
+        endPoint.pollForData();
 
         then:
         verify(mockSessionIds).onDisconnect(anyLong());
@@ -182,7 +182,7 @@ public class ReceiverEndPointTest
         theChannelIsClosed();
 
         when:
-        endPoint.receiveData();
+        endPoint.pollForData();
 
         then:
         assertSavesDisconnect();
@@ -193,7 +193,7 @@ public class ReceiverEndPointTest
     {
         theEndpointReceives(INVALID_CHECKSUM_MSG, 0, INVALID_CHECKSUM_LEN);
 
-        endPoint.receiveData();
+        endPoint.pollForData();
 
         verify(mockPublication, times(1))
             .saveMessage(

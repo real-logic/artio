@@ -113,7 +113,7 @@ public class FramerTest
         aClientSendsData();
         framer.doWork();
 
-        verify(mockReceiverEndPoint).receiveData();
+        verify(mockReceiverEndPoint).pollForData();
     }
 
     @Test

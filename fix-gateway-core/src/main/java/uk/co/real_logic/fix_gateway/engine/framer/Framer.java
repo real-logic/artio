@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
@@ -27,18 +26,13 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 import static java.net.StandardSocketOptions.SO_RCVBUF;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
-import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
@@ -53,7 +47,7 @@ public class Framer implements Agent, SessionHandler
     private final List<ReceiverEndPoint> receiverEndPoints = new ArrayList<>();
     private final DataSubscriber dataSubscriber;
 
-    private final ServerSocketChannel listeningChannel;
+    private final ServerSocketChannelTransport listeningChannel;
     private final StaticConfiguration configuration;
     private final ConnectionHandler connectionHandler;
     private final Multiplexer multiplexer;
@@ -61,7 +55,7 @@ public class Framer implements Agent, SessionHandler
     private final GatewayPublication inboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
-    private final Selector selector;
+    private final TcpTransportPoller transportPoller;
 
     private long nextConnectionId = 0;
 
@@ -85,11 +79,10 @@ public class Framer implements Agent, SessionHandler
 
         try
         {
-            listeningChannel = ServerSocketChannel.open();
-            listeningChannel.bind(configuration.bindAddress()).configureBlocking(false);
+            listeningChannel = new ServerSocketChannelTransport(configuration.bindAddress(), this);
 
-            selector = Selector.open();
-            listeningChannel.register(selector, SelectionKey.OP_ACCEPT);
+            transportPoller = new TcpTransportPoller();
+            transportPoller.register(listeningChannel);
         }
         catch (final IOException ex)
         {
@@ -126,29 +119,10 @@ public class Framer implements Agent, SessionHandler
 
     private int pollSockets() throws IOException
     {
-        final int count = selector.selectNow();
-
-        final Set<SelectionKey> keys = selector.selectedKeys();
-        for (Iterator<SelectionKey> iter = keys.iterator(); iter.hasNext(); )
-        {
-            final SelectionKey key = iter.next();
-            if (key.isAcceptable())
-            {
-                final SocketChannel channel = listeningChannel.accept();
-                onAcceptConnection(channel);
-            }
-            else if (key.isReadable())
-            {
-                ((ReceiverEndPoint)key.attachment()).receiveData();
-            }
-
-            iter.remove();
-        }
-
-        return count;
+        return transportPoller.pollTransports();
     }
 
-    private void onAcceptConnection(final SocketChannel channel) throws IOException
+    public void onAcceptConnection(final SocketChannel channel) throws IOException
     {
         final long connectionId = this.nextConnectionId++;
         setupConnection(channel, connectionId, UNKNOWN);
@@ -204,8 +178,7 @@ public class Framer implements Agent, SessionHandler
 
         final ReceiverEndPoint receiverEndPoint = connectionHandler.receiverEndPoint(channel, connectionId, sessionId);
         receiverEndPoints.add(receiverEndPoint);
-        final SelectionKey selectionKey = channel.register(selector, OP_READ, receiverEndPoint);
-        receiverEndPoint.selectionKey(selectionKey);
+        transportPoller.register(receiverEndPoint);
 
         multiplexer.onNewConnection(connectionHandler.senderEndPoint(channel, connectionId));
     }
@@ -227,21 +200,9 @@ public class Framer implements Agent, SessionHandler
 
     public void onClose()
     {
-        try
-        {
-            receiverEndPoints.forEach(ReceiverEndPoint::close);
-            if (selector.isOpen())
-            {
-                // JDK on Windows - sigh
-                selector.selectNow();
-                selector.close();
-            }
-            listeningChannel.close();
-        }
-        catch (final IOException ex)
-        {
-            LangUtil.rethrowUnchecked(ex);
-        }
+        receiverEndPoints.forEach(ReceiverEndPoint::close);
+        transportPoller.close();
+        listeningChannel.close();
     }
 
     public String roleName()
