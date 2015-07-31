@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.system_benchmarks;
 
 import org.HdrHistogram.Histogram;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.agrona.console.ContinueBarrier;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
@@ -30,6 +31,7 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.locks.LockSupport;
 
 import static java.net.StandardSocketOptions.TCP_NODELAY;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.*;
 
 public final class FixBenchmarkClient
@@ -53,22 +55,49 @@ public final class FixBenchmarkClient
 
             logon(socketChannel);
 
-            final TestRequestEncoder testRequest = new TestRequestEncoder();
-            final HeaderEncoder header = testRequest
-                .header()
-                .senderCompID(INITIATOR_ID)
-                .targetCompID(ACCEPTOR_ID);
-
-            testRequest.testReqID("a");
-
+            final TestRequestEncoder testRequest = setupTestRequest();
+            final HeaderEncoder header = testRequest.header();
             final Histogram histogram = new Histogram(3);
 
-            for (int i = 0; i < WARMUP_MESSAGES; i++)
-            {
-                exchangeMessage(socketChannel, testRequest, header, i, histogram);
-            }
+            runWarmup(socketChannel, testRequest, header, histogram);
 
-            LockSupport.parkNanos(1_000_000_000);
+            LockSupport.parkNanos(SECONDS.toNanos(1));
+
+            runBenchmark(socketChannel, testRequest, header, histogram);
+        }
+    }
+
+    private static void runWarmup(final SocketChannel socketChannel,
+                                  final TestRequestEncoder testRequest,
+                                  final HeaderEncoder header, final Histogram histogram) throws IOException
+    {
+        for (int i = 0; i < WARMUP_MESSAGES; i++)
+        {
+            exchangeMessage(socketChannel, testRequest, header, i, histogram);
+        }
+    }
+
+    private static TestRequestEncoder setupTestRequest()
+    {
+        final TestRequestEncoder testRequest = new TestRequestEncoder();
+        testRequest
+            .header()
+            .senderCompID(INITIATOR_ID)
+            .targetCompID(ACCEPTOR_ID);
+        testRequest.testReqID("a");
+        return testRequest;
+    }
+
+    private static void runBenchmark(
+        final SocketChannel socketChannel,
+        final TestRequestEncoder testRequest,
+        final HeaderEncoder header,
+        final Histogram histogram)
+        throws IOException
+    {
+        final ContinueBarrier continueBarrier = new ContinueBarrier("Would you like to rerun the benchmark?");
+        do
+        {
             histogram.reset();
 
             for (int i = 0; i < MESSAGES_EXCHANGED; i++)
@@ -78,6 +107,7 @@ public final class FixBenchmarkClient
 
             histogram.outputPercentileDistribution(System.out, 1000.0);
         }
+        while (continueBarrier.await());
     }
 
     private static void exchangeMessage(
