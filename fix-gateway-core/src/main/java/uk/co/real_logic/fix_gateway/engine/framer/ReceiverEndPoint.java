@@ -181,6 +181,7 @@ public class ReceiverEndPoint extends TcpChannelTransport
                         connectionId,
                         INVALID_BODYLENGTH);
                     close();
+                    removeEndpoint();
                     break;
                 }
 
@@ -289,11 +290,22 @@ public class ReceiverEndPoint extends TcpChannelTransport
                 e.printStackTrace();
             }
 
-            onDisconnect();
+            disconnectEndpoint();
         }
     }
 
+    private void removeEndpoint()
+    {
+        framer.removeEndPoint(this);
+    }
+
     private void onDisconnect()
+    {
+        disconnectEndpoint();
+        removeEndpoint();
+    }
+
+    private void disconnectEndpoint()
     {
         sessionIds.onDisconnect(connectionId);
         publication.saveDisconnect(connectionId);
@@ -302,7 +314,6 @@ public class ReceiverEndPoint extends TcpChannelTransport
             selectionKey.cancel();
         }
         hasDisconnected = true;
-        framer.removeEndPoint(this);
     }
 
     public boolean hasDisconnected()
