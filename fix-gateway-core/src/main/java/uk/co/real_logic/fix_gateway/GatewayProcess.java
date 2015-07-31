@@ -27,6 +27,8 @@ public class GatewayProcess implements AutoCloseable
     public static final int OUTBOUND_DATA_STREAM = 2;
     public static final int OUTBOUND_CONTROL_STREAM = 3;
 
+    protected final StaticConfiguration configuration;
+
     protected CountersFile countersFile;
     protected FixCounters fixCounters;
     protected Aeron aeron;
@@ -35,6 +37,7 @@ public class GatewayProcess implements AutoCloseable
 
     protected GatewayProcess(final StaticConfiguration configuration)
     {
+        this.configuration = configuration;
         initCounters(configuration);
         initAeron();
         initReplicationStreams(configuration);

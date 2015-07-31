@@ -100,6 +100,7 @@ public final class StaticConfiguration
     private int loggerCacheCapacity = DEFAULT_LOGGER_CACHE_CAPACITY;
     private long sendingTimeWindow = DEFAULT_SENDING_TIME_WINDOW;
     private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
+    private boolean logMessages = true;
 
     public StaticConfiguration()
     {
@@ -238,6 +239,12 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration logMessages(final boolean value)
+    {
+        this.logMessages = value;
+        return this;
+    }
+
     public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -336,5 +343,10 @@ public final class StaticConfiguration
     public SessionCustomisationStrategy sessionCustomisationStrategy()
     {
         return sessionCustomisationStrategy;
+    }
+
+    public boolean logMessages()
+    {
+        return logMessages;
     }
 }

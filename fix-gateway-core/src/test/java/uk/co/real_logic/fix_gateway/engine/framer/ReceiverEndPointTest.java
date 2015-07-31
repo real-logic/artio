@@ -56,7 +56,7 @@ public class ReceiverEndPointTest
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
             mockChannel, 16 * 1024, mockPublication, CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
-            messagesRead);
+            messagesRead, mock(Framer.class));
 
     @Before
     public void setUp()

@@ -46,33 +46,36 @@ public class FixEngine extends GatewayProcess
 
     private void initLogger(final StaticConfiguration configuration)
     {
-        final int loggerCacheCapacity = configuration.loggerCacheCapacity();
-        final String logFileDir = configuration.logFileDir();
+        if (configuration.logMessages())
+        {
+            final int loggerCacheCapacity = configuration.loggerCacheCapacity();
+            final String logFileDir = configuration.logFileDir();
 
-        final List<Subscription> subscriptions = Arrays.asList(
-            outboundStreams.dataSubscription(), inboundStreams.dataSubscription());
-        final Archiver archiver = new Archiver(
-            LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity, subscriptions);
-        final ArchiveReader archiveReader = new ArchiveReader(
-            LoggerUtil::mapExistingFile, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
+            final List<Subscription> subscriptions = Arrays.asList(
+                outboundStreams.dataSubscription(), inboundStreams.dataSubscription());
+            final Archiver archiver = new Archiver(
+                LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity, subscriptions);
+            final ArchiveReader archiveReader = new ArchiveReader(
+                LoggerUtil::mapExistingFile, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
 
-        final List<Index> indices = Arrays.asList(
-            new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, LoggerUtil::map));
-        final Indexer indexer = new Indexer(indices, outboundStreams);
+            final List<Index> indices = Arrays.asList(
+                new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, LoggerUtil::map));
+            final Indexer indexer = new Indexer(indices, outboundStreams);
 
-        final ReplayQuery replayQuery = new ReplayQuery(
-            logFileDir, loggerCacheCapacity, LoggerUtil::mapExistingFile, archiveReader);
-        final Replayer replayer = new Replayer(
-            inboundStreams.dataSubscription(),
-            replayQuery,
-            outboundStreams.dataPublication(),
-            new BufferClaim(),
-            backoffIdleStrategy());
+            final ReplayQuery replayQuery = new ReplayQuery(
+                logFileDir, loggerCacheCapacity, LoggerUtil::mapExistingFile, archiveReader);
+            final Replayer replayer = new Replayer(
+                inboundStreams.dataSubscription(),
+                replayQuery,
+                outboundStreams.dataPublication(),
+                new BufferClaim(),
+                backoffIdleStrategy());
 
-        final Agent loggingAgent = new CompositeAgent(archiver, new CompositeAgent(indexer, replayer));
+            final Agent loggingAgent = new CompositeAgent(archiver, new CompositeAgent(indexer, replayer));
 
-        loggingRunner =
-            new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, fixCounters.exceptions(), loggingAgent);
+            loggingRunner =
+                new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, fixCounters.exceptions(), loggingAgent);
+        }
     }
 
     private void initFramer(final StaticConfiguration configuration, final FixCounters fixCounters)
@@ -111,7 +114,10 @@ public class FixEngine extends GatewayProcess
     private FixEngine start()
     {
         start(framerRunner);
-        start(loggingRunner);
+        if (configuration.logMessages())
+        {
+            start(loggingRunner);
+        }
         return this;
     }
 

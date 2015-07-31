@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.engine.framer.Framer;
 import uk.co.real_logic.fix_gateway.engine.framer.ReceiverEndPoint;
 import uk.co.real_logic.fix_gateway.engine.framer.SenderEndPoint;
 import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
@@ -58,7 +59,7 @@ public class ConnectionHandler
     }
 
     public ReceiverEndPoint receiverEndPoint(
-        final SocketChannel channel, final long connectionId, final long sessionId) throws IOException
+        final SocketChannel channel, final long connectionId, final long sessionId, final Framer framer) throws IOException
     {
         return new ReceiverEndPoint(
             channel,
@@ -68,7 +69,8 @@ public class ConnectionHandler
             sessionId,
             sessionIdStrategy,
             sessionIds,
-            fixCounters.messagesRead(channel.getRemoteAddress())
+            fixCounters.messagesRead(channel.getRemoteAddress()),
+            framer
         );
     }
 

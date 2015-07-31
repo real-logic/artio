@@ -93,28 +93,13 @@ public class Framer implements Agent, SessionHandler
     @Override
     public int doWork() throws Exception
     {
-        return outboundDataSubscription.poll(dataSubscriber, 5) + pollSockets() + pollEndpoints();
+        return outboundDataSubscription.poll(dataSubscriber, 5) + pollSockets();
     }
 
-    /**
-     * Scans for endpoints which have been disconnected and then removes them.
-     */
-    private int pollEndpoints()
+    public void removeEndPoint(final ReceiverEndPoint receiverEndPoint)
     {
-        int disconnected = 0;
-        final Iterator<ReceiverEndPoint> iterator = receiverEndPoints.iterator();
-        while (iterator.hasNext())
-        {
-            final ReceiverEndPoint endPoint = iterator.next();
-            if (endPoint.hasDisconnected())
-            {
-                multiplexer.onDisconnect(endPoint.connectionId());
-                iterator.remove();
-                disconnected++;
-            }
-        }
-
-        return disconnected;
+        receiverEndPoints.remove(receiverEndPoint);
+        multiplexer.onDisconnect(receiverEndPoint.connectionId());
     }
 
     private int pollSockets() throws IOException
@@ -176,7 +161,8 @@ public class Framer implements Agent, SessionHandler
             channel.setOption(SO_RCVBUF, configuration.senderSocketBufferSize());
         }
 
-        final ReceiverEndPoint receiverEndPoint = connectionHandler.receiverEndPoint(channel, connectionId, sessionId);
+        final ReceiverEndPoint receiverEndPoint =
+            connectionHandler.receiverEndPoint(channel, connectionId, sessionId, this);
         receiverEndPoints.add(receiverEndPoint);
         transportPoller.register(receiverEndPoint);
 
@@ -209,5 +195,4 @@ public class Framer implements Agent, SessionHandler
     {
         return "Framer";
     }
-
 }

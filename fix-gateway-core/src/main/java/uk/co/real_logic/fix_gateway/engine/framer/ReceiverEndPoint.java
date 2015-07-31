@@ -65,6 +65,7 @@ public class ReceiverEndPoint extends TcpChannelTransport
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
     private final AtomicCounter messagesRead;
+    private final Framer framer;
     private final AtomicBuffer buffer;
     private final AsciiFlyweight string;
     private final ByteBuffer byteBuffer;
@@ -82,7 +83,8 @@ public class ReceiverEndPoint extends TcpChannelTransport
         final long sessionId,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
-        final AtomicCounter messagesRead)
+        final AtomicCounter messagesRead,
+        final Framer framer)
     {
         this.channel = channel;
         this.publication = publication;
@@ -91,6 +93,7 @@ public class ReceiverEndPoint extends TcpChannelTransport
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
         this.messagesRead = messagesRead;
+        this.framer = framer;
 
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new AsciiFlyweight(buffer);
@@ -299,6 +302,7 @@ public class ReceiverEndPoint extends TcpChannelTransport
             selectionKey.cancel();
         }
         hasDisconnected = true;
+        framer.removeEndPoint(this);
     }
 
     public boolean hasDisconnected()

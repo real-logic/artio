@@ -70,7 +70,7 @@ public class FramerTest
 
         clientBuffer.putInt(10, 5);
 
-        when(mockConnectionHandler.receiverEndPoint(any(SocketChannel.class), anyLong(), anyLong()))
+        when(mockConnectionHandler.receiverEndPoint(any(SocketChannel.class), anyLong(), anyLong(), eq(framer)))
             .thenReturn(mockReceiverEndPoint);
 
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong()))
@@ -101,7 +101,7 @@ public class FramerTest
 
         framer.doWork();
 
-        verify(mockConnectionHandler).receiverEndPoint(notNull(SocketChannel.class), anyLong(), anyLong());
+        verify(mockConnectionHandler).receiverEndPoint(notNull(SocketChannel.class), anyLong(), anyLong(), eq(framer));
     }
 
     @Test
@@ -172,9 +172,7 @@ public class FramerTest
         intiateConnection();
         notifyLibraryOfConnection();
 
-        when(mockReceiverEndPoint.hasDisconnected()).thenReturn(true);
-
-        framer.doWork();
+        framer.removeEndPoint(mockReceiverEndPoint);
 
         verify(mockMultiplexer).onDisconnect(CONNECTION_ID);
     }
