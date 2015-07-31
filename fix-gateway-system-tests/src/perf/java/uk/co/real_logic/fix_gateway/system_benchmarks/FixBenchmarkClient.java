@@ -75,6 +75,7 @@ public final class FixBenchmarkClient
         {
             exchangeMessage(socketChannel, testRequest, header, i, histogram);
         }
+        System.out.println("Warmup Complete");
     }
 
     private static TestRequestEncoder setupTestRequest()
