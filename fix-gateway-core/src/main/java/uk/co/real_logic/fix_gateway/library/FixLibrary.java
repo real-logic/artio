@@ -19,6 +19,7 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
@@ -128,12 +129,14 @@ public class FixLibrary extends GatewayProcess
         {
             if (type == INITIATOR)
             {
+                DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
                 final Session session = initiateSession(connectionId);
                 newSession(connectionId, session);
                 incomingSession = session;
             }
             else
             {
+                DebugLogger.log("Acct Connect: %d, %d\n", connectionId, libraryId);
                 final String address = buffer.getStringUtf8(addressOffset, addressLength);
                 final Session session = acceptSession(address, connectionId);
                 newSession(connectionId, session);
@@ -142,6 +145,7 @@ public class FixLibrary extends GatewayProcess
 
         public void onLogon(final long connectionId, final long sessionId)
         {
+            DebugLogger.log("Library Logon: %d, %d\n", connectionId, sessionId);
             final SessionSubscriber subscriber = sessions.get(connectionId);
             if (subscriber != null)
             {
@@ -156,6 +160,7 @@ public class FixLibrary extends GatewayProcess
                               final long sessionId,
                               final int messageType)
         {
+            DebugLogger.log("Received %s\n", buffer, offset, length);
             final SessionSubscriber subscriber = sessions.get(connectionId);
             if (subscriber != null)
             {
@@ -166,6 +171,7 @@ public class FixLibrary extends GatewayProcess
         public void onDisconnect(final long connectionId)
         {
             final SessionSubscriber subscriber = sessions.remove(connectionId);
+            DebugLogger.log("Library Disconnect %s\n", connectionId);
             if (subscriber != null)
             {
                 subscriber.onDisconnect(connectionId);

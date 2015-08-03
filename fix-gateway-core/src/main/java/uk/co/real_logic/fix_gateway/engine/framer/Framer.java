@@ -30,6 +30,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Iterator;
 
 import static java.net.StandardSocketOptions.SO_RCVBUF;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
@@ -123,14 +124,19 @@ public class Framer implements Agent, SessionHandler
     private int pollNewConnections() throws IOException
     {
         final int newConnections = selector.selectNow();
-        for (int i = 0; i < newConnections; i++)
+        final Iterator<SelectionKey> it = selector.selectedKeys().iterator();
+        while (it.hasNext())
         {
+            it.next();
+
             final SocketChannel channel = listeningChannel.accept();
             final long connectionId = this.nextConnectionId++;
             setupConnection(channel, connectionId, UNKNOWN);
 
             final String address = channel.getRemoteAddress().toString();
             inboundPublication.saveConnect(connectionId, address, ACCEPTOR);
+
+            it.remove();
         }
         return newConnections;
     }

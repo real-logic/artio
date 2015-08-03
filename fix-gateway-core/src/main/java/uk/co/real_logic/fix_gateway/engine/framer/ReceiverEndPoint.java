@@ -137,7 +137,10 @@ public class ReceiverEndPoint
         final int dataRead = channel.read(byteBuffer);
         if (dataRead != SOCKET_DISCONNECTED)
         {
-            DebugLogger.log("Read     %s\n", byteBuffer, dataRead);
+            if (dataRead > 0)
+            {
+                DebugLogger.log("Read     %s\n", buffer, 0, dataRead);
+            }
             usedBufferData += dataRead;
         }
         else

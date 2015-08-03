@@ -78,7 +78,7 @@ public final class DebugLogger
         {
             final byte[] data = new byte[length];
             buffer.getBytes(offset, data);
-            System.out.printf(formatString, new String(data, US_ASCII));
+            OUTPUT.printf(formatString, new String(data, US_ASCII));
         }
     }
 
@@ -92,7 +92,7 @@ public final class DebugLogger
             byteBuffer.get(data);
             byteBuffer.position(originalPosition);
 
-            System.out.printf(formatString, new String(data, US_ASCII));
+            OUTPUT.printf(formatString, new String(data, US_ASCII));
         }
     }
 
@@ -100,7 +100,7 @@ public final class DebugLogger
     {
         if (DEBUG_PRINT_MESSAGES)
         {
-            System.out.println(message);
+            OUTPUT.println(message);
         }
     }
 
@@ -108,7 +108,7 @@ public final class DebugLogger
     {
         if (DEBUG_PRINT_MESSAGES)
         {
-            System.out.printf(formatString, value);
+            OUTPUT.printf(formatString, value);
         }
     }
 
@@ -116,7 +116,15 @@ public final class DebugLogger
     {
         if (DEBUG_PRINT_MESSAGES)
         {
-            System.out.printf(formatString, first, second);
+            OUTPUT.printf(formatString, first, second);
+        }
+    }
+
+    public static void log(final String formatString, final long first, final long second)
+    {
+        if (DEBUG_PRINT_MESSAGES)
+        {
+            OUTPUT.printf(formatString, first, second);
         }
     }
 
@@ -124,7 +132,7 @@ public final class DebugLogger
     {
         if (DEBUG_PRINT_MESSAGES)
         {
-            System.out.printf(formatString, first, second, third);
+            OUTPUT.printf(formatString, first, second, third);
         }
     }
 }
