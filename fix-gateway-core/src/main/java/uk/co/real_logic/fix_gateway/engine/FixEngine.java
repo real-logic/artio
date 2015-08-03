@@ -27,6 +27,7 @@ import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -46,13 +47,20 @@ public class FixEngine extends GatewayProcess
 
     private void initLogger(final StaticConfiguration configuration)
     {
-        if (configuration.logMessages())
+        if (isLoggingMessages())
         {
             final int loggerCacheCapacity = configuration.loggerCacheCapacity();
             final String logFileDir = configuration.logFileDir();
 
-            final List<Subscription> subscriptions = Arrays.asList(
-                outboundStreams.dataSubscription(), inboundStreams.dataSubscription());
+            final List<Subscription> subscriptions = new ArrayList<>();
+            if (configuration.logInboundMessages())
+            {
+                subscriptions.add(inboundStreams.dataSubscription());
+            }
+            if (configuration.logOutboundMessages())
+            {
+                subscriptions.add(outboundStreams.dataSubscription());
+            }
             final Archiver archiver = new Archiver(
                 LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity, subscriptions);
             final ArchiveReader archiveReader = new ArchiveReader(
@@ -114,11 +122,16 @@ public class FixEngine extends GatewayProcess
     private FixEngine start()
     {
         start(framerRunner);
-        if (configuration.logMessages())
+        if (isLoggingMessages())
         {
             start(loggingRunner);
         }
         return this;
+    }
+
+    private boolean isLoggingMessages()
+    {
+        return configuration.logInboundMessages() || configuration.logOutboundMessages();
     }
 
     private void start(final AgentRunner runner)

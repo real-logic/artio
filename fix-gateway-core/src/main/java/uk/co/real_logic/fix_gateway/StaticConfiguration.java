@@ -100,7 +100,8 @@ public final class StaticConfiguration
     private int loggerCacheCapacity = DEFAULT_LOGGER_CACHE_CAPACITY;
     private long sendingTimeWindow = DEFAULT_SENDING_TIME_WINDOW;
     private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
-    private boolean logMessages = true;
+    private boolean logInboundMessages = true;
+    private boolean logOutboundMessages = true;
 
     public StaticConfiguration()
     {
@@ -239,9 +240,15 @@ public final class StaticConfiguration
         return this;
     }
 
-    public StaticConfiguration logMessages(final boolean value)
+    public StaticConfiguration logInboundMessages(final boolean value)
     {
-        this.logMessages = value;
+        this.logInboundMessages = value;
+        return this;
+    }
+
+    public StaticConfiguration logOutboundMessages(final boolean value)
+    {
+        this.logOutboundMessages = value;
         return this;
     }
 
@@ -345,8 +352,13 @@ public final class StaticConfiguration
         return sessionCustomisationStrategy;
     }
 
-    public boolean logMessages()
+    public boolean logInboundMessages()
     {
-        return logMessages;
+        return logInboundMessages;
+    }
+
+    public boolean logOutboundMessages()
+    {
+        return logOutboundMessages;
     }
 }

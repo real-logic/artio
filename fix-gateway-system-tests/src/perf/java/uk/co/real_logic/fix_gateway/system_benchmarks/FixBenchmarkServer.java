@@ -80,6 +80,7 @@ public final class FixBenchmarkServer
             .authenticationStrategy(authenticationStrategy)
             .newSessionHandler(session -> new BenchmarkSessionHandler())
             .logFileDir(acceptorLogs)
-            .logMessages(false);
+            .logInboundMessages(false)
+            .logOutboundMessages(false);
     }
 }
