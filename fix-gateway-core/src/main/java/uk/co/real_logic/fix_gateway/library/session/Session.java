@@ -607,4 +607,13 @@ public class Session
             msgTypeLength,
             INVALID_MSGTYPE.representation());
     }
+
+    public String toString()
+    {
+        return getClass().getSimpleName() + "{" +
+            "connectionId=" + connectionId +
+            ", sessionId=" + id +
+            ", state=" + state +
+            '}';
+    }
 }

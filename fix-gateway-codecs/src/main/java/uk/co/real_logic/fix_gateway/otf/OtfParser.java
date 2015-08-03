@@ -224,7 +224,6 @@ public final class OtfParser
 
     private void parseError(final int messageType, final int tag)
     {
-
         acceptor.onError(PARSE_ERROR, messageType, tag, stringField);
     }
 

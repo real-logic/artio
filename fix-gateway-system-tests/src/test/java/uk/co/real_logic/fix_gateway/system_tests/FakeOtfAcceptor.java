@@ -20,6 +20,7 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
@@ -31,12 +32,14 @@ import java.util.List;
  */
 public class FakeOtfAcceptor implements OtfMessageAcceptor
 {
-    private final List<Integer> messageTypes = new ArrayList<>();
+
+    private final List<FixMessage> messages = new ArrayList<>();
     private final AsciiFlyweight string = new AsciiFlyweight();
 
     private ValidationError error;
     private boolean isCompleted;
     private String senderCompId;
+    private FixMessage message;
 
     public void onNext()
     {
@@ -44,27 +47,27 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         senderCompId = null;
         error = null;
         isCompleted = false;
+        ensureMessage();
     }
 
     public void onComplete()
     {
         DebugLogger.log("Message Complete");
         isCompleted = true;
+        messages.add(message);
+        message = null;
     }
 
     public synchronized void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
     {
         DebugLogger.log("Field: %s=%s\n", tag, buffer, offset, length);
-        if (tag == Constants.MSG_TYPE)
+        string.wrap(buffer);
+        if (tag == Constants.SENDER_COMP_ID)
         {
-            string.wrap(buffer);
-            messageTypes.add(string.getMessageType(offset, length));
-        }
-        else if (tag == Constants.SENDER_COMP_ID)
-        {
-            string.wrap(buffer);
             senderCompId = string.getAscii(offset, length);
         }
+
+        message.put(tag, string.getAscii(offset, length));
     }
 
     public void onGroupHeader(final int tag, final int numInGroup)
@@ -89,13 +92,13 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         final AsciiFieldFlyweight value)
     {
         this.error = error;
-        System.err.printf("%s for %d @ %d", error, messageType, tagNumber);
+        System.err.printf("%s for %d @ %d\n", error, messageType, tagNumber);
         return false;
     }
 
-    public synchronized List<Integer> messageTypes()
+    public List<FixMessage> messages()
     {
-        return messageTypes;
+        return messages;
     }
 
     public String lastSenderCompId()
@@ -111,5 +114,24 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
     public boolean isCompleted()
     {
         return isCompleted;
+    }
+
+    public void forSession(final Session session)
+    {
+        ensureMessage();
+        message.session(session);
+    }
+
+    private void ensureMessage()
+    {
+        if (message == null)
+        {
+            message = new FixMessage();
+        }
+    }
+
+    public FixMessage lastMessage()
+    {
+        return messages.get(messages.size() - 1);
     }
 }

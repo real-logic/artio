@@ -21,7 +21,6 @@ import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
-import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
@@ -37,7 +36,6 @@ import java.util.concurrent.locks.LockSupport;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -108,24 +106,26 @@ public final class SystemTestUtil
         session.send(testRequest);
     }
 
-    public static void assertReceivedMessage(
+    public static void assertReceivedTestRequest(
         final FixLibrary library, final FakeOtfAcceptor acceptor)
     {
-        assertReceivedMessage(library, null, acceptor);
+        assertReceivedTestRequest(library, null, acceptor);
     }
 
-    public static void assertReceivedMessage(
+    public static void assertReceivedTestRequest(
         final FixLibrary library1, final FixLibrary library2, final FakeOtfAcceptor acceptor)
     {
-        assertEventuallyTrue("Failed to receive a logon and test request message", () ->
+        assertEventuallyTrue("Failed to receive 2 messages", () ->
         {
             poll(library1, library2);
-            assertEquals(2, acceptor.messageTypes().size());
-            assertThat(acceptor.messageTypes(), hasItem(TestRequestDecoder.MESSAGE_TYPE));
+            assertEquals(2, acceptor.messages().size());
         });
+
+        final FixMessage message = acceptor.messages().get(1);
+        assertEquals("Not a test request message", "1", message.getMessageType());
     }
 
-    private static void poll(final FixLibrary library1, final FixLibrary library2)
+    public static void poll(final FixLibrary library1, final FixLibrary library2)
     {
         library1.poll(1);
         if (library2 != null)
@@ -242,7 +242,7 @@ public final class SystemTestUtil
     public static Session acceptSession(final FakeSessionHandler acceptingSessionHandler, final FixLibrary acceptingLibrary)
     {
         Session session;
-        while ((session = acceptingSessionHandler.session()) == null)
+        while ((session = acceptingSessionHandler.latestSession()) == null)
         {
             acceptingLibrary.poll(1);
             LockSupport.parkNanos(10_000);

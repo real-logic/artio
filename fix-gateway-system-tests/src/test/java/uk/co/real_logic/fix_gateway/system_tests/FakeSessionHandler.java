@@ -1,25 +1,43 @@
+/*
+ * Copyright 2015 Real Logic Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
-import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
-import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
+
+import java.util.Collection;
 
 public class FakeSessionHandler implements SessionHandler, NewSessionHandler
 {
 
+    private final Long2ObjectHashMap<Session> connectionIdToSession = new Long2ObjectHashMap<>();
     private final OtfParser parser;
-    private final DataSubscriber subscriber = new DataSubscriber(this);
+    private final FakeOtfAcceptor acceptor;
 
-    private Session session;
+    private Session latestSession;
     private long connectionId = -1;
 
-    public FakeSessionHandler(final OtfMessageAcceptor acceptor)
+    public FakeSessionHandler(final FakeOtfAcceptor acceptor)
     {
+        this.acceptor = acceptor;
         parser = new OtfParser(acceptor, new IntDictionary());
     }
 
@@ -32,11 +50,13 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
         final int messageType)
     {
         parser.onMessage(buffer, offset, length);
+        acceptor.forSession(connectionIdToSession.get(connectionId));
     }
 
     public void onDisconnect(final long connectionId)
     {
         this.connectionId = connectionId;
+        connectionIdToSession.remove(connectionId);
     }
 
     public long connectionId()
@@ -46,18 +66,24 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
 
     public SessionHandler onConnect(final Session session)
     {
-        this.session = session;
+        connectionIdToSession.put(session.connectionId(), session);
+        this.latestSession = session;
         return this;
     }
 
-    public Session session()
+    public Session latestSession()
     {
-        return session;
+        return latestSession;
     }
 
     public void resetSession()
     {
-        session = null;
+        latestSession = null;
+    }
+
+    public Collection<Session> sessions()
+    {
+        return connectionIdToSession.values();
     }
 
 }
