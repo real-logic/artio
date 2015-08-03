@@ -166,7 +166,7 @@ public class Framer implements Agent, SessionHandler
         throws IOException
     {
         channel.configureBlocking(false);
-        channel.setOption(TCP_NODELAY, false);
+        channel.setOption(TCP_NODELAY, true);
         if (configuration.receiverSocketBufferSize() > 0)
         {
             channel.setOption(SO_RCVBUF, configuration.receiverSocketBufferSize());
