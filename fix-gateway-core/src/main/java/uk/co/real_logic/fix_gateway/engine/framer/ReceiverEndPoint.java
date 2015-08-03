@@ -41,7 +41,7 @@ import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 /**
  * Handles incoming data from sockets
  */
-public class ReceiverEndPoint extends TcpChannelTransport
+public class ReceiverEndPoint
 {
     private static final byte BODY_LENGTH_FIELD = 9;
 

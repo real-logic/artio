@@ -22,16 +22,16 @@ import uk.co.real_logic.agrona.nio.TransportPoller;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 
-public class TcpTransportPoller extends TransportPoller
+public class ReceiverEndPointPoller extends TransportPoller
 {
-    private TcpChannelTransport[] transports = new TcpChannelTransport[0];
+    private ReceiverEndPoint[] endPoints = new ReceiverEndPoint[0];
 
-    public void register(final TcpChannelTransport channelTransport)
+    public void register(final ReceiverEndPoint endPoint)
     {
         try
         {
-            transports = ArrayUtil.add(transports, channelTransport);
-            channelTransport.register(selector);
+            endPoints = ArrayUtil.add(endPoints, endPoint);
+            endPoint.register(selector);
         }
         catch (final IOException ex)
         {
@@ -39,23 +39,23 @@ public class TcpTransportPoller extends TransportPoller
         }
     }
 
-    public void deregister(final TcpChannelTransport channelTransport)
+    public void deregister(final ReceiverEndPoint endPoint)
     {
-        transports = ArrayUtil.remove(transports, channelTransport);
+        endPoints = ArrayUtil.remove(endPoints, endPoint);
     }
 
-    public int pollTransports()
+    public int pollEndPoints()
     {
         int bytesReceived = 0;
         try
         {
-            final TcpChannelTransport[] transports = this.transports;
-            final int numTransports = transports.length;
-            if (numTransports <= ITERATION_THRESHOLD)
+            final ReceiverEndPoint[] endPoints = this.endPoints;
+            final int numEndPoints = endPoints.length;
+            if (numEndPoints <= ITERATION_THRESHOLD)
             {
-                for (int i = numTransports - 1; i >= 0; i--)
+                for (int i = numEndPoints - 1; i >= 0; i--)
                 {
-                    bytesReceived += transports[i].pollForData();
+                    bytesReceived += endPoints[i].pollForData();
                 }
             }
             else
@@ -65,7 +65,7 @@ public class TcpTransportPoller extends TransportPoller
                 final SelectionKey[] keys = selectedKeySet.keys();
                 for (int i = selectedKeySet.size() - 1; i >= 0; i--)
                 {
-                    bytesReceived += ((TcpChannelTransport)keys[i].attachment()).pollForData();
+                    bytesReceived += ((ReceiverEndPoint)keys[i].attachment()).pollForData();
                 }
 
                 selectedKeySet.reset();
