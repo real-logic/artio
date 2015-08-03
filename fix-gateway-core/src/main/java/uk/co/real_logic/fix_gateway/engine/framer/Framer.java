@@ -108,7 +108,16 @@ public class Framer implements Agent, SessionHandler
 
     private int pollSockets() throws IOException
     {
-        return endPointPoller.pollEndPoints() + pollNewConnections();
+        int totalBytesReceived = 0;
+        int bytesReceived;
+        do
+        {
+            bytesReceived = endPointPoller.pollEndPoints();
+            totalBytesReceived += bytesReceived;
+        }
+        while (bytesReceived > 0);
+
+        return totalBytesReceived + pollNewConnections();
     }
 
     private int pollNewConnections() throws IOException
