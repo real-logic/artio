@@ -21,6 +21,9 @@ import uk.co.real_logic.agrona.nio.TransportPoller;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
+import java.util.stream.Stream;
+
+import static uk.co.real_logic.agrona.collections.ArrayUtil.UNKNOWN_INDEX;
 
 public class ReceiverEndPointPoller extends TransportPoller
 {
@@ -42,6 +45,25 @@ public class ReceiverEndPointPoller extends TransportPoller
     public void deregister(final ReceiverEndPoint endPoint)
     {
         endPoints = ArrayUtil.remove(endPoints, endPoint);
+    }
+
+    public void deregister(final long connectionId)
+    {
+        final ReceiverEndPoint[] endPoints = this.endPoints;
+        final int length = endPoints.length;
+        int index = UNKNOWN_INDEX;
+
+        for (int i = 0; i < length; i++)
+        {
+            final ReceiverEndPoint endPoint = endPoints[i];
+            if (endPoint.connectionId() == connectionId)
+            {
+                index = i;
+            }
+            endPoint.close();
+        }
+
+        this.endPoints = ArrayUtil.remove(endPoints, index);
     }
 
     public int pollEndPoints()
@@ -78,4 +100,11 @@ public class ReceiverEndPointPoller extends TransportPoller
 
         return bytesReceived;
     }
+
+    public void close()
+    {
+        Stream.of(endPoints).forEach(ReceiverEndPoint::close);
+        super.close();
+    }
+
 }

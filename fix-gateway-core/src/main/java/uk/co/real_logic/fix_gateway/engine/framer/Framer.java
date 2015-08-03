@@ -30,9 +30,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
 import static java.net.StandardSocketOptions.SO_RCVBUF;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
@@ -48,7 +45,6 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.EXCEPTION;
  */
 public class Framer implements Agent, SessionHandler
 {
-    private final List<ReceiverEndPoint> receiverEndPoints = new ArrayList<>();
     private final DataSubscriber dataSubscriber;
 
     private final Selector selector;
@@ -106,9 +102,8 @@ public class Framer implements Agent, SessionHandler
 
     public void removeEndPoint(final ReceiverEndPoint receiverEndPoint)
     {
-        receiverEndPoints.remove(receiverEndPoint);
         multiplexer.onDisconnect(receiverEndPoint.connectionId());
-        //endPointPoller.deregister(receiverEndPoint);
+        endPointPoller.deregister(receiverEndPoint);
     }
 
     private int pollSockets() throws IOException
@@ -178,7 +173,6 @@ public class Framer implements Agent, SessionHandler
 
         final ReceiverEndPoint receiverEndPoint =
             connectionHandler.receiverEndPoint(channel, connectionId, sessionId, this);
-        receiverEndPoints.add(receiverEndPoint);
         endPointPoller.register(receiverEndPoint);
 
         multiplexer.onNewConnection(connectionHandler.senderEndPoint(channel, connectionId));
@@ -186,22 +180,11 @@ public class Framer implements Agent, SessionHandler
 
     public void onDisconnect(final long connectionId)
     {
-        final Iterator<ReceiverEndPoint> it = receiverEndPoints.iterator();
-        while (it.hasNext())
-        {
-            final ReceiverEndPoint endPoint = it.next();
-            if (endPoint.connectionId() == connectionId)
-            {
-                endPoint.close();
-                it.remove();
-                break;
-            }
-        }
+        endPointPoller.deregister(connectionId);
     }
 
     public void onClose()
     {
-        receiverEndPoints.forEach(ReceiverEndPoint::close);
         endPointPoller.close();
         close(listeningChannel);
     }

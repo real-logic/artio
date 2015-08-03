@@ -120,14 +120,14 @@ public class ReceiverEndPoint
         }
         catch (final ClosedChannelException ex)
         {
-            onDisconnect();
+            onDisconnectDetected();
             return 1;
         }
         catch (final IOException ex)
         {
             // TODO: log
             ex.printStackTrace();
-            onDisconnect();
+            onDisconnectDetected();
             return 1;
         }
     }
@@ -142,7 +142,7 @@ public class ReceiverEndPoint
         }
         else
         {
-            onDisconnect();
+            onDisconnectDetected();
         }
         return dataRead;
     }
@@ -280,17 +280,21 @@ public class ReceiverEndPoint
     {
         if (!hasDisconnected)
         {
-            try
-            {
-                channel.close();
-            }
-            catch (IOException e)
-            {
-                // TODO:
-                e.printStackTrace();
-            }
-
+            closeChannel();
             disconnectEndpoint();
+        }
+    }
+
+    private void closeChannel()
+    {
+        try
+        {
+            channel.close();
+        }
+        catch (IOException e)
+        {
+            // TODO:
+            e.printStackTrace();
         }
     }
 
@@ -299,7 +303,7 @@ public class ReceiverEndPoint
         framer.removeEndPoint(this);
     }
 
-    private void onDisconnect()
+    private void onDisconnectDetected()
     {
         disconnectEndpoint();
         removeEndpoint();
