@@ -59,7 +59,7 @@ public class Framer implements Agent, SessionHandler
     private final SessionIds sessionIds;
     private final ReceiverEndPointPoller endPointPoller;
 
-    private long nextConnectionId = 0;
+    private long nextConnectionId = (long) (Math.random() * 10);
 
     public Framer(
         final StaticConfiguration configuration,
