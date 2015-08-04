@@ -124,20 +124,24 @@ public class Framer implements Agent, SessionHandler
     private int pollNewConnections() throws IOException
     {
         final int newConnections = selector.selectNow();
-        final Iterator<SelectionKey> it = selector.selectedKeys().iterator();
-        while (it.hasNext())
+        if (newConnections > 0)
         {
-            it.next();
+            final Iterator<SelectionKey> it = selector.selectedKeys().iterator();
+            while (it.hasNext())
+            {
+                it.next();
 
-            final SocketChannel channel = listeningChannel.accept();
-            final long connectionId = this.nextConnectionId++;
-            setupConnection(channel, connectionId, UNKNOWN);
+                final SocketChannel channel = listeningChannel.accept();
+                final long connectionId = this.nextConnectionId++;
+                setupConnection(channel, connectionId, UNKNOWN);
 
-            final String address = channel.getRemoteAddress().toString();
-            inboundPublication.saveConnect(connectionId, address, ACCEPTOR);
+                final String address = channel.getRemoteAddress().toString();
+                inboundPublication.saveConnect(connectionId, address, ACCEPTOR);
 
-            it.remove();
+                it.remove();
+            }
         }
+
         return newConnections;
     }
 
@@ -175,7 +179,6 @@ public class Framer implements Agent, SessionHandler
     private void setupConnection(final SocketChannel channel, final long connectionId, final long sessionId)
         throws IOException
     {
-        channel.configureBlocking(false);
         channel.setOption(TCP_NODELAY, true);
         if (configuration.receiverSocketBufferSize() > 0)
         {
@@ -185,6 +188,7 @@ public class Framer implements Agent, SessionHandler
         {
             channel.setOption(SO_RCVBUF, configuration.senderSocketBufferSize());
         }
+        channel.configureBlocking(false);
 
         final ReceiverEndPoint receiverEndPoint =
             connectionHandler.receiverEndPoint(channel, connectionId, sessionId, this);

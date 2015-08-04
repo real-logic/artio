@@ -314,7 +314,7 @@ public class ReceiverEndPoint
 
     private void disconnectEndpoint()
     {
-        sessionIds.onDisconnect(connectionId);
+        sessionIds.onDisconnect(sessionId);
         publication.saveDisconnect(connectionId);
         if (selectionKey != null)
         {

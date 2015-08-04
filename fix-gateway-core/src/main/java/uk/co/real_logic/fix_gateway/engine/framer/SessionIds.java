@@ -43,9 +43,9 @@ public class SessionIds
         return sessionId;
     }
 
-    public void onDisconnect(final long compositeKey)
+    public void onDisconnect(final long sessionId)
     {
-        currentlyAuthenticated.remove(compositeKey);
+        currentlyAuthenticated.remove(sessionId);
     }
 
 }

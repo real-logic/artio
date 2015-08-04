@@ -34,6 +34,7 @@ import static java.net.StandardSocketOptions.TCP_NODELAY;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.*;
 
+// TODO: make another benchmark client with two threads, measuring load
 public final class FixBenchmarkClient
 {
     private static final String HOST = System.getProperty("fix.benchmark.host", "localhost");
