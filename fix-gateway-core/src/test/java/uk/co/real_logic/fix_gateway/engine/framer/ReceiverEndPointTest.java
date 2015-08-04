@@ -108,15 +108,12 @@ public class ReceiverEndPointTest
     @Test
     public void shouldFrameSplitFixMessage()
     {
-        given:
         theEndpointReceivesAnIncompleteMessage();
         endPoint.pollForData();
 
-        when:
         theEndpointReceivesTheRestOfTheMessage();
         endPoint.pollForData();
 
-        then:
         handlerReceivesAFramedMessage();
     }
 
@@ -136,13 +133,10 @@ public class ReceiverEndPointTest
     @Test
     public void shouldFrameOneCompleteMessageWhenTheSecondMessageIsIncomplete()
     {
-        given:
         theEndpointReceivesACompleteAndAnIncompleteMessage();
 
-        when:
         endPoint.pollForData();
 
-        then:
         handlerReceivesAFramedMessage();
     }
 

@@ -123,7 +123,7 @@ public class ReceiverEndPoint
             onDisconnectDetected();
             return 1;
         }
-        catch (final IOException ex)
+        catch (final Exception ex)
         {
             // TODO: log
             ex.printStackTrace();
@@ -294,7 +294,7 @@ public class ReceiverEndPoint
         {
             channel.close();
         }
-        catch (IOException e)
+        catch (Exception e)
         {
             // TODO:
             e.printStackTrace();
