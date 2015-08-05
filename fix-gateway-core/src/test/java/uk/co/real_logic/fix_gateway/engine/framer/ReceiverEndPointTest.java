@@ -20,6 +20,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
+import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
@@ -56,7 +57,7 @@ public class ReceiverEndPointTest
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
             mockChannel, 16 * 1024, mockPublication, CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
-            messagesRead, mock(Framer.class));
+            messagesRead, mock(Framer.class), mock(ErrorHandler.class));
 
     @Before
     public void setUp()

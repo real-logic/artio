@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -66,6 +67,7 @@ public class ReceiverEndPoint
     private final SessionIds sessionIds;
     private final AtomicCounter messagesRead;
     private final Framer framer;
+    private final ErrorHandler errorHandler;
     private final AtomicBuffer buffer;
     private final AsciiFlyweight string;
     private final ByteBuffer byteBuffer;
@@ -84,7 +86,8 @@ public class ReceiverEndPoint
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
         final AtomicCounter messagesRead,
-        final Framer framer)
+        final Framer framer,
+        final ErrorHandler errorHandler)
     {
         this.channel = channel;
         this.publication = publication;
@@ -94,6 +97,7 @@ public class ReceiverEndPoint
         this.sessionIds = sessionIds;
         this.messagesRead = messagesRead;
         this.framer = framer;
+        this.errorHandler = errorHandler;
 
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new AsciiFlyweight(buffer);
@@ -125,8 +129,7 @@ public class ReceiverEndPoint
         }
         catch (final Exception ex)
         {
-            // TODO: log
-            ex.printStackTrace();
+            errorHandler.onError(ex);
             onDisconnectDetected();
             return 1;
         }
@@ -229,8 +232,7 @@ public class ReceiverEndPoint
             }
             catch (final Exception ex)
             {
-                // TODO: remove exceptions from the common path
-                ex.printStackTrace();
+                errorHandler.onError(ex);
                 break;
             }
         }

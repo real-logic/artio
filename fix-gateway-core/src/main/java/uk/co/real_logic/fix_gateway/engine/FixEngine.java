@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BufferClaim;
+import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
@@ -94,6 +95,7 @@ public class FixEngine extends GatewayProcess
         final Multiplexer multiplexer = new Multiplexer();
         final Subscription dataSubscription = outboundStreams.dataSubscription();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
+        final ErrorHandler errorHandler = Throwable::printStackTrace;
 
         final ConnectionHandler handler = new ConnectionHandler(
             configuration,
@@ -101,7 +103,8 @@ public class FixEngine extends GatewayProcess
             sessionIds,
             inboundStreams,
             idleStrategy,
-            fixCounters);
+            fixCounters,
+            errorHandler);
 
         final Framer framer = new Framer(configuration, handler, multiplexer, dataSubscription,
             inboundStreams.gatewayPublication(), sessionIdStrategy, sessionIds);

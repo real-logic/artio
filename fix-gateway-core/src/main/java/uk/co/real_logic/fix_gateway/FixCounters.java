@@ -20,10 +20,13 @@ import uk.co.real_logic.agrona.concurrent.CountersManager;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public final class FixCounters implements AutoCloseable
+public class FixCounters implements AutoCloseable
 {
+    private final Map<String, AtomicCounter> errorCountersByName = new HashMap<>();
     private final List<AtomicCounter> otherCounters = new ArrayList<>();
     private final CountersManager countersManager;
     private final AtomicCounter failedInboundPublications;
@@ -80,11 +83,19 @@ public final class FixCounters implements AutoCloseable
         return counter;
     }
 
+    public AtomicCounter errors(final String className)
+    {
+        final String counterName = className + " errors";
+        return errorCountersByName.computeIfAbsent(counterName, this::newCounter);
+    }
+
     public void close()
     {
         failedInboundPublications.close();
         failedOutboundPublications.close();
         exceptions.close();
         otherCounters.forEach(AtomicCounter::close);
+        errorCountersByName.values().forEach(AtomicCounter::close);
     }
+
 }

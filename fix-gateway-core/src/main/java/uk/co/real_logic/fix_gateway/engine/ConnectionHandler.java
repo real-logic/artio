@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
+import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
@@ -41,6 +42,7 @@ public class ConnectionHandler
     private final ReplicatedStream inboundStreams;
     private final IdleStrategy idleStrategy;
     private final FixCounters fixCounters;
+    private final ErrorHandler errorHandler;
 
     public ConnectionHandler(
         final StaticConfiguration configuration,
@@ -48,7 +50,8 @@ public class ConnectionHandler
         final SessionIds sessionIds,
         final ReplicatedStream inboundStreams,
         final IdleStrategy idleStrategy,
-        final FixCounters fixCounters)
+        final FixCounters fixCounters,
+        final ErrorHandler errorHandler)
     {
         this.configuration = configuration;
         this.sessionIdStrategy = sessionIdStrategy;
@@ -56,6 +59,7 @@ public class ConnectionHandler
         this.inboundStreams = inboundStreams;
         this.idleStrategy = idleStrategy;
         this.fixCounters = fixCounters;
+        this.errorHandler = errorHandler;
     }
 
     public ReceiverEndPoint receiverEndPoint(
@@ -70,7 +74,8 @@ public class ConnectionHandler
             sessionIdStrategy,
             sessionIds,
             fixCounters.messagesRead(channel.getRemoteAddress()),
-            framer
+            framer,
+            errorHandler
         );
     }
 
