@@ -33,7 +33,8 @@ import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
  *
  * Instances are single threaded, but buffers are threadsafe to read from another thread.
  */
-// TODO: add done flag
+// TODO: check capacity
+// TODO: support multiple writers
 public class ErrorBuffer implements ErrorHandler
 {
     private static final byte INITIALISING = 0;

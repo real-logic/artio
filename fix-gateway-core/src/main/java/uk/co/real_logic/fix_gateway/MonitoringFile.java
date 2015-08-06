@@ -24,26 +24,36 @@ import java.io.File;
 import java.nio.MappedByteBuffer;
 
 /**
+ * A memory mapped file that stores monitoring data which can be accessed by a monitoring
+ * daemon/process.
  *
- * A single file of the labelsBuffer, followed by the countersBuffer.
+ * This contains buffers in order for:
  *
+ * <ol>
+ *     <li>The Labels Buffer</li>
+ *     <li>The Counters Buffer</li>
+ *     <li>The Error Buffer</li>
+ * </ol>
  */
-public final class CountersFile implements AutoCloseable
+public final class MonitoringFile implements AutoCloseable
 {
+    private static final int NUMBER_OF_BUFFERS = 3;
+
     private final MappedByteBuffer mappedByteBuffer;
     private final AtomicBuffer labelsBuffer;
     private final AtomicBuffer countersBuffer;
+    private final AtomicBuffer errorBuffer;
 
-    public CountersFile(final boolean newFile, final StaticConfiguration configuration)
+    public MonitoringFile(final boolean newFile, final StaticConfiguration configuration)
     {
-        final File file = new File(configuration.counterBuffersFile());
+        final File file = new File(configuration.monitoringFile());
         final int length;
         if (newFile)
         {
             IoUtil.deleteIfExists(file);
 
             length = configuration.counterBuffersLength();
-            mappedByteBuffer = IoUtil.mapNewFile(file, length * 2);
+            mappedByteBuffer = IoUtil.mapNewFile(file, length * NUMBER_OF_BUFFERS);
         }
         else
         {
@@ -53,12 +63,13 @@ public final class CountersFile implements AutoCloseable
             }
 
             mappedByteBuffer = IoUtil.mapExistingFile(file, "counters file");
-            length = mappedByteBuffer.capacity() / 2;
+            length = mappedByteBuffer.capacity() / NUMBER_OF_BUFFERS;
         }
 
         final AtomicBuffer mappedFile = new UnsafeBuffer(mappedByteBuffer);
         labelsBuffer = new UnsafeBuffer(mappedFile, 0, length);
         countersBuffer = new UnsafeBuffer(mappedFile, length, length);
+        errorBuffer = new UnsafeBuffer(mappedFile, 2 * length, length);
     }
 
     public CountersManager createCountersManager()
@@ -69,6 +80,11 @@ public final class CountersFile implements AutoCloseable
     public AtomicBuffer countersBuffer()
     {
         return countersBuffer;
+    }
+
+    public AtomicBuffer errorBuffer()
+    {
+        return errorBuffer;
     }
 
     public void close()

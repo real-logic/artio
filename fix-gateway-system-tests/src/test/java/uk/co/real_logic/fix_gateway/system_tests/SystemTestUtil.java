@@ -193,7 +193,7 @@ public final class SystemTestUtil
             .bind("localhost", unusedPort())
             .aeronChannel("udp://localhost:" + initAeronPort)
             .newSessionHandler(sessionHandler)
-            .counterBuffersFile(IoUtil.tmpDirName() + "fix-client" + File.separator + countersSuffix)
+            .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + countersSuffix)
             .logFileDir(CLIENT_LOGS);
     }
 
@@ -235,7 +235,7 @@ public final class SystemTestUtil
             .aeronChannel("udp://localhost:" + acceptAeronPort)
             .authenticationStrategy(authenticationStrategy)
             .newSessionHandler(sessionHandler)
-            .counterBuffersFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + countersSuffix)
+            .monitoringFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + countersSuffix)
             .logFileDir(ACCEPTOR_LOGS);
     }
 

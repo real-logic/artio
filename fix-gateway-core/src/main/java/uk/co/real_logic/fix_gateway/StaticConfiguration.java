@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
-import uk.co.real_logic.fix_gateway.flyweight_api.OrderSingleAcceptor;
 import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.auth.NoAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
@@ -49,9 +48,9 @@ public final class StaticConfiguration
     /** Property name for the file to log debug messages to, default is standard output */
     public static final String DEBUG_FILE_PROPERTY = "fix.core.debug.file";
     /** Property name for length of the memory mapped buffers for the counters file */
-    public static final String COUNTER_BUFFERS_LENGTH_PROP_NAME = "fix.counters.length";
+    public static final String MONITORING_BUFFERS_LENGTH_PROP_NAME = "fix.monitoring.length";
     /** Property name for directory of the conductor buffers */
-    public static final String COUNTERS_FILE_PROP_NAME = "fix.counters.file";
+    public static final String MONITORING_FILE_PROP_NAME = "fix.monitoring.file";
     /** Property name for the directory to log archive data into */
     public static final String LOG_FILE_DIR_PROP = "logging.dir";
     /** Property name for size of logging index files */
@@ -65,9 +64,9 @@ public final class StaticConfiguration
     public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
     public static final long DEFAULT_CONNECTION_TIMEOUT = 1000;
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
-    public static final int DEFAULT_COUNTERS_BUFFER_LENGTH = 8 * 1024 * 1024;
+    public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 8 * 1024 * 1024;
+    public static final String DEFAULT_MONITORING_FILE = IoUtil.tmpDirName() + "fix" + File.separator + "counters";
     public static final int DEFAULT_INDEX_FILE_SIZE = 2 * 1024 * 1024;
-    public static final String DEFAULT_COUNTERS_FILE_PROP = IoUtil.tmpDirName() + "fix" + File.separator + "counters";
     public static final String DEFAULT_LOG_FILE_DIR = "logs";
     public static final int DEFAULT_LOGGER_CACHE_CAPACITY = 10;
     public static final long DEFAULT_SENDING_TIME_WINDOW = MINUTES.toMillis(2);
@@ -92,8 +91,8 @@ public final class StaticConfiguration
     private int port;
     private int indexFileSize = getInteger(INDEX_FILE_SIZE_PROP, DEFAULT_INDEX_FILE_SIZE);
     private String logFileDir = getProperty(LOG_FILE_DIR_PROP, DEFAULT_LOG_FILE_DIR);
-    private int counterBuffersLength = getInteger(COUNTER_BUFFERS_LENGTH_PROP_NAME, DEFAULT_COUNTERS_BUFFER_LENGTH);
-    private String counterBuffersFile = getProperty(COUNTERS_FILE_PROP_NAME, DEFAULT_COUNTERS_FILE_PROP);
+    private int counterBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROP_NAME, DEFAULT_MONITORING_BUFFER_LENGTH);
+    private String monitoringFile = getProperty(MONITORING_FILE_PROP_NAME, DEFAULT_MONITORING_FILE);
     private String aeronChannel;
     private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
     private NewSessionHandler newSessionHandler;
@@ -106,10 +105,6 @@ public final class StaticConfiguration
     public StaticConfiguration()
     {
         beginString(DEFAULT_BEGIN_STRING);
-    }
-
-    public void registerAcceptor(final OrderSingleAcceptor orderSingleAcceptor, final ErrorAcceptor errorAcceptor)
-    {
     }
 
     public StaticConfiguration registerAcceptor(
@@ -168,9 +163,9 @@ public final class StaticConfiguration
         return this;
     }
 
-    public StaticConfiguration counterBuffersFile(String counterBuffersFile)
+    public StaticConfiguration monitoringFile(String counterBuffersFile)
     {
-        this.counterBuffersFile = counterBuffersFile;
+        this.monitoringFile = counterBuffersFile;
         return this;
     }
 
@@ -297,9 +292,9 @@ public final class StaticConfiguration
         return counterBuffersLength;
     }
 
-    public String counterBuffersFile()
+    public String monitoringFile()
     {
-        return counterBuffersFile;
+        return monitoringFile;
     }
 
     public StaticConfiguration conclude()

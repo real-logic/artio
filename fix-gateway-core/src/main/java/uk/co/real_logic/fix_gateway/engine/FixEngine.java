@@ -16,75 +16,29 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.logbuffer.BufferClaim;
-import uk.co.real_logic.agrona.ErrorHandler;
-import uk.co.real_logic.agrona.concurrent.*;
+import uk.co.real_logic.agrona.concurrent.AgentRunner;
+import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.engine.framer.Framer;
 import uk.co.real_logic.fix_gateway.engine.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
-import uk.co.real_logic.fix_gateway.engine.logger.*;
+import uk.co.real_logic.fix_gateway.engine.logger.LoggerModule;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class FixEngine extends GatewayProcess
 {
-
     private AgentRunner framerRunner;
-    private AgentRunner loggingRunner;
+    private LoggerModule logger;
 
     FixEngine(final StaticConfiguration configuration)
     {
         super(configuration);
 
         initFramer(configuration, fixCounters);
-        initLogger(configuration);
-    }
-
-    private void initLogger(final StaticConfiguration configuration)
-    {
-        if (isLoggingMessages())
-        {
-            final int loggerCacheCapacity = configuration.loggerCacheCapacity();
-            final String logFileDir = configuration.logFileDir();
-
-            final List<Subscription> subscriptions = new ArrayList<>();
-            if (configuration.logInboundMessages())
-            {
-                subscriptions.add(inboundStreams.dataSubscription());
-            }
-            if (configuration.logOutboundMessages())
-            {
-                subscriptions.add(outboundStreams.dataSubscription());
-            }
-            final Archiver archiver = new Archiver(
-                LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity, subscriptions);
-            final ArchiveReader archiveReader = new ArchiveReader(
-                LoggerUtil::mapExistingFile, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
-
-            final List<Index> indices = Arrays.asList(
-                new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, LoggerUtil::map));
-            final Indexer indexer = new Indexer(indices, outboundStreams);
-
-            final ReplayQuery replayQuery = new ReplayQuery(
-                logFileDir, loggerCacheCapacity, LoggerUtil::mapExistingFile, archiveReader);
-            final Replayer replayer = new Replayer(
-                inboundStreams.dataSubscription(),
-                replayQuery,
-                outboundStreams.dataPublication(),
-                new BufferClaim(),
-                backoffIdleStrategy());
-
-            final Agent loggingAgent = new CompositeAgent(archiver, new CompositeAgent(indexer, replayer));
-
-            loggingRunner =
-                new AgentRunner(backoffIdleStrategy(), Throwable::printStackTrace, fixCounters.exceptions(), loggingAgent);
-        }
+        logger = new LoggerModule(configuration, inboundStreams, outboundStreams, errorBuffer);
     }
 
     private void initFramer(final StaticConfiguration configuration, final FixCounters fixCounters)
@@ -95,7 +49,6 @@ public class FixEngine extends GatewayProcess
         final Multiplexer multiplexer = new Multiplexer();
         final Subscription dataSubscription = outboundStreams.dataSubscription();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
-        final ErrorHandler errorHandler = Throwable::printStackTrace;
 
         final ConnectionHandler handler = new ConnectionHandler(
             configuration,
@@ -104,12 +57,12 @@ public class FixEngine extends GatewayProcess
             inboundStreams,
             idleStrategy,
             fixCounters,
-            errorHandler);
+            errorBuffer);
 
         final Framer framer = new Framer(configuration, handler, multiplexer, dataSubscription,
             inboundStreams.gatewayPublication(), sessionIdStrategy, sessionIds);
         multiplexer.framer(framer);
-        framerRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace, fixCounters.exceptions(), framer);
+        framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }
 
     private BackoffIdleStrategy backoffIdleStrategy()
@@ -124,31 +77,15 @@ public class FixEngine extends GatewayProcess
 
     private FixEngine start()
     {
-        start(framerRunner);
-        if (isLoggingMessages())
-        {
-            start(loggingRunner);
-        }
+        AgentRunner.startOnThread(framerRunner);
+        logger.start();
         return this;
-    }
-
-    private boolean isLoggingMessages()
-    {
-        return configuration.logInboundMessages() || configuration.logOutboundMessages();
-    }
-
-    private void start(final AgentRunner runner)
-    {
-        final Thread thread = new Thread(runner);
-        thread.setName(runner.agent().roleName());
-        thread.start();
     }
 
     public synchronized void close()
     {
         framerRunner.close();
-        loggingRunner.close();
-
+        logger.close();
         super.close();
     }
 

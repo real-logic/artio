@@ -104,11 +104,6 @@ public class ReceiverEndPoint
         byteBuffer = buffer.byteBuffer();
     }
 
-    public SocketChannel channel()
-    {
-        return channel;
-    }
-
     public long connectionId()
     {
         return connectionId;
@@ -298,8 +293,7 @@ public class ReceiverEndPoint
         }
         catch (Exception e)
         {
-            // TODO:
-            e.printStackTrace();
+            errorHandler.onError(e);
         }
     }
 

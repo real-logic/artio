@@ -34,10 +34,10 @@ public class FixStat
     public static void main(String[] args) throws InterruptedException
     {
         final StaticConfiguration configuration = new StaticConfiguration();
-        try (final CountersFile countersFile = new CountersFile(false, configuration))
+        try (final MonitoringFile monitoringFile = new MonitoringFile(false, configuration))
         {
-            final CountersManager countersManager = countersFile.createCountersManager();
-            final AtomicBuffer countersBuffer = countersFile.countersBuffer();
+            final CountersManager countersManager = monitoringFile.createCountersManager();
+            final AtomicBuffer countersBuffer = monitoringFile.countersBuffer();
 
             final AtomicBoolean running = new AtomicBoolean(true);
             SigInt.register(() -> running.set(false));

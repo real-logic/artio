@@ -29,8 +29,9 @@ public class GatewayProcess implements AutoCloseable
 
     protected final StaticConfiguration configuration;
 
-    protected CountersFile countersFile;
+    protected MonitoringFile monitoringFile;
     protected FixCounters fixCounters;
+    protected ErrorBuffer errorBuffer;
     protected Aeron aeron;
     protected ReplicatedStream inboundStreams;
     protected ReplicatedStream outboundStreams;
@@ -38,15 +39,16 @@ public class GatewayProcess implements AutoCloseable
     protected GatewayProcess(final StaticConfiguration configuration)
     {
         this.configuration = configuration;
-        initCounters(configuration);
+        initMonitoring(configuration);
         initAeron();
         initReplicationStreams(configuration);
     }
 
-    private void initCounters(final StaticConfiguration configuration)
+    private void initMonitoring(final StaticConfiguration configuration)
     {
-        countersFile = new CountersFile(true, configuration);
-        fixCounters = new FixCounters(countersFile.createCountersManager());
+        monitoringFile = new MonitoringFile(true, configuration);
+        fixCounters = new FixCounters(monitoringFile.createCountersManager());
+        errorBuffer = new ErrorBuffer(monitoringFile.errorBuffer(), fixCounters.exceptions());
     }
 
     private void initReplicationStreams(final StaticConfiguration configuration)
@@ -66,7 +68,7 @@ public class GatewayProcess implements AutoCloseable
         {
             if (!(throwable instanceof ClosedByInterruptException))
             {
-                Aeron.DEFAULT_ERROR_HANDLER.onError(throwable);
+                errorBuffer.onError(throwable);
             }
         });
         aeron = Aeron.connect(ctx);
@@ -77,6 +79,6 @@ public class GatewayProcess implements AutoCloseable
         inboundStreams.close();
         outboundStreams.close();
         aeron.close();
-        countersFile.close();
+        monitoringFile.close();
     }
 }
