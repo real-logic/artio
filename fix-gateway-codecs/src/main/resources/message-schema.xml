@@ -87,7 +87,7 @@
         <data name="message" id="26" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="ExceptionEntry" id="14" description="">
-        <field name="status" id="37" type="int8"/>
+        <field name="status" id="37" type="int32"/>
         <field name="hash" id="35" type="int32"/>
         <field name="size" id="36" type="int32"/>
         <field name="time" id="27" type="int64"/>

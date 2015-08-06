@@ -25,27 +25,32 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.LockSupport;
 
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
 
 /**
  * A buffer which keeps track of the last exception thrown from a callsite.
  *
  * Instances are single threaded, but buffers are threadsafe to read from another thread.
+ *
+ * NB: its possible in a multi-threaded scenario to log two exceptions with the same hash,
+ * however, exceptions are still bounded in worst case by number of threads * number of hashes.
  */
-// TODO: check capacity
-// TODO: support multiple writers
 public class ErrorBuffer implements ErrorHandler
 {
-    private static final byte INITIALISING = 0;
-    private static final byte DONE = 1;
-    private static final byte REMOVED = 2;
+    private static final int WRITING = 0;
+    private static final int COMMITTED = 1;
+    private static final int ABORTED = 2;
+
+    private static final int NO_SPACE_LEFT = -1;
 
     private static final int MAX_STACK_TRACE_SIZE = 5;
     private static final int POSITION_FIELD_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int END_OF_POSITION_FIELD = POSITION_FIELD_OFFSET + SIZE_OF_INT;
-    public static final int EXCEPTION_ENTRY_MIN = ExceptionEntryEncoder.BLOCK_LENGTH + 4;
-    public static final int STACK_TRACE_ELEMENT_MIN = StackTraceElementEncoder.BLOCK_LENGTH + 6;
+    private static final int EXCEPTION_ENTRY_MIN = ExceptionEntryEncoder.BLOCK_LENGTH + 4;
+    private static final int STACK_TRACE_ELEMENT_MIN = StackTraceElementEncoder.BLOCK_LENGTH + 6;
 
     private final MessageHeaderEncoder messageHeaderEncoder = new MessageHeaderEncoder();
     private final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
@@ -132,10 +137,10 @@ public class ErrorBuffer implements ErrorHandler
         while (offset < position)
         {
             wrapExceptionDecoder(offset);
-            if (status(offset) == DONE)
+            if (status(offset) == COMMITTED)
             {
                 final StringBuilder builder = new StringBuilder();
-                appendException(offset, builder);
+                appendException(builder);
                 appendStackTraceElements(exceptionDecoder.limit(), builder);
                 errors.add(builder.toString());
             }
@@ -145,14 +150,17 @@ public class ErrorBuffer implements ErrorHandler
         return errors;
     }
 
-    private byte status(final int offset)
+    private int status(final int offset)
     {
-        return buffer.getByteVolatile(offset);
+        return buffer.getIntVolatile(offset);
     }
 
-    private void status(final int offset, final byte status)
+    private void status(final int offset, final int oldStatus, final int newStatus)
     {
-        buffer.putByteVolatile(offset, status);
+        while (!buffer.compareAndSetInt(offset, oldStatus, newStatus))
+        {
+            LockSupport.parkNanos(MICROSECONDS.toNanos(1));
+        }
     }
 
     private void appendStackTraceElements(int offset, final StringBuilder builder)
@@ -178,7 +186,7 @@ public class ErrorBuffer implements ErrorHandler
             stackTraceElementDecoder.lineNumber()));
     }
 
-    private void appendException(final int offset, final StringBuilder builder)
+    private void appendException(final StringBuilder builder)
     {
         builder.append(formatTimeStamp());
         builder.append(": ");
@@ -214,6 +222,11 @@ public class ErrorBuffer implements ErrorHandler
         final int size = sizeInBytes(stackTrace, stackTraceSize, message, exceptionName);
 
         final int claimedOffset = findSlot(size, hash);
+        if (claimedOffset == NO_SPACE_LEFT)
+        {
+            return;
+        }
+
         int offset = claimedOffset;
 
         exceptionEntryEncoder
@@ -245,7 +258,7 @@ public class ErrorBuffer implements ErrorHandler
             offset = stackTraceElementEncoder.limit();
         }
 
-        status(claimedOffset, DONE);
+        status(claimedOffset, WRITING, COMMITTED);
 
         if (claimedOffset + size != offset)
         {
@@ -265,25 +278,31 @@ public class ErrorBuffer implements ErrorHandler
         {
             wrapExceptionDecoder(offset);
             final int slotSize = exceptionDecoder.size();
-            if (hash == exceptionDecoder.hash())
+            if (hash == exceptionDecoder.hash() && status(offset) == COMMITTED)
             {
                 if (requiredSize <= slotSize)
                 {
-                    status(offset, INITIALISING);
+                    status(offset, COMMITTED, WRITING);
                     isReusedSlot = true;
                     return offset;
                 }
                 else
                 {
-                    status(offset, REMOVED);
+                    status(offset, COMMITTED, ABORTED);
                 }
             }
 
             offset += slotSize;
         }
 
+        if ((offset + requiredSize) > buffer.capacity())
+        {
+            return NO_SPACE_LEFT;
+        }
+
         isReusedSlot = false;
-        return claimSlot(requiredSize);
+        final int claimedOffset = claimSlot(requiredSize);
+        return claimedOffset;
     }
 
     private int sizeInBytes(final StackTraceElement[] stackTrace,
