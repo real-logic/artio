@@ -19,6 +19,7 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.ErrorPrinter;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
@@ -28,8 +29,11 @@ import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
 import uk.co.real_logic.fix_gateway.engine.logger.LoggerModule;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
+import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
+
 public class FixEngine extends GatewayProcess
 {
+    private AgentRunner errorPrinterRunner;
     private AgentRunner framerRunner;
     private LoggerModule logger;
 
@@ -39,6 +43,14 @@ public class FixEngine extends GatewayProcess
 
         initFramer(configuration, fixCounters);
         logger = new LoggerModule(configuration, inboundStreams, outboundStreams, errorBuffer);
+        initErrorPrinter();
+    }
+
+    private void initErrorPrinter()
+    {
+        final ErrorPrinter printer = new ErrorPrinter(monitoringFile);
+        final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
+        errorPrinterRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace, null, printer);
     }
 
     private void initFramer(final StaticConfiguration configuration, final FixCounters fixCounters)
@@ -77,13 +89,15 @@ public class FixEngine extends GatewayProcess
 
     private FixEngine start()
     {
-        AgentRunner.startOnThread(framerRunner);
+        startOnThread(framerRunner);
         logger.start();
+        startOnThread(errorPrinterRunner);
         return this;
     }
 
     public synchronized void close()
     {
+        errorPrinterRunner.close();
         framerRunner.close();
         logger.close();
         super.close();

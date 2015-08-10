@@ -16,9 +16,11 @@
 package uk.co.real_logic.fix_gateway;
 
 import org.hamcrest.Matcher;
+import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.engine.framer.FakeMilliClock;
 
 import java.util.List;
 
@@ -32,8 +34,15 @@ public class ErrorBufferTest
 {
     private UnsafeBuffer unsafeBuffer = new UnsafeBuffer(new byte[64 * 1024]);
     private AtomicCounter mockCounter = mock(AtomicCounter.class);
-    private ErrorBuffer writeBuffer = new ErrorBuffer(unsafeBuffer, mockCounter);
-    private ErrorBuffer readBuffer = new ErrorBuffer(unsafeBuffer, mockCounter);
+    private FakeMilliClock clock = new FakeMilliClock();
+    private ErrorBuffer writeBuffer = new ErrorBuffer(unsafeBuffer, mockCounter, clock);
+    private ErrorBuffer readBuffer = new ErrorBuffer(unsafeBuffer);
+
+    @Before
+    public void setUp()
+    {
+        clock.advanceMilliSeconds(50L);
+    }
 
     @Test
     public void shouldEncodeErrors()
@@ -112,6 +121,27 @@ public class ErrorBufferTest
         writeBuffer.onError(ExceptionFixtures.nullPointerException);
 
         verify(mockCounter, times(3)).orderedIncrement();
+    }
+
+
+    @Test
+    public void shouldNotDisplayExceptionsBeforeTimestamp()
+    {
+        writeBuffer.onError(ExceptionFixtures.fooException);
+
+        assertThat(readBuffer.errorsSince(100L), hasSize(0));
+    }
+
+    @Test
+    public void shouldDisplayExceptionsSinceTimestamp()
+    {
+        clock.advanceMilliSeconds(150L);
+
+        writeBuffer.onError(ExceptionFixtures.fooException);
+
+        final List<String> errors = readBuffer.errorsSince(100L);
+        assertThat(errors, hasSize(1));
+        assertIsFooException(errors.get(0));
     }
 
     private void assertFooAndNullPointer()

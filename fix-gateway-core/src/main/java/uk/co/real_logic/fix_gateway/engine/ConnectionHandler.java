@@ -85,6 +85,7 @@ public class ConnectionHandler
             connectionId,
             channel,
             idleStrategy,
-            fixCounters.messagesWritten(channel.getRemoteAddress()));
+            fixCounters.messagesWritten(channel.getRemoteAddress()),
+            errorHandler);
     }
 }

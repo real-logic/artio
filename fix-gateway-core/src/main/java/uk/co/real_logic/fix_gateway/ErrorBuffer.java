@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -46,7 +47,7 @@ public class ErrorBuffer implements ErrorHandler
 
     private static final int NO_SPACE_LEFT = -1;
 
-    private static final int MAX_STACK_TRACE_SIZE = 5;
+    private static final int MAX_STACK_TRACE_SIZE = 10;
     private static final int POSITION_FIELD_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int END_OF_POSITION_FIELD = POSITION_FIELD_OFFSET + SIZE_OF_INT;
     private static final int EXCEPTION_ENTRY_MIN = ExceptionEntryEncoder.BLOCK_LENGTH + 4;
@@ -65,13 +66,25 @@ public class ErrorBuffer implements ErrorHandler
 
     private final AtomicBuffer buffer;
     private final AtomicCounter counter;
+    private final MilliClock clock;
 
     private boolean isReusedSlot;
 
-    public ErrorBuffer(final AtomicBuffer buffer, final AtomicCounter counter)
+    /**
+     * Read only constructor.
+     *
+     * @param buffer the buffer to use for outputting errors on.
+     */
+    public ErrorBuffer(final AtomicBuffer buffer)
+    {
+        this(buffer, null, null);
+    }
+
+    public ErrorBuffer(final AtomicBuffer buffer, final AtomicCounter counter, final MilliClock clock)
     {
         this.buffer = buffer;
         this.counter = counter;
+        this.clock = clock;
 
         setupBuffers(buffer);
     }
@@ -129,6 +142,11 @@ public class ErrorBuffer implements ErrorHandler
      */
     public List<String> errors()
     {
+        return errorsSince(0L);
+    }
+
+    public List<String> errorsSince(final long timeInMillis)
+    {
         final List<String> errors = new ArrayList<>();
 
         int offset = END_OF_POSITION_FIELD;
@@ -137,7 +155,7 @@ public class ErrorBuffer implements ErrorHandler
         while (offset < position)
         {
             wrapExceptionDecoder(offset);
-            if (status(offset) == COMMITTED)
+            if (status(offset) == COMMITTED && exceptionDecoder.time() > timeInMillis)
             {
                 final StringBuilder builder = new StringBuilder();
                 appendException(builder);
@@ -232,7 +250,7 @@ public class ErrorBuffer implements ErrorHandler
         exceptionEntryEncoder
             .wrap(buffer, offset)
             .hash(hash)
-            .time(System.currentTimeMillis())
+            .time(clock.time())
             .elementCount((byte) stackTraceSize)
             .exceptionClassName(exceptionName)
             .message(message);

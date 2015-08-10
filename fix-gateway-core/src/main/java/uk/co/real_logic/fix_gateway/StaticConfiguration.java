@@ -101,6 +101,7 @@ public final class StaticConfiguration
     private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
     private boolean logInboundMessages = true;
     private boolean logOutboundMessages = true;
+    private boolean printErrorMessages = true;
 
     public StaticConfiguration()
     {
@@ -247,6 +248,12 @@ public final class StaticConfiguration
         return this;
     }
 
+    public StaticConfiguration printErrorMessages(final boolean printErrorMessages)
+    {
+        this.printErrorMessages = printErrorMessages;
+        return this;
+    }
+
     public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -355,5 +362,10 @@ public final class StaticConfiguration
     public boolean logOutboundMessages()
     {
         return logOutboundMessages;
+    }
+
+    public boolean printErrorMessages()
+    {
+        return printErrorMessages;
     }
 }

@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.fix_gateway.replication.ReplicatedStream;
+import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.nio.channels.ClosedByInterruptException;
 
@@ -48,7 +49,8 @@ public class GatewayProcess implements AutoCloseable
     {
         monitoringFile = new MonitoringFile(true, configuration);
         fixCounters = new FixCounters(monitoringFile.createCountersManager());
-        errorBuffer = new ErrorBuffer(monitoringFile.errorBuffer(), fixCounters.exceptions());
+        final MilliClock clock = System::currentTimeMillis;
+        errorBuffer = new ErrorBuffer(monitoringFile.errorBuffer(), fixCounters.exceptions(), clock);
     }
 
     private void initReplicationStreams(final StaticConfiguration configuration)
