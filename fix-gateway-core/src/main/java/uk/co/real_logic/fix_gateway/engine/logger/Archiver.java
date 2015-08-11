@@ -139,7 +139,7 @@ public class Archiver implements Agent
         }
     }
 
-    public int doWork() throws Exception
+    public int doWork()
     {
         return sum(subscriptions, SubscriptionArchive::poll);
     }

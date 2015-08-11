@@ -29,13 +29,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
+
 /**
  * Top level entry point for the whole logging module.
  */
 public class LoggerModule implements AutoCloseable
 {
-
     private final StaticConfiguration configuration;
+    private final ReplicatedStream inboundStreams;
+    private final ReplicatedStream outboundStreams;
+    private final ErrorHandler errorHandler;
+
+    private Archiver archiver;
+    private ArchiveReader archiveReader;
     private AgentRunner loggingRunner;
 
     public LoggerModule(final StaticConfiguration configuration,
@@ -44,25 +51,26 @@ public class LoggerModule implements AutoCloseable
                         final ErrorHandler errorHandler)
     {
         this.configuration = configuration;
+        this.inboundStreams = inboundStreams;
+        this.outboundStreams = outboundStreams;
+        this.errorHandler = errorHandler;
+    }
+
+    public void init()
+    {
         if (isLoggingMessages())
+        {
+            initArchival();
+            initReplay();
+        }
+    }
+
+    public void initReplay()
+    {
+        if (configuration.logOutboundMessages())
         {
             final int loggerCacheCapacity = configuration.loggerCacheCapacity();
             final String logFileDir = configuration.logFileDir();
-
-            final List<Subscription> subscriptions = new ArrayList<>();
-            if (configuration.logInboundMessages())
-            {
-                subscriptions.add(inboundStreams.dataSubscription());
-            }
-            if (configuration.logOutboundMessages())
-            {
-                subscriptions.add(outboundStreams.dataSubscription());
-            }
-            final Archiver archiver = new Archiver(
-                LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity, subscriptions);
-            final ArchiveReader archiveReader = new ArchiveReader(
-                LoggerUtil::mapExistingFile, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
-
             final List<Index> indices = Arrays.asList(
                 new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, LoggerUtil::map));
             final Indexer indexer = new Indexer(indices, outboundStreams);
@@ -78,16 +86,55 @@ public class LoggerModule implements AutoCloseable
 
             final Agent loggingAgent = new CompositeAgent(archiver, new CompositeAgent(indexer, replayer));
 
-            loggingRunner =
-                new AgentRunner(backoffIdleStrategy(), errorHandler, null, loggingAgent);
+            loggingRunner = newRunner(loggingAgent);
         }
+    }
+
+    private AgentRunner newRunner(final Agent loggingAgent)
+    {
+        return new AgentRunner(backoffIdleStrategy(), errorHandler, null, loggingAgent);
+    }
+
+    public void initArchival()
+    {
+        final int loggerCacheCapacity = configuration.loggerCacheCapacity();
+        final String logFileDir = configuration.logFileDir();
+
+        final List<Subscription> subscriptions = new ArrayList<>();
+        if (configuration.logInboundMessages())
+        {
+            subscriptions.add(inboundStreams.dataSubscription());
+        }
+        if (configuration.logOutboundMessages())
+        {
+            subscriptions.add(outboundStreams.dataSubscription());
+        }
+        archiver = new Archiver(
+            LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity, subscriptions);
+
+        archiveReader = new ArchiveReader(
+            LoggerUtil::mapExistingFile, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
+    }
+
+    public Archiver archiver()
+    {
+        return archiver;
+    }
+
+    public ArchiveReader archiveReader()
+    {
+        return archiveReader;
     }
 
     public void start()
     {
         if (isLoggingMessages())
         {
-            AgentRunner.startOnThread(loggingRunner);
+            if (loggingRunner == null)
+            {
+                loggingRunner = newRunner(archiver);
+            }
+            startOnThread(loggingRunner);
         }
     }
 

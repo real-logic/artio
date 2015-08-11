@@ -29,7 +29,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.StaticConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
-public class ReplayIndexTest extends AbstractMessageTest
+public class ReplayIndexTest extends AbstractReplayTest
 {
     private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024);
     private BufferFactory mockBufferFactory = mock(BufferFactory.class);

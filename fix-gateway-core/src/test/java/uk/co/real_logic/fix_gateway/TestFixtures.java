@@ -15,6 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import uk.co.real_logic.aeron.driver.MediaDriver;
+
+import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
+
 public class TestFixtures
 {
     private static final int LOW_PORT = 9999;
@@ -30,5 +34,14 @@ public class TestFixtures
         }
 
         throw new IllegalStateException("The test framework has run out of ports");
+    }
+
+    public static MediaDriver launchMediaDriver()
+    {
+        final MediaDriver.Context context = new MediaDriver.Context()
+            .threadingMode(SHARED)
+            .dirsDeleteOnStart(true);
+
+        return MediaDriver.launch(context);
     }
 }

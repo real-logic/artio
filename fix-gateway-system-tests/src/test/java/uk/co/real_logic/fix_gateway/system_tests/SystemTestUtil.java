@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.hamcrest.Matcher;
-import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.StaticConfiguration;
@@ -36,7 +35,6 @@ import java.util.concurrent.locks.LockSupport;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
-import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
@@ -49,15 +47,6 @@ public final class SystemTestUtil
     public static final String INITIATOR_ID = "LEH_LZJ02";
     public static final String CLIENT_LOGS = "client-logs";
     public static final String ACCEPTOR_LOGS = "acceptor-logs";
-
-    public static MediaDriver launchMediaDriver()
-    {
-        final MediaDriver.Context context = new MediaDriver.Context()
-            .threadingMode(SHARED)
-            .dirsDeleteOnStart(true);
-
-        return MediaDriver.launch(context);
-    }
 
     public static void assertDisconnected(final FixLibrary handlerLibrary,
                                           final FakeSessionHandler sessionHandler,

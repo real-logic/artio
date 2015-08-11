@@ -43,6 +43,7 @@ public class FixEngine extends GatewayProcess
 
         initFramer(configuration, fixCounters);
         logger = new LoggerModule(configuration, inboundStreams, outboundStreams, errorBuffer);
+        logger.init();
         initErrorPrinter();
     }
 

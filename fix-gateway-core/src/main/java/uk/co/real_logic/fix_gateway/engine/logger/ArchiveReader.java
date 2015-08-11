@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 
@@ -89,7 +90,8 @@ public class ArchiveReader
 
         private ByteBuffer newBuffer(final int termId)
         {
-            return archiveBufferFactory.map(directoryDescriptor.logFile(streamId, sessionId, termId));
+            final File logFile = directoryDescriptor.logFile(streamId, sessionId, termId);
+            return archiveBufferFactory.map(logFile);
         }
 
         private boolean read(final long position, final LogHandler handler)

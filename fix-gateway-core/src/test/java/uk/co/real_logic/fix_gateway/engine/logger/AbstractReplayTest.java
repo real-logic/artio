@@ -24,7 +24,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.SIZE_OF_LENGTH_FIELD;
 
-public class AbstractMessageTest
+public class AbstractReplayTest
 {
     protected static final long SESSION_ID = 1;
     protected static final long SESSION_ID_2 = 2;
