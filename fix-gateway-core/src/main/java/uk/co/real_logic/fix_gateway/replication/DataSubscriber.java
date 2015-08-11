@@ -122,6 +122,8 @@ public class DataSubscriber implements FragmentHandler
                     initiateConnection.port(),
                     initiateConnection.host(),
                     initiateConnection.senderCompId(),
+                    initiateConnection.senderSubId(),
+                    initiateConnection.senderLocationId(),
                     initiateConnection.targetCompId()
                 );
                 return initiateConnection.limit();

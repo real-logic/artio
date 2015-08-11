@@ -210,18 +210,24 @@ public class GatewayPublication
         final String host,
         final int port,
         final String senderCompId,
+        final String senderSubId,
+        final String senderLocationId,
         final String targetCompId)
     {
         final byte[] hostBytes = host.getBytes(US_ASCII);
         final byte[] senderCompIdBytes = senderCompId.getBytes(US_ASCII);
+        final byte[] senderSubIdBytes = senderSubId.getBytes(US_ASCII);
+        final byte[] senderLocationIdBytes = senderLocationId.getBytes(US_ASCII);
         final byte[] targetCompIdBytes = targetCompId.getBytes(US_ASCII);
 
         final long position = claim(
             header.encodedLength() +
             InitiateConnectionEncoder.BLOCK_LENGTH +
-            InitiateConnectionDecoder.hostHeaderLength() * 3 +
+            InitiateConnectionDecoder.hostHeaderLength() * 5 +
             hostBytes.length +
             senderCompIdBytes.length +
+            senderSubIdBytes.length +
+            senderLocationIdBytes.length +
             targetCompIdBytes.length);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
@@ -242,6 +248,8 @@ public class GatewayPublication
             .putHost(hostBytes, 0, hostBytes.length);
 
         initiateConnection.putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length);
+        initiateConnection.putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length);
+        initiateConnection.putSenderLocationId(senderLocationIdBytes, 0, senderLocationIdBytes.length);
         initiateConnection.putTargetCompId(targetCompIdBytes, 0, targetCompIdBytes.length);
 
         bufferClaim.commit();

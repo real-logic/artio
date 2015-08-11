@@ -28,6 +28,8 @@ public final class SessionConfiguration
     private final String password;
     private final String senderCompId;
     private final String targetCompId;
+    private final String senderSubId;
+    private final String senderLocationId;
 
     public static Builder builder()
     {
@@ -36,13 +38,17 @@ public final class SessionConfiguration
 
     private SessionConfiguration(
         final String host, final int port, final String username, final String password, final String senderCompId,
-        final String targetCompId)
+        final String senderSubId, final String senderLocationId, final String targetCompId)
     {
         Objects.requireNonNull(host);
         Objects.requireNonNull(senderCompId);
+        Objects.requireNonNull(senderSubId);
+        Objects.requireNonNull(senderLocationId);
         Objects.requireNonNull(targetCompId);
 
         this.senderCompId = senderCompId;
+        this.senderSubId = senderSubId;
+        this.senderLocationId = senderLocationId;
         this.targetCompId = targetCompId;
         this.host = host;
         this.port = port;
@@ -75,6 +81,16 @@ public final class SessionConfiguration
         return senderCompId;
     }
 
+    public String senderSubId()
+    {
+        return senderSubId;
+    }
+
+    public String senderLocationId()
+    {
+        return senderLocationId;
+    }
+
     public String targetCompId()
     {
         return targetCompId;
@@ -88,6 +104,8 @@ public final class SessionConfiguration
         private int port;
         private String senderCompId;
         private String targetCompId;
+        private String senderSubId = "";
+        private String senderLocationId = "";
 
         private Builder()
         {
@@ -113,6 +131,18 @@ public final class SessionConfiguration
             return this;
         }
 
+        public Builder senderSubId(final String senderSubId)
+        {
+            this.senderSubId = senderSubId;
+            return this;
+        }
+
+        public Builder senderLocationId(final String senderLocationId)
+        {
+            this.senderLocationId = senderLocationId;
+            return this;
+        }
+
         public Builder targetCompId(final String targetCompId)
         {
             this.targetCompId = targetCompId;
@@ -121,7 +151,8 @@ public final class SessionConfiguration
 
         public SessionConfiguration build()
         {
-            return new SessionConfiguration(host, port, username, password, senderCompId, targetCompId);
+            return new SessionConfiguration(host, port, username, password, senderCompId, senderSubId,
+                senderLocationId, targetCompId);
         }
     }
 

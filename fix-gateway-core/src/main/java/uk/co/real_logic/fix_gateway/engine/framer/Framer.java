@@ -149,6 +149,8 @@ public class Framer implements Agent, SessionHandler
                                      final int port,
                                      final String host,
                                      final String senderCompId,
+                                     final String senderSubId,
+                                     final String senderLocationId,
                                      final String targetCompId)
     {
         try
@@ -158,7 +160,8 @@ public class Framer implements Agent, SessionHandler
             channel.connect(address);
             final long connectionId = this.nextConnectionId++;
 
-            final Object sessionKey = sessionIdStrategy.onInitiatorLogon(senderCompId, targetCompId);
+            final Object sessionKey = sessionIdStrategy.onInitiatorLogon(
+                senderCompId, senderSubId, senderLocationId, targetCompId);
             final long sessionId = sessionIds.onLogon(sessionKey);
             if (sessionId == SessionIds.DUPLICATE_SESSION)
             {

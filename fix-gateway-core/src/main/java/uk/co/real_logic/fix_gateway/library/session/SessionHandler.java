@@ -54,7 +54,13 @@ public interface SessionHandler
     }
 
     default void onInitiateConnection(
-        final int libraryId, final int port, final String host, final String senderCompId, final String targetCompId)
+        final int libraryId,
+        final int port,
+        final String host,
+        final String senderCompId,
+        final String senderSubId,
+        final String senderLocationId,
+        final String targetCompId)
     {
         // Optional method, implement if you care about this type of message.
     }

@@ -179,7 +179,8 @@ public class FramerTest
 
     private void intiateConnection() throws Exception
     {
-        framer.onInitiateConnection(LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", "CCG");
+        framer.onInitiateConnection(
+            LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG");
 
         framer.doWork();
     }

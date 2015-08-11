@@ -38,7 +38,7 @@ public class SenderAndTargetSessionIdStrategyTest
         final Set<Object> compositeKeys = IDS.stream()
             .flatMap((sender) ->
                 IDS.stream()
-                   .map((target) -> strategy.onInitiatorLogon(sender, target)))
+                   .map((target) -> strategy.onInitiatorLogon(sender, null, null, target)))
             .collect(toSet());
 
         assertThat(compositeKeys, hasSize(IDS.size() * IDS.size()));
@@ -50,8 +50,8 @@ public class SenderAndTargetSessionIdStrategyTest
         IDS.forEach((sender) ->
             IDS.forEach((target) ->
             {
-                final Object first = strategy.onInitiatorLogon(sender, target);
-                final Object second = strategy.onInitiatorLogon(sender, target);
+                final Object first = strategy.onInitiatorLogon(sender, null, null, target);
+                final Object second = strategy.onInitiatorLogon(sender, null, null, target);
                 assertEquals(first, second);
                 assertEquals(first.hashCode(), second.hashCode());
             }));

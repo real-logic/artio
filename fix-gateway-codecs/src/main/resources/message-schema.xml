@@ -76,6 +76,8 @@
         <field name="port" id="20" type="int32"/>
         <data name="host" id="21" type="varDataEncoding"/>
         <data name="senderCompId" id="22" type="varDataEncoding"/>
+        <data name="senderSubId" id="38" type="varDataEncoding"/>
+        <data name="senderLocationId" id="39" type="varDataEncoding"/>
         <data name="targetCompId" id="23" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">

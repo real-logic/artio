@@ -74,8 +74,10 @@ public class Multiplexer implements SessionHandler
                                      final int port,
                                      final String host,
                                      final String senderCompId,
+                                     final String senderSubId,
+                                     final String senderLocationId,
                                      final String targetCompId)
     {
-        framer.onInitiateConnection(libraryId, port, host, senderCompId, targetCompId);
+        framer.onInitiateConnection(libraryId, port, host, senderCompId, senderSubId, senderLocationId, targetCompId);
     }
 }

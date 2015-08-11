@@ -94,6 +94,8 @@ public class FixLibrary extends GatewayProcess
             configuration.host(),
             configuration.port(),
             configuration.senderCompId(),
+            configuration.senderSubId(),
+            configuration.senderLocationId(),
             configuration.targetCompId());
 
         while (incomingSession == null && errorType == null)
@@ -136,8 +138,7 @@ public class FixLibrary extends GatewayProcess
             else
             {
                 DebugLogger.log("Acct Connect: %d, %d\n", connectionId, libraryId);
-                final String address = buffer.getStringUtf8(addressOffset, addressLength);
-                final Session session = acceptSession(address, connectionId);
+                final Session session = acceptSession(connectionId);
                 newSession(connectionId, session);
             }
         }
@@ -196,10 +197,11 @@ public class FixLibrary extends GatewayProcess
         sessions.put(connectionId, subscriber);
     }
 
-    public Session initiateSession(final long connectionId)
+    private Session initiateSession(final long connectionId)
     {
         final Object key = sessionIdStrategy.onInitiatorLogon(
-            sessionConfiguration.senderCompId(), sessionConfiguration.targetCompId());
+            sessionConfiguration.senderCompId(), sessionConfiguration.senderSubId(),
+            sessionConfiguration.senderLocationId(), sessionConfiguration.targetCompId());
         final int defaultInterval = configuration.defaultHeartbeatInterval();
         final GatewayPublication publication = outboundStreams.gatewayPublication();
 
@@ -217,7 +219,7 @@ public class FixLibrary extends GatewayProcess
     }
 
     // TODO: refactor to callback
-    public Session acceptSession(final String address, final long connectionId)
+    private Session acceptSession(final long connectionId)
     {
         final GatewayPublication publication = outboundStreams.gatewayPublication();
         final int defaultInterval = configuration.defaultHeartbeatInterval();
