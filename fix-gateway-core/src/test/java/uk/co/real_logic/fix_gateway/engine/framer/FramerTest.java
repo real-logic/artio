@@ -19,7 +19,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -57,10 +57,10 @@ public class FramerTest
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private final Multiplexer mockMultiplexer = mock(Multiplexer.class);
 
-    private StaticConfiguration staticConfiguration = new StaticConfiguration()
+    private EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort());
 
-    private Framer framer = new Framer(staticConfiguration, mockConnectionHandler, mockMultiplexer,
+    private Framer framer = new Framer(engineConfiguration, mockConnectionHandler, mockMultiplexer,
         mock(Subscription.class), mockGatewayPublication, mockSessionIdStrategy, new SessionIds());
 
     @Before

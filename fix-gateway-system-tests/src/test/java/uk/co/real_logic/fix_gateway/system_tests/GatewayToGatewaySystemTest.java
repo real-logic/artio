@@ -19,10 +19,14 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.session.Session;
+
+import java.io.File;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
@@ -57,12 +61,16 @@ public class GatewayToGatewaySystemTest
         final int acceptAeronPort = unusedPort();
 
         mediaDriver = launchMediaDriver();
-        initiatingEngine = launchInitiatingGateway(initiatingSessionHandler, initAeronPort);
-        acceptingEngine = launchAcceptingGateway(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID, acceptAeronPort);
+        initiatingEngine = launchInitiatingGateway(initAeronPort);
+        acceptingEngine = launchAcceptingGateway(port, acceptAeronPort);
 
-        initiatingLibrary = new FixLibrary(initiatingConfig(initiatingSessionHandler, initAeronPort, "libraryCounters"));
-        acceptingLibrary = new FixLibrary(acceptingConfig(port, acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID,
-            acceptAeronPort, "libraryCounters"));
+        initiatingLibrary = new FixLibrary(
+            new LibraryConfiguration()
+                .newSessionHandler(initiatingSessionHandler)
+                .aeronChannel("udp://localhost:" + initAeronPort)
+                .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters"));
+        acceptingLibrary = new FixLibrary(
+            acceptingLibraryConfig(acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID, acceptAeronPort, "fix-acceptor"));
 
         connectSessions();
     }

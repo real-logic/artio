@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.EngineConfiguration;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -41,7 +41,7 @@ public final class LoggerUtil
         return IoUtil.mapExistingFile(file, file.getName());
     }
 
-    public static ArchiveMetaData newArchiveMetaData(final StaticConfiguration configuration)
+    public static ArchiveMetaData newArchiveMetaData(final EngineConfiguration configuration)
     {
         final LogDirectoryDescriptor directoryDescriptor = new LogDirectoryDescriptor(configuration.logFileDir());
         return new ArchiveMetaData(directoryDescriptor, LoggerUtil::mapExistingFile, IoUtil::mapNewFile);

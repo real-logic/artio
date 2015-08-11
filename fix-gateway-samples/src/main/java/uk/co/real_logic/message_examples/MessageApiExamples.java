@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.message_examples;
 
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
@@ -33,7 +33,7 @@ public class MessageApiExamples
     public static void main(String[] args) throws Exception
     {
         // Static configuration lasts the duration of a FIX-Gateway instance
-        final StaticConfiguration configuration = new StaticConfiguration()
+        final EngineConfiguration configuration = new EngineConfiguration()
             .aeronChannel("udp://localhost:9999");
 
         // You register the acceptor - which is your custom application hook

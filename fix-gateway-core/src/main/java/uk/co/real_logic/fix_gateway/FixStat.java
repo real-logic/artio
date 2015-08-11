@@ -33,7 +33,7 @@ public class FixStat
 {
     public static void main(String[] args) throws InterruptedException
     {
-        final StaticConfiguration configuration = new StaticConfiguration();
+        final EngineConfiguration configuration = new EngineConfiguration();
         try (final MonitoringFile monitoringFile = new MonitoringFile(false, configuration))
         {
             final CountersManager countersManager = monitoringFile.createCountersManager();

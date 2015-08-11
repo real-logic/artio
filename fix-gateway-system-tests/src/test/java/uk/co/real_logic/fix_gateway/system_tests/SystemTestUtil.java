@@ -18,10 +18,11 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.auth.SenderCompIdAuthenticationStrategy;
@@ -137,7 +138,7 @@ public final class SystemTestUtil
     {
         return hasItem(
             allOf(hasSenderCompId(senderCompId),
-                  hasTargetCompId(targetCompId)));
+                hasTargetCompId(targetCompId)));
     }
 
     private static <T> Matcher<T> hasTargetCompId(final String targetCompId)
@@ -166,22 +167,20 @@ public final class SystemTestUtil
         return library.initiate(config, new SleepingIdleStrategy(10));
     }
 
-    public static FixEngine launchInitiatingGateway(final NewSessionHandler sessionHandler, final int initAeronPort)
+    public static FixEngine launchInitiatingGateway(final int initAeronPort)
     {
         delete(CLIENT_LOGS);
-        final StaticConfiguration initiatingConfig = initiatingConfig(sessionHandler, initAeronPort, "engineCounters");
+        final EngineConfiguration initiatingConfig = initiatingConfig(initAeronPort, "engineCounters");
         return FixEngine.launch(initiatingConfig);
     }
 
-    public static StaticConfiguration initiatingConfig(
-        final NewSessionHandler sessionHandler,
+    public static EngineConfiguration initiatingConfig(
         final int initAeronPort,
         final String countersSuffix)
     {
-        return new StaticConfiguration()
+        return new EngineConfiguration()
             .bind("localhost", unusedPort())
             .aeronChannel("udp://localhost:" + initAeronPort)
-            .newSessionHandler(sessionHandler)
             .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + countersSuffix)
             .logFileDir(CLIENT_LOGS);
     }
@@ -197,35 +196,41 @@ public final class SystemTestUtil
 
     public static FixEngine launchAcceptingGateway(
         final int port,
-        final NewSessionHandler sessionHandler,
-        final String acceptorId,
-        final String initiatorId,
         final int acceptAeronPort)
     {
         delete(ACCEPTOR_LOGS);
-        final StaticConfiguration config = acceptingConfig(
-            port, sessionHandler, acceptorId, initiatorId, acceptAeronPort, "engineCounters");
+        final EngineConfiguration config = acceptingConfig(
+            port, acceptAeronPort, "engineCounters");
         return FixEngine.launch(config);
     }
 
-    public static StaticConfiguration acceptingConfig(
+    public static EngineConfiguration acceptingConfig(
         final int port,
-        final NewSessionHandler sessionHandler,
-        final String acceptorId,
-        final String initiatorId,
         final int acceptAeronPort,
         final String countersSuffix)
     {
-        final AuthenticationStrategy authenticationStrategy = new TargetCompIdAuthenticationStrategy(acceptorId)
-                .and(new SenderCompIdAuthenticationStrategy(Arrays.asList(initiatorId)));
-
-        return new StaticConfiguration()
+        return new EngineConfiguration()
             .bind("localhost", port)
             .aeronChannel("udp://localhost:" + acceptAeronPort)
-            .authenticationStrategy(authenticationStrategy)
-            .newSessionHandler(sessionHandler)
             .monitoringFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + countersSuffix)
             .logFileDir(ACCEPTOR_LOGS);
+    }
+
+    public static LibraryConfiguration acceptingLibraryConfig(
+        final NewSessionHandler sessionHandler,
+        final String acceptorId,
+        final String initiatorId,
+        final int aeronPort,
+        final String monitorDir)
+    {
+        final AuthenticationStrategy authenticationStrategy = new TargetCompIdAuthenticationStrategy(acceptorId)
+            .and(new SenderCompIdAuthenticationStrategy(Arrays.asList(initiatorId)));
+
+        return new LibraryConfiguration()
+            .authenticationStrategy(authenticationStrategy)
+            .newSessionHandler(sessionHandler)
+            .aeronChannel("udp://localhost:" + aeronPort)
+            .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "libraryCounters");
     }
 
     public static Session acceptSession(final FakeSessionHandler acceptingSessionHandler, final FixLibrary acceptingLibrary)

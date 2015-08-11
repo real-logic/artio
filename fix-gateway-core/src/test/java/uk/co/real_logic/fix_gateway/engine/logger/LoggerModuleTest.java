@@ -24,7 +24,7 @@ import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.replication.ReplicatedStream;
 
 import java.util.concurrent.locks.LockSupport;
@@ -68,7 +68,7 @@ public class LoggerModuleTest
         inboundStreams = new ReplicatedStream("udp://localhost:9999", aeron, mock(AtomicCounter.class), STREAM_ID, 2);
 
         logger = new LoggerModule(
-            new StaticConfiguration().logOutboundMessages(false), inboundStreams, null, Throwable::printStackTrace);
+            new EngineConfiguration().logOutboundMessages(false), inboundStreams, null, Throwable::printStackTrace);
 
         logger.initArchival();
         archiver = logger.archiver();

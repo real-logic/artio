@@ -19,9 +19,10 @@ import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.auth.SenderCompIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.auth.TargetCompIdAuthenticationStrategy;
@@ -39,11 +40,11 @@ public final class FixBenchmarkServer
 
     public static void main(String[] args)
     {
-        final StaticConfiguration configuration = staticConfiguration();
+        final EngineConfiguration configuration = engineConfiguration();
 
         try (final MediaDriver mediaDriver = newMediaDriver();
              final FixEngine engine = FixEngine.launch(configuration);
-             final FixLibrary library = new FixLibrary(configuration))
+             final FixLibrary library = new FixLibrary(libraryConfiguration()))
         {
             final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1, 1 << 20);
             while (true)
@@ -62,25 +63,31 @@ public final class FixBenchmarkServer
         return MediaDriver.launch(context);
     }
 
-    private static StaticConfiguration staticConfiguration()
+    private static EngineConfiguration engineConfiguration()
     {
-        final AuthenticationStrategy authenticationStrategy =
-            new TargetCompIdAuthenticationStrategy(ACCEPTOR_ID)
-                .and(new SenderCompIdAuthenticationStrategy(Arrays.asList(INITIATOR_ID)));
-
         final String acceptorLogs = "acceptor_logs";
         final File dir = new File(acceptorLogs);
         if (dir.exists())
         {
             IoUtil.delete(dir, false);
         }
-        return new StaticConfiguration()
+        return new EngineConfiguration()
             .bind("localhost", Configuration.PORT)
             .aeronChannel("udp://localhost:" + AERON_PORT)
-            .authenticationStrategy(authenticationStrategy)
-            .newSessionHandler(session -> new BenchmarkSessionHandler())
             .logFileDir(acceptorLogs)
             .logInboundMessages(false)
             .logOutboundMessages(false);
+    }
+
+    private static LibraryConfiguration libraryConfiguration()
+    {
+        final AuthenticationStrategy authenticationStrategy =
+            new TargetCompIdAuthenticationStrategy(ACCEPTOR_ID)
+                .and(new SenderCompIdAuthenticationStrategy(Arrays.asList(INITIATOR_ID)));
+
+        return new LibraryConfiguration()
+            .aeronChannel("udp://localhost:" + AERON_PORT)
+            .authenticationStrategy(authenticationStrategy)
+            .newSessionHandler(session -> new BenchmarkSessionHandler());
     }
 }

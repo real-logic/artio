@@ -16,10 +16,11 @@
 package uk.co.real_logic.client;
 
 import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
@@ -36,10 +37,9 @@ public final class SampleClient
     public static void main(final String[] args) throws Exception
     {
         // Static configuration lasts the duration of a FIX-Gateway instance
-        final StaticConfiguration configuration = new StaticConfiguration()
+        final EngineConfiguration configuration = new EngineConfiguration()
             .aeronChannel("udp://localhost:10002")
-            .bind("localhost", 10001)
-            .newSessionHandler(SampleClient::onConnect);
+            .bind("localhost", 10001);
 
         try (final FixEngine gateway = FixEngine.launch(configuration))
         {
@@ -52,7 +52,8 @@ public final class SampleClient
                 .senderCompId(INITIATOR_COMP_ID)
                 .build();
 
-            final FixLibrary library = new FixLibrary(configuration);
+            final FixLibrary library = new FixLibrary(new LibraryConfiguration()
+                .newSessionHandler(SampleClient::onConnect));
             final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
             final Session session = library.initiate(sessionConfig, idleStrategy);
 

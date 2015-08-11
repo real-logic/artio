@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.Agent;
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
@@ -50,7 +50,7 @@ public class Framer implements Agent, SessionHandler
 
     private final Selector selector;
     private final ServerSocketChannel listeningChannel;
-    private final StaticConfiguration configuration;
+    private final EngineConfiguration configuration;
     private final ConnectionHandler connectionHandler;
     private final Multiplexer multiplexer;
     private final Subscription outboundDataSubscription;
@@ -62,7 +62,7 @@ public class Framer implements Agent, SessionHandler
     private long nextConnectionId = (long) (Math.random() * 10);
 
     public Framer(
-        final StaticConfiguration configuration,
+        final EngineConfiguration configuration,
         final ConnectionHandler connectionHandler,
         final Multiplexer multiplexer,
         final Subscription outboundDataSubscription,

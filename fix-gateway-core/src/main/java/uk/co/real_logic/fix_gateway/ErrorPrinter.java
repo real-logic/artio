@@ -30,7 +30,7 @@ public class ErrorPrinter implements Agent
 
     public static void main(String[] args)
     {
-        final StaticConfiguration configuration = new StaticConfiguration();
+        final EngineConfiguration configuration = new EngineConfiguration();
         final MonitoringFile monitoringFile = new MonitoringFile(false, configuration);
         final ErrorPrinter printer = new ErrorPrinter(monitoringFile);
         final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);

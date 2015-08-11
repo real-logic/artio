@@ -28,8 +28,6 @@ public class GatewayProcess implements AutoCloseable
     public static final int OUTBOUND_DATA_STREAM = 2;
     public static final int OUTBOUND_CONTROL_STREAM = 3;
 
-    protected final StaticConfiguration configuration;
-
     protected MonitoringFile monitoringFile;
     protected FixCounters fixCounters;
     protected ErrorBuffer errorBuffer;
@@ -37,15 +35,14 @@ public class GatewayProcess implements AutoCloseable
     protected ReplicatedStream inboundStreams;
     protected ReplicatedStream outboundStreams;
 
-    protected GatewayProcess(final StaticConfiguration configuration)
+    protected GatewayProcess(final CommonConfiguration configuration)
     {
-        this.configuration = configuration;
         initMonitoring(configuration);
         initAeron();
         initReplicationStreams(configuration);
     }
 
-    private void initMonitoring(final StaticConfiguration configuration)
+    private void initMonitoring(final CommonConfiguration configuration)
     {
         monitoringFile = new MonitoringFile(true, configuration);
         fixCounters = new FixCounters(monitoringFile.createCountersManager());
@@ -53,7 +50,7 @@ public class GatewayProcess implements AutoCloseable
         errorBuffer = new ErrorBuffer(monitoringFile.errorBuffer(), fixCounters.exceptions(), clock);
     }
 
-    private void initReplicationStreams(final StaticConfiguration configuration)
+    private void initReplicationStreams(final CommonConfiguration configuration)
     {
         final String channel = configuration.aeronChannel();
 

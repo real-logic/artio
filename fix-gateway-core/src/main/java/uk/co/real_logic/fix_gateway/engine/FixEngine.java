@@ -19,27 +19,30 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.ErrorPrinter;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.engine.framer.Framer;
 import uk.co.real_logic.fix_gateway.engine.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
 import uk.co.real_logic.fix_gateway.engine.logger.LoggerModule;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
+import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
 
 public class FixEngine extends GatewayProcess
 {
+    private final EngineConfiguration configuration;
     private AgentRunner errorPrinterRunner;
     private AgentRunner framerRunner;
     private LoggerModule logger;
 
-    FixEngine(final StaticConfiguration configuration)
+    FixEngine(final EngineConfiguration configuration)
     {
         super(configuration);
+        this.configuration = configuration;
 
         initFramer(configuration, fixCounters);
         logger = new LoggerModule(configuration, inboundStreams, outboundStreams, errorBuffer);
@@ -49,12 +52,15 @@ public class FixEngine extends GatewayProcess
 
     private void initErrorPrinter()
     {
-        final ErrorPrinter printer = new ErrorPrinter(monitoringFile);
-        final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
-        errorPrinterRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace, null, printer);
+        if (configuration.printErrorMessages())
+        {
+            final ErrorPrinter printer = new ErrorPrinter(monitoringFile);
+            final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
+            errorPrinterRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace, null, printer);
+        }
     }
 
-    private void initFramer(final StaticConfiguration configuration, final FixCounters fixCounters)
+    private void initFramer(final EngineConfiguration configuration, final FixCounters fixCounters)
     {
         final SessionIds sessionIds = new SessionIds();
 
@@ -83,22 +89,25 @@ public class FixEngine extends GatewayProcess
         return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
     }
 
-    public static FixEngine launch(final StaticConfiguration configuration)
+    public static FixEngine launch(final EngineConfiguration configuration)
     {
-        return new FixEngine(configuration.conclude()).start();
+        return new FixEngine(configuration).start();
     }
 
     private FixEngine start()
     {
         startOnThread(framerRunner);
         logger.start();
-        startOnThread(errorPrinterRunner);
+        if (configuration.printErrorMessages())
+        {
+            startOnThread(errorPrinterRunner);
+        }
         return this;
     }
 
     public synchronized void close()
     {
-        errorPrinterRunner.close();
+        quietClose(errorPrinterRunner);
         framerRunner.close();
         logger.close();
         super.close();

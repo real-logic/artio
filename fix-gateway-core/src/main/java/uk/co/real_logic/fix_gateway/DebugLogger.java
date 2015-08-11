@@ -24,8 +24,8 @@ import java.io.PrintStream;
 import java.nio.ByteBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEBUG_FILE;
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.DEBUG_PRINT_MESSAGES;
+import static uk.co.real_logic.fix_gateway.EngineConfiguration.DEBUG_FILE;
+import static uk.co.real_logic.fix_gateway.EngineConfiguration.DEBUG_PRINT_MESSAGES;
 
 /**
  * A logger purely for debug data. Not optimised for high performance logging, but all logging calls must be removable

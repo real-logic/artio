@@ -44,7 +44,7 @@ public final class MonitoringFile implements AutoCloseable
     private final AtomicBuffer countersBuffer;
     private final AtomicBuffer errorBuffer;
 
-    public MonitoringFile(final boolean newFile, final StaticConfiguration configuration)
+    public MonitoringFile(final boolean newFile, final CommonConfiguration configuration)
     {
         final File file = new File(configuration.monitoringFile());
         final int length;

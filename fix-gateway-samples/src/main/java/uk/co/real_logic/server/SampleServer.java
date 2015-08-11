@@ -17,9 +17,10 @@ package uk.co.real_logic.server;
 
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.concurrent.SigInt;
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.auth.SenderCompIdAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.auth.TargetCompIdAuthenticationStrategy;
@@ -45,19 +46,19 @@ public final class SampleServer
             .and(new SenderCompIdAuthenticationStrategy(Arrays.asList(INITIATOR_COMP_ID)));
 
         // Static configuration lasts the duration of a FIX-Gateway instance
-        final StaticConfiguration configuration = new StaticConfiguration()
+        final EngineConfiguration configuration = new EngineConfiguration()
             .bind("localhost", 9999)
-            .aeronChannel("udp://localhost:10000")
-            .authenticationStrategy(authenticationStrategy)
-
-            // You register the new session handler - which is your application hook
-            // that receives messages for new sessions
-            .newSessionHandler(SampleServer::onConnect);
+            .aeronChannel("udp://localhost:10000");
 
         try (final MediaDriver driver = MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
              final FixEngine gateway = FixEngine.launch(configuration))
         {
-            final FixLibrary library = new FixLibrary(configuration);
+
+            final FixLibrary library = new FixLibrary(new LibraryConfiguration()
+                // You register the new session handler - which is your application hook
+                // that receives messages for new sessions
+                .authenticationStrategy(authenticationStrategy)
+                .newSessionHandler(SampleServer::onConnect));
 
             final AtomicBoolean running = new AtomicBoolean(true);
             SigInt.register(() -> running.set(false));

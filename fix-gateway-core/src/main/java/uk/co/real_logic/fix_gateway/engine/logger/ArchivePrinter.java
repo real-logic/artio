@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
+import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
@@ -52,7 +52,7 @@ public class ArchivePrinter implements SessionHandler
         }
 
         final int streamId = Integer.parseInt(args[0]);
-        final StaticConfiguration configuration = new StaticConfiguration();
+        final EngineConfiguration configuration = new EngineConfiguration();
         final String logFileDir = configuration.logFileDir();
         final ArchivePrinter printer = new ArchivePrinter(
             LoggerUtil::mapExistingFile, streamId, logFileDir, System.out);

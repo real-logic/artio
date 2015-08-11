@@ -22,7 +22,6 @@ import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
-import uk.co.real_logic.fix_gateway.StaticConfiguration;
 import uk.co.real_logic.fix_gateway.library.session.*;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
@@ -39,7 +38,7 @@ public class FixLibrary extends GatewayProcess
     private final GatewayPublication outboundPublication;
     private final Long2ObjectHashMap<SessionSubscriber> sessions = new Long2ObjectHashMap<>();
     private final MilliClock clock;
-    private final StaticConfiguration configuration;
+    private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
 
     private Session incomingSession;
@@ -48,7 +47,7 @@ public class FixLibrary extends GatewayProcess
     private GatewayError errorType;
     private String errorMessage;
 
-    public FixLibrary(final StaticConfiguration configuration)
+    public FixLibrary(final LibraryConfiguration configuration)
     {
         super(configuration);
 

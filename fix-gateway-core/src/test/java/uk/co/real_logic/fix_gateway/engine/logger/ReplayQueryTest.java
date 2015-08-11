@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.StaticConfiguration.*;
+import static uk.co.real_logic.fix_gateway.EngineConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
 public class ReplayQueryTest extends AbstractReplayTest
