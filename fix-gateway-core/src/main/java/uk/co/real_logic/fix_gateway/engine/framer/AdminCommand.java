@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Real Logic Ltd.
+ * Copyright 2014 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.engine;
+package uk.co.real_logic.fix_gateway.engine.framer;
 
-/**
- * The conductor handles requests related to admin enquiries.
- */
-public class Administrator
+public interface AdminCommand
 {
+    void execute(Framer framer);
 }

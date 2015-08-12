@@ -15,30 +15,52 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
+import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.agrona.concurrent.AgentRunner;
-import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.fix_gateway.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.ErrorPrinter;
-import uk.co.real_logic.fix_gateway.FixCounters;
-import uk.co.real_logic.fix_gateway.GatewayProcess;
-import uk.co.real_logic.fix_gateway.engine.framer.Framer;
-import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
+import uk.co.real_logic.agrona.concurrent.*;
+import uk.co.real_logic.fix_gateway.*;
+import uk.co.real_logic.fix_gateway.engine.framer.*;
 import uk.co.real_logic.fix_gateway.engine.logger.Logger;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
+import java.util.List;
+import java.util.concurrent.locks.LockSupport;
+
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
 
-public class FixEngine extends GatewayProcess
+public final class FixEngine extends GatewayProcess
 {
+    public static final long COMMAND_QUEUE_IDLE = MILLISECONDS.toNanos(10);
+    private QueuedPipe<AdminCommand> adminCommands;
+
     private final EngineConfiguration configuration;
     private AgentRunner errorPrinterRunner;
     private AgentRunner framerRunner;
     private Logger logger;
 
-    FixEngine(final EngineConfiguration configuration)
+    public static FixEngine launch(final EngineConfiguration configuration)
+    {
+        return new FixEngine(configuration).start();
+    }
+
+    /**
+     * Query the engine for the list of libraries currently active.
+     *
+     * @return a list of currently active libraries.
+     */
+    public List<LibraryInfo> libraries()
+    {
+        final QueryLibraries query = new QueryLibraries();
+        while (!adminCommands.offer(query))
+        {
+            LockSupport.parkNanos(COMMAND_QUEUE_IDLE);
+        }
+        return query.awaitResponse();
+    }
+
+    private FixEngine(final EngineConfiguration configuration)
     {
         super(configuration);
         this.configuration = configuration;
@@ -77,18 +99,13 @@ public class FixEngine extends GatewayProcess
             errorBuffer);
 
         final Framer framer = new Framer(configuration, handler, dataSubscription,
-            inboundStreams.gatewayPublication(), sessionIdStrategy, sessionIds);
+            inboundStreams.gatewayPublication(), sessionIdStrategy, sessionIds, adminCommands);
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }
 
     private BackoffIdleStrategy backoffIdleStrategy()
     {
         return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
-    }
-
-    public static FixEngine launch(final EngineConfiguration configuration)
-    {
-        return new FixEngine(configuration).start();
     }
 
     private FixEngine start()
@@ -100,6 +117,18 @@ public class FixEngine extends GatewayProcess
             startOnThread(errorPrinterRunner);
         }
         return this;
+    }
+
+    protected Aeron.Context aeronContext(final CommonConfiguration configuration)
+    {
+        adminCommands = new ManyToOneConcurrentArrayQueue<>(10);
+        final boolean logInboundMessages = ((EngineConfiguration) configuration).logInboundMessages();
+        final LibraryActivationHandler activationHandler =
+            new LibraryActivationHandler(logInboundMessages, adminCommands);
+        final Aeron.Context context = super.aeronContext(configuration);
+        return context
+            .newImageHandler(activationHandler)
+            .inactiveImageHandler(activationHandler);
     }
 
     public synchronized void close()

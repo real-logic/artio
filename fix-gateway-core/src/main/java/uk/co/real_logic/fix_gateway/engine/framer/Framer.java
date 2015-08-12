@@ -17,10 +17,13 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.Agent;
+import uk.co.real_logic.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
+import uk.co.real_logic.fix_gateway.engine.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
@@ -32,7 +35,10 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.function.Consumer;
 
 import static java.net.StandardSocketOptions.SO_RCVBUF;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
@@ -48,7 +54,9 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.EXCEPTION;
  */
 public class Framer implements Agent, SessionHandler
 {
+    private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Long2ObjectHashMap<SenderEndPoint> connectionToSenderEndpoint = new Long2ObjectHashMap<>();
+    private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final DataSubscriber dataSubscriber;
 
     private final Selector selector;
@@ -59,6 +67,7 @@ public class Framer implements Agent, SessionHandler
     private final GatewayPublication inboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
+    private final QueuedPipe<AdminCommand> adminCommands;
     private final ReceiverEndPointPoller endPointPoller;
 
     private long nextConnectionId = (long) (Math.random() * 10);
@@ -69,7 +78,8 @@ public class Framer implements Agent, SessionHandler
         final Subscription outboundDataSubscription,
         final GatewayPublication inboundPublication,
         final SessionIdStrategy sessionIdStrategy,
-        final SessionIds sessionIds)
+        final SessionIds sessionIds,
+        final QueuedPipe<AdminCommand> adminCommands)
     {
         this.configuration = configuration;
         this.connectionHandler = connectionHandler;
@@ -77,6 +87,7 @@ public class Framer implements Agent, SessionHandler
         this.inboundPublication = inboundPublication;
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
+        this.adminCommands = adminCommands;
         dataSubscriber = new DataSubscriber(this);
 
         try
@@ -98,7 +109,9 @@ public class Framer implements Agent, SessionHandler
     @Override
     public int doWork() throws Exception
     {
-        return outboundDataSubscription.poll(dataSubscriber, 5) + pollSockets();
+        return outboundDataSubscription.poll(dataSubscriber, 5) +
+               pollSockets() +
+               adminCommands.drain(onAdminCommand);
     }
 
     public void removeEndPoint(final ReceiverEndPoint receiverEndPoint)
@@ -225,6 +238,23 @@ public class Framer implements Agent, SessionHandler
         endPointPoller.deregister(connectionId);
     }
 
+    public void onNewLibrary(final int libraryId)
+    {
+        final boolean isAcceptor = idToLibrary.isEmpty();
+        idToLibrary.put(libraryId, new LibraryInfo(isAcceptor, libraryId));
+    }
+
+    public void onInactiveLibrary(final int libraryId)
+    {
+        idToLibrary.remove(libraryId);
+    }
+
+    public void onQueryLibraries(final QueryLibraries queryLibraries)
+    {
+        final List<LibraryInfo> libraries = new ArrayList<>(idToLibrary.values());
+        queryLibraries.respond(libraries);
+    }
+
     public void onClose()
     {
         endPointPoller.close();
@@ -235,4 +265,5 @@ public class Framer implements Agent, SessionHandler
     {
         return "Framer";
     }
+
 }

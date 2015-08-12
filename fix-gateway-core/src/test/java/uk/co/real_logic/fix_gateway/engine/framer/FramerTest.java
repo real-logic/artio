@@ -19,6 +19,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
@@ -60,7 +61,8 @@ public class FramerTest
         .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort());
 
     private Framer framer = new Framer(engineConfiguration, mockConnectionHandler,
-        mock(Subscription.class), mockGatewayPublication, mockSessionIdStrategy, new SessionIds());
+        mock(Subscription.class), mockGatewayPublication, mockSessionIdStrategy, new SessionIds(),
+        mock(QueuedPipe.class));
 
     @Before
     public void setUp() throws IOException

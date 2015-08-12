@@ -38,7 +38,7 @@ public class GatewayProcess implements AutoCloseable
     protected GatewayProcess(final CommonConfiguration configuration)
     {
         initMonitoring(configuration);
-        initAeron();
+        initAeron(configuration);
         initReplicationStreams(configuration);
     }
 
@@ -60,7 +60,13 @@ public class GatewayProcess implements AutoCloseable
             channel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
     }
 
-    private void initAeron()
+    private void initAeron(final CommonConfiguration configuration)
+    {
+        final Aeron.Context ctx = aeronContext(configuration);
+        aeron = Aeron.connect(ctx);
+    }
+
+    protected Aeron.Context aeronContext(final CommonConfiguration configuration)
     {
         final Aeron.Context ctx = new Aeron.Context();
         ctx.errorHandler(throwable ->
@@ -70,7 +76,7 @@ public class GatewayProcess implements AutoCloseable
                 errorBuffer.onError(throwable);
             }
         });
-        aeron = Aeron.connect(ctx);
+        return ctx;
     }
 
     public void close()
