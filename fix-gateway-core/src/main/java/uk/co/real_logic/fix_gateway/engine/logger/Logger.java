@@ -34,7 +34,7 @@ import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
 /**
  * Top level entry point for the whole logging module.
  */
-public class LoggerModule implements AutoCloseable
+public class Logger implements AutoCloseable
 {
     private final EngineConfiguration configuration;
     private final ReplicatedStream inboundStreams;
@@ -45,10 +45,10 @@ public class LoggerModule implements AutoCloseable
     private ArchiveReader archiveReader;
     private AgentRunner loggingRunner;
 
-    public LoggerModule(final EngineConfiguration configuration,
-                        final ReplicatedStream inboundStreams,
-                        final ReplicatedStream outboundStreams,
-                        final ErrorHandler errorHandler)
+    public Logger(final EngineConfiguration configuration,
+                  final ReplicatedStream inboundStreams,
+                  final ReplicatedStream outboundStreams,
+                  final ErrorHandler errorHandler)
     {
         this.configuration = configuration;
         this.inboundStreams = inboundStreams;

@@ -26,7 +26,7 @@ import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.engine.framer.Framer;
 import uk.co.real_logic.fix_gateway.engine.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
-import uk.co.real_logic.fix_gateway.engine.logger.LoggerModule;
+import uk.co.real_logic.fix_gateway.engine.logger.Logger;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
@@ -37,7 +37,7 @@ public class FixEngine extends GatewayProcess
     private final EngineConfiguration configuration;
     private AgentRunner errorPrinterRunner;
     private AgentRunner framerRunner;
-    private LoggerModule logger;
+    private Logger logger;
 
     FixEngine(final EngineConfiguration configuration)
     {
@@ -45,7 +45,7 @@ public class FixEngine extends GatewayProcess
         this.configuration = configuration;
 
         initFramer(configuration, fixCounters);
-        logger = new LoggerModule(configuration, inboundStreams, outboundStreams, errorBuffer);
+        logger = new Logger(configuration, inboundStreams, outboundStreams, errorBuffer);
         logger.init();
         initErrorPrinter();
     }

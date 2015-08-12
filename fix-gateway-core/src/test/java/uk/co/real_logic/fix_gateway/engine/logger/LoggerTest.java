@@ -38,7 +38,7 @@ import static uk.co.real_logic.agrona.BitUtil.findNextPositivePowerOfTwo;
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 
-public class LoggerModuleTest
+public class LoggerTest
 {
     public static final int SIZE = 64 * 1024;
     public static final int TERM_LENGTH = findNextPositivePowerOfTwo(SIZE * 8);
@@ -51,7 +51,7 @@ public class LoggerModuleTest
     private MediaDriver mediaDriver;
     private Aeron aeron;
     private ReplicatedStream inboundStreams;
-    private LoggerModule logger;
+    private Logger logger;
     private Archiver archiver;
     private ArchiveReader archiveReader;
     private Publication publication;
@@ -67,7 +67,7 @@ public class LoggerModuleTest
         aeron = Aeron.connect(new Aeron.Context());
         inboundStreams = new ReplicatedStream("udp://localhost:9999", aeron, mock(AtomicCounter.class), STREAM_ID, 2);
 
-        logger = new LoggerModule(
+        logger = new Logger(
             new EngineConfiguration().logOutboundMessages(false), inboundStreams, null, Throwable::printStackTrace);
 
         logger.initArchival();
