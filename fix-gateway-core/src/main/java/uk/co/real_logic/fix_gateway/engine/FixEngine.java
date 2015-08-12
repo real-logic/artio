@@ -24,7 +24,6 @@ import uk.co.real_logic.fix_gateway.ErrorPrinter;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.engine.framer.Framer;
-import uk.co.real_logic.fix_gateway.engine.framer.Multiplexer;
 import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
 import uk.co.real_logic.fix_gateway.engine.logger.Logger;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -65,7 +64,6 @@ public class FixEngine extends GatewayProcess
         final SessionIds sessionIds = new SessionIds();
 
         final IdleStrategy idleStrategy = backoffIdleStrategy();
-        final Multiplexer multiplexer = new Multiplexer();
         final Subscription dataSubscription = outboundStreams.dataSubscription();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
 
@@ -78,9 +76,8 @@ public class FixEngine extends GatewayProcess
             fixCounters,
             errorBuffer);
 
-        final Framer framer = new Framer(configuration, handler, multiplexer, dataSubscription,
+        final Framer framer = new Framer(configuration, handler, dataSubscription,
             inboundStreams.gatewayPublication(), sessionIdStrategy, sessionIds);
-        multiplexer.framer(framer);
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }
 

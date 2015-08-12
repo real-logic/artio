@@ -16,6 +16,8 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
@@ -46,13 +48,13 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.EXCEPTION;
  */
 public class Framer implements Agent, SessionHandler
 {
+    private final Long2ObjectHashMap<SenderEndPoint> connectionToSenderEndpoint = new Long2ObjectHashMap<>();
     private final DataSubscriber dataSubscriber;
 
     private final Selector selector;
     private final ServerSocketChannel listeningChannel;
     private final EngineConfiguration configuration;
     private final ConnectionHandler connectionHandler;
-    private final Multiplexer multiplexer;
     private final Subscription outboundDataSubscription;
     private final GatewayPublication inboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
@@ -64,7 +66,6 @@ public class Framer implements Agent, SessionHandler
     public Framer(
         final EngineConfiguration configuration,
         final ConnectionHandler connectionHandler,
-        final Multiplexer multiplexer,
         final Subscription outboundDataSubscription,
         final GatewayPublication inboundPublication,
         final SessionIdStrategy sessionIdStrategy,
@@ -72,12 +73,11 @@ public class Framer implements Agent, SessionHandler
     {
         this.configuration = configuration;
         this.connectionHandler = connectionHandler;
-        this.multiplexer = multiplexer;
         this.outboundDataSubscription = outboundDataSubscription;
         this.inboundPublication = inboundPublication;
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
-        dataSubscriber = new DataSubscriber(multiplexer);
+        dataSubscriber = new DataSubscriber(this);
 
         try
         {
@@ -103,7 +103,7 @@ public class Framer implements Agent, SessionHandler
 
     public void removeEndPoint(final ReceiverEndPoint receiverEndPoint)
     {
-        multiplexer.onDisconnect(receiverEndPoint.connectionId());
+        connectionToSenderEndpoint.remove(receiverEndPoint.connectionId());
         endPointPoller.deregister(receiverEndPoint);
     }
 
@@ -179,6 +179,21 @@ public class Framer implements Agent, SessionHandler
         }
     }
 
+    public void onMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final long connectionId,
+        final long sessionId,
+        final int messageType)
+    {
+        final SenderEndPoint endPoint = connectionToSenderEndpoint.get(connectionId);
+        if (endPoint != null)
+        {
+            endPoint.onFramedMessage(buffer, offset, length);
+        }
+    }
+
     private void setupConnection(final SocketChannel channel, final long connectionId, final long sessionId)
         throws IOException
     {
@@ -197,7 +212,12 @@ public class Framer implements Agent, SessionHandler
             connectionHandler.receiverEndPoint(channel, connectionId, sessionId, this);
         endPointPoller.register(receiverEndPoint);
 
-        multiplexer.onNewConnection(connectionHandler.senderEndPoint(channel, connectionId));
+        connectionToSenderEndpoint.put(connectionId, connectionHandler.senderEndPoint(channel, connectionId));
+    }
+
+    public void onRequestDisconnect(final long connectionId)
+    {
+        onDisconnect(connectionId);
     }
 
     public void onDisconnect(final long connectionId)

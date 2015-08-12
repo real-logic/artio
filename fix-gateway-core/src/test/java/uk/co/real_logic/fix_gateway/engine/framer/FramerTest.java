@@ -55,12 +55,11 @@ public class FramerTest
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private GatewayPublication mockGatewayPublication = mock(GatewayPublication.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
-    private final Multiplexer mockMultiplexer = mock(Multiplexer.class);
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort());
 
-    private Framer framer = new Framer(engineConfiguration, mockConnectionHandler, mockMultiplexer,
+    private Framer framer = new Framer(engineConfiguration, mockConnectionHandler,
         mock(Subscription.class), mockGatewayPublication, mockSessionIdStrategy, new SessionIds());
 
     @Before
@@ -164,17 +163,6 @@ public class FramerTest
         intiateConnection();
 
         verify(mockGatewayPublication).saveError(DUPLICATE_SESSION, LIBRARY_ID, "");
-    }
-
-    @Test
-    public void shouldRemoveDisconnectedEndpoint() throws Exception
-    {
-        intiateConnection();
-        notifyLibraryOfConnection();
-
-        framer.removeEndPoint(mockReceiverEndPoint);
-
-        verify(mockMultiplexer).onDisconnect(CONNECTION_ID);
     }
 
     private void intiateConnection() throws Exception
