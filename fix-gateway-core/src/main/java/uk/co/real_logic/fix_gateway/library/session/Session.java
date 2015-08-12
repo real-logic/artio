@@ -75,7 +75,6 @@ public class Session
 
     private SessionState state;
     private long id = UNKNOWN;
-    // TODO: unify this with the atomic counter
     private int lastReceivedMsgSeqNum = 0;
     private int lastSentMsgSeqNum = 0;
 
@@ -478,11 +477,6 @@ public class Session
     long heartbeatIntervalInMs()
     {
         return heartbeatIntervalInMs;
-    }
-
-    long nextRequiredMessageTimeInMs()
-    {
-        return nextRequiredInboundMessageTimeInMs;
     }
 
     Session heartbeatIntervalInS(final int heartbeatIntervalInS)
