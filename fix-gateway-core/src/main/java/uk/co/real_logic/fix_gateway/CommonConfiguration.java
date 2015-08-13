@@ -38,15 +38,17 @@ public class CommonConfiguration
     public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 8 * 1024 * 1024;
     public static final String DEFAULT_MONITORING_FILE = IoUtil.tmpDirName() + "fix" + File.separator + "counters";
 
-
     /** This is static final field in order to give the optimiser scope to remove references to it. */
     public static final boolean DEBUG_PRINT_MESSAGES = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
     public static final String DEBUG_FILE = System.getProperty(DEBUG_FILE_PROPERTY);
+
+    private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 1000L;
 
     private SessionIdStrategy sessionIdStrategy = new SenderAndTargetSessionIdStrategy();
     private int counterBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROP_NAME, DEFAULT_MONITORING_BUFFER_LENGTH);
     private String monitoringFile = getProperty(MONITORING_FILE_PROP_NAME, DEFAULT_MONITORING_FILE);
     private String aeronChannel;
+    private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
 
     public CommonConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
     {
@@ -72,6 +74,12 @@ public class CommonConfiguration
         return this;
     }
 
+    public CommonConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
+    {
+        this.replyTimeoutInMs = replyTimeoutInMs;
+        return this;
+    }
+
     public SessionIdStrategy sessionIdStrategy()
     {
         return sessionIdStrategy;
@@ -92,4 +100,8 @@ public class CommonConfiguration
         return aeronChannel;
     }
 
+    public long replyTimeoutInMs()
+    {
+        return replyTimeoutInMs;
+    }
 }

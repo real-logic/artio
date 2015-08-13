@@ -32,8 +32,11 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 public class GatewayPublication
 {
+
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
-    public static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
+
+    private static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
+    private static final int MAX_CLAIM_ATTEMPTS = 1000;
 
     private final MessageHeaderEncoder header = new MessageHeaderEncoder();
     private final LogonEncoder logon = new LogonEncoder();
@@ -300,12 +303,20 @@ public class GatewayPublication
     private long claim(final int framedLength)
     {
         long position;
-        while ((position = dataPublication.tryClaim(framedLength, bufferClaim)) < 0L)
+        for (int i = 0; i < MAX_CLAIM_ATTEMPTS; i++)
         {
+            position = dataPublication.tryClaim(framedLength, bufferClaim);
+
+            if (position > 0L)
+            {
+                return position;
+            }
+
             idleStrategy.idle(0);
             fails.increment();
         }
 
-        return position;
+        throw new IllegalStateException(
+            "Unable to send publish message, probably a missing an engine or library instance");
     }
 }

@@ -90,6 +90,9 @@ public class FixLibrary extends GatewayProcess
 
         sessionConfiguration = configuration;
 
+        final long replyTimeoutInMs = this.configuration.replyTimeoutInMs();
+        final long latestReplyArrivalTime = clock.time() + replyTimeoutInMs;
+
         outboundPublication.saveInitiateConnection(
             configuration.host(),
             configuration.port(),
@@ -101,6 +104,15 @@ public class FixLibrary extends GatewayProcess
         while (incomingSession == null && errorType == null)
         {
             final int workCount = poll(1);
+
+            if (clock.time() > latestReplyArrivalTime)
+            {
+                throw new IllegalStateException(
+                    String.format(
+                        "Failed to received a reply from the engine within %d, are you sure its running?",
+                        replyTimeoutInMs));
+            }
+
             idleStrategy.idle(workCount);
         }
 
@@ -242,13 +254,6 @@ public class FixLibrary extends GatewayProcess
         return new SessionProxy(
             configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy,
             configuration.sessionCustomisationStrategy(), System::currentTimeMillis, connectionId);
-    }
-
-    // TODO
-    private ConnectionTimeoutException timeout(final SessionConfiguration configuration)
-    {
-        return new ConnectionTimeoutException(
-            "Connection timed out connecting to: " + configuration.host() + ":" + configuration.port());
     }
 
     public void close()
