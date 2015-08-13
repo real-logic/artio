@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
@@ -68,41 +67,31 @@ public class ReceiverEndPointTest
     @Test
     public void shouldHandleValidFixMessageInOneGo()
     {
-        given:
         theEndpointReceivesACompleteMessage();
 
-        when:
         endPoint.pollForData();
 
-        then:
         handlerReceivesAFramedMessage();
     }
 
     @Test
     public void shouldIgnoreGarbledMessages() throws IOException
     {
-        given:
         theEndpointReceives(GARBLED_MESSAGE, 0, GARBLED_MESSAGE.length);
 
-        when:
         endPoint.pollForData();
 
-        then:
         handlerNotCalled();
         assertFalse("Endpoint Disconnected", endPoint.hasDisconnected());
     }
 
-    @Ignore
     @Test
     public void shouldOnlyFrameCompleteFixMessage()
     {
-        given:
         theEndpointReceivesAnIncompleteMessage();
 
-        when:
         endPoint.pollForData();
 
-        then:
         handlerNotCalled();
     }
 
@@ -121,13 +110,10 @@ public class ReceiverEndPointTest
     @Test
     public void shouldFrameTwoCompleteFixMessagesInOnePacket()
     {
-        given:
         theEndpointReceivesTwoCompleteMessages();
 
-        when:
         endPoint.pollForData();
 
-        then:
         handlerReceivesTwoFramedMessages();
     }
 
@@ -144,28 +130,22 @@ public class ReceiverEndPointTest
     @Test
     public void shouldFrameSecondSplitMessage()
     {
-        given:
         theEndpointReceivesACompleteAndAnIncompleteMessage();
         endPoint.pollForData();
 
-        when:
         theEndpointReceivesTheRestOfTheMessage();
         endPoint.pollForData();
 
-        then:
         handlerReceivesFramedMessages(2, OK, MSG_LEN);
     }
 
     @Test
     public void aClosedSocketSavesItsDisconnect() throws IOException
     {
-        given:
         theChannelIsClosedByException();
 
-        when:
         endPoint.pollForData();
 
-        then:
         verify(mockSessionIds).onDisconnect(anyLong());
         assertSavesDisconnect();
     }
@@ -173,13 +153,10 @@ public class ReceiverEndPointTest
     @Test
     public void anUnreadableSocketDisconnectsItsSession() throws IOException
     {
-        given:
         theChannelIsClosed();
 
-        when:
         endPoint.pollForData();
 
-        then:
         assertSavesDisconnect();
     }
 
@@ -195,8 +172,6 @@ public class ReceiverEndPointTest
                 any(AtomicBuffer.class), eq(0), eq(INVALID_CHECKSUM_LEN), eq(MESSAGE_TYPE), anyLong(), eq(CONNECTION_ID),
                     eq(INVALID_CHECKSUM));
     }
-
-    // TODO: log not authenticated messages
 
     private void assertSavesDisconnect()
     {

@@ -77,7 +77,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
         onLogon(1);
 
-        // TODO: verify(mockGateway).onInitiatorSessionActive(session);
+        verifySavesLogonMessage();
     }
 
     @Test
@@ -89,7 +89,12 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
         onLogon(2);
 
-        // TODO: verify(mockGateway, times(1)).onInitiatorSessionActive(session);
+        verifySavesLogonMessage();
+    }
+
+    private void verifySavesLogonMessage()
+    {
+        verify(mockPublication, times(1)).saveLogon(CONNECTION_ID, SESSION_ID);
     }
 
     private void verifyLogon()

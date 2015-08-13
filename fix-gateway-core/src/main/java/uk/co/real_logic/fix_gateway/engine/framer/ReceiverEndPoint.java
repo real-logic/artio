@@ -171,6 +171,12 @@ public class ReceiverEndPoint
                 final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData, START_OF_HEADER);
                 final int startOfChecksumTag = endOfBodyLength + getBodyLength(offset, endOfBodyLength);
 
+                final int endOfChecksumTag = startOfChecksumTag + 3;
+                if (endOfChecksumTag > usedBufferData)
+                {
+                    break;
+                }
+
                 if (!validateBodyLength(startOfChecksumTag))
                 {
                     publication.saveMessage(
