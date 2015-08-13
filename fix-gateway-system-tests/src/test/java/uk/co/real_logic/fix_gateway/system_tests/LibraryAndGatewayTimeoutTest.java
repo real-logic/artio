@@ -31,7 +31,7 @@ import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-public class GatewayTimeoutTest
+public class LibraryAndGatewayTimeoutTest
 {
     private int aeronPort = unusedPort();
     private int port = unusedPort();
@@ -49,7 +49,7 @@ public class GatewayTimeoutTest
     }
 
     @Test(expected = FixGatewayException.class)
-    public void shouldRefuseConnectionWhenTheresNoAcceptor()
+    public void libraryShouldRefuseConnectionWhenTheresNoAcceptor()
     {
         launchEngine();
         launchLibrary();
@@ -58,7 +58,7 @@ public class GatewayTimeoutTest
     }
 
     @Test(expected = IllegalStateException.class)
-    public void shouldRefuseConnectionWhenEngineNotStarted()
+    public void libraryShouldRefuseConnectionWhenEngineNotStarted()
     {
         launchLibrary();
 
@@ -66,7 +66,7 @@ public class GatewayTimeoutTest
     }
 
     @Test(expected = IllegalStateException.class)
-    public void shouldRefuseConnectionWhenEngineClosed()
+    public void libraryShouldRefuseConnectionWhenEngineClosed()
     {
         launchEngine();
         launchLibrary();
