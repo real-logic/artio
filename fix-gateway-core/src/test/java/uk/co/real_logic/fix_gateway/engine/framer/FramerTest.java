@@ -37,7 +37,7 @@ import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.DUPLICATE_SESSION;
-import static uk.co.real_logic.fix_gateway.messages.GatewayError.EXCEPTION;
+import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
 
 public class FramerTest
 {
@@ -152,7 +152,7 @@ public class FramerTest
 
         intiateConnection();
 
-        verify(mockGatewayPublication).saveError(eq(EXCEPTION), eq(LIBRARY_ID), anyString());
+        verify(mockGatewayPublication).saveError(eq(UNABLE_TO_CONNECT), eq(LIBRARY_ID), anyString());
     }
 
     @Test

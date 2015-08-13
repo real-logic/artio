@@ -36,6 +36,7 @@ import java.util.concurrent.locks.LockSupport;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
@@ -269,5 +270,27 @@ public final class SystemTestUtil
         {
             ex.printStackTrace();
         }
+    }
+
+    public static FixLibrary newInitiatingLibrary(
+        final int initAeronPort,
+        final NewSessionHandler sessionHandler)
+    {
+        return new FixLibrary(
+            new LibraryConfiguration()
+                .newSessionHandler(sessionHandler)
+                .aeronChannel("udp://localhost:" + initAeronPort)
+                .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters"));
+    }
+
+    public static FixLibrary newAcceptingLibrary(final int acceptAeronPort, final NewSessionHandler sessionHandler)
+    {
+        return new FixLibrary(
+            acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, acceptAeronPort, "fix-acceptor"));
+    }
+
+    public static void assertConnected(final Session session)
+    {
+        assertTrue("Session has failed to connect", session.isConnected());
     }
 }

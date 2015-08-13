@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -22,8 +24,8 @@ import java.util.Objects;
  */
 public final class SessionConfiguration
 {
-    private final String host;
-    private final int port;
+    private final List<String> hosts;
+    private final List<Integer> ports;
     private final String username;
     private final String password;
     private final String senderCompId;
@@ -37,33 +39,51 @@ public final class SessionConfiguration
     }
 
     private SessionConfiguration(
-        final String host, final int port, final String username, final String password, final String senderCompId,
-        final String senderSubId, final String senderLocationId, final String targetCompId)
+        final List<String> hosts,
+        final List<Integer> ports,
+        final String username,
+        final String password,
+        final String senderCompId,
+        final String senderSubId,
+        final String senderLocationId,
+        final String targetCompId)
     {
-        Objects.requireNonNull(host);
+        Objects.requireNonNull(hosts);
+        Objects.requireNonNull(ports);
         Objects.requireNonNull(senderCompId);
         Objects.requireNonNull(senderSubId);
         Objects.requireNonNull(senderLocationId);
         Objects.requireNonNull(targetCompId);
 
+        requireNonEmpty(hosts, "hosts");
+        requireNonEmpty(ports, "ports");
+
         this.senderCompId = senderCompId;
         this.senderSubId = senderSubId;
         this.senderLocationId = senderLocationId;
         this.targetCompId = targetCompId;
-        this.host = host;
-        this.port = port;
+        this.hosts = hosts;
+        this.ports = ports;
         this.username = username;
         this.password = password;
     }
 
-    public String host()
+    private void requireNonEmpty(final List<?> values, final String name)
     {
-        return host;
+        if (values.isEmpty())
+        {
+            throw new IllegalArgumentException(name + " is empty");
+        }
     }
 
-    public int port()
+    public List<String> hosts()
     {
-        return port;
+        return hosts;
+    }
+
+    public List<Integer> ports()
+    {
+        return ports;
     }
 
     public String username()
@@ -100,8 +120,8 @@ public final class SessionConfiguration
     {
         private String username;
         private String password;
-        private String host;
-        private int port;
+        private List<String> hosts = new ArrayList<>();
+        private List<Integer> ports = new ArrayList<>();
         private String senderCompId;
         private String targetCompId;
         private String senderSubId = "";
@@ -120,8 +140,8 @@ public final class SessionConfiguration
 
         public Builder address(final String host, final int port)
         {
-            this.host = host;
-            this.port = port;
+            hosts.add(host);
+            ports.add(Integer.valueOf(port));
             return this;
         }
 
@@ -151,7 +171,7 @@ public final class SessionConfiguration
 
         public SessionConfiguration build()
         {
-            return new SessionConfiguration(host, port, username, password, senderCompId, senderSubId,
+            return new SessionConfiguration(hosts, ports, username, password, senderCompId, senderSubId,
                 senderLocationId, targetCompId);
         }
     }

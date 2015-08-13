@@ -20,18 +20,15 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
-import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.session.Session;
-
-import java.io.File;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -65,13 +62,8 @@ public class GatewayToGatewaySystemTest
         initiatingEngine = launchInitiatingGateway(initAeronPort);
         acceptingEngine = launchAcceptingGateway(port, acceptAeronPort);
 
-        initiatingLibrary = new FixLibrary(
-            new LibraryConfiguration()
-                .newSessionHandler(initiatingSessionHandler)
-                .aeronChannel("udp://localhost:" + initAeronPort)
-                .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters"));
-        acceptingLibrary = new FixLibrary(
-            acceptingLibraryConfig(acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID, acceptAeronPort, "fix-acceptor"));
+        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler);
+        acceptingLibrary = newAcceptingLibrary(acceptAeronPort, acceptingSessionHandler);
 
         connectSessions();
     }
@@ -173,7 +165,7 @@ public class GatewayToGatewaySystemTest
     {
         initiatedSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
 
-        assertTrue("Session has failed to connect", initiatedSession.isConnected());
+        assertConnected(initiatedSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatedSession);
         acceptingSession = acceptSession(acceptingSessionHandler, acceptingLibrary);
     }
@@ -208,12 +200,12 @@ public class GatewayToGatewaySystemTest
     @After
     public void close() throws Exception
     {
-        closeIfOpen(initiatingLibrary);
-        closeIfOpen(acceptingLibrary);
+        quietClose(initiatingLibrary);
+        quietClose(acceptingLibrary);
 
-        closeIfOpen(initiatingEngine);
-        closeIfOpen(acceptingEngine);
-        closeIfOpen(mediaDriver);
+        quietClose(initiatingEngine);
+        quietClose(acceptingEngine);
+        quietClose(mediaDriver);
     }
 
 }

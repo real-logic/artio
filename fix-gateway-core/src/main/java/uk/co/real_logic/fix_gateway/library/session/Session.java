@@ -83,6 +83,9 @@ public class Session
     private long sendingHeartbeatIntervalInMs;
     private long nextRequiredHeartbeatTimeInMs;
 
+    private String connectedHost;
+    private int connectedPort;
+
     public Session(
         final int heartbeatIntervalInS,
         final long connectionId,
@@ -557,6 +560,22 @@ public class Session
     public long connectionId()
     {
         return connectionId;
+    }
+
+    public void address(final String connectedHost, final int connectedPort)
+    {
+        this.connectedHost = connectedHost;
+        this.connectedPort = connectedPort;
+    }
+
+    public String connectedHost()
+    {
+        return connectedHost;
+    }
+
+    public int connectedPort()
+    {
+        return connectedPort;
     }
 
     public void onInvalidMessage(

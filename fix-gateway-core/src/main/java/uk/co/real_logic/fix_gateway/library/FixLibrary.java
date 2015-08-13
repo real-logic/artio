@@ -30,7 +30,10 @@ import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
+import java.util.List;
+
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
+import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
 
 public class FixLibrary extends GatewayProcess
 {
@@ -83,50 +86,69 @@ public class FixLibrary extends GatewayProcess
 
     public Session initiate(final SessionConfiguration configuration, final IdleStrategy idleStrategy)
     {
-        if (sessionConfiguration != null || incomingSession != null)
+        if (sessionConfiguration != null || incomingSession != null || errorType != null)
         {
             throw new IllegalStateException("You can't initiate a session whilst initiating a session");
         }
 
         sessionConfiguration = configuration;
 
-        final long replyTimeoutInMs = this.configuration.replyTimeoutInMs();
-        final long latestReplyArrivalTime = clock.time() + replyTimeoutInMs;
-
-        outboundPublication.saveInitiateConnection(
-            configuration.host(),
-            configuration.port(),
-            configuration.senderCompId(),
-            configuration.senderSubId(),
-            configuration.senderLocationId(),
-            configuration.targetCompId());
-
-        while (incomingSession == null && errorType == null)
+        try
         {
-            final int workCount = poll(1);
-
-            if (clock.time() > latestReplyArrivalTime)
+            final long replyTimeoutInMs = this.configuration.replyTimeoutInMs();
+            final List<String> hosts = configuration.hosts();
+            final List<Integer> ports = configuration.ports();
+            final int size = hosts.size();
+            for (int i = 0; i < size; i++)
             {
-                throw new IllegalStateException(
-                    String.format(
-                        "Failed to received a reply from the engine within %d, are you sure its running?",
-                        replyTimeoutInMs));
+                final String host = hosts.get(i);
+                final int port = ports.get(i);
+
+                outboundPublication.saveInitiateConnection(
+                    host,
+                    port,
+                    configuration.senderCompId(),
+                    configuration.senderSubId(),
+                    configuration.senderLocationId(),
+                    configuration.targetCompId());
+
+                final long latestReplyArrivalTime = clock.time() + replyTimeoutInMs;
+                while (incomingSession == null && errorType == null)
+                {
+                    final int workCount = poll(1);
+
+                    if (clock.time() > latestReplyArrivalTime)
+                    {
+                        throw new IllegalStateException(
+                            String.format(
+                                "Failed to received a reply from the engine within %d, are you sure its running?",
+                                replyTimeoutInMs));
+                    }
+
+                    idleStrategy.idle(workCount);
+                }
+
+                if (incomingSession != null)
+                {
+                    final Session session = incomingSession;
+                    session.address(host, port);
+                    return session;
+                }
+                else if (errorType != UNABLE_TO_CONNECT)
+                {
+                    throw new FixGatewayException(String.format("%s: %s", errorType, errorMessage));
+                }
+
+                errorType = null;
             }
 
-            idleStrategy.idle(workCount);
+            throw new FixGatewayException("Unable to connect to any of the addresses specified");
         }
-
-        sessionConfiguration = null;
-
-        if (incomingSession != null)
+        finally
         {
-            final Session session = incomingSession;
+            sessionConfiguration = null;
+            errorType = null;
             incomingSession = null;
-            return session;
-        }
-        else
-        {
-            throw new FixGatewayException(String.format("%s: %s", errorType, errorMessage));
         }
     }
 

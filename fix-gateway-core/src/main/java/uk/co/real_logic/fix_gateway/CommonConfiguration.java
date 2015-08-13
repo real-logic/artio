@@ -42,7 +42,7 @@ public class CommonConfiguration
     public static final boolean DEBUG_PRINT_MESSAGES = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
     public static final String DEBUG_FILE = System.getProperty(DEBUG_FILE_PROPERTY);
 
-    private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 1000L;
+    private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 1_000L;
 
     private SessionIdStrategy sessionIdStrategy = new SenderAndTargetSessionIdStrategy();
     private int counterBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROP_NAME, DEFAULT_MONITORING_BUFFER_LENGTH);

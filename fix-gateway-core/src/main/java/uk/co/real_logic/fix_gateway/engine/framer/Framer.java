@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
 import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -46,8 +47,7 @@ import static uk.co.real_logic.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
-import static uk.co.real_logic.fix_gateway.messages.GatewayError.DUPLICATE_SESSION;
-import static uk.co.real_logic.fix_gateway.messages.GatewayError.EXCEPTION;
+import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
@@ -168,9 +168,20 @@ public class Framer implements Agent, SessionHandler
     {
         try
         {
-            final InetSocketAddress address = new InetSocketAddress(host, port);
-            final SocketChannel channel = SocketChannel.open();
-            channel.connect(address);
+            SocketChannel channel;
+            InetSocketAddress address;
+            try
+            {
+                address = new InetSocketAddress(host, port);
+                channel = SocketChannel.open();
+                channel.connect(address);
+            }
+            catch (final Exception e)
+            {
+                saveError(UNABLE_TO_CONNECT, libraryId, e);
+                return;
+            }
+
             final long connectionId = this.nextConnectionId++;
 
             final Object sessionKey = sessionIdStrategy.onInitiatorLogon(
@@ -188,8 +199,14 @@ public class Framer implements Agent, SessionHandler
         }
         catch (final Exception e)
         {
-            inboundPublication.saveError(EXCEPTION, libraryId, e.getMessage());
+            saveError(EXCEPTION, libraryId, e);
         }
+    }
+
+    private void saveError(final GatewayError error, final int libraryId, final Exception e)
+    {
+        final String message = e.getMessage();
+        inboundPublication.saveError(error, libraryId, message == null ? "" : message);
     }
 
     public void onMessage(
