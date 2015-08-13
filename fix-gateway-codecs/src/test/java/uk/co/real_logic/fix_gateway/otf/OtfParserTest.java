@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.otf;
 
-import org.junit.Ignore;
 import org.junit.experimental.theories.DataPoint;
 import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
@@ -52,26 +51,20 @@ public class OtfParserTest
     @Theory
     public void notifiesAcceptorOfMessageStart(final int offset)
     {
-        given:
         putMessage(offset);
 
-        when:
         parser.onMessage(buffer, offset, MSG_LEN);
 
-        then:
         verify(mockAcceptor).onNext();
     }
 
     @Theory
     public void notifiesAcceptorOfValidMessageFields(final int offset)
     {
-        given:
         putMessage(offset);
 
-        when:
         parser.onMessage(buffer, offset, MSG_LEN);
 
-        then:
         //8=FIX.4.2
         inOrder.verify(mockAcceptor).onField(8, buffer, offset + 2, 7);
         //9=145
@@ -84,58 +77,45 @@ public class OtfParserTest
         inOrder.verify(mockAcceptor, times(15)).onField(anyInt(), eq(buffer), anyInt(), anyInt());
     }
 
-    @Ignore
     @Theory
     public void notifiesAcceptorOfValidMessageEnd(final int offset)
     {
-        given:
         putMessage(offset);
 
-        when:
         parser.onMessage(buffer, offset, MSG_LEN);
 
-        then:
         verify(mockAcceptor).onComplete();
     }
 
     @Theory
     public void notifiesAcceptorOfInvalidChecksum(final int offset)
     {
-        given:
         buffer.putBytes(offset, INVALID_CHECKSUM_MSG);
 
-        when:
         parser.onMessage(buffer, offset, INVALID_CHECKSUM_LEN);
 
-        then:
         verify(mockAcceptor).onError(eq(INVALID_CHECKSUM), eq((int) 'D'), eq(10), any(AsciiFieldFlyweight.class));
     }
 
     @Theory
     public void notifiesAcceptorOfInvalidMessage(final int offset)
     {
-        given:
         buffer.putBytes(offset, INVALID_MESSAGE);
 
-        when:
         parser.onMessage(buffer, offset, INVALID_LEN);
 
-        then:
         verify(mockAcceptor).onError(eq(PARSE_ERROR), eq((int) 'D'), eq(11), any(AsciiFieldFlyweight.class));
     }
 
     @Theory
     public void notifiesAcceptorOfRepeatingGroup(final int offset)
     {
-        given:
         understandsContraBrokersGroup();
 
         buffer.putBytes(offset, EXECUTION_REPORT);
 
-        when:
         parser.onMessage(buffer, offset, EXECUTION_REPORT.length);
 
-        then:
         verifyGroupHeader(382, 1);
         verifyGroupBegin(382, 1, 0);
         verifyInOrderField(375);
@@ -148,14 +128,11 @@ public class OtfParserTest
     @Theory
     public void notifiesAcceptorOfOnlyHeaderForEmptyGroup(final int offset)
     {
-        given:
         understandsContraBrokersGroup();
         buffer.putBytes(offset, ZERO_REPEATING_GROUP);
 
-        when:
         parser.onMessage(buffer, offset, ZERO_REPEATING_GROUP.length);
 
-        then:
         verifyGroupHeader(382, 0);
         inOrder.verify(mockAcceptor, never()).onGroupBegin(anyInt(), anyInt(), anyInt());
         inOrder.verify(mockAcceptor, never()).onGroupEnd(anyInt(), anyInt(), anyInt());
@@ -164,15 +141,12 @@ public class OtfParserTest
     @Theory
     public void notifiesAcceptorOfMultiElementRepeatingGroup(final int offset)
     {
-        given:
         understandsNoOrdersGroup();
 
         buffer.putBytes(offset, REPEATING_GROUP);
 
-        when:
         parser.onMessage(buffer, offset, REPEATING_GROUP.length);
 
-        then:
         verifyGroupHeader(NO_ORDERS, 2);
         verifyNoOrdersGroup(0);
         verifyNoOrdersGroup(1);
@@ -181,16 +155,13 @@ public class OtfParserTest
     @Theory
     public void notifiesAcceptorOfNestedRepeatingGroup(final int offset)
     {
-        given:
         understandsNoOrdersGroup();
         understandsNoAllocsGroup();
 
         buffer.putBytes(offset, NESTED_REPEATING_GROUP);
 
-        when:
         parser.onMessage(buffer, offset, NESTED_REPEATING_GROUP.length);
 
-        then:
         verifyGroupHeader(NO_ORDERS, 2);
         verifyNestedNoAllocsGroup(0);
         verifyNoOrdersGroup(1);
