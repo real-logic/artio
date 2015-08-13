@@ -467,11 +467,15 @@ public class Session
         onMessage(msgSeqNo, RejectDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }
 
-    public boolean onBeginString(final char[] value, final int length)
+    public boolean onBeginString(final char[] value, final int length, final boolean isLogon)
     {
         final boolean isValid = CodecUtil.equals(value, expectedBeginString, length);
         if (!isValid)
         {
+            if (!isLogon)
+            {
+                proxy.incorrectBeginStringLogout(newSentSeqNum());
+            }
             requestDisconnect();
         }
         return isValid;

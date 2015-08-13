@@ -40,6 +40,7 @@ public class SessionParserTest
     public void setUp()
     {
         when(mockAuthenticationStrategy.authenticate(any(LogonDecoder.class))).thenReturn(true);
+        when(mockSession.onBeginString(any(), anyInt(), anyBoolean())).thenReturn(true);
     }
 
     @Test

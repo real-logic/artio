@@ -270,14 +270,25 @@ public class SessionTest extends AbstractSessionTest
     }
 
     @Test
+    public void shouldDisconnectIfBeginStringIsInvalidAtLogon()
+    {
+        onBeginString(true);
+        verifyDisconnect();
+    }
+
+    @Test
     public void shouldDisconnectIfBeginStringIsInvalid()
     {
-        final char[] beginString = "FIX.3.9 ".toCharArray();
-
-        final boolean valid = session.onBeginString(beginString, beginString.length - 1);
-
-        assertFalse(valid);
+        onBeginString(false);
+        verify(mockProxy).incorrectBeginStringLogout(anyInt());
         verifyDisconnect();
+    }
+
+    private void onBeginString(final boolean isLogon)
+    {
+        final char[] beginString = "FIX.3.9 ".toCharArray();
+        final boolean valid = session.onBeginString(beginString, beginString.length - 1, isLogon);
+        assertFalse(valid);
     }
 
     @Test

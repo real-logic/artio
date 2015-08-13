@@ -117,7 +117,7 @@ public class SessionParser
         heartbeat.reset();
         heartbeat.decode(string, offset, length);
         final HeaderDecoder header = heartbeat.header();
-        if (VALIDATION_ENABLED && !heartbeat.validate())
+        if (VALIDATION_ENABLED && (!heartbeat.validate() || !validBeginString(header)))
         {
             onInvalidMessage(heartbeat, header);
         }
@@ -145,7 +145,7 @@ public class SessionParser
 
         final char[] msgType = header.msgType();
         final int msgTypeLength = header.msgTypeLength();
-        if (!isValidMsgType(msgType, msgTypeLength) && VALIDATION_ENABLED)
+        if (VALIDATION_ENABLED && (!isValidMsgType(msgType, msgTypeLength) || !validBeginString(header)))
         {
             final int msgSeqNum = header.msgSeqNum();
             session.onInvalidMessageType(msgSeqNum, msgType, msgTypeLength);
@@ -182,7 +182,7 @@ public class SessionParser
         sequenceReset.reset();
         sequenceReset.decode(string, offset, length);
         final HeaderDecoder header = sequenceReset.header();
-        if (VALIDATION_ENABLED && !sequenceReset.validate())
+        if (VALIDATION_ENABLED && (!sequenceReset.validate() || !validBeginString(header)))
         {
             onInvalidMessage(sequenceReset, header);
         }
@@ -202,7 +202,7 @@ public class SessionParser
         testRequest.reset();
         testRequest.decode(string, offset, length);
         final HeaderDecoder header = testRequest.header();
-        if (VALIDATION_ENABLED && !testRequest.validate())
+        if (VALIDATION_ENABLED && (!testRequest.validate() || !validBeginString(header)))
         {
             onInvalidMessage(testRequest, header);
         }
@@ -226,7 +226,7 @@ public class SessionParser
         reject.reset();
         reject.decode(string, offset, length);
         final HeaderDecoder header = reject.header();
-        if (VALIDATION_ENABLED && !reject.validate())
+        if (VALIDATION_ENABLED && (!reject.validate() || !validBeginString(header)))
         {
             onInvalidMessage(reject, header);
         }
@@ -243,7 +243,7 @@ public class SessionParser
         logout.reset();
         logout.decode(string, offset, length);
         final HeaderDecoder header = logout.header();
-        if (VALIDATION_ENABLED && !logout.validate())
+        if (VALIDATION_ENABLED && (!logout.validate() || !validBeginString(header)))
         {
             onInvalidMessage(logout, header);
         }
@@ -260,7 +260,9 @@ public class SessionParser
         logon.reset();
         logon.decode(string, offset, length);
         final HeaderDecoder header = logon.header();
-        if (VALIDATION_ENABLED && !logon.validate())
+        final char[] beginString = header.beginString();
+        final int beginStringLength = header.beginStringLength();
+        if (VALIDATION_ENABLED && (!logon.validate() || !session.onBeginString(beginString, beginStringLength, true)))
         {
             if (!onInvalidMessage(logon, header))
             {
@@ -273,7 +275,7 @@ public class SessionParser
             {
                 final Object sessionKey = sessionIdStrategy.onAcceptorLogon(header);
 
-                if (session.onBeginString(header.beginString(), header.beginStringLength()))
+                if (validBeginString(header))
                 {
                     final long origSendingTime = getSendingTime(header);
                     session.onLogon(
@@ -293,25 +295,35 @@ public class SessionParser
         }
     }
 
+    private boolean validBeginString(final HeaderDecoder header)
+    {
+        return session.onBeginString(header.beginString(), header.beginStringLength(), false);
+    }
+
     private boolean onInvalidMessage(final Decoder decoder, final HeaderDecoder header)
     {
-        final int msgTypeLength = header.msgTypeLength();
-
-        if (header.msgSeqNum() == MISSING_INT)
+        if (session.state() != SessionState.DISCONNECTED)
         {
-            final long origSendingTime = getSendingTime(header);
-            final long sendingTime = header.sendingTime();
-            final byte[] msgType = extractMsgType(header, msgTypeLength);
-            session.onMessage(MISSING_INT, msgType, msgTypeLength, sendingTime, origSendingTime, false);
-            return true;
-        }
+            final int msgTypeLength = header.msgTypeLength();
 
-        session.onInvalidMessage(
-            header.msgSeqNum(),
-            decoder.invalidTagId(),
-            header.msgType(),
-            msgTypeLength,
-            decoder.rejectReason());
+            if (header.msgSeqNum() == MISSING_INT)
+            {
+                final long origSendingTime = getSendingTime(header);
+                final long sendingTime = header.sendingTime();
+                final byte[] msgType = extractMsgType(header, msgTypeLength);
+                session.onMessage(MISSING_INT, msgType, msgTypeLength, sendingTime, origSendingTime, false);
+                return true;
+            }
+
+            session.onInvalidMessage(
+                header.msgSeqNum(),
+                decoder.invalidTagId(),
+                header.msgType(),
+                msgTypeLength,
+                decoder.rejectReason());
+
+            return false;
+        }
 
         return false;
     }
