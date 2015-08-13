@@ -83,6 +83,8 @@ public class Session
     private long sendingHeartbeatIntervalInMs;
     private long nextRequiredHeartbeatTimeInMs;
 
+    private String username;
+    private String password;
     private String connectedHost;
     private int connectedPort;
 
@@ -568,6 +570,16 @@ public class Session
         this.connectedPort = connectedPort;
     }
 
+    public void username(final String username)
+    {
+        this.username = username;
+    }
+
+    public void password(final String password)
+    {
+        this.password = password;
+    }
+
     public String connectedHost()
     {
         return connectedHost;
@@ -576,6 +588,16 @@ public class Session
     public int connectedPort()
     {
         return connectedPort;
+    }
+
+    public String username()
+    {
+        return username;
+    }
+
+    public String password()
+    {
+        return password;
     }
 
     public void onInvalidMessage(

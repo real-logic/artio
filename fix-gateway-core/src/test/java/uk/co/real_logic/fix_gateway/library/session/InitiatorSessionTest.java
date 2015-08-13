@@ -26,7 +26,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 {
     private InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy,
         mockPublication, null, BEGIN_STRING, SENDING_TIME_WINDOW,
-        mockReceivedMsgSeqNo, mockSentMsgSeqNo);
+        mockReceivedMsgSeqNo, mockSentMsgSeqNo, null, null);
 
     @Test
     public void shouldInitiallyBeConnected()
@@ -99,7 +99,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
     private void verifyLogon()
     {
-        verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1);
+        verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1, null, null);
     }
 
     protected Session session()

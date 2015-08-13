@@ -87,7 +87,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
     private void verifyLogon()
     {
-        verify(mockProxy).logon(HEARTBEAT_INTERVAL, 1);
+        verify(mockProxy).logon(HEARTBEAT_INTERVAL, 1, null, null);
     }
 
     private void verifySessionSetup()

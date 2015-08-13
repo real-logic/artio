@@ -90,7 +90,7 @@ public final class AcceptorSession extends Session
 
     private void replyToLogon(int heartbeatInterval)
     {
-        proxy.logon(heartbeatInterval, newSentSeqNum());
+        proxy.logon(heartbeatInterval, newSentSeqNum(), null, null);
     }
 
 }

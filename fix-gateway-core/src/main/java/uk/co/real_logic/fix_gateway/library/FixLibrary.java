@@ -249,7 +249,9 @@ public class FixLibrary extends GatewayProcess
             configuration.beginString(),
             configuration.sendingTimeWindow(),
             fixCounters.receivedMsgSeqNo(connectionId),
-            fixCounters.sentMsgSeqNo(connectionId));
+            fixCounters.sentMsgSeqNo(connectionId),
+            sessionConfiguration.username(),
+            sessionConfiguration.password());
     }
 
     // TODO: refactor to callback

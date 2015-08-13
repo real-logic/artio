@@ -33,7 +33,9 @@ public class InitiatorSession extends Session
         final char[] beginString,
         final long sendingTimeWindow,
         final AtomicCounter receivedMsgSeqNo,
-        final AtomicCounter sentMsgSeqNo)
+        final AtomicCounter sentMsgSeqNo,
+        final String username,
+        final String password)
     {
         super(
             heartbeatInterval,
@@ -47,6 +49,9 @@ public class InitiatorSession extends Session
             sendingTimeWindow,
             receivedMsgSeqNo,
             sentMsgSeqNo);
+
+        username(username);
+        password(password);
     }
 
     void onLogon(
@@ -74,7 +79,7 @@ public class InitiatorSession extends Session
         if (state() == SessionState.CONNECTED && id() != UNKNOWN)
         {
             state(SessionState.SENT_LOGON);
-            proxy.logon((int) (heartbeatIntervalInMs() / 1000), newSentSeqNum());
+            proxy.logon((int) (heartbeatIntervalInMs() / 1000), newSentSeqNum(), username(), password());
             actions++;
         }
         return actions + super.poll(time);

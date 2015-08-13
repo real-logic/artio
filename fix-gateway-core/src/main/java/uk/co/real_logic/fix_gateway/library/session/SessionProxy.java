@@ -137,13 +137,21 @@ public class SessionProxy
         gatewayPublication.saveRequestDisconnect(connectionId);
     }
 
-    public void logon(final int heartbeatInterval, final int msgSeqNo)
+    public void logon(final int heartbeatInterval, final int msgSeqNo, final String username, final String password)
     {
         final HeaderEncoder header = logon.header();
         setupHeader(header);
         header.msgSeqNum(msgSeqNo);
 
         logon.heartBtInt(heartbeatInterval);
+        if (username != null)
+        {
+            logon.username(username);
+        }
+        if (password != null)
+        {
+            logon.password(password);
+        }
         customisationStrategy.configureLogon(logon, sessionId);
 
         send(logon.encode(string, 0), LogonDecoder.MESSAGE_TYPE);
