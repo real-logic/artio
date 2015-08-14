@@ -134,9 +134,8 @@ public final class FixEngine extends GatewayProcess
     protected Aeron.Context aeronContext(final CommonConfiguration configuration)
     {
         adminCommands = new ManyToOneConcurrentArrayQueue<>(10);
-        final boolean logInboundMessages = ((EngineConfiguration) configuration).logInboundMessages();
         final LibraryActivationHandler activationHandler =
-            new LibraryActivationHandler(logInboundMessages, adminCommands);
+            new LibraryActivationHandler(adminCommands, configuration.aeronChannel());
         final Aeron.Context context = super.aeronContext(configuration);
         return context
             .newImageHandler(activationHandler)

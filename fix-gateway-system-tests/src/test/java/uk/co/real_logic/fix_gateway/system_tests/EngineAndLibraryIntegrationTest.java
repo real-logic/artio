@@ -84,9 +84,7 @@ public class EngineAndLibraryIntegrationTest
         connectLibrary();
         library.close();
 
-        System.out.println("EH?");
         LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1000));
-        System.out.println("EH?");
 
         assertNoActiveLibraries();
     }

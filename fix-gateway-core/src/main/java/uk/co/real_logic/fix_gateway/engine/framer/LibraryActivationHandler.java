@@ -18,62 +18,60 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.InactiveImageHandler;
 import uk.co.real_logic.aeron.NewImageHandler;
+import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.agrona.collections.Int2IntHashMap;
 import uk.co.real_logic.agrona.concurrent.QueuedPipe;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Objects;
 import java.util.concurrent.locks.LockSupport;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
-import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 
 public class LibraryActivationHandler implements NewImageHandler, InactiveImageHandler
 {
     private static final long PAUSE = MICROSECONDS.toNanos(10);
 
-    private final Set<Image> images = new HashSet<>();
+    private final Int2IntHashMap libraryIds = new Int2IntHashMap(0);
     private final QueuedPipe<AdminCommand> commands;
-    private final int firstLibrary;
+    private final String channel;
 
-    private int imageCount = 0;
-
-    public LibraryActivationHandler(
-        final boolean logInboundMessages, final QueuedPipe<AdminCommand> commands)
+    public LibraryActivationHandler(final QueuedPipe<AdminCommand> commands, final String channel)
     {
-        firstLibrary = logInboundMessages ? 1 : 0;
+        Objects.requireNonNull(commands, "commands");
+        Objects.requireNonNull(channel, "channel");
         this.commands = commands;
+        this.channel = channel;
     }
 
-    public void onInactiveImage(final Image image,
-                                final String channel,
-                                final int streamId,
-                                final int sessionId,
-                                final long position)
+    public void onInactiveImage(final Image image, final Subscription subscription, final long position)
     {
-        if (streamId == INBOUND_LIBRARY_STREAM && !images.contains(image))
+        if (isOutbound(subscription))
         {
-            put(new InactiveLibrary(sessionId));
+            final int libraryId = image.sessionId();
+            final int count = libraryIds.get(libraryId) - 1;
+            libraryIds.put(libraryId, count);
+            if (count == 0)
+            {
+                put(new InactiveLibrary(libraryId));
+            }
         }
     }
 
     public void onNewImage(final Image image,
-                           final String channel,
-                           final int streamId,
-                           final int sessionId,
+                           final Subscription subscription,
                            final long joiningPosition,
                            final String sourceIdentity)
     {
-        if (streamId == INBOUND_LIBRARY_STREAM)
+        if (isOutbound(subscription))
         {
-            if (imageCount >= firstLibrary)
+            final int libraryId = image.sessionId();
+            final int count = libraryIds.get(libraryId);
+            libraryIds.put(libraryId, count + 1);
+            if (count == 0)
             {
-                put(new NewLibrary(sessionId));
+                put(new NewLibrary(libraryId));
             }
-            else
-            {
-                images.add(image);
-            }
-            imageCount++;
         }
     }
 
@@ -85,4 +83,11 @@ public class LibraryActivationHandler implements NewImageHandler, InactiveImageH
             // TODO: consider monitoring this
         }
     }
+
+    private boolean isOutbound(final Subscription subscription)
+    {
+        return subscription.streamId() == OUTBOUND_LIBRARY_STREAM
+            && channel.equals(subscription.channel());
+    }
+
 }
