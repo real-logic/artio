@@ -54,6 +54,7 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
  */
 public class Framer implements Agent, SessionHandler
 {
+    public static final int OUTBOUND_FRAGMENT_LIMIT = 5;
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Long2ObjectHashMap<SenderEndPoint> connectionToSenderEndpoint = new Long2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
@@ -64,6 +65,7 @@ public class Framer implements Agent, SessionHandler
     private final EngineConfiguration configuration;
     private final ConnectionHandler connectionHandler;
     private final Subscription outboundDataSubscription;
+    private final Subscription replaySubscription;
     private final GatewayPublication inboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
@@ -75,7 +77,8 @@ public class Framer implements Agent, SessionHandler
     public Framer(
         final EngineConfiguration configuration,
         final ConnectionHandler connectionHandler,
-        final Subscription outboundDataSubscription,
+        final Subscription outboundLibrarySubscription,
+        final Subscription replaySubscription,
         final GatewayPublication inboundPublication,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
@@ -83,7 +86,8 @@ public class Framer implements Agent, SessionHandler
     {
         this.configuration = configuration;
         this.connectionHandler = connectionHandler;
-        this.outboundDataSubscription = outboundDataSubscription;
+        this.outboundDataSubscription = outboundLibrarySubscription;
+        this.replaySubscription = replaySubscription;
         this.inboundPublication = inboundPublication;
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
@@ -109,7 +113,8 @@ public class Framer implements Agent, SessionHandler
     @Override
     public int doWork() throws Exception
     {
-        return outboundDataSubscription.poll(dataSubscriber, 5) +
+        return outboundDataSubscription.poll(dataSubscriber, OUTBOUND_FRAGMENT_LIMIT) +
+               replaySubscription.poll(dataSubscriber, OUTBOUND_FRAGMENT_LIMIT) +
                pollSockets() +
                adminCommands.drain(onAdminCommand);
     }

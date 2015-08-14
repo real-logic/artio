@@ -60,8 +60,14 @@ public class FramerTest
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort());
 
-    private Framer framer = new Framer(engineConfiguration, mockConnectionHandler,
-        mock(Subscription.class), mockGatewayPublication, mockSessionIdStrategy, new SessionIds(),
+    private Framer framer = new Framer(
+        engineConfiguration,
+        mockConnectionHandler,
+        mock(Subscription.class),
+        mock(Subscription.class),
+        mockGatewayPublication,
+        mockSessionIdStrategy,
+        new SessionIds(),
         mock(QueuedPipe.class));
 
     @Before

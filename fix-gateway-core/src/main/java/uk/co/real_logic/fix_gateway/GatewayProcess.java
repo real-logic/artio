@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
+import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.fix_gateway.streams.Streams;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -31,14 +32,14 @@ public class GatewayProcess implements AutoCloseable
     protected FixCounters fixCounters;
     protected ErrorBuffer errorBuffer;
     protected Aeron aeron;
-    protected Streams inboundStreams;
-    protected Streams outboundStreams;
+    protected Streams inboundLibraryStreams;
+    protected Streams outboundLibraryStreams;
 
     protected GatewayProcess(final CommonConfiguration configuration)
     {
         initMonitoring(configuration);
         initAeron(configuration);
-        initReplicationStreams(configuration);
+        initStreams(configuration);
     }
 
     private void initMonitoring(final CommonConfiguration configuration)
@@ -49,13 +50,13 @@ public class GatewayProcess implements AutoCloseable
         errorBuffer = new ErrorBuffer(monitoringFile.errorBuffer(), fixCounters.exceptions(), clock);
     }
 
-    private void initReplicationStreams(final CommonConfiguration configuration)
+    private void initStreams(final CommonConfiguration configuration)
     {
         final String channel = configuration.aeronChannel();
 
-        inboundStreams = new Streams(
+        inboundLibraryStreams = new Streams(
             channel, aeron, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM);
-        outboundStreams = new Streams(
+        outboundLibraryStreams = new Streams(
             channel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM);
     }
 
@@ -63,6 +64,11 @@ public class GatewayProcess implements AutoCloseable
     {
         final Aeron.Context ctx = aeronContext(configuration);
         aeron = Aeron.connect(ctx);
+    }
+
+    protected BackoffIdleStrategy backoffIdleStrategy()
+    {
+        return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
     }
 
     protected Aeron.Context aeronContext(final CommonConfiguration configuration)
@@ -80,8 +86,8 @@ public class GatewayProcess implements AutoCloseable
 
     public void close()
     {
-        inboundStreams.close();
-        outboundStreams.close();
+        inboundLibraryStreams.close();
+        outboundLibraryStreams.close();
         aeron.close();
         monitoringFile.close();
     }

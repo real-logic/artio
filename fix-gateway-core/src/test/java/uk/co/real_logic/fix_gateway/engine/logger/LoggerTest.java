@@ -67,8 +67,9 @@ public class LoggerTest
         aeron = Aeron.connect(new Aeron.Context());
         inboundStreams = new Streams("udp://localhost:9999", aeron, mock(AtomicCounter.class), STREAM_ID);
 
+        final EngineConfiguration configuration = new EngineConfiguration().logOutboundMessages(false);
         logger = new Logger(
-            new EngineConfiguration().logOutboundMessages(false), inboundStreams, null, Throwable::printStackTrace);
+            configuration, inboundStreams, null, Throwable::printStackTrace, null);
 
         logger.initArchival();
         archiver = logger.archiver();

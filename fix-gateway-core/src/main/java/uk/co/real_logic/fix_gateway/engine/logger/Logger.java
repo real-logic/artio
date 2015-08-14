@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.ErrorHandler;
@@ -37,22 +38,26 @@ import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
 public class Logger implements AutoCloseable
 {
     private final EngineConfiguration configuration;
-    private final Streams inboundStreams;
-    private final Streams outboundStreams;
+    private final Streams inboundLibraryStreams;
+    private final Streams outboundLibraryStreams;
+    private final Publication replayPublication;
     private final ErrorHandler errorHandler;
 
     private Archiver archiver;
     private ArchiveReader archiveReader;
     private AgentRunner loggingRunner;
 
+
     public Logger(final EngineConfiguration configuration,
-                  final Streams inboundStreams,
-                  final Streams outboundStreams,
-                  final ErrorHandler errorHandler)
+                  final Streams inboundLibraryStreams,
+                  final Streams outboundLibraryStreams,
+                  final ErrorHandler errorHandler,
+                  final Publication replayPublication)
     {
         this.configuration = configuration;
-        this.inboundStreams = inboundStreams;
-        this.outboundStreams = outboundStreams;
+        this.inboundLibraryStreams = inboundLibraryStreams;
+        this.outboundLibraryStreams = outboundLibraryStreams;
+        this.replayPublication = replayPublication;
         this.errorHandler = errorHandler;
     }
 
@@ -73,14 +78,14 @@ public class Logger implements AutoCloseable
             final String logFileDir = configuration.logFileDir();
             final List<Index> indices = Arrays.asList(
                 new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, LoggerUtil::map));
-            final Indexer indexer = new Indexer(indices, outboundStreams);
+            final Indexer indexer = new Indexer(indices, outboundLibraryStreams.dataSubscription());
 
             final ReplayQuery replayQuery = new ReplayQuery(
                 logFileDir, loggerCacheCapacity, LoggerUtil::mapExistingFile, archiveReader);
             final Replayer replayer = new Replayer(
-                inboundStreams.dataSubscription(),
+                inboundLibraryStreams.dataSubscription(),
                 replayQuery,
-                outboundStreams.dataPublication(),
+                replayPublication,
                 new BufferClaim(),
                 backoffIdleStrategy());
 
@@ -103,11 +108,11 @@ public class Logger implements AutoCloseable
         final List<Subscription> subscriptions = new ArrayList<>();
         if (configuration.logInboundMessages())
         {
-            subscriptions.add(inboundStreams.dataSubscription());
+            subscriptions.add(inboundLibraryStreams.dataSubscription());
         }
         if (configuration.logOutboundMessages())
         {
-            subscriptions.add(outboundStreams.dataSubscription());
+            subscriptions.add(outboundLibraryStreams.dataSubscription());
         }
         archiver = new Archiver(
             LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity, subscriptions);

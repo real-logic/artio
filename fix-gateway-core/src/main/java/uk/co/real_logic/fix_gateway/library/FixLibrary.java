@@ -59,8 +59,8 @@ public class FixLibrary extends GatewayProcess
         this.configuration = configuration;
         sessionIdStrategy = configuration.sessionIdStrategy();
 
-        inboundSubscription = inboundStreams.dataSubscription();
-        outboundPublication = outboundStreams.gatewayPublication();
+        inboundSubscription = inboundLibraryStreams.dataSubscription();
+        outboundPublication = outboundLibraryStreams.gatewayPublication();
 
         clock = System::currentTimeMillis;
     }
@@ -241,7 +241,7 @@ public class FixLibrary extends GatewayProcess
             sessionConfiguration.senderCompId(), sessionConfiguration.senderSubId(),
             sessionConfiguration.senderLocationId(), sessionConfiguration.targetCompId());
         final int defaultInterval = configuration.defaultHeartbeatInterval();
-        final GatewayPublication publication = outboundStreams.gatewayPublication();
+        final GatewayPublication publication = outboundLibraryStreams.gatewayPublication();
 
         return new InitiatorSession(
             defaultInterval,
@@ -261,7 +261,7 @@ public class FixLibrary extends GatewayProcess
     // TODO: refactor to callback
     private Session acceptSession(final long connectionId)
     {
-        final GatewayPublication publication = outboundStreams.gatewayPublication();
+        final GatewayPublication publication = outboundLibraryStreams.gatewayPublication();
         final int defaultInterval = configuration.defaultHeartbeatInterval();
 
         return new AcceptorSession(
@@ -280,7 +280,7 @@ public class FixLibrary extends GatewayProcess
     private SessionProxy sessionProxy(final long connectionId)
     {
         return new SessionProxy(
-            configuration.encoderBufferSize(), outboundStreams.gatewayPublication(), sessionIdStrategy,
+            configuration.encoderBufferSize(), outboundLibraryStreams.gatewayPublication(), sessionIdStrategy,
             configuration.sessionCustomisationStrategy(), System::currentTimeMillis, connectionId);
     }
 

@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import uk.co.real_logic.aeron.Aeron;
+import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.*;
@@ -66,9 +67,20 @@ public final class FixEngine extends GatewayProcess
         this.configuration = configuration;
 
         initFramer(configuration, fixCounters);
-        logger = new Logger(configuration, inboundStreams, outboundStreams, errorBuffer);
-        logger.init();
+        initLogger(configuration);
         initErrorPrinter();
+    }
+
+    private void initLogger(final EngineConfiguration configuration)
+    {
+        logger = new Logger(
+            configuration, inboundLibraryStreams, outboundLibraryStreams, errorBuffer, replayPublication());
+        logger.init();
+    }
+
+    private Publication replayPublication()
+    {
+        return aeron.addPublication(configuration.aeronChannel(), OUTBOUND_REPLAY_STREAM);
     }
 
     private void initErrorPrinter()
@@ -86,26 +98,26 @@ public final class FixEngine extends GatewayProcess
         final SessionIds sessionIds = new SessionIds();
 
         final IdleStrategy idleStrategy = backoffIdleStrategy();
-        final Subscription dataSubscription = outboundStreams.dataSubscription();
+        final Subscription librarySubscription = outboundLibraryStreams.dataSubscription();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
 
         final ConnectionHandler handler = new ConnectionHandler(
             configuration,
             sessionIdStrategy,
             sessionIds,
-            inboundStreams,
+            inboundLibraryStreams,
             idleStrategy,
             fixCounters,
             errorBuffer);
 
-        final Framer framer = new Framer(configuration, handler, dataSubscription,
-            inboundStreams.gatewayPublication(), sessionIdStrategy, sessionIds, adminCommands);
+        final Framer framer = new Framer(configuration, handler, librarySubscription, replaySubscription(),
+            inboundLibraryStreams.gatewayPublication(), sessionIdStrategy, sessionIds, adminCommands);
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }
 
-    private BackoffIdleStrategy backoffIdleStrategy()
+    private Subscription replaySubscription()
     {
-        return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
+        return aeron.addSubscription(configuration.aeronChannel(), OUTBOUND_REPLAY_STREAM);
     }
 
     private FixEngine start()

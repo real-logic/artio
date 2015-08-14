@@ -39,13 +39,13 @@ public class Streams implements AutoCloseable
         final String channel,
         final Aeron aeron,
         final AtomicCounter failedDataPublications,
-        final int dataStream)
+        final int streamId)
     {
         this.channel = channel;
         this.aeron = aeron;
         this.failedDataPublications = failedDataPublications;
-        this.dataStream = dataStream;
-        dataPublication = aeron.addPublication(channel, dataStream);
+        this.dataStream = streamId;
+        dataPublication = aeron.addPublication(channel, streamId);
     }
 
     public GatewayPublication gatewayPublication()
@@ -60,12 +60,7 @@ public class Streams implements AutoCloseable
 
     public Subscription dataSubscription()
     {
-        return addSubscription(dataStream);
-    }
-
-    private Subscription addSubscription(final int stream)
-    {
-        final Subscription subscription = aeron.addSubscription(channel, stream);
+        final Subscription subscription = aeron.addSubscription(channel, dataStream);
         subscriptions.add(subscription);
         return subscription;
     }
