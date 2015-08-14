@@ -22,13 +22,14 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
+import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.SIZE_OF_LENGTH_FIELD;
 
 public class AbstractReplayTest
 {
     protected static final long SESSION_ID = 1;
     protected static final long SESSION_ID_2 = 2;
-    protected static final int STREAM_ID = 2;
+    protected static final int STREAM_ID = OUTBOUND_LIBRARY_STREAM;
     protected static final int CONNECTION_ID = 1;
     protected static final int START = 1;
     protected static final int SEQUENCE_NUMBER = 5;

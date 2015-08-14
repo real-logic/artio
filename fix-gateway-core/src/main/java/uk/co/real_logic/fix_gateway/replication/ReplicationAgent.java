@@ -20,7 +20,7 @@ import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
-import uk.co.real_logic.fix_gateway.streams.ReplicatedStream;
+import uk.co.real_logic.fix_gateway.streams.Streams;
 
 public class ReplicationAgent implements Agent
 {
@@ -31,9 +31,9 @@ public class ReplicationAgent implements Agent
     private final FragmentHandler onDataMessageFunc = this::onDataMessage;
 
     public ReplicationAgent(
-        final ReplicatedStream replicatedStream)
+        final Streams streams)
     {
-        dataSubscription = replicatedStream.dataSubscription();
+        dataSubscription = streams.dataSubscription();
         //controlSubscription = replicatedStream.controlSubscription();
     }
 

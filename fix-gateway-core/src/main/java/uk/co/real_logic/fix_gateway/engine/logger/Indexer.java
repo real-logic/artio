@@ -20,7 +20,7 @@ import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
-import uk.co.real_logic.fix_gateway.streams.ReplicatedStream;
+import uk.co.real_logic.fix_gateway.streams.Streams;
 
 import java.util.List;
 
@@ -32,7 +32,7 @@ public class Indexer implements Agent, FragmentHandler
     private final List<Index> indices;
     private final Subscription subscription;
 
-    public Indexer(final List<Index> indices, final ReplicatedStream streams)
+    public Indexer(final List<Index> indices, final Streams streams)
     {
         this.indices = indices;
         this.subscription = streams.dataSubscription();

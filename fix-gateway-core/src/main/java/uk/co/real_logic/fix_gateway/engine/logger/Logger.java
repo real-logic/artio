@@ -23,7 +23,7 @@ import uk.co.real_logic.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.streams.ReplicatedStream;
+import uk.co.real_logic.fix_gateway.streams.Streams;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,8 +37,8 @@ import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
 public class Logger implements AutoCloseable
 {
     private final EngineConfiguration configuration;
-    private final ReplicatedStream inboundStreams;
-    private final ReplicatedStream outboundStreams;
+    private final Streams inboundStreams;
+    private final Streams outboundStreams;
     private final ErrorHandler errorHandler;
 
     private Archiver archiver;
@@ -46,8 +46,8 @@ public class Logger implements AutoCloseable
     private AgentRunner loggingRunner;
 
     public Logger(final EngineConfiguration configuration,
-                  final ReplicatedStream inboundStreams,
-                  final ReplicatedStream outboundStreams,
+                  final Streams inboundStreams,
+                  final Streams outboundStreams,
                   final ErrorHandler errorHandler)
     {
         this.configuration = configuration;

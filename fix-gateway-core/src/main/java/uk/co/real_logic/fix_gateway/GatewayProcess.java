@@ -16,24 +16,23 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
-import uk.co.real_logic.fix_gateway.streams.ReplicatedStream;
+import uk.co.real_logic.fix_gateway.streams.Streams;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.nio.channels.ClosedByInterruptException;
 
 public class GatewayProcess implements AutoCloseable
 {
-    public static final int INBOUND_DATA_STREAM = 0;
-    public static final int INBOUND_CONTROL_STREAM = 1;
-    public static final int OUTBOUND_DATA_STREAM = 2;
-    public static final int OUTBOUND_CONTROL_STREAM = 3;
+    public static final int INBOUND_LIBRARY_STREAM = 0;
+    public static final int OUTBOUND_LIBRARY_STREAM = 1;
+    public static final int OUTBOUND_REPLAY_STREAM = 2;
 
     protected MonitoringFile monitoringFile;
     protected FixCounters fixCounters;
     protected ErrorBuffer errorBuffer;
     protected Aeron aeron;
-    protected ReplicatedStream inboundStreams;
-    protected ReplicatedStream outboundStreams;
+    protected Streams inboundStreams;
+    protected Streams outboundStreams;
 
     protected GatewayProcess(final CommonConfiguration configuration)
     {
@@ -54,10 +53,10 @@ public class GatewayProcess implements AutoCloseable
     {
         final String channel = configuration.aeronChannel();
 
-        inboundStreams = new ReplicatedStream(
-            channel, aeron, fixCounters.failedInboundPublications(), INBOUND_DATA_STREAM);
-        outboundStreams = new ReplicatedStream(
-            channel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_DATA_STREAM);
+        inboundStreams = new Streams(
+            channel, aeron, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM);
+        outboundStreams = new Streams(
+            channel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM);
     }
 
     private void initAeron(final CommonConfiguration configuration)

@@ -23,7 +23,7 @@ import uk.co.real_logic.fix_gateway.engine.framer.Framer;
 import uk.co.real_logic.fix_gateway.engine.framer.ReceiverEndPoint;
 import uk.co.real_logic.fix_gateway.engine.framer.SenderEndPoint;
 import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
-import uk.co.real_logic.fix_gateway.streams.ReplicatedStream;
+import uk.co.real_logic.fix_gateway.streams.Streams;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.IOException;
@@ -39,7 +39,7 @@ public class ConnectionHandler
     private final EngineConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
-    private final ReplicatedStream inboundStreams;
+    private final Streams inboundStreams;
     private final IdleStrategy idleStrategy;
     private final FixCounters fixCounters;
     private final ErrorHandler errorHandler;
@@ -48,7 +48,7 @@ public class ConnectionHandler
         final EngineConfiguration configuration,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
-        final ReplicatedStream inboundStreams,
+        final Streams inboundStreams,
         final IdleStrategy idleStrategy,
         final FixCounters fixCounters,
         final ErrorHandler errorHandler)

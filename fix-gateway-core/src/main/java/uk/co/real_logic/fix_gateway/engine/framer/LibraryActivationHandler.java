@@ -25,7 +25,7 @@ import java.util.Set;
 import java.util.concurrent.locks.LockSupport;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
-import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_DATA_STREAM;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 
 public class LibraryActivationHandler implements NewImageHandler, InactiveImageHandler
 {
@@ -50,7 +50,7 @@ public class LibraryActivationHandler implements NewImageHandler, InactiveImageH
                                 final int sessionId,
                                 final long position)
     {
-        if (streamId == INBOUND_DATA_STREAM && !images.contains(image))
+        if (streamId == INBOUND_LIBRARY_STREAM && !images.contains(image))
         {
             put(new InactiveLibrary(sessionId));
         }
@@ -63,7 +63,7 @@ public class LibraryActivationHandler implements NewImageHandler, InactiveImageH
                            final long joiningPosition,
                            final String sourceIdentity)
     {
-        if (streamId == INBOUND_DATA_STREAM)
+        if (streamId == INBOUND_LIBRARY_STREAM)
         {
             if (imageCount >= firstLibrary)
             {

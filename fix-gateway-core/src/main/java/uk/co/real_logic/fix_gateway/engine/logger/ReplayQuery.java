@@ -24,7 +24,7 @@ import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordDecoder;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 
-import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_DATA_STREAM;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
 /**
@@ -99,7 +99,7 @@ public class ReplayQuery implements AutoCloseable
                 }
 
                 final int sequenceNumber = indexRecord.sequenceNumber();
-                if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo && streamId == OUTBOUND_DATA_STREAM)
+                if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo && streamId == OUTBOUND_LIBRARY_STREAM)
                 {
                     count++;
                     if (!archiveReader.read(streamId, aeronSessionId, position, handler))
