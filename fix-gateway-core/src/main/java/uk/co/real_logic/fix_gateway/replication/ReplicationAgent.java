@@ -20,20 +20,21 @@ import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
+import uk.co.real_logic.fix_gateway.streams.ReplicatedStream;
 
 public class ReplicationAgent implements Agent
 {
     public static final int CONTROL_LIMIT = 10;
 
     private final Subscription dataSubscription;
-    private final Subscription controlSubscription;
+    //private final Subscription controlSubscription;
     private final FragmentHandler onDataMessageFunc = this::onDataMessage;
 
     public ReplicationAgent(
         final ReplicatedStream replicatedStream)
     {
         dataSubscription = replicatedStream.dataSubscription();
-        controlSubscription = replicatedStream.controlSubscription();
+        //controlSubscription = replicatedStream.controlSubscription();
     }
 
     private void onDataMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
@@ -43,13 +44,13 @@ public class ReplicationAgent implements Agent
 
     public int doWork() throws Exception
     {
-        return controlSubscription.poll(onDataMessageFunc, CONTROL_LIMIT);
+        return 0; //controlSubscription.poll(onDataMessageFunc, CONTROL_LIMIT);
     }
 
     public void onClose()
     {
         dataSubscription.close();
-        controlSubscription.close();
+        //controlSubscription.close();
     }
 
     public String roleName()

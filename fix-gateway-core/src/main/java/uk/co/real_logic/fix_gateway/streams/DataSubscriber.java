@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.replication;
+package uk.co.real_logic.fix_gateway.streams;
 
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
@@ -23,7 +23,7 @@ import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
-import static uk.co.real_logic.fix_gateway.replication.GatewayPublication.FRAME_SIZE;
+import static uk.co.real_logic.fix_gateway.streams.GatewayPublication.FRAME_SIZE;
 
 public class DataSubscriber implements FragmentHandler
 {

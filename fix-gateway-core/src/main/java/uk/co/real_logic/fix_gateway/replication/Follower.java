@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.replication;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 
 public class Follower implements FragmentHandler
 {

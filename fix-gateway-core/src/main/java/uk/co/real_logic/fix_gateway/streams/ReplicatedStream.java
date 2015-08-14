@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.replication;
+package uk.co.real_logic.fix_gateway.streams;
 
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
@@ -29,7 +29,6 @@ public class ReplicatedStream implements AutoCloseable
     private final List<Subscription> subscriptions = new ArrayList<>();
 
     private final int dataStream;
-    private final int controlStream;
 
     private final String channel;
     private final Aeron aeron;
@@ -40,14 +39,12 @@ public class ReplicatedStream implements AutoCloseable
         final String channel,
         final Aeron aeron,
         final AtomicCounter failedDataPublications,
-        final int dataStream,
-        final int controlStream)
+        final int dataStream)
     {
         this.channel = channel;
         this.aeron = aeron;
         this.failedDataPublications = failedDataPublications;
         this.dataStream = dataStream;
-        this.controlStream = controlStream;
         dataPublication = aeron.addPublication(channel, dataStream);
     }
 
@@ -61,19 +58,9 @@ public class ReplicatedStream implements AutoCloseable
         return dataPublication;
     }
 
-    public Publication controlPublication()
-    {
-        return aeron.addPublication(channel, controlStream);
-    }
-
     public Subscription dataSubscription()
     {
         return addSubscription(dataStream);
-    }
-
-    public Subscription controlSubscription()
-    {
-        return addSubscription(controlStream);
     }
 
     private Subscription addSubscription(final int stream)

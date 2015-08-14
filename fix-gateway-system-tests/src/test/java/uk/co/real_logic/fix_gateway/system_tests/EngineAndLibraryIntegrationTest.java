@@ -44,7 +44,7 @@ public class EngineAndLibraryIntegrationTest
     static
     {
         /*System.setProperty(Configuration.IMAGE_LIVENESS_TIMEOUT_PROP_NAME,
-            String.valueOf(TimeUnit.MILLISECONDS.toNanos(10)));*/
+            String.valueOf(TimeUnit.MILLISECONDS.toNanos(20)));*/
     }
 
     private int aeronPort = unusedPort();
@@ -84,7 +84,9 @@ public class EngineAndLibraryIntegrationTest
         connectLibrary();
         library.close();
 
+        System.out.println("EH?");
         LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1000));
+        System.out.println("EH?");
 
         assertNoActiveLibraries();
     }

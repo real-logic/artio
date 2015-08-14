@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.library.session;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.engine.framer.FakeMilliClock;
-import uk.co.real_logic.fix_gateway.replication.GatewayPublication;
+import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertEquals;

@@ -23,7 +23,7 @@ import uk.co.real_logic.fix_gateway.engine.framer.Framer;
 import uk.co.real_logic.fix_gateway.engine.framer.ReceiverEndPoint;
 import uk.co.real_logic.fix_gateway.engine.framer.SenderEndPoint;
 import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
-import uk.co.real_logic.fix_gateway.replication.ReplicatedStream;
+import uk.co.real_logic.fix_gateway.streams.ReplicatedStream;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.IOException;

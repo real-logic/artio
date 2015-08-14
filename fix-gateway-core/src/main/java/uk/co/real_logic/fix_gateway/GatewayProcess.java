@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
-import uk.co.real_logic.fix_gateway.replication.ReplicatedStream;
+import uk.co.real_logic.fix_gateway.streams.ReplicatedStream;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.nio.channels.ClosedByInterruptException;
@@ -55,9 +55,9 @@ public class GatewayProcess implements AutoCloseable
         final String channel = configuration.aeronChannel();
 
         inboundStreams = new ReplicatedStream(
-            channel, aeron, fixCounters.failedInboundPublications(), INBOUND_DATA_STREAM, INBOUND_CONTROL_STREAM);
+            channel, aeron, fixCounters.failedInboundPublications(), INBOUND_DATA_STREAM);
         outboundStreams = new ReplicatedStream(
-            channel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_DATA_STREAM, OUTBOUND_CONTROL_STREAM);
+            channel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_DATA_STREAM);
     }
 
     private void initAeron(final CommonConfiguration configuration)

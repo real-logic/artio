@@ -25,7 +25,7 @@ import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.replication.ReplicatedStream;
+import uk.co.real_logic.fix_gateway.streams.ReplicatedStream;
 
 import java.util.concurrent.locks.LockSupport;
 
@@ -65,7 +65,7 @@ public class LoggerTest
 
         mediaDriver = launchMediaDriver();
         aeron = Aeron.connect(new Aeron.Context());
-        inboundStreams = new ReplicatedStream("udp://localhost:9999", aeron, mock(AtomicCounter.class), STREAM_ID, 2);
+        inboundStreams = new ReplicatedStream("udp://localhost:9999", aeron, mock(AtomicCounter.class), STREAM_ID);
 
         logger = new Logger(
             new EngineConfiguration().logOutboundMessages(false), inboundStreams, null, Throwable::printStackTrace);

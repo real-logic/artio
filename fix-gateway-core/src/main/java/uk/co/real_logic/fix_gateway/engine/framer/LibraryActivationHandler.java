@@ -67,7 +67,6 @@ public class LibraryActivationHandler implements NewImageHandler, InactiveImageH
         {
             if (imageCount >= firstLibrary)
             {
-                //System.out.println(sessionId + ", " + channel + ", " + sourceIdentity + ", " + streamId);
                 put(new NewLibrary(sessionId));
             }
             else

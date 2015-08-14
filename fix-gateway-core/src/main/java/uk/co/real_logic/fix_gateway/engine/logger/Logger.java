@@ -23,7 +23,7 @@ import uk.co.real_logic.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.replication.ReplicatedStream;
+import uk.co.real_logic.fix_gateway.streams.ReplicatedStream;
 
 import java.util.ArrayList;
 import java.util.Arrays;
