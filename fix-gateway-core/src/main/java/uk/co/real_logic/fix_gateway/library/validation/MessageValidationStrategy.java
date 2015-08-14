@@ -56,7 +56,7 @@ public interface MessageValidationStrategy
                     rejectReason = self.rejectReason();
                 }
 
-                return selfValid;
+                return false;
             }
 
             public int invalidTagId()

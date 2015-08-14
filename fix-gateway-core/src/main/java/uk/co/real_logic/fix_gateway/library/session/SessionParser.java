@@ -154,7 +154,10 @@ public class SessionParser
         if (CODEC_VALIDATION_ENABLED && (!isValidMsgType(msgType, msgTypeLength) || !validateHeader(header)))
         {
             final int msgSeqNum = header.msgSeqNum();
-            session.onInvalidMessageType(msgSeqNum, msgType, msgTypeLength);
+            if (!isDisconnectedOrAwaitingLogout())
+            {
+                session.onInvalidMessageType(msgSeqNum, msgType, msgTypeLength);
+            }
         }
         else
         {
@@ -313,6 +316,7 @@ public class SessionParser
                 header.msgType(),
                 header.msgTypeLength(),
                 validationStrategy.rejectReason());
+            session.startLogout();
             return false;
         }
 
@@ -321,8 +325,7 @@ public class SessionParser
 
     private boolean onCodecInvalidMessage(final Decoder decoder, final HeaderDecoder header)
     {
-        final SessionState state = session.state();
-        if (state != DISCONNECTED && state != AWAITING_LOGOUT)
+        if (!isDisconnectedOrAwaitingLogout())
         {
             final int msgTypeLength = header.msgTypeLength();
 
@@ -346,6 +349,12 @@ public class SessionParser
         }
 
         return false;
+    }
+
+    private boolean isDisconnectedOrAwaitingLogout()
+    {
+        final SessionState state = session.state();
+        return state == DISCONNECTED || state == AWAITING_LOGOUT;
     }
 
     private boolean isPossDup(final HeaderDecoder header)

@@ -78,6 +78,8 @@ public class SessionParserTest
             "52=20090323-15:40:29\00156=WRONG\001115=XYZ\00111=NF 0542/03232009\00154=1\00138=100\001" +
             "55=CVS\00140=1\00159=0\00147=A\00160=20090323-15:40:29\00121=1\001207=N\00110=195\001");
 
+        when(mockSession.state()).thenReturn(SessionState.AWAITING_LOGOUT);
+
         parser.onMessage(buffer, 0, buffer.capacity(), 'D', 1);
 
         verify(mockSession).onInvalidMessage(
@@ -86,6 +88,9 @@ public class SessionParserTest
             "D".toCharArray(),
             "D".length(),
             SessionRejectReason.COMPID_PROBLEM.representation());
+
+        verify(mockSession).startLogout();
+        verify(mockSession, never()).onInvalidMessageType(anyInt(), any(), anyInt());
     }
 
     private UnsafeBuffer bufferOf(final String str)
