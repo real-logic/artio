@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.library.auth;
+package uk.co.real_logic.fix_gateway.library.validation;
 
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
-import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 
 import java.util.Arrays;
 
@@ -27,19 +26,17 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class SenderCompIdAuthenticationStrategyTest
+public class SenderCompIdValidationStrategyTest
 {
-    private SenderCompIdAuthenticationStrategy authenticationStrategy = new SenderCompIdAuthenticationStrategy(
+    private SenderCompIdValidationStrategy authenticationStrategy = new SenderCompIdValidationStrategy(
         Arrays.asList("ab", "a"));
 
     private char[] examples = "abcdef".toCharArray();
     private HeaderDecoder headerDecoder = mock(HeaderDecoder.class);
-    private LogonDecoder logonDecoder = mock(LogonDecoder.class);
 
     @Before
     public void setUp()
     {
-        when(logonDecoder.header()).thenReturn(headerDecoder);
         when(headerDecoder.senderCompID()).thenReturn(examples);
     }
 
@@ -47,20 +44,20 @@ public class SenderCompIdAuthenticationStrategyTest
     public void shouldAcceptValidId()
     {
         lengthOf(1);
-        assertTrue(authenticationStrategy.authenticate(logonDecoder));
+        assertTrue(authenticationStrategy.validate(headerDecoder));
 
         lengthOf(2);
-        assertTrue(authenticationStrategy.authenticate(logonDecoder));
+        assertTrue(authenticationStrategy.validate(headerDecoder));
     }
 
     @Test
     public void shouldRejectInvalidId()
     {
         lengthOf(3);
-        assertFalse(authenticationStrategy.authenticate(logonDecoder));
+        assertFalse(authenticationStrategy.validate(headerDecoder));
 
         lengthOf(4);
-        assertFalse(authenticationStrategy.authenticate(logonDecoder));
+        assertFalse(authenticationStrategy.validate(headerDecoder));
     }
 
     private void lengthOf(final int length)

@@ -31,8 +31,8 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.*;
-import static uk.co.real_logic.fix_gateway.builder.Validation.VALIDATION_DISABLED;
-import static uk.co.real_logic.fix_gateway.builder.Validation.VALIDATION_ENABLED;
+import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
+import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
@@ -250,7 +250,7 @@ public class Session
 
             final long time = time();
 
-            if (VALIDATION_ENABLED)
+            if (CODEC_VALIDATION_ENABLED)
             {
                 if (isPossDupOrResend)
                 {
@@ -322,7 +322,7 @@ public class Session
     {
         this.sessionKey = sessionKey;
         proxy.setupSession(sessionId, sessionKey);
-        if (VALIDATION_DISABLED || (validateHeartbeat(heartbeatInterval) && validateSendingTime(sendingTime)))
+        if (CODEC_VALIDATION_DISABLED || (validateHeartbeat(heartbeatInterval) && validateSendingTime(sendingTime)))
         {
             id(sessionId);
             heartbeatIntervalInS(heartbeatInterval);

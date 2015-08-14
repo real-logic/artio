@@ -13,29 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.library.auth;
+package uk.co.real_logic.fix_gateway.library.validation;
 
+import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
-import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.CharArraySet;
 
 import java.util.Collection;
 
-public class SenderCompIdAuthenticationStrategy implements AuthenticationStrategy
+import static uk.co.real_logic.fix_gateway.SessionRejectReason.COMPID_PROBLEM;
+
+public class SenderCompIdValidationStrategy implements MessageValidationStrategy
 {
     private final CharArraySet validSenderIds;
 
-    public SenderCompIdAuthenticationStrategy(final Collection<String> validSenderIds)
+    public SenderCompIdValidationStrategy(final Collection<String> validSenderIds)
     {
         this.validSenderIds = new CharArraySet(validSenderIds);
     }
 
-    public boolean authenticate(final LogonDecoder logon)
+    public boolean validate(final HeaderDecoder header)
     {
-        final HeaderDecoder header = logon.header();
         final char[] senderCompID = header.senderCompID();
         final int senderCompIDLength = header.senderCompIDLength();
 
         return validSenderIds.contains(senderCompID, senderCompIDLength);
+    }
+
+    public int invalidTagId()
+    {
+        return Constants.SENDER_COMP_ID;
+    }
+
+    public int rejectReason()
+    {
+        return COMPID_PROBLEM.representation();
     }
 }

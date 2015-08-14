@@ -638,7 +638,7 @@ public class DecoderGenerator extends Generator
         final String prefix =
             "    public int decode(final AsciiFlyweight buffer, final int offset, final int length)\n" +
                 "    {\n" +
-                "        if (" + VALIDATION_ENABLED + ")\n" +
+                "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
                 "        {\n" +
                 "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");\n" +
                 "        }\n" +
@@ -655,7 +655,7 @@ public class DecoderGenerator extends Generator
                 "            final int valueOffset = equalsPosition + 1;\n" +
                 "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
                 "            final int valueLength = endOfField - valueOffset;\n" +
-                "            if (" + VALIDATION_ENABLED + ")\n" +
+                "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
                 "            {\n" +
                 "                if (tag <= 0)\n" +
                 "                {\n" +
@@ -687,7 +687,7 @@ public class DecoderGenerator extends Generator
 
         final String suffix =
             "            default:\n" +
-            "                if (" + VALIDATION_ENABLED + " && !TrailerDecoder.REQUIRED_FIELDS.contains(tag))\n" +
+            "                if (" + CODEC_VALIDATION_ENABLED + " && !TrailerDecoder.REQUIRED_FIELDS.contains(tag))\n" +
             "                {\n" +
             "                    unknownFields.add(tag);\n" +
             "                }\n" +

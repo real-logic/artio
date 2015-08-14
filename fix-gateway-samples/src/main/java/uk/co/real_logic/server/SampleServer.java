@@ -21,9 +21,10 @@ import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
-import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.auth.SenderCompIdAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.auth.TargetCompIdAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.SenderCompIdValidationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.TargetCompIdValidationStrategy;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 
@@ -42,8 +43,10 @@ public final class SampleServer
 
     public static void main(final String[] args) throws Exception
     {
-        final AuthenticationStrategy authenticationStrategy = new TargetCompIdAuthenticationStrategy(ACCEPTOR_COMP_ID)
-            .and(new SenderCompIdAuthenticationStrategy(Arrays.asList(INITIATOR_COMP_ID)));
+        final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(ACCEPTOR_COMP_ID)
+            .and(new SenderCompIdValidationStrategy(Arrays.asList(INITIATOR_COMP_ID)));
+
+        final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
         // Static configuration lasts the duration of a FIX-Gateway instance
         final EngineConfiguration configuration = new EngineConfiguration()

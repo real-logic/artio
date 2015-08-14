@@ -13,30 +13,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.library.auth;
+package uk.co.real_logic.fix_gateway.library.validation;
 
+import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
-import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 
-public final class TargetCompIdAuthenticationStrategy implements AuthenticationStrategy
+import static uk.co.real_logic.fix_gateway.SessionRejectReason.COMPID_PROBLEM;
+
+public final class TargetCompIdValidationStrategy implements MessageValidationStrategy
 {
     private final char[] gatewayCompId;
 
-    public TargetCompIdAuthenticationStrategy(final String gatewayCompId)
+    public TargetCompIdValidationStrategy(final String gatewayCompId)
     {
         this(gatewayCompId.toCharArray());
     }
 
-    public TargetCompIdAuthenticationStrategy(final char[] gatewayCompId)
+    public TargetCompIdValidationStrategy(final char[] gatewayCompId)
     {
         this.gatewayCompId = gatewayCompId;
     }
 
-    public boolean authenticate(final LogonDecoder logon)
+    public boolean validate(final HeaderDecoder header)
     {
-        final HeaderDecoder header = logon.header();
         return CodecUtil.equals(gatewayCompId, header.targetCompID(), header.targetCompIDLength());
     }
 
+    public int invalidTagId()
+    {
+        return Constants.TARGET_COMP_ID;
+    }
+
+    public int rejectReason()
+    {
+        return COMPID_PROBLEM.representation();
+    }
 }

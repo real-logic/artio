@@ -23,9 +23,10 @@ import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
-import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.auth.SenderCompIdAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.auth.TargetCompIdAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.SenderCompIdValidationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.TargetCompIdValidationStrategy;
 
 import java.io.File;
 import java.util.Arrays;
@@ -81,9 +82,11 @@ public final class FixBenchmarkServer
 
     private static LibraryConfiguration libraryConfiguration()
     {
-        final AuthenticationStrategy authenticationStrategy =
-            new TargetCompIdAuthenticationStrategy(ACCEPTOR_ID)
-                .and(new SenderCompIdAuthenticationStrategy(Arrays.asList(INITIATOR_ID)));
+        final MessageValidationStrategy validationStrategy =
+            new TargetCompIdValidationStrategy(ACCEPTOR_ID)
+                .and(new SenderCompIdValidationStrategy(Arrays.asList(INITIATOR_ID)));
+
+        final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
         return new LibraryConfiguration()
             .aeronChannel("udp://localhost:" + AERON_PORT)

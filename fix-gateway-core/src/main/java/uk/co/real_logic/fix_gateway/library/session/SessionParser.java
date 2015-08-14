@@ -19,14 +19,17 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
-import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
-import static uk.co.real_logic.fix_gateway.builder.Validation.VALIDATION_ENABLED;
+import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.fix_gateway.builder.Validation.isValidMsgType;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.AWAITING_LOGOUT;
+import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
 
 public class SessionParser
 {
@@ -46,15 +49,18 @@ public class SessionParser
     private final Session session;
     private final SessionIdStrategy sessionIdStrategy;
     private final AuthenticationStrategy authenticationStrategy;
+    private final MessageValidationStrategy validationStrategy;
 
     public SessionParser(
         final Session session,
         final SessionIdStrategy sessionIdStrategy,
-        final AuthenticationStrategy authenticationStrategy)
+        final AuthenticationStrategy authenticationStrategy,
+        final MessageValidationStrategy validationStrategy)
     {
         this.session = session;
         this.sessionIdStrategy = sessionIdStrategy;
         this.authenticationStrategy = authenticationStrategy;
+        this.validationStrategy = validationStrategy;
     }
 
     public boolean onMessage(
@@ -117,9 +123,9 @@ public class SessionParser
         heartbeat.reset();
         heartbeat.decode(string, offset, length);
         final HeaderDecoder header = heartbeat.header();
-        if (VALIDATION_ENABLED && (!heartbeat.validate() || !validBeginString(header)))
+        if (CODEC_VALIDATION_ENABLED && (!heartbeat.validate() || !validateHeader(header)))
         {
-            onInvalidMessage(heartbeat, header);
+            onCodecInvalidMessage(heartbeat, header);
         }
         else if (heartbeat.hasTestReqID())
         {
@@ -145,7 +151,7 @@ public class SessionParser
 
         final char[] msgType = header.msgType();
         final int msgTypeLength = header.msgTypeLength();
-        if (VALIDATION_ENABLED && (!isValidMsgType(msgType, msgTypeLength) || !validBeginString(header)))
+        if (CODEC_VALIDATION_ENABLED && (!isValidMsgType(msgType, msgTypeLength) || !validateHeader(header)))
         {
             final int msgSeqNum = header.msgSeqNum();
             session.onInvalidMessageType(msgSeqNum, msgType, msgTypeLength);
@@ -182,9 +188,9 @@ public class SessionParser
         sequenceReset.reset();
         sequenceReset.decode(string, offset, length);
         final HeaderDecoder header = sequenceReset.header();
-        if (VALIDATION_ENABLED && (!sequenceReset.validate() || !validBeginString(header)))
+        if (CODEC_VALIDATION_ENABLED && (!sequenceReset.validate() || !validateHeader(header)))
         {
-            onInvalidMessage(sequenceReset, header);
+            onCodecInvalidMessage(sequenceReset, header);
         }
         else
         {
@@ -202,9 +208,9 @@ public class SessionParser
         testRequest.reset();
         testRequest.decode(string, offset, length);
         final HeaderDecoder header = testRequest.header();
-        if (VALIDATION_ENABLED && (!testRequest.validate() || !validBeginString(header)))
+        if (CODEC_VALIDATION_ENABLED && (!testRequest.validate() || !validateHeader(header)))
         {
-            onInvalidMessage(testRequest, header);
+            onCodecInvalidMessage(testRequest, header);
         }
         else
         {
@@ -226,9 +232,9 @@ public class SessionParser
         reject.reset();
         reject.decode(string, offset, length);
         final HeaderDecoder header = reject.header();
-        if (VALIDATION_ENABLED && (!reject.validate() || !validBeginString(header)))
+        if (CODEC_VALIDATION_ENABLED && (!reject.validate() || !validateHeader(header)))
         {
-            onInvalidMessage(reject, header);
+            onCodecInvalidMessage(reject, header);
         }
         else
         {
@@ -243,9 +249,9 @@ public class SessionParser
         logout.reset();
         logout.decode(string, offset, length);
         final HeaderDecoder header = logout.header();
-        if (VALIDATION_ENABLED && (!logout.validate() || !validBeginString(header)))
+        if (CODEC_VALIDATION_ENABLED && (!logout.validate() || !validateHeader(header)))
         {
-            onInvalidMessage(logout, header);
+            onCodecInvalidMessage(logout, header);
         }
         else
         {
@@ -262,9 +268,9 @@ public class SessionParser
         final HeaderDecoder header = logon.header();
         final char[] beginString = header.beginString();
         final int beginStringLength = header.beginStringLength();
-        if (VALIDATION_ENABLED && (!logon.validate() || !session.onBeginString(beginString, beginStringLength, true)))
+        if (CODEC_VALIDATION_ENABLED && (!logon.validate() || !session.onBeginString(beginString, beginStringLength, true)))
         {
-            if (!onInvalidMessage(logon, header))
+            if (!onCodecInvalidMessage(logon, header))
             {
                 session.requestDisconnect();
             }
@@ -275,18 +281,15 @@ public class SessionParser
             {
                 final Object sessionKey = sessionIdStrategy.onAcceptorLogon(header);
 
-                if (validBeginString(header))
-                {
-                    final long origSendingTime = getSendingTime(header);
-                    session.onLogon(
-                        logon.heartBtInt(),
-                        header.msgSeqNum(),
-                        sessionId,
-                        sessionKey,
-                        header.sendingTime(),
-                        origSendingTime,
-                        isPossDup(header));
-                }
+                final long origSendingTime = getSendingTime(header);
+                session.onLogon(
+                    logon.heartBtInt(),
+                    header.msgSeqNum(),
+                    sessionId,
+                    sessionKey,
+                    header.sendingTime(),
+                    origSendingTime,
+                    isPossDup(header));
             }
             else
             {
@@ -295,14 +298,31 @@ public class SessionParser
         }
     }
 
-    private boolean validBeginString(final HeaderDecoder header)
+    private boolean validateHeader(final HeaderDecoder header)
     {
-        return session.onBeginString(header.beginString(), header.beginStringLength(), false);
+        if (!session.onBeginString(header.beginString(), header.beginStringLength(), false))
+        {
+            return false;
+        }
+
+        if (!validationStrategy.validate(header))
+        {
+            session.onInvalidMessage(
+                header.msgSeqNum(),
+                validationStrategy.invalidTagId(),
+                header.msgType(),
+                header.msgTypeLength(),
+                validationStrategy.rejectReason());
+            return false;
+        }
+
+        return true;
     }
 
-    private boolean onInvalidMessage(final Decoder decoder, final HeaderDecoder header)
+    private boolean onCodecInvalidMessage(final Decoder decoder, final HeaderDecoder header)
     {
-        if (session.state() != SessionState.DISCONNECTED)
+        final SessionState state = session.state();
+        if (state != DISCONNECTED && state != AWAITING_LOGOUT)
         {
             final int msgTypeLength = header.msgTypeLength();
 

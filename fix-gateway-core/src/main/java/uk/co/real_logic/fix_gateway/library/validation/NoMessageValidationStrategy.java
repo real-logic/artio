@@ -13,16 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.library.auth;
+package uk.co.real_logic.fix_gateway.library.validation;
 
-import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
+import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
-public interface AuthenticationStrategy
+public class NoMessageValidationStrategy implements MessageValidationStrategy
 {
-    boolean authenticate(final LogonDecoder logon);
-
-    default AuthenticationStrategy and(AuthenticationStrategy other)
+    public boolean validate(final HeaderDecoder logon)
     {
-        return logon -> authenticate(logon) && other.authenticate(logon);
+        return true;
+    }
+
+    public int invalidTagId()
+    {
+        return notSupported();
+    }
+
+    public int rejectReason()
+    {
+        return notSupported();
+    }
+
+    private int notSupported()
+    {
+        throw new UnsupportedOperationException(
+            "NoMessageValidationStrategy never fails, invoking me is a breach of the contract");
     }
 }

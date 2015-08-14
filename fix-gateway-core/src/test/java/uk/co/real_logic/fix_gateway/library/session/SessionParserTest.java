@@ -18,12 +18,16 @@ package uk.co.real_logic.fix_gateway.library.session;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.SessionRejectReason;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
-import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.TargetCompIdValidationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.TARGET_COMP_ID;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 
 public class SessionParserTest
@@ -32,9 +36,10 @@ public class SessionParserTest
     private Session mockSession = mock(Session.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private AuthenticationStrategy mockAuthenticationStrategy = mock(AuthenticationStrategy.class);
+    private MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy("das");
 
     private SessionParser parser = new SessionParser(
-        mockSession, mockSessionIdStrategy, mockAuthenticationStrategy);
+        mockSession, mockSessionIdStrategy, mockAuthenticationStrategy, validationStrategy);
 
     @Before
     public void setUp()
@@ -47,7 +52,7 @@ public class SessionParserTest
     public void shouldNotifySessionOfMissingMsgSeqNum()
     {
         final UnsafeBuffer buffer = bufferOf(
-            "8=FIX.4.4\00135=B\00149=abc\00152=00000101-00:00:00.000\00156=dsa\001");
+            "8=FIX.4.4\00135=B\00149=abc\00152=00000101-00:00:00.000\00156=das\001");
 
         parser.onMessage(buffer, 0, buffer.capacity(), 'B', 1);
 
@@ -63,6 +68,24 @@ public class SessionParserTest
         parser.onMessage(buffer, 0, buffer.capacity(), '*', 1);
 
         verify(mockSession).onInvalidMessageType(eq(2), any(char[].class), anyInt());
+    }
+
+    @Test
+    public void shouldValidateCompId()
+    {
+        final UnsafeBuffer buffer = bufferOf(
+            "8=FIX.4.2\0019=146\00135=D\00134=4\00149=WRONG\001" +
+            "52=20090323-15:40:29\00156=WRONG\001115=XYZ\00111=NF 0542/03232009\00154=1\00138=100\001" +
+            "55=CVS\00140=1\00159=0\00147=A\00160=20090323-15:40:29\00121=1\001207=N\00110=195\001");
+
+        parser.onMessage(buffer, 0, buffer.capacity(), 'D', 1);
+
+        verify(mockSession).onInvalidMessage(
+            4,
+            TARGET_COMP_ID,
+            "D".toCharArray(),
+            "D".length(),
+            SessionRejectReason.COMPID_PROBLEM.representation());
     }
 
     private UnsafeBuffer bufferOf(final String str)

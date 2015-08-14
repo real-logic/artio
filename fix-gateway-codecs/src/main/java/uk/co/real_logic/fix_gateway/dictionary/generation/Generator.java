@@ -48,7 +48,7 @@ public abstract class Generator
 
     protected static final String MSG_TYPE = "MsgType";
     public static final String EXPAND_INDENT = ".toString().replace(\"\\n\", \"\\n  \")";
-    public static final String VALIDATION_ENABLED = "VALIDATION_ENABLED";
+    public static final String CODEC_VALIDATION_ENABLED = "CODEC_VALIDATION_ENABLED";
 
     protected String commonCompoundImports(final String form)
     {
@@ -127,7 +127,7 @@ public abstract class Generator
             importFor(IntHashSet.class) +
             importFor(IntIterator.class) +
             importStaticFor(StandardCharsets.class, "US_ASCII") +
-            importStaticFor(Validation.class, VALIDATION_ENABLED) +
+            importStaticFor(Validation.class, CODEC_VALIDATION_ENABLED) +
             "\npublic class %2$s implements %5$s%3$s\n" +
             "{\n\n",
             builderPackage,

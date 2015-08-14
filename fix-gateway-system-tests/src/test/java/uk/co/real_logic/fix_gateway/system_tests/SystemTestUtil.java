@@ -24,9 +24,10 @@ import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.auth.SenderCompIdAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.auth.TargetCompIdAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.SenderCompIdValidationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.TargetCompIdValidationStrategy;
 import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 
@@ -224,11 +225,14 @@ public final class SystemTestUtil
         final int aeronPort,
         final String monitorDir)
     {
-        final AuthenticationStrategy authenticationStrategy = new TargetCompIdAuthenticationStrategy(acceptorId)
-            .and(new SenderCompIdAuthenticationStrategy(Arrays.asList(initiatorId)));
+        final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(acceptorId)
+            .and(new SenderCompIdValidationStrategy(Arrays.asList(initiatorId)));
+
+        final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
         return new LibraryConfiguration()
             .authenticationStrategy(authenticationStrategy)
+            .messageValidationStrategy(validationStrategy)
             .newSessionHandler(sessionHandler)
             .aeronChannel("udp://localhost:" + aeronPort)
             .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "libraryCounters");

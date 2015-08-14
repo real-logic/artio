@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.library.auth;
+package uk.co.real_logic.fix_gateway.library.validation;
 
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 

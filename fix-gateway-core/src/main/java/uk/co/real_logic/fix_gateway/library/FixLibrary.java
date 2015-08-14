@@ -23,6 +23,8 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.library.session.*;
+import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.replication.DataSubscriber;
@@ -224,8 +226,10 @@ public class FixLibrary extends GatewayProcess
 
     private void newSession(final long connectionId, final Session session)
     {
+        final AuthenticationStrategy authenticationStrategy = configuration.authenticationStrategy();
+        final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
-            session, sessionIdStrategy, configuration.authenticationStrategy());
+            session, sessionIdStrategy, authenticationStrategy, validationStrategy);
         final SessionHandler handler = configuration.newSessionHandler().onConnect(session);
         final SessionSubscriber subscriber = new SessionSubscriber(parser, session, handler);
         sessions.put(connectionId, subscriber);

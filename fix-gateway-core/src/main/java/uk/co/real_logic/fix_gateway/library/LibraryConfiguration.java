@@ -16,11 +16,13 @@
 package uk.co.real_logic.fix_gateway.library;
 
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
-import uk.co.real_logic.fix_gateway.library.auth.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.auth.NoAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.NoAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.library.session.NoSessionCustomisationStrategy;
 import uk.co.real_logic.fix_gateway.library.session.SessionCustomisationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.NoMessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -39,6 +41,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private char[] beginString;
     private long sendingTimeWindow = DEFAULT_SENDING_TIME_WINDOW;
     private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
+    private MessageValidationStrategy messageValidationStrategy = new NoMessageValidationStrategy();
     private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
 
     public LibraryConfiguration()
@@ -88,10 +91,15 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
-
     public LibraryConfiguration sessionCustomisationStrategy(final SessionCustomisationStrategy value)
     {
         this.sessionCustomisationStrategy = value;
+        return this;
+    }
+
+    public LibraryConfiguration messageValidationStrategy(final MessageValidationStrategy messageValidationStrategy)
+    {
+        this.messageValidationStrategy = messageValidationStrategy;
         return this;
     }
 
@@ -128,6 +136,11 @@ public final class LibraryConfiguration extends CommonConfiguration
     public SessionCustomisationStrategy sessionCustomisationStrategy()
     {
         return sessionCustomisationStrategy;
+    }
+
+    public MessageValidationStrategy messageValidationStrategy()
+    {
+        return messageValidationStrategy;
     }
 
     public LibraryConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
