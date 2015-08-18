@@ -121,10 +121,9 @@ public class FixLibrary extends GatewayProcess
 
                     if (clock.time() > latestReplyArrivalTime)
                     {
-                        throw new IllegalStateException(
-                            String.format(
-                                "Failed to received a reply from the engine within %d, are you sure its running?",
-                                replyTimeoutInMs));
+                        throw new IllegalStateException(String.format(
+                            "Failed to received a reply from the engine within %dms, are you sure its running?",
+                            replyTimeoutInMs));
                     }
 
                     idleStrategy.idle(workCount);
@@ -158,11 +157,11 @@ public class FixLibrary extends GatewayProcess
     {
 
         public void onConnect(final int libraryId,
-                              final long connectionId,
-                              final ConnectionType type,
-                              final DirectBuffer buffer,
-                              final int addressOffset,
-                              final int addressLength)
+            final long connectionId,
+            final ConnectionType type,
+            final DirectBuffer buffer,
+            final int addressOffset,
+            final int addressLength)
         {
             if (type == INITIATOR)
             {
@@ -190,11 +189,11 @@ public class FixLibrary extends GatewayProcess
         }
 
         public void onMessage(final DirectBuffer buffer,
-                              final int offset,
-                              final int length,
-                              final long connectionId,
-                              final long sessionId,
-                              final int messageType)
+            final int offset,
+            final int length,
+            final long connectionId,
+            final long sessionId,
+            final int messageType)
         {
             DebugLogger.log("Received %s\n", buffer, offset, length);
             final SessionSubscriber subscriber = sessions.get(connectionId);
