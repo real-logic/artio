@@ -97,7 +97,7 @@ public final class FixEngine extends GatewayProcess
     {
         final SessionIds sessionIds = new SessionIds();
 
-        final IdleStrategy idleStrategy = backoffIdleStrategy();
+        final IdleStrategy idleStrategy = idleStrategy();
         final Subscription librarySubscription = outboundLibraryStreams.dataSubscription();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
 
@@ -133,7 +133,7 @@ public final class FixEngine extends GatewayProcess
 
     protected Aeron.Context aeronContext(final CommonConfiguration configuration)
     {
-        adminCommands = new ManyToOneConcurrentArrayQueue<>(10);
+        adminCommands = new ManyToOneConcurrentArrayQueue<>(16);
         final LibraryActivationHandler activationHandler =
             new LibraryActivationHandler(adminCommands, configuration.aeronChannel());
         final Aeron.Context context = super.aeronContext(configuration);

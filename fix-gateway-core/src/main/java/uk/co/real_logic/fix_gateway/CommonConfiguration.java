@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -49,6 +50,7 @@ public class CommonConfiguration
     private String monitoringFile = getProperty(MONITORING_FILE_PROP_NAME, DEFAULT_MONITORING_FILE);
     private String aeronChannel;
     private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
+    private Aeron.Context aeronContext = new Aeron.Context();
 
     public CommonConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
     {
@@ -78,6 +80,11 @@ public class CommonConfiguration
     {
         this.replyTimeoutInMs = replyTimeoutInMs;
         return this;
+    }
+
+    public Aeron.Context aeronContext()
+    {
+        return aeronContext;
     }
 
     public SessionIdStrategy sessionIdStrategy()

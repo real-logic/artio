@@ -46,6 +46,7 @@ public class LibraryActivationHandler implements NewImageHandler, InactiveImageH
 
     public void onInactiveImage(final Image image, final Subscription subscription, final long position)
     {
+        System.out.println(System.currentTimeMillis());
         if (isOutbound(subscription))
         {
             final int libraryId = image.sessionId();

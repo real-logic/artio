@@ -187,7 +187,7 @@ public final class SystemTestUtil
             .logFileDir(CLIENT_LOGS);
     }
 
-    private static void delete(final String dirPath)
+    public static void delete(final String dirPath)
     {
         final File dir = new File(dirPath);
         if (dir.exists())

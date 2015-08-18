@@ -19,10 +19,14 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.agrona.concurrent.YieldingIdleStrategy;
+import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -31,21 +35,16 @@ import java.util.concurrent.locks.LockSupport;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
-import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 // TODO: figure out how to configure timing and detection in a sensible way
-@Ignore
 public class EngineAndLibraryIntegrationTest
 {
 
-    static
-    {
-        /*System.setProperty(Configuration.IMAGE_LIVENESS_TIMEOUT_PROP_NAME,
-            String.valueOf(TimeUnit.MILLISECONDS.toNanos(20)));*/
-    }
+    private static final long TIMEOUT = TimeUnit.MILLISECONDS.toNanos(10);
 
     private int aeronPort = unusedPort();
     private MediaDriver mediaDriver;
@@ -58,8 +57,19 @@ public class EngineAndLibraryIntegrationTest
     @Before
     public void launch()
     {
-        mediaDriver = launchMediaDriver();
-        engine = launchAcceptingGateway(unusedPort(), aeronPort);
+        final MediaDriver.Context context = new MediaDriver.Context()
+            .threadingMode(SHARED)
+            .dirsDeleteOnStart(true)
+            .imageLivenessTimeoutNs(TIMEOUT)
+            .clientLivenessTimeoutNs(TIMEOUT)
+            .sharedIdleStrategy(new YieldingIdleStrategy());
+
+        mediaDriver = MediaDriver.launch(context);
+
+        delete(ACCEPTOR_LOGS);
+        final EngineConfiguration config = acceptingConfig(unusedPort(), aeronPort, "engineCounters");
+        setupAeronClient(config.aeronContext());
+        engine = FixEngine.launch(config);
     }
 
     @Test
@@ -78,13 +88,16 @@ public class EngineAndLibraryIntegrationTest
         assertTrue("Is not acceptor", libraries.get(0).isAcceptor());
     }
 
+    @Ignore
     @Test
     public void engineDetectsLibraryDisconnect()
     {
         connectLibrary();
         library.close();
 
-        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1000));
+        System.out.println("before park" + System.currentTimeMillis());
+        // should be 3 * TIMEOUT
+        LockSupport.parkNanos(15 * TIMEOUT);
 
         assertNoActiveLibraries();
     }
@@ -97,13 +110,21 @@ public class EngineAndLibraryIntegrationTest
 
     private void assertNoActiveLibraries()
     {
-        assertThat(engine.libraries(), hasSize(0));
+        assertThat("libraries haven't disconnected yet", engine.libraries(), hasSize(0));
     }
 
     private void connectLibrary()
     {
-        library = new FixLibrary(
-            acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, aeronPort, "fix-acceptor"));
+        final LibraryConfiguration config = acceptingLibraryConfig(
+            sessionHandler, ACCEPTOR_ID, INITIATOR_ID, aeronPort, "fix-acceptor");
+        setupAeronClient(config.aeronContext());
+        library = new FixLibrary(config);
+    }
+
+    private void setupAeronClient(Aeron.Context context)
+    {
+        context.keepAliveInterval(TIMEOUT / 4)
+               .idleStrategy(new YieldingIdleStrategy());
     }
 
     @After
