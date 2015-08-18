@@ -39,9 +39,11 @@ import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
  * NB: its possible in a multi-threaded scenario to log two exceptions with the same hash,
  * however, exceptions are still bounded in worst case by number of threads * number of hashes.
  */
+// TODO: move to a fixed size
 public class ErrorBuffer implements ErrorHandler
 {
-    private static final int WRITING = 0;
+    // TODO: split out unused and pending to avoid double claiming a slot
+    private static final int PENDING = 0;
     private static final int COMMITTED = 1;
     private static final int ABORTED = 2;
 
@@ -276,7 +278,7 @@ public class ErrorBuffer implements ErrorHandler
             offset = stackTraceElementEncoder.limit();
         }
 
-        status(claimedOffset, WRITING, COMMITTED);
+        status(claimedOffset, PENDING, COMMITTED);
 
         if (claimedOffset + size != offset)
         {
@@ -300,7 +302,7 @@ public class ErrorBuffer implements ErrorHandler
             {
                 if (requiredSize <= slotSize)
                 {
-                    status(offset, COMMITTED, WRITING);
+                    status(offset, COMMITTED, PENDING);
                     isReusedSlot = true;
                     return offset;
                 }
