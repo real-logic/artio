@@ -72,7 +72,7 @@ public class Framer implements Agent, SessionHandler
     private final QueuedPipe<AdminCommand> adminCommands;
     private final ReceiverEndPointPoller endPointPoller;
 
-    private long nextConnectionId = (long) (Math.random() * 10);
+    private long nextConnectionId = (long) (Math.random() * Long.MAX_VALUE);
 
     public Framer(
         final EngineConfiguration configuration,
