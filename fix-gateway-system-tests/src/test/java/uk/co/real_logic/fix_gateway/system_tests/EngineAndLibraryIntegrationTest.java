@@ -73,7 +73,7 @@ public class EngineAndLibraryIntegrationTest
     }
 
     @Test
-    public void engineInitialiallyHasNoConnectedLibraries()
+    public void engineInitiallyHasNoConnectedLibraries()
     {
         assertNoActiveLibraries();
     }
