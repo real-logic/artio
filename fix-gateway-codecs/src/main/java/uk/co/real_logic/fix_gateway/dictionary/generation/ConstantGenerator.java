@@ -77,10 +77,10 @@ public class ConstantGenerator
         final int hashMapSize = sizeHashSet(fields);
         return String.format(
             "    public static final IntHashSet %3$s = new IntHashSet(%1$d, -1);\n\n" +
-            "    static\n" +
-            "    {\n" +
-            "%2$s" +
-            "    }\n\n",
+                "    static\n" +
+                "    {\n" +
+                "%2$s" +
+                "    }\n\n",
             hashMapSize,
             addFields,
             name);
@@ -105,7 +105,11 @@ public class ConstantGenerator
         return dictionary
             .messages()
             .stream()
-            .map(message -> generateIntConstant(message.name(), message.type()))
+            .map(message ->
+            {
+                final int type = message.type();
+                return generateMessageTypeConstant(type) + generateIntConstant(message.name(), type);
+            })
             .collect(joining());
     }
 
@@ -124,12 +128,24 @@ public class ConstantGenerator
             .values();
     }
 
+    private String generateMessageTypeConstant(final int messageType)
+    {
+        char[] chars;
+        if (messageType > Byte.MAX_VALUE)
+        {
+            chars = new char[]{(char) (byte) messageType, (char) (byte) (messageType >>> 8)};
+        }
+        else
+        {
+            chars = new char[]{(char) (byte) messageType};
+        }
+        return String.format("    /** In Ascii - %1$s */\n", new String(chars));
+    }
+
     private String generateIntConstant(final String name, final int number)
     {
         return String.format(
-            "    /** In Ascii - %1$s */\n" +
-            "    public static final int %3$s = %2$d;\n\n",
-            (char) number,
+            "    public static final int %2$s = %1$d;\n\n",
             number,
             constantName(name));
     }
