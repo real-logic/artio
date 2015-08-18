@@ -20,6 +20,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -28,7 +29,6 @@ import uk.co.real_logic.fix_gateway.library.session.Session;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -36,7 +36,6 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest
 {
-
     private int port = unusedPort();
     private MediaDriver mediaDriver;
     private FixEngine acceptingEngine;
@@ -59,11 +58,12 @@ public class GatewayToGatewaySystemTest
         final int acceptAeronPort = unusedPort();
 
         mediaDriver = launchMediaDriver();
-        initiatingEngine = launchInitiatingGateway(initAeronPort);
-        acceptingEngine = launchAcceptingGateway(port, acceptAeronPort);
 
-        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler);
+        acceptingEngine = launchAcceptingGateway(port, acceptAeronPort);
+        initiatingEngine = launchInitiatingGateway(initAeronPort);
+
         acceptingLibrary = newAcceptingLibrary(acceptAeronPort, acceptingSessionHandler);
+        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler);
 
         connectSessions();
     }
@@ -201,12 +201,14 @@ public class GatewayToGatewaySystemTest
     @After
     public void close() throws Exception
     {
-        quietClose(initiatingLibrary);
-        quietClose(acceptingLibrary);
+        CloseHelper.close(initiatingLibrary);
+        CloseHelper.close(acceptingLibrary);
 
-        quietClose(initiatingEngine);
-        quietClose(acceptingEngine);
-        quietClose(mediaDriver);
+        CloseHelper.close(initiatingEngine);
+        CloseHelper.close(acceptingEngine);
+
+        CloseHelper.close(mediaDriver);
+
+        System.gc();
     }
-
 }
