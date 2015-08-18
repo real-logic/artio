@@ -60,6 +60,7 @@ public class FramerTest
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort());
 
+    @SuppressWarnings("unchecked")
     private Framer framer = new Framer(
         engineConfiguration,
         mockConnectionHandler,
