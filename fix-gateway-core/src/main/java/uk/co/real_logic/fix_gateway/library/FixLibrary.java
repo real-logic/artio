@@ -122,7 +122,7 @@ public class FixLibrary extends GatewayProcess
                     if (clock.time() > latestReplyArrivalTime)
                     {
                         throw new IllegalStateException(String.format(
-                            "Failed to received a reply from the engine within %dms, are you sure its running?",
+                            "Failed to receive a reply from the engine within %dms, are you sure its running?",
                             replyTimeoutInMs));
                     }
 
@@ -156,7 +156,8 @@ public class FixLibrary extends GatewayProcess
     private final DataSubscriber dataSubscriber = new DataSubscriber(new SessionHandler()
     {
 
-        public void onConnect(final int libraryId,
+        public void onConnect(
+            final int libraryId,
             final long connectionId,
             final ConnectionType type,
             final DirectBuffer buffer,
@@ -188,7 +189,8 @@ public class FixLibrary extends GatewayProcess
             }
         }
 
-        public void onMessage(final DirectBuffer buffer,
+        public void onMessage(
+            final DirectBuffer buffer,
             final int offset,
             final int length,
             final long connectionId,
