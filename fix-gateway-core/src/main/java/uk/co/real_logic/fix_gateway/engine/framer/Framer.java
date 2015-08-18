@@ -280,6 +280,7 @@ public class Framer implements Agent, SessionHandler
     public void onClose()
     {
         endPointPoller.close();
+        close(selector);
         close(listeningChannel);
     }
 
@@ -287,5 +288,4 @@ public class Framer implements Agent, SessionHandler
     {
         return "Framer";
     }
-
 }
