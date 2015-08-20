@@ -13,19 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.engine.framer;
+package uk.co.real_logic.fix_gateway.streams;
 
-public final class NewLibrary implements AdminCommand
+import uk.co.real_logic.fix_gateway.engine.framer.AdminCommand;
+import uk.co.real_logic.fix_gateway.engine.framer.Framer;
+import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryCommand;
+
+public final class NewProcess implements AdminCommand, LibraryCommand
 {
-    private final int libraryId;
+    private final int sessionId;
 
-    public NewLibrary(final int libraryId)
+    public NewProcess(final int sessionId)
     {
-        this.libraryId = libraryId;
+        this.sessionId = sessionId;
     }
 
     public void execute(final Framer framer)
     {
-        framer.onNewLibrary(libraryId);
+        framer.onNewLibrary(sessionId);
+    }
+
+    public void execute(final FixLibrary library)
+    {
+        library.onActiveGateway();
     }
 }

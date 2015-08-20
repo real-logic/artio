@@ -16,7 +16,7 @@
 package uk.co.real_logic.client;
 
 import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
-import uk.co.real_logic.fix_gateway.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;

@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.fix_gateway.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 
 import java.io.File;
 import java.nio.ByteBuffer;

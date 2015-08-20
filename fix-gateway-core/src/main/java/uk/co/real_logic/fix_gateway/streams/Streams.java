@@ -51,7 +51,7 @@ public class Streams
         return aeron.addPublication(channel, streamId);
     }
 
-    public Subscription dataSubscription()
+    public Subscription subscription()
     {
         return aeron.addSubscription(channel, streamId);
     }

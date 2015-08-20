@@ -19,6 +19,8 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
+import uk.co.real_logic.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
@@ -27,18 +29,23 @@ import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.streams.ActivationHandler;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
-import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
 
 public class FixLibrary extends GatewayProcess
 {
+    private QueuedPipe<LibraryCommand> commands = new OneToOneConcurrentArrayQueue<>(16);
+
+    private final Consumer<LibraryCommand> executeFunc = command -> command.execute(this);
     private final Subscription inboundSubscription;
     private final GatewayPublication outboundPublication;
     private final Long2ObjectHashMap<SessionSubscriber> sessions = new Long2ObjectHashMap<>();
@@ -52,14 +59,19 @@ public class FixLibrary extends GatewayProcess
     private GatewayError errorType;
     private String errorMessage;
 
+    private boolean connected = false;
+
     public FixLibrary(final LibraryConfiguration configuration)
     {
-        super(configuration);
+        configuration.activationHandler(
+            new ActivationHandler(commands, configuration.aeronChannel(), INBOUND_LIBRARY_STREAM));
+
+        init(configuration);
 
         this.configuration = configuration;
         sessionIdStrategy = configuration.sessionIdStrategy();
 
-        inboundSubscription = inboundLibraryStreams.dataSubscription();
+        inboundSubscription = inboundLibraryStreams.subscription();
         outboundPublication = outboundLibraryStreams.gatewayPublication();
 
         clock = System::currentTimeMillis;
@@ -67,7 +79,9 @@ public class FixLibrary extends GatewayProcess
 
     public int poll(final int fragmentLimit)
     {
-        return inboundSubscription.poll(dataSubscriber, fragmentLimit) + pollSessions();
+        return commands.drain(executeFunc) +
+               inboundSubscription.poll(dataSubscriber, fragmentLimit) +
+               pollSessions();
     }
 
     private int pollSessions()
@@ -289,5 +303,20 @@ public class FixLibrary extends GatewayProcess
     {
         sessions.values().forEach(SessionSubscriber::close);
         super.close();
+    }
+
+    public boolean isConnected()
+    {
+        return connected;
+    }
+
+    public void onInactiveGateway()
+    {
+        connected = false;
+    }
+
+    public void onActiveGateway()
+    {
+        connected = true;
     }
 }

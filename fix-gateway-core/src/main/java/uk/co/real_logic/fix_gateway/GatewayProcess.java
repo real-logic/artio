@@ -16,8 +16,8 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
+import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.agrona.concurrent.YieldingIdleStrategy;
 import uk.co.real_logic.fix_gateway.streams.Streams;
 import uk.co.real_logic.fix_gateway.util.MilliClock;
 
@@ -36,7 +36,7 @@ public class GatewayProcess implements AutoCloseable
     protected Streams inboundLibraryStreams;
     protected Streams outboundLibraryStreams;
 
-    protected GatewayProcess(final CommonConfiguration configuration)
+    protected void init(final CommonConfiguration configuration)
     {
         initMonitoring(configuration);
         initAeron(configuration);
@@ -69,11 +69,10 @@ public class GatewayProcess implements AutoCloseable
 
     protected IdleStrategy idleStrategy()
     {
-        return new YieldingIdleStrategy();
-        //return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
+        return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
     }
 
-    protected Aeron.Context aeronContext(final CommonConfiguration configuration)
+    private Aeron.Context aeronContext(final CommonConfiguration configuration)
     {
         final Aeron.Context ctx = configuration.aeronContext();
         ctx.errorHandler(throwable ->

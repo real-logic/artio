@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.engine;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
-import uk.co.real_logic.fix_gateway.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.framer.Framer;
 import uk.co.real_logic.fix_gateway.engine.framer.ReceiverEndPoint;
 import uk.co.real_logic.fix_gateway.engine.framer.SenderEndPoint;

@@ -23,7 +23,7 @@ import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.CompositeAgent;
-import uk.co.real_logic.fix_gateway.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.streams.Streams;
 
 import java.util.ArrayList;
@@ -78,12 +78,12 @@ public class Logger implements AutoCloseable
             final String logFileDir = configuration.logFileDir();
             final List<Index> indices = Arrays.asList(
                 new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, LoggerUtil::map));
-            final Indexer indexer = new Indexer(indices, outboundLibraryStreams.dataSubscription());
+            final Indexer indexer = new Indexer(indices, outboundLibraryStreams.subscription());
 
             final ReplayQuery replayQuery = new ReplayQuery(
                 logFileDir, loggerCacheCapacity, LoggerUtil::mapExistingFile, archiveReader);
             final Replayer replayer = new Replayer(
-                inboundLibraryStreams.dataSubscription(),
+                inboundLibraryStreams.subscription(),
                 replayQuery,
                 replayPublication,
                 new BufferClaim(),
@@ -108,11 +108,11 @@ public class Logger implements AutoCloseable
         final List<Subscription> subscriptions = new ArrayList<>();
         if (configuration.logInboundMessages())
         {
-            subscriptions.add(inboundLibraryStreams.dataSubscription());
+            subscriptions.add(inboundLibraryStreams.subscription());
         }
         if (configuration.logOutboundMessages())
         {
-            subscriptions.add(outboundLibraryStreams.dataSubscription());
+            subscriptions.add(outboundLibraryStreams.subscription());
         }
         archiver = new Archiver(
             LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity, subscriptions);

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.engine.framer;
+package uk.co.real_logic.fix_gateway.streams;
 
 import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.InactiveImageHandler;
@@ -23,30 +23,31 @@ import uk.co.real_logic.agrona.collections.Int2IntHashMap;
 import uk.co.real_logic.agrona.concurrent.QueuedPipe;
 
 import java.util.Objects;
-import java.util.concurrent.locks.LockSupport;
 
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
-import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
-
-public class LibraryActivationHandler implements NewImageHandler, InactiveImageHandler
+public class ActivationHandler implements NewImageHandler, InactiveImageHandler
 {
-    private static final long PAUSE = MICROSECONDS.toNanos(10);
-
     private final Int2IntHashMap libraryIds = new Int2IntHashMap(0);
-    private final QueuedPipe<AdminCommand> commands;
+    private final QueuedPipe<Object> commands;
     private final String channel;
+    private final int streamId;
 
-    public LibraryActivationHandler(final QueuedPipe<AdminCommand> commands, final String channel)
+    @SuppressWarnings("unchecked")
+    public ActivationHandler(
+        final QueuedPipe<?> commands,
+        final String channel,
+        final int streamId)
     {
+        this.streamId = streamId;
         Objects.requireNonNull(commands, "commands");
         Objects.requireNonNull(channel, "channel");
-        this.commands = commands;
+
+        this.commands = (QueuedPipe<Object>) commands;
         this.channel = channel;
     }
 
     public void onInactiveImage(final Image image, final Subscription subscription, final long position)
     {
-        if (isOutbound(subscription))
+        if (isExpectedStream(subscription))
         {
             //System.out.println("Inactive: " + System.currentTimeMillis());
             final int libraryId = image.sessionId();
@@ -54,7 +55,7 @@ public class LibraryActivationHandler implements NewImageHandler, InactiveImageH
             libraryIds.put(libraryId, count);
             if (count == 0)
             {
-                put(new InactiveLibrary(libraryId));
+                put(new InactiveProcess(libraryId));
             }
         }
     }
@@ -64,7 +65,7 @@ public class LibraryActivationHandler implements NewImageHandler, InactiveImageH
                            final long joiningPosition,
                            final String sourceIdentity)
     {
-        if (isOutbound(subscription))
+        if (isExpectedStream(subscription))
         {
             final int libraryId = image.sessionId();
             final int count = libraryIds.get(libraryId) + 1;
@@ -72,23 +73,24 @@ public class LibraryActivationHandler implements NewImageHandler, InactiveImageH
             //System.out.println("Active: " + System.currentTimeMillis() + " : " + libraryId + " @ " + count);
             if (count == 1)
             {
-                put(new NewLibrary(libraryId));
+                put(new NewProcess(libraryId));
             }
         }
     }
 
-    private void put(final AdminCommand command)
+    private void put(final Object command)
     {
         while (!commands.offer(command))
         {
-            LockSupport.parkNanos(PAUSE);
+            Thread.yield();
             // TODO: consider monitoring this
+            // TODO: consider backoff
         }
     }
 
-    private boolean isOutbound(final Subscription subscription)
+    private boolean isExpectedStream(final Subscription subscription)
     {
-        return subscription.streamId() == OUTBOUND_LIBRARY_STREAM
+        return subscription.streamId() == streamId
             && channel.equals(subscription.channel());
     }
 

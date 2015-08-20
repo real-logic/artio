@@ -40,7 +40,7 @@ public final class QueryLibraries implements AdminCommand
         List<LibraryInfo> response;
         while ((response = this.response) == null)
         {
-            LockSupport.parkNanos(FixEngine.COMMAND_QUEUE_IDLE);
+            LockSupport.parkNanos(FixEngine.COMMAND_QUEUE_IDLE_NS);
         }
         return response;
     }

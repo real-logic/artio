@@ -33,7 +33,7 @@ public class ReplicationAgent implements Agent
     public ReplicationAgent(
         final Streams streams)
     {
-        dataSubscription = streams.dataSubscription();
+        dataSubscription = streams.subscription();
         //controlSubscription = replicatedStream.controlSubscription();
     }
 

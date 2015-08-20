@@ -15,26 +15,31 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
-import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.*;
-import uk.co.real_logic.fix_gateway.*;
-import uk.co.real_logic.fix_gateway.engine.framer.*;
+import uk.co.real_logic.fix_gateway.ErrorPrinter;
+import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.GatewayProcess;
+import uk.co.real_logic.fix_gateway.engine.framer.AdminCommand;
+import uk.co.real_logic.fix_gateway.engine.framer.Framer;
+import uk.co.real_logic.fix_gateway.engine.framer.QueryLibraries;
+import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
 import uk.co.real_logic.fix_gateway.engine.logger.Logger;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.streams.ActivationHandler;
 
 import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
 
 public final class FixEngine extends GatewayProcess
 {
-    public static final long COMMAND_QUEUE_IDLE = MILLISECONDS.toNanos(10);
-    private QueuedPipe<AdminCommand> adminCommands;
+    public static final long COMMAND_QUEUE_IDLE_NS = 1;
+
+    private QueuedPipe<AdminCommand> adminCommands = new ManyToOneConcurrentArrayQueue<>(16);
 
     private final EngineConfiguration configuration;
     private AgentRunner errorPrinterRunner;
@@ -56,14 +61,17 @@ public final class FixEngine extends GatewayProcess
         final QueryLibraries query = new QueryLibraries();
         while (!adminCommands.offer(query))
         {
-            LockSupport.parkNanos(COMMAND_QUEUE_IDLE);
+            LockSupport.parkNanos(COMMAND_QUEUE_IDLE_NS);
         }
         return query.awaitResponse();
     }
 
     private FixEngine(final EngineConfiguration configuration)
     {
-        super(configuration);
+        configuration.activationHandler(
+            new ActivationHandler(adminCommands, configuration.aeronChannel(), OUTBOUND_LIBRARY_STREAM));
+
+        init(configuration);
         this.configuration = configuration;
 
         initFramer(configuration, fixCounters);
@@ -98,7 +106,7 @@ public final class FixEngine extends GatewayProcess
         final SessionIds sessionIds = new SessionIds();
 
         final IdleStrategy idleStrategy = idleStrategy();
-        final Subscription librarySubscription = outboundLibraryStreams.dataSubscription();
+        final Subscription librarySubscription = outboundLibraryStreams.subscription();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
 
         final ConnectionHandler handler = new ConnectionHandler(
@@ -129,17 +137,6 @@ public final class FixEngine extends GatewayProcess
             startOnThread(errorPrinterRunner);
         }
         return this;
-    }
-
-    protected Aeron.Context aeronContext(final CommonConfiguration configuration)
-    {
-        adminCommands = new ManyToOneConcurrentArrayQueue<>(16);
-        final LibraryActivationHandler activationHandler =
-            new LibraryActivationHandler(adminCommands, configuration.aeronChannel());
-        final Aeron.Context context = super.aeronContext(configuration);
-        return context
-            .newImageHandler(activationHandler)
-            .inactiveImageHandler(activationHandler);
     }
 
     public synchronized void close()

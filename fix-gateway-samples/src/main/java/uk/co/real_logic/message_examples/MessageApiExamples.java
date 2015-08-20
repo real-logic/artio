@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.message_examples;
 
-import uk.co.real_logic.fix_gateway.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;

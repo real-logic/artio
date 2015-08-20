@@ -20,8 +20,9 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.concurrent.YieldingIdleStrategy;
-import uk.co.real_logic.fix_gateway.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -35,7 +36,6 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
-import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
@@ -82,7 +82,7 @@ public class EngineAndLibraryIntegrationTest
     {
         connectLibrary();
 
-        LockSupport.parkNanos(3 * TIMEOUT);
+        ensureLibraryConnected();
 
         final List<LibraryInfo> libraries = engine.libraries();
         assertThat(libraries, hasSize(1));
@@ -94,7 +94,7 @@ public class EngineAndLibraryIntegrationTest
     {
         connectLibrary();
 
-        LockSupport.parkNanos(TIMEOUT);
+        ensureLibraryConnected();
 
         library.close();
 
@@ -107,7 +107,24 @@ public class EngineAndLibraryIntegrationTest
     @Test
     public void libraryDetectsEngineDisconnect()
     {
+        connectLibrary();
 
+        ensureLibraryConnected();
+
+        CloseHelper.close(engine);
+
+        assertEventuallyTrue(
+            "Engine still hasn't disconnected", () ->
+            {
+                library.poll(1);
+                return !library.isConnected();
+            },
+            20 * TIMEOUT);
+    }
+
+    private void ensureLibraryConnected()
+    {
+        LockSupport.parkNanos(3 * TIMEOUT);
     }
 
     private void assertNoActiveLibraries()
@@ -132,8 +149,8 @@ public class EngineAndLibraryIntegrationTest
     @After
     public void close() throws Exception
     {
-        quietClose(library);
-        quietClose(engine);
-        quietClose(mediaDriver);
+        CloseHelper.close(library);
+        CloseHelper.close(engine);
+        CloseHelper.close(mediaDriver);
     }
 }
