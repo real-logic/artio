@@ -33,15 +33,15 @@ public class ErrorPrinter implements Agent
     {
         final EngineConfiguration configuration = new EngineConfiguration();
         final MonitoringFile monitoringFile = new MonitoringFile(false, configuration);
-        final ErrorPrinter printer = new ErrorPrinter(monitoringFile);
+        final ErrorPrinter printer = new ErrorPrinter(monitoringFile, configuration.errorSlotSize());
         final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
         final AgentRunner runner = new AgentRunner(idleStrategy, Throwable::printStackTrace, null, printer);
         runner.run();
     }
 
-    public ErrorPrinter(final MonitoringFile monitoringFile)
+    public ErrorPrinter(final MonitoringFile monitoringFile, final int errorSlotSize)
     {
-        buffer = new ErrorBuffer(monitoringFile.errorBuffer());
+        buffer = new ErrorBuffer(monitoringFile.errorBuffer(), errorSlotSize);
     }
 
     public int doWork() throws Exception

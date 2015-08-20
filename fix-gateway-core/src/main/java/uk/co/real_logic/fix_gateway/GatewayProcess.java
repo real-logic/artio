@@ -48,7 +48,8 @@ public class GatewayProcess implements AutoCloseable
         monitoringFile = new MonitoringFile(true, configuration);
         fixCounters = new FixCounters(monitoringFile.createCountersManager());
         final MilliClock clock = System::currentTimeMillis;
-        errorBuffer = new ErrorBuffer(monitoringFile.errorBuffer(), fixCounters.exceptions(), clock);
+        errorBuffer = new ErrorBuffer(
+            monitoringFile.errorBuffer(), fixCounters.exceptions(), clock, configuration.errorSlotSize());
     }
 
     private void initStreams(final CommonConfiguration configuration)

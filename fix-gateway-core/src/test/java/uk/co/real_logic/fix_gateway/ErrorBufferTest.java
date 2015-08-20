@@ -32,11 +32,13 @@ import static org.mockito.Mockito.*;
 
 public class ErrorBufferTest
 {
-    private UnsafeBuffer unsafeBuffer = new UnsafeBuffer(new byte[64 * 1024]);
+    public static final int SLOT_SIZE = 1024;
+
+    private UnsafeBuffer unsafeBuffer = new UnsafeBuffer(new byte[64 * SLOT_SIZE]);
     private AtomicCounter mockCounter = mock(AtomicCounter.class);
     private FakeMilliClock clock = new FakeMilliClock();
-    private ErrorBuffer writeBuffer = new ErrorBuffer(unsafeBuffer, mockCounter, clock);
-    private ErrorBuffer readBuffer = new ErrorBuffer(unsafeBuffer);
+    private ErrorBuffer writeBuffer = new ErrorBuffer(unsafeBuffer, mockCounter, clock, SLOT_SIZE);
+    private ErrorBuffer readBuffer = new ErrorBuffer(unsafeBuffer, SLOT_SIZE);
 
     @Before
     public void setUp()
@@ -99,8 +101,8 @@ public class ErrorBufferTest
 
         final List<String> errors = readBuffer.errors();
         assertThat(errors, hasSize(2));
-        assertIsNullPointerException(errors.get(0));
-        assertIsLongerFooException(errors.get(1));
+        assertIsLongerFooException(errors.get(0));
+        assertIsNullPointerException(errors.get(1));
     }
 
     @Test

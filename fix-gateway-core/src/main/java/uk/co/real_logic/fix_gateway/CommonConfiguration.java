@@ -45,6 +45,7 @@ public class CommonConfiguration
     public static final String DEBUG_FILE = System.getProperty(DEBUG_FILE_PROPERTY);
 
     private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 2_000L;
+    private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
 
     private SessionIdStrategy sessionIdStrategy = new SenderAndTargetSessionIdStrategy();
     private int counterBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROP_NAME, DEFAULT_MONITORING_BUFFER_LENGTH);
@@ -52,6 +53,7 @@ public class CommonConfiguration
     private String aeronChannel;
     private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
     private Aeron.Context aeronContext = new Aeron.Context();
+    private int errorSlotSize = DEFAULT_ERROR_SLOT_SIZE;
 
     public CommonConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
     {
@@ -92,6 +94,12 @@ public class CommonConfiguration
         return this;
     }
 
+    public CommonConfiguration errorSlotSize(final int errorSlotSize)
+    {
+        this.errorSlotSize = errorSlotSize;
+        return this;
+    }
+
     public Aeron.Context aeronContext()
     {
         return aeronContext;
@@ -122,4 +130,8 @@ public class CommonConfiguration
         return replyTimeoutInMs;
     }
 
+    public int errorSlotSize()
+    {
+        return errorSlotSize;
+    }
 }

@@ -76,7 +76,7 @@ public final class FixEngine extends GatewayProcess
 
         initFramer(configuration, fixCounters);
         initLogger(configuration);
-        initErrorPrinter();
+        initErrorPrinter(configuration);
     }
 
     private void initLogger(final EngineConfiguration configuration)
@@ -91,11 +91,11 @@ public final class FixEngine extends GatewayProcess
         return aeron.addPublication(configuration.aeronChannel(), OUTBOUND_REPLAY_STREAM);
     }
 
-    private void initErrorPrinter()
+    private void initErrorPrinter(final EngineConfiguration configuration)
     {
-        if (configuration.printErrorMessages())
+        if (this.configuration.printErrorMessages())
         {
-            final ErrorPrinter printer = new ErrorPrinter(monitoringFile);
+            final ErrorPrinter printer = new ErrorPrinter(monitoringFile, configuration.errorSlotSize());
             final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
             errorPrinterRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace, null, printer);
         }
