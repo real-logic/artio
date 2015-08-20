@@ -37,13 +37,12 @@ import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-// TODO: figure out how to configure timing and detection in a sensible way
 public class EngineAndLibraryIntegrationTest
 {
-
-    private static final long TIMEOUT = TimeUnit.MILLISECONDS.toNanos(10);
+    private static final long TIMEOUT = TimeUnit.MILLISECONDS.toNanos(100);
 
     private int aeronPort = unusedPort();
     private MediaDriver mediaDriver;
@@ -61,6 +60,7 @@ public class EngineAndLibraryIntegrationTest
             .dirsDeleteOnStart(true)
             .imageLivenessTimeoutNs(TIMEOUT)
             .clientLivenessTimeoutNs(TIMEOUT)
+            .statusMessageTimeout(TIMEOUT)
             .sharedIdleStrategy(new YieldingIdleStrategy());
 
         mediaDriver = MediaDriver.launch(context);
@@ -82,6 +82,8 @@ public class EngineAndLibraryIntegrationTest
     {
         connectLibrary();
 
+        LockSupport.parkNanos(3 * TIMEOUT);
+
         final List<LibraryInfo> libraries = engine.libraries();
         assertThat(libraries, hasSize(1));
         assertTrue("Is not acceptor", libraries.get(0).isAcceptor());
@@ -91,12 +93,15 @@ public class EngineAndLibraryIntegrationTest
     public void engineDetectsLibraryDisconnect()
     {
         connectLibrary();
+
+        LockSupport.parkNanos(TIMEOUT);
+
         library.close();
 
-        // should be 3 * TIMEOUT
-        LockSupport.parkNanos(20 * TIMEOUT);
-
-        assertNoActiveLibraries();
+        assertEventuallyTrue(
+            "libraries haven't disconnected yet",
+            this::assertNoActiveLibraries,
+            20 * TIMEOUT);
     }
 
     @Test

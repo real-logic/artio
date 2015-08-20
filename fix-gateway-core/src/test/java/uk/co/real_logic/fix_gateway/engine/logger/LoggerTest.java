@@ -50,7 +50,6 @@ public class LoggerTest
 
     private MediaDriver mediaDriver;
     private Aeron aeron;
-    private Streams inboundStreams;
     private Logger logger;
     private Archiver archiver;
     private ArchiveReader archiveReader;
@@ -65,7 +64,7 @@ public class LoggerTest
 
         mediaDriver = launchMediaDriver();
         aeron = Aeron.connect(new Aeron.Context());
-        inboundStreams = new Streams("udp://localhost:9999", aeron, mock(AtomicCounter.class), STREAM_ID);
+        final Streams inboundStreams = new Streams("udp://localhost:9999", aeron, mock(AtomicCounter.class), STREAM_ID);
 
         final EngineConfiguration configuration = new EngineConfiguration().logOutboundMessages(false);
         logger = new Logger(
@@ -142,7 +141,6 @@ public class LoggerTest
     public void tearDown()
     {
         quietClose(logger);
-        quietClose(inboundStreams);
         quietClose(aeron);
         quietClose(mediaDriver);
     }

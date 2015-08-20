@@ -45,6 +45,14 @@ public final class Timing
         final String message,
         final Runnable runnable)
     {
+        assertEventuallyTrue(message, runnable, DEFAULT_TIMEOUT);
+    }
+
+    public static void assertEventuallyTrue(
+        final String message,
+        final Runnable runnable,
+        final long timeout)
+    {
         assertEventuallyTrue(message,
             () ->
             {
@@ -57,7 +65,8 @@ public final class Timing
                 {
                     return false;
                 }
-            }, DEFAULT_TIMEOUT);
+            },
+            timeout);
     }
 
     public static void assertEventuallyTrue(final String message, final BooleanSupplier condition, final long timeout)

@@ -21,53 +21,39 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class Streams implements AutoCloseable
+public class Streams
 {
-    private final List<Subscription> subscriptions = new ArrayList<>();
-
-    private final int dataStream;
+    private final int streamId;
 
     private final String channel;
     private final Aeron aeron;
-    private final AtomicCounter failedDataPublications;
-    private final Publication dataPublication;
+    private final AtomicCounter failedPublications;
 
     public Streams(
         final String channel,
         final Aeron aeron,
-        final AtomicCounter failedDataPublications,
+        final AtomicCounter failedPublications,
         final int streamId)
     {
         this.channel = channel;
         this.aeron = aeron;
-        this.failedDataPublications = failedDataPublications;
-        this.dataStream = streamId;
-        dataPublication = aeron.addPublication(channel, streamId);
+        this.failedPublications = failedPublications;
+        this.streamId = streamId;
     }
 
     public GatewayPublication gatewayPublication()
     {
-        return new GatewayPublication(dataPublication, failedDataPublications, new BackoffIdleStrategy(1, 1, 1, 1 << 20));
+        return new GatewayPublication(dataPublication(), failedPublications, new BackoffIdleStrategy(1, 1, 1, 1 << 20));
     }
 
     public Publication dataPublication()
     {
-        return dataPublication;
+        return aeron.addPublication(channel, streamId);
     }
 
     public Subscription dataSubscription()
     {
-        final Subscription subscription = aeron.addSubscription(channel, dataStream);
-        subscriptions.add(subscription);
-        return subscription;
+        return aeron.addSubscription(channel, streamId);
     }
 
-    public void close()
-    {
-        dataPublication.close();
-        subscriptions.forEach(Subscription::close);
-    }
 }

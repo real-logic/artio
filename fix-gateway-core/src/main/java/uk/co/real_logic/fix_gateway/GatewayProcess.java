@@ -88,8 +88,6 @@ public class GatewayProcess implements AutoCloseable
 
     public void close()
     {
-        inboundLibraryStreams.close();
-        outboundLibraryStreams.close();
         aeron.close();
         monitoringFile.close();
     }
