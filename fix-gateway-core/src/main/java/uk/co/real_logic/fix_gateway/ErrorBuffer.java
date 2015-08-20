@@ -18,8 +18,8 @@ package uk.co.real_logic.fix_gateway;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.fix_gateway.messages.*;
-import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -64,7 +64,7 @@ public class ErrorBuffer implements ErrorHandler
 
     private final AtomicBuffer buffer;
     private final AtomicCounter counter;
-    private final MilliClock clock;
+    private final EpochClock clock;
     private final int slotSize;
 
     /**
@@ -78,7 +78,7 @@ public class ErrorBuffer implements ErrorHandler
     }
 
     public ErrorBuffer(
-        final AtomicBuffer buffer, final AtomicCounter counter, final MilliClock clock, final int slotSize)
+        final AtomicBuffer buffer, final AtomicCounter counter, final EpochClock clock, final int slotSize)
     {
         this.buffer = buffer;
         this.counter = counter;

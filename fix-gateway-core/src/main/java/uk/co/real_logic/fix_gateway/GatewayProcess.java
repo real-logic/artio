@@ -17,9 +17,10 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
+import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.agrona.concurrent.SystemEpochClock;
 import uk.co.real_logic.fix_gateway.streams.Streams;
-import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.nio.channels.ClosedByInterruptException;
 
@@ -47,7 +48,7 @@ public class GatewayProcess implements AutoCloseable
     {
         monitoringFile = new MonitoringFile(true, configuration);
         fixCounters = new FixCounters(monitoringFile.createCountersManager());
-        final MilliClock clock = System::currentTimeMillis;
+        final EpochClock clock = new SystemEpochClock();
         errorBuffer = new ErrorBuffer(
             monitoringFile.errorBuffer(), fixCounters.exceptions(), clock, configuration.errorSlotSize());
     }

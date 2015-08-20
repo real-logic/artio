@@ -20,7 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.engine.framer.FakeMilliClock;
+import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
 
 import java.util.List;
 
@@ -36,7 +36,7 @@ public class ErrorBufferTest
 
     private UnsafeBuffer unsafeBuffer = new UnsafeBuffer(new byte[64 * SLOT_SIZE]);
     private AtomicCounter mockCounter = mock(AtomicCounter.class);
-    private FakeMilliClock clock = new FakeMilliClock();
+    private FakeEpochClock clock = new FakeEpochClock();
     private ErrorBuffer writeBuffer = new ErrorBuffer(unsafeBuffer, mockCounter, clock, SLOT_SIZE);
     private ErrorBuffer readBuffer = new ErrorBuffer(unsafeBuffer, SLOT_SIZE);
 

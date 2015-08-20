@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.library.session;
 
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.fix_gateway.engine.framer.FakeMilliClock;
+import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -38,7 +38,7 @@ public abstract class AbstractSessionTest
 
     protected SessionProxy mockProxy = mock(SessionProxy.class);
     protected GatewayPublication mockPublication = mock(GatewayPublication.class);
-    protected FakeMilliClock fakeClock = new FakeMilliClock();
+    protected FakeEpochClock fakeClock = new FakeEpochClock();
     protected AtomicCounter mockReceivedMsgSeqNo = mock(AtomicCounter.class);
     protected AtomicCounter mockSentMsgSeqNo = mock(AtomicCounter.class);
 

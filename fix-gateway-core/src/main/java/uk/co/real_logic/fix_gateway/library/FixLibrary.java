@@ -18,9 +18,7 @@ package uk.co.real_logic.fix_gateway.library;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
-import uk.co.real_logic.agrona.concurrent.QueuedPipe;
+import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
@@ -33,7 +31,6 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.ActivationHandler;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
-import uk.co.real_logic.fix_gateway.util.MilliClock;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -49,7 +46,7 @@ public class FixLibrary extends GatewayProcess
     private final Subscription inboundSubscription;
     private final GatewayPublication outboundPublication;
     private final Long2ObjectHashMap<SessionSubscriber> sessions = new Long2ObjectHashMap<>();
-    private final MilliClock clock;
+    private final EpochClock clock;
     private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
 
@@ -74,7 +71,7 @@ public class FixLibrary extends GatewayProcess
         inboundSubscription = inboundLibraryStreams.subscription();
         outboundPublication = outboundLibraryStreams.gatewayPublication();
 
-        clock = System::currentTimeMillis;
+        clock = new SystemEpochClock();
     }
 
     public int poll(final int fragmentLimit)

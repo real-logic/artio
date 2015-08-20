@@ -15,20 +15,22 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import uk.co.real_logic.fix_gateway.util.MilliClock;
+import uk.co.real_logic.agrona.concurrent.EpochClock;
 
-public class FakeMilliClock implements MilliClock
+import static java.util.concurrent.TimeUnit.SECONDS;
+
+public class FakeEpochClock implements EpochClock
 {
     private long time;
 
-    public FakeMilliClock()
+    public FakeEpochClock()
     {
         time = 0;
     }
 
     public void advanceSeconds(final int timeInSeconds)
     {
-        advanceMilliSeconds(MilliClock.fromSeconds(timeInSeconds));
+        advanceMilliSeconds(SECONDS.toMillis((long) timeInSeconds));
     }
 
     public void advanceMilliSeconds(final long duration)

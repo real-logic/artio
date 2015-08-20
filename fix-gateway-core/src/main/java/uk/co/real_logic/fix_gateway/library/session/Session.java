@@ -18,15 +18,15 @@ package uk.co.real_logic.fix_gateway.library.session;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.Verify;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.SessionRejectReason;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
-import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.util.MilliClock;
+import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -59,7 +59,7 @@ public class Session
     public static final String TEST_REQ_ID = "TEST";
     public static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
 
-    private final MilliClock clock;
+    private final EpochClock clock;
 
     protected final SessionProxy proxy;
     protected final long connectionId;
@@ -91,7 +91,7 @@ public class Session
     public Session(
         final int heartbeatIntervalInS,
         final long connectionId,
-        final MilliClock clock,
+        final EpochClock clock,
         final SessionState state,
         final SessionProxy proxy,
         final GatewayPublication publication,
@@ -490,7 +490,7 @@ public class Session
 
     Session heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
-        this.heartbeatIntervalInMs = MilliClock.fromSeconds(heartbeatIntervalInS);
+        this.heartbeatIntervalInMs = SECONDS.toMillis((long) heartbeatIntervalInS);
 
         final long time = time();
         incNextReceivedInboundMessageTime(time);

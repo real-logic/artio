@@ -16,10 +16,10 @@
 package uk.co.real_logic.fix_gateway.library.session;
 
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
-import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.util.MilliClock;
+import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
 public final class AcceptorSession extends Session
 {
@@ -27,7 +27,7 @@ public final class AcceptorSession extends Session
     public AcceptorSession(
         final int defaultInterval,
         final long connectionId,
-        final MilliClock clock,
+        final EpochClock clock,
         final SessionProxy proxy,
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,

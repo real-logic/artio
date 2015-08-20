@@ -15,14 +15,14 @@
  */
 package uk.co.real_logic.fix_gateway.library.session;
 
+import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.SessionRejectReason;
 import uk.co.real_logic.fix_gateway.builder.*;
 import uk.co.real_logic.fix_gateway.decoder.*;
-import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiFormatter;
-import uk.co.real_logic.fix_gateway.util.MilliClock;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.util.List;
@@ -84,7 +84,7 @@ public class SessionProxy
     private final GatewayPublication gatewayPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionCustomisationStrategy customisationStrategy;
-    private final MilliClock clock;
+    private final EpochClock clock;
     private final long connectionId;
     private long sessionId;
 
@@ -93,7 +93,7 @@ public class SessionProxy
         final GatewayPublication gatewayPublication,
         final SessionIdStrategy sessionIdStrategy,
         final SessionCustomisationStrategy customisationStrategy,
-        final MilliClock clock,
+        final EpochClock clock,
         final long connectionId)
     {
         this.gatewayPublication = gatewayPublication;
