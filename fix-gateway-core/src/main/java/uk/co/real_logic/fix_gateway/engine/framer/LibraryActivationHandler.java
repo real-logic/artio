@@ -46,9 +46,9 @@ public class LibraryActivationHandler implements NewImageHandler, InactiveImageH
 
     public void onInactiveImage(final Image image, final Subscription subscription, final long position)
     {
-        System.out.println(System.currentTimeMillis());
         if (isOutbound(subscription))
         {
+            System.out.println("Inactive: " + System.currentTimeMillis());
             final int libraryId = image.sessionId();
             final int count = libraryIds.get(libraryId) - 1;
             libraryIds.put(libraryId, count);
@@ -67,9 +67,11 @@ public class LibraryActivationHandler implements NewImageHandler, InactiveImageH
         if (isOutbound(subscription))
         {
             final int libraryId = image.sessionId();
-            final int count = libraryIds.get(libraryId);
-            libraryIds.put(libraryId, count + 1);
-            if (count == 0)
+            final int count = libraryIds.get(libraryId) + 1;
+            libraryIds.put(libraryId, count);
+            System.out.println("Active: " + System.currentTimeMillis() + " : " + libraryId + " @ " + count);
+            System.out.println(subscription);
+            if (count == 1)
             {
                 put(new NewLibrary(libraryId));
             }

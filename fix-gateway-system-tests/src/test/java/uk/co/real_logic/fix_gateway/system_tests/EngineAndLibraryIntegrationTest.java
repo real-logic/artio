@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.driver.MediaDriver;
@@ -88,16 +87,14 @@ public class EngineAndLibraryIntegrationTest
         assertTrue("Is not acceptor", libraries.get(0).isAcceptor());
     }
 
-    @Ignore
     @Test
     public void engineDetectsLibraryDisconnect()
     {
         connectLibrary();
         library.close();
 
-        System.out.println("before park" + System.currentTimeMillis());
         // should be 3 * TIMEOUT
-        LockSupport.parkNanos(15 * TIMEOUT);
+        LockSupport.parkNanos(20 * TIMEOUT);
 
         assertNoActiveLibraries();
     }
