@@ -24,8 +24,8 @@ import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.messages.MessageStatus;
-import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -36,9 +36,9 @@ import java.util.function.ToIntFunction;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
-import static uk.co.real_logic.fix_gateway.messages.MessageStatus.INVALID_CHECKSUM;
-import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
 public class ReceiverEndPointTest
@@ -52,11 +52,12 @@ public class ReceiverEndPointTest
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private SessionIds mockSessionIds = mock(SessionIds.class);
     private AtomicCounter messagesRead = mock(AtomicCounter.class);
+    private ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
             mockChannel, 16 * 1024, mockPublication, CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
-            messagesRead, mock(Framer.class), mock(ErrorHandler.class));
+            messagesRead, mock(Framer.class), errorHandler);
 
     @Before
     public void setUp()
@@ -77,12 +78,13 @@ public class ReceiverEndPointTest
     @Test
     public void shouldIgnoreGarbledMessages() throws IOException
     {
-        theEndpointReceives(GARBLED_MESSAGE, 0, GARBLED_MESSAGE.length);
+        final int length = GARBLED_MESSAGE.length;
+        theEndpointReceives(GARBLED_MESSAGE, 0, length);
 
         endPoint.pollForData();
 
-        handlerNotCalled();
-        assertFalse("Endpoint Disconnected", endPoint.hasDisconnected());
+        savesInvalidMessage(length);
+        verifyNoError();
     }
 
     @Test
@@ -170,7 +172,34 @@ public class ReceiverEndPointTest
         verify(mockPublication, times(1))
             .saveMessage(
                 any(AtomicBuffer.class), eq(0), eq(INVALID_CHECKSUM_LEN), eq(MESSAGE_TYPE), anyLong(), eq(CONNECTION_ID),
-                    eq(INVALID_CHECKSUM));
+                eq(INVALID_CHECKSUM));
+    }
+
+    @Test
+    public void fieldOutOfOrderMessageRecorded() throws IOException
+    {
+        final int length = TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES.length;
+        theEndpointReceives(
+            TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES, 0, length);
+
+        endPoint.pollForData();
+
+        savesInvalidMessage(length);
+        verifyNoError();
+    }
+
+    private void verifyNoError()
+    {
+        verify(errorHandler, never()).onError(any());
+        assertFalse("Endpoint Disconnected", endPoint.hasDisconnected());
+    }
+
+    private void savesInvalidMessage(final int length)
+    {
+        verify(mockPublication, times(1))
+            .saveMessage(
+                any(AtomicBuffer.class), eq(0), eq(length), anyInt(), anyLong(), eq(CONNECTION_ID),
+                eq(INVALID));
     }
 
     private void assertSavesDisconnect()

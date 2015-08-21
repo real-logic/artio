@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -152,6 +153,9 @@ public final class ExampleDictionary
 
     public static final String TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE =
         "35=0\0018=FIX.4.4\0019=0027\001115=abc\001116=2\001117=1.1\00110=161\001";
+
+    public static final byte[] TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES =
+        TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE.getBytes(US_ASCII);
 
     public static final String TAG_APPEARS_MORE_THAN_ONCE_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001116=1\001117=1.1\00110=161\001";

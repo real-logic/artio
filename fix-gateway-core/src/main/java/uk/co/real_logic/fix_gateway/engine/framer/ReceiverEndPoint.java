@@ -231,6 +231,14 @@ public class ReceiverEndPoint
 
                 offset += length;
             }
+            catch (final IllegalArgumentException ex)
+            {
+                // Completely unable to deal with parsing this message, bail
+                publication.saveMessage(
+                    buffer, offset, usedBufferData, '-', sessionId, connectionId, INVALID);
+                moveRemainingDataToBufferStart(usedBufferData);
+                return;
+            }
             catch (final Exception ex)
             {
                 errorHandler.onError(ex);
@@ -266,8 +274,15 @@ public class ReceiverEndPoint
 
     private boolean invalidBodyLengthTag(final int offset)
     {
-        return string.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD ||
-               string.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
+        try
+        {
+            return string.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD ||
+                   string.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
+        }
+        catch (IllegalArgumentException e)
+        {
+            return false;
+        }
     }
 
     private void moveRemainingDataToBufferStart(final int offset)

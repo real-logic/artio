@@ -37,6 +37,7 @@
             <validValue name="OK">0</validValue>
             <validValue name="INVALID_CHECKSUM">1</validValue>
             <validValue name="INVALID_BODYLENGTH">2</validValue>
+            <validValue name="INVALID">3</validValue>
         </enum>
     </types>
     <sbe:message name="FixMessage" id="1" description="A framed FIX message">
