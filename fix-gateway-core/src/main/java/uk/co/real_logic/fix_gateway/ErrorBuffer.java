@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.EpochClock;
+import uk.co.real_logic.agrona.concurrent.RecordBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import java.time.Instant;
@@ -26,10 +27,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.LockSupport;
 
-import static java.util.concurrent.TimeUnit.MICROSECONDS;
-import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
+import static uk.co.real_logic.agrona.concurrent.RecordBuffer.DID_NOT_CLAIM_RECORD;
 
 /**
  * A buffer which keeps track of the last exception thrown from a callsite.
@@ -41,14 +40,6 @@ import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
  */
 public class ErrorBuffer implements ErrorHandler
 {
-    private static final int UNUSED = 0;
-    private static final int PENDING = 1;
-    private static final int COMMITTED = 2;
-
-    private static final int DID_NOT_ACQUIRE_SLOT = -1;
-
-    private static final int POSITION_FIELD_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
-    private static final int END_OF_POSITION_FIELD = POSITION_FIELD_OFFSET + SIZE_OF_INT;
     private static final int STACK_TRACE_ELEMENT_MIN = StackTraceElementEncoder.BLOCK_LENGTH + 6;
 
     private final MessageHeaderEncoder messageHeaderEncoder = new MessageHeaderEncoder();
@@ -63,27 +54,29 @@ public class ErrorBuffer implements ErrorHandler
     private final int elementVersion = stackTraceElementEncoder.sbeSchemaVersion();
 
     private final AtomicBuffer buffer;
+    private final RecordBuffer recordBuffer;
     private final AtomicCounter counter;
     private final EpochClock clock;
-    private final int slotSize;
+    private final int maxRecordSize;
 
     /**
      * Read only constructor.
      *
      * @param buffer the buffer to use for outputting errors on.
      */
-    public ErrorBuffer(final AtomicBuffer buffer, final int slotSize)
+    public ErrorBuffer(final AtomicBuffer buffer, final int maxRecordSize)
     {
-        this(buffer, null, null, slotSize);
+        this(buffer, null, null, maxRecordSize);
     }
 
     public ErrorBuffer(
-        final AtomicBuffer buffer, final AtomicCounter counter, final EpochClock clock, final int slotSize)
+        final AtomicBuffer buffer, final AtomicCounter counter, final EpochClock clock, final int maxRecordSize)
     {
         this.buffer = buffer;
         this.counter = counter;
         this.clock = clock;
-        this.slotSize = slotSize;
+        this.maxRecordSize = maxRecordSize;
+        recordBuffer = new RecordBuffer(buffer, MessageHeaderEncoder.ENCODED_LENGTH, maxRecordSize);
 
         setupBuffers(buffer);
     }
@@ -117,7 +110,7 @@ public class ErrorBuffer implements ErrorHandler
             .schemaId(exceptionEntryEncoder.sbeSchemaId())
             .version(exceptionVersion);
 
-        movePosition(END_OF_POSITION_FIELD);
+        recordBuffer.initialise();
     }
 
     private void validate(final int read, final int expected, final String name)
@@ -148,36 +141,19 @@ public class ErrorBuffer implements ErrorHandler
     {
         final List<String> errors = new ArrayList<>();
 
-        int offset = END_OF_POSITION_FIELD;
-
-        final int position = position();
-        while (offset < position)
+        recordBuffer.forEach((key, offset) ->
         {
             wrapExceptionDecoder(offset);
-            if (status(offset) == COMMITTED && exceptionDecoder.time() > timeInMillis)
+            if (exceptionDecoder.time() > timeInMillis)
             {
                 final StringBuilder builder = new StringBuilder();
                 appendException(builder);
                 appendStackTraceElements(exceptionDecoder.limit(), builder);
                 errors.add(builder.toString());
             }
-            offset += slotSize;
-        }
+        });
 
         return errors;
-    }
-
-    private int status(final int offset)
-    {
-        return buffer.getIntVolatile(offset);
-    }
-
-    private void status(final int offset, final int oldStatus, final int newStatus)
-    {
-        while (!buffer.compareAndSetInt(offset, oldStatus, newStatus))
-        {
-            LockSupport.parkNanos(MICROSECONDS.toNanos(1));
-        }
     }
 
     private void appendStackTraceElements(int offset, final StringBuilder builder)
@@ -236,13 +212,13 @@ public class ErrorBuffer implements ErrorHandler
         final String message = ex.getMessage() != null ? ex.getMessage() : "No Message";
         final String exceptionName = ex.getClass().getName();
 
-        final int claimedOffset = findSlot(hash);
-        if (claimedOffset == DID_NOT_ACQUIRE_SLOT)
+        final int claimedOffset = recordBuffer.claimRecord(hash);
+        if (claimedOffset == DID_NOT_CLAIM_RECORD)
         {
             return;
         }
 
-        final int claimedLimit = claimedOffset + slotSize;
+        final int claimedLimit = claimedOffset + maxRecordSize;
         int offset = claimedOffset;
 
         exceptionEntryEncoder
@@ -276,50 +252,16 @@ public class ErrorBuffer implements ErrorHandler
         }
         exceptionEntryEncoder.elementCount((byte) i);
 
-        status(claimedOffset, PENDING, COMMITTED);
+        recordBuffer.commit(claimedOffset);
 
         if (claimedLimit < offset)
         {
             System.err.printf(
                 "Unexpected offset logging errors, claimedOffset = %d, size = %d, offset = %d\n",
                 claimedOffset,
-                slotSize,
+                maxRecordSize,
                 offset);
         }
-    }
-
-    private int findSlot(final int hash)
-    {
-        int offset = END_OF_POSITION_FIELD;
-
-        while (offset < position())
-        {
-            wrapExceptionDecoder(offset);
-            if (hash == exceptionDecoder.hash())
-            {
-                // If someone else is writing something with the same hash discard your error
-                if (status(offset) == PENDING)
-                {
-                    return DID_NOT_ACQUIRE_SLOT;
-                }
-                else // states == COMMITTED
-                {
-                    status(offset, COMMITTED, PENDING);
-                    return offset;
-                }
-            }
-
-            offset += slotSize;
-        }
-
-        if ((offset + slotSize) > buffer.capacity())
-        {
-            return DID_NOT_ACQUIRE_SLOT;
-        }
-
-        final int claimOffset = movePosition(slotSize);
-        status(claimOffset, UNUSED, PENDING);
-        return claimOffset;
     }
 
     private int sizeOfElement(final StackTraceElement element)
@@ -333,15 +275,5 @@ public class ErrorBuffer implements ErrorHandler
     private int hashThrowSite(final StackTraceElement throwSite)
     {
         return throwSite.getClassName().hashCode() + throwSite.getLineNumber() * 31;
-    }
-
-    private int position()
-    {
-        return buffer.getIntVolatile(POSITION_FIELD_OFFSET);
-    }
-
-    private int movePosition(final int delta)
-    {
-        return buffer.getAndAddInt(POSITION_FIELD_OFFSET, delta);
     }
 }
