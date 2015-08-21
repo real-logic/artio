@@ -32,7 +32,7 @@ public final class BenchmarkSessionHandler implements SessionHandler
                           final int length,
                           final long connectionId,
                           final long sessionId,
-                          final int messageType)
+                          final int messageType, final long timestamp)
     {
         //flyweight.wrap(buffer);
         //System.out.printf("Received Message: ");

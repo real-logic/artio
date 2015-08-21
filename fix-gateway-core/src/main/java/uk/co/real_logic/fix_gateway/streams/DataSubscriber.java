@@ -71,7 +71,8 @@ public class DataSubscriber implements FragmentHandler
                         messageLength,
                         messageFrame.connection(),
                         messageFrame.session(),
-                        messageFrame.messageType());
+                        messageFrame.messageType(),
+                        messageFrame.timestamp());
                 }
 
                 return offset + FRAME_SIZE + messageLength;

@@ -21,14 +21,16 @@ import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.QueuedPipe;
+import uk.co.real_logic.agrona.concurrent.SystemNanoClock;
+import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
-import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -44,6 +46,7 @@ import java.util.function.Consumer;
 import static java.net.StandardSocketOptions.SO_RCVBUF;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
 import static uk.co.real_logic.agrona.CloseHelper.close;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
@@ -58,6 +61,8 @@ public class Framer implements Agent, SessionHandler
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Long2ObjectHashMap<SenderEndPoint> connectionToSenderEndpoint = new Long2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
+    private final SystemNanoClock clock = new SystemNanoClock();
+    private final Timer outboundTimer = new Timer("Outbound Framer", clock);
     private final DataSubscriber dataSubscriber;
 
     private final Selector selector;
@@ -220,8 +225,14 @@ public class Framer implements Agent, SessionHandler
         final int length,
         final long connectionId,
         final long sessionId,
-        final int messageType)
+        final int messageType,
+        final long timestamp)
     {
+        if (TIME_MESSAGES)
+        {
+            outboundTimer.recordSince(timestamp);
+        }
+
         final SenderEndPoint endPoint = connectionToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {

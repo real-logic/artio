@@ -16,10 +16,7 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
-import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
-import uk.co.real_logic.agrona.concurrent.EpochClock;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.agrona.concurrent.SystemEpochClock;
+import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.streams.Streams;
 
 import java.nio.channels.ClosedByInterruptException;
@@ -56,11 +53,12 @@ public class GatewayProcess implements AutoCloseable
     private void initStreams(final CommonConfiguration configuration)
     {
         final String channel = configuration.aeronChannel();
+        final NanoClock nanoClock = new SystemNanoClock();
 
         inboundLibraryStreams = new Streams(
-            channel, aeron, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM);
+            channel, aeron, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock);
         outboundLibraryStreams = new Streams(
-            channel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM);
+            channel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock);
     }
 
     private void initAeron(final CommonConfiguration configuration)

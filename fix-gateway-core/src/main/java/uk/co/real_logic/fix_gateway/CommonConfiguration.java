@@ -34,15 +34,20 @@ public class CommonConfiguration
     public static final String MONITORING_FILE_PROP_NAME = "fix.monitoring.file";
     /** Property name for the flag to enable or disable debug logging */
     public static final String DEBUG_PRINT_MESSAGES_PROPERTY = "fix.core.debug";
+    /** Property name for the flag to enable or disable message timing */
+    public static final String TIME_MESSAGES_PROPERTY = "fix.core.timing";
     /** Property name for the file to log debug messages to, default is standard output */
     public static final String DEBUG_FILE_PROPERTY = "fix.core.debug.file";
 
     public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 8 * 1024 * 1024;
     public static final String DEFAULT_MONITORING_FILE = IoUtil.tmpDirName() + "fix" + File.separator + "counters";
 
-    /** This is static final field in order to give the optimiser scope to remove references to it. */
+    /** These are static final fields in order to give the optimiser scope to remove references to it. */
     public static final boolean DEBUG_PRINT_MESSAGES = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
     public static final String DEBUG_FILE = System.getProperty(DEBUG_FILE_PROPERTY);
+    public static final boolean TIME_MESSAGES = true; //Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
+    public static final int WARMUP_MESSAGES = Integer.getInteger("fix.benchmark.warmup", 10_000);
+    public static final int MESSAGES_EXCHANGED = Integer.getInteger("fix.benchmark.messages", 100_000);
 
     private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 2_000L;
     private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;

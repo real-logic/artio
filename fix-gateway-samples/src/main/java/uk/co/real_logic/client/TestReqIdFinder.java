@@ -39,7 +39,7 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
                           final int length,
                           final long connectionId,
                           final long sessionId,
-                          final int messageType)
+                          final int messageType, final long timestamp)
     {
         // You can hook your own parsers at this point,
         // Here's an example using our otf parser

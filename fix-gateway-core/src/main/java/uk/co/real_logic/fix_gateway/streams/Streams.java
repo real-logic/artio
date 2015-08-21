@@ -20,11 +20,12 @@ import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
+import uk.co.real_logic.agrona.concurrent.NanoClock;
 
 public class Streams
 {
     private final int streamId;
-
+    private final NanoClock nanoClock;
     private final String channel;
     private final Aeron aeron;
     private final AtomicCounter failedPublications;
@@ -33,17 +34,23 @@ public class Streams
         final String channel,
         final Aeron aeron,
         final AtomicCounter failedPublications,
-        final int streamId)
+        final int streamId,
+        final NanoClock nanoClock)
     {
         this.channel = channel;
         this.aeron = aeron;
         this.failedPublications = failedPublications;
         this.streamId = streamId;
+        this.nanoClock = nanoClock;
     }
 
     public GatewayPublication gatewayPublication()
     {
-        return new GatewayPublication(dataPublication(), failedPublications, new BackoffIdleStrategy(1, 1, 1, 1 << 20));
+        return new GatewayPublication(
+            dataPublication(),
+            failedPublications,
+            new BackoffIdleStrategy(1, 1, 1, 1 << 20),
+            nanoClock);
     }
 
     public Publication dataPublication()

@@ -21,11 +21,13 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.agrona.concurrent.NanoClock;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 
 /**
  * A proxy for publishing messages fix related messages
@@ -50,13 +52,18 @@ public class GatewayPublication
     private final BufferClaim bufferClaim;
     private final Publication dataPublication;
     private final IdleStrategy idleStrategy;
+    private final NanoClock nanoClock;
     private final AtomicCounter fails;
 
     public GatewayPublication(
-        final Publication dataPublication, final AtomicCounter fails, final IdleStrategy idleStrategy)
+        final Publication dataPublication,
+        final AtomicCounter fails,
+        final IdleStrategy idleStrategy,
+        final NanoClock nanoClock)
     {
         this.dataPublication = dataPublication;
         this.idleStrategy = idleStrategy;
+        this.nanoClock = nanoClock;
         bufferClaim = new BufferClaim();
         this.fails = fails;
     }
@@ -70,6 +77,7 @@ public class GatewayPublication
         final long connectionId,
         final MessageStatus status)
     {
+        final long timestamp = TIME_MESSAGES ? nanoClock.nanoTime() : 0L;
         final int framedLength = header.encodedLength() + FRAME_SIZE + srcLength;
         final long position = claim(framedLength);
 
@@ -91,6 +99,7 @@ public class GatewayPublication
             .messageType(messageType)
             .session(sessionId)
             .connection(connectionId)
+            .timestamp(timestamp)
             .status(status)
             .putBody(srcBuffer, srcOffset, srcLength);
 

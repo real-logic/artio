@@ -37,7 +37,7 @@ public class SampleSessionHandler implements SessionHandler
                           final int length,
                           final long connectionId,
                           final long sessionId,
-                          final int messageType)
+                          final int messageType, final long timestamp)
     {
         string.wrap(buffer);
         System.out.printf("%d -> %s\n", connectionId, printer.toString(string, offset, length, messageType));

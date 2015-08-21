@@ -154,6 +154,6 @@ public class ReplayerTest extends AbstractReplayTest
 
     private void onMessage(final int messageType)
     {
-        replayer.onMessage(buffer, 1, buffer.capacity(), CONNECTION_ID, SESSION_ID, messageType);
+        replayer.onMessage(buffer, 1, buffer.capacity(), CONNECTION_ID, SESSION_ID, messageType, 0L);
     }
 }

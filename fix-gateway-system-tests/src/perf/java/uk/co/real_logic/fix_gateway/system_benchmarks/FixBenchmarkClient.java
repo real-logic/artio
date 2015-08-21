@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.system_benchmarks;
 import org.HdrHistogram.Histogram;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.console.ContinueBarrier;
+import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
@@ -32,6 +33,8 @@ import java.util.concurrent.locks.LockSupport;
 
 import static java.net.StandardSocketOptions.TCP_NODELAY;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.MESSAGES_EXCHANGED;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.WARMUP_MESSAGES;
 import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.*;
 
 // TODO: make another benchmark client with two threads, measuring load
@@ -107,7 +110,8 @@ public final class FixBenchmarkClient
                 exchangeMessage(socketChannel, testRequest, header, WARMUP_MESSAGES + i, histogram);
             }
 
-            histogram.outputPercentileDistribution(System.out, 1000.0);
+            //histogram.outputPercentileDistribution(System.out, 1000.0);
+            Timer.prettyPrint("Client", histogram);
         }
         while (continueBarrier.await());
     }

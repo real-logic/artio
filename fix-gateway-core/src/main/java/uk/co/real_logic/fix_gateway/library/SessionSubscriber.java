@@ -16,21 +16,30 @@
 package uk.co.real_logic.fix_gateway.library;
 
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.library.session.SessionParser;
+
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 
 public class SessionSubscriber implements SessionHandler, AutoCloseable
 {
     private final SessionParser parser;
     private final Session session;
     private final SessionHandler handler;
+    private final Timer timer;
 
-    public SessionSubscriber(final SessionParser parser, final Session session, final SessionHandler handler)
+    public SessionSubscriber(
+        final SessionParser parser,
+        final Session session,
+        final SessionHandler handler,
+        final Timer timer)
     {
         this.parser = parser;
         this.session = session;
         this.handler = handler;
+        this.timer = timer;
     }
 
     public void onMessage(final DirectBuffer buffer,
@@ -38,11 +47,17 @@ public class SessionSubscriber implements SessionHandler, AutoCloseable
                           final int length,
                           final long connectionId,
                           final long sessionId,
-                          final int messageType)
+                          final int messageType,
+                          final long timestamp)
     {
+        if (TIME_MESSAGES)
+        {
+            timer.recordSince(timestamp);
+        }
+
         if (parser.onMessage(buffer, offset, length, messageType, sessionId))
         {
-            handler.onMessage(buffer, offset, length, connectionId, sessionId, messageType);
+            handler.onMessage(buffer, offset, length, connectionId, sessionId, messageType, timestamp);
         }
     }
 

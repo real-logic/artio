@@ -47,7 +47,7 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
         final int length,
         final long connectionId,
         final long sessionId,
-        final int messageType)
+        final int messageType, final long timestamp)
     {
         parser.onMessage(buffer, offset, length);
         acceptor.forSession(connectionIdToSession.get(connectionId));

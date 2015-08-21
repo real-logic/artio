@@ -199,6 +199,7 @@ project(':fix-gateway-core') {
         compile project(path: ':fix-gateway-codecs')
         compile "uk.co.real-logic:aeron-client:${aeronVersion}"
         compile "uk.co.real-logic:aeron-driver:${aeronVersion}"
+        compile 'org.hdrhistogram:HdrHistogram:2.1.6'
     }
 
     run {
@@ -226,8 +227,7 @@ project(':fix-gateway-system-tests') {
                     project(path: ':fix-gateway-codecs', configuration: 'tests')
 
         compile project(path: ':fix-gateway-core'),
-                "uk.co.real-logic:aeron-client:${aeronVersion}",
-                'org.hdrhistogram:HdrHistogram:2.1.6'
+                "uk.co.real-logic:aeron-client:${aeronVersion}"
 
         perfCompile project,
                     'org.openjdk.jmh:jmh-core:1.9.2',

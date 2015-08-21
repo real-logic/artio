@@ -27,7 +27,8 @@ public interface SessionHandler
         final int length,
         final long connectionId,
         final long sessionId,
-        final int messageType)
+        final int messageType,
+        final long timestamp)
     {
         // Optional method, implement if you care about this type of message.
     }

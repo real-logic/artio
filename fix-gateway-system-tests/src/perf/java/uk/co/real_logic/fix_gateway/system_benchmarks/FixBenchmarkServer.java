@@ -31,7 +31,6 @@ import uk.co.real_logic.fix_gateway.library.validation.TargetCompIdValidationStr
 import java.io.File;
 import java.util.Arrays;
 
-import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.ACCEPTOR_ID;
 import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.INITIATOR_ID;
 
@@ -57,9 +56,7 @@ public final class FixBenchmarkServer
 
     private static MediaDriver newMediaDriver()
     {
-        final MediaDriver.Context context = new MediaDriver.Context()
-            .threadingMode(SHARED)
-            .dirsDeleteOnStart(true);
+        final MediaDriver.Context context = new MediaDriver.Context().dirsDeleteOnStart(true);
 
         return MediaDriver.launch(context);
     }

@@ -102,7 +102,7 @@ public class ArchivePrinter implements SessionHandler
                           final int length,
                           final long connectionId,
                           final long sessionId,
-                          final int messageType)
+                          final int messageType, final long timestamp)
     {
         ascii.wrap(buffer);
         output.println(ascii.getAscii(offset, length));

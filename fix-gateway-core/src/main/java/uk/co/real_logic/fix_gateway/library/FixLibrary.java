@@ -22,6 +22,7 @@ import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
+import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.library.session.*;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
@@ -49,6 +50,7 @@ public class FixLibrary extends GatewayProcess
     private final EpochClock clock;
     private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
+    private final Timer timer = new Timer("Session", new SystemNanoClock());
 
     private Session incomingSession;
     private SessionConfiguration sessionConfiguration;
@@ -206,13 +208,14 @@ public class FixLibrary extends GatewayProcess
             final int length,
             final long connectionId,
             final long sessionId,
-            final int messageType)
+            final int messageType,
+            final long timestamp)
         {
             DebugLogger.log("Received %s\n", buffer, offset, length);
             final SessionSubscriber subscriber = sessions.get(connectionId);
             if (subscriber != null)
             {
-                subscriber.onMessage(buffer, offset, length, connectionId, sessionId, messageType);
+                subscriber.onMessage(buffer, offset, length, connectionId, sessionId, messageType, timestamp);
             }
         }
 
@@ -243,7 +246,7 @@ public class FixLibrary extends GatewayProcess
         final SessionParser parser = new SessionParser(
             session, sessionIdStrategy, authenticationStrategy, validationStrategy);
         final SessionHandler handler = configuration.newSessionHandler().onConnect(session);
-        final SessionSubscriber subscriber = new SessionSubscriber(parser, session, handler);
+        final SessionSubscriber subscriber = new SessionSubscriber(parser, session, handler, timer);
         sessions.put(connectionId, subscriber);
     }
 

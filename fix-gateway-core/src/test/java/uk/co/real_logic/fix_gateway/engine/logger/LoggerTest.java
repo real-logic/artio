@@ -23,6 +23,7 @@ import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.agrona.concurrent.NanoClock;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.streams.Streams;
@@ -64,7 +65,8 @@ public class LoggerTest
 
         mediaDriver = launchMediaDriver();
         aeron = Aeron.connect(new Aeron.Context());
-        final Streams inboundStreams = new Streams("udp://localhost:9999", aeron, mock(AtomicCounter.class), STREAM_ID);
+        final Streams inboundStreams = new Streams(
+            "udp://localhost:9999", aeron, mock(AtomicCounter.class), STREAM_ID, mock(NanoClock.class));
 
         final EngineConfiguration configuration = new EngineConfiguration().logOutboundMessages(false);
         logger = new Logger(

@@ -20,6 +20,4 @@ public final class Configuration
     public static final int PORT = Integer.getInteger("fix.benchmark.port", 9999);
     public static final String ACCEPTOR_ID = "ACC";
     public static final String INITIATOR_ID = "INIT";
-    public static final int MESSAGES_EXCHANGED = Integer.getInteger("fix.benchmark.messages", 100_000);
-    public static final int WARMUP_MESSAGES = Integer.getInteger("fix.benchmark.warmup", 10_000);
 }
