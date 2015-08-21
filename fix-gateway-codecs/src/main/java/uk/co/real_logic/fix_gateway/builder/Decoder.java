@@ -31,14 +31,15 @@ public interface Decoder
     boolean validate();
 
     /**
-     * @return the tag id of the tag that failed validation, or {@code NO_ERROR} if there's no error
+     * @return the tag id of the tag that failed validation, or {@code NO_ERROR} if there's no error.
      */
     int invalidTagId();
 
     /**
      * NB: Not enum to avoid cyclic compilation dependency
      *
-     * @return the session reject reason error code corresponding to the validation error.
+     * @return the session reject reason error code corresponding to the validation error,
+     * or {@code NO_ERROR} if there's no error.
      */
     int rejectReason();
 }

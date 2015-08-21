@@ -36,6 +36,7 @@ import static java.lang.reflect.Modifier.isPublic;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
+import static uk.co.real_logic.fix_gateway.builder.Decoder.NO_ERROR;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.DecoderGenerator.*;
@@ -366,6 +367,28 @@ public class DecoderGeneratorTest
         assertFalse("Passed validation with incorrect value", decoder.validate());
         assertEquals("Wrong tag id", 116, decoder.invalidTagId());
         assertEquals("Wrong reject reason", TAG_APPEARS_MORE_THAN_ONCE, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldResetTheInvalidAccessors() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_APPEARS_MORE_THAN_ONCE_MESSAGE);
+        decoder.validate();
+
+        decoder.reset();
+
+        assertEquals("Failed to reset tag id", NO_ERROR, decoder.invalidTagId());
+        assertEquals("Failed to reset reject reason", NO_ERROR, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateFirstThreeFieldsAreInOrder() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE);
+
+        assertFalse("Passed validation with incorrect value", decoder.validate());
+        assertEquals("Wrong tag id", 9, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER, decoder.rejectReason());
     }
 
     // TODO: validation for data fields

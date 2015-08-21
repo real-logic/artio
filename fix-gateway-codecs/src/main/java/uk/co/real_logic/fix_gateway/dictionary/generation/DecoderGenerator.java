@@ -63,6 +63,7 @@ public class DecoderGenerator extends Generator
     public static final int TAG_SPECIFIED_WITHOUT_A_VALUE = 4;
     public static final int VALUE_IS_INCORRECT = 5;
     public static final int TAG_APPEARS_MORE_THAN_ONCE = 13;
+    public static final int TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER = 14;
 
     public static String decoderClassName(final Aggregate aggregate)
     {
@@ -611,10 +612,12 @@ public class DecoderGenerator extends Generator
         }
     }
 
-    private String generateDecodeMethod(final List<Entry> entries, final Aggregate aggregate, final AggregateType type)
+    private String generateDecodeMethod(
+        final List<Entry> entries, final Aggregate aggregate, final AggregateType type)
     {
         final boolean hasCommonCompounds = type == MESSAGE;
         final boolean isGroup = type == GROUP;
+        final boolean isHeader = type == HEADER;
         final String endGroupCheck;
         if (isGroup)
         {
@@ -638,6 +641,7 @@ public class DecoderGenerator extends Generator
         final String prefix =
             "    public int decode(final AsciiFlyweight buffer, final int offset, final int length)\n" +
                 "    {\n" +
+                "        int seenFieldCount = 0;\n" +
                 "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
                 "        {\n" +
                 "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");\n" +
@@ -667,6 +671,23 @@ public class DecoderGenerator extends Generator
                 "                    invalidTagId = tag;\n" +
                 "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
                 "                }\n" +
+                (isHeader ?
+                    "                else if (seenFieldCount == 0 && tag != 8)\n" +
+                    "                {\n" +
+                    "                    invalidTagId = tag;\n" +
+                    "                    rejectReason = " + TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER + ";\n" +
+                    "                }\n" +
+                    "                else if (seenFieldCount == 1 && tag != 9)\n" +
+                    "                {\n" +
+                    "                    invalidTagId = tag;\n" +
+                    "                    rejectReason = " + TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER + ";\n" +
+                    "                }\n" +
+                    "                else if (seenFieldCount == 2 && tag != 35)\n" +
+                    "                {\n" +
+                    "                    invalidTagId = tag;\n" +
+                    "                    rejectReason = " + TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER + ";\n" +
+                    "                }\n"
+                : "") +
 
                 (isGroup ? "" :
                 "                if (!alreadyVisitedFields.add(tag))\n" +
@@ -676,6 +697,7 @@ public class DecoderGenerator extends Generator
                 "                }\n") +
 
                 "                missingRequiredFields.remove(tag);\n" +
+                "                seenFieldCount++;\n" +
                 "            }\n" +
                 "            switch (tag)\n" +
                 "            {\n\n";
