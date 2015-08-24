@@ -31,7 +31,7 @@ public final class Timing
 
     public static void assertEventuallyTrue(final String message, final BooleanSupplier condition)
     {
-        assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT);
+        assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT, 100);
     }
 
     public static void assertEventuallyEquals(
@@ -66,10 +66,13 @@ public final class Timing
                     return false;
                 }
             },
-            timeout);
+            timeout, 100);
     }
 
-    public static void assertEventuallyTrue(final String message, final BooleanSupplier condition, final long timeout)
+    public static void assertEventuallyTrue(final String message,
+                                            final BooleanSupplier condition,
+                                            final long timeout,
+                                            final long interval)
     {
         final long startTime = System.currentTimeMillis();
 
@@ -82,7 +85,7 @@ public final class Timing
 
             try
             {
-                Thread.sleep(100);
+                Thread.sleep(interval);
             }
             catch (final InterruptedException e)
             {

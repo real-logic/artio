@@ -75,4 +75,9 @@ public interface SessionHandler
     {
         // Optional method, implement if you care about this type of message.
     }
+
+    default void onApplicationHeartbeat(final int libraryId)
+    {
+        // Optional method, implement if you care about this type of message.
+    }
 }

@@ -56,7 +56,7 @@ public final class FixEngine extends GatewayProcess
      *
      * @return a list of currently active libraries.
      */
-    public List<LibraryInfo> libraries()
+    public List<Library> libraries()
     {
         final QueryLibraries query = new QueryLibraries();
         while (!adminCommands.offer(query))

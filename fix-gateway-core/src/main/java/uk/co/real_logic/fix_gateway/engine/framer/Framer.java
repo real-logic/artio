@@ -19,13 +19,12 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
-import uk.co.real_logic.agrona.concurrent.Agent;
-import uk.co.real_logic.agrona.concurrent.QueuedPipe;
-import uk.co.real_logic.agrona.concurrent.SystemNanoClock;
+import uk.co.real_logic.agrona.concurrent.*;
+import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.engine.LibraryInfo;
+import uk.co.real_logic.fix_gateway.engine.Library;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -58,11 +57,13 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 public class Framer implements Agent, SessionHandler
 {
     public static final int OUTBOUND_FRAGMENT_LIMIT = 5;
-    private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
+
+    private final Int2ObjectHashMap<Library> idToLibrary = new Int2ObjectHashMap<>();
+
     private final Long2ObjectHashMap<SenderEndPoint> connectionToSenderEndpoint = new Long2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
-    private final SystemNanoClock clock = new SystemNanoClock();
-    private final Timer outboundTimer = new Timer("Outbound Framer", clock);
+    private final EpochClock clock = new SystemEpochClock();
+    private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
     private final DataSubscriber dataSubscriber;
 
     private final Selector selector;
@@ -78,6 +79,7 @@ public class Framer implements Agent, SessionHandler
     private final ReceiverEndPointPoller endPointPoller;
 
     private long nextConnectionId = (long) (Math.random() * Long.MAX_VALUE);
+    private int acceptorLibraryId;
 
     public Framer(
         final EngineConfiguration configuration,
@@ -121,7 +123,25 @@ public class Framer implements Agent, SessionHandler
         return outboundDataSubscription.poll(dataSubscriber, OUTBOUND_FRAGMENT_LIMIT) +
                replaySubscription.poll(dataSubscriber, OUTBOUND_FRAGMENT_LIMIT) +
                pollSockets() +
+               pollLibraries() +
                adminCommands.drain(onAdminCommand);
+    }
+
+    private int pollLibraries()
+    {
+        final long timeInMs = clock.time();
+        int total = 0;
+        final Iterator<Library> iterator = idToLibrary.values().iterator();
+        while (iterator.hasNext())
+        {
+            final Library library = iterator.next();
+            total += library.poll(timeInMs);
+            if (!library.isConnected())
+            {
+                iterator.remove();
+            }
+        }
+        return total;
     }
 
     public void removeEndPoint(final ReceiverEndPoint receiverEndPoint)
@@ -159,7 +179,7 @@ public class Framer implements Agent, SessionHandler
                 setupConnection(channel, connectionId, UNKNOWN);
 
                 final String address = channel.getRemoteAddress().toString();
-                inboundPublication.saveConnect(connectionId, address, ACCEPTOR);
+                inboundPublication.saveConnect(connectionId, address, acceptorLibraryId, ACCEPTOR);
 
                 it.remove();
             }
@@ -204,7 +224,7 @@ public class Framer implements Agent, SessionHandler
             }
 
             setupConnection(channel, connectionId, sessionId);
-            inboundPublication.saveConnect(connectionId, address.toString(), INITIATOR);
+            inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR);
             inboundPublication.saveLogon(connectionId, sessionId);
         }
         catch (final Exception e)
@@ -273,18 +293,42 @@ public class Framer implements Agent, SessionHandler
 
     public void onNewLibrary(final int libraryId)
     {
-        final boolean isAcceptor = idToLibrary.isEmpty();
-        idToLibrary.put(libraryId, new LibraryInfo(isAcceptor, libraryId));
+
     }
 
     public void onInactiveLibrary(final int libraryId)
     {
-        idToLibrary.remove(libraryId);
+    }
+
+    public void onApplicationHeartbeat(final int libraryId)
+    {
+        Library library = idToLibrary.get(libraryId);
+        if (library == null)
+        {
+            final LivenessDetector livenessDetector = new LivenessDetector(
+                inboundPublication,
+                libraryId,
+                configuration.replyTimeoutInMs(),
+                clock.time(),
+                true);
+
+            final boolean isFirstLibrary = idToLibrary.isEmpty();
+            if (isFirstLibrary)
+            {
+                acceptorLibraryId = libraryId;
+            }
+            library = new Library(isFirstLibrary, libraryId, livenessDetector);
+            idToLibrary.put(libraryId, library);
+        }
+        else
+        {
+            library.onHeartbeat(clock.time());
+        }
     }
 
     public void onQueryLibraries(final QueryLibraries queryLibraries)
     {
-        final List<LibraryInfo> libraries = new ArrayList<>(idToLibrary.values());
+        final List<Library> libraries = new ArrayList<>(idToLibrary.values());
         queryLibraries.respond(libraries);
     }
 

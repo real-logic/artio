@@ -48,6 +48,7 @@ public class GatewayPublication
     private final DisconnectEncoder disconnect = new DisconnectEncoder();
     private final FixMessageEncoder messageFrame = new FixMessageEncoder();
     private final ErrorEncoder error = new ErrorEncoder();
+    private final ApplicationHeartbeatEncoder applicationHeartbeat = new ApplicationHeartbeatEncoder();
 
     private final BufferClaim bufferClaim;
     private final Publication dataPublication;
@@ -138,6 +139,7 @@ public class GatewayPublication
 
     public long saveConnect(final long connectionId,
                             final String address,
+                            final int libraryId,
                             final ConnectionType type)
     {
         final byte[] addressString = address.getBytes(UTF_8);
@@ -160,6 +162,7 @@ public class GatewayPublication
         connect
             .wrap(buffer, offset)
             .connection(connectionId)
+            .libraryId(libraryId)
             .type(type)
             .putAddress(addressString, 0, addressString.length);
 
@@ -293,6 +296,31 @@ public class GatewayPublication
             .type(errorType)
             .libraryId(libraryId)
             .putMessage(messageBytes, 0, messageBytes.length);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long saveApplicationHeartbeat(final int libraryId)
+    {
+        final long position = claim(header.encodedLength() + ApplicationHeartbeatEncoder.BLOCK_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(applicationHeartbeat.sbeBlockLength())
+            .templateId(applicationHeartbeat.sbeTemplateId())
+            .schemaId(applicationHeartbeat.sbeSchemaId())
+            .version(applicationHeartbeat.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        applicationHeartbeat
+            .wrap(buffer, offset)
+            .libraryId(libraryId);
 
         bufferClaim.commit();
 

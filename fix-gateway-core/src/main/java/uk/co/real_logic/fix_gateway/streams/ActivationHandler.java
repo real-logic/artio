@@ -55,7 +55,7 @@ public class ActivationHandler implements NewImageHandler, InactiveImageHandler
             libraryIds.put(libraryId, count);
             if (count == 0)
             {
-                put(new InactiveProcess(libraryId));
+                //put(new InactiveProcess(libraryId));
             }
         }
     }
@@ -73,7 +73,7 @@ public class ActivationHandler implements NewImageHandler, InactiveImageHandler
             //System.out.println("Active: " + System.currentTimeMillis() + " : " + libraryId + " @ " + count);
             if (count == 1)
             {
-                put(new NewProcess(libraryId));
+                //put(new NewProcess(libraryId));
             }
         }
     }

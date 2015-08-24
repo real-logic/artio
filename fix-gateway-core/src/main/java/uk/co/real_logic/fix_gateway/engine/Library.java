@@ -15,15 +15,32 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
-public final class LibraryInfo
+import uk.co.real_logic.fix_gateway.LivenessDetector;
+
+/**
+ * Engine managed model of a library instance.
+ */
+public final class Library
 {
     private final boolean acceptor;
     private final int libraryId;
+    private final LivenessDetector livenessDetector;
 
-    public LibraryInfo(final boolean acceptor, final int libraryId)
+    public Library(final boolean acceptor, final int libraryId, final LivenessDetector livenessDetector)
     {
         this.acceptor = acceptor;
         this.libraryId = libraryId;
+        this.livenessDetector = livenessDetector;
+    }
+
+    public void onHeartbeat(final long timeInMs)
+    {
+        livenessDetector.onHeartbeat(timeInMs);
+    }
+
+    public int poll(final long timeInMs)
+    {
+        return livenessDetector.poll(timeInMs);
     }
 
     public boolean isAcceptor()
@@ -42,5 +59,10 @@ public final class LibraryInfo
             "acceptor=" + acceptor +
             ", libraryId=" + libraryId +
             '}';
+    }
+
+    public boolean isConnected()
+    {
+        return livenessDetector.isConnected();
     }
 }

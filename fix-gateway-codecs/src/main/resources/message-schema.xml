@@ -20,6 +20,7 @@
     </types>
     <types>
         <type name="FixSessionId" primitiveType="int64"/>
+        <type name="LibraryId" primitiveType="uint16"/>
         <type name="ConnectionId" primitiveType="int64"/>
         <type name="TermId" primitiveType="int32"/>
         <type name="MessageType" primitiveType="int32"/>
@@ -70,7 +71,7 @@
     </sbe:message>
     <sbe:message name="Connect" id="10" description="A TCP Connection has connected">
         <field name="connection" id="17" type="ConnectionId"/>
-        <field name="libraryId" id="19" type="int32"/>
+        <field name="libraryId" id="19" type="LibraryId"/>
         <field name="type" id="24" type="ConnectionType"/>
         <data name="address" id="18" type="varDataEncoding"/>
     </sbe:message>
@@ -87,7 +88,7 @@
     </sbe:message>
     <sbe:message name="Error" id="13" description="An error has occurred">
         <field name="type" id="25" type="GatewayError"/>
-        <field name="libraryId" id="19" type="int32"/>
+        <field name="libraryId" id="19" type="LibraryId"/>
         <data name="message" id="26" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="ExceptionEntry" id="14" description="">
@@ -103,5 +104,9 @@
         <data name="className" id="32" type="varDataEncoding"/>
         <data name="methodName" id="33" type="varDataEncoding"/>
         <data name="fileName" id="34" type="varDataEncoding"/>
+    </sbe:message>
+    <sbe:message name="ApplicationHeartbeat" id="16"
+                 description="A heartbeat message sent within the application protocol">
+        <field name="libraryId" id="40" type="LibraryId"/>
     </sbe:message>
 </sbe:messageSchema>

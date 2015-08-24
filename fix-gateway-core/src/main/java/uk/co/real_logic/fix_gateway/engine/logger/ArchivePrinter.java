@@ -91,7 +91,7 @@ public class ArchivePrinter implements SessionHandler
                         break;
                     }
 
-                   offset = subscriber.readFragment(termBuffer, offset, streamId);
+                   offset = subscriber.readFragment(termBuffer, offset);
                 }
             }
         }

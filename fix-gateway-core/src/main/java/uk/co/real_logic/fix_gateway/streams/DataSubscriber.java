@@ -22,12 +22,14 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
 
+import static uk.co.real_logic.fix_gateway.messages.ConnectDecoder.addressHeaderLength;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.streams.GatewayPublication.FRAME_SIZE;
 
 public class DataSubscriber implements FragmentHandler
 {
     public static final int UNKNOWN_TEMPLATE = -1;
+
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final LogonDecoder logon = new LogonDecoder();
     private final ConnectDecoder connect = new ConnectDecoder();
@@ -36,6 +38,7 @@ public class DataSubscriber implements FragmentHandler
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final ErrorDecoder error = new ErrorDecoder();
+    private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
 
     private final SessionHandler sessionHandler;
 
@@ -46,10 +49,10 @@ public class DataSubscriber implements FragmentHandler
 
     public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
-        readFragment(buffer, offset, header.sessionId());
+        readFragment(buffer, offset);
     }
 
-    public int readFragment(final DirectBuffer buffer, int offset, final int libraryId)
+    public int readFragment(final DirectBuffer buffer, int offset)
     {
         messageHeader.wrap(buffer, offset);
 
@@ -61,88 +64,149 @@ public class DataSubscriber implements FragmentHandler
         {
             case FixMessageDecoder.TEMPLATE_ID:
             {
-                messageFrame.wrap(buffer, offset, blockLength, version);
-                final int messageLength = messageFrame.bodyLength();
-                if (messageFrame.status() == OK)
-                {
-                    sessionHandler.onMessage(
-                        buffer,
-                        offset + FRAME_SIZE,
-                        messageLength,
-                        messageFrame.connection(),
-                        messageFrame.session(),
-                        messageFrame.messageType(),
-                        messageFrame.timestamp());
-                }
-
-                return offset + FRAME_SIZE + messageLength;
+                return onFixMessage(buffer, offset, blockLength, version);
             }
 
             case DisconnectDecoder.TEMPLATE_ID:
             {
-                disconnect.wrap(buffer, offset, blockLength, version);
-                final long connectionId = disconnect.connection();
-                DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
-                sessionHandler.onDisconnect(connectionId);
-                return offset + DisconnectDecoder.BLOCK_LENGTH;
+                return onDisconnect(buffer, offset, blockLength, version);
             }
 
             case LogonDecoder.TEMPLATE_ID:
             {
-                logon.wrap(buffer, offset, blockLength, version);
-                sessionHandler.onLogon(logon.connection(), logon.session());
-                return logon.limit();
+                return onLogon(buffer, offset, blockLength, version);
             }
 
             case ConnectDecoder.TEMPLATE_ID:
             {
-                connect.wrap(buffer, offset, blockLength, version);
-                final int addressOffset = offset + ConnectDecoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
-                sessionHandler.onConnect(
-                    connect.libraryId(),
-                    connect.connection(),
-                    connect.type(),
-                    buffer,
-                    addressOffset,
-                    connect.addressLength());
-                return connect.limit();
+                return onConnect(buffer, offset, blockLength, version);
             }
 
             case RequestDisconnectDecoder.TEMPLATE_ID:
             {
-                requestDisconnect.wrap(buffer, offset, blockLength, version);
-                sessionHandler.onRequestDisconnect(requestDisconnect.connection());
-                return requestDisconnect.limit();
+                return onRequestDisconnect(buffer, offset, blockLength, version);
             }
 
             case InitiateConnectionDecoder.TEMPLATE_ID:
             {
-                initiateConnection.wrap(buffer, offset, blockLength, version);
-                sessionHandler.onInitiateConnection(
-                    libraryId,
-                    initiateConnection.port(),
-                    initiateConnection.host(),
-                    initiateConnection.senderCompId(),
-                    initiateConnection.senderSubId(),
-                    initiateConnection.senderLocationId(),
-                    initiateConnection.targetCompId()
-                );
-                return initiateConnection.limit();
+                return onInitiateConnection(buffer, offset, blockLength, version);
             }
 
             case ErrorDecoder.TEMPLATE_ID:
             {
-                error.wrap(buffer, offset, blockLength, version);
-                sessionHandler.onError(
-                    error.type(),
-                    error.libraryId(),
-                    error.message()
-                );
+                return onError(buffer, offset, blockLength, version);
+            }
 
-                return error.limit();
+            case ApplicationHeartbeatDecoder.TEMPLATE_ID:
+            {
+                return onApplicationHeartbeat(buffer, offset, blockLength, version);
             }
         }
 
         return UNKNOWN_TEMPLATE;
+    }
+
+    private int onApplicationHeartbeat(final DirectBuffer buffer,
+                                       final int offset,
+                                       final int blockLength,
+                                       final int version)
+    {
+        applicationHeartbeat.wrap(buffer, offset, blockLength, version);
+        sessionHandler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
+        return applicationHeartbeat.limit();
+    }
+
+    private int onError(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        error.wrap(buffer, offset, blockLength, version);
+        sessionHandler.onError(
+            error.type(),
+            error.libraryId(),
+            error.message()
+        );
+
+        return error.limit();
+    }
+
+    private int onInitiateConnection(final DirectBuffer buffer,
+                                     final int offset,
+                                     final int blockLength,
+                                     final int version)
+    {
+        initiateConnection.wrap(buffer, offset, blockLength, version);
+        sessionHandler.onInitiateConnection(
+            1, // TODO
+            initiateConnection.port(),
+            initiateConnection.host(),
+            initiateConnection.senderCompId(),
+            initiateConnection.senderSubId(),
+            initiateConnection.senderLocationId(),
+            initiateConnection.targetCompId()
+        );
+        return initiateConnection.limit();
+    }
+
+    private int onRequestDisconnect(final DirectBuffer buffer,
+                                    final int offset,
+                                    final int blockLength,
+                                    final int version)
+    {
+        requestDisconnect.wrap(buffer, offset, blockLength, version);
+        sessionHandler.onRequestDisconnect(requestDisconnect.connection());
+        return requestDisconnect.limit();
+    }
+
+    private int onConnect(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        connect.wrap(buffer, offset, blockLength, version);
+        final int addressOffset = offset + ConnectDecoder.BLOCK_LENGTH + addressHeaderLength();
+        sessionHandler.onConnect(
+            connect.libraryId(),
+            connect.connection(),
+            connect.type(),
+            buffer,
+            addressOffset,
+            connect.addressLength());
+        return connect.limit();
+    }
+
+    private int onLogon(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        logon.wrap(buffer, offset, blockLength, version);
+        sessionHandler.onLogon(logon.connection(), logon.session());
+        return logon.limit();
+    }
+
+    private int onDisconnect(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        disconnect.wrap(buffer, offset, blockLength, version);
+        final long connectionId = disconnect.connection();
+        DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
+        sessionHandler.onDisconnect(connectionId);
+        return offset + DisconnectDecoder.BLOCK_LENGTH;
+    }
+
+    private int onFixMessage(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        messageFrame.wrap(buffer, offset, blockLength, version);
+        final int messageLength = messageFrame.bodyLength();
+        if (messageFrame.status() == OK)
+        {
+            sessionHandler.onMessage(
+                buffer,
+                offset + FRAME_SIZE,
+                messageLength,
+                messageFrame.connection(),
+                messageFrame.session(),
+                messageFrame.messageType(),
+                messageFrame.timestamp());
+        }
+
+        return offset + FRAME_SIZE + messageLength;
     }
 }

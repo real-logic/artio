@@ -19,10 +19,7 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.*;
-import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.FixGatewayException;
-import uk.co.real_logic.fix_gateway.GatewayProcess;
-import uk.co.real_logic.fix_gateway.Timer;
+import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.library.session.*;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
@@ -51,14 +48,15 @@ public class FixLibrary extends GatewayProcess
     private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
     private final Timer timer = new Timer("Session", new SystemNanoClock());
+    private final LivenessDetector livenessDetector;
+    private final int libraryId;
 
     private Session incomingSession;
+
     private SessionConfiguration sessionConfiguration;
-
     private GatewayError errorType;
-    private String errorMessage;
 
-    private boolean connected = false;
+    private String errorMessage;
 
     public FixLibrary(final LibraryConfiguration configuration)
     {
@@ -68,12 +66,19 @@ public class FixLibrary extends GatewayProcess
         init(configuration);
 
         this.configuration = configuration;
-        sessionIdStrategy = configuration.sessionIdStrategy();
+        this.sessionIdStrategy = configuration.sessionIdStrategy();
+        this.libraryId = configuration.libraryId();
 
         inboundSubscription = inboundLibraryStreams.subscription();
         outboundPublication = outboundLibraryStreams.gatewayPublication();
 
         clock = new SystemEpochClock();
+        livenessDetector = new LivenessDetector(
+            outboundPublication,
+            configuration.libraryId(),
+            configuration.replyTimeoutInMs(),
+            System.currentTimeMillis(),
+            false);
     }
 
     public int poll(final int fragmentLimit)
@@ -85,18 +90,18 @@ public class FixLibrary extends GatewayProcess
 
     private int pollSessions()
     {
-        if (sessions.isEmpty())
+        int total = 0;
+        final long timeInMs = clock.time();
+
+        if (!sessions.isEmpty())
         {
-            return 0;
+            for (final SessionSubscriber session : sessions.values())
+            {
+                total += session.poll(timeInMs);
+            }
         }
 
-        final long time = clock.time();
-        int total = 0;
-        for (final SessionSubscriber session : sessions.values())
-        {
-            total += session.poll(time);
-        }
-        return total;
+        return total + livenessDetector.poll(timeInMs);
     }
 
     public Session initiate(final SessionConfiguration configuration, final IdleStrategy idleStrategy)
@@ -130,7 +135,7 @@ public class FixLibrary extends GatewayProcess
                 final long latestReplyArrivalTime = clock.time() + replyTimeoutInMs;
                 while (incomingSession == null && errorType == null)
                 {
-                    final int workCount = poll(1);
+                    final int workCount = poll(5);
 
                     if (clock.time() > latestReplyArrivalTime)
                     {
@@ -168,7 +173,6 @@ public class FixLibrary extends GatewayProcess
 
     private final DataSubscriber dataSubscriber = new DataSubscriber(new SessionHandler()
     {
-
         public void onConnect(
             final int libraryId,
             final long connectionId,
@@ -177,18 +181,21 @@ public class FixLibrary extends GatewayProcess
             final int addressOffset,
             final int addressLength)
         {
-            if (type == INITIATOR)
+            if (libraryId == FixLibrary.this.libraryId)
             {
-                DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
-                final Session session = initiateSession(connectionId);
-                newSession(connectionId, session);
-                incomingSession = session;
-            }
-            else
-            {
-                DebugLogger.log("Acct Connect: %d, %d\n", connectionId, libraryId);
-                final Session session = acceptSession(connectionId);
-                newSession(connectionId, session);
+                if (type == INITIATOR)
+                {
+                    DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
+                    final Session session = initiateSession(connectionId);
+                    newSession(connectionId, session);
+                    incomingSession = session;
+                }
+                else
+                {
+                    DebugLogger.log("Acct Connect: %d, %d\n", connectionId, libraryId);
+                    final Session session = acceptSession(connectionId);
+                    newSession(connectionId, session);
+                }
             }
         }
 
@@ -231,10 +238,18 @@ public class FixLibrary extends GatewayProcess
 
         public void onError(final GatewayError errorType, final int libraryId, final String message)
         {
-            if (libraryId == outboundPublication.sessionId())
+            if (libraryId == FixLibrary.this.libraryId)
             {
                 FixLibrary.this.errorType = errorType;
                 FixLibrary.this.errorMessage = message;
+            }
+        }
+
+        public void onApplicationHeartbeat(final int libraryId)
+        {
+            if (libraryId == FixLibrary.this.libraryId)
+            {
+                livenessDetector.onHeartbeat(clock.time());
             }
         }
     });
@@ -307,16 +322,16 @@ public class FixLibrary extends GatewayProcess
 
     public boolean isConnected()
     {
-        return connected;
+        return livenessDetector.isConnected();
     }
 
     public void onInactiveGateway()
     {
-        connected = false;
+
     }
 
     public void onActiveGateway()
     {
-        connected = true;
+
     }
 }

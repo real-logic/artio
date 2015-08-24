@@ -34,6 +34,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     public static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
     public static final long DEFAULT_SENDING_TIME_WINDOW = MINUTES.toMillis(2);
+    public static final int DEFAULT_LIBRARY_ID = 1;
 
     private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
     private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
@@ -43,6 +44,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
     private MessageValidationStrategy messageValidationStrategy = new NoMessageValidationStrategy();
     private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
+    private int libraryId = DEFAULT_LIBRARY_ID;
 
     public LibraryConfiguration()
     {
@@ -100,6 +102,12 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConfiguration messageValidationStrategy(final MessageValidationStrategy messageValidationStrategy)
     {
         this.messageValidationStrategy = messageValidationStrategy;
+        return this;
+    }
+
+    public LibraryConfiguration libraryId(final int libraryId)
+    {
+        this.libraryId = libraryId;
         return this;
     }
 
@@ -165,5 +173,10 @@ public final class LibraryConfiguration extends CommonConfiguration
     {
         super.aeronChannel(aeronChannel);
         return this;
+    }
+
+    public int libraryId()
+    {
+        return libraryId;
     }
 }

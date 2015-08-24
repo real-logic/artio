@@ -18,31 +18,30 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.CloseHelper;
-import uk.co.real_logic.agrona.concurrent.YieldingIdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.engine.LibraryInfo;
+import uk.co.real_logic.fix_gateway.engine.Library;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
+import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.fix_gateway.library.LibraryConfiguration.DEFAULT_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class EngineAndLibraryIntegrationTest
 {
-    private static final long TIMEOUT = TimeUnit.MILLISECONDS.toNanos(100);
+    private static final long TIMEOUT_IN_MS = 100;
+    private static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
 
     private int aeronPort = unusedPort();
     private MediaDriver mediaDriver;
@@ -55,19 +54,11 @@ public class EngineAndLibraryIntegrationTest
     @Before
     public void launch()
     {
-        final MediaDriver.Context context = new MediaDriver.Context()
-            .threadingMode(SHARED)
-            .dirsDeleteOnStart(true)
-            .imageLivenessTimeoutNs(TIMEOUT)
-            .clientLivenessTimeoutNs(TIMEOUT)
-            .statusMessageTimeout(TIMEOUT)
-            .sharedIdleStrategy(new YieldingIdleStrategy());
-
-        mediaDriver = MediaDriver.launch(context);
+        mediaDriver = launchMediaDriver();
 
         delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(unusedPort(), aeronPort, "engineCounters");
-        setupAeronClient(config.aeronContext());
+        config.replyTimeoutInMs(TIMEOUT_IN_MS);
         engine = FixEngine.launch(config);
     }
 
@@ -78,15 +69,25 @@ public class EngineAndLibraryIntegrationTest
     }
 
     @Test
+    public void libraryDetectsEngine()
+    {
+        connectLibrary();
+
+        awaitLibraryConnect();
+    }
+
+    @Test
     public void engineDetectsLibraryConnect()
     {
         connectLibrary();
 
-        ensureLibraryConnected();
+        awaitLibraryConnect();
 
-        final List<LibraryInfo> libraries = engine.libraries();
+        final List<Library> libraries = engine.libraries();
         assertThat(libraries, hasSize(1));
-        assertTrue("Is not acceptor", libraries.get(0).isAcceptor());
+        final Library library = libraries.get(0);
+        assertTrue("Is not acceptor", library.isAcceptor());
+        assertEquals("Has the wrong id", DEFAULT_LIBRARY_ID, library.libraryId());
     }
 
     @Test
@@ -94,14 +95,14 @@ public class EngineAndLibraryIntegrationTest
     {
         connectLibrary();
 
-        ensureLibraryConnected();
+        awaitLibraryConnect();
 
         library.close();
 
         assertEventuallyTrue(
             "libraries haven't disconnected yet",
             this::assertNoActiveLibraries,
-            20 * TIMEOUT);
+            AWAIT_TIMEOUT);
     }
 
     @Test
@@ -109,22 +110,30 @@ public class EngineAndLibraryIntegrationTest
     {
         connectLibrary();
 
-        ensureLibraryConnected();
+        awaitLibraryConnect();
 
         CloseHelper.close(engine);
 
         assertEventuallyTrue(
             "Engine still hasn't disconnected", () ->
             {
-                library.poll(1);
-                return !library.isConnected();
+                library.poll(5);
+                final boolean notConnected = !library.isConnected();
+                return notConnected;
             },
-            20 * TIMEOUT);
+            AWAIT_TIMEOUT, 1);
     }
 
-    private void ensureLibraryConnected()
+    private void awaitLibraryConnect()
     {
-        LockSupport.parkNanos(3 * TIMEOUT);
+        assertEventuallyTrue(
+            "Library hasn't seen Engine", () ->
+            {
+                library.poll(5);
+                final boolean connected = library.isConnected();
+                return connected;
+            },
+            AWAIT_TIMEOUT, 1);
     }
 
     private void assertNoActiveLibraries()
@@ -136,14 +145,8 @@ public class EngineAndLibraryIntegrationTest
     {
         final LibraryConfiguration config = acceptingLibraryConfig(
             sessionHandler, ACCEPTOR_ID, INITIATOR_ID, aeronPort, "fix-acceptor");
-        setupAeronClient(config.aeronContext());
+        config.replyTimeoutInMs(TIMEOUT_IN_MS);
         library = new FixLibrary(config);
-    }
-
-    private void setupAeronClient(Aeron.Context context)
-    {
-        context.keepAliveInterval(TIMEOUT / 4)
-               .idleStrategy(new YieldingIdleStrategy());
     }
 
     @After
