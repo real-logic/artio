@@ -26,43 +26,50 @@ import java.util.Arrays;
  *
  * Threadsafe - no state;
  */
-public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
+public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
 {
     public Object onAcceptorLogon(final HeaderDecoder header)
     {
-        return new CompositeKey(header.targetCompID(), header.senderCompID());
+        final char[] senderCompID = Arrays.copyOf(header.targetCompID(), header.targetCompIDLength());
+        final char[] senderSubID = Arrays.copyOf(header.targetSubID(), header.targetSubIDLength());
+        final char[] targetCompId = Arrays.copyOf(header.senderCompID(), header.senderCompIDLength());
+        return new CompositeKey(senderCompID, senderSubID, targetCompId);
     }
 
     public Object onInitiatorLogon(
         final String senderCompId, final String senderSubId, final String senderLocationId, final String targetCompId)
     {
-        return new CompositeKey(senderCompId.toCharArray(), targetCompId.toCharArray());
+        return new CompositeKey(senderCompId.toCharArray(), senderSubId.toCharArray(), targetCompId.toCharArray());
     }
 
     public void setupSession(final Object compositeKey, final HeaderEncoder encoder)
     {
-        final CompositeKey composite = (CompositeKey)compositeKey;
+        final CompositeKey composite = (CompositeKey) compositeKey;
         encoder.senderCompID(composite.senderCompID);
+        encoder.senderSubID(composite.senderSubID);
         encoder.targetCompID(composite.targetCompID);
     }
 
     private static final class CompositeKey
     {
         private final char[] senderCompID;
+        private final char[] senderSubID;
         private final char[] targetCompID;
         private final int hashCode;
 
-        private CompositeKey(final char[] senderCompID, final char[] targetCompID)
+        private CompositeKey(final char[] senderCompID, final char[] senderSubID, final char[] targetCompID)
         {
             this.senderCompID = senderCompID;
+            this.senderSubID = senderSubID;
             this.targetCompID = targetCompID;
 
-            hashCode = hash(senderCompID, targetCompID);
+            hashCode = hash(senderCompID, senderSubID, targetCompID);
         }
 
-        private int hash(final char[] senderCompID, final char[] targetCompID)
+        private int hash(final char[] senderCompID, final char[] senderSubID, final char[] targetCompID)
         {
             int result  = Arrays.hashCode(senderCompID);
+            result = 31 * result + Arrays.hashCode(senderSubID);
             result = 31 * result + Arrays.hashCode(targetCompID);
             return result;
         }
@@ -78,6 +85,7 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
             {
                 final CompositeKey compositeKey = (CompositeKey)obj;
                 return Arrays.equals(compositeKey.senderCompID, senderCompID)
+                    && Arrays.equals(compositeKey.senderSubID, senderSubID)
                     && Arrays.equals(compositeKey.targetCompID, targetCompID);
             }
 
@@ -88,6 +96,7 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         {
             return "CompositeKey{" +
                 "senderCompID=" + Arrays.toString(senderCompID) +
+                "senderSubID=" + Arrays.toString(senderSubID) +
                 ", targetCompID=" + Arrays.toString(targetCompID) +
                 '}';
         }
