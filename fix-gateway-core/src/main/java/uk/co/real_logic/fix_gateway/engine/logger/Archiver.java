@@ -24,10 +24,10 @@ import uk.co.real_logic.agrona.concurrent.Agent;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.util.List;
 
-import static java.nio.file.StandardOpenOption.*;
 import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
 import static uk.co.real_logic.agrona.collections.CollectionUtil.sum;
@@ -116,8 +116,10 @@ public class Archiver implements Agent
                 if (termId != currentTermId)
                 {
                     close();
-                    final File file = directoryDescriptor.logFile(streamId, sessionId, termId);
-                    currentLogFile = FileChannel.open(file.toPath(), CREATE, APPEND, WRITE);
+                    final File location = directoryDescriptor.logFile(streamId, sessionId, termId);
+                    final RandomAccessFile file = new RandomAccessFile(location, "rwd");
+                    file.setLength(termBufferLength());
+                    currentLogFile = file.getChannel();
                     currentTermId = termId;
                 }
 
