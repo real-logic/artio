@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.CloseHelper;
@@ -130,18 +129,6 @@ public class GatewayToGatewaySystemTest
 
         sendTestRequest(initiatedSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
-    }
-
-    // TODO: detect close
-    @Ignore
-    @Test(expected = IllegalStateException.class)
-    public void sessionShouldRefuseCommandsWhenEngineClosed()
-    {
-        initiatingEngine.close();
-
-        // wait for timeout
-
-        sendTestRequest(initiatedSession);
     }
 
     private void assertSessionsDisconnected()

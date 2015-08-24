@@ -58,6 +58,8 @@ public class Framer implements Agent, SessionHandler
 {
     public static final int OUTBOUND_FRAGMENT_LIMIT = 5;
 
+    private static final int NO_ACCEPTOR = -1;
+
     private final Int2ObjectHashMap<Library> idToLibrary = new Int2ObjectHashMap<>();
 
     private final Long2ObjectHashMap<SenderEndPoint> connectionToSenderEndpoint = new Long2ObjectHashMap<>();
@@ -79,7 +81,7 @@ public class Framer implements Agent, SessionHandler
     private final ReceiverEndPointPoller endPointPoller;
 
     private long nextConnectionId = (long) (Math.random() * Long.MAX_VALUE);
-    private int acceptorLibraryId;
+    private int acceptorLibraryId = NO_ACCEPTOR;
 
     public Framer(
         final EngineConfiguration configuration,
@@ -139,8 +141,13 @@ public class Framer implements Agent, SessionHandler
             if (!library.isConnected())
             {
                 iterator.remove();
+                if (library.isAcceptor())
+                {
+                    acceptorLibraryId = NO_ACCEPTOR;
+                }
             }
         }
+
         return total;
     }
 
@@ -303,12 +310,11 @@ public class Framer implements Agent, SessionHandler
                 clock.time(),
                 true);
 
-            final boolean isFirstLibrary = idToLibrary.isEmpty();
-            if (isFirstLibrary)
+            library = new Library(acceptorLibraryId == NO_ACCEPTOR, libraryId, livenessDetector);
+            if (library.isAcceptor())
             {
                 acceptorLibraryId = libraryId;
             }
-            library = new Library(isFirstLibrary, libraryId, livenessDetector);
             idToLibrary.put(libraryId, library);
         }
         else

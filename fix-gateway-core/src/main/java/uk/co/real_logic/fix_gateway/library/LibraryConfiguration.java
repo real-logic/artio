@@ -151,6 +151,11 @@ public final class LibraryConfiguration extends CommonConfiguration
         return messageValidationStrategy;
     }
 
+    public int libraryId()
+    {
+        return libraryId;
+    }
+
     public LibraryConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
     {
         super.sessionIdStrategy(sessionIdStrategy);
@@ -175,8 +180,9 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
-    public int libraryId()
+    public LibraryConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
     {
-        return libraryId;
+        super.replyTimeoutInMs(replyTimeoutInMs);
+        return this;
     }
 }

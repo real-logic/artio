@@ -31,7 +31,6 @@ import java.util.List;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -46,7 +45,6 @@ public class EngineAndLibraryIntegrationTest
     private int aeronPort = unusedPort();
     private MediaDriver mediaDriver;
     private FixEngine engine;
-    private FixLibrary library;
 
     private FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
     private FakeSessionHandler sessionHandler = new FakeSessionHandler(otfAcceptor);
@@ -65,52 +63,90 @@ public class EngineAndLibraryIntegrationTest
     @Test
     public void engineInitiallyHasNoConnectedLibraries()
     {
-        assertNoActiveLibraries();
-    }
-
-    @Test
-    public void libraryDetectsEngine()
-    {
-        connectLibrary();
-
-        awaitLibraryConnect();
+        assertNoActiveLibraries(0);
     }
 
     @Test
     public void engineDetectsLibraryConnect()
     {
-        connectLibrary();
+        awaitLibraryConnect(connectLibrary());
 
-        awaitLibraryConnect();
-
-        final List<Library> libraries = engine.libraries();
-        assertThat(libraries, hasSize(1));
-        final Library library = libraries.get(0);
-        assertTrue("Is not acceptor", library.isAcceptor());
-        assertEquals("Has the wrong id", DEFAULT_LIBRARY_ID, library.libraryId());
+        final List<Library> libraries = hasLibraries(1);
+        assertLibrary(libraries.get(0), true, DEFAULT_LIBRARY_ID);
     }
 
     @Test
     public void engineDetectsLibraryDisconnect()
     {
-        connectLibrary();
-
-        awaitLibraryConnect();
+        final FixLibrary library = connectLibrary();
+        awaitLibraryConnect(library);
 
         library.close();
 
-        assertEventuallyTrue(
-            "libraries haven't disconnected yet",
-            this::assertNoActiveLibraries,
-            AWAIT_TIMEOUT);
+        assertLibrariesDisconnect(0, null);
+    }
+
+    @Test
+    public void engineDetectsMultipleLibraryInstances()
+    {
+        awaitLibraryConnect(connectLibrary(2));
+
+        awaitLibraryConnect(connectLibrary(3));
+
+        final List<Library> libraries = hasLibraries(2);
+
+        assertLibrary2(libraries);
+        assertLibrary(libraries.get(1), true, 2);
+    }
+
+    @Test
+    public void engineDetectsDisconnectOfSpecificLibraryInstances()
+    {
+        setupTwoLibrariesAndCloseTheFirst();
+    }
+
+    private FixLibrary setupTwoLibrariesAndCloseTheFirst()
+    {
+        final FixLibrary library1 = connectLibrary(2);
+        awaitLibraryConnect(library1);
+
+        final FixLibrary library2 = connectLibrary(3);
+        awaitLibraryConnect(library2);
+
+        library1.close();
+
+        assertLibrariesDisconnect(1, library2);
+
+        final List<Library> libraries = hasLibraries(1);
+        assertLibrary2(libraries);
+
+        return library2;
+    }
+
+    @Test
+    public void engineMakesNewLibraryAcceptorLibrary()
+    {
+        setupTwoLibrariesAndCloseTheFirst();
+
+        awaitLibraryConnect(connectLibrary(4));
+
+        final List<Library> libraries = hasLibraries(2);
+        assertLibrary2(libraries);
+        assertLibrary(libraries.get(1), true, 4);
+    }
+
+    @Test
+    public void libraryDetectsEngine()
+    {
+        awaitLibraryConnect(connectLibrary());
     }
 
     @Test
     public void libraryDetectsEngineDisconnect()
     {
-        connectLibrary();
+        final FixLibrary library = connectLibrary(DEFAULT_LIBRARY_ID);
 
-        awaitLibraryConnect();
+        awaitLibraryConnect(library);
 
         CloseHelper.close(engine);
 
@@ -121,10 +157,44 @@ public class EngineAndLibraryIntegrationTest
                 final boolean notConnected = !library.isConnected();
                 return notConnected;
             },
-            AWAIT_TIMEOUT, 1);
+            AWAIT_TIMEOUT,
+            1);
     }
 
-    private void awaitLibraryConnect()
+    private void assertLibrary2(final List<Library> libraries)
+    {
+        assertLibrary(libraries.get(0), false, 3);
+    }
+
+    private void assertLibrariesDisconnect(final int count, final FixLibrary library)
+    {
+        assertEventuallyTrue(
+            "libraries haven't disconnected yet",
+            () -> {
+                if (library != null)
+                {
+                    library.poll(1);
+                }
+                return engine.libraries().size() == count;
+            },
+            AWAIT_TIMEOUT,
+            1);
+    }
+
+    private void assertLibrary(final Library library, final boolean expectedAcceptor, final int libraryId)
+    {
+        assertEquals(expectedAcceptor, library.isAcceptor());
+        assertEquals("Has the wrong id", libraryId, library.libraryId());
+    }
+
+    private List<Library> hasLibraries(final int count)
+    {
+        final List<Library> libraries = engine.libraries();
+        assertThat(libraries, hasSize(count));
+        return libraries;
+    }
+
+    private void awaitLibraryConnect(final FixLibrary library)
     {
         assertEventuallyTrue(
             "Library hasn't seen Engine", () ->
@@ -136,23 +206,29 @@ public class EngineAndLibraryIntegrationTest
             AWAIT_TIMEOUT, 1);
     }
 
-    private void assertNoActiveLibraries()
+    private void assertNoActiveLibraries(final int count)
     {
-        assertThat("libraries haven't disconnected yet", engine.libraries(), hasSize(0));
+        assertThat("libraries haven't disconnected yet", engine.libraries(), hasSize(count));
     }
 
-    private void connectLibrary()
+    private FixLibrary connectLibrary()
     {
-        final LibraryConfiguration config = acceptingLibraryConfig(
-            sessionHandler, ACCEPTOR_ID, INITIATOR_ID, aeronPort, "fix-acceptor");
-        config.replyTimeoutInMs(TIMEOUT_IN_MS);
-        library = new FixLibrary(config);
+        return connectLibrary(DEFAULT_LIBRARY_ID);
+    }
+
+    private FixLibrary connectLibrary(final int libraryId)
+    {
+        final LibraryConfiguration config =
+            acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, aeronPort, "fix-acceptor")
+                .libraryId(libraryId)
+                .replyTimeoutInMs(TIMEOUT_IN_MS);
+
+        return new FixLibrary(config);
     }
 
     @After
     public void close() throws Exception
     {
-        CloseHelper.close(library);
         CloseHelper.close(engine);
         CloseHelper.close(mediaDriver);
     }
