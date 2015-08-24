@@ -35,6 +35,7 @@ public class SampleSessionHandler implements SessionHandler
     public void onMessage(final DirectBuffer buffer,
                           final int offset,
                           final int length,
+                          final int libraryId,
                           final long connectionId,
                           final long sessionId,
                           final int messageType, final long timestamp)
@@ -43,7 +44,7 @@ public class SampleSessionHandler implements SessionHandler
         System.out.printf("%d -> %s\n", connectionId, printer.toString(string, offset, length, messageType));
     }
 
-    public void onDisconnect(final long connectionId)
+    public void onDisconnect(final int libraryId, final long connectionId)
     {
         System.out.printf("%d Disconnected", connectionId);
     }

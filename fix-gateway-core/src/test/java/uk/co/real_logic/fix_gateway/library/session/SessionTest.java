@@ -43,7 +43,8 @@ public class SessionTest extends AbstractSessionTest
         BEGIN_STRING,
         SENDING_TIME_WINDOW,
         mockReceivedMsgSeqNo,
-        mockSentMsgSeqNo);
+        mockSentMsgSeqNo,
+        LIBRARY_ID);
 
     @Test
     public void shouldReplyToValidLogout()
@@ -366,11 +367,6 @@ public class SessionTest extends AbstractSessionTest
     private void verifyConnected()
     {
         verify(mockProxy, never()).requestDisconnect(CONNECTION_ID);
-    }
-
-    private void heartbeatSentAfterInterval(final int msgSeqNo)
-    {
-        heartbeatSentAfterInterval(HEARTBEAT_INTERVAL, msgSeqNo);
     }
 
     private void verifyCanRoundtripTestMessage()

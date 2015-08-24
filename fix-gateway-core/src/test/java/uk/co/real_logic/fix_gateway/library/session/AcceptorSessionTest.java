@@ -28,7 +28,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     private AcceptorSession session = new AcceptorSession(
         HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy, mockPublication, null,
         BEGIN_STRING, SENDING_TIME_WINDOW, mockReceivedMsgSeqNo,
-        mockSentMsgSeqNo);
+        mockSentMsgSeqNo, LIBRARY_ID);
 
     @Test
     public void shouldInitiallyBeConnected()

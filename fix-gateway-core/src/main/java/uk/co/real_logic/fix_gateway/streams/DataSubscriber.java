@@ -136,7 +136,7 @@ public class DataSubscriber implements FragmentHandler
     {
         initiateConnection.wrap(buffer, offset, blockLength, version);
         sessionHandler.onInitiateConnection(
-            1, // TODO
+            initiateConnection.libraryId(),
             initiateConnection.port(),
             initiateConnection.host(),
             initiateConnection.senderCompId(),
@@ -153,7 +153,7 @@ public class DataSubscriber implements FragmentHandler
                                     final int version)
     {
         requestDisconnect.wrap(buffer, offset, blockLength, version);
-        sessionHandler.onRequestDisconnect(requestDisconnect.connection());
+        sessionHandler.onRequestDisconnect(requestDisconnect.libraryId(), requestDisconnect.connection());
         return requestDisconnect.limit();
     }
 
@@ -176,7 +176,7 @@ public class DataSubscriber implements FragmentHandler
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         logon.wrap(buffer, offset, blockLength, version);
-        sessionHandler.onLogon(logon.connection(), logon.session());
+        sessionHandler.onLogon(logon.libraryId(), logon.connection(), logon.session());
         return logon.limit();
     }
 
@@ -186,7 +186,7 @@ public class DataSubscriber implements FragmentHandler
         disconnect.wrap(buffer, offset, blockLength, version);
         final long connectionId = disconnect.connection();
         DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
-        sessionHandler.onDisconnect(connectionId);
+        sessionHandler.onDisconnect(disconnect.libraryId(), connectionId);
         return offset + DisconnectDecoder.BLOCK_LENGTH;
     }
 
@@ -201,6 +201,7 @@ public class DataSubscriber implements FragmentHandler
                 buffer,
                 offset + FRAME_SIZE,
                 messageLength,
+                messageFrame.libraryId(),
                 messageFrame.connection(),
                 messageFrame.session(),
                 messageFrame.messageType(),

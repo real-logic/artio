@@ -100,6 +100,7 @@ public class ArchivePrinter implements SessionHandler
     public void onMessage(final DirectBuffer buffer,
                           final int offset,
                           final int length,
+                          final int libraryId,
                           final long connectionId,
                           final long sessionId,
                           final int messageType, final long timestamp)
@@ -108,17 +109,17 @@ public class ArchivePrinter implements SessionHandler
         output.println(ascii.getAscii(offset, length));
     }
 
-    public void onDisconnect(final long connectionId)
+    public void onDisconnect(final int libraryId, final long connectionId)
     {
         output.printf("%d Disconnected\n", connectionId);
     }
 
-    public void onLogon(final long connectionId, final long sessionId)
+    public void onLogon(final int libraryId, final long connectionId, final long sessionId)
     {
         output.printf("connection %d has logged in as session %d\n", connectionId, sessionId);
     }
 
-    public void onConnect(final int sessionId,
+    public void onConnect(final int libraryId,
                           final long connectionId,
                           final ConnectionType type,
                           final DirectBuffer buffer,
@@ -133,6 +134,8 @@ public class ArchivePrinter implements SessionHandler
                                      final int port,
                                      final String host,
                                      final String senderCompId,
+                                     final String senderSubId,
+                                     final String senderLocationId,
                                      final String targetCompId)
     {
         output.printf("Initiate Connection to %s:%d as %s to %s", host, port, senderCompId, targetCompId);

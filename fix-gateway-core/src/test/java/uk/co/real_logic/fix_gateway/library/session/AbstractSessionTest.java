@@ -35,6 +35,7 @@ public abstract class AbstractSessionTest
     public static final int HEARTBEAT_INTERVAL = 2;
     public static final byte[] MSG_TYPE_BYTES = "D".getBytes(US_ASCII);
     public static final Object SESSION_KEY = new Object();
+    public static final int LIBRARY_ID = 4;
 
     protected SessionProxy mockProxy = mock(SessionProxy.class);
     protected GatewayPublication mockPublication = mock(GatewayPublication.class);

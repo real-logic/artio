@@ -68,6 +68,7 @@ public class ReceiverEndPoint
     private final AtomicCounter messagesRead;
     private final Framer framer;
     private final ErrorHandler errorHandler;
+    private final int libraryId;
     private final AtomicBuffer buffer;
     private final AsciiFlyweight string;
     private final ByteBuffer byteBuffer;
@@ -87,7 +88,8 @@ public class ReceiverEndPoint
         final SessionIds sessionIds,
         final AtomicCounter messagesRead,
         final Framer framer,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final int libraryId)
     {
         this.channel = channel;
         this.publication = publication;
@@ -98,6 +100,7 @@ public class ReceiverEndPoint
         this.messagesRead = messagesRead;
         this.framer = framer;
         this.errorHandler = errorHandler;
+        this.libraryId = libraryId;
 
         buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
         string = new AsciiFlyweight(buffer);
@@ -179,14 +182,7 @@ public class ReceiverEndPoint
 
                 if (!validateBodyLength(startOfChecksumTag))
                 {
-                    publication.saveMessage(
-                        buffer,
-                        offset,
-                        startOfChecksumTag,
-                        UNKNOWN_MESSAGE_TYPE,
-                        sessionId,
-                        connectionId,
-                        INVALID_BODYLENGTH);
+                    saveInvalidMessage(offset, startOfChecksumTag);
                     close();
                     removeEndpoint();
                     break;
@@ -209,7 +205,7 @@ public class ReceiverEndPoint
                 if (expectedChecksum != computedChecksum)
                 {
                     publication.saveMessage(
-                        buffer, offset, length, messageType, sessionId, connectionId, INVALID_CHECKSUM);
+                        buffer, offset, length, libraryId, messageType, sessionId, connectionId, INVALID_CHECKSUM);
                 }
                 else
                 {
@@ -222,11 +218,12 @@ public class ReceiverEndPoint
                         {
                             close();
                         }
-                        publication.saveLogon(connectionId, sessionId);
+                        publication.saveLogon(libraryId, connectionId, sessionId);
                     }
 
                     messagesRead.orderedIncrement();
-                    publication.saveMessage(buffer, offset, length, messageType, sessionId, connectionId, OK);
+                    publication.saveMessage(
+                        buffer, offset, length, libraryId, messageType, sessionId, connectionId, OK);
                 }
 
                 offset += length;
@@ -235,7 +232,7 @@ public class ReceiverEndPoint
             {
                 // Completely unable to deal with parsing this message, bail
                 publication.saveMessage(
-                    buffer, offset, usedBufferData, '-', sessionId, connectionId, INVALID);
+                    buffer, offset, usedBufferData, libraryId, '-', sessionId, connectionId, INVALID);
                 moveRemainingDataToBufferStart(usedBufferData);
                 return;
             }
@@ -247,6 +244,19 @@ public class ReceiverEndPoint
         }
 
         moveRemainingDataToBufferStart(offset);
+    }
+
+    private void saveInvalidMessage(final int offset, final int startOfChecksumTag)
+    {
+        publication.saveMessage(
+            buffer,
+            offset,
+            libraryId,
+            startOfChecksumTag,
+            UNKNOWN_MESSAGE_TYPE,
+            sessionId,
+            connectionId,
+            INVALID_BODYLENGTH);
     }
 
     private boolean validateBodyLength(final int startOfChecksumTag)
@@ -332,7 +342,7 @@ public class ReceiverEndPoint
     private void disconnectEndpoint()
     {
         sessionIds.onDisconnect(sessionId);
-        publication.saveDisconnect(connectionId);
+        publication.saveDisconnect(libraryId, connectionId);
         if (selectionKey != null)
         {
             selectionKey.cancel();

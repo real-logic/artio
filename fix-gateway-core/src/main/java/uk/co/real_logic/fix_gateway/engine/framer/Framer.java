@@ -57,8 +57,7 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 public class Framer implements Agent, SessionHandler
 {
     public static final int OUTBOUND_FRAGMENT_LIMIT = 5;
-
-    private static final int NO_ACCEPTOR = -1;
+    public static final int NO_ACCEPTOR = -1;
 
     private final Int2ObjectHashMap<Library> idToLibrary = new Int2ObjectHashMap<>();
 
@@ -183,7 +182,7 @@ public class Framer implements Agent, SessionHandler
 
                 final SocketChannel channel = listeningChannel.accept();
                 final long connectionId = this.nextConnectionId++;
-                setupConnection(channel, connectionId, UNKNOWN);
+                setupConnection(channel, connectionId, UNKNOWN, acceptorLibraryId);
 
                 final String address = channel.getRemoteAddress().toString();
                 inboundPublication.saveConnect(connectionId, address, acceptorLibraryId, ACCEPTOR);
@@ -230,9 +229,9 @@ public class Framer implements Agent, SessionHandler
                 return;
             }
 
-            setupConnection(channel, connectionId, sessionId);
+            setupConnection(channel, connectionId, sessionId, libraryId);
             inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR);
-            inboundPublication.saveLogon(connectionId, sessionId);
+            inboundPublication.saveLogon(libraryId, connectionId, sessionId);
         }
         catch (final Exception e)
         {
@@ -250,6 +249,7 @@ public class Framer implements Agent, SessionHandler
         final DirectBuffer buffer,
         final int offset,
         final int length,
+        final int libraryId,
         final long connectionId,
         final long sessionId,
         final int messageType,
@@ -267,7 +267,10 @@ public class Framer implements Agent, SessionHandler
         }
     }
 
-    private void setupConnection(final SocketChannel channel, final long connectionId, final long sessionId)
+    private void setupConnection(final SocketChannel channel,
+                                 final long connectionId,
+                                 final long sessionId,
+                                 final int libraryId)
         throws IOException
     {
         channel.setOption(TCP_NODELAY, true);
@@ -282,18 +285,18 @@ public class Framer implements Agent, SessionHandler
         channel.configureBlocking(false);
 
         final ReceiverEndPoint receiverEndPoint =
-            connectionHandler.receiverEndPoint(channel, connectionId, sessionId, this);
+            connectionHandler.receiverEndPoint(channel, connectionId, sessionId, this, libraryId);
         endPointPoller.register(receiverEndPoint);
 
         connectionToSenderEndpoint.put(connectionId, connectionHandler.senderEndPoint(channel, connectionId));
     }
 
-    public void onRequestDisconnect(final long connectionId)
+    public void onRequestDisconnect(final int libraryId, final long connectionId)
     {
-        onDisconnect(connectionId);
+        onDisconnect(libraryId, connectionId);
     }
 
-    public void onDisconnect(final long connectionId)
+    public void onDisconnect(final int libraryId, final long connectionId)
     {
         endPointPoller.deregister(connectionId);
     }

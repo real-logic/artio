@@ -45,6 +45,7 @@ public class SessionSubscriber implements SessionHandler, AutoCloseable
     public void onMessage(final DirectBuffer buffer,
                           final int offset,
                           final int length,
+                          final int libraryId,
                           final long connectionId,
                           final long sessionId,
                           final int messageType,
@@ -57,17 +58,17 @@ public class SessionSubscriber implements SessionHandler, AutoCloseable
 
         if (parser.onMessage(buffer, offset, length, messageType, sessionId))
         {
-            handler.onMessage(buffer, offset, length, connectionId, sessionId, messageType, timestamp);
+            handler.onMessage(buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp);
         }
     }
 
-    public void onDisconnect(final long connectionId)
+    public void onDisconnect(final int libraryId, final long connectionId)
     {
         session.onDisconnect();
-        handler.onDisconnect(connectionId);
+        handler.onDisconnect(libraryId, connectionId);
     }
 
-    public void onLogon(final long connectionId, final long sessionId)
+    public void onLogon(final int libraryId, final long connectionId, final long sessionId)
     {
         session.id(sessionId);
     }

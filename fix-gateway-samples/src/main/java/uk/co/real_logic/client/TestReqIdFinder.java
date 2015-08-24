@@ -37,6 +37,7 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
     public void onMessage(final DirectBuffer buffer,
                           final int offset,
                           final int length,
+                          final int libraryId,
                           final long connectionId,
                           final long sessionId,
                           final int messageType, final long timestamp)

@@ -46,6 +46,7 @@ public class ReceiverEndPointTest
     private static final int MESSAGE_TYPE = 'D';
     private static final long CONNECTION_ID = 20L;
     private static final long SESSION_ID = 4L;
+    private static final int LIBRARY_ID = 3;
 
     private SocketChannel mockChannel = mock(SocketChannel.class);
     private GatewayPublication mockPublication = mock(GatewayPublication.class);
@@ -57,7 +58,7 @@ public class ReceiverEndPointTest
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
             mockChannel, 16 * 1024, mockPublication, CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
-            messagesRead, mock(Framer.class), errorHandler);
+            messagesRead, mock(Framer.class), errorHandler, LIBRARY_ID);
 
     @Before
     public void setUp()
@@ -171,7 +172,8 @@ public class ReceiverEndPointTest
 
         verify(mockPublication, times(1))
             .saveMessage(
-                any(AtomicBuffer.class), eq(0), eq(INVALID_CHECKSUM_LEN), eq(MESSAGE_TYPE), anyLong(), eq(CONNECTION_ID),
+                any(AtomicBuffer.class), eq(0), eq(INVALID_CHECKSUM_LEN),
+                eq(LIBRARY_ID), eq(MESSAGE_TYPE), anyLong(), eq(CONNECTION_ID),
                 eq(INVALID_CHECKSUM));
     }
 
@@ -198,13 +200,14 @@ public class ReceiverEndPointTest
     {
         verify(mockPublication, times(1))
             .saveMessage(
-                any(AtomicBuffer.class), eq(0), eq(length), anyInt(), anyLong(), eq(CONNECTION_ID),
+                any(AtomicBuffer.class), eq(0), eq(length), eq(LIBRARY_ID),
+                anyInt(), anyLong(), eq(CONNECTION_ID),
                 eq(INVALID));
     }
 
     private void assertSavesDisconnect()
     {
-        verify(mockPublication).saveDisconnect(CONNECTION_ID);
+        verify(mockPublication).saveDisconnect(LIBRARY_ID, CONNECTION_ID);
     }
 
     private void theChannelIsClosed() throws IOException
@@ -228,7 +231,8 @@ public class ReceiverEndPointTest
     {
         verify(mockPublication, times(numberOfMessages))
             .saveMessage(
-                any(AtomicBuffer.class), eq(0), eq(msgLen), eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
+                any(AtomicBuffer.class), eq(0), eq(msgLen), eq(LIBRARY_ID),
+                    eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
                     eq(status));
     }
 
@@ -237,11 +241,12 @@ public class ReceiverEndPointTest
         final InOrder inOrder = Mockito.inOrder(mockPublication);
         inOrder.verify(mockPublication, times(1))
             .saveMessage(
-                any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
-                    eq(OK));
+                any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(LIBRARY_ID), eq(MESSAGE_TYPE), eq(SESSION_ID),
+                eq(CONNECTION_ID), eq(OK));
         inOrder.verify(mockPublication, times(1))
             .saveMessage(
-                any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
+                any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(LIBRARY_ID),
+                    eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
                     eq(OK));
         inOrder.verifyNoMoreInteractions();
     }

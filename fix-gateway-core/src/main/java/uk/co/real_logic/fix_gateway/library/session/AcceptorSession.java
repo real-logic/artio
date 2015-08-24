@@ -34,7 +34,8 @@ public final class AcceptorSession extends Session
         final char[] beginString,
         final long sendingTimeWindow,
         final AtomicCounter receivedMsgSeqNo,
-        final AtomicCounter sentMsgSeqNo)
+        final AtomicCounter sentMsgSeqNo,
+        final int libraryId)
     {
         super(
             defaultInterval,
@@ -47,8 +48,8 @@ public final class AcceptorSession extends Session
             beginString,
             sendingTimeWindow,
             receivedMsgSeqNo,
-            sentMsgSeqNo);
-
+            sentMsgSeqNo,
+            libraryId);
     }
 
     public void onLogon(
@@ -83,7 +84,7 @@ public final class AcceptorSession extends Session
                 state(SessionState.AWAITING_RESEND);
                 replyToLogon(heartbeatInterval);
             }
-            publication.saveLogon(connectionId, sessionId);
+            publication.saveLogon(libraryId, connectionId, sessionId);
         }
         onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }

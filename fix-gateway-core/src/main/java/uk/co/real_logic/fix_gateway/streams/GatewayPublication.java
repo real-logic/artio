@@ -73,6 +73,7 @@ public class GatewayPublication
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength,
+        final int libraryId,
         final int messageType,
         final long sessionId,
         final long connectionId,
@@ -97,6 +98,7 @@ public class GatewayPublication
 
         messageFrame
             .wrap(destBuffer, offset)
+            .libraryId(libraryId)
             .messageType(messageType)
             .session(sessionId)
             .connection(connectionId)
@@ -111,7 +113,7 @@ public class GatewayPublication
         return position;
     }
 
-    public long saveLogon(final long connectionId, final long sessionId)
+    public long saveLogon(final int libraryId, final long connectionId, final long sessionId)
     {
         final long position = claim(header.encodedLength() + LogonEncoder.BLOCK_LENGTH);
 
@@ -129,6 +131,7 @@ public class GatewayPublication
 
         logon
             .wrap(buffer, offset)
+            .libraryId(libraryId)
             .connection(connectionId)
             .session(sessionId);
 
@@ -171,7 +174,7 @@ public class GatewayPublication
         return position;
     }
 
-    public long saveDisconnect(final long connectionId)
+    public long saveDisconnect(final int libraryId, final long connectionId)
     {
         final long position = claim(header.encodedLength() + DisconnectEncoder.BLOCK_LENGTH);
 
@@ -189,6 +192,7 @@ public class GatewayPublication
 
         disconnect
             .wrap(buffer, offset)
+            .libraryId(libraryId)
             .connection(connectionId);
 
         bufferClaim.commit();
@@ -196,7 +200,7 @@ public class GatewayPublication
         return position;
     }
 
-    public long saveRequestDisconnect(final long connectionId)
+    public long saveRequestDisconnect(final int libraryId, final long connectionId)
     {
         final long position = claim(header.encodedLength() + RequestDisconnectDecoder.BLOCK_LENGTH);
 
@@ -214,6 +218,7 @@ public class GatewayPublication
 
         requestDisconnect
             .wrap(buffer, offset)
+            .libraryId(libraryId)
             .connection(connectionId);
 
         bufferClaim.commit();
@@ -222,6 +227,7 @@ public class GatewayPublication
     }
 
     public long saveInitiateConnection(
+        final int libraryId,
         final String host,
         final int port,
         final String senderCompId,
@@ -259,6 +265,7 @@ public class GatewayPublication
 
         initiateConnection
             .wrap(buffer, offset)
+            .libraryId(libraryId)
             .port(port)
             .putHost(hostBytes, 0, hostBytes.length);
 

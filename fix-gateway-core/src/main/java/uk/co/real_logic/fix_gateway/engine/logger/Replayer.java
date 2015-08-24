@@ -81,9 +81,11 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int length,
+        final int libraryId,
         final long connectionId,
         final long sessionId,
-        final int messageType, final long timestamp)
+        final int messageType,
+        final long timestamp)
     {
         if (messageType == ResendRequestDecoder.MESSAGE_TYPE)
         {

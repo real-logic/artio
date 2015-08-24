@@ -116,6 +116,7 @@ public class FixLibrary extends GatewayProcess
                 final int port = ports.get(i);
 
                 outboundPublication.saveInitiateConnection(
+                    libraryId,
                     host,
                     port,
                     configuration.senderCompId(),
@@ -190,13 +191,13 @@ public class FixLibrary extends GatewayProcess
             }
         }
 
-        public void onLogon(final long connectionId, final long sessionId)
+        public void onLogon(final int libraryId, final long connectionId, final long sessionId)
         {
             DebugLogger.log("Library Logon: %d, %d\n", connectionId, sessionId);
             final SessionSubscriber subscriber = sessions.get(connectionId);
             if (subscriber != null)
             {
-                subscriber.onLogon(connectionId, sessionId);
+                subscriber.onLogon(libraryId, connectionId, sessionId);
             }
         }
 
@@ -204,6 +205,7 @@ public class FixLibrary extends GatewayProcess
             final DirectBuffer buffer,
             final int offset,
             final int length,
+            final int libraryId,
             final long connectionId,
             final long sessionId,
             final int messageType,
@@ -213,17 +215,18 @@ public class FixLibrary extends GatewayProcess
             final SessionSubscriber subscriber = sessions.get(connectionId);
             if (subscriber != null)
             {
-                subscriber.onMessage(buffer, offset, length, connectionId, sessionId, messageType, timestamp);
+                subscriber.onMessage(
+                    buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp);
             }
         }
 
-        public void onDisconnect(final long connectionId)
+        public void onDisconnect(final int libraryId, final long connectionId)
         {
             final SessionSubscriber subscriber = sessions.remove(connectionId);
             DebugLogger.log("Library Disconnect %s\n", connectionId);
             if (subscriber != null)
             {
-                subscriber.onDisconnect(connectionId);
+                subscriber.onDisconnect(libraryId, connectionId);
             }
         }
 
@@ -276,7 +279,8 @@ public class FixLibrary extends GatewayProcess
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId),
             sessionConfiguration.username(),
-            sessionConfiguration.password());
+            sessionConfiguration.password(),
+            libraryId);
     }
 
     // TODO: refactor to callback
@@ -295,14 +299,15 @@ public class FixLibrary extends GatewayProcess
             configuration.beginString(),
             configuration.sendingTimeWindow(),
             fixCounters.receivedMsgSeqNo(connectionId),
-            fixCounters.sentMsgSeqNo(connectionId));
+            fixCounters.sentMsgSeqNo(connectionId),
+            libraryId);
     }
 
     private SessionProxy sessionProxy(final long connectionId)
     {
         return new SessionProxy(
             configuration.encoderBufferSize(), outboundLibraryStreams.gatewayPublication(), sessionIdStrategy,
-            configuration.sessionCustomisationStrategy(), System::currentTimeMillis, connectionId);
+            configuration.sessionCustomisationStrategy(), System::currentTimeMillis, connectionId, libraryId);
     }
 
     public void close()

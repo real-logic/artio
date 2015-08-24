@@ -25,6 +25,7 @@ public interface SessionHandler
         final DirectBuffer buffer,
         final int offset,
         final int length,
+        final int libraryId,
         final long connectionId,
         final long sessionId,
         final int messageType,
@@ -33,7 +34,7 @@ public interface SessionHandler
         // Optional method, implement if you care about this type of message.
     }
 
-    default void onDisconnect(final long connectionId)
+    default void onDisconnect(final int libraryId, final long connectionId)
     {
         // Optional method, implement if you care about this type of message.
     }
@@ -49,7 +50,7 @@ public interface SessionHandler
         // Optional method, implement if you care about this type of message.
     }
 
-    default void onLogon(final long connectionId, final long sessionId)
+    default void onLogon(final int libraryId, final long connectionId, final long sessionId)
     {
         // Optional method, implement if you care about this type of message.
     }
@@ -66,7 +67,7 @@ public interface SessionHandler
         // Optional method, implement if you care about this type of message.
     }
 
-    default void onRequestDisconnect(final long connectionId)
+    default void onRequestDisconnect(final int libraryId, final long connectionId)
     {
         // Optional method, implement if you care about this type of message.
     }

@@ -62,7 +62,11 @@ public class ConnectionHandler
     }
 
     public ReceiverEndPoint receiverEndPoint(
-        final SocketChannel channel, final long connectionId, final long sessionId, final Framer framer) throws IOException
+        final SocketChannel channel,
+        final long connectionId,
+        final long sessionId,
+        final Framer framer,
+        final int libraryId) throws IOException
     {
         return new ReceiverEndPoint(
             channel,
@@ -74,7 +78,8 @@ public class ConnectionHandler
             sessionIds,
             fixCounters.messagesRead(channel.getRemoteAddress()),
             framer,
-            errorHandler
+            errorHandler,
+            libraryId
         );
     }
 

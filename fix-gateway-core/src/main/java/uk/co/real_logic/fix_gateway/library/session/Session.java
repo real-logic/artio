@@ -71,6 +71,7 @@ public class Session
     private final long sendingTimeWindow;
     private final AtomicCounter receivedMsgSeqNo;
     private final AtomicCounter sentMsgSeqNo;
+    protected final int libraryId;
     protected Object sessionKey;
 
     private SessionState state;
@@ -99,8 +100,10 @@ public class Session
         final char[] expectedBeginString,
         final long sendingTimeWindow,
         final AtomicCounter receivedMsgSeqNo,
-        final AtomicCounter sentMsgSeqNo)
+        final AtomicCounter sentMsgSeqNo,
+        final int libraryId)
     {
+        this.libraryId = libraryId;
         Verify.notNull(clock, "clock");
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
@@ -213,7 +216,7 @@ public class Session
 
         final int length = encoder.encode(string, 0);
 
-        return publication.saveMessage(buffer, 0, length, encoder.messageType(), id(), connectionId, OK);
+        return publication.saveMessage(buffer, 0, length, libraryId, encoder.messageType(), id(), connectionId, OK);
     }
 
     // ---------- Event Handlers ----------
@@ -318,7 +321,8 @@ public class Session
                  final long sessionId,
                  final Object sessionKey,
                  long sendingTime,
-                 final long origSendingTime, final boolean isPossDupOrResend)
+                 final long origSendingTime,
+                 final boolean isPossDupOrResend)
     {
         this.sessionKey = sessionKey;
         proxy.setupSession(sessionId, sessionKey);
@@ -327,7 +331,7 @@ public class Session
             id(sessionId);
             heartbeatIntervalInS(heartbeatInterval);
             onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
-            publication.saveLogon(connectionId, sessionId);
+            publication.saveLogon(libraryId, connectionId, sessionId);
         }
     }
 

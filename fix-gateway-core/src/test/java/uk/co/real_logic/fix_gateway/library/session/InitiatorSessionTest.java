@@ -26,7 +26,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 {
     private InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy,
         mockPublication, null, BEGIN_STRING, SENDING_TIME_WINDOW,
-        mockReceivedMsgSeqNo, mockSentMsgSeqNo, null, null);
+        mockReceivedMsgSeqNo, mockSentMsgSeqNo, null, null, LIBRARY_ID);
 
     @Test
     public void shouldInitiallyBeConnected()
@@ -94,7 +94,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
     private void verifySavesLogonMessage()
     {
-        verify(mockPublication, times(1)).saveLogon(CONNECTION_ID, SESSION_ID);
+        verify(mockPublication, times(1)).saveLogon(LIBRARY_ID, CONNECTION_ID, SESSION_ID);
     }
 
     private void verifyLogon()

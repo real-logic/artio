@@ -78,7 +78,8 @@ public class FramerTest
 
         clientBuffer.putInt(10, 5);
 
-        when(mockConnectionHandler.receiverEndPoint(any(SocketChannel.class), anyLong(), anyLong(), eq(framer)))
+        when(mockConnectionHandler
+            .receiverEndPoint(any(SocketChannel.class), anyLong(), anyLong(), eq(framer), anyInt()))
             .thenReturn(mockReceiverEndPoint);
 
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong()))
@@ -109,7 +110,8 @@ public class FramerTest
 
         framer.doWork();
 
-        verify(mockConnectionHandler).receiverEndPoint(notNull(SocketChannel.class), anyLong(), anyLong(), eq(framer));
+        verify(mockConnectionHandler).receiverEndPoint(
+            notNull(SocketChannel.class), anyLong(), anyLong(), eq(framer), anyInt());
     }
 
     @Test
@@ -130,7 +132,7 @@ public class FramerTest
         aClientConnects();
         framer.doWork();
 
-        framer.onDisconnect(CONNECTION_ID);
+        framer.onDisconnect(LIBRARY_ID, CONNECTION_ID);
         framer.doWork();
 
         verify(mockReceiverEndPoint).close();
@@ -190,7 +192,7 @@ public class FramerTest
     private void notifyLibraryOfConnection()
     {
         verify(mockGatewayPublication).saveConnect(anyLong(), anyString(), eq(LIBRARY_ID), eq(INITIATOR));
-        verify(mockGatewayPublication).saveLogon(anyLong(), anyLong());
+        verify(mockGatewayPublication).saveLogon(eq(LIBRARY_ID), anyLong(), anyLong());
     }
 
     private void aClientSendsData() throws IOException

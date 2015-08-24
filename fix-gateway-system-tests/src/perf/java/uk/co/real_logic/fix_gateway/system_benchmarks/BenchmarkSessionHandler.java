@@ -30,6 +30,7 @@ public final class BenchmarkSessionHandler implements SessionHandler
     public void onMessage(final DirectBuffer buffer,
                           final int offset,
                           final int length,
+                          final int libraryId,
                           final long connectionId,
                           final long sessionId,
                           final int messageType, final long timestamp)
@@ -39,12 +40,12 @@ public final class BenchmarkSessionHandler implements SessionHandler
         //System.out.println(printer.toString(flyweight, offset, length, messageType));
     }
 
-    public void onLogon(final long connectionId, final long sessionId)
+    public void onLogon(final int libraryId, final long connectionId, final long sessionId)
     {
         System.out.printf("%d logged on with sessionId=%d\n", connectionId, sessionId);
     }
 
-    public void onDisconnect(final long connectionId)
+    public void onDisconnect(final int libraryId, final long connectionId)
     {
         System.out.printf("%d disconnected\n", connectionId);
     }
