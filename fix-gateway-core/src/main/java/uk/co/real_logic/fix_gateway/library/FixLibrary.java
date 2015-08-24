@@ -26,21 +26,16 @@ import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.streams.ActivationHandler;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
 
 public class FixLibrary extends GatewayProcess
 {
-    private QueuedPipe<LibraryCommand> commands = new OneToOneConcurrentArrayQueue<>(16);
-
-    private final Consumer<LibraryCommand> executeFunc = command -> command.execute(this);
     private final Subscription inboundSubscription;
     private final GatewayPublication outboundPublication;
     private final Long2ObjectHashMap<SessionSubscriber> sessions = new Long2ObjectHashMap<>();
@@ -60,9 +55,6 @@ public class FixLibrary extends GatewayProcess
 
     public FixLibrary(final LibraryConfiguration configuration)
     {
-        configuration.activationHandler(
-            new ActivationHandler(commands, configuration.aeronChannel(), INBOUND_LIBRARY_STREAM));
-
         init(configuration);
 
         this.configuration = configuration;
@@ -83,12 +75,11 @@ public class FixLibrary extends GatewayProcess
 
     public int poll(final int fragmentLimit)
     {
-        return commands.drain(executeFunc) +
-               inboundSubscription.poll(dataSubscriber, fragmentLimit) +
-               pollSessions();
+        return inboundSubscription.poll(dataSubscriber, fragmentLimit) +
+               pollSessionsAndLiveness();
     }
 
-    private int pollSessions()
+    private int pollSessionsAndLiveness()
     {
         int total = 0;
         final long timeInMs = clock.time();
@@ -323,15 +314,5 @@ public class FixLibrary extends GatewayProcess
     public boolean isConnected()
     {
         return livenessDetector.isConnected();
-    }
-
-    public void onInactiveGateway()
-    {
-
-    }
-
-    public void onActiveGateway()
-    {
-
     }
 }

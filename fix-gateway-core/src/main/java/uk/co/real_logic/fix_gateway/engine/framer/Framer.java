@@ -291,15 +291,6 @@ public class Framer implements Agent, SessionHandler
         endPointPoller.deregister(connectionId);
     }
 
-    public void onNewLibrary(final int libraryId)
-    {
-
-    }
-
-    public void onInactiveLibrary(final int libraryId)
-    {
-    }
-
     public void onApplicationHeartbeat(final int libraryId)
     {
         Library library = idToLibrary.get(libraryId);

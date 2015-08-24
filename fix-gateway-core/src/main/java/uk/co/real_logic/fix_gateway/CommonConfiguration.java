@@ -19,7 +19,6 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.streams.ActivationHandler;
 
 import java.io.File;
 
@@ -87,15 +86,6 @@ public class CommonConfiguration
     public CommonConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
     {
         this.replyTimeoutInMs = replyTimeoutInMs;
-        return this;
-    }
-
-    public CommonConfiguration activationHandler(final ActivationHandler handler)
-    {
-        aeronContext
-            .newImageHandler(handler)
-            .inactiveImageHandler(handler);
-
         return this;
     }
 

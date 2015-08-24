@@ -27,7 +27,6 @@ import uk.co.real_logic.fix_gateway.engine.framer.QueryLibraries;
 import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
 import uk.co.real_logic.fix_gateway.engine.logger.Logger;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.streams.ActivationHandler;
 
 import java.util.List;
 import java.util.concurrent.locks.LockSupport;
@@ -68,9 +67,6 @@ public final class FixEngine extends GatewayProcess
 
     private FixEngine(final EngineConfiguration configuration)
     {
-        configuration.activationHandler(
-            new ActivationHandler(adminCommands, configuration.aeronChannel(), OUTBOUND_LIBRARY_STREAM));
-
         init(configuration);
         this.configuration = configuration;
 
