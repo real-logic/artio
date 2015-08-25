@@ -50,6 +50,8 @@ public final class SystemTestUtil
     public static final String INITIATOR_ID = "LEH_LZJ02";
     public static final String CLIENT_LOGS = "client-logs";
     public static final String ACCEPTOR_LOGS = "acceptor-logs";
+    public static final long TIMEOUT_IN_MS = 100;
+    public static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
 
     public static void assertDisconnected(final FixLibrary handlerLibrary,
                                           final FakeSessionHandler sessionHandler,
@@ -200,8 +202,7 @@ public final class SystemTestUtil
         final int port)
     {
         delete(ACCEPTOR_LOGS);
-        final EngineConfiguration config = acceptingConfig(
-            port, "engineCounters");
+        final EngineConfiguration config = acceptingConfig(port, "engineCounters");
         return FixEngine.launch(config);
     }
 
@@ -276,10 +277,12 @@ public final class SystemTestUtil
 
     public static FixLibrary newInitiatingLibrary(
         final int initAeronPort,
-        final NewSessionHandler sessionHandler)
+        final NewSessionHandler sessionHandler,
+        final int libraryId)
     {
         return new FixLibrary(
             new LibraryConfiguration()
+                //.libraryId(libraryId)
                 .newSessionHandler(sessionHandler)
                 .aeronChannel("udp://localhost:" + initAeronPort)
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters"));
@@ -294,5 +297,32 @@ public final class SystemTestUtil
     public static void assertConnected(final Session session)
     {
         assertTrue("Session has failed to connect", session.isConnected());
+    }
+
+    public static void assertLibrariesDisconnect(final int count, final FixLibrary library, final FixEngine engine)
+    {
+        assertEventuallyTrue(
+            "libraries haven't disconnected yet",
+            () -> {
+                if (library != null)
+                {
+                    library.poll(1);
+                }
+                return engine.libraries().size() == count;
+            },
+            AWAIT_TIMEOUT,
+            1);
+    }
+
+    public static void awaitLibraryConnect(final FixLibrary library)
+    {
+        assertEventuallyTrue(
+            "Library hasn't seen Engine", () ->
+            {
+                library.poll(5);
+                final boolean connected = library.isConnected();
+                return connected;
+            },
+            AWAIT_TIMEOUT, 1);
     }
 }

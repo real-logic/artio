@@ -60,15 +60,16 @@ public class Framer implements Agent, SessionHandler
     public static final int NO_ACCEPTOR = -1;
 
     private final Int2ObjectHashMap<Library> idToLibrary = new Int2ObjectHashMap<>();
-
     private final Long2ObjectHashMap<SenderEndPoint> connectionToSenderEndpoint = new Long2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final EpochClock clock = new SystemEpochClock();
     private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
-    private final DataSubscriber dataSubscriber;
+    private final DataSubscriber dataSubscriber = new DataSubscriber(this);
 
     private final Selector selector;
     private final ServerSocketChannel listeningChannel;
+    private final ReceiverEndPointPoller endPointPoller;
+
     private final EngineConfiguration configuration;
     private final ConnectionHandler connectionHandler;
     private final Subscription outboundDataSubscription;
@@ -77,7 +78,6 @@ public class Framer implements Agent, SessionHandler
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
     private final QueuedPipe<AdminCommand> adminCommands;
-    private final ReceiverEndPointPoller endPointPoller;
 
     private long nextConnectionId = (long) (Math.random() * Long.MAX_VALUE);
     private int acceptorLibraryId = NO_ACCEPTOR;
@@ -100,7 +100,6 @@ public class Framer implements Agent, SessionHandler
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
         this.adminCommands = adminCommands;
-        dataSubscriber = new DataSubscriber(this);
 
         try
         {

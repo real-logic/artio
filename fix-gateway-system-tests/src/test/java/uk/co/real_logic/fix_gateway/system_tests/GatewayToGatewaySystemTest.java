@@ -62,7 +62,7 @@ public class GatewayToGatewaySystemTest
         initiatingEngine = launchInitiatingGateway(initAeronPort);
 
         acceptingLibrary = newAcceptingLibrary(acceptAeronPort, acceptingSessionHandler);
-        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler);
+        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
 
         connectSessions();
     }

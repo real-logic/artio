@@ -212,4 +212,11 @@ public final class EngineConfiguration extends CommonConfiguration
         super.monitoringFile(counterBuffersFile);
         return this;
     }
+
+    public EngineConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
+    {
+        super.replyTimeoutInMs(replyTimeoutInMs);
+        return this;
+    }
+
 }

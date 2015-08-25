@@ -39,8 +39,6 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class EngineAndLibraryIntegrationTest
 {
-    private static final long TIMEOUT_IN_MS = 100;
-    private static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
 
     private int aeronPort = unusedPort();
     private MediaDriver mediaDriver;
@@ -83,7 +81,7 @@ public class EngineAndLibraryIntegrationTest
 
         library.close();
 
-        assertLibrariesDisconnect(0, null);
+        assertLibrariesDisconnect(0, null, engine);
     }
 
     @Test
@@ -115,7 +113,7 @@ public class EngineAndLibraryIntegrationTest
 
         library1.close();
 
-        assertLibrariesDisconnect(1, library2);
+        assertLibrariesDisconnect(1, library2, engine);
 
         final List<Library> libraries = hasLibraries(1);
         assertLibrary2(libraries);
@@ -166,21 +164,6 @@ public class EngineAndLibraryIntegrationTest
         assertLibrary(libraries.get(0), false, 3);
     }
 
-    private void assertLibrariesDisconnect(final int count, final FixLibrary library)
-    {
-        assertEventuallyTrue(
-            "libraries haven't disconnected yet",
-            () -> {
-                if (library != null)
-                {
-                    library.poll(1);
-                }
-                return engine.libraries().size() == count;
-            },
-            AWAIT_TIMEOUT,
-            1);
-    }
-
     private void assertLibrary(final Library library, final boolean expectedAcceptor, final int libraryId)
     {
         assertEquals(expectedAcceptor, library.isAcceptor());
@@ -192,18 +175,6 @@ public class EngineAndLibraryIntegrationTest
         final List<Library> libraries = engine.libraries();
         assertThat(libraries, hasSize(count));
         return libraries;
-    }
-
-    private void awaitLibraryConnect(final FixLibrary library)
-    {
-        assertEventuallyTrue(
-            "Library hasn't seen Engine", () ->
-            {
-                library.poll(5);
-                final boolean connected = library.isConnected();
-                return connected;
-            },
-            AWAIT_TIMEOUT, 1);
     }
 
     private void assertNoActiveLibraries(final int count)
