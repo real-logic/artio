@@ -23,7 +23,7 @@ import uk.co.real_logic.fix_gateway.library.session.SessionParser;
 
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 
-public class SessionSubscriber implements SessionHandler, AutoCloseable
+public class SessionSubscriber implements AutoCloseable
 {
     private final SessionParser parser;
     private final Session session;
@@ -68,7 +68,7 @@ public class SessionSubscriber implements SessionHandler, AutoCloseable
         handler.onDisconnect(libraryId, connectionId);
     }
 
-    public void onLogon(final int libraryId, final long connectionId, final long sessionId)
+    public void onLogon(final long connectionId, final long sessionId)
     {
         session.id(sessionId);
     }

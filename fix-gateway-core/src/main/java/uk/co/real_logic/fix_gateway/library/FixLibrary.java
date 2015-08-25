@@ -193,11 +193,14 @@ public class FixLibrary extends GatewayProcess
 
         public void onLogon(final int libraryId, final long connectionId, final long sessionId)
         {
-            DebugLogger.log("Library Logon: %d, %d\n", connectionId, sessionId);
-            final SessionSubscriber subscriber = sessions.get(connectionId);
-            if (subscriber != null)
+            if (libraryId == FixLibrary.this.libraryId)
             {
-                subscriber.onLogon(libraryId, connectionId, sessionId);
+                DebugLogger.log("Library Logon: %d, %d\n", connectionId, sessionId);
+                final SessionSubscriber subscriber = sessions.get(connectionId);
+                if (subscriber != null)
+                {
+                    subscriber.onLogon(connectionId, sessionId);
+                }
             }
         }
 
@@ -211,22 +214,28 @@ public class FixLibrary extends GatewayProcess
             final int messageType,
             final long timestamp)
         {
-            DebugLogger.log("Received %s\n", buffer, offset, length);
-            final SessionSubscriber subscriber = sessions.get(connectionId);
-            if (subscriber != null)
+            if (libraryId == FixLibrary.this.libraryId)
             {
-                subscriber.onMessage(
-                    buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp);
+                DebugLogger.log("Received %s\n", buffer, offset, length);
+                final SessionSubscriber subscriber = sessions.get(connectionId);
+                if (subscriber != null)
+                {
+                    subscriber.onMessage(
+                        buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp);
+                }
             }
         }
 
         public void onDisconnect(final int libraryId, final long connectionId)
         {
-            final SessionSubscriber subscriber = sessions.remove(connectionId);
-            DebugLogger.log("Library Disconnect %s\n", connectionId);
-            if (subscriber != null)
+            if (libraryId == FixLibrary.this.libraryId)
             {
-                subscriber.onDisconnect(libraryId, connectionId);
+                final SessionSubscriber subscriber = sessions.remove(connectionId);
+                DebugLogger.log("Library Disconnect %s\n", connectionId);
+                if (subscriber != null)
+                {
+                    subscriber.onDisconnect(libraryId, connectionId);
+                }
             }
         }
 
