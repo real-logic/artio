@@ -57,7 +57,7 @@ public class MultipleAddressSystemTest
 
         mediaDriver = launchMediaDriver();
         initiatingEngine = launchInitiatingGateway(initAeronPort);
-        acceptingEngine = launchAcceptingGateway(port, acceptAeronPort);
+        acceptingEngine = launchAcceptingGateway(port);
 
         initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler);
         acceptingLibrary = newAcceptingLibrary(acceptAeronPort, acceptingSessionHandler);

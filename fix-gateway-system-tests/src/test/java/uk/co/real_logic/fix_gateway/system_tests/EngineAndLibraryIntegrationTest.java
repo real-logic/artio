@@ -55,7 +55,7 @@ public class EngineAndLibraryIntegrationTest
         mediaDriver = launchMediaDriver();
 
         delete(ACCEPTOR_LOGS);
-        final EngineConfiguration config = acceptingConfig(unusedPort(), aeronPort, "engineCounters");
+        final EngineConfiguration config = acceptingConfig(unusedPort(), "engineCounters");
         config.replyTimeoutInMs(TIMEOUT_IN_MS);
         engine = FixEngine.launch(config);
     }

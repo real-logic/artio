@@ -58,7 +58,7 @@ public class GatewayToGatewaySystemTest
 
         mediaDriver = launchMediaDriver();
 
-        acceptingEngine = launchAcceptingGateway(port, acceptAeronPort);
+        acceptingEngine = launchAcceptingGateway(port);
         initiatingEngine = launchInitiatingGateway(initAeronPort);
 
         acceptingLibrary = newAcceptingLibrary(acceptAeronPort, acceptingSessionHandler);

@@ -197,23 +197,21 @@ public final class SystemTestUtil
     }
 
     public static FixEngine launchAcceptingGateway(
-        final int port,
-        final int acceptAeronPort)
+        final int port)
     {
         delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(
-            port, acceptAeronPort, "engineCounters");
+            port, "engineCounters");
         return FixEngine.launch(config);
     }
 
     public static EngineConfiguration acceptingConfig(
         final int port,
-        final int acceptAeronPort,
         final String countersSuffix)
     {
         return new EngineConfiguration()
             .bind("localhost", port)
-            .aeronChannel("udp://localhost:" + acceptAeronPort)
+            .aeronChannel("aeron:ipc")
             .monitoringFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + countersSuffix)
             .logFileDir(ACCEPTOR_LOGS);
     }
@@ -234,7 +232,7 @@ public final class SystemTestUtil
             .authenticationStrategy(authenticationStrategy)
             .messageValidationStrategy(validationStrategy)
             .newSessionHandler(sessionHandler)
-            .aeronChannel("udp://localhost:" + aeronPort)
+            .aeronChannel("aeron:ipc")
             .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "libraryCounters");
     }
 
