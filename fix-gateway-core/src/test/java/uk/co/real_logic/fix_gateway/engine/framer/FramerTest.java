@@ -22,8 +22,9 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
+import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -38,6 +39,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.DUPLICATE_SESSION;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
+import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNKNOWN_LIBRARY;
 
 public class FramerTest
 {
@@ -45,6 +47,7 @@ public class FramerTest
     private static final InetSocketAddress FRAMER_ADDRESS = new InetSocketAddress("localhost", 9999);
     private static final long CONNECTION_ID = 2L;
     private static final int LIBRARY_ID = 3;
+    private static final int REPLY_TIMEOUT_IN_MS = 10;
 
     private ServerSocketChannel server;
 
@@ -56,12 +59,15 @@ public class FramerTest
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private GatewayPublication mockGatewayPublication = mock(GatewayPublication.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
+    private FakeEpochClock mockClock = new FakeEpochClock();
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
-        .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort());
+        .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
+        .replyTimeoutInMs(REPLY_TIMEOUT_IN_MS);
 
     @SuppressWarnings("unchecked")
     private Framer framer = new Framer(
+        mockClock,
         engineConfiguration,
         mockConnectionHandler,
         mock(Subscription.class),
@@ -75,6 +81,7 @@ public class FramerTest
     public void setUp() throws IOException
     {
         server = ServerSocketChannel.open().bind(TEST_ADDRESS);
+        server.configureBlocking(false);
 
         clientBuffer.putInt(10, 5);
 
@@ -86,6 +93,8 @@ public class FramerTest
             .thenReturn(mockSenderEndPoint);
 
         when(mockReceiverEndPoint.connectionId()).thenReturn(CONNECTION_ID);
+
+        when(mockReceiverEndPoint.libraryId()).thenReturn(LIBRARY_ID);
     }
 
     @After
@@ -147,6 +156,18 @@ public class FramerTest
     }
 
     @Test
+    public void shouldNotConnectIfLibraryUnknown() throws Exception
+    {
+        framer.onInitiateConnection(
+            LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG");
+
+        framer.doWork();
+
+        assertNull("Sender has connected to server", server.accept());
+        verifyErrorPublished(UNKNOWN_LIBRARY);
+    }
+
+    @Test
     public void shouldNotifyLibraryOfInitiatedConnection() throws Exception
     {
         intiateConnection();
@@ -161,7 +182,12 @@ public class FramerTest
 
         intiateConnection();
 
-        verify(mockGatewayPublication).saveError(eq(UNABLE_TO_CONNECT), eq(LIBRARY_ID), anyString());
+        verifyErrorPublished(UNABLE_TO_CONNECT);
+    }
+
+    private void verifyErrorPublished(final GatewayError error)
+    {
+        verify(mockGatewayPublication).saveError(eq(error), eq(LIBRARY_ID), anyString());
     }
 
     @Test
@@ -173,11 +199,38 @@ public class FramerTest
 
         intiateConnection();
 
-        verify(mockGatewayPublication).saveError(DUPLICATE_SESSION, LIBRARY_ID, "");
+        verifyErrorPublished(DUPLICATE_SESSION);
+    }
+
+    @Test
+    public void shouldDisconnectClientsWhenLibraryDisconnects() throws Exception
+    {
+        intiateConnection();
+
+        final SocketChannel conn = server.accept();
+        assertTrue(conn.isConnected());
+
+        timeoutLibrary();
+
+        framer.doWork();
+
+        verify(mockReceiverEndPoint).close();
+    }
+
+    private void timeoutLibrary()
+    {
+        mockClock.advanceMilliSeconds(REPLY_TIMEOUT_IN_MS * 2);
+    }
+
+    private void connectLibrary()
+    {
+        framer.onApplicationHeartbeat(LIBRARY_ID);
     }
 
     private void intiateConnection() throws Exception
     {
+        connectLibrary();
+
         framer.onInitiateConnection(
             LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG");
 

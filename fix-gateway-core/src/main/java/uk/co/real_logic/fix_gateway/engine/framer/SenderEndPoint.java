@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
+// TODO: make sender end points always, consistently, be removed when sender end points are
 public class SenderEndPoint
 {
     private final long connectionId;

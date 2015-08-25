@@ -33,6 +33,7 @@
             <validValue name="EXCEPTION">0</validValue>
             <validValue name="DUPLICATE_SESSION">1</validValue>
             <validValue name="UNABLE_TO_CONNECT">2</validValue>
+            <validValue name="UNKNOWN_LIBRARY">3</validValue>
         </enum>
         <enum name="MessageStatus" encodingType="uint8">
             <validValue name="OK">0</validValue>

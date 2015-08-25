@@ -62,7 +62,7 @@ public class Framer implements Agent, SessionHandler
     private final Int2ObjectHashMap<Library> idToLibrary = new Int2ObjectHashMap<>();
     private final Long2ObjectHashMap<SenderEndPoint> connectionToSenderEndpoint = new Long2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
-    private final EpochClock clock = new SystemEpochClock();
+    private final EpochClock clock;
     private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
     private final DataSubscriber dataSubscriber = new DataSubscriber(this);
 
@@ -83,6 +83,7 @@ public class Framer implements Agent, SessionHandler
     private int acceptorLibraryId = NO_ACCEPTOR;
 
     public Framer(
+        final EpochClock clock,
         final EngineConfiguration configuration,
         final ConnectionHandler connectionHandler,
         final Subscription outboundLibrarySubscription,
@@ -92,6 +93,7 @@ public class Framer implements Agent, SessionHandler
         final SessionIds sessionIds,
         final QueuedPipe<AdminCommand> adminCommands)
     {
+        this.clock = clock;
         this.configuration = configuration;
         this.connectionHandler = connectionHandler;
         this.outboundDataSubscription = outboundLibrarySubscription;
@@ -139,6 +141,7 @@ public class Framer implements Agent, SessionHandler
             if (!library.isConnected())
             {
                 iterator.remove();
+                endPointPoller.deregisterLibrary(library.libraryId());
                 if (library.isAcceptor())
                 {
                     acceptorLibraryId = NO_ACCEPTOR;
@@ -152,7 +155,7 @@ public class Framer implements Agent, SessionHandler
     public void removeEndPoint(final ReceiverEndPoint receiverEndPoint)
     {
         connectionToSenderEndpoint.remove(receiverEndPoint.connectionId());
-        endPointPoller.deregister(receiverEndPoint);
+        endPointPoller.deregisterEndPoint(receiverEndPoint);
     }
 
     private int pollSockets() throws IOException
@@ -201,6 +204,13 @@ public class Framer implements Agent, SessionHandler
                                      final String senderLocationId,
                                      final String targetCompId)
     {
+        final Library library = idToLibrary.get(libraryId);
+        if (library == null)
+        {
+            saveError(UNKNOWN_LIBRARY, libraryId);
+            return;
+        }
+
         try
         {
             SocketChannel channel;
@@ -224,7 +234,7 @@ public class Framer implements Agent, SessionHandler
             final long sessionId = sessionIds.onLogon(sessionKey);
             if (sessionId == SessionIds.DUPLICATE_SESSION)
             {
-                inboundPublication.saveError(DUPLICATE_SESSION, libraryId, "");
+                saveError(DUPLICATE_SESSION, libraryId);
                 return;
             }
 
@@ -236,6 +246,11 @@ public class Framer implements Agent, SessionHandler
         {
             saveError(EXCEPTION, libraryId, e);
         }
+    }
+
+    private void saveError(final GatewayError error, final int libraryId)
+    {
+        inboundPublication.saveError(error, libraryId, "");
     }
 
     private void saveError(final GatewayError error, final int libraryId, final Exception e)
@@ -287,7 +302,8 @@ public class Framer implements Agent, SessionHandler
             connectionHandler.receiverEndPoint(channel, connectionId, sessionId, this, libraryId);
         endPointPoller.register(receiverEndPoint);
 
-        connectionToSenderEndpoint.put(connectionId, connectionHandler.senderEndPoint(channel, connectionId));
+        final SenderEndPoint senderEndPoint = connectionHandler.senderEndPoint(channel, connectionId);
+        connectionToSenderEndpoint.put(connectionId, senderEndPoint);
     }
 
     public void onRequestDisconnect(final int libraryId, final long connectionId)
@@ -297,7 +313,7 @@ public class Framer implements Agent, SessionHandler
 
     public void onDisconnect(final int libraryId, final long connectionId)
     {
-        endPointPoller.deregister(connectionId);
+        endPointPoller.deregisterConnection(connectionId);
     }
 
     public void onApplicationHeartbeat(final int libraryId)

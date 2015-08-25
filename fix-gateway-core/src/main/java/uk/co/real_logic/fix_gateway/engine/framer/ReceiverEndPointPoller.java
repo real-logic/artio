@@ -42,12 +42,12 @@ public class ReceiverEndPointPoller extends TransportPoller
         }
     }
 
-    public void deregister(final ReceiverEndPoint endPoint)
+    public void deregisterEndPoint(final ReceiverEndPoint endPoint)
     {
         endPoints = ArrayUtil.remove(endPoints, endPoint);
     }
 
-    public void deregister(final long connectionId)
+    public void deregisterConnection(final long connectionId)
     {
         final ReceiverEndPoint[] endPoints = this.endPoints;
         final int length = endPoints.length;
@@ -64,6 +64,41 @@ public class ReceiverEndPointPoller extends TransportPoller
         }
 
         this.endPoints = ArrayUtil.remove(endPoints, index);
+    }
+
+    public void deregisterLibrary(final int libraryId)
+    {
+        final ReceiverEndPoint[] endPoints = this.endPoints;
+        final int length = endPoints.length;
+        int removeCount = 0;
+
+        for (int i = 0; i < length; i++)
+        {
+            final ReceiverEndPoint endPoint = endPoints[i];
+            if (endPoint.libraryId() == libraryId)
+            {
+                endPoint.close();
+                removeCount++;
+            }
+        }
+
+        if (removeCount > 0)
+        {
+            final int newLength = length - removeCount;
+            final ReceiverEndPoint[] newEndPoints = ArrayUtil.newArray(endPoints, newLength);
+
+            for (int i = 0, j = 0; i < length; i++)
+            {
+                final ReceiverEndPoint endPoint = endPoints[i];
+                if (endPoint.libraryId() != libraryId)
+                {
+                    newEndPoints[j] = endPoint;
+                    j++;
+                }
+            }
+
+            this.endPoints = newEndPoints;
+        }
     }
 
     public int pollEndPoints()
@@ -106,5 +141,4 @@ public class ReceiverEndPointPoller extends TransportPoller
         Stream.of(endPoints).forEach(ReceiverEndPoint::close);
         super.close();
     }
-
 }
