@@ -16,28 +16,27 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.engine.Library;
 
 import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 
 public final class QueryLibraries implements AdminCommand
 {
-    private volatile List<Library> response;
+    private volatile List<LibraryInfo> response;
 
     public void execute(final Framer framer)
     {
         framer.onQueryLibraries(this);
     }
 
-    public void respond(final List<Library> response)
+    public void respond(final List<LibraryInfo> response)
     {
         this.response = response;
     }
 
-    public List<Library> awaitResponse()
+    public List<LibraryInfo> awaitResponse()
     {
-        List<Library> response;
+        List<LibraryInfo> response;
         while ((response = this.response) == null)
         {
             LockSupport.parkNanos(FixEngine.COMMAND_QUEUE_IDLE_NS);

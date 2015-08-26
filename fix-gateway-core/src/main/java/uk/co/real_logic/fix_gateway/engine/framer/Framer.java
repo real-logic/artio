@@ -24,7 +24,6 @@ import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.engine.Library;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -59,7 +58,7 @@ public class Framer implements Agent, SessionHandler
     public static final int OUTBOUND_FRAGMENT_LIMIT = 5;
     public static final int NO_ACCEPTOR = -1;
 
-    private final Int2ObjectHashMap<Library> idToLibrary = new Int2ObjectHashMap<>();
+    private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Long2ObjectHashMap<SenderEndPoint> connectionToSenderEndpoint = new Long2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final Consumer<ReceiverEndPoint> removeSenderEndPointFunc = this::removeSenderEndPoint;
@@ -135,10 +134,10 @@ public class Framer implements Agent, SessionHandler
     {
         final long timeInMs = clock.time();
         int total = 0;
-        final Iterator<Library> iterator = idToLibrary.values().iterator();
+        final Iterator<LibraryInfo> iterator = idToLibrary.values().iterator();
         while (iterator.hasNext())
         {
-            final Library library = iterator.next();
+            final LibraryInfo library = iterator.next();
             total += library.poll(timeInMs);
             if (!library.isConnected())
             {
@@ -221,7 +220,7 @@ public class Framer implements Agent, SessionHandler
                                      final String senderLocationId,
                                      final String targetCompId)
     {
-        final Library library = idToLibrary.get(libraryId);
+        final LibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
         {
             saveError(UNKNOWN_LIBRARY, libraryId);
@@ -335,7 +334,7 @@ public class Framer implements Agent, SessionHandler
 
     public void onApplicationHeartbeat(final int libraryId)
     {
-        Library library = idToLibrary.get(libraryId);
+        LibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
         {
             final LivenessDetector livenessDetector = new LivenessDetector(
@@ -345,7 +344,7 @@ public class Framer implements Agent, SessionHandler
                 clock.time(),
                 true);
 
-            library = new Library(acceptorLibraryId == NO_ACCEPTOR, libraryId, livenessDetector);
+            library = new LibraryInfo(acceptorLibraryId == NO_ACCEPTOR, libraryId, livenessDetector);
             if (library.isAcceptor())
             {
                 acceptorLibraryId = libraryId;
@@ -360,7 +359,7 @@ public class Framer implements Agent, SessionHandler
 
     public void onQueryLibraries(final QueryLibraries queryLibraries)
     {
-        final List<Library> libraries = new ArrayList<>(idToLibrary.values());
+        final List<LibraryInfo> libraries = new ArrayList<>(idToLibrary.values());
         queryLibraries.respond(libraries);
     }
 

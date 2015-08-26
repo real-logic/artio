@@ -13,34 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.engine;
+package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 
 /**
  * Engine managed model of a library instance.
  */
-public final class Library
+public final class LibraryInfo
 {
     private final boolean acceptor;
     private final int libraryId;
     private final LivenessDetector livenessDetector;
 
-    public Library(final boolean acceptor, final int libraryId, final LivenessDetector livenessDetector)
+    public LibraryInfo(final boolean acceptor, final int libraryId, final LivenessDetector livenessDetector)
     {
         this.acceptor = acceptor;
         this.libraryId = libraryId;
         this.livenessDetector = livenessDetector;
-    }
-
-    public void onHeartbeat(final long timeInMs)
-    {
-        livenessDetector.onHeartbeat(timeInMs);
-    }
-
-    public int poll(final long timeInMs)
-    {
-        return livenessDetector.poll(timeInMs);
     }
 
     public boolean isAcceptor()
@@ -53,17 +43,27 @@ public final class Library
         return libraryId;
     }
 
+    void onHeartbeat(final long timeInMs)
+    {
+        livenessDetector.onHeartbeat(timeInMs);
+    }
+
+    int poll(final long timeInMs)
+    {
+        return livenessDetector.poll(timeInMs);
+    }
+
+    boolean isConnected()
+    {
+        return livenessDetector.isConnected();
+    }
+
     public String toString()
     {
         return "LibraryInfo{" +
             "acceptor=" + acceptor +
             ", libraryId=" + libraryId +
             '}';
-    }
-
-    public boolean isConnected()
-    {
-        return livenessDetector.isConnected();
     }
 
 }

@@ -22,7 +22,7 @@ import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.engine.Library;
+import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 
@@ -69,7 +69,7 @@ public class EngineAndLibraryIntegrationTest
     {
         awaitLibraryConnect(connectLibrary());
 
-        final List<Library> libraries = hasLibraries(1);
+        final List<LibraryInfo> libraries = hasLibraries(1);
         assertLibrary(libraries.get(0), true, DEFAULT_LIBRARY_ID);
     }
 
@@ -91,7 +91,7 @@ public class EngineAndLibraryIntegrationTest
 
         awaitLibraryConnect(connectLibrary(3));
 
-        final List<Library> libraries = hasLibraries(2);
+        final List<LibraryInfo> libraries = hasLibraries(2);
 
         assertLibrary2(libraries);
         assertLibrary(libraries.get(1), true, 2);
@@ -115,7 +115,7 @@ public class EngineAndLibraryIntegrationTest
 
         assertLibrariesDisconnect(1, library2, engine);
 
-        final List<Library> libraries = hasLibraries(1);
+        final List<LibraryInfo> libraries = hasLibraries(1);
         assertLibrary2(libraries);
 
         return library2;
@@ -128,7 +128,7 @@ public class EngineAndLibraryIntegrationTest
 
         awaitLibraryConnect(connectLibrary(4));
 
-        final List<Library> libraries = hasLibraries(2);
+        final List<LibraryInfo> libraries = hasLibraries(2);
         assertLibrary2(libraries);
         assertLibrary(libraries.get(1), true, 4);
     }
@@ -159,20 +159,20 @@ public class EngineAndLibraryIntegrationTest
             1);
     }
 
-    private void assertLibrary2(final List<Library> libraries)
+    private void assertLibrary2(final List<LibraryInfo> libraries)
     {
         assertLibrary(libraries.get(0), false, 3);
     }
 
-    private void assertLibrary(final Library library, final boolean expectedAcceptor, final int libraryId)
+    private void assertLibrary(final LibraryInfo library, final boolean expectedAcceptor, final int libraryId)
     {
         assertEquals(expectedAcceptor, library.isAcceptor());
         assertEquals("Has the wrong id", libraryId, library.libraryId());
     }
 
-    private List<Library> hasLibraries(final int count)
+    private List<LibraryInfo> hasLibraries(final int count)
     {
-        final List<Library> libraries = engine.libraries();
+        final List<LibraryInfo> libraries = engine.libraries();
         assertThat(libraries, hasSize(count));
         return libraries;
     }

@@ -21,10 +21,7 @@ import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.ErrorPrinter;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
-import uk.co.real_logic.fix_gateway.engine.framer.AdminCommand;
-import uk.co.real_logic.fix_gateway.engine.framer.Framer;
-import uk.co.real_logic.fix_gateway.engine.framer.QueryLibraries;
-import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
+import uk.co.real_logic.fix_gateway.engine.framer.*;
 import uk.co.real_logic.fix_gateway.engine.logger.Logger;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
@@ -55,7 +52,7 @@ public final class FixEngine extends GatewayProcess
      *
      * @return a list of currently active libraries.
      */
-    public List<Library> libraries()
+    public List<LibraryInfo> libraries()
     {
         final QueryLibraries query = new QueryLibraries();
         while (!adminCommands.offer(query))
