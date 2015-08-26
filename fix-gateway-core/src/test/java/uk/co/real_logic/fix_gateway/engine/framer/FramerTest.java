@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
@@ -37,15 +38,12 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
-import static uk.co.real_logic.fix_gateway.messages.GatewayError.DUPLICATE_SESSION;
-import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
-import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNKNOWN_LIBRARY;
+import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 
 public class FramerTest
 {
     private static final InetSocketAddress TEST_ADDRESS = new InetSocketAddress("localhost", 9998);
     private static final InetSocketAddress FRAMER_ADDRESS = new InetSocketAddress("localhost", 9999);
-    private static final long CONNECTION_ID = 2L;
     private static final int LIBRARY_ID = 3;
     private static final int REPLY_TIMEOUT_IN_MS = 10;
 
@@ -77,6 +75,8 @@ public class FramerTest
         new SessionIds(),
         mock(QueuedPipe.class));
 
+    private ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);
+
     @Before
     public void setUp() throws IOException
     {
@@ -86,13 +86,15 @@ public class FramerTest
         clientBuffer.putInt(10, 5);
 
         when(mockConnectionHandler
-            .receiverEndPoint(any(SocketChannel.class), anyLong(), anyLong(), eq(framer), anyInt()))
+            .receiverEndPoint(any(SocketChannel.class), connectionId.capture(), anyLong(), eq(framer), anyInt()))
             .thenReturn(mockReceiverEndPoint);
 
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong()))
             .thenReturn(mockSenderEndPoint);
 
-        when(mockReceiverEndPoint.connectionId()).thenReturn(CONNECTION_ID);
+        when(mockReceiverEndPoint.connectionId()).then(inv -> connectionId.getValue());
+
+        when(mockSenderEndPoint.connectionId()).then(inv -> connectionId.getValue());
 
         when(mockReceiverEndPoint.libraryId()).thenReturn(LIBRARY_ID);
     }
@@ -120,7 +122,20 @@ public class FramerTest
         framer.doWork();
 
         verify(mockConnectionHandler).receiverEndPoint(
-            notNull(SocketChannel.class), anyLong(), anyLong(), eq(framer), anyInt());
+            notNull(SocketChannel.class), anyLong(), anyLong(), eq(framer), eq(LIBRARY_ID));
+
+        verify(mockConnectionHandler).senderEndPoint(
+            notNull(SocketChannel.class), anyLong());
+    }
+
+    @Test
+    public void shouldDisconnectClientIfTheresNoAcceptorLibrary() throws Exception
+    {
+        client = SocketChannel.open(FRAMER_ADDRESS);
+
+        framer.doWork();
+
+        verify(mockGatewayPublication).saveError(eq(UNKNOWN_LIBRARY), eq(-1), anyString());
     }
 
     @Test
@@ -141,10 +156,16 @@ public class FramerTest
         aClientConnects();
         framer.doWork();
 
-        framer.onDisconnect(LIBRARY_ID, CONNECTION_ID);
+        framer.onDisconnect(LIBRARY_ID, connectionId.getValue());
         framer.doWork();
 
+        verifyEndpointsClosed();
+    }
+
+    private void verifyEndpointsClosed()
+    {
         verify(mockReceiverEndPoint).close();
+        verify(mockSenderEndPoint).close();
     }
 
     @Test
@@ -203,18 +224,27 @@ public class FramerTest
     }
 
     @Test
-    public void shouldDisconnectClientsWhenLibraryDisconnects() throws Exception
+    public void shouldDisconnectInitiatedClientsWhenLibraryDisconnects() throws Exception
     {
         intiateConnection();
-
-        final SocketChannel conn = server.accept();
-        assertTrue(conn.isConnected());
 
         timeoutLibrary();
 
         framer.doWork();
 
-        verify(mockReceiverEndPoint).close();
+        verifyEndpointsClosed();
+    }
+
+    @Test
+    public void shouldDisconnectAcceptedClientsWhenLibraryDisconnects() throws Exception
+    {
+        aClientConnects();
+
+        timeoutLibrary();
+
+        framer.doWork();
+
+        verifyEndpointsClosed();
     }
 
     private void timeoutLibrary()
@@ -239,6 +269,8 @@ public class FramerTest
 
     private void aClientConnects() throws IOException
     {
+        connectLibrary();
+
         client = SocketChannel.open(FRAMER_ADDRESS);
     }
 

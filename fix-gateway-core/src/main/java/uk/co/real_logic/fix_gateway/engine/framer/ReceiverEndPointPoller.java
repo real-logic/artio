@@ -21,6 +21,7 @@ import uk.co.real_logic.agrona.nio.TransportPoller;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static uk.co.real_logic.agrona.collections.ArrayUtil.UNKNOWN_INDEX;
@@ -47,7 +48,7 @@ public class ReceiverEndPointPoller extends TransportPoller
         endPoints = ArrayUtil.remove(endPoints, endPoint);
     }
 
-    public void deregisterConnection(final long connectionId)
+    public void deregisterConnection(final long connectionId, final Consumer<ReceiverEndPoint> callback)
     {
         final ReceiverEndPoint[] endPoints = this.endPoints;
         final int length = endPoints.length;
@@ -61,12 +62,13 @@ public class ReceiverEndPointPoller extends TransportPoller
                 index = i;
             }
             endPoint.close();
+            callback.accept(endPoint);
         }
 
         this.endPoints = ArrayUtil.remove(endPoints, index);
     }
 
-    public void deregisterLibrary(final int libraryId)
+    public void deregisterLibrary(final int libraryId, final Consumer<ReceiverEndPoint> callback)
     {
         final ReceiverEndPoint[] endPoints = this.endPoints;
         final int length = endPoints.length;
@@ -78,6 +80,7 @@ public class ReceiverEndPointPoller extends TransportPoller
             if (endPoint.libraryId() == libraryId)
             {
                 endPoint.close();
+                callback.accept(endPoint);
                 removeCount++;
             }
         }

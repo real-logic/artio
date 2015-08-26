@@ -25,8 +25,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-// TODO: make sender end points always, consistently, be removed when sender end points are
-public class SenderEndPoint
+public class SenderEndPoint implements AutoCloseable
 {
     private final long connectionId;
     private final SocketChannel channel;
@@ -63,7 +62,7 @@ public class SenderEndPoint
                 DebugLogger.log("Written  %s\n", buffer, written);
                 messagesWritten.orderedIncrement();
                 bytesWritten += written;
-                idleStrategy.idle(1);
+                idleStrategy.idle(written);
             }
         }
         catch (final IOException ex)
@@ -75,5 +74,10 @@ public class SenderEndPoint
     public long connectionId()
     {
         return connectionId;
+    }
+
+    public void close()
+    {
+        messagesWritten.close();
     }
 }

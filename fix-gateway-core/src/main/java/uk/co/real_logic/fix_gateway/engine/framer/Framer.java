@@ -62,6 +62,7 @@ public class Framer implements Agent, SessionHandler
     private final Int2ObjectHashMap<Library> idToLibrary = new Int2ObjectHashMap<>();
     private final Long2ObjectHashMap<SenderEndPoint> connectionToSenderEndpoint = new Long2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
+    private final Consumer<ReceiverEndPoint> removeSenderEndPointFunc = this::removeSenderEndPoint;
     private final EpochClock clock;
     private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
     private final DataSubscriber dataSubscriber = new DataSubscriber(this);
@@ -124,7 +125,8 @@ public class Framer implements Agent, SessionHandler
     {
         return outboundDataSubscription.poll(dataSubscriber, OUTBOUND_FRAGMENT_LIMIT) +
                replaySubscription.poll(dataSubscriber, OUTBOUND_FRAGMENT_LIMIT) +
-               pollSockets() +
+               pollEndPoints() +
+               pollNewConnections() +
                pollLibraries() +
                adminCommands.drain(onAdminCommand);
     }
@@ -141,7 +143,7 @@ public class Framer implements Agent, SessionHandler
             if (!library.isConnected())
             {
                 iterator.remove();
-                endPointPoller.deregisterLibrary(library.libraryId());
+                endPointPoller.deregisterLibrary(library.libraryId(), removeSenderEndPointFunc);
                 if (library.isAcceptor())
                 {
                     acceptorLibraryId = NO_ACCEPTOR;
@@ -154,11 +156,18 @@ public class Framer implements Agent, SessionHandler
 
     public void removeEndPoint(final ReceiverEndPoint receiverEndPoint)
     {
-        connectionToSenderEndpoint.remove(receiverEndPoint.connectionId());
+        removeSenderEndPoint(receiverEndPoint);
         endPointPoller.deregisterEndPoint(receiverEndPoint);
     }
 
-    private int pollSockets() throws IOException
+    private void removeSenderEndPoint(final ReceiverEndPoint receiverEndPoint)
+    {
+        final long id = receiverEndPoint.connectionId();
+        final SenderEndPoint senderEndPoint = connectionToSenderEndpoint.remove(id);
+        senderEndPoint.close();
+    }
+
+    private int pollEndPoints() throws IOException
     {
         int totalBytesReceived = 0;
         int bytesReceived;
@@ -169,7 +178,7 @@ public class Framer implements Agent, SessionHandler
         }
         while (bytesReceived > 0);
 
-        return totalBytesReceived + pollNewConnections();
+        return totalBytesReceived;
     }
 
     private int pollNewConnections() throws IOException
@@ -183,11 +192,19 @@ public class Framer implements Agent, SessionHandler
                 it.next();
 
                 final SocketChannel channel = listeningChannel.accept();
-                final long connectionId = this.nextConnectionId++;
-                setupConnection(channel, connectionId, UNKNOWN, acceptorLibraryId);
+                if (acceptorLibraryId == NO_ACCEPTOR)
+                {
+                    saveError(UNKNOWN_LIBRARY, NO_ACCEPTOR);
+                    channel.close();
+                }
+                else
+                {
+                    final long connectionId = this.nextConnectionId++;
+                    setupConnection(channel, connectionId, UNKNOWN, acceptorLibraryId);
 
-                final String address = channel.getRemoteAddress().toString();
-                inboundPublication.saveConnect(connectionId, address, acceptorLibraryId, ACCEPTOR);
+                    final String address = channel.getRemoteAddress().toString();
+                    inboundPublication.saveConnect(connectionId, address, acceptorLibraryId, ACCEPTOR);
+                }
 
                 it.remove();
             }
@@ -313,7 +330,7 @@ public class Framer implements Agent, SessionHandler
 
     public void onDisconnect(final int libraryId, final long connectionId)
     {
-        endPointPoller.deregisterConnection(connectionId);
+        endPointPoller.deregisterConnection(connectionId, removeSenderEndPointFunc);
     }
 
     public void onApplicationHeartbeat(final int libraryId)
