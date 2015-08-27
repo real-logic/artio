@@ -22,11 +22,14 @@ import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.not;
+import java.util.List;
+
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
@@ -129,6 +132,24 @@ public class GatewayToGatewaySystemTest
 
         sendTestRequest(initiatedSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+    }
+
+    @Test
+    public void sessionsListedInAdminApi()
+    {
+        final List<LibraryInfo> libraries = initiatingEngine.libraries();
+        assertThat(libraries, hasSize(1));
+
+        final LibraryInfo library = libraries.get(0);
+        assertEquals(initiatingLibrary.libraryId(), library.libraryId());
+
+        final List<SessionInfo> sessions = library.sessions();
+        assertThat(sessions, hasSize(1));
+
+        final SessionInfo sessionInfo = sessions.get(0);
+        assertThat(sessionInfo.address(), containsString("localhost"));
+        assertThat(sessionInfo.address(), containsString(String.valueOf(port)));
+        assertEquals(initiatedSession.connectionId(), sessionInfo.connectionId());
     }
 
     private void assertSessionsDisconnected()

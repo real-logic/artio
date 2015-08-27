@@ -73,7 +73,8 @@ public class FramerTest
         mockGatewayPublication,
         mockSessionIdStrategy,
         new SessionIds(),
-        mock(QueuedPipe.class));
+        mock(QueuedPipe.class)
+    );
 
     private ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);
 

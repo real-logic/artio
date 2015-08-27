@@ -19,11 +19,15 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
-import uk.co.real_logic.agrona.concurrent.*;
+import uk.co.real_logic.agrona.concurrent.Agent;
+import uk.co.real_logic.agrona.concurrent.EpochClock;
+import uk.co.real_logic.agrona.concurrent.QueuedPipe;
+import uk.co.real_logic.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -320,6 +324,11 @@ public class Framer implements Agent, SessionHandler
 
         final SenderEndPoint senderEndPoint = connectionHandler.senderEndPoint(channel, connectionId);
         connectionToSenderEndpoint.put(connectionId, senderEndPoint);
+
+        idToLibrary.get(libraryId).onSessionConnected(new SessionInfo(
+            connectionId,
+            channel.getRemoteAddress().toString()
+        ));
     }
 
     public void onRequestDisconnect(final int libraryId, final long connectionId)

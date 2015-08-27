@@ -16,6 +16,12 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.fix_gateway.LivenessDetector;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import static java.util.Collections.unmodifiableList;
 
 /**
  * Engine managed model of a library instance.
@@ -25,22 +31,44 @@ public final class LibraryInfo
     private final boolean acceptor;
     private final int libraryId;
     private final LivenessDetector livenessDetector;
+    private final List<SessionInfo> sessions = new CopyOnWriteArrayList<>();
+    private final List<SessionInfo> unmodifiableSessions = unmodifiableList(sessions);
 
-    public LibraryInfo(final boolean acceptor, final int libraryId, final LivenessDetector livenessDetector)
+    LibraryInfo(final boolean acceptor, final int libraryId, final LivenessDetector livenessDetector)
     {
         this.acceptor = acceptor;
         this.libraryId = libraryId;
         this.livenessDetector = livenessDetector;
     }
 
+    /**
+     * Check whether the library is listed as the acceptor.
+     *
+     * @return true if the library is the acceptor, false otherwise.
+     */
     public boolean isAcceptor()
     {
         return acceptor;
     }
 
+    /**
+     * Get the id of the library.
+     *
+     * @return the id of the library.
+     */
     public int libraryId()
     {
         return libraryId;
+    }
+
+    /**
+     * Get an unmodifiable list of the current sessions connected to this library.
+     *
+     * @return an unmodifiable list of the current sessions connected to this library.
+     */
+    public List<SessionInfo> sessions()
+    {
+        return unmodifiableSessions;
     }
 
     void onHeartbeat(final long timeInMs)
@@ -56,6 +84,11 @@ public final class LibraryInfo
     boolean isConnected()
     {
         return livenessDetector.isConnected();
+    }
+
+    void onSessionConnected(final SessionInfo session)
+    {
+        sessions.add(session);
     }
 
     public String toString()

@@ -539,7 +539,7 @@ public class Session
         return lastReceivedMsgSeqNum + 1;
     }
 
-    public int sentSeqNum()
+    public int lastSentMsgSeqNum()
     {
         return lastSentMsgSeqNum;
     }

@@ -328,4 +328,9 @@ public class FixLibrary extends GatewayProcess
     {
         return livenessDetector.isConnected();
     }
+
+    public int libraryId()
+    {
+        return libraryId;
+    }
 }

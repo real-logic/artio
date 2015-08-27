@@ -54,7 +54,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
         verifyLogon();
 
-        assertEquals(1, session.sentSeqNum());
+        assertEquals(1, session.lastSentMsgSeqNum());
     }
 
     @Test
