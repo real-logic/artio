@@ -60,9 +60,9 @@ public class ReceiverEndPointPoller extends TransportPoller
             if (endPoint.connectionId() == connectionId)
             {
                 index = i;
+                endPoint.close();
+                callback.accept(endPoint);
             }
-            endPoint.close();
-            callback.accept(endPoint);
         }
 
         this.endPoints = ArrayUtil.remove(endPoints, index);

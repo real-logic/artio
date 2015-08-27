@@ -190,7 +190,7 @@ public class EngineAndLibraryIntegrationTest
     private FixLibrary connectLibrary(final int libraryId)
     {
         final LibraryConfiguration config =
-            acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, aeronPort, "fix-acceptor")
+            acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor")
                 .libraryId(libraryId)
                 .replyTimeoutInMs(TIMEOUT_IN_MS);
 

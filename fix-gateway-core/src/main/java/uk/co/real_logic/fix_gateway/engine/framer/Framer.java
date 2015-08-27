@@ -159,8 +159,8 @@ public class Framer implements Agent, SessionHandler
 
     public void removeEndPoint(final ReceiverEndPoint receiverEndPoint)
     {
-        removeSenderEndPoint(receiverEndPoint);
         endPointPoller.deregisterEndPoint(receiverEndPoint);
+        removeSenderEndPoint(receiverEndPoint);
     }
 
     private void removeSenderEndPoint(final ReceiverEndPoint receiverEndPoint)

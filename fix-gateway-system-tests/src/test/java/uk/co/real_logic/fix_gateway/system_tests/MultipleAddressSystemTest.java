@@ -60,7 +60,7 @@ public class MultipleAddressSystemTest
         acceptingEngine = launchAcceptingGateway(port);
 
         initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
-        acceptingLibrary = newAcceptingLibrary(acceptAeronPort, acceptingSessionHandler);
+        acceptingLibrary = newAcceptingLibrary(acceptingSessionHandler);
     }
 
     @Test

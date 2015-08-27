@@ -48,6 +48,7 @@ public final class SystemTestUtil
     public static final long CONNECTION_ID = 0L;
     public static final String ACCEPTOR_ID = "CCG";
     public static final String INITIATOR_ID = "LEH_LZJ02";
+    public static final String INITIATOR_ID2 = "initiator2";
     public static final String CLIENT_LOGS = "client-logs";
     public static final String ACCEPTOR_LOGS = "acceptor-logs";
     public static final long TIMEOUT_IN_MS = 100;
@@ -221,11 +222,10 @@ public final class SystemTestUtil
         final NewSessionHandler sessionHandler,
         final String acceptorId,
         final String initiatorId,
-        final int aeronPort,
         final String monitorDir)
     {
         final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(acceptorId)
-            .and(new SenderCompIdValidationStrategy(Arrays.asList(initiatorId)));
+            .and(new SenderCompIdValidationStrategy(Arrays.asList(initiatorId, INITIATOR_ID2)));
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
@@ -282,16 +282,16 @@ public final class SystemTestUtil
     {
         return new FixLibrary(
             new LibraryConfiguration()
-                //.libraryId(libraryId)
+                .libraryId(libraryId)
                 .newSessionHandler(sessionHandler)
                 .aeronChannel("udp://localhost:" + initAeronPort)
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters"));
     }
 
-    public static FixLibrary newAcceptingLibrary(final int acceptAeronPort, final NewSessionHandler sessionHandler)
+    public static FixLibrary newAcceptingLibrary(final NewSessionHandler sessionHandler)
     {
         return new FixLibrary(
-            acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, acceptAeronPort, "fix-acceptor"));
+            acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor"));
     }
 
     public static void assertConnected(final Session session)

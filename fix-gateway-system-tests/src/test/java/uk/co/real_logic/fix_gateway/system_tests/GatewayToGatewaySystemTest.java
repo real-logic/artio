@@ -39,6 +39,8 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 public class GatewayToGatewaySystemTest
 {
     private int port = unusedPort();
+    private int initAeronPort = unusedPort();
+
     private MediaDriver mediaDriver;
     private FixEngine acceptingEngine;
     private FixEngine initiatingEngine;
@@ -56,7 +58,6 @@ public class GatewayToGatewaySystemTest
     @Before
     public void launch()
     {
-        final int initAeronPort = unusedPort();
         final int acceptAeronPort = unusedPort();
 
         mediaDriver = launchMediaDriver();
@@ -64,7 +65,7 @@ public class GatewayToGatewaySystemTest
         acceptingEngine = launchAcceptingGateway(port);
         initiatingEngine = launchInitiatingGateway(initAeronPort);
 
-        acceptingLibrary = newAcceptingLibrary(acceptAeronPort, acceptingSessionHandler);
+        acceptingLibrary = newAcceptingLibrary(acceptingSessionHandler);
         initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
 
         connectSessions();
@@ -150,6 +151,23 @@ public class GatewayToGatewaySystemTest
         assertThat(sessionInfo.address(), containsString("localhost"));
         assertThat(sessionInfo.address(), containsString(String.valueOf(port)));
         assertEquals(initiatedSession.connectionId(), sessionInfo.connectionId());
+    }
+
+    @Test
+    public void multipleLibrariesCanExchangeMessages()
+    {
+        final FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
+        final FakeSessionHandler initiatingSessionHandler = new FakeSessionHandler(initiatingOtfAcceptor);
+
+        final FixLibrary library2 = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 2);
+        final Session session2 = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID);
+
+        assertConnected(session2);
+        sessionLogsOn(library2, acceptingLibrary, session2);
+        final Session acceptingSession2 = acceptSession(acceptingSessionHandler, acceptingLibrary);
+
+        sendTestRequest(acceptingSession2);
+        assertReceivedTestRequest(library2, acceptingLibrary, initiatingOtfAcceptor);
     }
 
     private void assertSessionsDisconnected()
