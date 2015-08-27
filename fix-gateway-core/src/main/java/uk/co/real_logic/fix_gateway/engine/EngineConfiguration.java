@@ -159,12 +159,6 @@ public final class EngineConfiguration extends CommonConfiguration
         return new InetSocketAddress(host, port);
     }
 
-    // TODO: where should this be used?
-    public long connectionTimeout()
-    {
-        return connectionTimeout;
-    }
-
     public String logFileDir()
     {
         return logFileDir;
