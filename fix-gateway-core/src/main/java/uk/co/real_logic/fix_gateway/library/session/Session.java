@@ -52,10 +52,6 @@ public class Session
      */
     public static final double HEARTBEAT_PAUSE_FACTOR = 0.8;
 
-    // TODO: make these configurable:
-    private static final long REASONABLE_TRANSMISSION_TIME = SECONDS.toMillis(1);
-    private static final long SENDING_TIME_WINDOW = SECONDS.toMillis(10);
-
     public static final String TEST_REQ_ID = "TEST";
     public static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
 
@@ -274,7 +270,7 @@ public class Session
                     }
                 }
 
-                if ((sendingTime < time - SENDING_TIME_WINDOW) || (sendingTime > time + SENDING_TIME_WINDOW))
+                if ((sendingTime < time - sendingTimeWindow) || (sendingTime > time + sendingTimeWindow))
                 {
                     rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
                     logoutAndDisconnect();
@@ -313,7 +309,7 @@ public class Session
 
     private void incNextReceivedInboundMessageTime(final long time)
     {
-        nextRequiredMessageTime(time + REASONABLE_TRANSMISSION_TIME + heartbeatIntervalInMs());
+        nextRequiredMessageTime(time + sendingTimeWindow + heartbeatIntervalInMs());
     }
 
     void onLogon(final int heartbeatInterval,

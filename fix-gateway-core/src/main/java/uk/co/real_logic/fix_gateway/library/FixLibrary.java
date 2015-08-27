@@ -292,7 +292,6 @@ public class FixLibrary extends GatewayProcess
             libraryId);
     }
 
-    // TODO: refactor to callback
     private Session acceptSession(final long connectionId)
     {
         final GatewayPublication publication = outboundLibraryStreams.gatewayPublication();
