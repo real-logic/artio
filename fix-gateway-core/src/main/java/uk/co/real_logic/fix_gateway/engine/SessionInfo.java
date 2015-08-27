@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 /**
- *
+ * Class represents information that a gateway is aware of about a session.
  */
 public final class SessionInfo
 {
@@ -40,6 +40,11 @@ public final class SessionInfo
         return connectionId;
     }
 
+    /**
+     * Get the remove address to which this session is connected.
+     *
+     * @return the remove address to which this session is connected.
+     */
     public String address()
     {
         return address;
