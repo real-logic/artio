@@ -58,8 +58,6 @@ public class GatewayToGatewaySystemTest
     @Before
     public void launch()
     {
-        final int acceptAeronPort = unusedPort();
-
         mediaDriver = launchMediaDriver();
 
         acceptingEngine = launchAcceptingGateway(port);
@@ -156,10 +154,11 @@ public class GatewayToGatewaySystemTest
     @Test
     public void multipleLibrariesCanExchangeMessages()
     {
-        final FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
-        final FakeSessionHandler initiatingSessionHandler = new FakeSessionHandler(initiatingOtfAcceptor);
+        final int initiator1MessageCount = initiatingOtfAcceptor.messages().size();
 
-        final FixLibrary library2 = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 2);
+        final FakeOtfAcceptor initiatingOtfAcceptor2 = new FakeOtfAcceptor();
+        final FakeSessionHandler initiatingSessionHandler2 = new FakeSessionHandler(initiatingOtfAcceptor2);
+        final FixLibrary library2 = newInitiatingLibrary(initAeronPort, initiatingSessionHandler2, 2);
         final Session session2 = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID);
 
         assertConnected(session2);
@@ -167,7 +166,16 @@ public class GatewayToGatewaySystemTest
         final Session acceptingSession2 = acceptSession(acceptingSessionHandler, acceptingLibrary);
 
         sendTestRequest(acceptingSession2);
-        assertReceivedTestRequest(library2, acceptingLibrary, initiatingOtfAcceptor);
+        assertReceivedTestRequest(library2, acceptingLibrary, initiatingOtfAcceptor2);
+
+        assertOriginalLibraryDoesntReceiveMessages(initiator1MessageCount);
+    }
+
+    private void assertOriginalLibraryDoesntReceiveMessages(final int initiator1MessageCount)
+    {
+        initiatingLibrary.poll(5);
+        assertThat("Messages received by wrong initiator",
+            initiatingOtfAcceptor.messages(), hasSize(initiator1MessageCount));
     }
 
     private void assertSessionsDisconnected()
