@@ -25,6 +25,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.*;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.fix_gateway.library.session.Session.TEST_REQ_ID;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
@@ -32,6 +33,7 @@ import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
 public class SessionTest extends AbstractSessionTest
 {
     public static final long TWO_MINUTES = MINUTES.toMillis(2);
+
     private Session session = new Session(
         HEARTBEAT_INTERVAL,
         CONNECTION_ID,
@@ -44,7 +46,8 @@ public class SessionTest extends AbstractSessionTest
         SENDING_TIME_WINDOW,
         mockReceivedMsgSeqNo,
         mockSentMsgSeqNo,
-        LIBRARY_ID);
+        LIBRARY_ID,
+        DEFAULT_SESSION_BUFFER_SIZE);
 
     @Test
     public void shouldReplyToValidLogout()

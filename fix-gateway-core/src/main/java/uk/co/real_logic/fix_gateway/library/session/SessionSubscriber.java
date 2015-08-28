@@ -13,13 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.library;
+package uk.co.real_logic.fix_gateway.library.session;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.Timer;
-import uk.co.real_logic.fix_gateway.library.session.Session;
-import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
-import uk.co.real_logic.fix_gateway.library.session.SessionParser;
 
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 

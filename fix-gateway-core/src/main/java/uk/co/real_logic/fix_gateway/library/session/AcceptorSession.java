@@ -35,7 +35,8 @@ public final class AcceptorSession extends Session
         final long sendingTimeWindow,
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo,
-        final int libraryId)
+        final int libraryId,
+        final int sessionBufferSize)
     {
         super(
             defaultInterval,
@@ -49,9 +50,12 @@ public final class AcceptorSession extends Session
             sendingTimeWindow,
             receivedMsgSeqNo,
             sentMsgSeqNo,
-            libraryId);
+            libraryId,
+            sessionBufferSize);
     }
 
+    // TODO: username/password
+    // TODO: address
     public void onLogon(
         final int heartbeatInterval,
         final int msgSeqNo,

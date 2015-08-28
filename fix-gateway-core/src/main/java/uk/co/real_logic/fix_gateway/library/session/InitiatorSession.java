@@ -36,7 +36,8 @@ public class InitiatorSession extends Session
         final AtomicCounter sentMsgSeqNo,
         final String username,
         final String password,
-        final int libraryId)
+        final int libraryId,
+        final int sessionBufferSize)
     {
         super(
             heartbeatInterval,
@@ -50,7 +51,8 @@ public class InitiatorSession extends Session
             sendingTimeWindow,
             receivedMsgSeqNo,
             sentMsgSeqNo,
-            libraryId);
+            libraryId,
+            sessionBufferSize);
 
         username(username);
         password(password);

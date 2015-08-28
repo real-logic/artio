@@ -34,6 +34,15 @@ import java.util.List;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
 
+/**
+ * FIX Library instances represent a process where session management,
+ * message parsing and API users configure the gateway.
+ *
+ * Libraries can be run in the same process as the engine, or in a
+ * different process.
+ *
+ * @see uk.co.real_logic.fix_gateway.engine.FixEngine
+ */
 public class FixLibrary extends GatewayProcess
 {
     private final Subscription inboundSubscription;
@@ -289,7 +298,8 @@ public class FixLibrary extends GatewayProcess
             fixCounters.sentMsgSeqNo(connectionId),
             sessionConfiguration.username(),
             sessionConfiguration.password(),
-            libraryId);
+            libraryId,
+            sessionConfiguration.bufferSize());
     }
 
     private Session acceptSession(final long connectionId)
@@ -308,7 +318,7 @@ public class FixLibrary extends GatewayProcess
             configuration.sendingTimeWindow(),
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId),
-            libraryId);
+            libraryId, 8 * 1024);
     }
 
     private SessionProxy sessionProxy(final long connectionId)

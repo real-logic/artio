@@ -24,6 +24,8 @@ import java.util.Objects;
  */
 public final class SessionConfiguration
 {
+    public static final int DEFAULT_SESSION_BUFFER_SIZE = 8 * 1024;
+
     private final List<String> hosts;
     private final List<Integer> ports;
     private final String username;
@@ -32,6 +34,7 @@ public final class SessionConfiguration
     private final String targetCompId;
     private final String senderSubId;
     private final String senderLocationId;
+    private final int bufferSize;
 
     public static Builder builder()
     {
@@ -46,7 +49,8 @@ public final class SessionConfiguration
         final String senderCompId,
         final String senderSubId,
         final String senderLocationId,
-        final String targetCompId)
+        final String targetCompId,
+        final int bufferSize)
     {
         Objects.requireNonNull(hosts);
         Objects.requireNonNull(ports);
@@ -66,6 +70,7 @@ public final class SessionConfiguration
         this.ports = ports;
         this.username = username;
         this.password = password;
+        this.bufferSize = bufferSize;
     }
 
     private void requireNonEmpty(final List<?> values, final String name)
@@ -116,6 +121,11 @@ public final class SessionConfiguration
         return targetCompId;
     }
 
+    public int bufferSize()
+    {
+        return bufferSize;
+    }
+
     public static final class Builder
     {
         private String username;
@@ -126,6 +136,7 @@ public final class SessionConfiguration
         private String targetCompId;
         private String senderSubId = "";
         private String senderLocationId = "";
+        private int bufferSize = DEFAULT_SESSION_BUFFER_SIZE;
 
         private Builder()
         {
@@ -169,10 +180,16 @@ public final class SessionConfiguration
             return this;
         }
 
+        public Builder bufferSize(final int bufferSize)
+        {
+            this.bufferSize = bufferSize;
+            return this;
+        }
+
         public SessionConfiguration build()
         {
             return new SessionConfiguration(hosts, ports, username, password, senderCompId, senderSubId,
-                senderLocationId, targetCompId);
+                senderLocationId, targetCompId, bufferSize);
         }
     }
 

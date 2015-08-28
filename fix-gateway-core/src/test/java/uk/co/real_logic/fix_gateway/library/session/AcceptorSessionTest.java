@@ -20,6 +20,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.SENDINGTIME_ACCURACY_PROBLEM;
+import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
 
@@ -28,7 +29,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     private AcceptorSession session = new AcceptorSession(
         HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy, mockPublication, null,
         BEGIN_STRING, SENDING_TIME_WINDOW, mockReceivedMsgSeqNo,
-        mockSentMsgSeqNo, LIBRARY_ID);
+        mockSentMsgSeqNo, LIBRARY_ID, DEFAULT_SESSION_BUFFER_SIZE);
 
     @Test
     public void shouldInitiallyBeConnected()

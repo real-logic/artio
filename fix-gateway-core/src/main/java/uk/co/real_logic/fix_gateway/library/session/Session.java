@@ -85,7 +85,7 @@ public class Session
     private String connectedHost;
     private int connectedPort;
 
-    public Session(
+    protected Session(
         final int heartbeatIntervalInS,
         final long connectionId,
         final EpochClock clock,
@@ -97,9 +97,9 @@ public class Session
         final long sendingTimeWindow,
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo,
-        final int libraryId)
+        final int libraryId,
+        final int sessionBufferSize)
     {
-        this.libraryId = libraryId;
         Verify.notNull(clock, "clock");
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
@@ -117,28 +117,218 @@ public class Session
         this.sendingTimeWindow = sendingTimeWindow;
         this.receivedMsgSeqNo = receivedMsgSeqNo;
         this.sentMsgSeqNo = sentMsgSeqNo;
+        this.libraryId = libraryId;
 
-        buffer = new UnsafeBuffer(new byte[8 * 1024]);
+        buffer = new UnsafeBuffer(new byte[sessionBufferSize]);
         string = new MutableAsciiFlyweight(buffer);
 
         state(state);
-
         heartbeatIntervalInS(heartbeatIntervalInS);
     }
 
     // ---------- PUBLIC API ----------
 
+    /**
+     * Check if the session is connected to another session.
+     *
+     * @return true if the session is connected to another session, false otherwise.
+     */
     public boolean isConnected()
     {
-        return state() != SessionState.CONNECTING && state() != SessionState.DISCONNECTED && state() != SessionState.DISABLED;
+        final SessionState state = state();
+        return state != CONNECTING
+            && state != DISCONNECTED
+            && state != DISABLED;
     }
 
+    /**
+     * Get the session's state.
+     *
+     * @return the session's state.
+     */
     public SessionState state()
     {
         return state;
     }
 
-    public int poll(final long time)
+    /**
+     * Get the username associated with this session.
+     *
+     * @return the username associated with this session.
+     */
+    public String username()
+    {
+        return username;
+    }
+
+    /**
+     * Get the password associated with this session.
+     *
+     * @return the password associated with this session.
+     */
+    public String password()
+    {
+        return password;
+    }
+
+    /**
+     * Get the sequence number of the last message to be sent from this session.
+     *
+     * @return the sequence number of the last message to be sent from this session.
+     */
+    public int lastSentMsgSeqNum()
+    {
+        return lastSentMsgSeqNum;
+    }
+
+    /**
+     * Get the sequence number of the last message to be received by this session.
+     *
+     * @return the sequence number of the last message to be received by this session.
+     */
+    public int lastReceivedMsgSeqNum()
+    {
+        return lastReceivedMsgSeqNum;
+    }
+
+    /**
+     * Get the heartbeat interval for this session in milliseconds. This can be configured locally
+     * or agreed by the logon process.
+     *
+     * @return the heartbeat interval for this session in milliseconds.
+     */
+    public long heartbeatIntervalInMs()
+    {
+        return heartbeatIntervalInMs;
+    }
+
+    /**
+     * Get the address of the remote host that your session is connected to.
+     *
+     * @see Session#connectedPort()
+     * @return the address of the remote host that your session is connected to.
+     */
+    public String connectedHost()
+    {
+        return connectedHost;
+    }
+
+    /**
+     * Get the id of the connection associated with this session. Sessions always
+     * have a connection id.
+     *
+     * @see Session#id()
+     * @return the id of the connection associated with this session.
+     */
+    public long connectionId()
+    {
+        return connectionId;
+    }
+
+    /**
+     * Get the id of this session. If the session hasn't logged in yet, this
+     * will return <code>Session.UNKNOWN</code>.
+     *
+     * @see Session#UNKNOWN
+     * @return the id of the session if known.
+     */
+    public long id()
+    {
+        return id;
+    }
+
+    /**
+     * Get the port of the remote host that your session is connected to.
+     *
+     * @see Session#connectedHost()
+     * @return the port of the remote host that your session is connected to.
+     */
+    public int connectedPort()
+    {
+        return connectedPort;
+    }
+
+    /**
+     * Sends a logout message and puts the session into the awaiting logout state.
+     *
+     * @see Session#logoutAndDisconnect()
+     */
+    public void startLogout()
+    {
+        sendLogout();
+        awaitLogout();
+    }
+
+    /**
+     * Request the session be disconnected.
+     *
+     * @see Session#logoutAndDisconnect()
+     */
+    public void requestDisconnect()
+    {
+        if (state() != DISCONNECTED)
+        {
+            proxy.requestDisconnect(connectionId);
+            state(DISCONNECTED);
+        }
+    }
+
+    /**
+     * Send a logout message and immediately disconnect the session.
+     *
+     * This disconnects the session faster than <code>startLogout</code>.
+     *
+     * @see Session#startLogout()
+     */
+    public void logoutAndDisconnect()
+    {
+        sendLogout();
+        requestDisconnect();
+    }
+
+    /**
+     * Send a message on this session.
+     *
+     * @param encoder the encoder of the message to be sent
+     * @return the position in the stream that corresponds to the end of this message.
+     */
+    public long send(final MessageEncoder encoder)
+    {
+        if (!canSendMessage())
+        {
+            throw new IllegalStateException("Session isn't active, and thus can't send a message");
+        }
+
+        final HeaderEncoder header = (HeaderEncoder) encoder.header();
+        header
+            .msgSeqNum(newSentSeqNum())
+            .sendingTime(time());
+        // TODO: figure out the best way to remove this overhead from every send
+        sessionIdStrategy.setupSession(sessionKey, header);
+
+        final int length = encoder.encode(string, 0);
+        return publication.saveMessage(
+            buffer, 0, length, libraryId, encoder.messageType(), id(), connectionId, OK);
+    }
+
+    /**
+     * Check if the session is in a state where it can send a message.
+     *
+     * @return true if the session is in a state where it can send a message, false otherwise.
+     */
+    public boolean canSendMessage()
+    {
+        return state() == ACTIVE;
+    }
+
+    // ---------- Event Handlers & Logic ----------
+
+    protected void onDisconnect()
+    {
+        state(DISCONNECTED);
+    }
+
+    protected int poll(final long time)
     {
         int actions = 0;
 
@@ -165,57 +355,6 @@ public class Session
 
         return actions;
     }
-
-    private void incNextHeartbeatTime()
-    {
-        nextRequiredHeartbeatTimeInMs = time() + sendingHeartbeatIntervalInMs;
-    }
-
-    public void startLogout()
-    {
-        sendLogout();
-        awaitLogout();
-    }
-
-    private void awaitLogout()
-    {
-        state(AWAITING_LOGOUT);
-    }
-
-    private void sendLogout()
-    {
-        proxy.logout(newSentSeqNum());
-    }
-
-    public void requestDisconnect()
-    {
-        if (state() != SessionState.DISCONNECTED)
-        {
-            proxy.requestDisconnect(connectionId);
-            state(SessionState.DISCONNECTED);
-        }
-    }
-
-    public long send(final MessageEncoder encoder)
-    {
-        if (state() != ACTIVE)
-        {
-            throw new IllegalStateException("Session isn't active, and thus can't send a message");
-        }
-
-        final HeaderEncoder header = (HeaderEncoder) encoder.header();
-        header
-            .msgSeqNum(newSentSeqNum())
-            .sendingTime(time());
-        // TODO: figure out the best way to remove this overhead from every send
-        sessionIdStrategy.setupSession(sessionKey, header);
-
-        final int length = encoder.encode(string, 0);
-
-        return publication.saveMessage(buffer, 0, length, libraryId, encoder.messageType(), id(), connectionId, OK);
-    }
-
-    // ---------- Event Handlers ----------
 
     void onMessage(final int msgSeqNo,
                    final byte[] msgType,
@@ -376,17 +515,6 @@ public class Session
         }
     }
 
-    public void logoutAndDisconnect()
-    {
-        sendLogout();
-        requestDisconnect();
-    }
-
-    public void onDisconnect()
-    {
-        state(SessionState.DISCONNECTED);
-    }
-
     void onTestRequest(
         final int msgSeqNo,
         final char[] testReqId,
@@ -481,12 +609,23 @@ public class Session
         return isValid;
     }
 
-    // ---------- Accessors ----------
-
-    long heartbeatIntervalInMs()
+    private void incNextHeartbeatTime()
     {
-        return heartbeatIntervalInMs;
+        nextRequiredHeartbeatTimeInMs = time() + sendingHeartbeatIntervalInMs;
     }
+
+    private void awaitLogout()
+    {
+        state(AWAITING_LOGOUT);
+    }
+
+    private void sendLogout()
+    {
+        proxy.logout(newSentSeqNum());
+    }
+
+    // ---------- Setters ----------
+
 
     Session heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
@@ -505,18 +644,13 @@ public class Session
         return this;
     }
 
-    public long id()
-    {
-        return id;
-    }
-
-    Session state(final SessionState state)
+    protected Session state(final SessionState state)
     {
         this.state = state;
         return this;
     }
 
-    public Session id(final long id)
+    protected Session id(final long id)
     {
         this.id = id;
         return this;
@@ -527,24 +661,19 @@ public class Session
         return clock.time();
     }
 
-    public Session lastReceivedMsgSeqNum(final int value)
+    protected Session lastReceivedMsgSeqNum(final int value)
     {
         this.lastReceivedMsgSeqNum = value;
         receivedMsgSeqNo.setOrdered(value);
         return this;
     }
 
-    public int expectedReceivedSeqNum()
+    protected int expectedReceivedSeqNum()
     {
         return lastReceivedMsgSeqNum + 1;
     }
 
-    public int lastSentMsgSeqNum()
-    {
-        return lastSentMsgSeqNum;
-    }
-
-    public int newSentSeqNum()
+    protected int newSentSeqNum()
     {
         final int lastSentMsgSeqNum = ++this.lastSentMsgSeqNum;
         sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
@@ -552,20 +681,10 @@ public class Session
         return lastSentMsgSeqNum;
     }
 
-    public void incReceivedSeqNum()
+    protected void incReceivedSeqNum()
     {
         lastReceivedMsgSeqNum++;
         receivedMsgSeqNo.increment();
-    }
-
-    public int lastReceivedMsgSeqNum()
-    {
-        return lastReceivedMsgSeqNum;
-    }
-
-    public long connectionId()
-    {
-        return connectionId;
     }
 
     public void address(final String connectedHost, final int connectedPort)
@@ -574,37 +693,17 @@ public class Session
         this.connectedPort = connectedPort;
     }
 
-    public void username(final String username)
+    protected void username(final String username)
     {
         this.username = username;
     }
 
-    public void password(final String password)
+    protected void password(final String password)
     {
         this.password = password;
     }
 
-    public String connectedHost()
-    {
-        return connectedHost;
-    }
-
-    public int connectedPort()
-    {
-        return connectedPort;
-    }
-
-    public String username()
-    {
-        return username;
-    }
-
-    public String password()
-    {
-        return password;
-    }
-
-    public void onInvalidMessage(
+    protected void onInvalidMessage(
         final int refSeqNum,
         final int refTagId,
         final char[] refMsgType,
@@ -622,7 +721,7 @@ public class Session
             rejectReason);
     }
 
-    public void onHeartbeat(
+    protected void onHeartbeat(
         final int msgSeqNum,
         final char[] testReqID,
         final int testReqIDLength,
@@ -637,7 +736,7 @@ public class Session
         onMessage(msgSeqNum, HeartbeatDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }
 
-    void onInvalidMessageType(final int msgSeqNum, final char[] msgType, final int msgTypeLength)
+    protected void onInvalidMessageType(final int msgSeqNum, final char[] msgType, final int msgTypeLength)
     {
         proxy.reject(
             newSentSeqNum(),
