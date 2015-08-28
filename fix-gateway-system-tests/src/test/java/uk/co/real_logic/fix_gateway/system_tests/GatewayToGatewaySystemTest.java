@@ -107,13 +107,12 @@ public class GatewayToGatewaySystemTest
         assertSessionsDisconnected();
     }
 
-    // TODO: fix this test, it passes even if you don't send the resend request
     @Test
     public void gatewayProcessesResendRequests()
     {
         messagesCanBeSentFromInitiatorToAcceptor();
 
-        //sendResendRequest();
+        sendResendRequest();
 
         assertMessageResent();
     }
@@ -213,6 +212,7 @@ public class GatewayToGatewaySystemTest
 
     private void assertMessageResent()
     {
+        assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
         assertEventuallyTrue("Failed to receive the reply", () ->
         {
             acceptingLibrary.poll(1);
