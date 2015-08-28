@@ -292,7 +292,8 @@ public class SessionParser
                     sessionKey,
                     header.sendingTime(),
                     origSendingTime,
-                    isPossDup(header));
+                    logon.usernameAsString(), logon.passwordAsString(), isPossDup(header)
+                );
             }
             else
             {

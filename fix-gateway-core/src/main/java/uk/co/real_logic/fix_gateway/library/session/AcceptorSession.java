@@ -54,8 +54,6 @@ public final class AcceptorSession extends Session
             sessionBufferSize);
     }
 
-    // TODO: username/password
-    // TODO: address
     public void onLogon(
         final int heartbeatInterval,
         final int msgSeqNo,
@@ -63,6 +61,8 @@ public final class AcceptorSession extends Session
         final Object sessionKey,
         final long sendingTime,
         final long origSendingTime,
+        final String username,
+        final String password,
         final boolean isPossDupOrResend)
     {
         id(sessionId);
@@ -81,6 +81,8 @@ public final class AcceptorSession extends Session
             {
                 heartbeatIntervalInS(heartbeatInterval);
                 state(SessionState.ACTIVE);
+                username(username);
+                password(password);
                 replyToLogon(heartbeatInterval);
             }
             else if (expectedSeqNo < msgSeqNo)

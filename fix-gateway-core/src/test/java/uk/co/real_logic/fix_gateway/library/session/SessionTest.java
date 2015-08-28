@@ -241,7 +241,7 @@ public class SessionTest extends AbstractSessionTest
     {
         final int heartbeatInterval = -1;
 
-        session().onLogon(heartbeatInterval, 0, SESSION_ID, SESSION_KEY, fakeClock.time(), UNKNOWN, false);
+        session().onLogon(heartbeatInterval, 0, SESSION_ID, SESSION_KEY, fakeClock.time(), UNKNOWN, null, null, false);
 
         verify(mockProxy).negativeHeartbeatLogout(1);
     }
@@ -258,7 +258,7 @@ public class SessionTest extends AbstractSessionTest
     public void shouldSendHeartbeatAfterLogonSpecifiedInterval()
     {
         final int heartbeatInterval = 1;
-        session().onLogon(heartbeatInterval, 1, SESSION_ID, null, fakeClock.time(), UNKNOWN, false);
+        session().onLogon(heartbeatInterval, 1, SESSION_ID, null, fakeClock.time(), UNKNOWN, null, null, false);
 
         heartbeatSentAfterInterval(heartbeatInterval, 2);
     }

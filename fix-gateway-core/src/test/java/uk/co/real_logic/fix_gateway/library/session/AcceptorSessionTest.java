@@ -76,7 +76,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     {
         fakeClock.advanceMilliSeconds(2 * SENDING_TIME_WINDOW);
 
-        session().onLogon(HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1, UNKNOWN, false);
+        session().onLogon(HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1, UNKNOWN, null, null, false);
 
         verify(mockProxy).rejectWhilstNotLoggedOn(1, SENDINGTIME_ACCURACY_PROBLEM);
     }

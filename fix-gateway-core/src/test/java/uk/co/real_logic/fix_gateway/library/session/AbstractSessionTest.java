@@ -88,7 +88,7 @@ public abstract class AbstractSessionTest
 
     public void onLogon(final int msgSeqNo)
     {
-       session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID, SESSION_KEY, fakeClock.time(), UNKNOWN, false);
+       session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID, SESSION_KEY, fakeClock.time(), UNKNOWN, null, null, false);
     }
 
     protected void onMessage(final int msgSeqNo)

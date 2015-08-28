@@ -457,7 +457,7 @@ public class Session
                  final Object sessionKey,
                  long sendingTime,
                  final long origSendingTime,
-                 final boolean isPossDupOrResend)
+                 final String username, final String password, final boolean isPossDupOrResend)
     {
         this.sessionKey = sessionKey;
         proxy.setupSession(sessionId, sessionKey);

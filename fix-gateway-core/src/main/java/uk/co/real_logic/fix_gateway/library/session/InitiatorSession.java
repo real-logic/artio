@@ -64,12 +64,24 @@ public class InitiatorSession extends Session
         final long sessionId,
         final Object sessionKey,
         final long sendingTime,
-        final long origSendingTime, final boolean isPossDupOrResend)
+        final long origSendingTime,
+        final String username,
+        final String password,
+        final boolean isPossDupOrResend)
     {
         if (msgSeqNo == expectedReceivedSeqNum() && state() == SessionState.SENT_LOGON)
         {
             state(SessionState.ACTIVE);
-            super.onLogon(heartbeatInterval, msgSeqNo, sessionId, sessionKey, sendingTime, origSendingTime, isPossDupOrResend);
+            super.onLogon(
+                heartbeatInterval,
+                msgSeqNo,
+                sessionId,
+                sessionKey,
+                sendingTime,
+                origSendingTime,
+                username,
+                password,
+                isPossDupOrResend);
         }
         else
         {
