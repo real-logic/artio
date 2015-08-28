@@ -28,6 +28,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.Collections.emptyList;
 import static uk.co.real_logic.agrona.concurrent.RecordBuffer.DID_NOT_CLAIM_RECORD;
 
 /**
@@ -52,12 +53,16 @@ public class ErrorBuffer implements ErrorHandler
     private final int exceptionVersion = exceptionEntryEncoder.sbeSchemaVersion();
     private final int elementBlockLength = stackTraceElementEncoder.sbeBlockLength();
     private final int elementVersion = stackTraceElementEncoder.sbeSchemaVersion();
+    private final RecordBuffer.RecordHandler onErrorFunc = (key, offset) -> onError(offset);
 
     private final AtomicBuffer buffer;
     private final RecordBuffer recordBuffer;
     private final AtomicCounter counter;
     private final EpochClock clock;
     private final int maxRecordSize;
+
+    private List<String> errors;
+    private long timeInMillis;
 
     /**
      * Read only constructor.
@@ -139,21 +144,25 @@ public class ErrorBuffer implements ErrorHandler
 
     public List<String> errorsSince(final long timeInMillis)
     {
-        final List<String> errors = new ArrayList<>();
+        this.timeInMillis = timeInMillis;
+        recordBuffer.forEach(onErrorFunc);
+        return errors != null ? errors : emptyList();
+    }
 
-        recordBuffer.forEach((key, offset) ->
+    private void onError(final int offset)
+    {
+        wrapExceptionDecoder(offset);
+        if (exceptionDecoder.time() > timeInMillis)
         {
-            wrapExceptionDecoder(offset);
-            if (exceptionDecoder.time() > timeInMillis)
+            final StringBuilder builder = new StringBuilder();
+            appendException(builder);
+            appendStackTraceElements(exceptionDecoder.limit(), builder);
+            if (errors == null)
             {
-                final StringBuilder builder = new StringBuilder();
-                appendException(builder);
-                appendStackTraceElements(exceptionDecoder.limit(), builder);
-                errors.add(builder.toString());
+                errors = new ArrayList<>();
             }
-        });
-
-        return errors;
+            errors.add(builder.toString());
+        }
     }
 
     private void appendStackTraceElements(int offset, final StringBuilder builder)

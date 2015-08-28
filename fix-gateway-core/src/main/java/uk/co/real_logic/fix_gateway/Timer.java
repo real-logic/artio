@@ -56,15 +56,20 @@ public final class Timer
 
     public static void prettyPrint(final String name, final Histogram histogram)
     {
+        prettyPrint(name, histogram, 1.0);
+    }
+
+    public static void prettyPrint(final String name, final Histogram histogram, final double scalingFactor)
+    {
         System.out.printf("%s Histogram\n", name);
         System.out.println("----------");
-        System.out.printf("Mean: %G\n", histogram.getMean());
-        System.out.printf("1:    %d\n", histogram.getValueAtPercentile(1));
-        System.out.printf("50:   %d\n", histogram.getValueAtPercentile(50));
-        System.out.printf("90:   %d\n", histogram.getValueAtPercentile(90));
-        System.out.printf("99:   %d\n", histogram.getValueAtPercentile(99));
-        System.out.printf("99.9: %d\n", histogram.getValueAtPercentile(99.9));
-        System.out.printf("100:  %d\n", histogram.getValueAtPercentile(100));
+        System.out.printf("Mean: %G\n", histogram.getMean() / scalingFactor);
+        System.out.printf("1:    %G\n", histogram.getValueAtPercentile(1) / scalingFactor);
+        System.out.printf("50:   %G\n", histogram.getValueAtPercentile(50) / scalingFactor);
+        System.out.printf("90:   %G\n", histogram.getValueAtPercentile(90) / scalingFactor);
+        System.out.printf("99:   %G\n", histogram.getValueAtPercentile(99) / scalingFactor);
+        System.out.printf("99.9: %G\n", histogram.getValueAtPercentile(99.9) / scalingFactor);
+        System.out.printf("100:  %G\n", histogram.getValueAtPercentile(100) / scalingFactor);
         System.out.println("----------");
         System.out.println();
     }

@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.system_benchmarks;
 
 import org.HdrHistogram.Histogram;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.agrona.console.ContinueBarrier;
 import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
@@ -100,20 +99,15 @@ public final class FixBenchmarkClient
         final Histogram histogram)
         throws IOException
     {
-        final ContinueBarrier continueBarrier = new ContinueBarrier("Would you like to rerun the benchmark?");
-        do
+        histogram.reset();
+
+        for (int i = 0; i < MESSAGES_EXCHANGED; i++)
         {
-            histogram.reset();
-
-            for (int i = 0; i < MESSAGES_EXCHANGED; i++)
-            {
-                exchangeMessage(socketChannel, testRequest, header, WARMUP_MESSAGES + i, histogram);
-            }
-
-            //histogram.outputPercentileDistribution(System.out, 1000.0);
-            Timer.prettyPrint("Client", histogram);
+            exchangeMessage(socketChannel, testRequest, header, WARMUP_MESSAGES + i, histogram);
         }
-        while (continueBarrier.await());
+
+        //histogram.outputPercentileDistribution(System.out, 1000.0);
+        Timer.prettyPrint("Client in Micros", histogram, 1000);
     }
 
     private static void exchangeMessage(
