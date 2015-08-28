@@ -303,8 +303,11 @@ public class Session
         header
             .msgSeqNum(newSentSeqNum())
             .sendingTime(time());
-        // TODO: figure out the best way to remove this overhead from every send
-        sessionIdStrategy.setupSession(sessionKey, header);
+
+        if (!header.hasSenderCompID())
+        {
+            sessionIdStrategy.setupSession(sessionKey, header);
+        }
 
         final int length = encoder.encode(string, 0);
         return publication.saveMessage(
