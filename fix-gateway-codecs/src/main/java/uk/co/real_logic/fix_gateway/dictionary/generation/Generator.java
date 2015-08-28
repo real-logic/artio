@@ -341,6 +341,16 @@ public abstract class Generator
         return "\"\"";
     }
 
+    protected String hasGetter(final String name)
+    {
+        return String.format(
+            "    public boolean has%s()\n" +
+            "    {\n" +
+            "        return has%1$s;\n" +
+            "    }\n\n",
+            name);
+    }
+
     protected abstract String generateComponentToString(final Component component);
 
     protected String generateValueToString(final Field field)

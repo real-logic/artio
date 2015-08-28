@@ -560,12 +560,7 @@ public class DecoderGenerator extends Generator
 
     private String optionalGetter(final Entry entry)
     {
-        return entry.required() ? "" : String.format(
-            "    public boolean has%s()\n" +
-            "    {\n" +
-            "        return has%1$s;\n" +
-            "    }\n\n",
-            entry.name());
+        return entry.required() ? "" : hasGetter(entry.name());
     }
 
     private String optionalCheck(final Entry entry)

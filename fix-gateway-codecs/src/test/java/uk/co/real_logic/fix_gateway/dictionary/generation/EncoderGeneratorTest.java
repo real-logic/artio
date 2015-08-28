@@ -324,6 +324,26 @@ public class EncoderGeneratorTest
         assertThat(encoder.toString(), containsString(COMPONENT_TO_STRING));
     }
 
+    @Test
+    public void shouldGenerateHasMethodsForFields() throws Exception
+    {
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        setRequiredFields(encoder);
+
+        assertTrue(hasOnBehalfOfCompID(encoder));
+        assertFalse(hasTestReqID(encoder));
+    }
+
+    private boolean hasOnBehalfOfCompID(final Encoder encoder) throws Exception
+    {
+        return (boolean) get(encoder, "hasOnBehalfOfCompID");
+    }
+
+    private boolean hasTestReqID(final Encoder encoder) throws Exception
+    {
+        return (boolean) get(encoder, "hasTestReqID");
+    }
+
     private void setupComponent(final Encoder encoder) throws Exception
     {
         final Object egComponent = getEgComponent(encoder);

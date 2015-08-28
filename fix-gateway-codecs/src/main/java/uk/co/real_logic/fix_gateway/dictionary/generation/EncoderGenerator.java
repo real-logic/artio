@@ -181,7 +181,7 @@ public class EncoderGenerator extends Generator
         final Element element = entry.element();
         if (element instanceof Field)
         {
-            return generateFieldSetter(className, entry, (Field) element);
+            return generateFieldSetter(className, (Field) element);
         }
         else if (element instanceof Group)
         {
@@ -195,16 +195,18 @@ public class EncoderGenerator extends Generator
         return "";
     }
 
-    private String generateFieldSetter(final String className, final Entry entry, final Field field)
+    private String generateFieldSetter(final String className, final Field field)
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
-        final String optionalField = optionalField(entry);
-        final String optionalAssign = optionalAssign(entry);
+        final String hasField =
+            String.format("    private boolean has%1$s;\n\n", name) + hasGetter(name);
+
+        final String hasAssign = String.format("        has%s = true;\n", name);
 
         // TODO: make encoding generation more regular and delegate to library calls more
         final Function<String, String> generateSetter =
-            (type) -> generateSetter(name, type, fieldName, optionalField, className, optionalAssign);
+            (type) -> generateSetter(name, type, fieldName, hasField, className, hasAssign);
 
         switch (field.type())
         {
@@ -216,7 +218,7 @@ public class EncoderGenerator extends Generator
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case MONTHYEAR:
-                return generateStringSetter(className, fieldName, optionalField, optionalAssign);
+                return generateStringSetter(className, fieldName, hasField, hasAssign);
 
             case BOOLEAN:
                 return generateSetter.apply("boolean");
@@ -606,11 +608,6 @@ public class EncoderGenerator extends Generator
             fieldName,
             length + 1,
             bytes));
-    }
-
-    private String optionalAssign(final Entry entry)
-    {
-        return entry.required() ? "" : String.format("        has%s = true;\n", entry.name());
     }
 
     protected String generateStringToString(String fieldName)
