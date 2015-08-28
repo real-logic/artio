@@ -391,6 +391,15 @@ public class DecoderGeneratorTest
         assertEquals("Wrong reject reason", TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER, decoder.rejectReason());
     }
 
+    @Test
+    public void shouldBeAbleToExtractStringsFromStringFields() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NO_OPTIONAL_MESSAGE);
+
+        assertEquals("abc", get(decoder, "onBehalfOfCompIDAsString"));
+        assertNull(get(decoder, "testReqIDAsString"));
+    }
+
     // TODO: validation for data fields
     // TODO: validation for groups
 

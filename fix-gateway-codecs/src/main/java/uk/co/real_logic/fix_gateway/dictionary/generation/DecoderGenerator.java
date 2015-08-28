@@ -471,16 +471,29 @@ public class DecoderGenerator extends Generator
         final Type type = field.type();
         final String optionalCheck = optionalCheck(entry);
 
+        final String asStringBody = String.format(
+            entry.required() ?
+                "new String(%1$s, 0, %1$sLength)" :
+                "has%2$s ? new String(%1$s, 0, %1$sLength) : null",
+            fieldName,
+            name
+            );
+
         final String suffix = type.isStringBased()
             ? String.format(
-                "    private int %s;\n\n" +
-                "    public int %1$s()\n" +
+                "    private int %1$sLength;\n\n" +
+                "    public int %1$sLength()\n" +
                 "    {\n" +
-                "%s" +
-                "        return %1$s;\n" +
-                "    }\n",
-                fieldName + "Length",
-                optionalCheck
+                "%2$s" +
+                "        return %1$sLength;\n" +
+                "    }\n\n" +
+                "    public String %1$sAsString()\n" +
+                "    {\n" +
+                "        return %3$s;\n" +
+                "    }\n\n",
+                fieldName,
+                optionalCheck,
+                asStringBody
             )
             : "";
 
