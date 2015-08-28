@@ -79,4 +79,9 @@ public class SessionSubscriber implements AutoCloseable
     {
         session.requestDisconnect();
     }
+
+    public Session session()
+    {
+        return session;
+    }
 }

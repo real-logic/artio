@@ -32,7 +32,9 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.UnmodifiableCollectionView;
 
+import java.util.Collection;
 import java.util.List;
 
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
@@ -51,7 +53,10 @@ public class FixLibrary extends GatewayProcess
 {
     private final Subscription inboundSubscription;
     private final GatewayPublication outboundPublication;
-    private final Long2ObjectHashMap<SessionSubscriber> sessions = new Long2ObjectHashMap<>();
+    private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
+    private final Collection<Session> sessions = new UnmodifiableCollectionView<>(
+        SessionSubscriber::session, connectionIdToSession.values());
+
     private final EpochClock clock;
     private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
@@ -86,27 +91,70 @@ public class FixLibrary extends GatewayProcess
             false);
     }
 
+    // ------------- Public API -------------
+
+    /**
+     * Poll the library all of its component sessions to process any messages
+     * and events that have received from or should be sent to the engine.
+     *
+     * @param fragmentLimit the maximum number of events to read from the engine.
+     *
+     * @return 0 if no work was performed, > 0 otherwise.
+     */
     public int poll(final int fragmentLimit)
     {
-        return inboundSubscription.poll(dataSubscriber, fragmentLimit) +
-               pollSessionsAndLiveness();
-    }
-
-    private int pollSessionsAndLiveness()
-    {
-        int total = 0;
         final long timeInMs = clock.time();
-
-        if (!sessions.isEmpty())
-        {
-            for (final SessionSubscriber session : sessions.values())
-            {
-                total += session.poll(timeInMs);
-            }
-        }
-
-        return total + livenessDetector.poll(timeInMs);
+        return inboundSubscription.poll(dataSubscriber, fragmentLimit) +
+               pollSessions(timeInMs) +
+               livenessDetector.poll(timeInMs);
     }
+
+    /**
+     * Check if the library is connected to an engine.
+     *
+     * Note that this refers to whether a library is connected to a FIX Engine,
+     * not whether of its sessions are connected.
+     *
+     * @see Session#isConnected()
+     * @see uk.co.real_logic.fix_gateway.engine.FixEngine
+     *
+     * @return true if the library is connected to an engine, false otherwise.
+     */
+    public boolean isConnected()
+    {
+        return livenessDetector.isConnected();
+    }
+
+    /**
+     * Get the identifier of the library.
+     *
+     * @return the identifier of the library.
+     */
+    public int libraryId()
+    {
+        return libraryId;
+    }
+
+    /**
+     * Get a unmodifiable view of the currently active sessions.
+     *
+     * @return a unmodifiable view of the currently active sessions.
+     */
+    public Collection<Session> sessions()
+    {
+        return sessions;
+    }
+
+    /**
+     * Close the Library.
+     */
+    public void close()
+    {
+        connectionIdToSession.values().forEach(SessionSubscriber::close);
+        super.close();
+    }
+
+    // ------------- End Public API -------------
 
     public Session initiate(final SessionConfiguration configuration, final IdleStrategy idleStrategy)
     {
@@ -176,6 +224,21 @@ public class FixLibrary extends GatewayProcess
         }
     }
 
+    private int pollSessions(final long timeInMs)
+    {
+        int total = 0;
+
+        if (!connectionIdToSession.isEmpty())
+        {
+            for (final SessionSubscriber session : connectionIdToSession.values())
+            {
+                total += session.poll(timeInMs);
+            }
+        }
+
+        return total;
+    }
+
     private final DataSubscriber dataSubscriber = new DataSubscriber(new SessionHandler()
     {
         private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
@@ -213,7 +276,7 @@ public class FixLibrary extends GatewayProcess
             if (libraryId == FixLibrary.this.libraryId)
             {
                 DebugLogger.log("Library Logon: %d, %d\n", connectionId, sessionId);
-                final SessionSubscriber subscriber = sessions.get(connectionId);
+                final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
                 if (subscriber != null)
                 {
                     subscriber.onLogon(connectionId, sessionId);
@@ -234,7 +297,7 @@ public class FixLibrary extends GatewayProcess
             if (libraryId == FixLibrary.this.libraryId)
             {
                 DebugLogger.log("Received %s\n", buffer, offset, length);
-                final SessionSubscriber subscriber = sessions.get(connectionId);
+                final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
                 if (subscriber != null)
                 {
                     subscriber.onMessage(
@@ -247,7 +310,7 @@ public class FixLibrary extends GatewayProcess
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
-                final SessionSubscriber subscriber = sessions.remove(connectionId);
+                final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
                 DebugLogger.log("Library Disconnect %s\n", connectionId);
                 if (subscriber != null)
                 {
@@ -282,7 +345,7 @@ public class FixLibrary extends GatewayProcess
             session, sessionIdStrategy, authenticationStrategy, validationStrategy);
         final SessionHandler handler = configuration.newSessionHandler().onConnect(session);
         final SessionSubscriber subscriber = new SessionSubscriber(parser, session, handler, timer);
-        sessions.put(connectionId, subscriber);
+        connectionIdToSession.put(connectionId, subscriber);
     }
 
     private Session initiateSession(final long connectionId)
@@ -340,21 +403,5 @@ public class FixLibrary extends GatewayProcess
         return new SessionProxy(
             configuration.encoderBufferSize(), outboundLibraryStreams.gatewayPublication(), sessionIdStrategy,
             configuration.sessionCustomisationStrategy(), System::currentTimeMillis, connectionId, libraryId);
-    }
-
-    public void close()
-    {
-        sessions.values().forEach(SessionSubscriber::close);
-        super.close();
-    }
-
-    public boolean isConnected()
-    {
-        return livenessDetector.isConnected();
-    }
-
-    public int libraryId()
-    {
-        return libraryId;
     }
 }
