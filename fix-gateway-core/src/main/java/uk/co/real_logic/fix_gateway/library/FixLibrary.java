@@ -18,7 +18,10 @@ package uk.co.real_logic.fix_gateway.library;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
-import uk.co.real_logic.agrona.concurrent.*;
+import uk.co.real_logic.agrona.concurrent.EpochClock;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.agrona.concurrent.SystemEpochClock;
+import uk.co.real_logic.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.library.session.*;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
@@ -28,6 +31,7 @@ import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.util.List;
 
@@ -174,6 +178,8 @@ public class FixLibrary extends GatewayProcess
 
     private final DataSubscriber dataSubscriber = new DataSubscriber(new SessionHandler()
     {
+        private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
+
         public void onConnect(
             final int libraryId,
             final long connectionId,
@@ -194,7 +200,9 @@ public class FixLibrary extends GatewayProcess
                 else
                 {
                     DebugLogger.log("Acct Connect: %d, %d\n", connectionId, libraryId);
-                    final Session session = acceptSession(connectionId);
+                    asciiFlyweight.wrap(buffer);
+                    final Session session = acceptSession(
+                        connectionId, asciiFlyweight.getAscii(addressOffset, addressLength));
                     newSession(connectionId, session);
                 }
             }
@@ -302,10 +310,14 @@ public class FixLibrary extends GatewayProcess
             sessionConfiguration.bufferSize());
     }
 
-    private Session acceptSession(final long connectionId)
+    private Session acceptSession(final long connectionId, final String address)
     {
         final GatewayPublication publication = outboundLibraryStreams.gatewayPublication();
         final int defaultInterval = configuration.defaultHeartbeatInterval();
+        final int split = address.lastIndexOf(':');
+        final int start = address.startsWith("/") ? 1 : 0;
+        final String host = address.substring(start, split);
+        final int port = Integer.parseInt(address.substring(split + 1));
 
         return new AcceptorSession(
             defaultInterval,
@@ -318,7 +330,9 @@ public class FixLibrary extends GatewayProcess
             configuration.sendingTimeWindow(),
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId),
-            libraryId, 8 * 1024);
+            libraryId,
+            configuration.acceptorSessionBufferSize())
+           .address(host, port);
     }
 
     private SessionProxy sessionProxy(final long connectionId)

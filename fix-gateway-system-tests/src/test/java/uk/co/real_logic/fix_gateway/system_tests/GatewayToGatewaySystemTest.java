@@ -149,6 +149,12 @@ public class GatewayToGatewaySystemTest
         assertThat(sessionInfo.address(), containsString("localhost"));
         assertThat(sessionInfo.address(), containsString(String.valueOf(port)));
         assertEquals(initiatedSession.connectionId(), sessionInfo.connectionId());
+
+        assertEquals(initiatedSession.connectedPort(), port);
+        assertEquals(initiatedSession.connectedHost(), "localhost");
+
+        assertNotEquals(0, acceptingSession.connectedPort());
+        assertEquals("127.0.0.1", acceptingSession.connectedHost());
     }
 
     @Test

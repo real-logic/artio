@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.library.validation.NoMessageValidationStrate
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 
 public final class LibraryConfiguration extends CommonConfiguration
 {
@@ -45,6 +46,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private MessageValidationStrategy messageValidationStrategy = new NoMessageValidationStrategy();
     private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
     private int libraryId = DEFAULT_LIBRARY_ID;
+    private int acceptorSessionBufferSize = DEFAULT_SESSION_BUFFER_SIZE;
 
     public LibraryConfiguration()
     {
@@ -74,7 +76,7 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
-    public LibraryConfiguration setSendingTimeWindow(long sendingTimeWindow)
+    public LibraryConfiguration sendingTimeWindow(long sendingTimeWindow)
     {
         this.sendingTimeWindow = sendingTimeWindow;
         return this;
@@ -108,6 +110,12 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConfiguration libraryId(final int libraryId)
     {
         this.libraryId = libraryId;
+        return this;
+    }
+
+    public LibraryConfiguration acceptorSessionBufferSize(final int acceptorSessionBufferSize)
+    {
+        this.acceptorSessionBufferSize = acceptorSessionBufferSize;
         return this;
     }
 
@@ -156,6 +164,11 @@ public final class LibraryConfiguration extends CommonConfiguration
         return libraryId;
     }
 
+    public int acceptorSessionBufferSize()
+    {
+        return acceptorSessionBufferSize;
+    }
+
     public LibraryConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
     {
         super.sessionIdStrategy(sessionIdStrategy);
@@ -185,4 +198,5 @@ public final class LibraryConfiguration extends CommonConfiguration
         super.replyTimeoutInMs(replyTimeoutInMs);
         return this;
     }
+
 }

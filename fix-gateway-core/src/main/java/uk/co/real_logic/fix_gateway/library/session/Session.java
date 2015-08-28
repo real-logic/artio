@@ -687,10 +687,11 @@ public class Session
         receivedMsgSeqNo.increment();
     }
 
-    public void address(final String connectedHost, final int connectedPort)
+    public Session address(final String connectedHost, final int connectedPort)
     {
         this.connectedHost = connectedHost;
         this.connectedPort = connectedPort;
+        return this;
     }
 
     protected void username(final String username)
