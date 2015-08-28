@@ -331,7 +331,7 @@ public class Session
         state(DISCONNECTED);
     }
 
-    protected int poll(final long time)
+    public int poll(final long time)
     {
         int actions = 0;
 

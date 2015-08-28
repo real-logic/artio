@@ -32,11 +32,11 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
-import uk.co.real_logic.fix_gateway.util.UnmodifiableCollectionView;
 
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.Collections.unmodifiableList;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
 
@@ -54,8 +54,8 @@ public class FixLibrary extends GatewayProcess
     private final Subscription inboundSubscription;
     private final GatewayPublication outboundPublication;
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
-    private final Collection<Session> sessions = new UnmodifiableCollectionView<>(
-        SessionSubscriber::session, connectionIdToSession.values());
+    private final List<Session> sessions = new ArrayList<>();
+    private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
 
     private final EpochClock clock;
     private final LibraryConfiguration configuration;
@@ -136,13 +136,15 @@ public class FixLibrary extends GatewayProcess
     }
 
     /**
-     * Get a unmodifiable view of the currently active sessions.
+     * Get a list of the currently active sessions.
      *
-     * @return a unmodifiable view of the currently active sessions.
+     * Note: the list is unmodifiable.
+     *
+     * @return a list of the currently active sessions.
      */
-    public Collection<Session> sessions()
+    public List<Session> sessions()
     {
-        return sessions;
+        return unmodifiableSessions;
     }
 
     /**
@@ -226,14 +228,13 @@ public class FixLibrary extends GatewayProcess
 
     private int pollSessions(final long timeInMs)
     {
+        final List<Session> sessions = this.sessions;
         int total = 0;
 
-        if (!connectionIdToSession.isEmpty())
+        for (int i = 0, size = sessions.size(); i < size; i++)
         {
-            for (final SessionSubscriber session : connectionIdToSession.values())
-            {
-                total += session.poll(timeInMs);
-            }
+            final Session session = sessions.get(i);
+            total += session.poll(timeInMs);
         }
 
         return total;
@@ -315,6 +316,7 @@ public class FixLibrary extends GatewayProcess
                 if (subscriber != null)
                 {
                     subscriber.onDisconnect(libraryId, connectionId);
+                    sessions.remove(subscriber.session());
                 }
             }
         }
@@ -346,6 +348,7 @@ public class FixLibrary extends GatewayProcess
         final SessionHandler handler = configuration.newSessionHandler().onConnect(session);
         final SessionSubscriber subscriber = new SessionSubscriber(parser, session, handler, timer);
         connectionIdToSession.put(connectionId, subscriber);
+        sessions.add(session);
     }
 
     private Session initiateSession(final long connectionId)
