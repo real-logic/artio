@@ -44,7 +44,6 @@ public final class EngineConfiguration extends CommonConfiguration
     // ------------------------------------------------
 
     public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
-    public static final long DEFAULT_CONNECTION_TIMEOUT = 1000;
     public static final int DEFAULT_INDEX_FILE_SIZE = 2 * 1024 * 1024;
     public static final String DEFAULT_LOG_FILE_DIR = "logs";
     public static final int DEFAULT_LOGGER_CACHE_CAPACITY = 10;
@@ -53,7 +52,6 @@ public final class EngineConfiguration extends CommonConfiguration
     private int receiverBufferSize = DEFAULT_RECEIVER_BUFFER_SIZE;
     private int receiverSocketBufferSize = 0;
     private int senderSocketBufferSize = 0;
-    private long connectionTimeout = DEFAULT_CONNECTION_TIMEOUT;
     private String host;
     private int port;
     private int indexFileSize = getInteger(INDEX_FILE_SIZE_PROP, DEFAULT_INDEX_FILE_SIZE);
@@ -117,7 +115,6 @@ public final class EngineConfiguration extends CommonConfiguration
 
     public EngineConfiguration connectionTimeout(final long connectionTimeout)
     {
-        this.connectionTimeout = connectionTimeout;
         return this;
     }
 

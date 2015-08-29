@@ -15,9 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
+import static uk.co.real_logic.aeron.CommonContext.IPC_CHANNEL;
+
 public final class Configuration
 {
     public static final int PORT = Integer.getInteger("fix.benchmark.port", 9999);
+    public static final String AERON_CHANNEL = System.getProperty("fix.benchmark.aeron_channel", IPC_CHANNEL);
     public static final String ACCEPTOR_ID = "ACC";
     public static final String INITIATOR_ID = "INIT";
 }

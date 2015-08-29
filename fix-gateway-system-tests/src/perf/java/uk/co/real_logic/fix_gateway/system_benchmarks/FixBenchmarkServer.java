@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway.system_benchmarks;
 
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -31,13 +31,10 @@ import uk.co.real_logic.fix_gateway.library.validation.TargetCompIdValidationStr
 import java.io.File;
 import java.util.Arrays;
 
-import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.ACCEPTOR_ID;
-import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.INITIATOR_ID;
+import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.*;
 
 public final class FixBenchmarkServer
 {
-    private static final int AERON_PORT = Integer.getInteger("fix.benchmark.aeron_port", 9998);
-
     public static void main(String[] args)
     {
         final EngineConfiguration configuration = engineConfiguration();
@@ -46,7 +43,9 @@ public final class FixBenchmarkServer
              final FixEngine engine = FixEngine.launch(configuration);
              final FixLibrary library = new FixLibrary(libraryConfiguration()))
         {
-            final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1, 1 << 20);
+            final IdleStrategy idleStrategy = new NoOpIdleStrategy();
+            // TODO: configurable idle strategy
+            // new BackoffIdleStrategy(1, 1, 1, 1 << 20);
             while (true)
             {
                 idleStrategy.idle(library.poll(1));
@@ -56,7 +55,8 @@ public final class FixBenchmarkServer
 
     private static MediaDriver newMediaDriver()
     {
-        final MediaDriver.Context context = new MediaDriver.Context().dirsDeleteOnStart(true);
+        final MediaDriver.Context context = new MediaDriver.Context()
+            .dirsDeleteOnStart(true);
 
         return MediaDriver.launch(context);
     }
@@ -71,9 +71,9 @@ public final class FixBenchmarkServer
         }
         return new EngineConfiguration()
             .bind("localhost", Configuration.PORT)
-            .aeronChannel("udp://localhost:" + AERON_PORT)
+            .aeronChannel(AERON_CHANNEL)
             .logFileDir(acceptorLogs)
-            .logInboundMessages(false)
+            .logInboundMessages(true)
             .logOutboundMessages(false);
     }
 
@@ -86,7 +86,7 @@ public final class FixBenchmarkServer
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
         return new LibraryConfiguration()
-            .aeronChannel("udp://localhost:" + AERON_PORT)
+            .aeronChannel(AERON_CHANNEL)
             .authenticationStrategy(authenticationStrategy)
             .newSessionHandler(session -> new BenchmarkSessionHandler());
     }
