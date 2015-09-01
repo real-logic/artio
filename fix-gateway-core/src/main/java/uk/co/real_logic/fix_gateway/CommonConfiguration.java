@@ -39,7 +39,8 @@ public class CommonConfiguration
     public static final String DEBUG_FILE_PROPERTY = "fix.core.debug.file";
 
     public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 8 * 1024 * 1024;
-    public static final String DEFAULT_MONITORING_FILE = IoUtil.tmpDirName() + "fix" + File.separator + "counters";
+    public static final String DEFAULT_MONITORING_FILE =
+        optimalTmpDirName() + File.separator + "fix" + File.separator + "monitoring";
 
     /** These are static final fields in order to give the optimiser scope to remove references to it. */
     public static final boolean DEBUG_PRINT_MESSAGES = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
@@ -128,5 +129,26 @@ public class CommonConfiguration
     public int errorSlotSize()
     {
         return errorSlotSize;
+    }
+
+    /**
+     * If shared memory is available, use that as a temporary directory,
+     * otherwise use the default temp directory
+     *
+     * @return the optimal temporary directory
+     */
+    public static String optimalTmpDirName()
+    {
+        if ("Linux".equalsIgnoreCase(System.getProperty("os.name")))
+        {
+            final File devShmDir = new File("/dev/shm");
+
+            if (devShmDir.exists())
+            {
+                return devShmDir.getAbsolutePath();
+            }
+        }
+
+        return IoUtil.tmpDirName();
     }
 }
