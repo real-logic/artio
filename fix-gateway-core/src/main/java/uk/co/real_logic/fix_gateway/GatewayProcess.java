@@ -67,11 +67,6 @@ public class GatewayProcess implements AutoCloseable
         aeron = Aeron.connect(ctx);
     }
 
-    protected IdleStrategy idleStrategy()
-    {
-        return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
-    }
-
     private Aeron.Context aeronContext(final CommonConfiguration configuration)
     {
         final Aeron.Context ctx = configuration.aeronContext();

@@ -97,7 +97,7 @@ public class Logger implements AutoCloseable
 
     private AgentRunner newRunner(final Agent loggingAgent)
     {
-        return new AgentRunner(backoffIdleStrategy(), errorHandler, null, loggingAgent);
+        return new AgentRunner(configuration.loggerIdleStrategy(), errorHandler, null, loggingAgent);
     }
 
     public void initArchival()
@@ -115,10 +115,13 @@ public class Logger implements AutoCloseable
             subscriptions.add(outboundLibraryStreams.subscription());
         }
         archiver = new Archiver(
-            LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity, subscriptions);
+            LoggerUtil.newArchiveMetaData(configuration.logFileDir()), logFileDir, loggerCacheCapacity, subscriptions);
 
         archiveReader = new ArchiveReader(
-            LoggerUtil::mapExistingFile, LoggerUtil.newArchiveMetaData(configuration), logFileDir, loggerCacheCapacity);
+            LoggerUtil::mapExistingFile,
+            LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
+            logFileDir,
+            loggerCacheCapacity);
     }
 
     public Archiver archiver()

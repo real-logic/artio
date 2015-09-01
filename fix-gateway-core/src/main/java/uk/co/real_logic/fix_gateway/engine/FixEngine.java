@@ -89,8 +89,8 @@ public final class FixEngine extends GatewayProcess
         if (this.configuration.printErrorMessages())
         {
             final ErrorPrinter printer = new ErrorPrinter(monitoringFile, configuration.errorSlotSize());
-            final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
-            errorPrinterRunner = new AgentRunner(idleStrategy, Throwable::printStackTrace, null, printer);
+            errorPrinterRunner = new AgentRunner(
+                configuration.errorPrinterIdleStrategy(), Throwable::printStackTrace, null, printer);
         }
     }
 
@@ -98,7 +98,7 @@ public final class FixEngine extends GatewayProcess
     {
         final SessionIds sessionIds = new SessionIds();
 
-        final IdleStrategy idleStrategy = idleStrategy();
+        final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Subscription librarySubscription = outboundLibraryStreams.subscription();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
 

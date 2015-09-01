@@ -16,6 +16,8 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
+import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 
@@ -60,6 +62,9 @@ public final class EngineConfiguration extends CommonConfiguration
     private boolean logInboundMessages = true;
     private boolean logOutboundMessages = true;
     private boolean printErrorMessages = true;
+    private IdleStrategy framerIdleStrategy = backoffIdleStrategy();
+    private IdleStrategy loggerIdleStrategy = backoffIdleStrategy();
+    private IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
 
     public EngineConfiguration registerAcceptor(
         final OtfMessageAcceptor messageAcceptor, int firstTag, final int... tags)
@@ -136,6 +141,24 @@ public final class EngineConfiguration extends CommonConfiguration
         return this;
     }
 
+    public EngineConfiguration framerIdleStrategy(final IdleStrategy framerIdleStrategy)
+    {
+        this.framerIdleStrategy = framerIdleStrategy;
+        return this;
+    }
+
+    public EngineConfiguration loggerIdleStrategy(final IdleStrategy loggerIdleStrategy)
+    {
+        this.loggerIdleStrategy = loggerIdleStrategy;
+        return this;
+    }
+
+    public EngineConfiguration errorPrinterIdleStrategy(final IdleStrategy errorPrinterIdleStrategy)
+    {
+        this.errorPrinterIdleStrategy = errorPrinterIdleStrategy;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -186,6 +209,21 @@ public final class EngineConfiguration extends CommonConfiguration
         return printErrorMessages;
     }
 
+    public IdleStrategy framerIdleStrategy()
+    {
+        return framerIdleStrategy;
+    }
+
+    public IdleStrategy errorPrinterIdleStrategy()
+    {
+        return errorPrinterIdleStrategy;
+    }
+
+    public IdleStrategy loggerIdleStrategy()
+    {
+        return loggerIdleStrategy;
+    }
+
     public EngineConfiguration aeronChannel(final String aeronChannel)
     {
         super.aeronChannel(aeronChannel);
@@ -208,6 +246,11 @@ public final class EngineConfiguration extends CommonConfiguration
     {
         super.replyTimeoutInMs(replyTimeoutInMs);
         return this;
+    }
+
+    private IdleStrategy backoffIdleStrategy()
+    {
+        return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
     }
 
 }
