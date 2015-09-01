@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration version="1.0" name="ProfileWithoutSockets" description="These settings were used to start the recording &apos;/home/richard/.jmc/5.4.0/flight_recording_comintellijrtexecutionapplicationAppMainukcoreallogicaeronbenchmarksAllocationSoakTestRunner26637_2014-09-17_13_10_40.jfr&apos;." provider="Oracle">
+<configuration version="1.0" name="ProfileWithoutSockets" description="Low overhead configuration for profiling, typically around 2 % overhead." provider="Oracle">
 
   <producer uri="http://www.oracle.com/hotspot/jvm/" label="Oracle JDK">
 
@@ -9,7 +9,7 @@
     </event>
 
     <event path="java/statistics/class_loading">
-      <setting name="enabled">false</setting>
+      <setting name="enabled">true</setting>
       <setting name="period">1000 ms</setting>
     </event>
 
@@ -72,7 +72,7 @@
 
     <event path="vm/prof/execution_sample">
       <setting name="enabled">true</setting>
-      <setting name="period">20 ms</setting>
+      <setting name="period">10 ms</setting>
     </event>
 
     <event path="vm/prof/execution_sampling_info">
@@ -86,8 +86,8 @@
     </event>
 
     <event path="vm/runtime/thread_dump">
-      <setting name="enabled">true</setting>
-      <setting name="period">10 s</setting>
+      <setting name="enabled">false</setting>
+      <setting name="period">999 d</setting>
     </event>
 
     <event path="vm/flag/long">
@@ -136,7 +136,7 @@
     </event>
 
     <event path="vm/gc/detailed/object_count">
-      <setting name="enabled">true</setting>
+      <setting name="enabled">false</setting>
       <setting name="period">everyChunk</setting>
     </event>
 
@@ -181,6 +181,24 @@
       <setting name="enabled">true</setting>
     </event>
 
+    <event path="vm/gc/metaspace/gc_threshold">
+      <setting name="enabled">true</setting>
+    </event>
+
+    <event path="vm/gc/metaspace/allocation_failure">
+      <setting name="enabled">true</setting>
+      <setting name="stackTrace">true</setting>
+    </event>
+
+    <event path="vm/gc/metaspace/out_of_memory">
+      <setting name="enabled">true</setting>
+      <setting name="stackTrace">true</setting>
+    </event>
+
+    <event path="vm/gc/metaspace/chunk_free_list_summary">
+      <setting name="enabled">true</setting>
+    </event>
+
     <event path="vm/gc/collector/garbage_collection">
       <setting name="enabled">true</setting>
       <setting name="threshold">0 ms</setting>
@@ -222,7 +240,7 @@
     </event>
 
     <event path="vm/gc/phases/pause_level_3">
-      <setting name="enabled">true</setting>
+      <setting name="enabled">false</setting>
       <setting name="threshold">0 ms</setting>
     </event>
 
@@ -244,6 +262,11 @@
 
     <event path="vm/gc/detailed/concurrent_mode_failure">
       <setting name="enabled">true</setting>
+    </event>
+
+    <event path="vm/gc/detailed/allocation_requiring_gc">
+      <setting name="enabled">false</setting>
+      <setting name="stackTrace">true</setting>
     </event>
 
     <event path="vm/compiler/config">
@@ -330,7 +353,7 @@
     </event>
 
     <event path="os/initial_environment_variable">
-      <setting name="enabled">false</setting>
+      <setting name="enabled">true</setting>
       <setting name="period">everyChunk</setting>
     </event>
 
@@ -354,13 +377,13 @@
   <producer uri="http://www.oracle.com/hotspot/jdk/" label="Oracle JDK">
 
     <event path="java/file_read">
-      <setting name="enabled">true</setting>
+      <setting name="enabled">false</setting>
       <setting name="stackTrace">true</setting>
       <setting name="threshold">10 ms</setting>
     </event>
 
     <event path="java/file_write">
-      <setting name="enabled">true</setting>
+      <setting name="enabled">false</setting>
       <setting name="stackTrace">true</setting>
       <setting name="threshold">10 ms</setting>
     </event>
@@ -378,7 +401,7 @@
     </event>
 
     <event path="java/exception_throw">
-      <setting name="enabled">false</setting>
+      <setting name="enabled">true</setting>
       <setting name="stackTrace">true</setting>
     </event>
 
