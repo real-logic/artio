@@ -106,8 +106,7 @@ public final class FixBenchmarkClient
             exchangeMessage(socketChannel, testRequest, header, WARMUP_MESSAGES + i, histogram);
         }
 
-        //histogram.outputPercentileDistribution(System.out, 1000.0);
-        Timer.prettyPrint("Client in Micros", histogram, 1000);
+        Timer.prettyPrint("", "Client in Micros", histogram, 1000);
     }
 
     private static void exchangeMessage(

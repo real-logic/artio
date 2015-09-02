@@ -57,7 +57,8 @@ public class FixLibrary extends GatewayProcess
     private final EpochClock clock;
     private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
-    private final Timer timer = new Timer("Session", new SystemNanoClock());
+    private final Timer sessionTimer = new Timer(" ", "Session", new SystemNanoClock());
+    private final Timer receiveTimer = new Timer("Receive", new SystemNanoClock());
     private final LivenessDetector livenessDetector;
     private final int libraryId;
     private final IdleStrategy idleStrategy;
@@ -345,7 +346,8 @@ public class FixLibrary extends GatewayProcess
         final SessionParser parser = new SessionParser(
             session, sessionIdStrategy, authenticationStrategy, validationStrategy);
         final SessionHandler handler = configuration.newSessionHandler().onConnect(session);
-        final SessionSubscriber subscriber = new SessionSubscriber(parser, session, handler, timer);
+        final SessionSubscriber subscriber = new SessionSubscriber(parser, session, handler,
+            receiveTimer, sessionTimer);
         connectionIdToSession.put(connectionId, subscriber);
         sessions.add(session);
     }

@@ -25,18 +25,21 @@ public class SessionSubscriber implements AutoCloseable
     private final SessionParser parser;
     private final Session session;
     private final SessionHandler handler;
-    private final Timer timer;
+    private final Timer receiveTimer;
+    private final Timer sessionTimer;
 
     public SessionSubscriber(
         final SessionParser parser,
         final Session session,
         final SessionHandler handler,
-        final Timer timer)
+        final Timer receiveTimer,
+        final Timer sessionTimer)
     {
         this.parser = parser;
         this.session = session;
         this.handler = handler;
-        this.timer = timer;
+        this.receiveTimer = receiveTimer;
+        this.sessionTimer = sessionTimer;
     }
 
     public void onMessage(final DirectBuffer buffer,
@@ -48,14 +51,20 @@ public class SessionSubscriber implements AutoCloseable
                           final int messageType,
                           final long timestamp)
     {
+        long now = 0;
         if (TIME_MESSAGES)
         {
-            timer.recordSince(timestamp);
+            now = receiveTimer.recordSince(timestamp);
         }
 
         if (parser.onMessage(buffer, offset, length, messageType, sessionId))
         {
             handler.onMessage(buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp);
+        }
+
+        if (TIME_MESSAGES)
+        {
+            sessionTimer.recordSince(now);
         }
     }
 

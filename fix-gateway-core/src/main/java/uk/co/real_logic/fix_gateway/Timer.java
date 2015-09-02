@@ -26,12 +26,19 @@ public final class Timer
     public static final int TOTAL_MESSAGES = WARMUP_MESSAGES + MESSAGES_EXCHANGED;
     private final Histogram histogram;
     private final NanoClock clock;
+    private final String prefix;
     private final String name;
 
     private int count;
 
     public Timer(final String name, final NanoClock clock)
     {
+        this("", name, clock);
+    }
+
+    public Timer(final String prefix, final String name, final NanoClock clock)
+    {
+        this.prefix = prefix;
         this.name = name;
         histogram = new Histogram(3);
         this.clock = clock;
@@ -49,28 +56,24 @@ public final class Timer
         }
         else if (count == TOTAL_MESSAGES)
         {
-            prettyPrint(name, histogram);
+            prettyPrint(prefix, name, histogram, 1000);
         }
         return time;
     }
 
-    public static void prettyPrint(final String name, final Histogram histogram)
-    {
-        prettyPrint(name, histogram, 1.0);
-    }
-
-    public static void prettyPrint(final String name, final Histogram histogram, final double scalingFactor)
+    public static void prettyPrint(
+        final String prefix, final String name, final Histogram histogram, final double scalingFactor)
     {
         System.out.printf("%s Histogram\n", name);
-        System.out.println("----------");
-        System.out.printf("Mean: %G\n", histogram.getMean() / scalingFactor);
-        System.out.printf("1:    %G\n", histogram.getValueAtPercentile(1) / scalingFactor);
-        System.out.printf("50:   %G\n", histogram.getValueAtPercentile(50) / scalingFactor);
-        System.out.printf("90:   %G\n", histogram.getValueAtPercentile(90) / scalingFactor);
-        System.out.printf("99:   %G\n", histogram.getValueAtPercentile(99) / scalingFactor);
-        System.out.printf("99.9: %G\n", histogram.getValueAtPercentile(99.9) / scalingFactor);
-        System.out.printf("100:  %G\n", histogram.getValueAtPercentile(100) / scalingFactor);
-        System.out.println("----------");
+        System.out.printf("%s----------\n", prefix);
+        System.out.printf("%sMean: %G\n", prefix, histogram.getMean() / scalingFactor);
+        System.out.printf("%s1:    %G\n", prefix, histogram.getValueAtPercentile(1) / scalingFactor);
+        System.out.printf("%s50:   %G\n", prefix, histogram.getValueAtPercentile(50) / scalingFactor);
+        System.out.printf("%s90:   %G\n", prefix, histogram.getValueAtPercentile(90) / scalingFactor);
+        System.out.printf("%s99:   %G\n", prefix, histogram.getValueAtPercentile(99) / scalingFactor);
+        System.out.printf("%s99.9: %G\n", prefix, histogram.getValueAtPercentile(99.9) / scalingFactor);
+        System.out.printf("%s100:  %G\n", prefix, histogram.getValueAtPercentile(100) / scalingFactor);
+        System.out.printf("%s----------", prefix);
         System.out.println();
     }
 
