@@ -45,15 +45,15 @@ public final class EngineConfiguration extends CommonConfiguration
     //          Configuration Defaults
     // ------------------------------------------------
 
-    public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
+    public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_INDEX_FILE_SIZE = 2 * 1024 * 1024;
     public static final String DEFAULT_LOG_FILE_DIR = "logs";
     public static final int DEFAULT_LOGGER_CACHE_CAPACITY = 10;
     private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
 
     private int receiverBufferSize = DEFAULT_RECEIVER_BUFFER_SIZE;
-    private int receiverSocketBufferSize = 0;
-    private int senderSocketBufferSize = 0;
+    private int receiverSocketBufferSize = 1024 * 1024;
+    private int senderSocketBufferSize = 1024 * 1024;
     private String host;
     private int port;
     private int indexFileSize = getInteger(INDEX_FILE_SIZE_PROP, DEFAULT_INDEX_FILE_SIZE);

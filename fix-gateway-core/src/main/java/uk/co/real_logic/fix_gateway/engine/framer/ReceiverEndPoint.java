@@ -102,9 +102,9 @@ public class ReceiverEndPoint
         this.errorHandler = errorHandler;
         this.libraryId = libraryId;
 
-        buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(bufferSize));
+        byteBuffer = ByteBuffer.allocateDirect(bufferSize);
+        buffer = new UnsafeBuffer(byteBuffer);
         string = new AsciiFlyweight(buffer);
-        byteBuffer = buffer.byteBuffer();
     }
 
     public long connectionId()
