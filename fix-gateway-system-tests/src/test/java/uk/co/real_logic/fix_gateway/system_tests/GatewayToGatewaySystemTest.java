@@ -248,7 +248,5 @@ public class GatewayToGatewaySystemTest
         CloseHelper.close(acceptingEngine);
 
         CloseHelper.close(mediaDriver);
-
-        System.gc();
     }
 }

@@ -42,6 +42,8 @@ public class EngineAndLibraryIntegrationTest
 
     private MediaDriver mediaDriver;
     private FixEngine engine;
+    private FixLibrary library;
+    private FixLibrary library2;
 
     private FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
     private FakeSessionHandler sessionHandler = new FakeSessionHandler(otfAcceptor);
@@ -66,7 +68,9 @@ public class EngineAndLibraryIntegrationTest
     @Test
     public void engineDetectsLibraryConnect()
     {
-        awaitLibraryConnect(connectLibrary());
+        library = connectLibrary();
+
+        awaitLibraryConnect(library);
 
         final List<LibraryInfo> libraries = hasLibraries(1);
         assertLibrary(libraries.get(0), true, DEFAULT_LIBRARY_ID);
@@ -75,7 +79,7 @@ public class EngineAndLibraryIntegrationTest
     @Test
     public void engineDetectsLibraryDisconnect()
     {
-        final FixLibrary library = connectLibrary();
+        library = connectLibrary();
         awaitLibraryConnect(library);
 
         library.close();
@@ -86,9 +90,11 @@ public class EngineAndLibraryIntegrationTest
     @Test
     public void engineDetectsMultipleLibraryInstances()
     {
-        awaitLibraryConnect(connectLibrary(2));
+        library = connectLibrary(2);
+        awaitLibraryConnect(library);
 
-        awaitLibraryConnect(connectLibrary(3));
+        library2 = connectLibrary(3);
+        awaitLibraryConnect(library2);
 
         final List<LibraryInfo> libraries = hasLibraries(2);
 
@@ -104,13 +110,13 @@ public class EngineAndLibraryIntegrationTest
 
     private FixLibrary setupTwoLibrariesAndCloseTheFirst()
     {
-        final FixLibrary library1 = connectLibrary(2);
-        awaitLibraryConnect(library1);
+        library = connectLibrary(2);
+        awaitLibraryConnect(library);
 
-        final FixLibrary library2 = connectLibrary(3);
+        library2 = connectLibrary(3);
         awaitLibraryConnect(library2);
 
-        library1.close();
+        library.close();
 
         assertLibrariesDisconnect(1, library2, engine);
 
@@ -125,7 +131,9 @@ public class EngineAndLibraryIntegrationTest
     {
         setupTwoLibrariesAndCloseTheFirst();
 
-        awaitLibraryConnect(connectLibrary(4));
+        library = connectLibrary(4);
+
+        awaitLibraryConnect(library);
 
         final List<LibraryInfo> libraries = hasLibraries(2);
         assertLibrary2(libraries);
@@ -135,13 +143,15 @@ public class EngineAndLibraryIntegrationTest
     @Test
     public void libraryDetectsEngine()
     {
-        awaitLibraryConnect(connectLibrary());
+        library = connectLibrary();
+
+        awaitLibraryConnect(library);
     }
 
     @Test
     public void libraryDetectsEngineDisconnect()
     {
-        final FixLibrary library = connectLibrary(DEFAULT_LIBRARY_ID);
+        library = connectLibrary(DEFAULT_LIBRARY_ID);
 
         awaitLibraryConnect(library);
 
@@ -200,8 +210,9 @@ public class EngineAndLibraryIntegrationTest
     public void close() throws Exception
     {
         CloseHelper.close(engine);
-        CloseHelper.close(mediaDriver);
+        CloseHelper.close(library);
+        CloseHelper.close(library2);
 
-        System.gc();
+        CloseHelper.close(mediaDriver);
     }
 }

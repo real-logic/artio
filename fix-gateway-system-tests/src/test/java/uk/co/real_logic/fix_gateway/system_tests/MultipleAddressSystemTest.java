@@ -90,7 +90,5 @@ public class MultipleAddressSystemTest
         CloseHelper.close(initiatingEngine);
         CloseHelper.close(acceptingEngine);
         CloseHelper.close(mediaDriver);
-
-        System.gc();
     }
 }
