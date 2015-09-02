@@ -16,7 +16,10 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
-import uk.co.real_logic.agrona.concurrent.*;
+import uk.co.real_logic.agrona.concurrent.EpochClock;
+import uk.co.real_logic.agrona.concurrent.NanoClock;
+import uk.co.real_logic.agrona.concurrent.SystemEpochClock;
+import uk.co.real_logic.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.streams.Streams;
 
 import java.nio.channels.ClosedByInterruptException;

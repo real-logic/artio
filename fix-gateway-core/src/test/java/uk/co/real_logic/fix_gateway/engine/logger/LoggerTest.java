@@ -22,6 +22,7 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
+import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -36,7 +37,6 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.aeron.driver.Configuration.TERM_BUFFER_LENGTH_PROP_NAME;
 import static uk.co.real_logic.agrona.BitUtil.findNextPositivePowerOfTwo;
-import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 
 public class LoggerTest
@@ -142,9 +142,11 @@ public class LoggerTest
     @After
     public void tearDown()
     {
-        quietClose(logger);
-        quietClose(aeron);
-        quietClose(mediaDriver);
+        CloseHelper.close(logger);
+        CloseHelper.close(aeron);
+        CloseHelper.close(mediaDriver);
+
+        System.gc();
     }
 
 }

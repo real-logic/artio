@@ -95,6 +95,7 @@ public class LibraryAndGatewayTimeoutTest
         closeIfOpen(initiatingLibrary);
         closeIfOpen(initiatingEngine);
         closeIfOpen(mediaDriver);
+
         System.gc();
     }
 }

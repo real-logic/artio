@@ -158,6 +158,9 @@ public class Logger implements AutoCloseable
 
     public void close()
     {
-        loggingRunner.close();
+        if (loggingRunner != null)
+        {
+            loggingRunner.close();
+        }
     }
 }

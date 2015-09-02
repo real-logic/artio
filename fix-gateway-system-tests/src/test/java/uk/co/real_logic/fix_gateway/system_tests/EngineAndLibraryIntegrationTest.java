@@ -201,5 +201,7 @@ public class EngineAndLibraryIntegrationTest
     {
         CloseHelper.close(engine);
         CloseHelper.close(mediaDriver);
+
+        System.gc();
     }
 }

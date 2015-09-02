@@ -16,12 +16,12 @@
 package uk.co.real_logic.fix_gateway.library;
 
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
-import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.NoAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.library.session.NoSessionCustomisationStrategy;
 import uk.co.real_logic.fix_gateway.library.session.SessionCustomisationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.NoAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.NoMessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 

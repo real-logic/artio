@@ -19,6 +19,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -26,7 +27,6 @@ import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 
 import static org.junit.Assert.assertEquals;
-import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
@@ -53,7 +53,6 @@ public class MultipleAddressSystemTest
     public void launch()
     {
         final int initAeronPort = unusedPort();
-        final int acceptAeronPort = unusedPort();
 
         mediaDriver = launchMediaDriver();
         initiatingEngine = launchInitiatingGateway(initAeronPort);
@@ -85,11 +84,13 @@ public class MultipleAddressSystemTest
     @After
     public void close() throws Exception
     {
-        quietClose(initiatingLibrary);
-        quietClose(acceptingLibrary);
+        CloseHelper.close(initiatingLibrary);
+        CloseHelper.close(acceptingLibrary);
 
-        quietClose(initiatingEngine);
-        quietClose(acceptingEngine);
-        quietClose(mediaDriver);
+        CloseHelper.close(initiatingEngine);
+        CloseHelper.close(acceptingEngine);
+        CloseHelper.close(mediaDriver);
+
+        System.gc();
     }
 }
