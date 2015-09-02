@@ -17,8 +17,7 @@ package uk.co.real_logic.fix_gateway.system_benchmarks;
 
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.agrona.concurrent.BusySpinIdleStrategy;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -43,12 +42,10 @@ public final class FixBenchmarkServer
              final FixEngine engine = FixEngine.launch(configuration);
              final FixLibrary library = new FixLibrary(libraryConfiguration()))
         {
-            final IdleStrategy idleStrategy = new BusySpinIdleStrategy();
-            // TODO: configurable idle strategy
-            // new BackoffIdleStrategy(1, 1, 1, 1 << 20);
+            final NoOpIdleStrategy idleStrategy = new NoOpIdleStrategy();
             while (true)
             {
-                idleStrategy.idle(library.poll(1));
+                idleStrategy.idle(library.poll(10));
             }
         }
     }
@@ -75,7 +72,7 @@ public final class FixBenchmarkServer
             .logFileDir(acceptorLogs)
             .logInboundMessages(true)
             .logOutboundMessages(false)
-            .framerIdleStrategy(new BusySpinIdleStrategy());
+            .framerIdleStrategy(new NoOpIdleStrategy());
     }
 
     private static LibraryConfiguration libraryConfiguration()
