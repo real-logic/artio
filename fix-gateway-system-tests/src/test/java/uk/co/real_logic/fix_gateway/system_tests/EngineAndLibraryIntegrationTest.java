@@ -40,7 +40,6 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 public class EngineAndLibraryIntegrationTest
 {
 
-    private int aeronPort = unusedPort();
     private MediaDriver mediaDriver;
     private FixEngine engine;
 
@@ -190,7 +189,7 @@ public class EngineAndLibraryIntegrationTest
     private FixLibrary connectLibrary(final int libraryId)
     {
         final LibraryConfiguration config =
-            acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor")
+            acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor-" + libraryId)
                 .libraryId(libraryId)
                 .replyTimeoutInMs(TIMEOUT_IN_MS);
 

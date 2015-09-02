@@ -18,18 +18,18 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
-import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
+import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
+import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.SenderCompIdValidationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.TargetCompIdValidationStrategy;
-import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
-import uk.co.real_logic.fix_gateway.library.session.Session;
 
 import java.io.File;
 import java.util.Arrays;
@@ -237,7 +237,8 @@ public final class SystemTestUtil
             .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "libraryCounters");
     }
 
-    public static Session acceptSession(final FakeSessionHandler acceptingSessionHandler, final FixLibrary acceptingLibrary)
+    public static Session acceptSession(final FakeSessionHandler acceptingSessionHandler,
+                                        final FixLibrary acceptingLibrary)
     {
         Session session;
         while ((session = acceptingSessionHandler.latestSession()) == null)
@@ -285,7 +286,7 @@ public final class SystemTestUtil
                 .libraryId(libraryId)
                 .newSessionHandler(sessionHandler)
                 .aeronChannel("udp://localhost:" + initAeronPort)
-                .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters"));
+                .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters-" + libraryId));
     }
 
     public static FixLibrary newAcceptingLibrary(final NewSessionHandler sessionHandler)
