@@ -18,10 +18,7 @@ package uk.co.real_logic.fix_gateway.library;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
-import uk.co.real_logic.agrona.concurrent.EpochClock;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.agrona.concurrent.SystemEpochClock;
-import uk.co.real_logic.agrona.concurrent.SystemNanoClock;
+import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.library.session.*;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
@@ -63,6 +60,7 @@ public class FixLibrary extends GatewayProcess
     private final Timer timer = new Timer("Session", new SystemNanoClock());
     private final LivenessDetector livenessDetector;
     private final int libraryId;
+    private final IdleStrategy idleStrategy;
 
     private Session incomingSession;
 
@@ -78,9 +76,10 @@ public class FixLibrary extends GatewayProcess
         this.configuration = configuration;
         this.sessionIdStrategy = configuration.sessionIdStrategy();
         this.libraryId = configuration.libraryId();
+        idleStrategy = configuration.libraryIdleStrategy();
 
         inboundSubscription = inboundLibraryStreams.subscription();
-        outboundPublication = outboundLibraryStreams.gatewayPublication();
+        outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy);
 
         clock = new SystemEpochClock();
         livenessDetector = new LivenessDetector(
@@ -357,7 +356,7 @@ public class FixLibrary extends GatewayProcess
             sessionConfiguration.senderCompId(), sessionConfiguration.senderSubId(),
             sessionConfiguration.senderLocationId(), sessionConfiguration.targetCompId());
         final int defaultInterval = configuration.defaultHeartbeatInterval();
-        final GatewayPublication publication = outboundLibraryStreams.gatewayPublication();
+        final GatewayPublication publication = outboundLibraryStreams.gatewayPublication(idleStrategy);
 
         return new InitiatorSession(
             defaultInterval,
@@ -378,7 +377,8 @@ public class FixLibrary extends GatewayProcess
 
     private Session acceptSession(final long connectionId, final String address)
     {
-        final GatewayPublication publication = outboundLibraryStreams.gatewayPublication();
+        final GatewayPublication publication = outboundLibraryStreams.gatewayPublication(
+            idleStrategy);
         final int defaultInterval = configuration.defaultHeartbeatInterval();
         final int split = address.lastIndexOf(':');
         final int start = address.startsWith("/") ? 1 : 0;
@@ -404,7 +404,12 @@ public class FixLibrary extends GatewayProcess
     private SessionProxy sessionProxy(final long connectionId)
     {
         return new SessionProxy(
-            configuration.encoderBufferSize(), outboundLibraryStreams.gatewayPublication(), sessionIdStrategy,
-            configuration.sessionCustomisationStrategy(), System::currentTimeMillis, connectionId, libraryId);
+            configuration.encoderBufferSize(),
+            outboundLibraryStreams.gatewayPublication(idleStrategy),
+            sessionIdStrategy,
+            configuration.sessionCustomisationStrategy(),
+            new SystemEpochClock(),
+            connectionId,
+            libraryId);
     }
 }

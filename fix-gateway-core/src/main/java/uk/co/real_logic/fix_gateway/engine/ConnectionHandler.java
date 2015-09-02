@@ -71,7 +71,7 @@ public class ConnectionHandler
         return new ReceiverEndPoint(
             channel,
             configuration.receiverBufferSize(),
-            inboundStreams.gatewayPublication(),
+            inboundStreams.gatewayPublication(idleStrategy),
             connectionId,
             sessionId,
             sessionIdStrategy,

@@ -19,7 +19,7 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
 
 public class Streams
@@ -44,12 +44,12 @@ public class Streams
         this.nanoClock = nanoClock;
     }
 
-    public GatewayPublication gatewayPublication()
+    public GatewayPublication gatewayPublication(final IdleStrategy idleStrategy)
     {
         return new GatewayPublication(
             dataPublication(),
             failedPublications,
-            new BackoffIdleStrategy(1, 1, 1, 1 << 20),
+            idleStrategy,
             nanoClock);
     }
 

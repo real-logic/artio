@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.library.session.NoSessionCustomisationStrategy;
@@ -47,6 +48,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
     private int libraryId = DEFAULT_LIBRARY_ID;
     private int acceptorSessionBufferSize = DEFAULT_SESSION_BUFFER_SIZE;
+    private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
 
     public LibraryConfiguration()
     {
@@ -119,6 +121,12 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    public LibraryConfiguration libraryIdleStrategy(final IdleStrategy libraryIdleStrategy)
+    {
+        this.libraryIdleStrategy = libraryIdleStrategy;
+        return this;
+    }
+
     public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -167,6 +175,11 @@ public final class LibraryConfiguration extends CommonConfiguration
     public int acceptorSessionBufferSize()
     {
         return acceptorSessionBufferSize;
+    }
+
+    public IdleStrategy libraryIdleStrategy()
+    {
+        return libraryIdleStrategy;
     }
 
     public LibraryConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)

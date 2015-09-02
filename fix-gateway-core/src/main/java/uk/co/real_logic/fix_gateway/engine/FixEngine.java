@@ -57,6 +57,7 @@ public final class FixEngine extends GatewayProcess
         final QueryLibraries query = new QueryLibraries();
         while (!adminCommands.offer(query))
         {
+            // TODO: decide whether this and QueryLibraries#awaitResponse() should take an idle strategy
             LockSupport.parkNanos(COMMAND_QUEUE_IDLE_NS);
         }
         return query.awaitResponse();
@@ -113,7 +114,7 @@ public final class FixEngine extends GatewayProcess
 
         final Framer framer = new Framer(
             new SystemEpochClock(), configuration, handler, librarySubscription, replaySubscription(),
-            inboundLibraryStreams.gatewayPublication(), sessionIdStrategy, sessionIds, adminCommands
+            inboundLibraryStreams.gatewayPublication(idleStrategy), sessionIdStrategy, sessionIds, adminCommands
         );
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }

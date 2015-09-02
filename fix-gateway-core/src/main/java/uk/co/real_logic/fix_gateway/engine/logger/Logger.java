@@ -21,7 +21,6 @@ import uk.co.real_logic.aeron.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.AgentRunner;
-import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.streams.Streams;
@@ -46,7 +45,6 @@ public class Logger implements AutoCloseable
     private Archiver archiver;
     private ArchiveReader archiveReader;
     private AgentRunner loggingRunner;
-
 
     public Logger(final EngineConfiguration configuration,
                   final Streams inboundLibraryStreams,
@@ -87,7 +85,7 @@ public class Logger implements AutoCloseable
                 replayQuery,
                 replayPublication,
                 new BufferClaim(),
-                backoffIdleStrategy());
+                configuration.loggerIdleStrategy());
 
             final Agent loggingAgent = new CompositeAgent(archiver, new CompositeAgent(indexer, replayer));
 
@@ -149,11 +147,6 @@ public class Logger implements AutoCloseable
     private boolean isLoggingMessages()
     {
         return configuration.logInboundMessages() || configuration.logOutboundMessages();
-    }
-
-    private BackoffIdleStrategy backoffIdleStrategy()
-    {
-        return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
     }
 
     public void close()

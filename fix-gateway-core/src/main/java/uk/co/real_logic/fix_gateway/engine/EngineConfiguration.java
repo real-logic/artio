@@ -248,9 +248,4 @@ public final class EngineConfiguration extends CommonConfiguration
         return this;
     }
 
-    private IdleStrategy backoffIdleStrategy()
-    {
-        return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
-    }
-
 }

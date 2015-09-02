@@ -17,6 +17,8 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.IoUtil;
+import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
@@ -150,5 +152,10 @@ public class CommonConfiguration
         }
 
         return IoUtil.tmpDirName();
+    }
+
+    protected IdleStrategy backoffIdleStrategy()
+    {
+        return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
     }
 }
