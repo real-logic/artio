@@ -114,11 +114,11 @@ public final class FixBenchmarkClient
         final SocketChannel socketChannel,
         final TestRequestEncoder testRequest,
         final HeaderEncoder header,
-        final int i,
+        final int index,
         final Histogram histogram)
         throws IOException
     {
-        header.sendingTime(System.currentTimeMillis()).msgSeqNum(i + 2);
+        header.sendingTime(System.currentTimeMillis()).msgSeqNum(index + 2);
 
         int length = testRequest.encode(WRITE_FLYWEIGHT, 0);
 
