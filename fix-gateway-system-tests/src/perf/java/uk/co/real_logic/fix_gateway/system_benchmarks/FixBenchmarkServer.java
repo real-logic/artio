@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.system_benchmarks;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.aeron.driver.ThreadingMode;
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.agrona.concurrent.BusySpinIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -89,7 +88,6 @@ public final class FixBenchmarkServer
         return new LibraryConfiguration()
             .aeronChannel(AERON_CHANNEL)
             .authenticationStrategy(authenticationStrategy)
-            .newSessionHandler(session -> new BenchmarkSessionHandler())
-            .libraryIdleStrategy(new BusySpinIdleStrategy());
+            .newSessionHandler(session -> new BenchmarkSessionHandler());
     }
 }

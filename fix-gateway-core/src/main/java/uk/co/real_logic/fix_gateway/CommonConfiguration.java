@@ -51,6 +51,9 @@ public class CommonConfiguration
     public static final int WARMUP_MESSAGES = Integer.getInteger("fix.benchmark.warmup", 10_000);
     public static final int MESSAGES_EXCHANGED = Integer.getInteger("fix.benchmark.messages", 100_000);
 
+    public static final int BACKOFF_SPINS = Integer.getInteger("fix.core.spins", 1_000);
+    public static final int BACKOFF_YIELDS = Integer.getInteger("fix.core.yields", 10_000);
+
     private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 2_000L;
     private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
 
@@ -156,6 +159,6 @@ public class CommonConfiguration
 
     protected IdleStrategy backoffIdleStrategy()
     {
-        return new BackoffIdleStrategy(1, 1, 1, 1 << 20);
+        return new BackoffIdleStrategy(BACKOFF_SPINS, BACKOFF_YIELDS, 1, 1 << 20);
     }
 }
