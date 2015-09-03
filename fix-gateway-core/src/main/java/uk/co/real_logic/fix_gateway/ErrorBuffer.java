@@ -248,9 +248,9 @@ public class ErrorBuffer implements ErrorHandler
                 stackTraceElementEncoder
                     .wrap(buffer, offset)
                     .lineNumber(element.getLineNumber())
-                    .className(element.getClassName())
-                    .methodName(element.getMethodName())
-                    .fileName(element.getFileName());
+                    .className(orEmpty(element.getClassName()))
+                    .methodName(orEmpty(element.getMethodName()))
+                    .fileName(orEmpty(element.getFileName()));
 
                 offset = stackTraceElementEncoder.limit();
             }
@@ -276,13 +276,23 @@ public class ErrorBuffer implements ErrorHandler
     private int sizeOfElement(final StackTraceElement element)
     {
         return STACK_TRACE_ELEMENT_MIN +
-               element.getClassName().length() +
-               element.getMethodName().length() +
-               element.getFileName().length();
+               nullSafeLength(element.getClassName()) +
+               nullSafeLength(element.getMethodName()) +
+               nullSafeLength(element.getFileName());
     }
 
     private int hashThrowSite(final StackTraceElement throwSite)
     {
         return throwSite.getClassName().hashCode() + throwSite.getLineNumber() * 31;
+    }
+
+    private int nullSafeLength(final String string)
+    {
+        return string == null ? 0 : string.length();
+    }
+
+    private String orEmpty(final String string)
+    {
+        return string == null ? "" : string;
     }
 }

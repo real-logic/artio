@@ -234,7 +234,7 @@ public final class SystemTestUtil
             .messageValidationStrategy(validationStrategy)
             .newSessionHandler(sessionHandler)
             .aeronChannel("aeron:ipc")
-            .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "libraryCounters");
+            .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "accLibraryCounters");
     }
 
     public static Session acceptSession(final FakeSessionHandler acceptingSessionHandler,
