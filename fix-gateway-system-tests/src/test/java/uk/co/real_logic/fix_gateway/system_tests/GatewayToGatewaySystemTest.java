@@ -163,17 +163,19 @@ public class GatewayToGatewaySystemTest
 
         final FakeOtfAcceptor initiatingOtfAcceptor2 = new FakeOtfAcceptor();
         final FakeSessionHandler initiatingSessionHandler2 = new FakeSessionHandler(initiatingOtfAcceptor2);
-        final FixLibrary library2 = newInitiatingLibrary(initAeronPort, initiatingSessionHandler2, 2);
-        final Session session2 = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID);
+        try (final FixLibrary library2 = newInitiatingLibrary(initAeronPort, initiatingSessionHandler2, 2))
+        {
+            final Session session2 = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID);
 
-        assertConnected(session2);
-        sessionLogsOn(library2, acceptingLibrary, session2);
-        final Session acceptingSession2 = acceptSession(acceptingSessionHandler, acceptingLibrary);
+            assertConnected(session2);
+            sessionLogsOn(library2, acceptingLibrary, session2);
+            final Session acceptingSession2 = acceptSession(acceptingSessionHandler, acceptingLibrary);
 
-        sendTestRequest(acceptingSession2);
-        assertReceivedTestRequest(library2, acceptingLibrary, initiatingOtfAcceptor2);
+            sendTestRequest(acceptingSession2);
+            assertReceivedTestRequest(library2, acceptingLibrary, initiatingOtfAcceptor2);
 
-        assertOriginalLibraryDoesntReceiveMessages(initiator1MessageCount);
+            assertOriginalLibraryDoesntReceiveMessages(initiator1MessageCount);
+        }
     }
 
     private void assertOriginalLibraryDoesntReceiveMessages(final int initiator1MessageCount)
