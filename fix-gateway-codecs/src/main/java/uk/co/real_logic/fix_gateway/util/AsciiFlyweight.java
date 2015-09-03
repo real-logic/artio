@@ -230,15 +230,15 @@ public class AsciiFlyweight
         return UNKNOWN_INDEX;
     }
 
-    public int scan(final int startInclusive, final int endExclusive, final char terminatingCharacter)
+    public int scan(final int startInclusive, final int endInclusive, final char terminatingCharacter)
     {
-        return scan(startInclusive, endExclusive, (byte)terminatingCharacter);
+        return scan(startInclusive, endInclusive, (byte)terminatingCharacter);
     }
 
-    public int scan(final int startInclusive, final int endExclusive, final byte terminator)
+    public int scan(final int startInclusive, final int endInclusive, final byte terminator)
     {
         int indexValue = UNKNOWN_INDEX;
-        for (int i = startInclusive; i <= endExclusive; i++)
+        for (int i = startInclusive; i <= endInclusive; i++)
         {
             final byte value = buffer.getByte(i);
             if (value == terminator)

@@ -23,4 +23,6 @@ public final class Configuration
     public static final String AERON_CHANNEL = System.getProperty("fix.benchmark.aeron_channel", IPC_CHANNEL);
     public static final String ACCEPTOR_ID = "ACC";
     public static final String INITIATOR_ID = "INIT";
+    public static final String TYPE = System.getProperty("fix.benchmark.type", "latency");
+
 }

@@ -15,162 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
-import org.HdrHistogram.Histogram;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.Timer;
-import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
-import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
-import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
-import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
-import java.util.concurrent.locks.LockSupport;
-
-import static java.net.StandardSocketOptions.TCP_NODELAY;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.MESSAGES_EXCHANGED;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.WARMUP_MESSAGES;
-import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.*;
-
-// TODO: make another benchmark client with two threads, measuring load
 public final class FixBenchmarkClient
 {
-    private static final String HOST = System.getProperty("fix.benchmark.host", "localhost");
-    private static final int BUFFER_SIZE = 16 * 1024;
-
-    private static final ByteBuffer WRITE_BUFFER = ByteBuffer.allocateDirect(BUFFER_SIZE);
-    private static final MutableAsciiFlyweight WRITE_FLYWEIGHT =
-        new MutableAsciiFlyweight(new UnsafeBuffer(WRITE_BUFFER));
-
-    private static final ByteBuffer READ_BUFFER = ByteBuffer.allocateDirect(BUFFER_SIZE);
-    private static final MutableAsciiFlyweight READ_FLYWEIGHT =
-        new MutableAsciiFlyweight(new UnsafeBuffer(READ_BUFFER));
-
-    public static void main(String[] args) throws IOException, InterruptedException
+    public void main(String[] args) throws Exception
     {
-        try (final SocketChannel socketChannel = SocketChannel.open(new InetSocketAddress(HOST, PORT)))
+        if (Configuration.TYPE.equalsIgnoreCase("throughput"))
         {
-            socketChannel.setOption(TCP_NODELAY, true);
-
-            logon(socketChannel);
-
-            final TestRequestEncoder testRequest = setupTestRequest();
-            final HeaderEncoder header = testRequest.header();
-            final Histogram histogram = new Histogram(3);
-
-            runWarmup(socketChannel, testRequest, header, histogram);
-
-            LockSupport.parkNanos(SECONDS.toNanos(1));
-
-            runBenchmark(socketChannel, testRequest, header, histogram);
+            new ThroughputBenchmarkClient().runBenchmark();
         }
-    }
-
-    private static void runWarmup(final SocketChannel socketChannel,
-                                  final TestRequestEncoder testRequest,
-                                  final HeaderEncoder header, final Histogram histogram) throws IOException
-    {
-        for (int i = 0; i < WARMUP_MESSAGES; i++)
+        else
         {
-            exchangeMessage(socketChannel, testRequest, header, i, histogram);
+            new LatencyBenchmarkClient().runBenchmark();
         }
-        System.out.println("Warmup Complete");
-    }
-
-    private static TestRequestEncoder setupTestRequest()
-    {
-        final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest
-            .header()
-            .senderCompID(INITIATOR_ID)
-            .targetCompID(ACCEPTOR_ID);
-        testRequest.testReqID("a");
-        return testRequest;
-    }
-
-    private static void runBenchmark(
-        final SocketChannel socketChannel,
-        final TestRequestEncoder testRequest,
-        final HeaderEncoder header,
-        final Histogram histogram)
-        throws IOException
-    {
-        histogram.reset();
-
-        for (int i = 0; i < MESSAGES_EXCHANGED; i++)
-        {
-            exchangeMessage(socketChannel, testRequest, header, WARMUP_MESSAGES + i, histogram);
-        }
-
-        Timer.prettyPrint("", "Client in Micros", histogram, 1000);
-    }
-
-    private static void exchangeMessage(
-        final SocketChannel socketChannel,
-        final TestRequestEncoder testRequest,
-        final HeaderEncoder header,
-        final int index,
-        final Histogram histogram)
-        throws IOException
-    {
-        header.sendingTime(System.currentTimeMillis()).msgSeqNum(index + 2);
-
-        int length = testRequest.encode(WRITE_FLYWEIGHT, 0);
-
-        final long sendingTime = System.nanoTime();
-        writeBuffer(socketChannel, length);
-
-        length = read(socketChannel);
-        final long returnTime = System.nanoTime();
-        //System.out.println(READ_FLYWEIGHT.getAscii(0, length));
-        histogram.recordValue(returnTime - sendingTime);
-    }
-
-    private static void logon(final SocketChannel socketChannel) throws IOException
-    {
-        final LogonEncoder logon = new LogonEncoder();
-        logon.heartBtInt(10);
-        logon
-            .header()
-            .sendingTime(System.currentTimeMillis())
-            .senderCompID(INITIATOR_ID)
-            .targetCompID(ACCEPTOR_ID)
-            .msgSeqNum(1);
-
-        writeBuffer(socketChannel, logon.encode(WRITE_FLYWEIGHT, 0));
-
-        final int length = read(socketChannel);
-        final LogonDecoder logonDecoder = new LogonDecoder();
-        logonDecoder.decode(READ_FLYWEIGHT, 0, length);
-        System.out.println("Authenticated: " + logonDecoder);
-    }
-
-    private static void writeBuffer(final SocketChannel socketChannel, final int amount) throws IOException
-    {
-        WRITE_BUFFER.position(0);
-        WRITE_BUFFER.limit(amount);
-        int remaining = amount;
-        do
-        {
-            remaining -= socketChannel.write(WRITE_BUFFER);
-        }
-        while (remaining > 0);
-    }
-
-    private static int read(final SocketChannel socketChannel) throws IOException
-    {
-        READ_BUFFER.clear();
-        int length;
-        do
-        {
-            length = socketChannel.read(READ_BUFFER);
-        }
-        while (length == 0);
-        //System.out.printf("Read Data: %d\n", length
-        return length;
     }
 }

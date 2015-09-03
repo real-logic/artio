@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import static java.net.StandardSocketOptions.SO_RCVBUF;
+import static java.net.StandardSocketOptions.SO_SNDBUF;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
 import static uk.co.real_logic.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
@@ -314,7 +315,7 @@ public class Framer implements Agent, SessionHandler
         }
         if (configuration.senderSocketBufferSize() > 0)
         {
-            channel.setOption(SO_RCVBUF, configuration.senderSocketBufferSize());
+            channel.setOption(SO_SNDBUF, configuration.senderSocketBufferSize());
         }
         channel.configureBlocking(false);
 

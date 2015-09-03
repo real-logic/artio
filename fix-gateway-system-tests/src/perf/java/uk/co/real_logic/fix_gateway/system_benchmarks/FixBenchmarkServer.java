@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.aeron.driver.ThreadingMode;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.BusySpinIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
@@ -54,7 +55,8 @@ public final class FixBenchmarkServer
     private static MediaDriver newMediaDriver()
     {
         final MediaDriver.Context context = new MediaDriver.Context()
-            .dirsDeleteOnStart(true);
+            .dirsDeleteOnStart(true)
+            .threadingMode(ThreadingMode.SHARED);
 
         return MediaDriver.launch(context);
     }
