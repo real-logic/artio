@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
-import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
@@ -27,15 +26,13 @@ import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
 public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
 {
-    private static final int MESSAGES_EXCHANGED = CommonConfiguration.MESSAGES_EXCHANGED;
-    private static final byte EIGHT = (byte) '8';
+    private static final int MESSAGES_EXCHANGED = 20_000;
+    private static final byte NINE = (byte) '9';
 
     public static void main(String[] args) throws Exception
     {
         new ThroughputBenchmarkClient().runBenchmark();
     }
-
-    private long endTime;
 
     private final class ReaderThread extends Thread
     {
@@ -51,45 +48,61 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
             final SocketChannel socketChannel = this.socketChannel;
             final MutableAsciiFlyweight readFlyweight = ThroughputBenchmarkClient.this.readFlyweight;
 
-            int messagesReceived = 0;
-            do
+            boolean lastWasSep = false;
+            while (true)
             {
-                try
+                final long startTime = System.currentTimeMillis();
+                int messagesReceived = 0;
+                do
                 {
-                    final int bytesReceived = read(socketChannel);
-                    if (bytesReceived > 0)
+                    try
                     {
-                        int index = 0;
-                        while (true)
+                        final int bytesReceived = read(socketChannel);
+                        if (bytesReceived > 0)
                         {
-                            index = readFlyweight.scan(index, bytesReceived - 1, EIGHT);
+                            int index = 0;
 
-                            if (index == UNKNOWN_INDEX || (index + 1) >= bytesReceived)
+                            while (index < bytesReceived)
                             {
-                                break;
+                                index = readFlyweight.scan(index, bytesReceived - 1, NINE);
+
+                                if (index == UNKNOWN_INDEX)
+                                {
+                                    break;
+                                }
+
+                                if (index == 0)
+                                {
+                                    if (lastWasSep)
+                                    {
+                                        messagesReceived++;
+                                    }
+                                }
+                                else if (readFlyweight.getChar(index - 1) == '\001')
+                                {
+                                    messagesReceived++;
+                                }
+
+                                index += 1;
                             }
 
-                            if (readFlyweight.getChar(index + 1) == '=')
-                            {
-                                messagesReceived++;
-                            }
-
-                            index += 2;
+                            lastWasSep = readFlyweight.getChar(bytesReceived - 1) == '\001';
                         }
-
-                        // System.out.println(readFlyweight.getAscii(0, bytesReceived));
-                        // System.out.println(messagesReceived);
+                    }
+                    catch (IOException e)
+                    {
+                        e.printStackTrace();
+                        System.exit(-1);
                     }
                 }
-                catch (IOException e)
-                {
-                    e.printStackTrace();
-                    System.exit(-1);
-                }
-            }
-            while (messagesReceived < MESSAGES_EXCHANGED);
+                while (messagesReceived < MESSAGES_EXCHANGED);
 
-            endTime = System.currentTimeMillis();
+                final long duration = System.currentTimeMillis() - startTime;
+                final double rate = (double) MESSAGES_EXCHANGED / duration;
+                System.out.printf("%d messages in %d ms\n", MESSAGES_EXCHANGED, duration);
+                System.out.printf("%G messages / ms\n", rate);
+                System.out.printf("%G messages / s\n", rate * 1000.0);
+            }
         }
     }
 
@@ -105,22 +118,20 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
             final ReaderThread readerThread = new ReaderThread(socketChannel);
             readerThread.start();
 
-            final long startTime = System.currentTimeMillis();
-            for (int seqNo = 2; seqNo < MESSAGES_EXCHANGED + 2; seqNo++)
+            int seqNo = 2;
+            int max = 2;
+            while (true)
             {
-                final int length = encode(testRequest, header, seqNo);
-                writeBuffer(socketChannel, length);
-                // System.out.printf("Written: %d\n", length);
-                // System.out.println(writeFlyweight.getAscii(0, length));
+                max += MESSAGES_EXCHANGED;
+
+                for (; seqNo < max; seqNo++)
+                {
+                    final int length = encode(testRequest, header, seqNo);
+                    write(socketChannel, length);
+                    // System.out.printf("Written: %d\n", length);
+                    // System.out.println(writeFlyweight.getAscii(0, length));
+                }
             }
-
-            readerThread.join();
-
-            final long duration = endTime - startTime;
-            final double rate = (double) MESSAGES_EXCHANGED / duration;
-            System.out.printf("%d messages in %d ms\n", MESSAGES_EXCHANGED, duration);
-            System.out.printf("%G messages / ms\n", rate);
-            System.out.printf("%G messages / s\n", rate * 1000.0);
         }
     }
 

@@ -89,7 +89,7 @@ public final class LatencyBenchmarkClient extends AbstractBenchmarkClient
         final int length = testRequest.encode(writeFlyweight, 0);
 
         final long sendingTime = System.nanoTime();
-        writeBuffer(socketChannel, length);
+        write(socketChannel, length);
 
         read(socketChannel);
         final long returnTime = System.nanoTime();

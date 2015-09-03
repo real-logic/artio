@@ -15,9 +15,7 @@ import java.util.concurrent.locks.LockSupport;
 import static java.net.StandardSocketOptions.SO_RCVBUF;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.ACCEPTOR_ID;
-import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.INITIATOR_ID;
-import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.PORT;
+import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.*;
 
 public abstract class AbstractBenchmarkClient
 {
@@ -53,7 +51,7 @@ public abstract class AbstractBenchmarkClient
             .targetCompID(ACCEPTOR_ID)
             .msgSeqNum(1);
 
-        writeBuffer(socketChannel, logon.encode(writeFlyweight, 0));
+        write(socketChannel, logon.encode(writeFlyweight, 0));
 
         final int length = read(socketChannel);
         final LogonDecoder logonDecoder = new LogonDecoder();
@@ -61,7 +59,7 @@ public abstract class AbstractBenchmarkClient
         System.out.println("Authenticated: " + logonDecoder);
     }
 
-    protected void writeBuffer(final SocketChannel socketChannel, final int amount) throws IOException
+    protected void write(final SocketChannel socketChannel, final int amount) throws IOException
     {
         writeBuffer.position(0);
         writeBuffer.limit(amount);
@@ -80,6 +78,7 @@ public abstract class AbstractBenchmarkClient
         do
         {
             length = socketChannel.read(readBuffer);
+            LockSupport.parkNanos(1);
         }
         while (length == 0);
         // System.out.printf("Read Data: %d\n", length);
@@ -94,6 +93,7 @@ public abstract class AbstractBenchmarkClient
     protected SocketChannel open() throws IOException
     {
         final SocketChannel socketChannel = SocketChannel.open(new InetSocketAddress(HOST, PORT));
+        socketChannel.configureBlocking(false);
         socketChannel.setOption(TCP_NODELAY, true);
         socketChannel.setOption(SO_RCVBUF, 1024 * 1024);
         socketChannel.setOption(SO_RCVBUF, 1024 * 1024);

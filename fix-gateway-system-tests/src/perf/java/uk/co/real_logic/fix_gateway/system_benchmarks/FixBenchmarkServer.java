@@ -68,6 +68,7 @@ public final class FixBenchmarkServer
         {
             IoUtil.delete(dir, false);
         }
+
         return new EngineConfiguration()
             .bind("localhost", Configuration.PORT)
             .aeronChannel(AERON_CHANNEL)
