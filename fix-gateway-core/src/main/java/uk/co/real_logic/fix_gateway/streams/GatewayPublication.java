@@ -28,7 +28,7 @@ import uk.co.real_logic.fix_gateway.messages.*;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.aeron.Publication.NOT_CONNECTED;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.*;
 
 /**
  * A proxy for publishing messages fix related messages
@@ -39,6 +39,8 @@ public class GatewayPublication
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
 
     private static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
+
+    private static final int MAX_CLAIM_ATTEMPTS = BACKOFF_SPINS + BACKOFF_YIELDS + 1000;
 
     private final MessageHeaderEncoder header = new MessageHeaderEncoder();
     private final LogonEncoder logon = new LogonEncoder();
@@ -346,8 +348,8 @@ public class GatewayPublication
 
     private long claim(final int framedLength)
     {
-        long position;
-        while (true)
+        long position = 0;
+        for (int i = 0; i < MAX_CLAIM_ATTEMPTS; i++)
         {
             position = dataPublication.tryClaim(framedLength, bufferClaim);
 
@@ -356,15 +358,18 @@ public class GatewayPublication
                 return position;
             }
 
-            if (position == NOT_CONNECTED)
-            {
-                throw new IllegalStateException(
-                    "Unable to send publish message, probably a missing an engine or library instance");
-            }
-
             idleStrategy.idle(0);
             fails.increment();
         }
 
+        if (position == NOT_CONNECTED)
+        {
+            // TODO: identify when its sensible to determine disconnect
+        }
+
+        throw new IllegalStateException(
+            "Unable to send publish message, probably a missing an engine or library instance");
+
+        // return position;
     }
 }

@@ -172,6 +172,12 @@ public class ReceiverEndPoint
                 }
 
                 final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData, START_OF_HEADER);
+                if (endOfBodyLength == UNKNOWN_INDEX)
+                {
+                    // Need more data
+                    break;
+                }
+
                 final int startOfChecksumTag = endOfBodyLength + getBodyLength(offset, endOfBodyLength);
 
                 final int endOfChecksumTag = startOfChecksumTag + 3;
