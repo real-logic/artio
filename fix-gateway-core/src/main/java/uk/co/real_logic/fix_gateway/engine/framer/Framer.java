@@ -60,7 +60,6 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
  */
 public class Framer implements Agent, SessionHandler
 {
-    public static final int OUTBOUND_FRAGMENT_LIMIT = 5;
     public static final int NO_ACCEPTOR = -1;
 
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
@@ -83,6 +82,9 @@ public class Framer implements Agent, SessionHandler
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
     private final QueuedPipe<AdminCommand> adminCommands;
+    private final int inboundBytesReceivedLimit;
+    private final int outboundLibraryFragmentLimit;
+    private final int replayFragmentLimit;
 
     private long nextConnectionId = (long) (Math.random() * Long.MAX_VALUE);
     private int acceptorLibraryId = NO_ACCEPTOR;
@@ -108,6 +110,10 @@ public class Framer implements Agent, SessionHandler
         this.sessionIds = sessionIds;
         this.adminCommands = adminCommands;
 
+        this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
+        this.replayFragmentLimit = configuration.replayFragmentLimit();
+        this.inboundBytesReceivedLimit = configuration.inboundBytesReceivedLimit();
+
         try
         {
             listeningChannel = ServerSocketChannel.open();
@@ -127,8 +133,8 @@ public class Framer implements Agent, SessionHandler
     @Override
     public int doWork() throws Exception
     {
-        return outboundDataSubscription.poll(dataSubscriber, OUTBOUND_FRAGMENT_LIMIT) +
-               replaySubscription.poll(dataSubscriber, OUTBOUND_FRAGMENT_LIMIT) +
+        return outboundDataSubscription.poll(dataSubscriber, outboundLibraryFragmentLimit) +
+               replaySubscription.poll(dataSubscriber, replayFragmentLimit) +
                pollEndPoints() +
                pollNewConnections() +
                pollLibraries() +
@@ -173,6 +179,8 @@ public class Framer implements Agent, SessionHandler
 
     private int pollEndPoints() throws IOException
     {
+        final int inboundBytesReceivedLimit = this.inboundBytesReceivedLimit;
+
         int totalBytesReceived = 0;
         int bytesReceived;
         do
@@ -180,7 +188,7 @@ public class Framer implements Agent, SessionHandler
             bytesReceived = endPointPoller.pollEndPoints();
             totalBytesReceived += bytesReceived;
         }
-        while (bytesReceived > 0);
+        while (bytesReceived > 0 && totalBytesReceived < inboundBytesReceivedLimit);
 
         return totalBytesReceived;
     }

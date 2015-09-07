@@ -22,13 +22,10 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.MESSAGES_EXCHANGED;
 
 public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
 {
-    private static final int MESSAGES_EXCHANGED = 20_000;
-    private static final byte NINE = (byte) '9';
-
     public static void main(String[] args) throws Exception
     {
         new ThroughputBenchmarkClient().runBenchmark();
@@ -48,7 +45,6 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
             final SocketChannel socketChannel = this.socketChannel;
             final MutableAsciiFlyweight readFlyweight = ThroughputBenchmarkClient.this.readFlyweight;
 
-            boolean lastWasSep = false;
             while (true)
             {
                 final long startTime = System.currentTimeMillis();
@@ -57,37 +53,8 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
                 {
                     try
                     {
-                        final int bytesReceived = read(socketChannel);
-                        if (bytesReceived > 0)
-                        {
-                            int index = 0;
-
-                            while (index < bytesReceived)
-                            {
-                                index = readFlyweight.scan(index, bytesReceived - 1, NINE);
-
-                                if (index == UNKNOWN_INDEX)
-                                {
-                                    break;
-                                }
-
-                                if (index == 0)
-                                {
-                                    if (lastWasSep)
-                                    {
-                                        messagesReceived++;
-                                    }
-                                }
-                                else if (readFlyweight.getChar(index - 1) == '\001')
-                                {
-                                    messagesReceived++;
-                                }
-
-                                index += 1;
-                            }
-
-                            lastWasSep = readFlyweight.getChar(bytesReceived - 1) == '\001';
-                        }
+                        final int length = read(socketChannel);
+                        messagesReceived += scanForReceivesMessages(readFlyweight, length);
                     }
                     catch (IOException e)
                     {
@@ -97,11 +64,7 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
                 }
                 while (messagesReceived < MESSAGES_EXCHANGED);
 
-                final long duration = System.currentTimeMillis() - startTime;
-                final double rate = (double) MESSAGES_EXCHANGED / duration;
-                System.out.printf("%d messages in %d ms\n", MESSAGES_EXCHANGED, duration);
-                System.out.printf("%G messages / ms\n", rate);
-                System.out.printf("%G messages / s\n", rate * 1000.0);
+                printTimes(startTime);
             }
         }
     }
@@ -120,6 +83,7 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
 
             int seqNo = 2;
             int max = 2;
+
             while (true)
             {
                 max += MESSAGES_EXCHANGED;
@@ -128,20 +92,9 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
                 {
                     final int length = encode(testRequest, header, seqNo);
                     write(socketChannel, length);
-                    // System.out.printf("Written: %d\n", length);
-                    // System.out.println(writeFlyweight.getAscii(0, length));
                 }
             }
         }
-    }
-
-    private int encode(final TestRequestEncoder testRequest, final HeaderEncoder header, final int seqNum)
-    {
-        header
-            .sendingTime(System.currentTimeMillis())
-            .msgSeqNum(seqNum);
-
-        return testRequest.encode(writeFlyweight, 0);
     }
 
 }

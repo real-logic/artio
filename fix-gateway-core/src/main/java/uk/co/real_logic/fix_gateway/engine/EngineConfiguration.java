@@ -41,19 +41,41 @@ public final class EngineConfiguration extends CommonConfiguration
     /** Property name for size of logging index files */
     public static final String INDEX_FILE_SIZE_PROP = "logging.index.size";
 
+    // Care needs to be taken when setting the fragment limits, and buffer sizes
+    // The inbound bytes received and buffer sizes should always be set low enough
+    // that fragments will be read off of the TCP connections slower
+    // that they can be written onto them.
+
+    /** Property name for the max number of messages to read from libraries. */
+    public static final String OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP = "fix.core.outbound_fragment_limit";
+    /** Property name for the max number of messages to read from replayer. */
+    public static final String REPLAY_FRAGMENT_LIMIT_PROP = "fix.core.replay_fragment_limit";
+    /** Property name for the max number of bytes to read from all TCP Connections. */
+    public static final String INBOUND_BYTES_RECEIVED_LIMIT_PROP = "fix.core.inbound_bytes_limit";
+    /** Property name for the size in bytes of the receiver end point's framing buffer. */
+    public static final String RECEIVER_BUFFER_SIZE_PROP = "fix.core.receiver_buffer_size";
+    /** Property name for the size in bytes of the TCP socket's receive buffer. */
+    public static final String RECEIVER_SOCKET_BUFFER_SIZE_PROP = "fix.core.receiver_socket_buffer_size";
+    /** Property name for the size in bytes of the TCP socket's send buffer. */
+    public static final String SENDER_SOCKET_BUFFER_SIZE_PROP = "fix.core.sender_socket_buffer_size";
+
     // ------------------------------------------------
     //          Configuration Defaults
     // ------------------------------------------------
 
-    public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 1024 * 1024;
-    public static final int DEFAULT_INDEX_FILE_SIZE = 2 * 1024 * 1024;
     public static final String DEFAULT_LOG_FILE_DIR = "logs";
+    public static final int DEFAULT_INDEX_FILE_SIZE = 2 * 1024 * 1024;
     public static final int DEFAULT_LOGGER_CACHE_CAPACITY = 10;
+
+    public static final int DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT = 20;
+    public static final int DEFAULT_REPLAY_FRAGMENT_LIMIT = 5;
+    public static final int DEFAULT_INBOUND_BYTES_RECEIVED_LIMIT = 16 * 1024;
+    public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 16 * 1024;
+    public static final int DEFAULT_RECEIVER_SOCKET_BUFFER_SIZE = 1024 * 1024;
+    public static final int DEFAULT_SENDER_SOCKET_BUFFER_SIZE = 1024 * 1024;
+
     private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
 
-    private int receiverBufferSize = DEFAULT_RECEIVER_BUFFER_SIZE;
-    private int receiverSocketBufferSize = 1024 * 1024;
-    private int senderSocketBufferSize = 1024 * 1024;
     private String host;
     private int port;
     private int indexFileSize = getInteger(INDEX_FILE_SIZE_PROP, DEFAULT_INDEX_FILE_SIZE);
@@ -65,6 +87,19 @@ public final class EngineConfiguration extends CommonConfiguration
     private IdleStrategy framerIdleStrategy = backoffIdleStrategy();
     private IdleStrategy loggerIdleStrategy = backoffIdleStrategy();
     private IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
+
+    private int outboundLibraryFragmentLimit =
+        getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
+    private int replayFragmentLimit =
+        getInteger(REPLAY_FRAGMENT_LIMIT_PROP, DEFAULT_REPLAY_FRAGMENT_LIMIT);
+    private int inboundBytesReceivedLimit =
+        getInteger(INBOUND_BYTES_RECEIVED_LIMIT_PROP, DEFAULT_INBOUND_BYTES_RECEIVED_LIMIT);
+    private int receiverBufferSize =
+        getInteger(RECEIVER_BUFFER_SIZE_PROP, DEFAULT_RECEIVER_BUFFER_SIZE);
+    private int receiverSocketBufferSize =
+        getInteger(RECEIVER_SOCKET_BUFFER_SIZE_PROP, DEFAULT_RECEIVER_SOCKET_BUFFER_SIZE);
+    private int senderSocketBufferSize =
+        getInteger(SENDER_SOCKET_BUFFER_SIZE_PROP, DEFAULT_SENDER_SOCKET_BUFFER_SIZE);
 
     public EngineConfiguration registerAcceptor(
         final OtfMessageAcceptor messageAcceptor, int firstTag, final int... tags)
@@ -117,7 +152,6 @@ public final class EngineConfiguration extends CommonConfiguration
         return this;
     }
 
-
     public EngineConfiguration connectionTimeout(final long connectionTimeout)
     {
         return this;
@@ -156,6 +190,24 @@ public final class EngineConfiguration extends CommonConfiguration
     public EngineConfiguration errorPrinterIdleStrategy(final IdleStrategy errorPrinterIdleStrategy)
     {
         this.errorPrinterIdleStrategy = errorPrinterIdleStrategy;
+        return this;
+    }
+
+    public EngineConfiguration outboundLibraryFragmentLimit(final int outboundLibraryFragmentLimit)
+    {
+        this.outboundLibraryFragmentLimit = outboundLibraryFragmentLimit;
+        return this;
+    }
+
+    public EngineConfiguration replayFragmentLimit(final int outboundReplayFragmentLimit)
+    {
+        this.replayFragmentLimit = outboundReplayFragmentLimit;
+        return this;
+    }
+
+    public EngineConfiguration inboundBytesReceivedLimit(final int inboundBytesReceivedLimit)
+    {
+        this.inboundBytesReceivedLimit = inboundBytesReceivedLimit;
         return this;
     }
 
@@ -222,6 +274,21 @@ public final class EngineConfiguration extends CommonConfiguration
     public IdleStrategy loggerIdleStrategy()
     {
         return loggerIdleStrategy;
+    }
+
+    public int outboundLibraryFragmentLimit()
+    {
+        return outboundLibraryFragmentLimit;
+    }
+
+    public int replayFragmentLimit()
+    {
+        return replayFragmentLimit;
+    }
+
+    public int inboundBytesReceivedLimit()
+    {
+        return inboundBytesReceivedLimit;
     }
 
     public EngineConfiguration aeronChannel(final String aeronChannel)

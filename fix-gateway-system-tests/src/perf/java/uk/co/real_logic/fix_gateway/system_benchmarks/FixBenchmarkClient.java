@@ -15,13 +15,19 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
+import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.TYPE;
+
 public final class FixBenchmarkClient
 {
     public void main(String[] args) throws Exception
     {
-        if (Configuration.TYPE.equalsIgnoreCase("throughput"))
+        if (TYPE.equalsIgnoreCase("throughput"))
         {
             new ThroughputBenchmarkClient().runBenchmark();
+        }
+        else if (TYPE.equalsIgnoreCase("single-throughput"))
+        {
+            new SingleThreadedThroughputBenchmarkClient().runBenchmark();
         }
         else
         {

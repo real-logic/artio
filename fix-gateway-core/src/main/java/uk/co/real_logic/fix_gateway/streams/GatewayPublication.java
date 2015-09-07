@@ -37,10 +37,9 @@ public class GatewayPublication
 {
 
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
+    public static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
 
-    private static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
-
-    private static final int MAX_CLAIM_ATTEMPTS = BACKOFF_SPINS + BACKOFF_YIELDS + 1000;
+    public static final int MAX_CLAIM_ATTEMPTS = BACKOFF_SPINS + BACKOFF_YIELDS + 1000;
 
     private final MessageHeaderEncoder header = new MessageHeaderEncoder();
     private final LogonEncoder logon = new LogonEncoder();
@@ -57,6 +56,8 @@ public class GatewayPublication
     private final IdleStrategy idleStrategy;
     private final NanoClock nanoClock;
     private final AtomicCounter fails;
+
+    private int lastFailedFramedLength = 0;
 
     public GatewayPublication(
         final Publication dataPublication,
@@ -364,12 +365,14 @@ public class GatewayPublication
 
         if (position == NOT_CONNECTED)
         {
-            // TODO: identify when its sensible to determine disconnect
+            throw new IllegalStateException(
+                "Unable to send publish message, probably a missing an engine or library instance");
         }
-
-        throw new IllegalStateException(
-            "Unable to send publish message, probably a missing an engine or library instance");
-
-        // return position;
+        else
+        {
+            // TODO: remove this exception, once you've made the framer else backpressure-aware.
+            throw new RuntimeException("Backpressured");
+        }
     }
+
 }

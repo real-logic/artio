@@ -1,6 +1,8 @@
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.CommonConfiguration;
+import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
@@ -16,11 +18,13 @@ import static java.net.StandardSocketOptions.SO_RCVBUF;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.*;
+import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
 public abstract class AbstractBenchmarkClient
 {
     protected static final String HOST = System.getProperty("fix.benchmark.host", "localhost");
     protected static final int BUFFER_SIZE = 16 * 1024;
+    protected static final byte NINE = (byte) '9';
 
     protected final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     protected final MutableAsciiFlyweight writeFlyweight =
@@ -28,6 +32,8 @@ public abstract class AbstractBenchmarkClient
     protected final ByteBuffer readBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     protected final MutableAsciiFlyweight readFlyweight =
         new MutableAsciiFlyweight(new UnsafeBuffer(readBuffer));
+
+    protected boolean lastWasSep;
 
     protected TestRequestEncoder setupTestRequest()
     {
@@ -98,5 +104,68 @@ public abstract class AbstractBenchmarkClient
         socketChannel.setOption(SO_RCVBUF, 1024 * 1024);
         socketChannel.setOption(SO_RCVBUF, 1024 * 1024);
         return socketChannel;
+    }
+
+    protected static void printTimes(final long startTime)
+    {
+        final long duration = System.currentTimeMillis() - startTime;
+        final double rate = (double) CommonConfiguration.MESSAGES_EXCHANGED / duration;
+        System.out.printf("%d messages in %d ms\n", CommonConfiguration.MESSAGES_EXCHANGED, duration);
+        System.out.printf("%G messages / ms\n", rate);
+        System.out.printf("%G messages / s\n", rate * 1000.0);
+    }
+
+    protected int scanForReceivesMessages(
+        final MutableAsciiFlyweight readFlyweight,
+        final int length)
+    {
+        int messagesReceived = 0;
+
+        if (length > 0)
+        {
+            int index = 0;
+
+            while (index < length)
+            {
+                index = readFlyweight.scan(index, length - 1, NINE);
+
+                if (index == UNKNOWN_INDEX)
+                {
+                    break;
+                }
+
+                if (index == 0)
+                {
+                    if (lastWasSep)
+                    {
+                        messagesReceived++;
+                    }
+                }
+                else if (isSeparator(readFlyweight, index - 1))
+                {
+                    messagesReceived++;
+                }
+
+                index += 1;
+            }
+
+            lastWasSep = isSeparator(readFlyweight, length - 1);
+        }
+
+        return messagesReceived;
+    }
+
+    protected static boolean isSeparator(final MutableAsciiFlyweight readFlyweight, final int index)
+    {
+        return readFlyweight.getChar(index) == '\001';
+    }
+
+    protected int encode(final TestRequestEncoder testRequest, final HeaderEncoder header, final int seqNum)
+    {
+        header
+            .sendingTime(System.currentTimeMillis())
+            .msgSeqNum(seqNum);
+
+        return testRequest.encode(writeFlyweight, 0);
     }
 }

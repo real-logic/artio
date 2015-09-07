@@ -22,19 +22,15 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.MESSAGES_EXCHANGED;
 
 public final class SingleThreadedThroughputBenchmarkClient extends AbstractBenchmarkClient
 {
-    private static final int MESSAGES_EXCHANGED = 20_000;
-    private static final byte NINE = (byte) '9';
 
     public static void main(String[] args) throws Exception
     {
         new SingleThreadedThroughputBenchmarkClient().runBenchmark();
     }
-
-    boolean lastWasSep;
 
     public void runBenchmark() throws Exception
     {
@@ -58,7 +54,6 @@ public final class SingleThreadedThroughputBenchmarkClient extends AbstractBench
                     final int length = encode(testRequest, header, sequenceNumber);
                     write(socketChannel, length);
                     sequenceNumber++;
-
                     messagesReceived += greedyRead(socketChannel, readFlyweight);
                 }
                 while (messagesReceived < MESSAGES_EXCHANGED);
@@ -78,36 +73,7 @@ public final class SingleThreadedThroughputBenchmarkClient extends AbstractBench
         {
             readBuffer.clear();
             final int length = socketChannel.read(readBuffer);
-            if (length > 0)
-            {
-                int index = 0;
-
-                while (index < length)
-                {
-                    index = readFlyweight.scan(index, length - 1, NINE);
-
-                    if (index == UNKNOWN_INDEX)
-                    {
-                        break;
-                    }
-
-                    if (index == 0)
-                    {
-                        if (lastWasSep)
-                        {
-                            messagesReceived++;
-                        }
-                    }
-                    else if (readFlyweight.getChar(index - 1) == '\001')
-                    {
-                        messagesReceived++;
-                    }
-
-                    index += 1;
-                }
-
-                lastWasSep = readFlyweight.getChar(length - 1) == '\001';
-            }
+            messagesReceived += scanForReceivesMessages(readFlyweight, length);
         }
         catch (IOException e)
         {
@@ -116,24 +82,6 @@ public final class SingleThreadedThroughputBenchmarkClient extends AbstractBench
         }
 
         return messagesReceived;
-    }
-
-    private int encode(final TestRequestEncoder testRequest, final HeaderEncoder header, final int seqNum)
-    {
-        header
-            .sendingTime(System.currentTimeMillis())
-            .msgSeqNum(seqNum);
-
-        return testRequest.encode(writeFlyweight, 0);
-    }
-
-    private void printTimes(final long startTime)
-    {
-        final long duration = System.currentTimeMillis() - startTime;
-        final double rate = (double) MESSAGES_EXCHANGED / duration;
-        System.out.printf("%d messages in %d ms\n", MESSAGES_EXCHANGED, duration);
-        System.out.printf("%G messages / ms\n", rate);
-        System.out.printf("%G messages / s\n", rate * 1000.0);
     }
 
 }
