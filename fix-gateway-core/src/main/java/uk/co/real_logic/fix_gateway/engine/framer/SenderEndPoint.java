@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
+// TODO: better removal of sender end points when the connection is closed.
 public class SenderEndPoint implements AutoCloseable
 {
     private final long connectionId;

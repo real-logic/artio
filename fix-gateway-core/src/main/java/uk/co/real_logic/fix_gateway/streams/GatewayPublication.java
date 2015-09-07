@@ -178,15 +178,6 @@ public class GatewayPublication
 
     public long saveDisconnect(final int libraryId, final long connectionId)
     {
-        try
-        {
-            throw new Exception("EH??");
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-
         final long position = claim(header.encodedLength() + DisconnectEncoder.BLOCK_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();

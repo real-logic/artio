@@ -74,7 +74,7 @@ public final class FixBenchmarkServer
             .bind("localhost", Configuration.PORT)
             .aeronChannel(AERON_CHANNEL)
             .logFileDir(acceptorLogs)
-            .logInboundMessages(true)
+            .logInboundMessages(false)
             .logOutboundMessages(false);
             //.framerIdleStrategy(new NoOpIdleStrategy());
     }

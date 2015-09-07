@@ -67,10 +67,10 @@ public final class EngineConfiguration extends CommonConfiguration
     public static final int DEFAULT_INDEX_FILE_SIZE = 2 * 1024 * 1024;
     public static final int DEFAULT_LOGGER_CACHE_CAPACITY = 10;
 
-    public static final int DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT = 20;
+    public static final int DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT = 100;
     public static final int DEFAULT_REPLAY_FRAGMENT_LIMIT = 5;
-    public static final int DEFAULT_INBOUND_BYTES_RECEIVED_LIMIT = 16 * 1024;
-    public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 16 * 1024;
+    public static final int DEFAULT_INBOUND_BYTES_RECEIVED_LIMIT = 8 * 1024;
+    public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
     public static final int DEFAULT_RECEIVER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SENDER_SOCKET_BUFFER_SIZE = 1024 * 1024;
 

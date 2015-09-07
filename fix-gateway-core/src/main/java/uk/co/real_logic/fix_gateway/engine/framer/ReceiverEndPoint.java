@@ -132,6 +132,9 @@ public class ReceiverEndPoint
         }
         catch (final Exception ex)
         {
+            System.out.println(usedBufferData);
+            System.out.println(byteBuffer.limit());
+            System.out.println(byteBuffer.position());
             errorHandler.onError(ex);
             onDisconnectDetected();
             return 1;
@@ -162,7 +165,7 @@ public class ReceiverEndPoint
         while (true)
         {
             final int startOfBodyLength = offset + START_OF_BODY_LENGTH;
-            if (usedBufferData <= startOfBodyLength)
+            if (usedBufferData < startOfBodyLength)
             {
                 // Need more data
                 break;
@@ -176,7 +179,7 @@ public class ReceiverEndPoint
                     return;
                 }
 
-                final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData, START_OF_HEADER);
+                final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData - 1, START_OF_HEADER);
                 if (endOfBodyLength == UNKNOWN_INDEX)
                 {
                     // Need more data
@@ -186,7 +189,7 @@ public class ReceiverEndPoint
                 final int startOfChecksumTag = endOfBodyLength + getBodyLength(offset, endOfBodyLength);
 
                 final int endOfChecksumTag = startOfChecksumTag + 3;
-                if (endOfChecksumTag > usedBufferData)
+                if (endOfChecksumTag >= usedBufferData)
                 {
                     break;
                 }
@@ -200,7 +203,7 @@ public class ReceiverEndPoint
                 }
 
                 final int startOfChecksumValue = startOfChecksumTag + MIN_CHECKSUM_SIZE;
-                final int indexOfLastByteOfMessage = string.scan(startOfChecksumValue, usedBufferData, START_OF_HEADER);
+                final int indexOfLastByteOfMessage = string.scan(startOfChecksumValue, usedBufferData - 1, START_OF_HEADER);
                 if (indexOfLastByteOfMessage == UNKNOWN_INDEX)
                 {
                     // Need more data
