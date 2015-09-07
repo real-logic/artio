@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
 import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.aeron.driver.ThreadingMode;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -56,8 +55,8 @@ public final class FixBenchmarkServer
         final MediaDriver.Context context = new MediaDriver.Context()
             .dirsDeleteOnStart(true)
             .termBufferLength(128 * 1024 * 1024)
-            .termBufferMaxLength(128 * 1024 * 1024)
-            .threadingMode(ThreadingMode.SHARED);
+            .termBufferMaxLength(128 * 1024 * 1024);
+//            .threadingMode(ThreadingMode.SHARED);
 
         return MediaDriver.launch(context);
     }
@@ -76,8 +75,8 @@ public final class FixBenchmarkServer
             .aeronChannel(AERON_CHANNEL)
             .logFileDir(acceptorLogs)
             .logInboundMessages(true)
-            .logOutboundMessages(false)
-            .framerIdleStrategy(new NoOpIdleStrategy());
+            .logOutboundMessages(false);
+            //.framerIdleStrategy(new NoOpIdleStrategy());
     }
 
     private static LibraryConfiguration libraryConfiguration()

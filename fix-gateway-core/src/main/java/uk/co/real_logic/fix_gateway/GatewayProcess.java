@@ -59,9 +59,11 @@ public class GatewayProcess implements AutoCloseable
         final NanoClock nanoClock = new SystemNanoClock();
 
         inboundLibraryStreams = new Streams(
-            channel, aeron, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock);
+            channel, aeron, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
+            configuration.inboundMaxClaimAttempts());
         outboundLibraryStreams = new Streams(
-            channel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock);
+            channel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
+            configuration.outboundMaxClaimAttempts());
     }
 
     private void initAeron(final CommonConfiguration configuration)

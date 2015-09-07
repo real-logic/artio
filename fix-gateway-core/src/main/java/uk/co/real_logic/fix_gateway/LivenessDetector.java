@@ -44,7 +44,7 @@ public class LivenessDetector
         this.libraryId = libraryId;
         this.replyTimeoutInMs = replyTimeoutInMs;
         this.isConnected = isConnected;
-        this.sendIntervalInMs = replyTimeoutInMs / 2;
+        this.sendIntervalInMs = replyTimeoutInMs / 4;
 
         if (isConnected)
         {

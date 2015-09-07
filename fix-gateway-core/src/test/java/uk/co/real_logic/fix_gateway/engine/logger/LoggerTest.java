@@ -66,7 +66,7 @@ public class LoggerTest
         mediaDriver = launchMediaDriver();
         aeron = Aeron.connect(new Aeron.Context());
         final Streams inboundStreams = new Streams(
-            "udp://localhost:9999", aeron, mock(AtomicCounter.class), STREAM_ID, mock(NanoClock.class));
+            "udp://localhost:9999", aeron, mock(AtomicCounter.class), STREAM_ID, mock(NanoClock.class), 12000);
 
         final EngineConfiguration configuration = new EngineConfiguration().logOutboundMessages(false);
         logger = new Logger(

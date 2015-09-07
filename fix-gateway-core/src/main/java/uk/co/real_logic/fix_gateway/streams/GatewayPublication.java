@@ -39,8 +39,6 @@ public class GatewayPublication
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
     public static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
 
-    public static final int MAX_CLAIM_ATTEMPTS = BACKOFF_SPINS + BACKOFF_YIELDS + 1000;
-
     private final MessageHeaderEncoder header = new MessageHeaderEncoder();
     private final LogonEncoder logon = new LogonEncoder();
     private final ConnectEncoder connect = new ConnectEncoder();
@@ -51,23 +49,24 @@ public class GatewayPublication
     private final ErrorEncoder error = new ErrorEncoder();
     private final ApplicationHeartbeatEncoder applicationHeartbeat = new ApplicationHeartbeatEncoder();
 
+    private final int maxClaimAttempts;
     private final BufferClaim bufferClaim;
     private final Publication dataPublication;
     private final IdleStrategy idleStrategy;
     private final NanoClock nanoClock;
     private final AtomicCounter fails;
 
-    private int lastFailedFramedLength = 0;
-
     public GatewayPublication(
         final Publication dataPublication,
         final AtomicCounter fails,
         final IdleStrategy idleStrategy,
-        final NanoClock nanoClock)
+        final NanoClock nanoClock,
+        final int maxClaimAttempts)
     {
         this.dataPublication = dataPublication;
         this.idleStrategy = idleStrategy;
         this.nanoClock = nanoClock;
+        this.maxClaimAttempts = maxClaimAttempts;
         bufferClaim = new BufferClaim();
         this.fails = fails;
     }
@@ -179,6 +178,15 @@ public class GatewayPublication
 
     public long saveDisconnect(final int libraryId, final long connectionId)
     {
+        try
+        {
+            throw new Exception("EH??");
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+
         final long position = claim(header.encodedLength() + DisconnectEncoder.BLOCK_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
@@ -350,7 +358,7 @@ public class GatewayPublication
     private long claim(final int framedLength)
     {
         long position = 0;
-        for (int i = 0; i < MAX_CLAIM_ATTEMPTS; i++)
+        for (int i = 0; i < maxClaimAttempts; i++)
         {
             position = dataPublication.tryClaim(framedLength, bufferClaim);
 

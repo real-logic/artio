@@ -29,19 +29,22 @@ public class Streams
     private final String channel;
     private final Aeron aeron;
     private final AtomicCounter failedPublications;
+    private final int maxClaimAttempts;
 
     public Streams(
         final String channel,
         final Aeron aeron,
         final AtomicCounter failedPublications,
         final int streamId,
-        final NanoClock nanoClock)
+        final NanoClock nanoClock,
+        final int maxClaimAttempts)
     {
         this.channel = channel;
         this.aeron = aeron;
         this.failedPublications = failedPublications;
         this.streamId = streamId;
         this.nanoClock = nanoClock;
+        this.maxClaimAttempts = maxClaimAttempts;
     }
 
     public GatewayPublication gatewayPublication(final IdleStrategy idleStrategy)
@@ -50,7 +53,8 @@ public class Streams
             dataPublication(),
             failedPublications,
             idleStrategy,
-            nanoClock);
+            nanoClock,
+            maxClaimAttempts);
     }
 
     public Publication dataPublication()

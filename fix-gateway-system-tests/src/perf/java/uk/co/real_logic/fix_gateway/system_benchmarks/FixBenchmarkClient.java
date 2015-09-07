@@ -19,7 +19,7 @@ import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.TYPE;
 
 public final class FixBenchmarkClient
 {
-    public void main(String[] args) throws Exception
+    public static void main(String[] args) throws Exception
     {
         if (TYPE.equalsIgnoreCase("throughput"))
         {

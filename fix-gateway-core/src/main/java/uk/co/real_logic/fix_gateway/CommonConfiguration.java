@@ -29,12 +29,27 @@ import static java.lang.System.getProperty;
 
 public class CommonConfiguration
 {
+
+    // ------------------------------------------------
+    //          Configuration Properties
+    // ------------------------------------------------
+
     /** Property name for length of the memory mapped buffers for the counters file */
-    public static final String MONITORING_BUFFERS_LENGTH_PROP_NAME = "fix.monitoring.length";
+    public static final String MONITORING_BUFFERS_LENGTH_PROPERTY = "fix.monitoring.length";
     /** Property name for directory of the conductor buffers */
-    public static final String MONITORING_FILE_PROP_NAME = "fix.monitoring.file";
+    public static final String MONITORING_FILE_PROPERTY = "fix.monitoring.file";
     /** Property name for the flag to enable or disable debug logging */
     public static final String DEBUG_PRINT_MESSAGES_PROPERTY = "fix.core.debug";
+    /**
+     * Property name for the flag to set the maximum number of attempts to claim a message
+     * slot on the inbound stream.
+     */
+    public static final String INBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY = "fix.core.inbound_max_claims";
+    /**
+     * Property name for the flag to set the maximum number of attempts to claim a message
+     * slot on the outbound stream.
+     */
+    public static final String OUTBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY = "fix.core.outbound_max_claims";
     /** Property name for the flag to enable or disable message timing */
     public static final String TIME_MESSAGES_PROPERTY = "fix.core.timing";
     /** Property name for the file to log debug messages to, default is standard output */
@@ -43,6 +58,10 @@ public class CommonConfiguration
     public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 8 * 1024 * 1024;
     public static final String DEFAULT_MONITORING_FILE =
         optimalTmpDirName() + File.separator + "fix" + File.separator + "monitoring";
+
+    // ------------------------------------------------
+    //          Static Configuration
+    // ------------------------------------------------
 
     /** These are static final fields in order to give the optimiser scope to remove references to it. */
     public static final boolean DEBUG_PRINT_MESSAGES = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
@@ -54,16 +73,28 @@ public class CommonConfiguration
     public static final int BACKOFF_SPINS = Integer.getInteger("fix.core.spins", 1_000);
     public static final int BACKOFF_YIELDS = Integer.getInteger("fix.core.yields", 10_000);
 
-    private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 2_000L;
+    // ------------------------------------------------
+    //          Configuration Defaults
+    // ------------------------------------------------
+
+    public static final int DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS = BACKOFF_SPINS + BACKOFF_YIELDS + 1000;
+    public static final int DEFAULT_OUTBOUND_MAX_CLAIM_ATTEMPTS = DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS;
+
+    private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
     private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
 
     private SessionIdStrategy sessionIdStrategy = new SenderAndTargetSessionIdStrategy();
-    private int counterBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROP_NAME, DEFAULT_MONITORING_BUFFER_LENGTH);
-    private String monitoringFile = getProperty(MONITORING_FILE_PROP_NAME, DEFAULT_MONITORING_FILE);
+    private int counterBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROPERTY, DEFAULT_MONITORING_BUFFER_LENGTH);
+    private String monitoringFile = getProperty(MONITORING_FILE_PROPERTY, DEFAULT_MONITORING_FILE);
     private String aeronChannel;
     private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
     private Aeron.Context aeronContext = new Aeron.Context();
     private int errorSlotSize = DEFAULT_ERROR_SLOT_SIZE;
+
+    private int inboundMaxClaimAttempts =
+        getInteger(INBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS);
+    private int outboundMaxClaimAttempts =
+        getInteger(OUTBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_OUTBOUND_MAX_CLAIM_ATTEMPTS);
 
     public CommonConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
     {
@@ -98,6 +129,18 @@ public class CommonConfiguration
     public CommonConfiguration errorSlotSize(final int errorSlotSize)
     {
         this.errorSlotSize = errorSlotSize;
+        return this;
+    }
+
+    public CommonConfiguration inboundMaxClaimAttempts(final int inboundMaxClaimAttempts)
+    {
+        this.inboundMaxClaimAttempts = inboundMaxClaimAttempts;
+        return this;
+    }
+
+    public CommonConfiguration outboundMaxClaimAttempts(final int outboundMaxClaimAttempts)
+    {
+        this.outboundMaxClaimAttempts = outboundMaxClaimAttempts;
         return this;
     }
 
@@ -160,5 +203,15 @@ public class CommonConfiguration
     protected IdleStrategy backoffIdleStrategy()
     {
         return new BackoffIdleStrategy(BACKOFF_SPINS, BACKOFF_YIELDS, 1, 1 << 20);
+    }
+
+    public int inboundMaxClaimAttempts()
+    {
+        return inboundMaxClaimAttempts;
+    }
+
+    public int outboundMaxClaimAttempts()
+    {
+        return outboundMaxClaimAttempts;
     }
 }

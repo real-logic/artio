@@ -114,6 +114,11 @@ public class ReceiverEndPoint
 
     public int pollForData()
     {
+        if (hasDisconnected())
+        {
+            return 0;
+        }
+
         try
         {
             final int bytesReceived = readData();
@@ -157,7 +162,7 @@ public class ReceiverEndPoint
         while (true)
         {
             final int startOfBodyLength = offset + START_OF_BODY_LENGTH;
-            if (usedBufferData < startOfBodyLength)
+            if (usedBufferData <= startOfBodyLength)
             {
                 // Need more data
                 break;
