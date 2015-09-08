@@ -45,9 +45,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static java.net.StandardSocketOptions.SO_RCVBUF;
-import static java.net.StandardSocketOptions.SO_SNDBUF;
-import static java.net.StandardSocketOptions.TCP_NODELAY;
+import static java.net.StandardSocketOptions.*;
 import static uk.co.real_logic.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
@@ -66,6 +64,7 @@ public class Framer implements Agent, SessionHandler
     private final Long2ObjectHashMap<SenderEndPoint> connectionToSenderEndpoint = new Long2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final Consumer<ReceiverEndPoint> removeSenderEndPointFunc = this::removeSenderEndPoint;
+    private final Depressurizer sendOutboundMessagesFunc = this::sendOutboundMessages;
     private final EpochClock clock;
     private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
     private final DataSubscriber dataSubscriber = new DataSubscriber(this);
@@ -338,7 +337,8 @@ public class Framer implements Agent, SessionHandler
         channel.configureBlocking(false);
 
         final ReceiverEndPoint receiverEndPoint =
-            connectionHandler.receiverEndPoint(channel, connectionId, sessionId, this, libraryId);
+            connectionHandler.receiverEndPoint(channel, connectionId, sessionId, this, libraryId,
+            sendOutboundMessagesFunc);
         endPointPoller.register(receiverEndPoint);
 
         final SenderEndPoint senderEndPoint = connectionHandler.senderEndPoint(channel, connectionId);

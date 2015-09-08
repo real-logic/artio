@@ -132,9 +132,6 @@ public class ReceiverEndPoint
         }
         catch (final Exception ex)
         {
-            System.out.println(usedBufferData);
-            System.out.println(byteBuffer.limit());
-            System.out.println(byteBuffer.position());
             errorHandler.onError(ex);
             onDisconnectDetected();
             return 1;

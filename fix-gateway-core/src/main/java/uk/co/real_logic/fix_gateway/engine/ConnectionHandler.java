@@ -18,10 +18,7 @@ package uk.co.real_logic.fix_gateway.engine;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
-import uk.co.real_logic.fix_gateway.engine.framer.Framer;
-import uk.co.real_logic.fix_gateway.engine.framer.ReceiverEndPoint;
-import uk.co.real_logic.fix_gateway.engine.framer.SenderEndPoint;
-import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
+import uk.co.real_logic.fix_gateway.engine.framer.*;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.Streams;
 
@@ -66,12 +63,13 @@ public class ConnectionHandler
         final long connectionId,
         final long sessionId,
         final Framer framer,
-        final int libraryId) throws IOException
+        final int libraryId,
+        final Depressurizer depressurizer) throws IOException
     {
         return new ReceiverEndPoint(
             channel,
             configuration.receiverBufferSize(),
-            inboundStreams.gatewayPublication(idleStrategy),
+            inboundStreams.gatewayPublication(idleStrategy, depressurizer),
             connectionId,
             sessionId,
             sessionIdStrategy,

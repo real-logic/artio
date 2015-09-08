@@ -21,9 +21,12 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
+import uk.co.real_logic.fix_gateway.engine.framer.Depressurizer;
 
 public class Streams
 {
+    private static final Depressurizer NO_DEPRESSURIZER = () -> 0;
+
     private final int streamId;
     private final NanoClock nanoClock;
     private final String channel;
@@ -49,12 +52,18 @@ public class Streams
 
     public GatewayPublication gatewayPublication(final IdleStrategy idleStrategy)
     {
+        return gatewayPublication(idleStrategy, NO_DEPRESSURIZER);
+    }
+
+    public GatewayPublication gatewayPublication(final IdleStrategy idleStrategy, final Depressurizer depressurizer)
+    {
         return new GatewayPublication(
             dataPublication(),
             failedPublications,
             idleStrategy,
             nanoClock,
-            maxClaimAttempts);
+            maxClaimAttempts,
+            depressurizer);
     }
 
     public Publication dataPublication()
@@ -66,5 +75,4 @@ public class Streams
     {
         return aeron.addSubscription(channel, streamId);
     }
-
 }

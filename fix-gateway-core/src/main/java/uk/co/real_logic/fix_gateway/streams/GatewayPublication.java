@@ -23,12 +23,14 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.engine.framer.Depressurizer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static uk.co.real_logic.aeron.Publication.BACK_PRESSURED;
 import static uk.co.real_logic.aeron.Publication.NOT_CONNECTED;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.*;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 
 /**
  * A proxy for publishing messages fix related messages
@@ -50,6 +52,7 @@ public class GatewayPublication
     private final ApplicationHeartbeatEncoder applicationHeartbeat = new ApplicationHeartbeatEncoder();
 
     private final int maxClaimAttempts;
+    private final Depressurizer depressurizer;
     private final BufferClaim bufferClaim;
     private final Publication dataPublication;
     private final IdleStrategy idleStrategy;
@@ -61,12 +64,14 @@ public class GatewayPublication
         final AtomicCounter fails,
         final IdleStrategy idleStrategy,
         final NanoClock nanoClock,
-        final int maxClaimAttempts)
+        final int maxClaimAttempts,
+        final Depressurizer depressurizer)
     {
         this.dataPublication = dataPublication;
         this.idleStrategy = idleStrategy;
         this.nanoClock = nanoClock;
         this.maxClaimAttempts = maxClaimAttempts;
+        this.depressurizer = depressurizer;
         bufferClaim = new BufferClaim();
         this.fails = fails;
     }
@@ -357,8 +362,15 @@ public class GatewayPublication
             {
                 return position;
             }
+            else if (position == BACK_PRESSURED)
+            {
+                idleStrategy.idle(depressurizer.depressurize());
+            }
+            else
+            {
+                idleStrategy.idle(0);
+            }
 
-            idleStrategy.idle(0);
             fails.increment();
         }
 
