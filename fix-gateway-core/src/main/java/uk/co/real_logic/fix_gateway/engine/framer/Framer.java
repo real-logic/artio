@@ -133,12 +133,22 @@ public class Framer implements Agent, SessionHandler
     @Override
     public int doWork() throws Exception
     {
-        return outboundDataSubscription.poll(dataSubscriber, outboundLibraryFragmentLimit) +
-               replaySubscription.poll(dataSubscriber, replayFragmentLimit) +
+        return sendOutboundMessages() +
+               sendReplayMessages() +
                pollEndPoints() +
                pollNewConnections() +
                pollLibraries() +
                adminCommands.drain(onAdminCommand);
+    }
+
+    private int sendReplayMessages()
+    {
+        return replaySubscription.poll(dataSubscriber, replayFragmentLimit);
+    }
+
+    private int sendOutboundMessages()
+    {
+        return outboundDataSubscription.poll(dataSubscriber, outboundLibraryFragmentLimit);
     }
 
     private int pollLibraries()
