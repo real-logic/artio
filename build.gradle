@@ -20,12 +20,9 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.puppycrawl.tools:checkstyle:6.7'
+        classpath 'com.puppycrawl.tools:checkstyle:6.10.1'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.2'
     }
-}
-
-plugins {
-    id 'com.github.johnrengelman.shadow' version '1.2.1'
 }
 
 apply plugin: 'maven'
@@ -329,4 +326,3 @@ uploadArchives {
 task wrapper(type: Wrapper) {
     gradleVersion = '2.6'
 }
-

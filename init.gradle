@@ -1,0 +1,9 @@
+
+allprojects {
+    buildscript {
+        repositories {
+            jcenter()
+        }
+    }
+}
+
