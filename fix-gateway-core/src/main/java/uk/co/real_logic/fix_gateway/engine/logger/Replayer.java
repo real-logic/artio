@@ -240,6 +240,7 @@ public class Replayer implements SessionHandler, LogHandler, Agent
     public void onClose()
     {
         publication.close();
+        replayQuery.close();
     }
 
     public String roleName()
