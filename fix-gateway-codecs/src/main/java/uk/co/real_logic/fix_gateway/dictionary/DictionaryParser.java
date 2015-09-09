@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import static javax.xml.xpath.XPathConstants.NODESET;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.getMessageType;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.CHAR;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 
@@ -237,9 +236,9 @@ public final class DictionaryParser
                 final NamedNodeMap attributes = node.getAttributes();
 
                 final String name = name(attributes);
-                final int type = parseMessageType(attributes);
+                final String fullType = getValue(attributes, "msgtype");
                 final Category category = parseCategory(getValue(attributes, "msgcat"));
-                final Message message = new Message(name, type, category);
+                final Message message = new Message(name, fullType, category);
 
                 extractEntries(node.getChildNodes(), fields, message.entries(), components, forwardReferences);
 
@@ -247,12 +246,6 @@ public final class DictionaryParser
             });
 
         return messages;
-    }
-
-    private int parseMessageType(final NamedNodeMap attributes)
-    {
-        final String msgtype = getValue(attributes, "msgtype");
-        return getMessageType(msgtype);
     }
 
     private void extractEntries(

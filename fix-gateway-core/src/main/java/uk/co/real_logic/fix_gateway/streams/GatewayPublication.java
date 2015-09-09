@@ -23,7 +23,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.engine.framer.Depressurizer;
+import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -52,7 +52,7 @@ public class GatewayPublication
     private final ApplicationHeartbeatEncoder applicationHeartbeat = new ApplicationHeartbeatEncoder();
 
     private final int maxClaimAttempts;
-    private final Depressurizer depressurizer;
+    private final ReliefValve reliefValve;
     private final BufferClaim bufferClaim;
     private final Publication dataPublication;
     private final IdleStrategy idleStrategy;
@@ -65,13 +65,13 @@ public class GatewayPublication
         final IdleStrategy idleStrategy,
         final NanoClock nanoClock,
         final int maxClaimAttempts,
-        final Depressurizer depressurizer)
+        final ReliefValve reliefValve)
     {
         this.dataPublication = dataPublication;
         this.idleStrategy = idleStrategy;
         this.nanoClock = nanoClock;
         this.maxClaimAttempts = maxClaimAttempts;
-        this.depressurizer = depressurizer;
+        this.reliefValve = reliefValve;
         bufferClaim = new BufferClaim();
         this.fails = fails;
     }
@@ -364,7 +364,7 @@ public class GatewayPublication
             }
             else if (position == BACK_PRESSURED)
             {
-                idleStrategy.idle(depressurizer.depressurize());
+                idleStrategy.idle(reliefValve.vent());
             }
             else
             {

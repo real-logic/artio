@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import org.junit.Test;
 
 import static org.junit.Assert.assertNotEquals;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.getMessageType;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.packMessageType;
 
 public class GenerationUtilTest
 {
@@ -26,12 +26,12 @@ public class GenerationUtilTest
     @Test
     public void shouldGenerateDifferentMessageTypeIdentifiers()
     {
-        assertNotEquals(getMessageType("AL"), getMessageType("AM"));
-        assertNotEquals(getMessageType("AL"), getMessageType("AN"));
-        assertNotEquals(getMessageType("AR"), getMessageType("AQ"));
-        assertNotEquals(getMessageType("BC"), getMessageType("BB"));
-        assertNotEquals(getMessageType("BD"), getMessageType("BE"));
-        assertNotEquals(getMessageType("BG"), getMessageType("BF"));
+        assertNotEquals(packMessageType("AL"), packMessageType("AM"));
+        assertNotEquals(packMessageType("AL"), packMessageType("AN"));
+        assertNotEquals(packMessageType("AR"), packMessageType("AQ"));
+        assertNotEquals(packMessageType("BC"), packMessageType("BB"));
+        assertNotEquals(packMessageType("BD"), packMessageType("BE"));
+        assertNotEquals(packMessageType("BG"), packMessageType("BF"));
     }
 
 }

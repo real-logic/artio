@@ -21,11 +21,11 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
-import uk.co.real_logic.fix_gateway.engine.framer.Depressurizer;
+import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 
 public class Streams
 {
-    private static final Depressurizer NO_DEPRESSURIZER = () -> 0;
+    private static final ReliefValve NO_RELIEF_VALVE = () -> 0;
 
     private final int streamId;
     private final NanoClock nanoClock;
@@ -52,10 +52,10 @@ public class Streams
 
     public GatewayPublication gatewayPublication(final IdleStrategy idleStrategy)
     {
-        return gatewayPublication(idleStrategy, NO_DEPRESSURIZER);
+        return gatewayPublication(idleStrategy, NO_RELIEF_VALVE);
     }
 
-    public GatewayPublication gatewayPublication(final IdleStrategy idleStrategy, final Depressurizer depressurizer)
+    public GatewayPublication gatewayPublication(final IdleStrategy idleStrategy, final ReliefValve reliefValve)
     {
         return new GatewayPublication(
             dataPublication(),
@@ -63,7 +63,7 @@ public class Streams
             idleStrategy,
             nanoClock,
             maxClaimAttempts,
-            depressurizer);
+            reliefValve);
     }
 
     public Publication dataPublication()

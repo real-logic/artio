@@ -107,7 +107,7 @@ public class ConstantGenerator
             .stream()
             .map(message ->
             {
-                final int type = message.type();
+                final int type = message.packedType();
                 return generateMessageTypeConstant(type) + generateIntConstant(message.name(), type);
             })
             .collect(joining());

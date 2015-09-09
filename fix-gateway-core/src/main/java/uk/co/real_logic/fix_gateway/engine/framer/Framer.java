@@ -64,7 +64,7 @@ public class Framer implements Agent, SessionHandler
     private final Long2ObjectHashMap<SenderEndPoint> connectionToSenderEndpoint = new Long2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final Consumer<ReceiverEndPoint> removeSenderEndPointFunc = this::removeSenderEndPoint;
-    private final Depressurizer sendOutboundMessagesFunc = this::sendOutboundMessages;
+    private final ReliefValve sendOutboundMessagesFunc = this::sendOutboundMessages;
     private final EpochClock clock;
     private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
     private final DataSubscriber dataSubscriber = new DataSubscriber(this);

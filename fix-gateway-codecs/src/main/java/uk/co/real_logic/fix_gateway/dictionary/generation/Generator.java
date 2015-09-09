@@ -29,8 +29,8 @@ import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
-import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
+import javax.annotation.Generated;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -126,9 +126,11 @@ public abstract class Generator
             importFor(CharArraySet.class) +
             importFor(IntHashSet.class) +
             importFor(IntIterator.class) +
+            importFor(Generated.class) +
             importStaticFor(StandardCharsets.class, "US_ASCII") +
             importStaticFor(Validation.class, CODEC_VALIDATION_ENABLED) +
-            "\npublic class %2$s implements %5$s%3$s\n" +
+            String.format("\n@Generated(\"%s\")\n", getClass().getName()) +
+            "public class %2$s implements %5$s%3$s\n" +
             "{\n\n",
             builderPackage,
             className,
@@ -293,7 +295,7 @@ public abstract class Generator
                 "    {\n" +
                 "        String entries =%1$s\n" +
                 "%2$s;\n\n" +
-                "        entries = \"{\\n  \\\"MsgType\\\": \\\"%4$s\\\",\\n\" + entries + \"}\";\n" +
+                "        entries = \"{\\n  \\\"MessageName\\\": \\\"%4$s\\\",\\n\" + entries + \"}\";\n" +
                 "%3$s" +
                 "        return entries;\n" +
                 "    }\n\n",
@@ -355,7 +357,7 @@ public abstract class Generator
 
     protected String generateValueToString(final Field field)
     {
-        final String fieldName = JavaUtil.formatPropertyName(field.name());
+        final String fieldName = formatPropertyName(field.name());
         switch (field.type())
         {
             case STRING:
