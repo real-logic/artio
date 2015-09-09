@@ -27,7 +27,7 @@ public final class Message extends Aggregate
     {
         super(name);
         this.fullType = fullType;
-        this.packedType = packMessageType(fullType);;
+        this.packedType = packMessageType(fullType);
         this.category = category;
     }
 
