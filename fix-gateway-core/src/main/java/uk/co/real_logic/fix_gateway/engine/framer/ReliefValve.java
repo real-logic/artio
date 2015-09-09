@@ -18,12 +18,12 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 /**
  * A valve that can be pulled to reduce back pressure.
  */
-public interface Depressurizer
+public interface ReliefValve
 {
     /**
      * depressurize the system.
      *
      * @return the amount of work done.
      */
-    int depressurize();
+    int vent();
 }

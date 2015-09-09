@@ -64,12 +64,12 @@ public class ConnectionHandler
         final long sessionId,
         final Framer framer,
         final int libraryId,
-        final Depressurizer depressurizer) throws IOException
+        final ReliefValve reliefValve) throws IOException
     {
         return new ReceiverEndPoint(
             channel,
             configuration.receiverBufferSize(),
-            inboundStreams.gatewayPublication(idleStrategy, depressurizer),
+            inboundStreams.gatewayPublication(idleStrategy, reliefValve),
             connectionId,
             sessionId,
             sessionIdStrategy,
