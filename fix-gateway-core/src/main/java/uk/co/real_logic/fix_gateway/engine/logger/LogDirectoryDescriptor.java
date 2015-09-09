@@ -21,7 +21,6 @@ import java.util.List;
 
 public class LogDirectoryDescriptor
 {
-
     private static final int EXTENSION_LENGTH = ".log".length();
 
     private final String logFileDir;
@@ -30,7 +29,7 @@ public class LogDirectoryDescriptor
     public LogDirectoryDescriptor(final String logFileDir)
     {
         this.logFileDir = logFileDir;
-        logFileFormat = logFileDir + File.separator + "archive-%d-%d-%d.log";
+        logFileFormat = logFileDir + File.separator + "archive_%d_%d_%d.log";
     }
 
     public File logFile(final int streamId, final int sessionId, final int termId)
@@ -40,12 +39,12 @@ public class LogDirectoryDescriptor
 
     public File metaDataLogFile(final int streamId, final int sessionId)
     {
-        return new File(String.format(logFileDir + File.separator + "meta-data-%d-%d.log", streamId, sessionId));
+        return new File(String.format(logFileDir + File.separator + "meta-data_%d_%d.log", streamId, sessionId));
     }
 
     public List<File> listLogFiles(final int streamId)
     {
-        final String prefix = String.format("archive-%d", streamId);
+        final String prefix = String.format("archive_%d", streamId);
         final File logFileDir = new File(this.logFileDir);
         return Arrays.asList(logFileDir.listFiles(file ->
         {
@@ -60,5 +59,4 @@ public class LogDirectoryDescriptor
         final int endOfTermId = logFileName.length() - EXTENSION_LENGTH;
         return Integer.parseInt(logFileName.substring(startOfTermId, endOfTermId));
     }
-
 }
