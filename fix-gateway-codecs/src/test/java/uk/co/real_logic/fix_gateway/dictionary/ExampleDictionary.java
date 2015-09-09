@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary;
 
+import uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 
@@ -51,6 +52,8 @@ public final class ExampleDictionary
     public static final String HEARTBEAT_DECODER = TEST_PACKAGE + ".HeartbeatDecoder";
     public static final String HEADER_DECODER = TEST_PACKAGE + ".HeaderDecoder";
     public static final String COMPONENT_DECODER = TEST_PACKAGE + "." + EG_COMPONENT + "Decoder";
+    public static final String OTHER_MESSAGE_DECODER = TEST_PACKAGE + ".OtherMessageDecoder";
+    public static final String OTHER_MESSAGE_ENCODER = TEST_PACKAGE + ".OtherMessageEncoder";
 
     public static final String PRINTER = TEST_PACKAGE + ".PrinterImpl";
 
@@ -78,7 +81,7 @@ public final class ExampleDictionary
 
     public static final String HEADER_TO_STRING =
         "  \"header\": {\n" +
-        "    \"MsgType\": \"Header\",\n" +
+        "    \"MessageName\": \"Header\",\n" +
         "    \"BeginString\": \"FIX.4.4\",\n" +
         "    \"BodyLength\": \"%s\",\n" +
         "    \"MsgType\": \"0\",\n" +
@@ -95,18 +98,18 @@ public final class ExampleDictionary
     public static final String STRING_FOR_GROUP =
         "  \"EgGroupGroup\": [\n" +
         "  {\n" +
-        "    \"MsgType\": \"EgGroupGroup\",\n" +
+        "    \"MessageName\": \"EgGroupGroup\",\n" +
         "    \"GroupField\": \"1\",\n" +
         "  },\n" +
         "  {\n" +
-        "    \"MsgType\": \"EgGroupGroup\",\n" +
+        "    \"MessageName\": \"EgGroupGroup\",\n" +
         "    \"GroupField\": \"2\",\n" +
         "  }\n" +
         "  ]";
 
     public static final String STRING_ENCODED_MESSAGE_EXAMPLE =
         "{\n" +
-        "  \"MsgType\": \"Heartbeat\",\n" +
+        "  \"MessageName\": \"Heartbeat\",\n" +
         String.format(HEADER_TO_STRING, 49) +
         STRING_ENCODED_MESSAGE_SUFFIX;
 
@@ -117,13 +120,13 @@ public final class ExampleDictionary
 
     public static final String STRING_NO_OPTIONAL_MESSAGE_EXAMPLE =
         "{\n" +
-            "  \"MsgType\": \"Heartbeat\",\n" +
+            "  \"MessageName\": \"Heartbeat\",\n" +
             String.format(HEADER_TO_STRING, 27) +
             STRING_NO_OPTIONAL_MESSAGE_SUFFIX;
 
     public static final String COMPONENT_TO_STRING =
         "  \"EgComponent\":  {\n" +
-        "    \"MsgType\": \"EgComponent\",\n" +
+        "    \"MessageName\": \"EgComponent\",\n" +
         "    \"ComponentField\": \"2\",\n" +
         "  }";
 
@@ -177,6 +180,10 @@ public final class ExampleDictionary
 
     public static final int TEST_REQ_ID_TAG = 112;
 
+    public static final String OTHER_MESSAGE_TYPE = "AB";
+    public static final byte[] OTHER_MESSAGE_TYPE_BYTES = OTHER_MESSAGE_TYPE.getBytes(US_ASCII);
+    public static final int OTHER_MESSAGE_TYPE_PACKED = GenerationUtil.packMessageType(OTHER_MESSAGE_TYPE);
+
     static
     {
         FIELD_EXAMPLE = buildFieldExample();
@@ -216,7 +223,7 @@ public final class ExampleDictionary
         final Component egComponent = new Component(EG_COMPONENT);
         egComponent.optionalEntry(registerField(messageEgFields, 124, "ComponentField", INT));
 
-        final Message heartbeat = new Message("Heartbeat", HEARTBEAT_TYPE, ADMIN);
+        final Message heartbeat = new Message("Heartbeat", "0", ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);
         heartbeat.optionalEntry(testReqID);
         heartbeat.requiredEntry(intField);
@@ -234,7 +241,7 @@ public final class ExampleDictionary
         final Component trailer = new Component("Trailer");
         trailer.requiredEntry(checkSum);
 
-        final Message otherMessage = new Message("OtherMessage", '1', ADMIN);
+        final Message otherMessage = new Message("OtherMessage", OTHER_MESSAGE_TYPE, ADMIN);
         otherMessage.requiredEntry(registerField(messageEgFields, 99, "OtherField", INT));
 
         final List<Message> messages = asList(heartbeat, otherMessage);

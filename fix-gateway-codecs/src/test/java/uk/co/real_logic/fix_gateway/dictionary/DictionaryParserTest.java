@@ -115,7 +115,7 @@ public class DictionaryParserTest
         final Message heartbeat = dictionary.messages().get(0);
 
         assertEquals("Heartbeat", heartbeat.name());
-        assertEquals('0', heartbeat.type());
+        assertEquals('0', heartbeat.packedType());
         assertEquals(ADMIN, heartbeat.category());
 
         final Entry entry = heartbeat.entries().get(0);

@@ -52,7 +52,7 @@ public final class IntDictionary
         dictionary.messages().forEach(
             (message) ->
             {
-                final int type = message.type();
+                final int type = message.packedType();
                 message.entries()
                     .stream()
                     .filter(entryPredicate)

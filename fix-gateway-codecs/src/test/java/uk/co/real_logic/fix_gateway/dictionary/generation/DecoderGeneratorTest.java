@@ -53,6 +53,7 @@ public class DecoderGeneratorTest
     private static DecoderGenerator decoderGenerator = new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager);
     private static Class<?> heartbeat;
     private static Class<?> component;
+    private static Class<?> otherMessage;
 
     private MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
 
@@ -69,6 +70,7 @@ public class DecoderGeneratorTest
         }
         component = heartbeat.getClassLoader().loadClass(COMPONENT_DECODER);
         compileInMemory(HEADER_DECODER, sources);
+        otherMessage = compileInMemory(OTHER_MESSAGE_DECODER, sources);
     }
 
     @Test
@@ -158,7 +160,7 @@ public class DecoderGeneratorTest
     @Test
     public void hasMessageTypeFlag() throws Exception
     {
-        final int messageType = (int) heartbeat.getField("MESSAGE_TYPE").get(null);
+        final int messageType = (int) getStatic(heartbeat, "MESSAGE_TYPE");
 
         assertEquals(HEARTBEAT_TYPE, messageType);
     }
@@ -289,7 +291,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldGenerateRequiredFieldsDictionary() throws Exception
     {
-        final Object allFieldsField = heartbeat.getField(REQUIRED_FIELDS).get(null);
+        final Object allFieldsField = getStatic(heartbeat, REQUIRED_FIELDS);
         assertThat(allFieldsField, instanceOf(IntHashSet.class));
 
         @SuppressWarnings("unchecked")
@@ -398,6 +400,21 @@ public class DecoderGeneratorTest
 
         assertEquals("abc", get(decoder, "onBehalfOfCompIDAsString"));
         assertNull(get(decoder, "testReqIDAsString"));
+    }
+
+    @Test
+    public void shouldProduceCorrectMessageTypeForTwoCharTypes() throws Exception
+    {
+        final byte[] messageTypeBytes = (byte[]) getStatic(otherMessage, "MESSAGE_TYPE_BYTES");
+        final int messageTypePacked = (int) getStatic(otherMessage, "MESSAGE_TYPE");
+
+        assertEquals(OTHER_MESSAGE_TYPE_PACKED, messageTypePacked);
+        assertArrayEquals(OTHER_MESSAGE_TYPE_BYTES, messageTypeBytes);
+    }
+
+    private Object getStatic(Class<?> cls, String field) throws IllegalAccessException, NoSuchFieldException
+    {
+        return cls.getField(field).get(null);
     }
 
     // TODO: validation for data fields

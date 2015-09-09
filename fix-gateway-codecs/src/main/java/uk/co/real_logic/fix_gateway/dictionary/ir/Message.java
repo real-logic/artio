@@ -15,21 +15,30 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.packMessageType;
+
 public final class Message extends Aggregate
 {
-    private final int type;
+    private final String fullType;
+    private final int packedType;
     private final Category category;
 
-    public Message(final String name, final int type, final Category category)
+    public Message(final String name, final String fullType, final Category category)
     {
         super(name);
-        this.type = type;
+        this.fullType = fullType;
+        this.packedType = packMessageType(fullType);;
         this.category = category;
     }
 
-    public int type()
+    public int packedType()
     {
-        return type;
+        return packedType;
+    }
+
+    public String fullType()
+    {
+        return fullType;
     }
 
     public Category category()
@@ -42,7 +51,7 @@ public final class Message extends Aggregate
     {
         return "Message{" +
             "name='" + name() + '\'' +
-            ", type=" + type +
+            ", type=" + fullType +
             ", category=" + category +
             ", entries=" + entries() +
             '}';

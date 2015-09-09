@@ -45,6 +45,7 @@ public class EncoderGeneratorTest
 
     private static Class<?> heartbeat;
     private static Class<?> headerClass;
+    private static Class<?> otherMessage;
 
     private MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
 
@@ -56,6 +57,7 @@ public class EncoderGeneratorTest
         // System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
         headerClass = compileInMemory(HEADER_ENCODER, sources);
+        otherMessage = compileInMemory(OTHER_MESSAGE_ENCODER, sources);
     }
 
     @Test
@@ -332,6 +334,15 @@ public class EncoderGeneratorTest
 
         assertTrue(hasOnBehalfOfCompID(encoder));
         assertFalse(hasTestReqID(encoder));
+    }
+
+    @Test
+    public void shouldGenerateTwoCharacterMessageTypes() throws Exception
+    {
+        final Encoder encoder = (Encoder) otherMessage.newInstance();
+
+        assertThat(encoder.toString(), containsString("\"MsgType\": \"" + OTHER_MESSAGE_TYPE + "\""));
+        assertEncodesTo(encoder, "8=FIX.4.4\0019=0011\00135=AB\00199=0\00110=099\001");
     }
 
     private boolean hasOnBehalfOfCompID(final Encoder encoder) throws Exception

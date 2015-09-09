@@ -94,7 +94,7 @@ public class PrinterGenerator
                    "            case %s:\n" +
                    "            %s.decode(input, offset, length);\n" +
                    "            return %2$s.toString();\n\n",
-                   aggregate.type(),
+                   aggregate.packedType(),
                    decoderFieldName(aggregate));
            })
            .collect(joining());

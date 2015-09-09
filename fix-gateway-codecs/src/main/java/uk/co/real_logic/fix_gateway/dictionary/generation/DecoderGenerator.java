@@ -112,7 +112,7 @@ public class DecoderGenerator extends Generator
             if (isMessage)
             {
                 final Message message = (Message)aggregate;
-                out.append(generateMessageType(message.type()));
+                out.append(generateMessageType(message.fullType(), message.packedType()));
                 out.append(commonCompoundImports("Decoder"));
             }
             generateGroupMethods(out, aggregate);
@@ -419,13 +419,13 @@ public class DecoderGenerator extends Generator
         }
     }
 
-    private String generateMessageType(final int type)
+    private String generateMessageType(final String fullType, final int packedType)
     {
         return String.format(
             "    public static final int MESSAGE_TYPE = %1$d;\n\n" +
             "    public static final byte[] MESSAGE_TYPE_BYTES = \"%2$s\".getBytes(US_ASCII);\n\n",
-            type,
-            (char) type); // TODO: larger message types
+            packedType,
+            fullType);
     }
 
     private void generateGetters(final Writer out, final String className, final List<Entry> entries) throws IOException

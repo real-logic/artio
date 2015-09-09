@@ -45,7 +45,7 @@ public final class GenerationUtil
         );
     }
 
-    public static int getMessageType(final String representation)
+    public static int packMessageType(final String representation)
     {
         int packed = (byte) representation.charAt(0);
 

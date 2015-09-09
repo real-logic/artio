@@ -39,7 +39,7 @@ public class IntDictionaryTest
     @Before
     public void createDataDictionary()
     {
-        final Message heartbeat = new Message("Hearbeat", '0', ADMIN);
+        final Message heartbeat = new Message("Hearbeat", "0", ADMIN);
         heartbeat.requiredEntry(new Field(115, "OnBehalfOfCompID", Type.STRING));
         heartbeat.optionalEntry(new Field(112, "TestReqID", Type.STRING));
 
