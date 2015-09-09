@@ -26,7 +26,7 @@ import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.streams.Streams;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
@@ -46,11 +46,12 @@ public class Logger implements AutoCloseable
     private ArchiveReader archiveReader;
     private AgentRunner loggingRunner;
 
-    public Logger(final EngineConfiguration configuration,
-                  final Streams inboundLibraryStreams,
-                  final Streams outboundLibraryStreams,
-                  final ErrorHandler errorHandler,
-                  final Publication replayPublication)
+    public Logger(
+        final EngineConfiguration configuration,
+        final Streams inboundLibraryStreams,
+        final Streams outboundLibraryStreams,
+        final ErrorHandler errorHandler,
+        final Publication replayPublication)
     {
         this.configuration = configuration;
         this.inboundLibraryStreams = inboundLibraryStreams;
@@ -74,7 +75,7 @@ public class Logger implements AutoCloseable
         {
             final int loggerCacheCapacity = configuration.loggerCacheCapacity();
             final String logFileDir = configuration.logFileDir();
-            final List<Index> indices = Arrays.asList(
+            final List<Index> indices = Collections.singletonList(
                 new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, LoggerUtil::map));
             final Indexer indexer = new Indexer(indices, outboundLibraryStreams.subscription());
 
@@ -140,6 +141,7 @@ public class Logger implements AutoCloseable
             {
                 loggingRunner = newRunner(archiver);
             }
+
             startOnThread(loggingRunner);
         }
     }
@@ -155,5 +157,11 @@ public class Logger implements AutoCloseable
         {
             loggingRunner.close();
         }
+        else
+        {
+            archiver.onClose();
+        }
+
+        archiveReader.close();
     }
 }

@@ -34,7 +34,7 @@ import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermId
 import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
-public class ArchiveReader
+public class ArchiveReader implements AutoCloseable
 {
     public static final int MESSAGE_FRAME_BLOCK_LENGTH =
         MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
@@ -59,6 +59,12 @@ public class ArchiveReader
         this.loggerCacheCapacity = loggerCacheCapacity;
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
         streamAndSessionToReader = new BiInt2ObjectMap<>();
+    }
+
+    public void close()
+    {
+        metaData.close();
+        streamAndSessionToReader.forEach(SessionReader::close);
     }
 
     public boolean read(final int streamId, final int aeronSessionId, final long position, final LogHandler handler)
@@ -110,8 +116,7 @@ public class ArchiveReader
             return handler.onLogEntry(messageFrame, buffer, aeronDataOffset, fixMessageOffset, messageLength);
         }
 
-        @Override
-        public void close() throws Exception
+        public void close()
         {
             termIdToBuffer.close();
         }
