@@ -39,7 +39,6 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class EngineAndLibraryIntegrationTest
 {
-
     private MediaDriver mediaDriver;
     private FixEngine engine;
     private FixLibrary library;
@@ -51,9 +50,9 @@ public class EngineAndLibraryIntegrationTest
     @Before
     public void launch()
     {
+        delete(ACCEPTOR_LOGS);
         mediaDriver = launchMediaDriver();
 
-        delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(unusedPort(), "engineCounters");
         config.replyTimeoutInMs(TIMEOUT_IN_MS);
         engine = FixEngine.launch(config);
@@ -161,8 +160,7 @@ public class EngineAndLibraryIntegrationTest
             "Engine still hasn't disconnected", () ->
             {
                 library.poll(5);
-                final boolean notConnected = !library.isConnected();
-                return notConnected;
+                return !library.isConnected();
             },
             AWAIT_TIMEOUT,
             1);
@@ -209,10 +207,9 @@ public class EngineAndLibraryIntegrationTest
     @After
     public void close() throws Exception
     {
-        CloseHelper.close(engine);
         CloseHelper.close(library);
         CloseHelper.close(library2);
-
+        CloseHelper.close(engine);
         CloseHelper.close(mediaDriver);
     }
 }
