@@ -25,27 +25,32 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-// TODO: better removal of sender end points when the connection is closed.
 public class SenderEndPoint implements AutoCloseable
 {
     private final long connectionId;
+    private final int libraryId;
     private final SocketChannel channel;
     private final IdleStrategy idleStrategy;
     private final AtomicCounter messagesWritten;
     private final ErrorHandler errorHandler;
+    private final Framer framer;
 
     public SenderEndPoint(
         final long connectionId,
+        final int libraryId,
         final SocketChannel channel,
         final IdleStrategy idleStrategy,
         final AtomicCounter messagesWritten,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final Framer framer)
     {
         this.connectionId = connectionId;
+        this.libraryId = libraryId;
         this.channel = channel;
         this.idleStrategy = idleStrategy;
         this.messagesWritten = messagesWritten;
         this.errorHandler = errorHandler;
+        this.framer = framer;
     }
 
     public void onFramedMessage(final DirectBuffer directBuffer, final int offset, final int length)
@@ -69,12 +74,23 @@ public class SenderEndPoint implements AutoCloseable
         catch (final IOException ex)
         {
             errorHandler.onError(ex);
+            removeEndpoint();
         }
+    }
+
+    private void removeEndpoint()
+    {
+        framer.onDisconnect(libraryId, connectionId);
     }
 
     public long connectionId()
     {
         return connectionId;
+    }
+
+    public int libraryId()
+    {
+        return libraryId;
     }
 
     public void close()

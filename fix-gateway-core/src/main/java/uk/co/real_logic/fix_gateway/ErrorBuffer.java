@@ -16,15 +16,12 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.agrona.ErrorHandler;
-import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.agrona.concurrent.EpochClock;
-import uk.co.real_logic.agrona.concurrent.RecordBuffer;
+import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,7 +59,7 @@ public class ErrorBuffer implements ErrorHandler
     private final int maxRecordSize;
 
     private List<String> errors;
-    private long timeInMillis;
+    private long timeSinceInMillis;
 
     /**
      * Read only constructor.
@@ -142,20 +139,14 @@ public class ErrorBuffer implements ErrorHandler
         return errorsSince(0L);
     }
 
-    public List<String> errorsSince(final long timeInMillis)
-    {
-        this.timeInMillis = timeInMillis;
-        recordBuffer.forEach(onErrorFunc);
-        return errors != null ? errors : emptyList();
-    }
-
     private void onError(final int offset)
     {
         wrapExceptionDecoder(offset);
-        if (exceptionDecoder.time() > timeInMillis)
+        final long timeOfException = exceptionDecoder.time();
+        if (timeOfException > timeSinceInMillis)
         {
             final StringBuilder builder = new StringBuilder();
-            appendException(builder);
+            appendException(timeOfException, builder);
             appendStackTraceElements(exceptionDecoder.limit(), builder);
             if (errors == null)
             {
@@ -163,6 +154,15 @@ public class ErrorBuffer implements ErrorHandler
             }
             errors.add(builder.toString());
         }
+    }
+
+    public List<String> errorsSince(final long timeSinceInMillis)
+    {
+        this.timeSinceInMillis = timeSinceInMillis;
+        recordBuffer.forEach(onErrorFunc);
+        final List<String> errors = this.errors;
+        this.errors = null;
+        return errors != null ? errors : emptyList();
     }
 
     private void appendStackTraceElements(int offset, final StringBuilder builder)
@@ -188,9 +188,9 @@ public class ErrorBuffer implements ErrorHandler
             stackTraceElementDecoder.lineNumber()));
     }
 
-    private void appendException(final StringBuilder builder)
+    private void appendException(final long timeOfException, final StringBuilder builder)
     {
-        builder.append(formatTimeStamp());
+        builder.append(formatTimeStamp(timeOfException));
         builder.append(": ");
         builder.append(exceptionDecoder.exceptionClassName());
         builder.append("(");
@@ -203,10 +203,10 @@ public class ErrorBuffer implements ErrorHandler
         exceptionDecoder.wrap(buffer, offset, exceptionBlockLength, exceptionVersion);
     }
 
-    private String formatTimeStamp()
+    private String formatTimeStamp(final long timeOfException)
     {
-        final Instant instant = Instant.ofEpochMilli(exceptionDecoder.time());
-        return LocalDateTime.ofInstant(instant, ZoneId.systemDefault()).toString();
+        final Instant instant = Instant.ofEpochMilli(timeOfException);
+        return ZonedDateTime.ofInstant(instant, ZoneId.systemDefault()).toString();
     }
 
     /**

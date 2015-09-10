@@ -178,6 +178,15 @@ public class GatewayToGatewaySystemTest
         }
     }
 
+    @Test
+    public void acceptorsShouldHandleInitiatorDisconnectsGracefully()
+    {
+        //initiatingLibrary.close();
+        initiatingEngine.close();
+
+        //LockSupport.parkNanos(10_000_000_000L);
+    }
+
     private void assertOriginalLibraryDoesntReceiveMessages(final int initiator1MessageCount)
     {
         initiatingLibrary.poll(5);

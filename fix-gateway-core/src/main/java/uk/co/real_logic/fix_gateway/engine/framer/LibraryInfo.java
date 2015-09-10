@@ -99,4 +99,8 @@ public final class LibraryInfo
             '}';
     }
 
+    public void onSessionDisconnected(final long connectionId)
+    {
+        sessions.removeIf(info -> info.connectionId() == connectionId);
+    }
 }

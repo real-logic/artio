@@ -62,8 +62,7 @@ public class ConnectionHandler
         final SocketChannel channel,
         final long connectionId,
         final long sessionId,
-        final Framer framer,
-        final int libraryId,
+        final int libraryId, final Framer framer,
         final ReliefValve reliefValve) throws IOException
     {
         return new ReceiverEndPoint(
@@ -81,13 +80,19 @@ public class ConnectionHandler
         );
     }
 
-    public SenderEndPoint senderEndPoint(final SocketChannel channel, final long connectionId) throws IOException
+    public SenderEndPoint senderEndPoint(
+        final SocketChannel channel,
+        final long connectionId,
+        final int libraryId,
+        final Framer framer) throws IOException
     {
         return new SenderEndPoint(
             connectionId,
+            libraryId,
             channel,
             idleStrategy,
             fixCounters.messagesWritten(channel.getRemoteAddress()),
-            errorHandler);
+            errorHandler,
+            framer);
     }
 }

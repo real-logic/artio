@@ -27,7 +27,7 @@ public class ErrorPrinter implements Agent
 {
     private final ErrorBuffer buffer;
 
-    private long lastTimeInMS = 0L;
+    private long lastSeenErrorTime = 0L;
 
     public static void main(String[] args)
     {
@@ -46,11 +46,19 @@ public class ErrorPrinter implements Agent
 
     public int doWork() throws Exception
     {
-        final long time = System.currentTimeMillis();
-        final List<String> errors = buffer.errorsSince(lastTimeInMS);
-        errors.forEach(System.err::println);
-        lastTimeInMS = time;
-        return errors.size();
+        final long time = System.nanoTime();
+        if (time > lastSeenErrorTime)
+        {
+            final List<String> errors = buffer.errorsSince(lastSeenErrorTime);
+            if (errors.size() > 0)
+            {
+                errors.forEach(System.err::println);
+                lastSeenErrorTime = time;
+            }
+            return errors.size();
+        }
+
+        return 0;
     }
 
     public String roleName()

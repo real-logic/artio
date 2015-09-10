@@ -87,11 +87,11 @@ public class FramerTest
         clientBuffer.putInt(10, 5);
 
         when(mockConnectionHandler
-            .receiverEndPoint(any(SocketChannel.class), connectionId.capture(), anyLong(), eq(framer), anyInt(),
+            .receiverEndPoint(any(SocketChannel.class), connectionId.capture(), anyLong(), anyInt(), eq(framer),
                 any()))
             .thenReturn(mockReceiverEndPoint);
 
-        when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong()))
+        when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong(), anyInt(), eq(framer)))
             .thenReturn(mockSenderEndPoint);
 
         when(mockReceiverEndPoint.connectionId()).then(inv -> connectionId.getValue());
@@ -99,6 +99,8 @@ public class FramerTest
         when(mockSenderEndPoint.connectionId()).then(inv -> connectionId.getValue());
 
         when(mockReceiverEndPoint.libraryId()).thenReturn(LIBRARY_ID);
+
+        when(mockSenderEndPoint.libraryId()).thenReturn(LIBRARY_ID);
     }
 
     @After
@@ -124,11 +126,11 @@ public class FramerTest
         framer.doWork();
 
         verify(mockConnectionHandler).receiverEndPoint(
-            notNull(SocketChannel.class), anyLong(), anyLong(), eq(framer), eq(LIBRARY_ID),
+            notNull(SocketChannel.class), anyLong(), anyLong(), eq(LIBRARY_ID), eq(framer),
             any());
 
         verify(mockConnectionHandler).senderEndPoint(
-            notNull(SocketChannel.class), anyLong());
+            notNull(SocketChannel.class), anyLong(), eq(LIBRARY_ID), eq(framer));
     }
 
     @Test

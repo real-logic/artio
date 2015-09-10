@@ -341,7 +341,7 @@ public class ReceiverEndPoint
 
     private void removeEndpoint()
     {
-        framer.removeEndPoint(this);
+        framer.onDisconnect(libraryId, connectionId);
     }
 
     private void onDisconnectDetected()

@@ -19,8 +19,8 @@ import org.hamcrest.Matcher;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
 
 import java.util.List;
 
@@ -34,14 +34,15 @@ public class ErrorBufferTest
 
     private UnsafeBuffer unsafeBuffer = new UnsafeBuffer(new byte[64 * SLOT_SIZE]);
     private AtomicCounter mockCounter = mock(AtomicCounter.class);
-    private FakeEpochClock clock = new FakeEpochClock();
+    private long time = 0;
+    private EpochClock clock = () -> time;
     private ErrorBuffer writeBuffer = new ErrorBuffer(unsafeBuffer, mockCounter, clock, SLOT_SIZE);
     private ErrorBuffer readBuffer = new ErrorBuffer(unsafeBuffer, SLOT_SIZE);
 
     @Before
     public void setUp()
     {
-        clock.advanceMilliSeconds(50L);
+        time += 50;
     }
 
     @Test
@@ -135,7 +136,7 @@ public class ErrorBufferTest
     @Test
     public void shouldDisplayExceptionsSinceTimestamp()
     {
-        clock.advanceMilliSeconds(150L);
+        time += 150;
 
         writeBuffer.onError(ExceptionFixtures.fooException);
 

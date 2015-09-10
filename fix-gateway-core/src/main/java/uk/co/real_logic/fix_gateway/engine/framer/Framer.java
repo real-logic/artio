@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
-import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.agrona.concurrent.QueuedPipe;
@@ -61,9 +60,7 @@ public class Framer implements Agent, SessionHandler
     public static final int NO_ACCEPTOR = -1;
 
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
-    private final Long2ObjectHashMap<SenderEndPoint> connectionToSenderEndpoint = new Long2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
-    private final Consumer<ReceiverEndPoint> removeSenderEndPointFunc = this::removeSenderEndPoint;
     private final ReliefValve sendOutboundMessagesFunc = this::sendOutboundMessages;
     private final EpochClock clock;
     private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
@@ -71,7 +68,8 @@ public class Framer implements Agent, SessionHandler
 
     private final Selector selector;
     private final ServerSocketChannel listeningChannel;
-    private final ReceiverEndPointPoller endPointPoller;
+    private final ReceiverEndPoints receiverEndPoints = new ReceiverEndPoints();
+    private final SenderEndPoints senderEndPoints = new SenderEndPoints();
 
     private final EngineConfiguration configuration;
     private final ConnectionHandler connectionHandler;
@@ -120,8 +118,6 @@ public class Framer implements Agent, SessionHandler
 
             selector = Selector.open();
             listeningChannel.register(selector, SelectionKey.OP_ACCEPT);
-
-            endPointPoller = new ReceiverEndPointPoller();
         }
         catch (final IOException ex)
         {
@@ -162,7 +158,9 @@ public class Framer implements Agent, SessionHandler
             if (!library.isConnected())
             {
                 iterator.remove();
-                endPointPoller.deregisterLibrary(library.libraryId(), removeSenderEndPointFunc);
+                final int libraryId = library.libraryId();
+                receiverEndPoints.removeLibrary(libraryId);
+                senderEndPoints.removeLibrary(libraryId);
                 if (library.isAcceptor())
                 {
                     acceptorLibraryId = NO_ACCEPTOR;
@@ -173,17 +171,9 @@ public class Framer implements Agent, SessionHandler
         return total;
     }
 
-    public void removeEndPoint(final ReceiverEndPoint receiverEndPoint)
+    public void removeEndPoints(final long connectionId)
     {
-        endPointPoller.deregisterEndPoint(receiverEndPoint);
-        removeSenderEndPoint(receiverEndPoint);
-    }
 
-    private void removeSenderEndPoint(final ReceiverEndPoint receiverEndPoint)
-    {
-        final long id = receiverEndPoint.connectionId();
-        final SenderEndPoint senderEndPoint = connectionToSenderEndpoint.remove(id);
-        senderEndPoint.close();
     }
 
     private int pollEndPoints() throws IOException
@@ -194,7 +184,7 @@ public class Framer implements Agent, SessionHandler
         int bytesReceived;
         do
         {
-            bytesReceived = endPointPoller.pollEndPoints();
+            bytesReceived = receiverEndPoints.pollEndPoints();
             totalBytesReceived += bytesReceived;
         }
         while (bytesReceived > 0 && totalBytesReceived < inboundBytesReceivedLimit);
@@ -312,11 +302,7 @@ public class Framer implements Agent, SessionHandler
             outboundTimer.recordSince(timestamp);
         }
 
-        final SenderEndPoint endPoint = connectionToSenderEndpoint.get(connectionId);
-        if (endPoint != null)
-        {
-            endPoint.onFramedMessage(buffer, offset, length);
-        }
+        senderEndPoints.onMessage(connectionId, buffer, offset, length);
     }
 
     private void setupConnection(final SocketChannel channel,
@@ -337,12 +323,13 @@ public class Framer implements Agent, SessionHandler
         channel.configureBlocking(false);
 
         final ReceiverEndPoint receiverEndPoint =
-            connectionHandler.receiverEndPoint(channel, connectionId, sessionId, this, libraryId,
-            sendOutboundMessagesFunc);
-        endPointPoller.register(receiverEndPoint);
+            connectionHandler.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
+                sendOutboundMessagesFunc);
+        receiverEndPoints.add(receiverEndPoint);
 
-        final SenderEndPoint senderEndPoint = connectionHandler.senderEndPoint(channel, connectionId);
-        connectionToSenderEndpoint.put(connectionId, senderEndPoint);
+        final SenderEndPoint senderEndPoint =
+            connectionHandler.senderEndPoint(channel, connectionId, libraryId, this);
+        senderEndPoints.add(senderEndPoint);
 
         idToLibrary.get(libraryId).onSessionConnected(new SessionInfo(
             connectionId,
@@ -357,7 +344,9 @@ public class Framer implements Agent, SessionHandler
 
     public void onDisconnect(final int libraryId, final long connectionId)
     {
-        endPointPoller.deregisterConnection(connectionId, removeSenderEndPointFunc);
+        receiverEndPoints.removeConnection(connectionId);
+        senderEndPoints.removeConnection(connectionId);
+        idToLibrary.get(libraryId).onSessionDisconnected(connectionId);
     }
 
     public void onApplicationHeartbeat(final int libraryId)
@@ -393,7 +382,8 @@ public class Framer implements Agent, SessionHandler
 
     public void onClose()
     {
-        endPointPoller.close();
+        receiverEndPoints.close();
+        senderEndPoints.close();
         close(selector);
         close(listeningChannel);
     }
