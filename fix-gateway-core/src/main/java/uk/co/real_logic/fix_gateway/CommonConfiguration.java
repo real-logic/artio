@@ -57,7 +57,7 @@ public class CommonConfiguration
 
     public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 8 * 1024 * 1024;
     public static final String DEFAULT_MONITORING_FILE =
-        optimalTmpDirName() + File.separator + "fix" + File.separator + "monitoring";
+        optimalTmpDirName() + File.separator + "fix-%s" + File.separator + "monitoring";
 
     // ------------------------------------------------
     //          Static Configuration
@@ -85,8 +85,8 @@ public class CommonConfiguration
 
     private SessionIdStrategy sessionIdStrategy = new SenderAndTargetSessionIdStrategy();
     private int counterBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROPERTY, DEFAULT_MONITORING_BUFFER_LENGTH);
-    private String monitoringFile = getProperty(MONITORING_FILE_PROPERTY, DEFAULT_MONITORING_FILE);
-    private String aeronChannel;
+    private String monitoringFile = null;
+    private String aeronChannel = null;
     private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
     private Aeron.Context aeronContext = new Aeron.Context();
     private int errorSlotSize = DEFAULT_ERROR_SLOT_SIZE;
@@ -108,9 +108,9 @@ public class CommonConfiguration
         return this;
     }
 
-    public CommonConfiguration monitoringFile(String counterBuffersFile)
+    public CommonConfiguration monitoringFile(String monitoringFile)
     {
-        this.monitoringFile = counterBuffersFile;
+        this.monitoringFile = monitoringFile;
         return this;
     }
 
@@ -213,5 +213,18 @@ public class CommonConfiguration
     public int outboundMaxClaimAttempts()
     {
         return outboundMaxClaimAttempts;
+    }
+
+    protected void conclude(final String fixSuffix)
+    {
+        if (aeronChannel() == null)
+        {
+            throw new IllegalArgumentException("Missing required configuration: aeron channel");
+        }
+
+        if (monitoringFile() == null)
+        {
+            monitoringFile(getProperty(MONITORING_FILE_PROPERTY, String.format(DEFAULT_MONITORING_FILE, fixSuffix)));
+        }
     }
 }

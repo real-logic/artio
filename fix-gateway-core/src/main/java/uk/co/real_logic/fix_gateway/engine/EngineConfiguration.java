@@ -303,9 +303,9 @@ public final class EngineConfiguration extends CommonConfiguration
         return this;
     }
 
-    public EngineConfiguration monitoringFile(String counterBuffersFile)
+    public EngineConfiguration monitoringFile(String monitoringFile)
     {
-        super.monitoringFile(counterBuffersFile);
+        super.monitoringFile(monitoringFile);
         return this;
     }
 
@@ -313,6 +313,11 @@ public final class EngineConfiguration extends CommonConfiguration
     {
         super.replyTimeoutInMs(replyTimeoutInMs);
         return this;
+    }
+
+    void conclude()
+    {
+        super.conclude("engine");
     }
 
 }

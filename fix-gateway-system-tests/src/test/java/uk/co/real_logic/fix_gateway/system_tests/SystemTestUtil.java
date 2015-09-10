@@ -199,8 +199,7 @@ public final class SystemTestUtil
         }
     }
 
-    public static FixEngine launchAcceptingGateway(
-        final int port)
+    public static FixEngine launchAcceptingGateway(final int port)
     {
         delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(port, "engineCounters");

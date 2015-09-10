@@ -72,6 +72,8 @@ public class FixLibrary extends GatewayProcess
 
     public FixLibrary(final LibraryConfiguration configuration)
     {
+        configuration.conclude();
+
         init(configuration);
 
         this.configuration = configuration;

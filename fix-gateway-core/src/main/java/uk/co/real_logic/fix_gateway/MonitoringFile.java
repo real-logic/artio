@@ -46,7 +46,7 @@ public final class MonitoringFile implements AutoCloseable
 
     public MonitoringFile(final boolean newFile, final CommonConfiguration configuration)
     {
-        final File file = new File(configuration.monitoringFile());
+        final File file = new File(configuration.monitoringFile()).getAbsoluteFile();
         final int length;
         if (newFile)
         {

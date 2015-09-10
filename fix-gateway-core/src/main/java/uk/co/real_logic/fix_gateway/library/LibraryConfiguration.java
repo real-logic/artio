@@ -212,4 +212,9 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    void conclude()
+    {
+        super.conclude("library-" + libraryId());
+    }
+
 }

@@ -44,6 +44,8 @@ public final class FixEngine extends GatewayProcess
 
     public static FixEngine launch(final EngineConfiguration configuration)
     {
+        configuration.conclude();
+
         return new FixEngine(configuration).start();
     }
 
