@@ -54,6 +54,7 @@ public final class FixLibrary extends GatewayProcess
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
     private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
+    private final SequenceNumbers sequenceNumbers;
 
     private final EpochClock clock;
     private final LibraryConfiguration configuration;
@@ -92,6 +93,7 @@ public final class FixLibrary extends GatewayProcess
             outboundPublication,
             configuration.libraryId(),
             configuration.replyTimeoutInMs());
+        sequenceNumbers = new SequenceNumbers(configuration.acceptorSequenceNumbersResetUponReconnect());
     }
 
     private FixLibrary connect()
@@ -374,7 +376,9 @@ public final class FixLibrary extends GatewayProcess
                 if (subscriber != null)
                 {
                     subscriber.onDisconnect(libraryId, connectionId, reason);
-                    sessions.remove(subscriber.session());
+                    final Session session = subscriber.session();
+                    sessions.remove(session);
+
                 }
             }
         }

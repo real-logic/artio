@@ -20,14 +20,17 @@ import uk.co.real_logic.agrona.collections.LongHashSet;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Identifies which sessions are currently authenticated.
+ */
 public class SessionIds
 {
-    private static final long MISSING = -2;
-
+    public static final long MISSING = -2;
     public static final long DUPLICATE_SESSION = -1;
 
     private static long counter = 0L;
 
+    // TODO: allow the hash set to resize
     private final LongHashSet currentlyAuthenticated = new LongHashSet(40, MISSING);
     private final Map<Object, Long> compositeToSurrogate = new HashMap<>();
 
