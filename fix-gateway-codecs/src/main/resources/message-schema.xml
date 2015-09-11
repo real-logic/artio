@@ -42,10 +42,14 @@
             <validValue name="INVALID">3</validValue>
         </enum>
         <enum name="DisconnectReason" encodingType="uint8">
-            <validValue name="REMOTE_DISCONNECT">0</validValue>
-            <validValue name="LOCAL_DISCONNECT">1</validValue>
-            <validValue name="LIBRARY_DISCONNECT">2</validValue>
-            <validValue name="ENGINE_SHUTDOWN">3</validValue>
+            <validValue name="REMOTE_DISCONNECT"
+                description="The TCP connection was disconnected remotely">0</validValue>
+            <validValue name="LOCAL_DISCONNECT"
+                description="We are disconnecting the connection due to session management rules">1</validValue>
+            <validValue name="LIBRARY_DISCONNECT"
+                description="We are disconnecting the connection due to its library disconnecting">2</validValue>
+            <validValue name="ENGINE_SHUTDOWN"
+                description="We are disconnecting the connection due to the engine shutting down">3</validValue>
         </enum>
     </types>
 
