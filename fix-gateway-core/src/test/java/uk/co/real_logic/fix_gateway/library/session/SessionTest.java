@@ -358,6 +358,21 @@ public class SessionTest extends AbstractSessionTest
         verify(mockProxy).reject(1, 2, MSG_TYPE_BYTES, MSG_TYPE_BYTES.length, REQUIRED_TAG_MISSING);
     }
 
+    @Test
+    public void shouldNotifyClientUponSequenceReset()
+    {
+        final int newSeqNo = 10;
+
+        onLogon(1);
+
+        assertEquals(0, session.lastSentMsgSeqNum());
+
+        session.sequenceReset(newSeqNo);
+
+        verify(mockProxy).sequenceReset(anyInt(), eq(newSeqNo));
+        assertEquals(newSeqNo - 1, session.lastSentMsgSeqNum());
+    }
+
     private void poll()
     {
         session.poll(fakeClock.time());

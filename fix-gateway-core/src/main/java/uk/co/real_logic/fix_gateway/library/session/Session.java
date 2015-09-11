@@ -333,9 +333,10 @@ public class Session
      * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
      *                                      sent.
      */
-    public void resetSequence(final int nextSentMessageSequenceNumber)
+    public void sequenceReset(final int nextSentMessageSequenceNumber)
     {
-        // TODO
+        proxy.sequenceReset(lastSentMsgSeqNum, nextSentMessageSequenceNumber);
+        lastSentMsgSeqNum = nextSentMessageSequenceNumber - 1;
     }
 
     // ---------- Event Handlers & Logic ----------

@@ -74,9 +74,10 @@ public class SessionProxy
     private final HeartbeatEncoder heartbeat = new HeartbeatEncoder();
     private final RejectEncoder reject = new RejectEncoder();
     private final TestRequestEncoder testRequest = new TestRequestEncoder();
+    private final SequenceResetEncoder sequenceReset = new SequenceResetEncoder();
     private final List<HeaderEncoder> headers = asList(
         logon.header(), resendRequest.header(), logout.header(), heartbeat.header(), reject.header(),
-        testRequest.header());
+        testRequest.header(), sequenceReset.header());
 
     private final AsciiFormatter lowSequenceNumber;
     private final UnsafeBuffer buffer;
@@ -315,6 +316,18 @@ public class SessionProxy
 
         send(testRequest.encode(string, 0), TestRequestDecoder.MESSAGE_TYPE);
         testRequest.reset();
+    }
+
+    public void sequenceReset(final int msgSeqNo, final int newSeqNo)
+    {
+        final HeaderEncoder header = sequenceReset.header();
+        setupHeader(header);
+        header.msgSeqNum(msgSeqNo);
+
+        sequenceReset.newSeqNo(newSeqNo);
+
+        send(sequenceReset.encode(string, 0), SequenceResetDecoder.MESSAGE_TYPE);
+        sequenceReset.reset();
     }
 
     private void setupHeader(final HeaderEncoder header)
