@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.library.session;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.Timer;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 
@@ -68,10 +69,10 @@ public class SessionSubscriber implements AutoCloseable
         }
     }
 
-    public void onDisconnect(final int libraryId, final long connectionId)
+    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         session.onDisconnect();
-        handler.onDisconnect(libraryId, connectionId);
+        handler.onDisconnect(libraryId, connectionId, reason);
     }
 
     public void onLogon(final long connectionId, final long sessionId)

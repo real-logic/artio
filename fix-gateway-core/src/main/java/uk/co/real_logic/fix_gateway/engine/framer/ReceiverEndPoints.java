@@ -24,6 +24,7 @@ import java.nio.channels.SelectionKey;
 import java.util.stream.Stream;
 
 import static uk.co.real_logic.agrona.collections.ArrayUtil.UNKNOWN_INDEX;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.*;
 
 public class ReceiverEndPoints extends TransportPoller
 {
@@ -54,7 +55,7 @@ public class ReceiverEndPoints extends TransportPoller
             if (endPoint.connectionId() == connectionId)
             {
                 index = i;
-                endPoint.close();
+                endPoint.close(LOCAL_DISCONNECT);
             }
         }
 
@@ -72,7 +73,7 @@ public class ReceiverEndPoints extends TransportPoller
             final ReceiverEndPoint endPoint = endPoints[i];
             if (endPoint.libraryId() == libraryId)
             {
-                endPoint.close();
+                endPoint.close(LIBRARY_DISCONNECT);
                 removeCount++;
             }
         }
@@ -133,7 +134,7 @@ public class ReceiverEndPoints extends TransportPoller
 
     public void close()
     {
-        Stream.of(endPoints).forEach(ReceiverEndPoint::close);
+        Stream.of(endPoints).forEach(receiverEndPoint -> receiverEndPoint.close(ENGINE_SHUTDOWN));
         super.close();
     }
 }

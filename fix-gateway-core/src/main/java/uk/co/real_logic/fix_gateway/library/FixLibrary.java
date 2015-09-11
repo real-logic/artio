@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.library.session.*;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
@@ -309,15 +310,15 @@ public class FixLibrary extends GatewayProcess
             }
         }
 
-        public void onDisconnect(final int libraryId, final long connectionId)
+        public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
                 final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
-                DebugLogger.log("Library Disconnect %s\n", connectionId);
+                DebugLogger.log("Library Disconnect %d, %s\n", connectionId, reason);
                 if (subscriber != null)
                 {
-                    subscriber.onDisconnect(libraryId, connectionId);
+                    subscriber.onDisconnect(libraryId, connectionId, reason);
                     sessions.remove(subscriber.session());
                 }
             }

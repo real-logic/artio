@@ -186,7 +186,7 @@ public class DataSubscriber implements FragmentHandler
         disconnect.wrap(buffer, offset, blockLength, version);
         final long connectionId = disconnect.connection();
         DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
-        sessionHandler.onDisconnect(disconnect.libraryId(), connectionId);
+        sessionHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
         return offset + DisconnectDecoder.BLOCK_LENGTH;
     }
 

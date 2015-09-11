@@ -80,7 +80,7 @@ public class SenderEndPoint implements AutoCloseable
 
     private void removeEndpoint()
     {
-        framer.onDisconnect(libraryId, connectionId);
+        framer.onDisconnect(libraryId, connectionId, null);
     }
 
     public long connectionId()

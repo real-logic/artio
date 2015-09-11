@@ -41,6 +41,12 @@
             <validValue name="INVALID_BODYLENGTH">2</validValue>
             <validValue name="INVALID">3</validValue>
         </enum>
+        <enum name="DisconnectReason" encodingType="uint8">
+            <validValue name="REMOTE_DISCONNECT">0</validValue>
+            <validValue name="LOCAL_DISCONNECT">1</validValue>
+            <validValue name="LIBRARY_DISCONNECT">2</validValue>
+            <validValue name="ENGINE_SHUTDOWN">3</validValue>
+        </enum>
     </types>
 
     <!-- MESSAGING PROTOCOL -->
@@ -61,6 +67,7 @@
     <sbe:message name="Disconnect" id="7" description="A connection has disconnected">
         <field name="libraryId" id="42" type="LibraryId"/>
         <field name="connection" id="8" type="ConnectionId"/>
+        <field name="reason" id="46" type="DisconnectReason"/>
     </sbe:message>
     <sbe:message name="Logon" id="9" description="A session has connected">
         <field name="libraryId" id="43" type="LibraryId"/>

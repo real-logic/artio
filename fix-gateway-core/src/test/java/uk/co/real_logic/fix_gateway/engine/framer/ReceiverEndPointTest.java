@@ -38,6 +38,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
@@ -207,7 +208,7 @@ public class ReceiverEndPointTest
 
     private void assertSavesDisconnect()
     {
-        verify(mockPublication).saveDisconnect(LIBRARY_ID, CONNECTION_ID);
+        verify(mockPublication).saveDisconnect(LIBRARY_ID, CONNECTION_ID, REMOTE_DISCONNECT);
     }
 
     private void theChannelIsClosed() throws IOException

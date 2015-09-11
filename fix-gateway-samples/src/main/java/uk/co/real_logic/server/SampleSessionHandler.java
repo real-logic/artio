@@ -20,6 +20,7 @@ import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.decoder.PrinterImpl;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 public class SampleSessionHandler implements SessionHandler
@@ -44,8 +45,8 @@ public class SampleSessionHandler implements SessionHandler
         System.out.printf("%d -> %s\n", connectionId, printer.toString(string, offset, length, messageType));
     }
 
-    public void onDisconnect(final int libraryId, final long connectionId)
+    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
-        System.out.printf("%d Disconnected", connectionId);
+        System.out.printf("%d Disconnected: %s\n", connectionId, reason);
     }
 }

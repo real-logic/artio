@@ -38,8 +38,10 @@ import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 public class GatewayPublication
 {
 
+    public static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
     public static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
+    public static final int DISCONNECT_CLAIM_LENGTH = HEADER_LENGTH + DisconnectEncoder.BLOCK_LENGTH;
 
     private final MessageHeaderEncoder header = new MessageHeaderEncoder();
     private final LogonEncoder logon = new LogonEncoder();
@@ -181,9 +183,9 @@ public class GatewayPublication
         return position;
     }
 
-    public long saveDisconnect(final int libraryId, final long connectionId)
+    public long saveDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
-        final long position = claim(header.encodedLength() + DisconnectEncoder.BLOCK_LENGTH);
+        final long position = claim(DISCONNECT_CLAIM_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -200,7 +202,8 @@ public class GatewayPublication
         disconnect
             .wrap(buffer, offset)
             .libraryId(libraryId)
-            .connection(connectionId);
+            .connection(connectionId)
+            .reason(reason);
 
         bufferClaim.commit();
 

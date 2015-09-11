@@ -23,6 +23,7 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
@@ -38,6 +39,8 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LIBRARY_DISCONNECT;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 
 public class FramerTest
@@ -161,15 +164,15 @@ public class FramerTest
         aClientConnects();
         framer.doWork();
 
-        framer.onDisconnect(LIBRARY_ID, connectionId.getValue());
+        framer.onDisconnect(LIBRARY_ID, connectionId.getValue(), null);
         framer.doWork();
 
-        verifyEndpointsClosed();
+        verifyEndpointsClosed(LOCAL_DISCONNECT);
     }
 
-    private void verifyEndpointsClosed()
+    private void verifyEndpointsClosed(final DisconnectReason reason)
     {
-        verify(mockReceiverEndPoint).close();
+        verify(mockReceiverEndPoint).close(reason);
         verify(mockSenderEndPoint).close();
     }
 
@@ -237,7 +240,7 @@ public class FramerTest
 
         framer.doWork();
 
-        verifyEndpointsClosed();
+        verifyEndpointsClosed(LIBRARY_DISCONNECT);
     }
 
     @Test
@@ -249,7 +252,7 @@ public class FramerTest
 
         framer.doWork();
 
-        verifyEndpointsClosed();
+        verifyEndpointsClosed(LIBRARY_DISCONNECT);
     }
 
     private void timeoutLibrary()

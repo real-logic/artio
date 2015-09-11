@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
@@ -169,11 +170,6 @@ public class Framer implements Agent, SessionHandler
         }
 
         return total;
-    }
-
-    public void removeEndPoints(final long connectionId)
-    {
-
     }
 
     private int pollEndPoints() throws IOException
@@ -339,10 +335,10 @@ public class Framer implements Agent, SessionHandler
 
     public void onRequestDisconnect(final int libraryId, final long connectionId)
     {
-        onDisconnect(libraryId, connectionId);
+        onDisconnect(libraryId, connectionId, null);
     }
 
-    public void onDisconnect(final int libraryId, final long connectionId)
+    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         receiverEndPoints.removeConnection(connectionId);
         senderEndPoints.removeConnection(connectionId);

@@ -21,6 +21,8 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
+import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
@@ -36,6 +38,8 @@ import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
@@ -176,7 +180,7 @@ public class ReceiverEndPoint
                     return;
                 }
 
-                final int endOfBodyLength = string.scan(startOfBodyLength + 1, usedBufferData - 1, START_OF_HEADER);
+                final int endOfBodyLength = scanEndOfBodyLength(startOfBodyLength);
                 if (endOfBodyLength == UNKNOWN_INDEX)
                 {
                     // Need more data
@@ -194,57 +198,36 @@ public class ReceiverEndPoint
                 if (!validateBodyLength(startOfChecksumTag))
                 {
                     saveInvalidMessage(offset, startOfChecksumTag);
-                    close();
+                    close(LOCAL_DISCONNECT);
                     removeEndpoint();
                     break;
                 }
 
                 final int startOfChecksumValue = startOfChecksumTag + MIN_CHECKSUM_SIZE;
-                final int indexOfLastByteOfMessage = string.scan(startOfChecksumValue, usedBufferData - 1, START_OF_HEADER);
-                if (indexOfLastByteOfMessage == UNKNOWN_INDEX)
+                final int endOfMessage = scanEndOfMessage(startOfChecksumValue);
+                if (endOfMessage == UNKNOWN_INDEX)
                 {
                     // Need more data
                     break;
                 }
 
-                final int messageType = getMessageType(endOfBodyLength, indexOfLastByteOfMessage);
-                final int length = (indexOfLastByteOfMessage + 1) - offset;
-
-                final int expectedChecksum = string.getInt(startOfChecksumValue - 1, indexOfLastByteOfMessage);
-                final int computedChecksum = string.computeChecksum(offset, startOfChecksumTag + 1);
-                //System.out.printf("Computed: %d, Expected: %d\n", computedChecksum, expectedChecksum);
-                if (expectedChecksum != computedChecksum)
+                final int messageType = getMessageType(endOfBodyLength, endOfMessage);
+                final int length = (endOfMessage + 1) - offset;
+                if (checksumInvalid(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
                 {
-                    publication.saveMessage(
-                        buffer, offset, length, libraryId, messageType, sessionId, connectionId, INVALID_CHECKSUM);
+                    saveInvalidChecksumMessage(offset, messageType, length);
                 }
                 else
                 {
-                    if (sessionId == UNKNOWN)
-                    {
-                        logon.decode(string, offset, length);
-                        final Object compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
-                        sessionId = sessionIds.onLogon(compositeKey);
-                        if (sessionId == DUPLICATE_SESSION)
-                        {
-                            close();
-                        }
-                        publication.saveLogon(libraryId, connectionId, sessionId);
-                    }
-
-                    messagesRead.orderedIncrement();
-                    publication.saveMessage(
-                        buffer, offset, length, libraryId, messageType, sessionId, connectionId, OK);
+                    checkSessionId(offset, length);
+                    saveMessage(offset, messageType, length);
                 }
 
                 offset += length;
             }
             catch (final IllegalArgumentException ex)
             {
-                // Completely unable to deal with parsing this message, bail
-                publication.saveMessage(
-                    buffer, offset, usedBufferData, libraryId, '-', sessionId, connectionId, INVALID);
-                moveRemainingDataToBufferStart(usedBufferData);
+                saveInvalidMessage(offset);
                 return;
             }
             catch (final Exception ex)
@@ -255,6 +238,67 @@ public class ReceiverEndPoint
         }
 
         moveRemainingDataToBufferStart(offset);
+    }
+
+    private boolean checksumInvalid(final int endOfMessage,
+                                    final int startOfChecksumValue,
+                                    final int offset,
+                                    final int startOfChecksumTag)
+    {
+        final int expectedChecksum = string.getInt(startOfChecksumValue - 1, endOfMessage);
+        final int computedChecksum = string.computeChecksum(offset, startOfChecksumTag + 1);
+        return expectedChecksum != computedChecksum;
+    }
+
+    private int scanEndOfMessage(final int startOfChecksumValue)
+    {
+        return string.scan(startOfChecksumValue, usedBufferData - 1, START_OF_HEADER);
+    }
+
+    private int scanEndOfBodyLength(final int startOfBodyLength)
+    {
+        return string.scan(startOfBodyLength + 1, usedBufferData - 1, START_OF_HEADER);
+    }
+
+    private void saveInvalidMessage(final int offset)
+    {
+        // Completely unable to deal with parsing this message, bail
+        publication.saveMessage(
+            buffer, offset, usedBufferData, libraryId, '-', sessionId, connectionId, INVALID);
+        moveRemainingDataToBufferStart(usedBufferData);
+    }
+
+    private void saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
+    {
+        publication.saveMessage(
+            buffer, offset, length, libraryId, messageType, sessionId, connectionId, INVALID_CHECKSUM);
+    }
+
+    private void saveMessage(final int offset, final int messageType, final int length)
+    {
+        messagesRead.orderedIncrement();
+        publication.saveMessage(
+            buffer, offset, length, libraryId, messageType, sessionId, connectionId, OK);
+    }
+
+    private void checkSessionId(final int offset, final int length)
+    {
+        if (sessionId == UNKNOWN)
+        {
+            logon.decode(string, offset, length);
+            final Object compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
+            sessionId = sessionIds.onLogon(compositeKey);
+            if (sessionId == DUPLICATE_SESSION)
+            {
+                publication.saveError(GatewayError.DUPLICATE_SESSION, libraryId,
+                    "Duplicate Session: " + compositeKey);
+                close(LOCAL_DISCONNECT);
+            }
+            else
+            {
+                publication.saveLogon(libraryId, connectionId, sessionId);
+            }
+        }
     }
 
     private void saveInvalidMessage(final int offset, final int startOfChecksumTag)
@@ -318,12 +362,12 @@ public class ReceiverEndPoint
         DebugLogger.log("%s", buffer, offset, COMMON_PREFIX_LENGTH);
     }
 
-    public void close()
+    public void close(final DisconnectReason reason)
     {
         if (!hasDisconnected)
         {
             closeChannel();
-            disconnectEndpoint();
+            disconnectEndpoint(reason);
         }
     }
 
@@ -341,19 +385,19 @@ public class ReceiverEndPoint
 
     private void removeEndpoint()
     {
-        framer.onDisconnect(libraryId, connectionId);
+        framer.onDisconnect(libraryId, connectionId, null);
     }
 
     private void onDisconnectDetected()
     {
-        disconnectEndpoint();
+        disconnectEndpoint(REMOTE_DISCONNECT);
         removeEndpoint();
     }
 
-    private void disconnectEndpoint()
+    private void disconnectEndpoint(final DisconnectReason reason)
     {
         sessionIds.onDisconnect(sessionId);
-        publication.saveDisconnect(libraryId, connectionId);
+        publication.saveDisconnect(libraryId, connectionId, reason);
         if (selectionKey != null)
         {
             selectionKey.cancel();

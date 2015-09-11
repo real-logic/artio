@@ -20,6 +20,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
@@ -109,9 +110,9 @@ public class ArchivePrinter implements SessionHandler
         output.println(ascii.getAscii(offset, length));
     }
 
-    public void onDisconnect(final int libraryId, final long connectionId)
+    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
-        output.printf("%d Disconnected\n", connectionId);
+        output.printf("%d Disconnected: %s\n", connectionId, reason);
     }
 
     public void onLogon(final int libraryId, final long connectionId, final long sessionId)

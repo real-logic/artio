@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.decoder.PrinterImpl;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
@@ -45,7 +46,7 @@ public final class BenchmarkSessionHandler implements SessionHandler
         System.out.printf("%d logged on with sessionId=%d\n", connectionId, sessionId);
     }
 
-    public void onDisconnect(final int libraryId, final long connectionId)
+    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         System.out.printf("%d disconnected\n", connectionId);
     }
