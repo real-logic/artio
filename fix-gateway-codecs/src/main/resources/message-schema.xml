@@ -34,6 +34,8 @@
             <validValue name="DUPLICATE_SESSION">1</validValue>
             <validValue name="UNABLE_TO_CONNECT">2</validValue>
             <validValue name="UNKNOWN_LIBRARY">3</validValue>
+            <validValue name="DUPLICATE_LIBRARY_ID">4</validValue>
+            <validValue name="DUPLICATE_ACCEPTOR">5</validValue>
         </enum>
         <enum name="MessageStatus" encodingType="uint8">
             <validValue name="OK">0</validValue>
@@ -105,6 +107,11 @@
     <sbe:message name="ApplicationHeartbeat" id="16"
                  description="A heartbeat message sent within the application protocol">
         <field name="libraryId" id="40" type="LibraryId"/>
+    </sbe:message>
+    <sbe:message name="LibraryConnect" id="17"
+                 description="Notify an engine that a new library has connected">
+        <field name="libraryId" id="47" type="LibraryId"/>
+        <field name="typeHandled" id="48" type="ConnectionType"/>
     </sbe:message>
 
     <!-- EXCEPTION STORAGE DATA STRUCTURES -->

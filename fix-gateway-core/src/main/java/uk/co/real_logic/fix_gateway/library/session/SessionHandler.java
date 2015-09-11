@@ -82,4 +82,9 @@ public interface SessionHandler
     {
         // Optional method, implement if you care about this type of message.
     }
+
+    default void onLibraryConnect(final int libraryId, final ConnectionType connectionType)
+    {
+        // Optional method, implement if you care about this type of message.
+    }
 }

@@ -47,7 +47,7 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNE
  *
  * @see uk.co.real_logic.fix_gateway.engine.FixEngine
  */
-public class FixLibrary extends GatewayProcess
+public final class FixLibrary extends GatewayProcess
 {
     private final Subscription inboundSubscription;
     private final GatewayPublication outboundPublication;
@@ -63,6 +63,7 @@ public class FixLibrary extends GatewayProcess
     private final LivenessDetector livenessDetector;
     private final int libraryId;
     private final IdleStrategy idleStrategy;
+    private final boolean isAcceptor;
 
     private Session incomingSession;
 
@@ -71,7 +72,7 @@ public class FixLibrary extends GatewayProcess
 
     private String errorMessage;
 
-    public FixLibrary(final LibraryConfiguration configuration)
+    private FixLibrary(final LibraryConfiguration configuration)
     {
         configuration.conclude();
 
@@ -81,20 +82,54 @@ public class FixLibrary extends GatewayProcess
         this.sessionIdStrategy = configuration.sessionIdStrategy();
         this.libraryId = configuration.libraryId();
         idleStrategy = configuration.libraryIdleStrategy();
+        isAcceptor = configuration.isAcceptor();
 
         inboundSubscription = inboundLibraryStreams.subscription();
         outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy);
 
         clock = new SystemEpochClock();
-        livenessDetector = new LivenessDetector(
+        livenessDetector = LivenessDetector.forLibrary(
             outboundPublication,
             configuration.libraryId(),
-            configuration.replyTimeoutInMs(),
-            System.currentTimeMillis(),
-            false);
+            configuration.replyTimeoutInMs());
+    }
+
+    private FixLibrary connect()
+    {
+        outboundPublication.saveLibraryConnect(libraryId, isAcceptor);
+
+        final long latestReplyArrivalTime = latestReplyArrivalTime();
+        while (!livenessDetector.isConnected() && errorType == null)
+        {
+            final int workCount = poll(1);
+
+            checkTime(latestReplyArrivalTime);
+
+            idleStrategy.idle(workCount);
+        }
+
+        if (errorType != null)
+        {
+            throw new IllegalArgumentException(String.format(
+                "Unable to connect to engine: %s", errorType
+            ));
+        }
+
+        return this;
     }
 
     // ------------- Public API -------------
+
+    /**
+     * Connect to an engine.
+     *
+     * @param configuration the configuration for this library instance.
+     * @return the library instance once it has connected.
+     */
+    public static FixLibrary connect(final LibraryConfiguration configuration)
+    {
+        return new FixLibrary(configuration).connect();
+    }
 
     /**
      * Poll the library all of its component sessions to process any messages
@@ -172,7 +207,6 @@ public class FixLibrary extends GatewayProcess
 
         try
         {
-            final long replyTimeoutInMs = this.configuration.replyTimeoutInMs();
             final List<String> hosts = configuration.hosts();
             final List<Integer> ports = configuration.ports();
             final int size = hosts.size();
@@ -190,17 +224,12 @@ public class FixLibrary extends GatewayProcess
                     configuration.senderLocationId(),
                     configuration.targetCompId());
 
-                final long latestReplyArrivalTime = clock.time() + replyTimeoutInMs;
+                final long latestReplyArrivalTime = latestReplyArrivalTime();
                 while (incomingSession == null && errorType == null)
                 {
                     final int workCount = poll(5);
 
-                    if (clock.time() > latestReplyArrivalTime)
-                    {
-                        throw new IllegalStateException(String.format(
-                            "Failed to receive a reply from the engine within %dms, are you sure its running?",
-                            replyTimeoutInMs));
-                    }
+                    checkTime(latestReplyArrivalTime);
 
                     idleStrategy.idle(workCount);
                 }
@@ -226,6 +255,21 @@ public class FixLibrary extends GatewayProcess
             sessionConfiguration = null;
             errorType = null;
             incomingSession = null;
+        }
+    }
+
+    private long latestReplyArrivalTime()
+    {
+        return clock.time() + configuration.replyTimeoutInMs();
+    }
+
+    private void checkTime(final long latestReplyArrivalTime)
+    {
+        if (clock.time() > latestReplyArrivalTime)
+        {
+            throw new IllegalStateException(String.format(
+                "Failed to receive a reply from the engine within %dms, are you sure its running?",
+                this.configuration.replyTimeoutInMs()));
         }
     }
 
@@ -268,9 +312,20 @@ public class FixLibrary extends GatewayProcess
                 {
                     DebugLogger.log("Acct Connect: %d, %d\n", connectionId, libraryId);
                     asciiFlyweight.wrap(buffer);
-                    final Session session = acceptSession(
-                        connectionId, asciiFlyweight.getAscii(addressOffset, addressLength));
-                    newSession(connectionId, session);
+                    final String address = asciiFlyweight.getAscii(addressOffset, addressLength);
+                    if (isAcceptor)
+                    {
+                        final Session session = acceptSession(connectionId, address);
+                        newSession(connectionId, session);
+                    }
+                    else
+                    {
+                        throw new IllegalArgumentException(String.format(
+                            "Received accept for session %d connecting from %s on non-accepting FIX Library",
+                            connectionId,
+                            address
+                        ));
+                    }
                 }
             }
         }

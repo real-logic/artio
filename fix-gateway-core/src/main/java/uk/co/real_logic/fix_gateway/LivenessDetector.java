@@ -17,13 +17,24 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
+import static uk.co.real_logic.fix_gateway.LivenessDetector.LivenessState.AWAITING_CONNECT;
+import static uk.co.real_logic.fix_gateway.LivenessDetector.LivenessState.CONNECTED;
+import static uk.co.real_logic.fix_gateway.LivenessDetector.LivenessState.DISCONNECTED;
+
 /**
  * Bidirection application level liveness detector.
  *
  * For use between an engine and a library.
  */
-public class LivenessDetector
+public final class LivenessDetector
 {
+    public enum LivenessState
+    {
+        AWAITING_CONNECT,
+        CONNECTED,
+        DISCONNECTED
+    }
+
     private final GatewayPublication publication;
     private final int libraryId;
     private final long replyTimeoutInMs;
@@ -31,49 +42,63 @@ public class LivenessDetector
 
     private long latestNextReceiveTimeInMs;
     private long nextSendTimeInMs;
-    private boolean isConnected;
+    private LivenessState state;
 
-    public LivenessDetector(
+    public static LivenessDetector forEngine(
         final GatewayPublication publication,
         final int libraryId,
         final long replyTimeoutInMs,
-        final long timeInMs,
-        final boolean isConnected)
+        final long timeInMs)
+    {
+        final LivenessDetector detector = new LivenessDetector(publication, libraryId, replyTimeoutInMs, CONNECTED);
+        detector.latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
+        detector.heartbeat(timeInMs);
+        return detector;
+    }
+
+    public static LivenessDetector forLibrary(
+        final GatewayPublication publication,
+        final int libraryId,
+        final long replyTimeoutInMs)
+    {
+        return new LivenessDetector(publication, libraryId, replyTimeoutInMs, AWAITING_CONNECT);
+    }
+
+    private LivenessDetector(
+        final GatewayPublication publication,
+        final int libraryId,
+        final long replyTimeoutInMs,
+        final LivenessState state)
     {
         this.publication = publication;
         this.libraryId = libraryId;
         this.replyTimeoutInMs = replyTimeoutInMs;
-        this.isConnected = isConnected;
+        this.state = state;
         this.sendIntervalInMs = replyTimeoutInMs / 4;
-
-        if (isConnected)
-        {
-            latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
-        }
-
-        heartbeat(timeInMs);
     }
 
     public boolean isConnected()
     {
-        return isConnected;
+        return state == CONNECTED;
     }
 
     public int poll(final long timeInMs)
     {
-        if (isConnected)
+        switch (state)
         {
-            if (timeInMs > latestNextReceiveTimeInMs)
-            {
-                isConnected = false;
-                return 1;
-            }
+            case CONNECTED:
+                if (timeInMs > latestNextReceiveTimeInMs)
+                {
+                    state = DISCONNECTED;
+                    return 1;
+                }
 
-            if (timeInMs > nextSendTimeInMs)
-            {
-                heartbeat(timeInMs);
-                return 1;
-            }
+            case AWAITING_CONNECT: // Fallthrough
+                if (timeInMs > nextSendTimeInMs)
+                {
+                    heartbeat(timeInMs);
+                    return 1;
+                }
         }
 
         return 0;
@@ -81,14 +106,14 @@ public class LivenessDetector
 
     public void onHeartbeat(final long timeInMs)
     {
-        if (!isConnected)
+        if (state != CONNECTED)
         {
-            isConnected = true;
+            state = CONNECTED;
         }
         latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
     }
 
-    private void heartbeat(final long timeInMs)
+    public void heartbeat(final long timeInMs)
     {
         nextSendTimeInMs = timeInMs + sendIntervalInMs;
         publication.saveApplicationHeartbeat(libraryId);

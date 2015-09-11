@@ -39,6 +39,7 @@ public class DataSubscriber implements FragmentHandler
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final ErrorDecoder error = new ErrorDecoder();
     private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
+    private final LibraryConnectDecoder libraryConnect = new LibraryConnectDecoder();
 
     private final SessionHandler sessionHandler;
 
@@ -101,6 +102,11 @@ public class DataSubscriber implements FragmentHandler
             {
                 return onApplicationHeartbeat(buffer, offset, blockLength, version);
             }
+
+            case LibraryConnectDecoder.TEMPLATE_ID:
+            {
+                return onLibraryConnect(buffer, offset, blockLength, version);
+            }
         }
 
         return UNKNOWN_TEMPLATE;
@@ -114,6 +120,15 @@ public class DataSubscriber implements FragmentHandler
         applicationHeartbeat.wrap(buffer, offset, blockLength, version);
         sessionHandler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
         return applicationHeartbeat.limit();
+    }
+
+
+    private int onLibraryConnect(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        libraryConnect.wrap(buffer, offset, blockLength, version);
+        sessionHandler.onLibraryConnect(libraryConnect.libraryId(), libraryConnect.typeHandled());
+        return libraryConnect.limit();
     }
 
     private int onError(

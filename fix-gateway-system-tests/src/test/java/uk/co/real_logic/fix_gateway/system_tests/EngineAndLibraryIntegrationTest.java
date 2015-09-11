@@ -20,12 +20,19 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.CloseHelper;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
+import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.SenderCompIdValidationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.TargetCompIdValidationStrategy;
 
+import java.io.File;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -89,10 +96,10 @@ public class EngineAndLibraryIntegrationTest
     @Test
     public void engineDetectsMultipleLibraryInstances()
     {
-        library = connectLibrary(2);
+        library = connectLibrary(2, true);
         awaitLibraryConnect(library);
 
-        library2 = connectLibrary(3);
+        library2 = connectLibrary(3, false);
         awaitLibraryConnect(library2);
 
         final List<LibraryInfo> libraries = hasLibraries(2);
@@ -109,10 +116,10 @@ public class EngineAndLibraryIntegrationTest
 
     private FixLibrary setupTwoLibrariesAndCloseTheFirst()
     {
-        library = connectLibrary(2);
+        library = connectLibrary(2, true);
         awaitLibraryConnect(library);
 
-        library2 = connectLibrary(3);
+        library2 = connectLibrary(3, false);
         awaitLibraryConnect(library2);
 
         library.close();
@@ -130,7 +137,7 @@ public class EngineAndLibraryIntegrationTest
     {
         setupTwoLibrariesAndCloseTheFirst();
 
-        library = connectLibrary(4);
+        library = connectLibrary(4, true);
 
         awaitLibraryConnect(library);
 
@@ -150,7 +157,7 @@ public class EngineAndLibraryIntegrationTest
     @Test
     public void libraryDetectsEngineDisconnect()
     {
-        library = connectLibrary(DEFAULT_LIBRARY_ID);
+        library = connectLibrary();
 
         awaitLibraryConnect(library);
 
@@ -164,6 +171,22 @@ public class EngineAndLibraryIntegrationTest
             },
             AWAIT_TIMEOUT,
             1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void refuseTwoAcceptorLibraries()
+    {
+        library = connectLibrary(2, true);
+
+        library2 = connectLibrary(3, true);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void refuseDuplicateLibraryId()
+    {
+        library = connectLibrary(2, true);
+
+        library2 = connectLibrary(2, false);
     }
 
     private void assertLibrary2(final List<LibraryInfo> libraries)
@@ -191,17 +214,28 @@ public class EngineAndLibraryIntegrationTest
 
     private FixLibrary connectLibrary()
     {
-        return connectLibrary(DEFAULT_LIBRARY_ID);
+        return connectLibrary(DEFAULT_LIBRARY_ID, true);
     }
 
-    private FixLibrary connectLibrary(final int libraryId)
+    private FixLibrary connectLibrary(final int libraryId, final boolean isAcceptor)
     {
+        final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(ACCEPTOR_ID)
+            .and(new SenderCompIdValidationStrategy(Arrays.asList(INITIATOR_ID, INITIATOR_ID2)));
+
+        final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
+
         final LibraryConfiguration config =
-            acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor-" + libraryId)
+            new LibraryConfiguration()
+                .isAcceptor(isAcceptor)
+                .authenticationStrategy(authenticationStrategy)
+                .messageValidationStrategy(validationStrategy)
+                .newSessionHandler(sessionHandler)
+                .aeronChannel("aeron:ipc")
+                .monitoringFile(IoUtil.tmpDirName() + "fix-acceptor-" + libraryId + File.separator + "accLibraryCounters")
                 .libraryId(libraryId)
                 .replyTimeoutInMs(TIMEOUT_IN_MS);
 
-        return new FixLibrary(config);
+        return FixLibrary.connect(config);
     }
 
     @After

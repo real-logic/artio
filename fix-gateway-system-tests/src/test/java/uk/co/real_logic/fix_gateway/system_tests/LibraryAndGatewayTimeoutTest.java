@@ -77,7 +77,7 @@ public class LibraryAndGatewayTimeoutTest
 
     private void launchLibrary()
     {
-        initiatingLibrary = new FixLibrary(
+        initiatingLibrary = FixLibrary.connect(
             new LibraryConfiguration()
                 .newSessionHandler(initiatingSessionHandler)
                 .aeronChannel("udp://localhost:" + aeronPort)

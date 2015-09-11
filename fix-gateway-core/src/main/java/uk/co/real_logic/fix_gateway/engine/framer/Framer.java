@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -345,28 +346,43 @@ public class Framer implements Agent, SessionHandler
         idToLibrary.get(libraryId).onSessionDisconnected(connectionId);
     }
 
+    public void onLibraryConnect(final int libraryId, final ConnectionType connectionType)
+    {
+        final long timeInMs = clock.time();
+        if (idToLibrary.containsKey(libraryId))
+        {
+            saveError(DUPLICATE_LIBRARY_ID, libraryId);
+            return;
+        }
+
+        final boolean isAcceptor = connectionType == ACCEPTOR;
+        if (isAcceptor && acceptorLibraryId != NO_ACCEPTOR)
+        {
+            saveError(DUPLICATE_ACCEPTOR, libraryId);
+            return;
+        }
+
+        final LivenessDetector livenessDetector = LivenessDetector.forEngine(
+            inboundPublication,
+            libraryId,
+            configuration.replyTimeoutInMs(),
+            timeInMs);
+
+        final LibraryInfo library = new LibraryInfo(isAcceptor, libraryId, livenessDetector);
+        if (isAcceptor)
+        {
+            acceptorLibraryId = libraryId;
+        }
+        idToLibrary.put(libraryId, library);
+    }
+
     public void onApplicationHeartbeat(final int libraryId)
     {
-        LibraryInfo library = idToLibrary.get(libraryId);
-        if (library == null)
+        final LibraryInfo library = idToLibrary.get(libraryId);
+        if (library != null)
         {
-            final LivenessDetector livenessDetector = new LivenessDetector(
-                inboundPublication,
-                libraryId,
-                configuration.replyTimeoutInMs(),
-                clock.time(),
-                true);
-
-            library = new LibraryInfo(acceptorLibraryId == NO_ACCEPTOR, libraryId, livenessDetector);
-            if (library.isAcceptor())
-            {
-                acceptorLibraryId = libraryId;
-            }
-            idToLibrary.put(libraryId, library);
-        }
-        else
-        {
-            library.onHeartbeat(clock.time());
+            final long timeInMs = clock.time();
+            library.onHeartbeat(timeInMs);
         }
     }
 

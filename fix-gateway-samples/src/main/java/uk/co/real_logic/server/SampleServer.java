@@ -57,7 +57,7 @@ public final class SampleServer
              final FixEngine gateway = FixEngine.launch(configuration))
         {
 
-            final FixLibrary library = new FixLibrary(new LibraryConfiguration()
+            final FixLibrary library = FixLibrary.connect(new LibraryConfiguration()
                 // You register the new session handler - which is your application hook
                 // that receives messages for new sessions
                 .authenticationStrategy(authenticationStrategy)

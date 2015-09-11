@@ -38,6 +38,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LIBRARY_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
@@ -262,7 +263,7 @@ public class FramerTest
 
     private void connectLibrary()
     {
-        framer.onApplicationHeartbeat(LIBRARY_ID);
+        framer.onLibraryConnect(LIBRARY_ID, ACCEPTOR);
     }
 
     private void intiateConnection() throws Exception

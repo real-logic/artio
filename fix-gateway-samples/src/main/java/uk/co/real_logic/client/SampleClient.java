@@ -52,7 +52,7 @@ public final class SampleClient
                 .senderCompId(INITIATOR_COMP_ID)
                 .build();
 
-            final FixLibrary library = new FixLibrary(new LibraryConfiguration()
+            final FixLibrary library = FixLibrary.connect(new LibraryConfiguration()
                 .newSessionHandler(SampleClient::onConnect));
             final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
             final Session session = library.initiate(sessionConfig, idleStrategy);

@@ -40,7 +40,7 @@ public final class FixBenchmarkServer
 
         try (final MediaDriver mediaDriver = newMediaDriver();
              final FixEngine engine = FixEngine.launch(configuration);
-             final FixLibrary library = new FixLibrary(libraryConfiguration()))
+             final FixLibrary library = FixLibrary.connect(libraryConfiguration()))
         {
             final NoOpIdleStrategy idleStrategy = new NoOpIdleStrategy();
             while (true)

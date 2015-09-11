@@ -229,6 +229,7 @@ public final class SystemTestUtil
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
         return new LibraryConfiguration()
+            .isAcceptor(true)
             .authenticationStrategy(authenticationStrategy)
             .messageValidationStrategy(validationStrategy)
             .newSessionHandler(sessionHandler)
@@ -280,7 +281,7 @@ public final class SystemTestUtil
         final NewSessionHandler sessionHandler,
         final int libraryId)
     {
-        return new FixLibrary(
+        return FixLibrary.connect(
             new LibraryConfiguration()
                 .libraryId(libraryId)
                 .newSessionHandler(sessionHandler)
@@ -290,7 +291,7 @@ public final class SystemTestUtil
 
     public static FixLibrary newAcceptingLibrary(final NewSessionHandler sessionHandler)
     {
-        return new FixLibrary(
+        return FixLibrary.connect(
             acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor"));
     }
 

@@ -31,6 +31,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.aeron.Publication.BACK_PRESSURED;
 import static uk.co.real_logic.aeron.Publication.NOT_CONNECTED;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
+import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
+import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 
 /**
  * A proxy for publishing messages fix related messages
@@ -41,7 +43,9 @@ public class GatewayPublication
     public static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
     public static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
-    public static final int DISCONNECT_CLAIM_LENGTH = HEADER_LENGTH + DisconnectEncoder.BLOCK_LENGTH;
+    public static final int HEARTBEAT_LENGTH = HEADER_LENGTH + ApplicationHeartbeatEncoder.BLOCK_LENGTH;
+    public static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH;
+    public static final int DISCONNECT_LENGTH = HEADER_LENGTH + DisconnectEncoder.BLOCK_LENGTH;
 
     private final MessageHeaderEncoder header = new MessageHeaderEncoder();
     private final LogonEncoder logon = new LogonEncoder();
@@ -52,6 +56,7 @@ public class GatewayPublication
     private final FixMessageEncoder messageFrame = new FixMessageEncoder();
     private final ErrorEncoder error = new ErrorEncoder();
     private final ApplicationHeartbeatEncoder applicationHeartbeat = new ApplicationHeartbeatEncoder();
+    private final LibraryConnectEncoder libraryConnect = new LibraryConnectEncoder();
 
     private final int maxClaimAttempts;
     private final ReliefValve reliefValve;
@@ -185,7 +190,7 @@ public class GatewayPublication
 
     public long saveDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
-        final long position = claim(DISCONNECT_CLAIM_LENGTH);
+        final long position = claim(DISCONNECT_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -321,7 +326,7 @@ public class GatewayPublication
 
     public long saveApplicationHeartbeat(final int libraryId)
     {
-        final long position = claim(header.encodedLength() + ApplicationHeartbeatEncoder.BLOCK_LENGTH);
+        final long position = claim(HEARTBEAT_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -338,6 +343,32 @@ public class GatewayPublication
         applicationHeartbeat
             .wrap(buffer, offset)
             .libraryId(libraryId);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long saveLibraryConnect(final int libraryId, final boolean isAcceptor)
+    {
+        final long position = claim(LIBRARY_CONNECT_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(libraryConnect.sbeBlockLength())
+            .templateId(libraryConnect.sbeTemplateId())
+            .schemaId(libraryConnect.sbeSchemaId())
+            .version(libraryConnect.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        libraryConnect
+            .wrap(buffer, offset)
+            .libraryId(libraryId)
+            .typeHandled(isAcceptor ? ACCEPTOR : INITIATOR);
 
         bufferClaim.commit();
 

@@ -49,6 +49,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private int libraryId = DEFAULT_LIBRARY_ID;
     private int acceptorSessionBufferSize = DEFAULT_SESSION_BUFFER_SIZE;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
+    private boolean isAcceptor = false;
 
     public LibraryConfiguration()
     {
@@ -127,6 +128,12 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    public LibraryConfiguration isAcceptor(final boolean isAcceptor)
+    {
+        this.isAcceptor = isAcceptor;
+        return this;
+    }
+
     public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -180,6 +187,11 @@ public final class LibraryConfiguration extends CommonConfiguration
     public IdleStrategy libraryIdleStrategy()
     {
         return libraryIdleStrategy;
+    }
+
+    public boolean isAcceptor()
+    {
+        return isAcceptor;
     }
 
     public LibraryConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
