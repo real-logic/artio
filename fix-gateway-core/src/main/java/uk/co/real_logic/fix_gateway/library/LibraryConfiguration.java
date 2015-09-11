@@ -50,6 +50,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private int acceptorSessionBufferSize = DEFAULT_SESSION_BUFFER_SIZE;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
     private boolean isAcceptor = false;
+    private boolean acceptorSequenceNumbersResetUponReconnect;
 
     public LibraryConfiguration()
     {
@@ -134,6 +135,23 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    /**
+     * Configure whether you want the session to reset its sequence number when it reconnects.
+     * The session is determined to be the same if the session id strategy allocates it the same
+     * id.
+     *
+     * @param value true if you want them to reset
+     * @return this configuration object.
+     *
+     * @see SessionConfiguration#sequenceNumbersPersistent()
+     * @see this#sessionIdStrategy(SessionIdStrategy)
+     */
+    public LibraryConfiguration acceptorSequenceNumbersResetUponReconnect(final boolean value)
+    {
+        this.acceptorSequenceNumbersResetUponReconnect = value;
+        return this;
+    }
+
     public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -192,6 +210,11 @@ public final class LibraryConfiguration extends CommonConfiguration
     public boolean isAcceptor()
     {
         return isAcceptor;
+    }
+
+    public boolean acceptorSequenceNumbersResetUponReconnect()
+    {
+        return acceptorSequenceNumbersResetUponReconnect;
     }
 
     public LibraryConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)

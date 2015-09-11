@@ -35,6 +35,8 @@ public final class SessionConfiguration
     private final String senderSubId;
     private final String senderLocationId;
     private final int bufferSize;
+    private final boolean sequenceNumbersPersistent;
+    private final int initialSequenceNumber;
 
     public static Builder builder()
     {
@@ -50,7 +52,9 @@ public final class SessionConfiguration
         final String senderSubId,
         final String senderLocationId,
         final String targetCompId,
-        final int bufferSize)
+        final int bufferSize,
+        final boolean sequenceNumbersPersistent,
+        final int initialSequenceNumber)
     {
         Objects.requireNonNull(hosts);
         Objects.requireNonNull(ports);
@@ -71,6 +75,8 @@ public final class SessionConfiguration
         this.username = username;
         this.password = password;
         this.bufferSize = bufferSize;
+        this.sequenceNumbersPersistent = sequenceNumbersPersistent;
+        this.initialSequenceNumber = initialSequenceNumber;
     }
 
     private void requireNonEmpty(final List<?> values, final String name)
@@ -126,6 +132,16 @@ public final class SessionConfiguration
         return bufferSize;
     }
 
+    public boolean sequenceNumbersPersistent()
+    {
+        return sequenceNumbersPersistent;
+    }
+
+    public int initialSequenceNumber()
+    {
+        return initialSequenceNumber;
+    }
+
     public static final class Builder
     {
         private String username;
@@ -137,6 +153,8 @@ public final class SessionConfiguration
         private String senderSubId = "";
         private String senderLocationId = "";
         private int bufferSize = DEFAULT_SESSION_BUFFER_SIZE;
+        private boolean sequenceNumbersPersistent = false;
+        private int initialSequenceNumber = 1;
 
         private Builder()
         {
@@ -186,10 +204,41 @@ public final class SessionConfiguration
             return this;
         }
 
+        /**
+         * Set this flag if you want sequence numbers to persistent when you reconnect
+         * to the acceptor.
+         *
+         * @param sequenceNumbersPersistent true to make sequence numbers persistent
+         * @return this builder
+         *
+         * @see this#initialSequenceNumber(int)
+         * @see LibraryConfiguration#acceptorSequenceNumbersResetUponReconnect(boolean)
+         */
+        public Builder sequenceNumbersPersistent(final boolean sequenceNumbersPersistent)
+        {
+            this.sequenceNumbersPersistent = sequenceNumbersPersistent;
+            return this;
+        }
+
+        /**
+         * Sets the initial sequence number that you use when connecting to an acceptor.
+         *
+         * @param initialSequenceNumber the msg sequence number to use when you send your logon message.
+         * @return this builder
+         *
+         * @see this#sequenceNumbersPersistent(boolean)
+         * @see LibraryConfiguration#acceptorSequenceNumbersResetUponReconnect(boolean)
+         */
+        public Builder initialSequenceNumber(final int initialSequenceNumber)
+        {
+            this.initialSequenceNumber = initialSequenceNumber;
+            return this;
+        }
+
         public SessionConfiguration build()
         {
             return new SessionConfiguration(hosts, ports, username, password, senderCompId, senderSubId,
-                senderLocationId, targetCompId, bufferSize);
+                senderLocationId, targetCompId, bufferSize, sequenceNumbersPersistent, initialSequenceNumber);
         }
     }
 

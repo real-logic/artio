@@ -432,7 +432,8 @@ public final class FixLibrary extends GatewayProcess
             sessionConfiguration.username(),
             sessionConfiguration.password(),
             libraryId,
-            sessionConfiguration.bufferSize());
+            sessionConfiguration.bufferSize(),
+            sessionConfiguration.initialSequenceNumber());
     }
 
     private Session acceptSession(final long connectionId, final String address)

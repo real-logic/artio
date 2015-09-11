@@ -47,7 +47,8 @@ public class SessionTest extends AbstractSessionTest
         mockReceivedMsgSeqNo,
         mockSentMsgSeqNo,
         LIBRARY_ID,
-        DEFAULT_SESSION_BUFFER_SIZE);
+        DEFAULT_SESSION_BUFFER_SIZE,
+        1);
 
     @Test
     public void shouldReplyToValidLogout()

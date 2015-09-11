@@ -51,7 +51,8 @@ public final class AcceptorSession extends Session
             receivedMsgSeqNo,
             sentMsgSeqNo,
             libraryId,
-            sessionBufferSize);
+            sessionBufferSize,
+            1);
     }
 
     public void onLogon(

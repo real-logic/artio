@@ -37,7 +37,8 @@ public class InitiatorSession extends Session
         final String username,
         final String password,
         final int libraryId,
-        final int sessionBufferSize)
+        final int sessionBufferSize,
+        final int initialSequenceNumber)
     {
         super(
             heartbeatInterval,
@@ -52,7 +53,8 @@ public class InitiatorSession extends Session
             receivedMsgSeqNo,
             sentMsgSeqNo,
             libraryId,
-            sessionBufferSize);
+            sessionBufferSize,
+            initialSequenceNumber);
 
         username(username);
         password(password);

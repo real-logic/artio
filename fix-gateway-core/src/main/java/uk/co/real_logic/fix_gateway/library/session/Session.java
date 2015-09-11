@@ -73,7 +73,7 @@ public class Session
     private SessionState state;
     private long id = UNKNOWN;
     private int lastReceivedMsgSeqNum = 0;
-    private int lastSentMsgSeqNum = 0;
+    private int lastSentMsgSeqNum;
 
     private long heartbeatIntervalInMs;
     private long nextRequiredInboundMessageTimeInMs;
@@ -98,7 +98,8 @@ public class Session
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo,
         final int libraryId,
-        final int sessionBufferSize)
+        final int sessionBufferSize,
+        final int initialSequenceNumber)
     {
         Verify.notNull(clock, "clock");
         Verify.notNull(state, "session state");
@@ -118,6 +119,7 @@ public class Session
         this.receivedMsgSeqNo = receivedMsgSeqNo;
         this.sentMsgSeqNo = sentMsgSeqNo;
         this.libraryId = libraryId;
+        lastSentMsgSeqNum = initialSequenceNumber - 1;
 
         buffer = new UnsafeBuffer(new byte[sessionBufferSize]);
         string = new MutableAsciiFlyweight(buffer);
@@ -322,6 +324,18 @@ public class Session
     public boolean canSendMessage()
     {
         return state() == ACTIVE;
+    }
+
+    /**
+     * Reset the sequence number, so that the specified sequence number will be the sequence
+     * number of the next message.
+     *
+     * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
+     *                                      sent.
+     */
+    public void resetSequence(final int nextSentMessageSequenceNumber)
+    {
+        // TODO
     }
 
     // ---------- Event Handlers & Logic ----------
@@ -537,7 +551,7 @@ public class Session
     {
         if (!gapFillFlag)
         {
-            sequenceReset(msgSeqNo, newSeqNo);
+            applySequenceReset(msgSeqNo, newSeqNo);
         }
         else if (newSeqNo > msgSeqNo)
         {
@@ -545,11 +559,11 @@ public class Session
         }
         else
         {
-            sequenceReset(msgSeqNo, newSeqNo);
+            applySequenceReset(msgSeqNo, newSeqNo);
         }
     }
 
-    private void sequenceReset(final int receivedMsgSeqNo, final int newSeqNo)
+    private void applySequenceReset(final int receivedMsgSeqNo, final int newSeqNo)
     {
         final int expectedMsgSeqNo = expectedReceivedSeqNum();
         if (newSeqNo > expectedMsgSeqNo)
