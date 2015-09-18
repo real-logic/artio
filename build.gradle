@@ -193,7 +193,7 @@ project(':fix-gateway-core') {
         compile project(path: ':fix-gateway-codecs')
         compile "uk.co.real-logic:aeron-client:${aeronVersion}"
         compile "uk.co.real-logic:aeron-driver:${aeronVersion}"
-        compile 'org.hdrhistogram:HdrHistogram:2.1.6'
+        compile 'org.hdrhistogram:HdrHistogram:2.1.7'
     }
 
     run {
