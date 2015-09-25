@@ -180,14 +180,15 @@ public class AsciiFlyweight
             offset++;
         }
 
-        int scale = length;
+        int scale = 0;
         long value = 0;
         for (int index = offset; index < end; index++)
         {
             final byte byteValue = buffer.getByte(index);
             if (byteValue == '.')
             {
-                scale = index - offset;
+                // number of digits after the dot
+                scale = end - (index + 1);
             }
             else
             {

@@ -13,45 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.util;
+package uk.co.real_logic.fix_gateway.fields;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
-
-import java.util.Arrays;
+import uk.co.real_logic.fix_gateway.util.DecimalFloatEncodingTest;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
-import static uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight.LONGEST_FLOAT_LENGTH;
 
 @RunWith(Parameterized.class)
-public class DecimalFloatEncodingTest
+public class DecimalFloatToStringTest
 {
     @Parameters(name = "{index}: {1},{2} => {0}")
     public static Iterable<Object[]> data1()
     {
-        return Arrays.asList(new Object[][]
-        {
-            {"55.36", 5536L, 2},
-            {".995", 995L, 3},
-            {"25", 25L, 0},
-            {"-55.36", -5536L, 2},
-            {"-.995", -995L, 3},
-            {"-25", -25L, 0},
-            {"1.1", 11L, 1},
-        });
+        return DecimalFloatEncodingTest.data1();
     }
 
     private final String input;
     private final long value;
     private final int scale;
 
-    public DecimalFloatEncodingTest(final String input, final long value, final int scale)
+    public DecimalFloatToStringTest(final String input, final long value, final int scale)
     {
         this.input = input;
         this.value = value;
@@ -61,14 +46,8 @@ public class DecimalFloatEncodingTest
     @Test
     public void canEncodeDecimalFloat()
     {
-        final int length = input.length();
-        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LONGEST_FLOAT_LENGTH]);
-        final MutableAsciiFlyweight string = new MutableAsciiFlyweight(buffer);
         final DecimalFloat price = new DecimalFloat(value, scale);
 
-        final int encodedLength = string.putFloat(1, price);
-
-        assertThat(string, containsAscii(input, 1, length));
-        assertEquals(length, encodedLength);
+        assertEquals(input, price.toString());
     }
 }

@@ -20,6 +20,9 @@ package uk.co.real_logic.fix_gateway.fields;
  *
  * Must support 15 significant digits, decimal places variable.
  *
+ * Decimal float represents the significant digits using a value field,
+ * and the location of the point using the scale field.
+ *
  * See http://fixwiki.org/fixwiki/FloatDataType for details. Examples:
  *
  * 55.36
@@ -60,6 +63,11 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         return this.value;
     }
 
+    /**
+     * Get the number of digits to the right of the decimal point.
+     *
+     * @return the number of digits to the right of the decimal point.
+     */
     public int scale()
     {
         return this.scale;
@@ -71,6 +79,12 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         return this;
     }
 
+    /**
+     * Set the number of digits to the right of the decimal point.
+     *
+     * @param scale the number of digits to the right of the decimal point.
+     * @return this
+     */
     public DecimalFloat scale(final int scale)
     {
         this.scale = scale;
@@ -102,7 +116,15 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
     public String toString()
     {
         final String value = String.valueOf(this.value);
-        return value.substring(0, scale) + "." + value.substring(scale);
+        if (scale > 0)
+        {
+            final int split = value.length() - scale;
+            return value.substring(0, split) + "." + value.substring(split);
+        }
+        else
+        {
+            return value;
+        }
     }
 
     public int compareTo(final DecimalFloat other)

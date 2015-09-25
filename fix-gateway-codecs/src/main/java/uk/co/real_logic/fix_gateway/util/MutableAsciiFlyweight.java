@@ -32,6 +32,7 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
 
     private static final byte Y = (byte) 'Y';
     private static final byte N = (byte) 'N';
+    public static final int SIZE_OF_DOT = 1;
 
     private MutableDirectBuffer buffer;
 
@@ -156,7 +157,7 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
             return 1;
         }
 
-        final long remainder = calculateRemainder(offset, value);
+        final long remainder = calculateRemainderAndPutMinus(offset, value);
         final int minusAdj = value < 0 ? 1 : 0;
         final int start = offset + minusAdj;
 
@@ -176,26 +177,30 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
             return 1;
         }
 
-        final long remainder = calculateRemainder(offset, value);
+        final long remainder = calculateRemainderAndPutMinus(offset, value);
         final int minusAdj = value < 0 ? 1 : 0;
         final int start = offset + minusAdj;
 
-        final int end = start + LONGEST_LONG_LENGTH;
-        int index = putLong(remainder, end);
-        final int length = minusAdj + end - index;
-        index++;
-        if (scale < (length - minusAdj))
+        // Encode the value into a tmp space, leaving the longest possible space required
+        final int tmpEnd = start + LONGEST_LONG_LENGTH;
+        final int tmpStart = putLong(remainder, tmpEnd) + 1;
+        final int length = tmpEnd - tmpStart + SIZE_OF_DOT;
+
+        // Move the value to the beginning once you've encoded it
+        if (scale > 0)
         {
-            final int split = start + scale;
-            buffer.putBytes(start, buffer, index, scale);
+            final int end = start + length;
+            final int split = end - scale;
+            final int digitsBeforeDot = length - scale;
+            buffer.putBytes(start, buffer, tmpStart, digitsBeforeDot);
             buffer.putByte(split, DOT);
-            buffer.putBytes(split + 1, buffer, index + scale, length - scale);
-            return length + 1;
+            buffer.putBytes(split + 1, buffer, tmpStart + digitsBeforeDot, scale);
+            return length + SIZE_OF_DOT + minusAdj;
         }
         else
         {
-            buffer.putBytes(start, buffer, index, length);
-            return length;
+            buffer.putBytes(start, buffer, tmpStart, length);
+            return length + minusAdj;
         }
     }
 
@@ -209,7 +214,7 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
         return false;
     }
 
-    private long calculateRemainder(final int offset, final long value)
+    private long calculateRemainderAndPutMinus(final int offset, final long value)
     {
         if (value < 0)
         {

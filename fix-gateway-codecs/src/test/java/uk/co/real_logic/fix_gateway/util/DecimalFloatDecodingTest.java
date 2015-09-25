@@ -43,15 +43,15 @@ public class DecimalFloatDecodingTest
             {"  55.3600", 5536L, 2},
             {" 0055.36 ", 5536L, 2},
             {"  0055.3600 ", 5536L, 2},
-            {".995", 995L, 0},
-            {"0.9950", 995L, 0},
-            {"25", 25L, 2},
+            {".995", 995L, 3},
+            {"0.9950", 995L, 3},
+            {"25", 25L, 0},
             {"-55.36", -5536L, 2},
             {"-0055.3600", -5536L, 2},
             {"-55.3600", -5536L, 2},
-            {"-.995", -995L, 0},
-            {"-0.9950", -995L, 0},
-            {"-25", -25L, 2},
+            {"-.995", -995L, 3},
+            {"-0.9950", -995L, 3},
+            {"-25", -25L, 0},
         });
     }
 
@@ -69,11 +69,13 @@ public class DecimalFloatDecodingTest
     @Test
     public void canDecodeDecimalFloat()
     {
-        final UnsafeBuffer buffer = new UnsafeBuffer(input.getBytes(US_ASCII));
+        final byte[] bytes = input.getBytes(US_ASCII);
+        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[bytes.length + 2]);
+        buffer.putBytes(1, bytes);
         final AsciiFlyweight string = new AsciiFlyweight(buffer);
         final DecimalFloat price = new DecimalFloat();
 
-        string.getFloat(price, 0, buffer.capacity());
+        string.getFloat(price, 1, bytes.length);
 
         Assert.assertEquals("Incorrect Value", value, price.value());
         Assert.assertEquals("Incorrect Scale", scale, price.scale());
