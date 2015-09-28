@@ -23,6 +23,8 @@ import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.engine.framer.*;
 import uk.co.real_logic.fix_gateway.engine.logger.Logger;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumbers;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.util.List;
@@ -37,7 +39,9 @@ public final class FixEngine extends GatewayProcess
 
     private QueuedPipe<AdminCommand> adminCommands = new ManyToOneConcurrentArrayQueue<>(16);
 
+    private final SequenceNumberIndex sequenceNumberIndex;
     private final EngineConfiguration configuration;
+
     private AgentRunner errorPrinterRunner;
     private AgentRunner framerRunner;
     private Logger logger;
@@ -70,6 +74,7 @@ public final class FixEngine extends GatewayProcess
         init(configuration);
         this.configuration = configuration;
 
+        sequenceNumberIndex = new SequenceNumberIndex();
         initFramer(configuration, fixCounters);
         initLogger(configuration);
         initErrorPrinter(configuration);
@@ -78,7 +83,8 @@ public final class FixEngine extends GatewayProcess
     private void initLogger(final EngineConfiguration configuration)
     {
         logger = new Logger(
-            configuration, inboundLibraryStreams, outboundLibraryStreams, errorBuffer, replayPublication());
+            configuration, inboundLibraryStreams, outboundLibraryStreams, errorBuffer, replayPublication(),
+            sequenceNumberIndex);
         logger.init();
     }
 
@@ -116,7 +122,8 @@ public final class FixEngine extends GatewayProcess
 
         final Framer framer = new Framer(
             new SystemEpochClock(), configuration, handler, librarySubscription, replaySubscription(),
-            inboundLibraryStreams.gatewayPublication(idleStrategy), sessionIdStrategy, sessionIds, adminCommands
+            inboundLibraryStreams.gatewayPublication(idleStrategy), sessionIdStrategy, sessionIds, adminCommands,
+            new SequenceNumbers(sequenceNumberIndex, idleStrategy)
         );
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }

@@ -27,6 +27,7 @@ import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumbers;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
@@ -49,6 +50,7 @@ import java.util.function.Consumer;
 import static java.net.StandardSocketOptions.*;
 import static uk.co.real_logic.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumbers.NONE;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
@@ -81,6 +83,7 @@ public class Framer implements Agent, SessionHandler
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
     private final QueuedPipe<AdminCommand> adminCommands;
+    private final SequenceNumbers sequenceNumbers;
     private final int inboundBytesReceivedLimit;
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
@@ -97,7 +100,8 @@ public class Framer implements Agent, SessionHandler
         final GatewayPublication inboundPublication,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
-        final QueuedPipe<AdminCommand> adminCommands)
+        final QueuedPipe<AdminCommand> adminCommands,
+        final SequenceNumbers sequenceNumbers)
     {
         this.clock = clock;
         this.configuration = configuration;
@@ -108,6 +112,7 @@ public class Framer implements Agent, SessionHandler
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
         this.adminCommands = adminCommands;
+        this.sequenceNumbers = sequenceNumbers;
 
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
@@ -211,7 +216,7 @@ public class Framer implements Agent, SessionHandler
                     setupConnection(channel, connectionId, UNKNOWN, acceptorLibraryId);
 
                     final String address = channel.getRemoteAddress().toString();
-                    inboundPublication.saveConnect(connectionId, address, acceptorLibraryId, ACCEPTOR);
+                    inboundPublication.saveConnect(connectionId, address, acceptorLibraryId, ACCEPTOR, NONE);
                 }
 
                 it.remove();
@@ -264,7 +269,8 @@ public class Framer implements Agent, SessionHandler
             }
 
             setupConnection(channel, connectionId, sessionId, libraryId);
-            inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR);
+            inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR,
+                sequenceNumbers.get(sessionId));
             inboundPublication.saveLogon(libraryId, connectionId, sessionId);
         }
         catch (final Exception e)

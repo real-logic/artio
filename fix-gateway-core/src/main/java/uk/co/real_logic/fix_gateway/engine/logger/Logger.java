@@ -26,7 +26,7 @@ import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.streams.Streams;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
@@ -41,6 +41,7 @@ public class Logger implements AutoCloseable
     private final Streams outboundLibraryStreams;
     private final Publication replayPublication;
     private final ErrorHandler errorHandler;
+    private final SequenceNumberIndex sequenceNumberIndex;
 
     private Archiver archiver;
     private ArchiveReader archiveReader;
@@ -51,13 +52,15 @@ public class Logger implements AutoCloseable
         final Streams inboundLibraryStreams,
         final Streams outboundLibraryStreams,
         final ErrorHandler errorHandler,
-        final Publication replayPublication)
+        final Publication replayPublication,
+        final SequenceNumberIndex sequenceNumberIndex)
     {
         this.configuration = configuration;
         this.inboundLibraryStreams = inboundLibraryStreams;
         this.outboundLibraryStreams = outboundLibraryStreams;
         this.replayPublication = replayPublication;
         this.errorHandler = errorHandler;
+        this.sequenceNumberIndex = sequenceNumberIndex;
     }
 
     public void init()
@@ -75,8 +78,9 @@ public class Logger implements AutoCloseable
         {
             final int loggerCacheCapacity = configuration.loggerCacheCapacity();
             final String logFileDir = configuration.logFileDir();
-            final List<Index> indices = Collections.singletonList(
-                new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, LoggerUtil::map));
+            final List<Index> indices = Arrays.asList(
+                new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, LoggerUtil::map),
+                sequenceNumberIndex);
             final Indexer indexer = new Indexer(indices, outboundLibraryStreams.subscription());
 
             final ReplayQuery replayQuery = new ReplayQuery(

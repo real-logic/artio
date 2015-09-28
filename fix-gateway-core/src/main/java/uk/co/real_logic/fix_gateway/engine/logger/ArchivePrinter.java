@@ -123,6 +123,7 @@ public class ArchivePrinter implements SessionHandler
     public void onConnect(final int libraryId,
                           final long connectionId,
                           final ConnectionType type,
+                          final int lastSequenceNumber,
                           final DirectBuffer buffer,
                           final int addressOffset,
                           final int addressLength)

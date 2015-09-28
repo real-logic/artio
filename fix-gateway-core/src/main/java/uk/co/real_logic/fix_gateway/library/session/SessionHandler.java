@@ -44,7 +44,7 @@ public interface SessionHandler
         final int libraryId,
         final long connectionId,
         final ConnectionType type,
-        final DirectBuffer buffer,
+        int lastSequenceNumber, final DirectBuffer buffer,
         final int addressOffset,
         final int addressLength)
     {

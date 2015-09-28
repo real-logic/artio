@@ -20,6 +20,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.*;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumbers;
 import uk.co.real_logic.fix_gateway.library.session.*;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
@@ -295,6 +296,7 @@ public final class FixLibrary extends GatewayProcess
             final int libraryId,
             final long connectionId,
             final ConnectionType type,
+            final int lastSequenceNumber,
             final DirectBuffer buffer,
             final int addressOffset,
             final int addressLength)
@@ -306,7 +308,7 @@ public final class FixLibrary extends GatewayProcess
                 if (type == INITIATOR)
                 {
                     DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
-                    final Session session = initiateSession(connectionId);
+                    final Session session = initiateSession(connectionId, lastSequenceNumber);
                     newSession(connectionId, session);
                     incomingSession = session;
                 }
@@ -317,7 +319,7 @@ public final class FixLibrary extends GatewayProcess
                     final String address = asciiFlyweight.getAscii(addressOffset, addressLength);
                     if (isAcceptor)
                     {
-                        final Session session = acceptSession(connectionId, address);
+                        final Session session = acceptSession(connectionId, lastSequenceNumber, address);
                         newSession(connectionId, session);
                     }
                     else
@@ -414,7 +416,7 @@ public final class FixLibrary extends GatewayProcess
         sessions.add(session);
     }
 
-    private Session initiateSession(final long connectionId)
+    private Session initiateSession(final long connectionId, final int lastSequenceNumber)
     {
         final Object key = sessionIdStrategy.onInitiatorLogon(
             sessionConfiguration.senderCompId(), sessionConfiguration.senderSubId(),
@@ -437,26 +439,26 @@ public final class FixLibrary extends GatewayProcess
             sessionConfiguration.password(),
             libraryId,
             sessionConfiguration.bufferSize(),
-            initiatorInitialSequenceNumber(SequenceNumbers.MISSING));
+            initiatorInitialSequenceNumber(lastSequenceNumber));
     }
 
     private int initiatorInitialSequenceNumber(
-        final int savedInitialSequenceNumber)
+        final int lastSequenceNumber)
     {
         if (sessionConfiguration.hasCustomInitialSequenceNumber())
         {
             return sessionConfiguration.initialSequenceNumber();
         }
 
-        if (sessionConfiguration.sequenceNumbersPersistent() && savedInitialSequenceNumber != SequenceNumbers.MISSING)
+        if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != SequenceNumbers.NONE)
         {
-            return savedInitialSequenceNumber;
+            return lastSequenceNumber;
         }
 
         return 1;
     }
 
-    private Session acceptSession(final long connectionId, final String address)
+    private Session acceptSession(final long connectionId, final int lastSequenceNumber, final String address)
     {
         final GatewayPublication publication = outboundLibraryStreams.gatewayPublication(
             idleStrategy);
@@ -479,16 +481,16 @@ public final class FixLibrary extends GatewayProcess
             fixCounters.sentMsgSeqNo(connectionId),
             libraryId,
             configuration.acceptorSessionBufferSize(),
-            acceptorInitialSequenceNumber(SequenceNumbers.MISSING))
+            acceptorInitialSequenceNumber(lastSequenceNumber))
            .address(host, port);
     }
 
-    private int acceptorInitialSequenceNumber(int savedInitialSequenceNumber)
+    private int acceptorInitialSequenceNumber(int lastSequenceNumber)
     {
         if (!configuration.acceptorSequenceNumbersResetUponReconnect() &&
-            savedInitialSequenceNumber != SequenceNumbers.MISSING)
+            lastSequenceNumber != SequenceNumbers.NONE)
         {
-            return savedInitialSequenceNumber;
+            return lastSequenceNumber;
         }
 
         return 1;

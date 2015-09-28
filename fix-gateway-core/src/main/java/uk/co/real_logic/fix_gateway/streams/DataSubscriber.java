@@ -181,6 +181,7 @@ public class DataSubscriber implements FragmentHandler
             connect.libraryId(),
             connect.connection(),
             connect.type(),
+            connect.lastSequenceNumber(),
             buffer,
             addressOffset,
             connect.addressLength());

@@ -84,6 +84,7 @@
         <field name="libraryId" id="19" type="LibraryId"/>
         <field name="connection" id="17" type="ConnectionId"/>
         <field name="type" id="24" type="ConnectionType"/>
+        <field name="lastSequenceNumber" id="49" type="int32"/>
         <data name="address" id="18" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="InitiateConnection" id="11" description="Try to make an outbound connection">
