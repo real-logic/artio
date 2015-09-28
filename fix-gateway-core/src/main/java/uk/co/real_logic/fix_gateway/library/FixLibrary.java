@@ -54,7 +54,6 @@ public final class FixLibrary extends GatewayProcess
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
     private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
-    private final SequenceNumbers sequenceNumbers;
 
     private final EpochClock clock;
     private final LibraryConfiguration configuration;
@@ -93,7 +92,6 @@ public final class FixLibrary extends GatewayProcess
             outboundPublication,
             configuration.libraryId(),
             configuration.replyTimeoutInMs());
-        sequenceNumbers = new SequenceNumbers(configuration.acceptorSequenceNumbersResetUponReconnect());
     }
 
     private FixLibrary connect()
@@ -303,6 +301,8 @@ public final class FixLibrary extends GatewayProcess
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
+                // TODO; wire up saved sequence number
+
                 if (type == INITIATOR)
                 {
                     DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
@@ -437,7 +437,23 @@ public final class FixLibrary extends GatewayProcess
             sessionConfiguration.password(),
             libraryId,
             sessionConfiguration.bufferSize(),
-            sessionConfiguration.initialSequenceNumber());
+            initiatorInitialSequenceNumber(SequenceNumbers.MISSING));
+    }
+
+    private int initiatorInitialSequenceNumber(
+        final int savedInitialSequenceNumber)
+    {
+        if (sessionConfiguration.hasCustomInitialSequenceNumber())
+        {
+            return sessionConfiguration.initialSequenceNumber();
+        }
+
+        if (sessionConfiguration.sequenceNumbersPersistent() && savedInitialSequenceNumber != SequenceNumbers.MISSING)
+        {
+            return savedInitialSequenceNumber;
+        }
+
+        return 1;
     }
 
     private Session acceptSession(final long connectionId, final String address)
@@ -462,8 +478,20 @@ public final class FixLibrary extends GatewayProcess
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId),
             libraryId,
-            configuration.acceptorSessionBufferSize())
+            configuration.acceptorSessionBufferSize(),
+            acceptorInitialSequenceNumber(SequenceNumbers.MISSING))
            .address(host, port);
+    }
+
+    private int acceptorInitialSequenceNumber(int savedInitialSequenceNumber)
+    {
+        if (!configuration.acceptorSequenceNumbersResetUponReconnect() &&
+            savedInitialSequenceNumber != SequenceNumbers.MISSING)
+        {
+            return savedInitialSequenceNumber;
+        }
+
+        return 1;
     }
 
     private SessionProxy sessionProxy(final long connectionId)

@@ -36,7 +36,8 @@ public final class AcceptorSession extends Session
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo,
         final int libraryId,
-        final int sessionBufferSize)
+        final int sessionBufferSize,
+        final int initialSequenceNumber)
     {
         super(
             defaultInterval,
@@ -52,7 +53,7 @@ public final class AcceptorSession extends Session
             sentMsgSeqNo,
             libraryId,
             sessionBufferSize,
-            1);
+            initialSequenceNumber);
     }
 
     public void onLogon(

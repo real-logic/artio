@@ -26,6 +26,8 @@ public final class SessionConfiguration
 {
     public static final int DEFAULT_SESSION_BUFFER_SIZE = 8 * 1024;
 
+    private static final int AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1;
+
     private final List<String> hosts;
     private final List<Integer> ports;
     private final String username;
@@ -142,6 +144,11 @@ public final class SessionConfiguration
         return initialSequenceNumber;
     }
 
+    public boolean hasCustomInitialSequenceNumber()
+    {
+        return initialSequenceNumber != AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+    }
+
     public static final class Builder
     {
         private String username;
@@ -154,7 +161,7 @@ public final class SessionConfiguration
         private String senderLocationId = "";
         private int bufferSize = DEFAULT_SESSION_BUFFER_SIZE;
         private boolean sequenceNumbersPersistent = false;
-        private int initialSequenceNumber = 1;
+        private int initialSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 
         private Builder()
         {

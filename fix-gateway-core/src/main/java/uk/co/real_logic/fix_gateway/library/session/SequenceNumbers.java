@@ -21,7 +21,7 @@ public class SequenceNumbers
 {
     public static final int MISSING = -1;
 
-    private final Long2LongHashMap sessionIdToLastSentSequenceNumber = new Long2LongHashMap(MISSING);
+    private final Long2LongHashMap sessionIdToLastKnownSequenceNumber = new Long2LongHashMap(MISSING);
     private final boolean acceptorSequenceNumbersResetUponReconnect;
 
     public SequenceNumbers(final boolean acceptorSequenceNumbersResetUponReconnect)
@@ -31,7 +31,7 @@ public class SequenceNumbers
 
     public int onInitiate(final long sessionId)
     {
-        return remove(sessionId);
+        return get(sessionId);
     }
 
     public int onAccept(final long sessionId)
@@ -41,16 +41,16 @@ public class SequenceNumbers
             return 1;
         }
 
-        return remove(sessionId);
+        return get(sessionId);
     }
 
-    private int remove(final long sessionId)
+    private int get(final long sessionId)
     {
-        return (int) sessionIdToLastSentSequenceNumber.remove(sessionId);
+        return (int) sessionIdToLastKnownSequenceNumber.get(sessionId);
     }
 
     public void onDisconnect(final long sessionId, final int sequenceNumber)
     {
-        sessionIdToLastSentSequenceNumber.put(sessionId, sequenceNumber);
+        sessionIdToLastKnownSequenceNumber.put(sessionId, sequenceNumber);
     }
 }
