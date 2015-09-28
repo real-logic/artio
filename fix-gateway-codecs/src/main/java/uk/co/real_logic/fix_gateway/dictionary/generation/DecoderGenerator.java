@@ -290,21 +290,11 @@ public class DecoderGenerator extends Generator
 
     private Stream<Field> extractFields(final Entry entry)
     {
-        final Entry.Element element = entry.element();
-        if (element instanceof Field)
-        {
-            return Stream.of((Field) element);
-        }
-        else if (element instanceof Group)
-        {
-            final Entry numberField = ((Group) element).numberField();
-            return Stream.of((Field) numberField.element());
-        }
-        else if (element instanceof Component)
-        {
-            return requiredFields(((Component) element).entries());
-        }
-        throw new IllegalStateException();
+        return entry.match(
+            (e, field) -> Stream.of(field),
+            (e, group) -> Stream.of((Field) group.numberField().element()),
+            (e, component) -> requiredFields(component.entries())
+        );
     }
 
     private void generateComponentInterface(final Component component)
@@ -338,68 +328,58 @@ public class DecoderGenerator extends Generator
 
     private String generateInterfaceGetter(final Entry entry)
     {
-        final Entry.Element element = entry.element();
-        if (element instanceof Field)
-        {
-            final String name = element.name();
-            final String fieldName = formatPropertyName(name);
-            final Type type = ((Field) element).type();
+        return entry.match(
+            this::generateFieldInterfaceGetter,
+            (e, group) -> generateGroupInterfaceGetter(group),
+            (e, component) -> generateComponentInterfaceGetter(component));
+    }
 
-            final String length = type.isStringBased()
-                                ? String.format("    public int %1$sLength();\n", fieldName) : "";
+    private String generateComponentInterfaceGetter(Component component)
+    {
+        return component.entries()
+                        .stream()
+                        .map(this::generateInterfaceGetter)
+                        .collect(joining("\n", "", "\n"));
+    }
 
-            final String optional = !entry.required()
-                                  ? String.format("    public boolean has%1$s();\n", name) : "";
+    private String generateGroupInterfaceGetter(Group group)
+    {
+        return String.format(
+            "    public %1$s %2$s();\n",
+            decoderClassName(group),
+            formatPropertyName(group.name())
+        );
+    }
 
-            return String.format(
-                    "    public %1$s %2$s();\n" +
-                    "%3$s" +
-                    "%4$s",
-                javaTypeOf(type),
-                fieldName,
-                optional,
-                length
-            );
-        }
-        else if (element instanceof Group)
-        {
-            final Group group = (Group) element;
+    private String generateFieldInterfaceGetter(Entry entry, Field field)
+    {
+        final String name = field.name();
+        final String fieldName = formatPropertyName(name);
+        final Type type = field.type();
 
-            return String.format(
-                "    public %1$s %2$s();\n",
-                decoderClassName(group),
-                formatPropertyName(group.name())
-            );
-        }
-        else if (element instanceof Component)
-        {
-            final Component component = (Component) element;
-            return component.entries()
-                            .stream()
-                            .map(this::generateInterfaceGetter)
-                            .collect(joining("\n", "", "\n"));
-        }
+        final String length = type.isStringBased()
+                            ? String.format("    public int %1$sLength();\n", fieldName) : "";
 
-        return "";
+        final String optional = !entry.required()
+                              ? String.format("    public boolean has%1$s();\n", name) : "";
+
+        return String.format(
+                "    public %1$s %2$s();\n" +
+                "%3$s" +
+                "%4$s",
+            javaTypeOf(type),
+            fieldName,
+            optional,
+            length
+        );
     }
 
     private String generateGetter(final Entry entry)
     {
-        final Entry.Element element = entry.element();
-        if (element instanceof Field)
-        {
-            return generateFieldGetter(entry, (Field) element);
-        }
-        else if (element instanceof Group)
-        {
-            return generateGroupGetter((Group) element);
-        }
-        else if (element instanceof Component)
-        {
-            return generateComponentField((Component) element);
-        }
-
-        return "";
+        return entry.match(
+            this::generateFieldGetter,
+            (e, group) -> generateGroupGetter(group),
+            (e, component) -> generateComponentField(component));
     }
 
     private void generateGroupMethods(final Writer out, final Aggregate aggregate) throws IOException
@@ -745,20 +725,10 @@ public class DecoderGenerator extends Generator
 
     private String decodeEntry(final Entry entry)
     {
-        if (entry.element() instanceof Field)
-        {
-            return decodeField(entry, "");
-        }
-        else if (entry.element() instanceof Group)
-        {
-            return decodeGroup(entry);
-        }
-        else if (entry.element() instanceof Component)
-        {
-            return decodeComponent(entry);
-        }
-
-        return "";
+        return entry.matchEntry(
+            e -> decodeField(e, ""),
+            this::decodeGroup,
+            this::decodeComponent);
     }
 
     private String decodeComponent(final Entry entry)

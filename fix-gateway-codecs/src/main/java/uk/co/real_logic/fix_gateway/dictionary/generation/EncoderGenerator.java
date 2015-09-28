@@ -179,21 +179,10 @@ public class EncoderGenerator extends Generator
 
     private String generateSetter(final String className, final Entry entry)
     {
-        final Element element = entry.element();
-        if (element instanceof Field)
-        {
-            return generateFieldSetter(className, (Field) element);
-        }
-        else if (element instanceof Group)
-        {
-            return generateGroupSetter(className, (Group) element);
-        }
-        else if (element instanceof Component)
-        {
-            return generateComponentField(encoderClassName(entry.name()), (Component) element);
-        }
-
-        return "";
+        return entry.match(
+            (e, field) -> generateFieldSetter(className, field),
+            (e, group) -> generateGroupSetter(className, group),
+            (e, component) -> generateComponentField(encoderClassName(e.name()), component));
     }
 
     private String generateFieldSetter(final String className, final Field field)
@@ -263,21 +252,21 @@ public class EncoderGenerator extends Generator
 
         return String.format(
             "%1$s\n" +
-            "    public void inc%4$s()\n" +
-            "    {\n" +
-            "        %5$s++;\n" +
-            "    }\n\n" +
-            "    private %2$s %3$s = null;\n\n" +
-            "    public %2$s %3$s()\n" +
-            "    {\n" +
-            "        if (%3$s == null)\n" +
-            "        {\n" +
-            "            has%4$s = true;\n" +
-            "            %5$s = 1;\n" +
-            "            %3$s = new %2$s(this::inc%4$s);\n" +
-            "        }\n" +
-            "        return %3$s;\n" +
-            "    }\n\n",
+                "    public void inc%4$s()\n" +
+                "    {\n" +
+                "        %5$s++;\n" +
+                "    }\n\n" +
+                "    private %2$s %3$s = null;\n\n" +
+                "    public %2$s %3$s()\n" +
+                "    {\n" +
+                "        if (%3$s == null)\n" +
+                "        {\n" +
+                "            has%4$s = true;\n" +
+                "            %5$s = 1;\n" +
+                "            %3$s = new %2$s(this::inc%4$s);\n" +
+                "        }\n" +
+                "        return %3$s;\n" +
+                "    }\n\n",
             setter,
             encoderClassName(group.name()),
             formatPropertyName(group.name()),
@@ -407,20 +396,10 @@ public class EncoderGenerator extends Generator
         {
             return encodeChecksum();
         }
-        else if (entry.element() instanceof Field)
+        else
         {
-            return encodeField(entry);
+            return entry.matchEntry(this::encodeField, this::encodeGroup, this::encodeComponent);
         }
-        else if (entry.element() instanceof Group)
-        {
-            return encodeGroup(entry);
-        }
-        else if (entry.element() instanceof Component)
-        {
-            return encodeComponent(entry);
-        }
-
-        return "";
     }
 
     private String encodeBodyLength()

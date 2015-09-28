@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.dictionary.ir;
 import uk.co.real_logic.agrona.Verify;
 
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public final class Entry
 {
@@ -34,7 +35,6 @@ public final class Entry
         return new Entry(false, element);
     }
 
-    // TODO: refactor ugly instanceofs to this
     public <T> T match(
         final BiFunction<Entry, Field, ? extends T> withField,
         final BiFunction<Entry, Group, ? extends T> withGroup,
@@ -53,6 +53,17 @@ public final class Entry
             return withComponent.apply(this, (Component) element);
         }
         throw new IllegalStateException("Unknown element type: " + element);
+    }
+
+    public <T> T matchEntry(
+        final Function<Entry, ? extends T> withField,
+        final Function<Entry, ? extends T> withGroup,
+        final Function<Entry, ? extends T> withComponent)
+    {
+        return match(
+            (entry, field) -> withField.apply(entry),
+            (entry, group) -> withGroup.apply(entry),
+            (entry, component) -> withComponent.apply(entry));
     }
 
     /**
