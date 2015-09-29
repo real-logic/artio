@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
+import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
 import static uk.co.real_logic.agrona.concurrent.RecordBuffer.DID_NOT_CLAIM_RECORD;
 
 /**
@@ -33,19 +34,18 @@ import static uk.co.real_logic.agrona.concurrent.RecordBuffer.DID_NOT_CLAIM_RECO
  * Each instance is not thread-safe, however, they can share a common
  * off-heap in a threadsafe manner.
  */
-// TODO: add a position and scan until you're at the latest position when reading from the table
 public class SequenceNumbers implements Index
 {
     public static final int NONE = -1;
 
     private static final int MASK = 0xFFFF;
+    private static final int HEADER_SIZE = SIZE_OF_INT;
+    private static final int KNOWN_STREAM_POSITION_INDEX = 0;
 
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
     private final HeaderDecoder fixHeader = new HeaderDecoder();
     private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
-    private final SequenceNumberHeaderEncoder headerEncoder = new SequenceNumberHeaderEncoder();
-    private final SequenceNumberHeaderDecoder headerDecoder = new SequenceNumberHeaderDecoder();
     private final LastKnownSequenceNumberEncoder lastKnownEncoder = new LastKnownSequenceNumberEncoder();
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
     private final int lastKnownBlockLength = lastKnownEncoder.sbeBlockLength();
@@ -71,15 +71,26 @@ public class SequenceNumbers implements Index
         this.outputBuffer = outputBuffer;
         this.errorHandler = errorHandler;
         this.isWriter = isWriter;
-        recordBuffer = new RecordBuffer(outputBuffer, 4, LastKnownSequenceNumberEncoder.BLOCK_LENGTH);
+        recordBuffer = new RecordBuffer(outputBuffer, HEADER_SIZE, LastKnownSequenceNumberEncoder.BLOCK_LENGTH);
     }
 
     public SequenceNumbers initialise()
     {
-        // TODO: only init if new buffer
-        recordBuffer.initialise();
-        // TODO
+        if (knownStreamPosition() == 0)
+        {
+            recordBuffer.initialise();
+        }
         return this;
+    }
+
+    private void knownStreamPosition(final int position)
+    {
+        outputBuffer.putIntOrdered(KNOWN_STREAM_POSITION_INDEX, position);
+    }
+
+    private int knownStreamPosition()
+    {
+        return outputBuffer.getIntVolatile(KNOWN_STREAM_POSITION_INDEX);
     }
 
     @Override
@@ -116,6 +127,8 @@ public class SequenceNumbers implements Index
                 .sequenceNumber(msgSeqNum);
 
             recordBuffer.commit(claimedOffset);
+
+            knownStreamPosition(srcOffset + length);
         }
     }
 
