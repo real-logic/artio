@@ -23,7 +23,6 @@ import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.engine.framer.*;
 import uk.co.real_logic.fix_gateway.engine.logger.Logger;
-import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumbers;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
@@ -39,7 +38,7 @@ public final class FixEngine extends GatewayProcess
 
     private QueuedPipe<AdminCommand> adminCommands = new ManyToOneConcurrentArrayQueue<>(16);
 
-    private final SequenceNumberIndex sequenceNumberIndex;
+    private final SequenceNumbers sequenceNumbers;
     private final EngineConfiguration configuration;
 
     private AgentRunner errorPrinterRunner;
@@ -74,7 +73,7 @@ public final class FixEngine extends GatewayProcess
         init(configuration);
         this.configuration = configuration;
 
-        sequenceNumberIndex = new SequenceNumberIndex();
+        sequenceNumbers = new SequenceNumbers();
         initFramer(configuration, fixCounters);
         initLogger(configuration);
         initErrorPrinter(configuration);
@@ -84,7 +83,7 @@ public final class FixEngine extends GatewayProcess
     {
         logger = new Logger(
             configuration, inboundLibraryStreams, outboundLibraryStreams, errorBuffer, replayPublication(),
-            sequenceNumberIndex);
+            sequenceNumbers);
         logger.init();
     }
 
@@ -123,7 +122,7 @@ public final class FixEngine extends GatewayProcess
         final Framer framer = new Framer(
             new SystemEpochClock(), configuration, handler, librarySubscription, replaySubscription(),
             inboundLibraryStreams.gatewayPublication(idleStrategy), sessionIdStrategy, sessionIds, adminCommands,
-            new SequenceNumbers(sequenceNumberIndex, idleStrategy)
+            sequenceNumbers
         );
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }

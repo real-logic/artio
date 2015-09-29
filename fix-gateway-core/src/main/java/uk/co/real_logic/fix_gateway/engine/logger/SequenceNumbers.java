@@ -15,41 +15,78 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.collections.Long2LongHashMap;
+import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
+import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
-public class SequenceNumbers
+public class SequenceNumbers implements Index
 {
     public static final int NONE = -1;
-    public static final int AWAITING_REPLY = -2;
 
-    private final SequenceNumberIndex sequenceNumberIndex;
-    private final IdleStrategy idleStrategy;
+    private final FixMessageDecoder messageFrame = new FixMessageDecoder();
+    private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
+    private final HeaderDecoder fixHeader = new HeaderDecoder();
+    private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
+    private final Long2LongHashMap sessionIdToLastKnownSequenceNumber = new Long2LongHashMap(NONE);
 
-    private volatile int response;
-
-    public SequenceNumbers(final SequenceNumberIndex sequenceNumberIndex, final IdleStrategy idleStrategy)
+    public SequenceNumbers()
     {
-        this.sequenceNumberIndex = sequenceNumberIndex;
-        this.idleStrategy = idleStrategy;
     }
 
     public int get(final long sessionId)
     {
-        response = AWAITING_REPLY;
-
-        sequenceNumberIndex.query(sessionId, this);
-
-        while (response == AWAITING_REPLY)
+        synchronized (sessionIdToLastKnownSequenceNumber)
         {
-            idleStrategy.idle(0);
+            return (int) sessionIdToLastKnownSequenceNumber.get(sessionId);
         }
-
-        return response;
     }
 
-    public void reply(final int value)
+    public void onMessage(final long sessionId, final int sequenceNumber)
     {
-        response = value;
+        sessionIdToLastKnownSequenceNumber.put(sessionId, sequenceNumber);
+    }
+
+    @Override
+    public void indexRecord(
+        final DirectBuffer buffer, final int srcOffset, final int length, final int streamId, final int aeronSessionId)
+    {
+        int offset = srcOffset;
+        frameHeaderDecoder.wrap(buffer, offset);
+        if (frameHeaderDecoder.templateId() == FixMessageEncoder.TEMPLATE_ID)
+        {
+            final int actingBlockLength = frameHeaderDecoder.blockLength();
+            offset += frameHeaderDecoder.encodedLength();
+            messageFrame.wrap(buffer, offset, actingBlockLength, frameHeaderDecoder.version());
+
+            offset += actingBlockLength + 2;
+
+            asciiFlyweight.wrap(buffer);
+            fixHeader.decode(asciiFlyweight, offset, messageFrame.bodyLength());
+
+            // TODO: remove synchronisation and move offheap
+            synchronized (sessionIdToLastKnownSequenceNumber)
+            {
+                sessionIdToLastKnownSequenceNumber.put(messageFrame.session(), fixHeader.msgSeqNum());
+            }
+        }
+    }
+
+    public int query(final long sessionId)
+    {
+        synchronized (sessionIdToLastKnownSequenceNumber)
+        {
+            return get(sessionId);
+        }
+    }
+
+    @Override
+    public void close()
+    {
+
     }
 
 }

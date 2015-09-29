@@ -41,7 +41,7 @@ public class Logger implements AutoCloseable
     private final Streams outboundLibraryStreams;
     private final Publication replayPublication;
     private final ErrorHandler errorHandler;
-    private final SequenceNumberIndex sequenceNumberIndex;
+    private final SequenceNumbers sequenceNumbers;
 
     private Archiver archiver;
     private ArchiveReader archiveReader;
@@ -53,14 +53,14 @@ public class Logger implements AutoCloseable
         final Streams outboundLibraryStreams,
         final ErrorHandler errorHandler,
         final Publication replayPublication,
-        final SequenceNumberIndex sequenceNumberIndex)
+        final SequenceNumbers sequenceNumbers)
     {
         this.configuration = configuration;
         this.inboundLibraryStreams = inboundLibraryStreams;
         this.outboundLibraryStreams = outboundLibraryStreams;
         this.replayPublication = replayPublication;
         this.errorHandler = errorHandler;
-        this.sequenceNumberIndex = sequenceNumberIndex;
+        this.sequenceNumbers = sequenceNumbers;
     }
 
     public void init()
@@ -80,7 +80,7 @@ public class Logger implements AutoCloseable
             final String logFileDir = configuration.logFileDir();
             final List<Index> indices = Arrays.asList(
                 new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, LoggerUtil::map),
-                sequenceNumberIndex);
+                sequenceNumbers);
             final Indexer indexer = new Indexer(indices, outboundLibraryStreams.subscription());
 
             final ReplayQuery replayQuery = new ReplayQuery(

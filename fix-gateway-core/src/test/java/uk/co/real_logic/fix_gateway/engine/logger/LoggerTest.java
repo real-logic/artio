@@ -70,7 +70,7 @@ public class LoggerTest
 
         final EngineConfiguration configuration = new EngineConfiguration().logOutboundMessages(false);
         logger = new Logger(
-            configuration, inboundStreams, null, Throwable::printStackTrace, null, mock(SequenceNumberIndex.class));
+            configuration, inboundStreams, null, Throwable::printStackTrace, null, mock(SequenceNumbers.class));
 
         logger.initArchival();
         archiver = logger.archiver();
