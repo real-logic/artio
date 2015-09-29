@@ -23,11 +23,13 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.stream.IntStream;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
+import static uk.co.real_logic.agrona.IoUtil.mapNewFile;
 
 /**
  * Configuration that exists for the entire duration of a fix gateway
@@ -60,6 +62,8 @@ public final class EngineConfiguration extends CommonConfiguration
     public static final String RECEIVER_SOCKET_BUFFER_SIZE_PROP = "fix.core.receiver_socket_buffer_size";
     /** Property name for the size in bytes of the TCP socket's send buffer. */
     public static final String SENDER_SOCKET_BUFFER_SIZE_PROP = "fix.core.sender_socket_buffer_size";
+    /** Property name for the size in bytes of the sequence number cache file*/
+    public static final String SEQUENCE_NUMBER_CACHE_BUFFER_SIZE_PROP = "fix.core.sequence_number_cache_size";
 
     // ------------------------------------------------
     //          Configuration Defaults
@@ -75,6 +79,7 @@ public final class EngineConfiguration extends CommonConfiguration
     public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
     public static final int DEFAULT_RECEIVER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SENDER_SOCKET_BUFFER_SIZE = 1024 * 1024;
+    public static final int DEFAULT_SEQUENCE_NUMBER_CACHE_BUFFER_SIZE = 8 * 1024 * 1024;
 
     private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
 
@@ -89,6 +94,7 @@ public final class EngineConfiguration extends CommonConfiguration
     private IdleStrategy framerIdleStrategy = backoffIdleStrategy();
     private IdleStrategy loggerIdleStrategy = backoffIdleStrategy();
     private IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
+    private AtomicBuffer sequenceNumberCacheBuffer;
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
@@ -102,8 +108,8 @@ public final class EngineConfiguration extends CommonConfiguration
         getInteger(RECEIVER_SOCKET_BUFFER_SIZE_PROP, DEFAULT_RECEIVER_SOCKET_BUFFER_SIZE);
     private int senderSocketBufferSize =
         getInteger(SENDER_SOCKET_BUFFER_SIZE_PROP, DEFAULT_SENDER_SOCKET_BUFFER_SIZE);
-
-    private AtomicBuffer sequenceNumberCacheBuffer = new UnsafeBuffer(new byte[16 * 1024]);
+    private int sequenceNumberCacheBufferSize =
+        getInteger(SEQUENCE_NUMBER_CACHE_BUFFER_SIZE_PROP, DEFAULT_SEQUENCE_NUMBER_CACHE_BUFFER_SIZE);
 
     public EngineConfiguration registerAcceptor(
         final OtfMessageAcceptor messageAcceptor, int firstTag, final int... tags)
@@ -295,7 +301,7 @@ public final class EngineConfiguration extends CommonConfiguration
         return inboundBytesReceivedLimit;
     }
 
-    public AtomicBuffer getSequenceNumberCacheBuffer()
+    public AtomicBuffer sequenceNumberCacheBuffer()
     {
         return sequenceNumberCacheBuffer;
     }
@@ -327,6 +333,13 @@ public final class EngineConfiguration extends CommonConfiguration
     void conclude()
     {
         super.conclude("engine");
+
+        if (sequenceNumberCacheBuffer() == null)
+        {
+            final File sequenceNumberCacheBufferFile = new File(logFileDir() + File.separator + "sequence_numbers");
+            sequenceNumberCacheBuffer = new UnsafeBuffer(
+                mapNewFile(sequenceNumberCacheBufferFile, sequenceNumberCacheBufferSize));
+        }
     }
 
 }

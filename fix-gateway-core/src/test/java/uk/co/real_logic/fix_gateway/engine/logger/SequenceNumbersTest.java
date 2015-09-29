@@ -28,9 +28,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumbers.NONE;
 
-/**
- * .
- */
 public class SequenceNumbersTest extends AbstractLogTest
 {
 

@@ -43,7 +43,6 @@ public final class FixEngine extends GatewayProcess
     private AgentRunner errorPrinterRunner;
     private AgentRunner framerRunner;
     private Logger logger;
-    private AtomicBuffer sequenceNumberCacheBuffer;
 
     public static FixEngine launch(final EngineConfiguration configuration)
     {
@@ -72,7 +71,6 @@ public final class FixEngine extends GatewayProcess
     {
         init(configuration);
         this.configuration = configuration;
-        sequenceNumberCacheBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
         initFramer(configuration, fixCounters);
         initLogger(configuration);
@@ -83,7 +81,7 @@ public final class FixEngine extends GatewayProcess
     {
         logger = new Logger(
             configuration, inboundLibraryStreams, outboundLibraryStreams, errorBuffer, replayPublication(),
-            SequenceNumbers.forWriting(new UnsafeBuffer(new byte[16 * 1024]), errorBuffer));
+            SequenceNumbers.forWriting(configuration.sequenceNumberCacheBuffer(), errorBuffer));
         logger.init();
     }
 
@@ -122,7 +120,7 @@ public final class FixEngine extends GatewayProcess
         final Framer framer = new Framer(
             new SystemEpochClock(), configuration, handler, librarySubscription, replaySubscription(),
             inboundLibraryStreams.gatewayPublication(idleStrategy), sessionIdStrategy, sessionIds, adminCommands,
-            SequenceNumbers.forReading(sequenceNumberCacheBuffer, errorBuffer)
+            SequenceNumbers.forReading(configuration.sequenceNumberCacheBuffer(), errorBuffer)
         );
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }

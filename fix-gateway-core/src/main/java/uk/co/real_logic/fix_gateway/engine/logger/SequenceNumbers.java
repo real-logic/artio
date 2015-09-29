@@ -25,9 +25,11 @@ import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
+import static uk.co.real_logic.agrona.concurrent.RecordBuffer.DID_NOT_CLAIM_RECORD;
+
 /**
  * Stores a cache of the last sent sequence number.
- *
+ * <p>
  * Each instance is not thread-safe, however, they can share a common
  * off-heap in a threadsafe manner.
  */
@@ -47,31 +49,34 @@ public class SequenceNumbers implements Index
     private final LastKnownSequenceNumberEncoder lastKnownEncoder = new LastKnownSequenceNumberEncoder();
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
     private final int lastKnownBlockLength = lastKnownEncoder.sbeBlockLength();
-    private final int lastKnownSchemaVersion = lastKnownEncoder.sbeSchemaVersion();;
+    private final int lastKnownSchemaVersion = lastKnownEncoder.sbeSchemaVersion();
 
     private final RecordBuffer recordBuffer;
     private final AtomicBuffer outputBuffer;
     private final ErrorHandler errorHandler;
+    private final boolean isWriter;
 
     public static SequenceNumbers forWriting(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
     {
-        return new SequenceNumbers(outputBuffer, errorHandler).initialise();
+        return new SequenceNumbers(outputBuffer, errorHandler, true).initialise();
     }
 
     public static SequenceNumbers forReading(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
     {
-        return new SequenceNumbers(outputBuffer, errorHandler);
+        return new SequenceNumbers(outputBuffer, errorHandler, false);
     }
 
-    SequenceNumbers(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
+    SequenceNumbers(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler, final boolean isWriter)
     {
         this.outputBuffer = outputBuffer;
         this.errorHandler = errorHandler;
+        this.isWriter = isWriter;
         recordBuffer = new RecordBuffer(outputBuffer, 4, LastKnownSequenceNumberEncoder.BLOCK_LENGTH);
     }
 
     public SequenceNumbers initialise()
     {
+        // TODO: only init if new buffer
         recordBuffer.initialise();
         // TODO
         return this;
@@ -99,7 +104,7 @@ public class SequenceNumbers implements Index
             final int key = hash(sessionId);
             final int claimedOffset = recordBuffer.claimRecord(key);
 
-            if (claimedOffset == RecordBuffer.DID_NOT_CLAIM_RECORD)
+            if (claimedOffset == DID_NOT_CLAIM_RECORD)
             {
                 errorHandler.onError(new IllegalStateException("Unable to claim an offset"));
                 return;
@@ -119,7 +124,8 @@ public class SequenceNumbers implements Index
         stashedSequenceNumber = NONE;
 
         final int key = hash(sessionId);
-        recordBuffer.forEach((recordKey, offset) -> {
+        recordBuffer.forEach((recordKey, offset) ->
+        {
             if (recordKey == key)
             {
                 lastKnownDecoder.wrap(outputBuffer, offset, lastKnownBlockLength, lastKnownSchemaVersion);
@@ -143,8 +149,10 @@ public class SequenceNumbers implements Index
     @Override
     public void close()
     {
-        // TODO: only writer
-        IoUtil.unmap(outputBuffer.byteBuffer());
+        if (isWriter)
+        {
+            IoUtil.unmap(outputBuffer.byteBuffer());
+        }
     }
 
 }
