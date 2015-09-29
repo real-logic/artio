@@ -25,7 +25,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.SIZE_OF_LENGTH_FIELD;
 
-public class AbstractReplayTest
+public class AbstractLogTest
 {
     protected static final long SESSION_ID = 1;
     protected static final long SESSION_ID_2 = 2;
@@ -46,10 +46,10 @@ public class AbstractReplayTest
 
     protected void bufferContainsMessage(final boolean hasPossDupFlag)
     {
-        bufferContainsMessage(hasPossDupFlag, SESSION_ID);
+        bufferContainsMessage(hasPossDupFlag, SESSION_ID, SEQUENCE_NUMBER);
     }
 
-    protected void bufferContainsMessage(final boolean hasPossDupFlag, final long sessionId)
+    protected void bufferContainsMessage(final boolean hasPossDupFlag, final long sessionId, int sequenceNumber)
     {
         final UnsafeBuffer msgBuffer = new UnsafeBuffer(new byte[8 * 1024]);
         final MutableAsciiFlyweight asciiFlyweight = new MutableAsciiFlyweight(msgBuffer);
@@ -60,7 +60,7 @@ public class AbstractReplayTest
             testRequest
                 .header()
                 .possDupFlag(false)
-                .msgSeqNum(SEQUENCE_NUMBER);
+                .msgSeqNum(sequenceNumber);
         }
         logEntryLength = testRequest.encode(asciiFlyweight, 0);
 

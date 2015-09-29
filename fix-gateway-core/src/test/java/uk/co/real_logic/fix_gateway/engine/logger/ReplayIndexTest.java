@@ -29,7 +29,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
-public class ReplayIndexTest extends AbstractReplayTest
+public class ReplayIndexTest extends AbstractLogTest
 {
     private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024);
     private BufferFactory mockBufferFactory = mock(BufferFactory.class);
@@ -76,10 +76,10 @@ public class ReplayIndexTest extends AbstractReplayTest
     @Test
     public void shouldRecordIndexesForMultipleSessions()
     {
-        bufferContainsMessage(true, SESSION_ID);
+        bufferContainsMessage(true, SESSION_ID, SEQUENCE_NUMBER);
         indexRecord();
 
-        bufferContainsMessage(true, SESSION_ID_2);
+        bufferContainsMessage(true, SESSION_ID_2, SEQUENCE_NUMBER);
         indexRecord();
 
         verifyMappedFile(SESSION_ID);

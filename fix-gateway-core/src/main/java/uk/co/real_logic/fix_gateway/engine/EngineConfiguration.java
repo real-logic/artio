@@ -16,8 +16,10 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
+import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 
@@ -100,6 +102,8 @@ public final class EngineConfiguration extends CommonConfiguration
         getInteger(RECEIVER_SOCKET_BUFFER_SIZE_PROP, DEFAULT_RECEIVER_SOCKET_BUFFER_SIZE);
     private int senderSocketBufferSize =
         getInteger(SENDER_SOCKET_BUFFER_SIZE_PROP, DEFAULT_SENDER_SOCKET_BUFFER_SIZE);
+
+    private AtomicBuffer sequenceNumberCacheBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
     public EngineConfiguration registerAcceptor(
         final OtfMessageAcceptor messageAcceptor, int firstTag, final int... tags)
@@ -289,6 +293,11 @@ public final class EngineConfiguration extends CommonConfiguration
     public int inboundBytesReceivedLimit()
     {
         return inboundBytesReceivedLimit;
+    }
+
+    public AtomicBuffer getSequenceNumberCacheBuffer()
+    {
+        return sequenceNumberCacheBuffer;
     }
 
     public EngineConfiguration aeronChannel(final String aeronChannel)

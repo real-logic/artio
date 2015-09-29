@@ -25,7 +25,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
-public class ReplayQueryTest extends AbstractReplayTest
+public class ReplayQueryTest extends AbstractLogTest
 {
     private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024);
     private ExistingBufferFactory mockBufferFactory = mock(ExistingBufferFactory.class);

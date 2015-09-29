@@ -16,38 +16,65 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.collections.Long2LongHashMap;
+import uk.co.real_logic.agrona.ErrorHandler;
+import uk.co.real_logic.agrona.IoUtil;
+import uk.co.real_logic.agrona.collections.Hashing;
+import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.agrona.concurrent.RecordBuffer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
+/**
+ * Stores a cache of the last sent sequence number.
+ *
+ * Each instance is not thread-safe, however, they can share a common
+ * off-heap in a threadsafe manner.
+ */
+// TODO: add a position and scan until you're at the latest position when reading from the table
 public class SequenceNumbers implements Index
 {
     public static final int NONE = -1;
+
+    private static final int MASK = 0xFFFF;
 
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
     private final HeaderDecoder fixHeader = new HeaderDecoder();
     private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
-    private final Long2LongHashMap sessionIdToLastKnownSequenceNumber = new Long2LongHashMap(NONE);
+    private final SequenceNumberHeaderEncoder headerEncoder = new SequenceNumberHeaderEncoder();
+    private final SequenceNumberHeaderDecoder headerDecoder = new SequenceNumberHeaderDecoder();
+    private final LastKnownSequenceNumberEncoder lastKnownEncoder = new LastKnownSequenceNumberEncoder();
+    private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
+    private final int lastKnownBlockLength = lastKnownEncoder.sbeBlockLength();
+    private final int lastKnownSchemaVersion = lastKnownEncoder.sbeSchemaVersion();;
 
-    public SequenceNumbers()
+    private final RecordBuffer recordBuffer;
+    private final AtomicBuffer outputBuffer;
+    private final ErrorHandler errorHandler;
+
+    public static SequenceNumbers forWriting(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
     {
+        return new SequenceNumbers(outputBuffer, errorHandler).initialise();
     }
 
-    public int get(final long sessionId)
+    public static SequenceNumbers forReading(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
     {
-        synchronized (sessionIdToLastKnownSequenceNumber)
-        {
-            return (int) sessionIdToLastKnownSequenceNumber.get(sessionId);
-        }
+        return new SequenceNumbers(outputBuffer, errorHandler);
     }
 
-    public void onMessage(final long sessionId, final int sequenceNumber)
+    SequenceNumbers(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
     {
-        sessionIdToLastKnownSequenceNumber.put(sessionId, sequenceNumber);
+        this.outputBuffer = outputBuffer;
+        this.errorHandler = errorHandler;
+        recordBuffer = new RecordBuffer(outputBuffer, 4, LastKnownSequenceNumberEncoder.BLOCK_LENGTH);
+    }
+
+    public SequenceNumbers initialise()
+    {
+        recordBuffer.initialise();
+        // TODO
+        return this;
     }
 
     @Override
@@ -67,26 +94,57 @@ public class SequenceNumbers implements Index
             asciiFlyweight.wrap(buffer);
             fixHeader.decode(asciiFlyweight, offset, messageFrame.bodyLength());
 
-            // TODO: remove synchronisation and move offheap
-            synchronized (sessionIdToLastKnownSequenceNumber)
+            final int msgSeqNum = fixHeader.msgSeqNum();
+            final long sessionId = messageFrame.session();
+            final int key = hash(sessionId);
+            final int claimedOffset = recordBuffer.claimRecord(key);
+
+            if (claimedOffset == RecordBuffer.DID_NOT_CLAIM_RECORD)
             {
-                sessionIdToLastKnownSequenceNumber.put(messageFrame.session(), fixHeader.msgSeqNum());
+                errorHandler.onError(new IllegalStateException("Unable to claim an offset"));
+                return;
             }
+
+            lastKnownEncoder
+                .wrap(outputBuffer, claimedOffset)
+                .sessionId(sessionId)
+                .sequenceNumber(msgSeqNum);
+
+            recordBuffer.commit(claimedOffset);
         }
     }
 
-    public int query(final long sessionId)
+    public int lastKnownSequenceNumber(final long sessionId)
     {
-        synchronized (sessionIdToLastKnownSequenceNumber)
-        {
-            return get(sessionId);
-        }
+        stashedSequenceNumber = NONE;
+
+        final int key = hash(sessionId);
+        recordBuffer.forEach((recordKey, offset) -> {
+            if (recordKey == key)
+            {
+                lastKnownDecoder.wrap(outputBuffer, offset, lastKnownBlockLength, lastKnownSchemaVersion);
+                if (lastKnownDecoder.sessionId() == sessionId)
+                {
+                    stashedSequenceNumber = lastKnownDecoder.sequenceNumber();
+                }
+            }
+        });
+
+        return stashedSequenceNumber;
     }
+
+    private int hash(long sessionId)
+    {
+        return Hashing.hash(sessionId, MASK);
+    }
+
+    private int stashedSequenceNumber;
 
     @Override
     public void close()
     {
-
+        // TODO: only writer
+        IoUtil.unmap(outputBuffer.byteBuffer());
     }
 
 }

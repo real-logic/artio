@@ -34,7 +34,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.POSS_DUP_FIELD;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
-public class ReplayerTest extends AbstractReplayTest
+public class ReplayerTest extends AbstractLogTest
 {
     private static final int BEGIN_SEQ_NO = 2;
     private static final int END_SEQ_NO = 2;

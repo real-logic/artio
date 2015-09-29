@@ -270,7 +270,7 @@ public class Framer implements Agent, SessionHandler
 
             setupConnection(channel, connectionId, sessionId, libraryId);
             inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR,
-                sequenceNumbers.get(sessionId));
+                sequenceNumbers.lastKnownSequenceNumber(sessionId));
             inboundPublication.saveLogon(libraryId, connectionId, sessionId);
         }
         catch (final Exception e)
