@@ -15,7 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-public interface ControlProtocol
+public interface ControlHandler
 {
-    void messageAcknowledgement(final long newAckedPosition, final int node);
+    void onMessageAcknowledgement(final long newAckedPosition, final short nodeId);
+
+    void onRequestVote(final short candidateId, final long lastAckedPosition);
+
+    void onConcensusHeartbeat(final short nodeId);
 }

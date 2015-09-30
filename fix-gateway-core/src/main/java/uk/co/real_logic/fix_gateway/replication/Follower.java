@@ -15,28 +15,49 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 
 public class Follower implements FragmentHandler
 {
-    private final int id;
-    private final ControlProtocol controlProtocol;
-    private final DataSubscriber delegate;
+    private static final int FRAGMENT_LIMIT = 10;
+
+    private final short id;
+    private final ControlPublication controlPublication;
+    private final FragmentHandler delegate;
+    private final Subscription dataSubscription;
+
+    private long position;
 
     public Follower(
-        final int id, final ControlProtocol controlProtocol, final DataSubscriber delegate)
+        final short id,
+        final ControlPublication controlPublication,
+        final FragmentHandler delegate,
+        final Subscription dataSubscription)
     {
         this.id = id;
-        this.controlProtocol = controlProtocol;
+        this.controlPublication = controlPublication;
         this.delegate = delegate;
+        this.dataSubscription = dataSubscription;
+    }
+
+    public int poll()
+    {
+        final int processed = dataSubscription.poll(this, FRAGMENT_LIMIT);
+
+        if (processed > 0)
+        {
+            controlPublication.onMessageAcknowledgement(position, id);
+        }
+
+        return processed;
     }
 
     public void onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        controlProtocol.messageAcknowledgement(header.position(), id);
         delegate.onFragment(buffer, offset, length, header);
+        position = header.position();
     }
 }

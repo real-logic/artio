@@ -15,10 +15,110 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-public class ControlPublication implements ControlProtocol
-{
-    public void messageAcknowledgement(final long newAckedPosition, final int node)
-    {
+import uk.co.real_logic.aeron.Publication;
+import uk.co.real_logic.agrona.MutableDirectBuffer;
+import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
+import uk.co.real_logic.fix_gateway.messages.ConcensusHeartbeatEncoder;
+import uk.co.real_logic.fix_gateway.messages.MessageAcknowledgementEncoder;
+import uk.co.real_logic.fix_gateway.messages.RequestVoteEncoder;
+import uk.co.real_logic.fix_gateway.streams.AbstractionPublication;
 
+public class ControlPublication extends AbstractionPublication
+{
+    private static final int MESSAGE_ACKNOWLEDGEMENT_LENGTH = HEADER_LENGTH + MessageAcknowledgementEncoder.BLOCK_LENGTH;
+    private static final int REQUEST_VOTE_LENGTH = HEADER_LENGTH + RequestVoteEncoder.BLOCK_LENGTH;
+    private static final int CONCENSUS_HEARTBEAT_LENGTH = HEADER_LENGTH + ConcensusHeartbeatEncoder.BLOCK_LENGTH;
+
+    private final MessageAcknowledgementEncoder messageAcknowledgement = new MessageAcknowledgementEncoder();
+    private final RequestVoteEncoder requestVote = new RequestVoteEncoder();
+    private final ConcensusHeartbeatEncoder concensusHeart = new ConcensusHeartbeatEncoder();
+
+    public ControlPublication(
+        final int maxClaimAttempts,
+        final IdleStrategy idleStrategy,
+        final AtomicCounter fails,
+        final ReliefValve reliefValve,
+        final Publication dataPublication)
+    {
+        super(maxClaimAttempts, idleStrategy, fails, reliefValve, dataPublication);
+    }
+
+    public long onMessageAcknowledgement(final long newAckedPosition, final short nodeId)
+    {
+        final long position = claim(MESSAGE_ACKNOWLEDGEMENT_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(messageAcknowledgement.sbeBlockLength())
+            .templateId(messageAcknowledgement.sbeTemplateId())
+            .schemaId(messageAcknowledgement.sbeSchemaId())
+            .version(messageAcknowledgement.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        messageAcknowledgement
+            .wrap(buffer, offset)
+            .newAckedPosition(newAckedPosition)
+            .nodeId(nodeId);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long onRequestVote(final short candidateId, final long lastAckedPosition)
+    {
+        final long position = claim(REQUEST_VOTE_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(requestVote.sbeBlockLength())
+            .templateId(requestVote.sbeTemplateId())
+            .schemaId(requestVote.sbeSchemaId())
+            .version(requestVote.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        requestVote
+            .wrap(buffer, offset)
+            .candidateId(candidateId)
+            .lastAckedPosition(lastAckedPosition);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long onConcensusHeartbeat(final short nodeId)
+    {
+        final long position = claim(CONCENSUS_HEARTBEAT_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(concensusHeart.sbeBlockLength())
+            .templateId(concensusHeart.sbeTemplateId())
+            .schemaId(concensusHeart.sbeSchemaId())
+            .version(concensusHeart.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        concensusHeart
+            .wrap(buffer, offset)
+            .nodeId(nodeId);
+
+        bufferClaim.commit();
+
+        return position;
     }
 }

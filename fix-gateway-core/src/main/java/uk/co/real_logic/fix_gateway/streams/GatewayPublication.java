@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.streams;
 
 import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.aeron.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
@@ -28,8 +27,6 @@ import uk.co.real_logic.fix_gateway.messages.*;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static uk.co.real_logic.aeron.Publication.BACK_PRESSURED;
-import static uk.co.real_logic.aeron.Publication.NOT_CONNECTED;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
@@ -37,17 +34,15 @@ import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 /**
  * A proxy for publishing messages fix related messages
  */
-public class GatewayPublication
+public class GatewayPublication extends AbstractionPublication
 {
 
-    public static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
     public static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
     public static final int HEARTBEAT_LENGTH = HEADER_LENGTH + ApplicationHeartbeatEncoder.BLOCK_LENGTH;
     public static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH;
     public static final int DISCONNECT_LENGTH = HEADER_LENGTH + DisconnectEncoder.BLOCK_LENGTH;
 
-    private final MessageHeaderEncoder header = new MessageHeaderEncoder();
     private final LogonEncoder logon = new LogonEncoder();
     private final ConnectEncoder connect = new ConnectEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -58,13 +53,7 @@ public class GatewayPublication
     private final ApplicationHeartbeatEncoder applicationHeartbeat = new ApplicationHeartbeatEncoder();
     private final LibraryConnectEncoder libraryConnect = new LibraryConnectEncoder();
 
-    private final int maxClaimAttempts;
-    private final ReliefValve reliefValve;
-    private final BufferClaim bufferClaim;
-    private final Publication dataPublication;
-    private final IdleStrategy idleStrategy;
     private final NanoClock nanoClock;
-    private final AtomicCounter fails;
 
     public GatewayPublication(
         final Publication dataPublication,
@@ -74,13 +63,8 @@ public class GatewayPublication
         final int maxClaimAttempts,
         final ReliefValve reliefValve)
     {
-        this.dataPublication = dataPublication;
-        this.idleStrategy = idleStrategy;
+        super(maxClaimAttempts, idleStrategy, fails, reliefValve, dataPublication);
         this.nanoClock = nanoClock;
-        this.maxClaimAttempts = maxClaimAttempts;
-        this.reliefValve = reliefValve;
-        bufferClaim = new BufferClaim();
-        this.fails = fails;
     }
 
     public long saveMessage(
@@ -385,41 +369,6 @@ public class GatewayPublication
     public int sessionId()
     {
         return dataPublication.sessionId();
-    }
-
-    private long claim(final int framedLength)
-    {
-        long position = 0;
-        for (int i = 0; i < maxClaimAttempts; i++)
-        {
-            position = dataPublication.tryClaim(framedLength, bufferClaim);
-
-            if (position > 0L)
-            {
-                return position;
-            }
-            else if (position == BACK_PRESSURED)
-            {
-                idleStrategy.idle(reliefValve.vent());
-            }
-            else
-            {
-                idleStrategy.idle(0);
-            }
-
-            fails.increment();
-        }
-
-        if (position == NOT_CONNECTED)
-        {
-            throw new IllegalStateException(
-                "Unable to send publish message, probably a missing an engine or library instance");
-        }
-        else
-        {
-            // TODO: remove this exception, once you've made the framer else backpressure-aware.
-            throw new RuntimeException("Backpressured");
-        }
     }
 
 }

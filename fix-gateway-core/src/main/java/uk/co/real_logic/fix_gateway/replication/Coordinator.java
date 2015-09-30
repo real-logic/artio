@@ -19,11 +19,12 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 
-public class Coordinator implements ControlProtocol
+public class Coordinator implements ControlHandler
 {
     public static final int NO_SESSION_ID = -1;
 
     private final TermAcknowledgementStrategy termAcknowledgementStrategy;
+    private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
     private final Subscription subscription;
 
     // Counts of how many acknowledgements
@@ -40,14 +41,19 @@ public class Coordinator implements ControlProtocol
         followers.forEach(follower -> nodeToAckedPosition.put(follower, 0));
     }
 
-    public void messageAcknowledgement(final long newAckedPosition, final int node)
+    public int poll()
     {
-        final long lastAckedPosition = nodeToAckedPosition.get(node);
+        return subscription.poll(controlSubscriber, 1);
+    }
+
+    public void onMessageAcknowledgement(final long newAckedPosition, final short nodeId)
+    {
+        final long lastAckedPosition = nodeToAckedPosition.get(nodeId);
         if (lastAckedPosition != NO_SESSION_ID)
         {
             if (newAckedPosition > lastAckedPosition)
             {
-                nodeToAckedPosition.put(node, newAckedPosition);
+                nodeToAckedPosition.put(nodeId, newAckedPosition);
 
                 final long newAcknowledgedTerm = termAcknowledgementStrategy.findAckedTerm(nodeToAckedPosition);
                 if (newAcknowledgedTerm > acknowledgedTerm)
@@ -61,6 +67,16 @@ public class Coordinator implements ControlProtocol
         {
             // TODO: error case
         }
+    }
+
+    public void onRequestVote(final short candidateId, final long lastAckedPosition)
+    {
+        // They're rebelling
+    }
+
+    public void onConcensusHeartbeat(final short nodeId)
+    {
+        // Update heartbeat time
     }
 
 }
