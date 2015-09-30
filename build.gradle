@@ -137,7 +137,7 @@ project(':fix-gateway-codecs') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
     dependencies {
-        compile 'uk.co.real-logic:Agrona:0.4.4-SNAPSHOT'
+        compile 'uk.co.real-logic:Agrona:0.4.5-SNAPSHOT'
         compile 'uk.co.real-logic:sbe:1.1.1-RC2'
     }
 
