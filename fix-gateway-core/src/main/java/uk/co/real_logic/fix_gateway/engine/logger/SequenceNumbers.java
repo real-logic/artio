@@ -134,30 +134,24 @@ public class SequenceNumbers implements Index
 
     public int lastKnownSequenceNumber(final long sessionId)
     {
-        stashedSequenceNumber = NONE;
-
         final int key = hash(sessionId);
-        recordBuffer.forEach((recordKey, offset) ->
+        final int offset = recordBuffer.get(key);
+        if (offset != RecordBuffer.DID_NOT_CLAIM_RECORD)
         {
-            if (recordKey == key)
+            lastKnownDecoder.wrap(outputBuffer, offset, lastKnownBlockLength, lastKnownSchemaVersion);
+            if (lastKnownDecoder.sessionId() == sessionId)
             {
-                lastKnownDecoder.wrap(outputBuffer, offset, lastKnownBlockLength, lastKnownSchemaVersion);
-                if (lastKnownDecoder.sessionId() == sessionId)
-                {
-                    stashedSequenceNumber = lastKnownDecoder.sequenceNumber();
-                }
+                return lastKnownDecoder.sequenceNumber();
             }
-        });
+        }
 
-        return stashedSequenceNumber;
+        return NONE;
     }
 
     private int hash(long sessionId)
     {
         return Hashing.hash(sessionId, MASK);
     }
-
-    private int stashedSequenceNumber;
 
     @Override
     public void close()
