@@ -16,34 +16,37 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 
-public class Coordinator implements ControlHandler
+public class Leader implements Role, ControlHandler, FragmentHandler
 {
     public static final int NO_SESSION_ID = -1;
 
     private final TermAcknowledgementStrategy termAcknowledgementStrategy;
     private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
-    private final Subscription subscription;
+    private final Subscription controlSubscription;
 
     // Counts of how many acknowledgements
     private final Long2LongHashMap nodeToAckedPosition = new Long2LongHashMap(NO_SESSION_ID);
     private long acknowledgedTerm = 0;
 
-    public Coordinator(
+    public Leader(
         final TermAcknowledgementStrategy termAcknowledgementStrategy,
         final IntHashSet followers,
-        final Subscription subscription)
+        final Subscription controlSubscription)
     {
         this.termAcknowledgementStrategy = termAcknowledgementStrategy;
-        this.subscription = subscription;
+        this.controlSubscription = controlSubscription;
         followers.forEach(follower -> nodeToAckedPosition.put(follower, 0));
     }
 
-    public int poll()
+    public int poll(int fragmentLimit, final long timeInMs)
     {
-        return subscription.poll(controlSubscriber, 1);
+        return controlSubscription.poll(controlSubscriber, fragmentLimit);
     }
 
     public void onMessageAcknowledgement(final long newAckedPosition, final short nodeId)
@@ -79,4 +82,9 @@ public class Coordinator implements ControlHandler
         // Update heartbeat time
     }
 
+    @Override
+    public void onFragment(DirectBuffer buffer, int offset, int length, Header header)
+    {
+
+    }
 }

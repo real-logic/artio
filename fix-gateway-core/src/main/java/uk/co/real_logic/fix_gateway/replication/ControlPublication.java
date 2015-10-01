@@ -45,7 +45,7 @@ public class ControlPublication extends AbstractionPublication
         super(maxClaimAttempts, idleStrategy, fails, reliefValve, dataPublication);
     }
 
-    public long onMessageAcknowledgement(final long newAckedPosition, final short nodeId)
+    public long saveMessageAcknowledgement(final long newAckedPosition, final short nodeId)
     {
         final long position = claim(MESSAGE_ACKNOWLEDGEMENT_LENGTH);
 
@@ -71,7 +71,7 @@ public class ControlPublication extends AbstractionPublication
         return position;
     }
 
-    public long onRequestVote(final short candidateId, final long lastAckedPosition)
+    public long saveRequestVote(final short candidateId, final long lastAckedPosition)
     {
         final long position = claim(REQUEST_VOTE_LENGTH);
 
@@ -97,7 +97,7 @@ public class ControlPublication extends AbstractionPublication
         return position;
     }
 
-    public long onConcensusHeartbeat(final short nodeId)
+    public long saveConcensusHeartbeat(final short nodeId)
     {
         final long position = claim(CONCENSUS_HEARTBEAT_LENGTH);
 

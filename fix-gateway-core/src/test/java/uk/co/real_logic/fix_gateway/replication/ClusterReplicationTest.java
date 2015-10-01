@@ -15,12 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-/**
- * Replication role determines your actions.
- */
-public interface Role
+public class ClusterReplicationTest
 {
-
-    int poll(final int fragmentLimit, final long timeInMs);
-
 }

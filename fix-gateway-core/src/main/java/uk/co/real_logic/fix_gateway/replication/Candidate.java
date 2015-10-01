@@ -15,12 +15,26 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-/**
- * Replication role determines your actions.
- */
-public interface Role
+public class Candidate implements Role, ControlHandler
 {
+    public int poll(int fragmentLimit, final long timeInMs)
+    {
+        return 0;
+    }
 
-    int poll(final int fragmentLimit, final long timeInMs);
+    public void onMessageAcknowledgement(long newAckedPosition, short nodeId)
+    {
+
+    }
+
+    public void onRequestVote(short candidateId, long lastAckedPosition)
+    {
+
+    }
+
+    public void onConcensusHeartbeat(short nodeId)
+    {
+
+    }
 
 }

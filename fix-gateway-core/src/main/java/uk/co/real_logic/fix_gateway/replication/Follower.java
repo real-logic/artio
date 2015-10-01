@@ -20,10 +20,8 @@ import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 
-public class Follower implements FragmentHandler
+public class Follower implements Role, FragmentHandler
 {
-    private static final int FRAGMENT_LIMIT = 10;
-
     private final short id;
     private final ControlPublication controlPublication;
     private final FragmentHandler delegate;
@@ -43,13 +41,13 @@ public class Follower implements FragmentHandler
         this.dataSubscription = dataSubscription;
     }
 
-    public int poll()
+    public int poll(final int fragmentLimit, final long timeInMs)
     {
-        final int processed = dataSubscription.poll(this, FRAGMENT_LIMIT);
+        final int processed = dataSubscription.poll(this, fragmentLimit);
 
         if (processed > 0)
         {
-            controlPublication.onMessageAcknowledgement(position, id);
+            controlPublication.saveMessageAcknowledgement(position, id);
         }
 
         return processed;
@@ -60,4 +58,5 @@ public class Follower implements FragmentHandler
         delegate.onFragment(buffer, offset, length, header);
         position = header.position();
     }
+
 }
