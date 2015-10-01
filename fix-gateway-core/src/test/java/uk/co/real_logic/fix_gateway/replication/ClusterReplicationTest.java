@@ -15,6 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+/**
+ * .
+ */
 public class ClusterReplicationTest
 {
 }

@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
@@ -29,47 +30,48 @@ public class Leader implements Role, ControlHandler, FragmentHandler
     private final TermAcknowledgementStrategy termAcknowledgementStrategy;
     private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
     private final Subscription controlSubscription;
+    private final Subscription dataSubscription;
+    private final BlockHandler handler;
 
     // Counts of how many acknowledgements
-    private final Long2LongHashMap nodeToAckedPosition = new Long2LongHashMap(NO_SESSION_ID);
-    private long acknowledgedTerm = 0;
+    private final Long2LongHashMap nodeToPosition = new Long2LongHashMap(NO_SESSION_ID);
+    private long lastPosition = 0;
 
     public Leader(
         final TermAcknowledgementStrategy termAcknowledgementStrategy,
         final IntHashSet followers,
-        final Subscription controlSubscription)
+        final Subscription controlSubscription,
+        final Subscription dataSubscription,
+        final BlockHandler handler)
+
     {
         this.termAcknowledgementStrategy = termAcknowledgementStrategy;
         this.controlSubscription = controlSubscription;
-        followers.forEach(follower -> nodeToAckedPosition.put(follower, 0));
+        this.dataSubscription = dataSubscription;
+        this.handler = handler;
+        followers.forEach(follower -> nodeToPosition.put(follower, 0));
     }
 
     public int poll(int fragmentLimit, final long timeInMs)
     {
-        return controlSubscription.poll(controlSubscriber, fragmentLimit);
+        final int read = controlSubscription.poll(controlSubscriber, fragmentLimit);
+
+        if (read > 0)
+        {
+            final long newPosition = termAcknowledgementStrategy.findAckedTerm(nodeToPosition);
+            final int delta = (int) (newPosition - lastPosition);
+            if (delta > 0)
+            {
+                lastPosition = dataSubscription.blockPoll(handler, delta);
+            }
+        }
+
+        return read;
     }
 
     public void onMessageAcknowledgement(final long newAckedPosition, final short nodeId)
     {
-        final long lastAckedPosition = nodeToAckedPosition.get(nodeId);
-        if (lastAckedPosition != NO_SESSION_ID)
-        {
-            if (newAckedPosition > lastAckedPosition)
-            {
-                nodeToAckedPosition.put(nodeId, newAckedPosition);
-
-                final long newAcknowledgedTerm = termAcknowledgementStrategy.findAckedTerm(nodeToAckedPosition);
-                if (newAcknowledgedTerm > acknowledgedTerm)
-                {
-                    //subscription.pollToPosition(newAckedPosition);
-                    acknowledgedTerm = newAcknowledgedTerm;
-                }
-            }
-        }
-        else
-        {
-            // TODO: error case
-        }
+        nodeToPosition.put(nodeId, newAckedPosition);
     }
 
     public void onRequestVote(final short candidateId, final long lastAckedPosition)
