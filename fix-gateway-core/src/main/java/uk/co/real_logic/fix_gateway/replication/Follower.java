@@ -26,19 +26,28 @@ public class Follower implements Role, FragmentHandler
     private final ControlPublication controlPublication;
     private final FragmentHandler delegate;
     private final Subscription dataSubscription;
+    private final Replicator replicator;
+    private final long replyTimeoutInMs;
 
+    private long latestNextReceiveTimeInMs;
     private long position;
 
     public Follower(
         final short id,
         final ControlPublication controlPublication,
         final FragmentHandler delegate,
-        final Subscription dataSubscription)
+        final Subscription dataSubscription,
+        final Replicator replicator,
+        final long timeInMs,
+        long replyTimeoutInMs)
     {
         this.id = id;
         this.controlPublication = controlPublication;
         this.delegate = delegate;
         this.dataSubscription = dataSubscription;
+        this.replicator = replicator;
+        this.replyTimeoutInMs = replyTimeoutInMs;
+        this.latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)
@@ -48,6 +57,12 @@ public class Follower implements Role, FragmentHandler
         if (processed > 0)
         {
             controlPublication.saveMessageAcknowledgement(position, id);
+            latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
+        }
+
+        if (timeInMs > latestNextReceiveTimeInMs)
+        {
+            replicator.becomeCandidate();
         }
 
         return processed;

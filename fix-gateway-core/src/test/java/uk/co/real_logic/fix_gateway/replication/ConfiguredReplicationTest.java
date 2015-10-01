@@ -49,14 +49,19 @@ public class ConfiguredReplicationTest
     private static final String IPC = "aeron:ipc";
     private static final int CONTROL = 1;
     private static final int DATA = 2;
-
     private static final int VALUE = 42;
     private static final int OFFSET = 42;
     private static final int FRAGMENT_LIMIT = 10;
+    private static final long REPLY_TIMEOUT = 100;
+    private static final long HEARTBEAT_INTERVAL = REPLY_TIMEOUT / 2;
 
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
 
     private BlockHandler handler = mock(BlockHandler.class);
+    private Replicator leaderReplicator = mock(Replicator.class);
+    private Replicator follower1Replicator = mock(Replicator.class);
+    private Replicator follower2Replicator = mock(Replicator.class);
+
     private MediaDriver mediaDriver;
     private Aeron aeron;
     private Leader leader;
@@ -81,10 +86,12 @@ public class ConfiguredReplicationTest
             followers,
             controlSubscription(),
             dataSubscription(),
-            handler);
+            handler,
+            0,
+            HEARTBEAT_INTERVAL);
 
-        follower1 = follower((short) 2);
-        follower2 = follower((short) 3);
+        follower1 = follower((short) 2, follower1Replicator);
+        follower2 = follower((short) 3, follower2Replicator);
 
         dataPublication = dataPublication();
     }
@@ -137,6 +144,47 @@ public class ConfiguredReplicationTest
         dataAcknowledged((int) position, 0);
     }
 
+    @Test
+    public void shouldTimeoutLeader()
+    {
+        follower1.poll(FRAGMENT_LIMIT, REPLY_TIMEOUT + 1);
+
+        verifyBecomeCandidate();
+    }
+
+    @Test
+    public void shouldNotTimeoutLeaderIfMessagesReceived()
+    {
+        offerBuffer();
+
+        follower1.poll(FRAGMENT_LIMIT, HEARTBEAT_INTERVAL);
+
+        follower1.poll(FRAGMENT_LIMIT, REPLY_TIMEOUT + 1);
+
+        verifyStayFollower();
+    }
+
+    @Test
+    public void shouldNotTimeoutLeaderIfHeartbeat()
+    {
+        leader.poll(FRAGMENT_LIMIT, HEARTBEAT_INTERVAL + 1);
+
+        follower1.poll(FRAGMENT_LIMIT, REPLY_TIMEOUT + 1);
+
+        verifyStayFollower();
+    }
+
+    private void verifyBecomeCandidate()
+    {
+        verify(follower1Replicator).becomeCandidate();
+    }
+
+    private void verifyStayFollower()
+    {
+        verify(follower1Replicator, never()).becomeCandidate();
+        verify(follower1Replicator, never()).becomeLeader();
+    }
+
     private void pollLeader(final int read)
     {
         assertEquals(read, poll(leader));
@@ -167,9 +215,16 @@ public class ConfiguredReplicationTest
         return role.poll(FRAGMENT_LIMIT, 0);
     }
 
-    private Follower follower(final short id)
+    private Follower follower(final short id, final Replicator replicator)
     {
-        return new Follower(id, controlPublication(), mock(FragmentHandler.class), dataSubscription());
+        return new Follower(
+            id,
+            controlPublication(),
+            mock(FragmentHandler.class),
+            dataSubscription(),
+            replicator,
+            0,
+            REPLY_TIMEOUT);
     }
 
     private Subscription controlSubscription()

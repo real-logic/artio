@@ -32,24 +32,30 @@ public class Leader implements Role, ControlHandler, FragmentHandler
     private final Subscription controlSubscription;
     private final Subscription dataSubscription;
     private final BlockHandler handler;
+    private final long heartbeatIntervalInMs;
 
     // Counts of how many acknowledgements
     private final Long2LongHashMap nodeToPosition = new Long2LongHashMap(NO_SESSION_ID);
+
     private long lastPosition = 0;
+    private long nextHeartbeatTimeInMs;
 
     public Leader(
         final TermAcknowledgementStrategy termAcknowledgementStrategy,
         final IntHashSet followers,
         final Subscription controlSubscription,
         final Subscription dataSubscription,
-        final BlockHandler handler)
-
+        final BlockHandler handler,
+        final int timeInMs,
+        final long heartbeatIntervalInMs)
     {
         this.termAcknowledgementStrategy = termAcknowledgementStrategy;
         this.controlSubscription = controlSubscription;
         this.dataSubscription = dataSubscription;
         this.handler = handler;
+        this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
+        this.nextHeartbeatTimeInMs = timeInMs + nextHeartbeatTimeInMs;
     }
 
     public int poll(int fragmentLimit, final long timeInMs)
@@ -63,8 +69,15 @@ public class Leader implements Role, ControlHandler, FragmentHandler
             if (delta > 0)
             {
                 lastPosition = dataSubscription.blockPoll(handler, delta);
+                nextHeartbeatTimeInMs = timeInMs + heartbeatIntervalInMs;
             }
         }
+
+        /*if (timeInMs > nextHeartbeatTimeInMs)
+        {
+            // TODO: heartbeat
+            ;
+        }*/
 
         return read;
     }
