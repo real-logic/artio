@@ -50,7 +50,7 @@ public class Leader implements Role, ControlHandler, FragmentHandler
         final Subscription controlSubscription,
         final Subscription dataSubscription,
         final BlockHandler handler,
-        final int timeInMs,
+        final long timeInMs,
         final long heartbeatIntervalInMs)
     {
         this.nodeId = nodeId;
@@ -87,7 +87,7 @@ public class Leader implements Role, ControlHandler, FragmentHandler
         return read;
     }
 
-    public void onSentMessage(final int timeInMs)
+    public void onSentMessage(final long timeInMs)
     {
         this.nextHeartbeatTimeInMs = timeInMs + nextHeartbeatTimeInMs;
     }

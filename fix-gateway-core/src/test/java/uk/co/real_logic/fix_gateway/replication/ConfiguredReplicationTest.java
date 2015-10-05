@@ -170,13 +170,27 @@ public class ConfiguredReplicationTest
     }
 
     @Test
-    public void shouldNotTimeoutLeaderIfHeartbeat()
+    public void shouldNotTimeoutLeaderUponHeartbeatReceipt()
     {
         leader.poll(FRAGMENT_LIMIT, HEARTBEAT_INTERVAL + 1);
 
         follower1.poll(FRAGMENT_LIMIT, REPLY_TIMEOUT + 1);
 
         verifyStayFollower();
+    }
+
+    @Test
+    public void shouldNotHeartbeatIfMessageRecentlySent()
+    {
+        leader.onSentMessage(HEARTBEAT_INTERVAL / 2);
+
+        leader.poll(FRAGMENT_LIMIT, HEARTBEAT_INTERVAL + 1);
+
+        final ControlHandler controlHandler = mock(ControlHandler.class);
+
+        final int readMessages = controlSubscription().poll(new ControlSubscriber(controlHandler), 10);
+        assertEquals(0, readMessages);
+        verify(controlHandler, never()).onConcensusHeartbeat(anyShort());
     }
 
     private void verifyBecomeCandidate()
