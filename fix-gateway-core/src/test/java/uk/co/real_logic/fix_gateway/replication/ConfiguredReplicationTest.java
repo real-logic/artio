@@ -54,6 +54,9 @@ public class ConfiguredReplicationTest
     private static final int FRAGMENT_LIMIT = 10;
     private static final long REPLY_TIMEOUT = 100;
     private static final long HEARTBEAT_INTERVAL = REPLY_TIMEOUT / 2;
+    private static final short LEADER_ID = (short) 1;
+    private static final short FOLLOWER_1_ID = (short) 2;
+    private static final short FOLLOWER_2_ID = (short) 3;
 
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
 
@@ -75,23 +78,25 @@ public class ConfiguredReplicationTest
         buffer.putInt(OFFSET, VALUE);
 
         mediaDriver = TestFixtures.launchMediaDriver();
-        aeron = Aeron.connect();
+        aeron = Aeron.connect(new Aeron.Context());
 
         final IntHashSet followers = new IntHashSet(10, -1);
         followers.add(2);
         followers.add(3);
 
         leader = new Leader(
+            LEADER_ID,
             new EntireClusterTermAcknowledgementStrategy(),
             followers,
+            controlPublication(),
             controlSubscription(),
             dataSubscription(),
             handler,
             0,
             HEARTBEAT_INTERVAL);
 
-        follower1 = follower((short) 2, follower1Replicator);
-        follower2 = follower((short) 3, follower2Replicator);
+        follower1 = follower(FOLLOWER_1_ID, follower1Replicator);
+        follower2 = follower(FOLLOWER_2_ID, follower2Replicator);
 
         dataPublication = dataPublication();
     }
@@ -222,6 +227,7 @@ public class ConfiguredReplicationTest
             controlPublication(),
             mock(FragmentHandler.class),
             dataSubscription(),
+            controlSubscription(),
             replicator,
             0,
             REPLY_TIMEOUT);

@@ -27,8 +27,10 @@ public class Leader implements Role, ControlHandler, FragmentHandler
 {
     public static final int NO_SESSION_ID = -1;
 
+    private final short nodeId;
     private final TermAcknowledgementStrategy termAcknowledgementStrategy;
     private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
+    private final ControlPublication controlPublication;
     private final Subscription controlSubscription;
     private final Subscription dataSubscription;
     private final BlockHandler handler;
@@ -41,21 +43,25 @@ public class Leader implements Role, ControlHandler, FragmentHandler
     private long nextHeartbeatTimeInMs;
 
     public Leader(
+        final short nodeId,
         final TermAcknowledgementStrategy termAcknowledgementStrategy,
         final IntHashSet followers,
+        final ControlPublication controlPublication,
         final Subscription controlSubscription,
         final Subscription dataSubscription,
         final BlockHandler handler,
         final int timeInMs,
         final long heartbeatIntervalInMs)
     {
+        this.nodeId = nodeId;
         this.termAcknowledgementStrategy = termAcknowledgementStrategy;
+        this.controlPublication = controlPublication;
         this.controlSubscription = controlSubscription;
         this.dataSubscription = dataSubscription;
         this.handler = handler;
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
-        this.nextHeartbeatTimeInMs = timeInMs + nextHeartbeatTimeInMs;
+        onSentMessage(timeInMs);
     }
 
     public int poll(int fragmentLimit, final long timeInMs)
@@ -73,13 +79,17 @@ public class Leader implements Role, ControlHandler, FragmentHandler
             }
         }
 
-        /*if (timeInMs > nextHeartbeatTimeInMs)
+        if (timeInMs > nextHeartbeatTimeInMs)
         {
-            // TODO: heartbeat
-            ;
-        }*/
+            controlPublication.saveConcensusHeartbeat(nodeId);
+        }
 
         return read;
+    }
+
+    public void onSentMessage(final int timeInMs)
+    {
+        this.nextHeartbeatTimeInMs = timeInMs + nextHeartbeatTimeInMs;
     }
 
     public void onMessageAcknowledgement(final long newAckedPosition, final short nodeId)
