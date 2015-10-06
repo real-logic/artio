@@ -57,6 +57,11 @@ public class ElectionTest extends AbstractReplicationTest
     {
         node3.follow(TIME, 2, 32);
 
+        electCandidateWithCorrectTerm();
+    }
+
+    private void electCandidateWithCorrectTerm()
+    {
         node1.startNewElection(TIME, 1, 40);
         node2.startNewElection(TIME, 2, 32);
 
@@ -76,6 +81,14 @@ public class ElectionTest extends AbstractReplicationTest
         runElection();
 
         electionResultsAre(replicator1, replicator2);
+    }
+
+    @Test
+    public void shouldBeAbleToSwitchLeadersUponSecondElection()
+    {
+        shouldElectCandidateWithAtLeastQuorumPosition();
+
+        electCandidateWithCorrectTerm();
     }
 
     private void electionResultsAre(final Replicator leader, final Replicator follower)
