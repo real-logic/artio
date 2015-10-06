@@ -52,7 +52,7 @@ public class Replicator implements Role
     public void becomeCandidate()
     {
         currentRole = candidate;
-        candidate.startElection(0, 0); // TODO
+        candidate.startNewElection(0L, 0, 0); // TODO
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)

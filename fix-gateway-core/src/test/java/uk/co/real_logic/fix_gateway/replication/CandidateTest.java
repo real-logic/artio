@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Test;
+import uk.co.real_logic.aeron.Subscription;
 
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
@@ -24,22 +25,25 @@ import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 public class CandidateTest
 {
     private static final long INITIAL_POSITION = 40;
+    private static final long VOTE_TIMEOUT = 100;
     private static final int OLD_TERM = 1;
     private static final int NEW_TERM = 2;
     private static final int CLUSTER_SIZE = 3;
     private static final short ID = 3;
 
     private ControlPublication controlPublication = mock(ControlPublication.class);
+    private Subscription controlSubscription = mock(Subscription.class);
     private Replicator replicator = mock(Replicator.class);
 
-    private Candidate candidate = new Candidate(ID, controlPublication, replicator, CLUSTER_SIZE);
+    private Candidate candidate = new Candidate(
+        ID, controlPublication, controlSubscription, replicator, CLUSTER_SIZE, VOTE_TIMEOUT);
 
     @Test
     public void shouldVoteForSelfWhenStartingElection()
     {
         startElection();
 
-        verify(controlPublication).saveRequestVote(ID, INITIAL_POSITION, NEW_TERM);
+        requestsVote(1);
     }
 
     @Test
@@ -49,7 +53,7 @@ public class CandidateTest
 
         candidate.onReplyVote(ID, NEW_TERM, FOR);
 
-        verifyBecomeLeader();
+        becomesLeader();
     }
 
     @Test
@@ -59,7 +63,7 @@ public class CandidateTest
 
         candidate.onReplyVote(ID, OLD_TERM, FOR);
 
-        verifyNotBecomeLeader();
+        neverBecomesLeader();
     }
 
     @Test
@@ -69,7 +73,7 @@ public class CandidateTest
 
         candidate.onReplyVote(ID, NEW_TERM, AGAINST);
 
-        verifyNotBecomeLeader();
+        neverBecomesLeader();
     }
 
     @Test
@@ -81,7 +85,7 @@ public class CandidateTest
 
         candidate.onReplyVote(otherCandidate, NEW_TERM, FOR);
 
-        verifyNotBecomeLeader();
+        neverBecomesLeader();
     }
 
     @Test
@@ -97,18 +101,45 @@ public class CandidateTest
     }
 
     @Test
-    public void shouldRestartElectionIfTimeoutElapses()
+    public void shouldNotBecomeFollowerUponReceiptOfOwnHeartbeat()
     {
+        startElection();
 
+        candidate.onConcensusHeartbeat(ID);
+
+        neverBecomesFollower();
     }
 
-    private void verifyBecomeLeader()
+    @Test
+    public void shouldRestartElectionIfTimeoutElapses()
+    {
+        startElection();
+
+        candidate.poll(1, VOTE_TIMEOUT + 1);
+
+        requestsVote(2);
+
+        neverBecomesLeader();
+        neverBecomesFollower();
+    }
+
+    private void neverBecomesFollower()
+    {
+        verify(replicator, never()).becomeFollower();
+    }
+
+    private void becomesLeader()
     {
         verify(replicator).becomeLeader();
         verify(controlPublication).saveConcensusHeartbeat(ID);
     }
 
-    private void verifyNotBecomeLeader()
+    private void requestsVote(final int wantedNumberOfInvocations)
+    {
+        verify(controlPublication, times(wantedNumberOfInvocations)).saveRequestVote(ID, INITIAL_POSITION, NEW_TERM);
+    }
+
+    private void neverBecomesLeader()
     {
         verify(replicator, never()).becomeLeader();
         verify(controlPublication, never()).saveConcensusHeartbeat(ID);
@@ -116,6 +147,6 @@ public class CandidateTest
 
     private void startElection()
     {
-        candidate.startElection(OLD_TERM, INITIAL_POSITION);
+        candidate.startNewElection(0L, OLD_TERM, INITIAL_POSITION);
     }
 }

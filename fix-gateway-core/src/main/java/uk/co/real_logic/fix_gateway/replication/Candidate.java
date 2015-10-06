@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
@@ -22,28 +23,45 @@ import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 
 public class Candidate implements Role, ControlHandler
 {
+    private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
+
     private final short id;
     private final ControlPublication controlPublication;
+    private final Subscription controlSubscription;
     private final Replicator replicator;
     private final int clusterSize;
+    private final long voteTimeout;
 
+    private long currentVoteTimeout;
     private int votesFor;
     private int term;
+    private long position;
 
     public Candidate(final short id,
                      final ControlPublication controlPublication,
+                     final Subscription controlSubscription,
                      final Replicator replicator,
-                     final int clusterSize)
+                     final int clusterSize,
+                     final long voteTimeout)
     {
         this.id = id;
         this.controlPublication = controlPublication;
+        this.controlSubscription = controlSubscription;
         this.replicator = replicator;
         this.clusterSize = clusterSize;
+        this.voteTimeout = voteTimeout;
     }
 
     public int poll(int fragmentLimit, final long timeInMs)
     {
-        return 0;
+        int read = controlSubscription.poll(controlSubscriber, fragmentLimit);
+
+        if (timeInMs > currentVoteTimeout)
+        {
+            startElection(timeInMs);
+        }
+
+        return read;
     }
 
     public void onMessageAcknowledgement(
@@ -79,10 +97,22 @@ public class Candidate implements Role, ControlHandler
         }
     }
 
-    public void startElection(final int oldTerm, final long position)
+    public void startNewElection(final long timeInMs, final int oldTerm, final long position)
     {
-        votesFor = 1; // Vote for yourself
+        this.position = position;
         term = oldTerm + 1;
+        startElection(timeInMs);
+    }
+
+    private void startElection(final long timeInMs)
+    {
+        resetTimeout(timeInMs);
+        votesFor = 1; // Vote for yourself
         controlPublication.saveRequestVote(id, position, term);
+    }
+
+    private void resetTimeout(final long timeInMs)
+    {
+        currentVoteTimeout = timeInMs + voteTimeout;
     }
 }
