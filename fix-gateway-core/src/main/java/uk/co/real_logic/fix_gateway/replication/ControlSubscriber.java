@@ -51,7 +51,8 @@ public class ControlSubscriber implements FragmentHandler
                 messageAcknowledgement.wrap(buffer, offset, blockLength, version);
                 handler.onMessageAcknowledgement(
                     messageAcknowledgement.newAckedPosition(),
-                    messageAcknowledgement.nodeId()
+                    messageAcknowledgement.nodeId(),
+                    messageAcknowledgement.status()
                 );
                 return;
             }

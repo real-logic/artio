@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
+
 public class Candidate implements Role, ControlHandler
 {
     public int poll(int fragmentLimit, final long timeInMs)
@@ -22,7 +24,8 @@ public class Candidate implements Role, ControlHandler
         return 0;
     }
 
-    public void onMessageAcknowledgement(long newAckedPosition, short nodeId)
+    public void onMessageAcknowledgement(
+        final long newAckedPosition, final short nodeId, final AcknowledgementStatus status)
     {
 
     }

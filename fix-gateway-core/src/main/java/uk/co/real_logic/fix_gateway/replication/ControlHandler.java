@@ -15,9 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
+
 public interface ControlHandler
 {
-    void onMessageAcknowledgement(final long newAckedPosition, final short nodeId);
+    void onMessageAcknowledgement(
+        final long newAckedPosition, final short nodeId, final AcknowledgementStatus status);
 
     void onRequestVote(final short candidateId, final long lastAckedPosition);
 

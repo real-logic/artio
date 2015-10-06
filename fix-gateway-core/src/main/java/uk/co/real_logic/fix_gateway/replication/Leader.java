@@ -17,13 +17,13 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
-import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
-import uk.co.real_logic.aeron.logbuffer.Header;
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
+import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 
-public class Leader implements Role, ControlHandler, FragmentHandler
+import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
+
+public class Leader implements Role, ControlHandler
 {
     public static final int NO_SESSION_ID = -1;
 
@@ -92,9 +92,13 @@ public class Leader implements Role, ControlHandler, FragmentHandler
         this.nextHeartbeatTimeInMs = timeInMs + nextHeartbeatTimeInMs;
     }
 
-    public void onMessageAcknowledgement(final long newAckedPosition, final short nodeId)
+    public void onMessageAcknowledgement(
+        final long newAckedPosition, final short nodeId, final AcknowledgementStatus status)
     {
-        nodeToPosition.put(nodeId, newAckedPosition);
+        if (status == OK)
+        {
+            nodeToPosition.put(nodeId, newAckedPosition);
+        }
     }
 
     public void onRequestVote(final short candidateId, final long lastAckedPosition)
@@ -104,12 +108,10 @@ public class Leader implements Role, ControlHandler, FragmentHandler
 
     public void onConcensusHeartbeat(final short nodeId)
     {
-        // Update heartbeat time
+        if (nodeId != this.nodeId)
+        {
+            // Should not receive this unless someone else is the leader
+        }
     }
 
-    @Override
-    public void onFragment(DirectBuffer buffer, int offset, int length, Header header)
-    {
-
-    }
 }

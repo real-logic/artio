@@ -60,10 +60,11 @@ public class ConfiguredReplicationTest
 
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
 
-    private BlockHandler handler = mock(BlockHandler.class);
+    private BlockHandler leaderHandler = mock(BlockHandler.class);
     private Replicator leaderReplicator = mock(Replicator.class);
     private Replicator follower1Replicator = mock(Replicator.class);
     private Replicator follower2Replicator = mock(Replicator.class);
+    private FragmentHandler follower1Handler = mock(FragmentHandler.class);
 
     private MediaDriver mediaDriver;
     private Aeron aeron;
@@ -91,12 +92,12 @@ public class ConfiguredReplicationTest
             controlPublication(),
             controlSubscription(),
             dataSubscription(),
-            handler,
+            leaderHandler,
             0,
             HEARTBEAT_INTERVAL);
 
-        follower1 = follower(FOLLOWER_1_ID, follower1Replicator);
-        follower2 = follower(FOLLOWER_2_ID, follower2Replicator);
+        follower1 = follower(FOLLOWER_1_ID, follower1Replicator, follower1Handler);
+        follower2 = follower(FOLLOWER_2_ID, follower2Replicator, mock(FragmentHandler.class));
 
         dataPublication = dataPublication();
     }
@@ -107,19 +108,39 @@ public class ConfiguredReplicationTest
         offerBuffer();
 
         pollLeader(0);
-        noDataAcknowledged();
+        leaderNeverCommitted();
     }
 
     @Test
     public void shouldProcessDataWhenAcknowledged()
     {
-        final long position = offerBuffer();
+        final int position = roundtripABuffer();
 
-        poll(follower1);
-        poll(follower2);
+        leaderCommitted(0, position);
+    }
 
-        pollLeader(2);
-        dataAcknowledged((int) position, 0);
+    @Test
+    public void shouldProcessSuccessiveChunks()
+    {
+        final int position1 = roundtripABuffer();
+        leaderCommitted(0, position1);
+
+        final int position2 = roundtripABuffer();
+
+        leaderCommitted(position1, position2 - position1);
+    }
+
+    @Test
+    public void shouldRequireContiguousMessages()
+    {
+        final int position1 = roundtripABuffer();
+        leaderCommitted(0, position1);
+
+        follower1.position(0);
+
+        final int position2 = roundtripABuffer();
+
+        leaderNotCommitted(position1, position2 - position1);
     }
 
     @Test
@@ -130,23 +151,23 @@ public class ConfiguredReplicationTest
         poll(follower1);
 
         pollLeader(1);
-        noDataAcknowledged();
+        leaderNeverCommitted();
     }
 
     @Test
     public void shouldSupportAcknowledgementLagging()
     {
-        final long position = offerBuffer();
+        final int position = offerBuffer();
 
         poll(follower1);
 
         pollLeader(1);
-        noDataAcknowledged();
+        leaderNeverCommitted();
 
         poll(follower2);
         pollLeader(1);
 
-        dataAcknowledged((int) position, 0);
+        leaderCommitted(0, position);
     }
 
     @Test
@@ -193,6 +214,23 @@ public class ConfiguredReplicationTest
         verify(controlHandler, never()).onConcensusHeartbeat(anyShort());
     }
 
+    @Test
+    public void shouldAccountForMissingLogEntries()
+    {
+        // TODO
+    }
+
+    private int roundtripABuffer()
+    {
+        final int position = offerBuffer();
+
+        poll(follower1);
+        poll(follower2);
+
+        pollLeader(2);
+        return position;
+    }
+
     private void verifyBecomeCandidate()
     {
         verify(follower1Replicator).becomeCandidate();
@@ -209,24 +247,29 @@ public class ConfiguredReplicationTest
         assertEquals(read, poll(leader));
     }
 
-    private long offerBuffer()
+    private int offerBuffer()
     {
         final long position = dataPublication.offer(buffer);
         assertThat(position, greaterThan(0L));
-        return position;
+        return (int) position;
     }
 
-    private void dataAcknowledged(final int length, final int offset)
+    private void leaderCommitted(final int offset, final int length)
     {
         final ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
-        verify(handler).onBlock(bufferCaptor.capture(), eq(offset), eq(length), anyInt(), anyInt());
+        verify(leaderHandler).onBlock(bufferCaptor.capture(), eq(offset), eq(length), anyInt(), anyInt());
         final DirectBuffer buffer = bufferCaptor.getValue();
         assertEquals(VALUE, buffer.getInt(OFFSET + DataHeaderFlyweight.HEADER_LENGTH));
     }
 
-    private void noDataAcknowledged()
+    private void leaderNeverCommitted()
     {
-        verify(handler, never()).onBlock(any(), anyInt(), anyInt(), anyInt(), anyInt());
+        verify(leaderHandler, never()).onBlock(any(), anyInt(), anyInt(), anyInt(), anyInt());
+    }
+
+    private void leaderNotCommitted(final int offset, final int length)
+    {
+        verify(leaderHandler, never()).onBlock(any(), eq(offset), eq(length), anyInt(), anyInt());
     }
 
     private int poll(final Role role)
@@ -234,12 +277,12 @@ public class ConfiguredReplicationTest
         return role.poll(FRAGMENT_LIMIT, 0);
     }
 
-    private Follower follower(final short id, final Replicator replicator)
+    private Follower follower(final short id, final Replicator replicator, final FragmentHandler handler)
     {
         return new Follower(
             id,
             controlPublication(),
-            mock(FragmentHandler.class),
+            handler,
             dataSubscription(),
             controlSubscription(),
             replicator,

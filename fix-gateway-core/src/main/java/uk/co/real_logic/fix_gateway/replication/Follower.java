@@ -19,6 +19,10 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
+
+import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
+import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 
 public class Follower implements Role, FragmentHandler, ControlHandler
 {
@@ -33,6 +37,7 @@ public class Follower implements Role, FragmentHandler, ControlHandler
     private final long replyTimeoutInMs;
 
     private long latestNextReceiveTimeInMs;
+    private long oldPosition = 0;
     private long position;
     private boolean receivedHeartbeat = false;
 
@@ -63,10 +68,11 @@ public class Follower implements Role, FragmentHandler, ControlHandler
 
         final int readDataMessages = dataSubscription.poll(this, fragmentLimit);
 
-        if (readDataMessages > 0)
+        if (position > oldPosition)
         {
-            controlPublication.saveMessageAcknowledgement(position, id);
+            controlPublication.saveMessageAcknowledgement(position, id, OK);
             onReceivedMessage(timeInMs);
+            oldPosition = position;
         }
 
         if (receivedHeartbeat)
@@ -90,11 +96,19 @@ public class Follower implements Role, FragmentHandler, ControlHandler
 
     public void onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        delegate.onFragment(buffer, offset, length, header);
-        position = header.position();
+        final int headerOffset = header.offset();
+        if (position == headerOffset)
+        {
+            position = header.position();
+        }
+        else if (position < headerOffset)
+        {
+            controlPublication.saveMessageAcknowledgement(position, id, MISSING_LOG_ENTRIES);
+        }
     }
 
-    public void onMessageAcknowledgement(final long newAckedPosition, final short nodeId)
+    public void onMessageAcknowledgement(
+        final long newAckedPosition, final short nodeId, final AcknowledgementStatus status)
     {
         // not interested in this message
     }
@@ -107,5 +121,10 @@ public class Follower implements Role, FragmentHandler, ControlHandler
     public void onConcensusHeartbeat(final short nodeId)
     {
         receivedHeartbeat = true;
+    }
+
+    public void position(final long position)
+    {
+        this.position = position;
     }
 }

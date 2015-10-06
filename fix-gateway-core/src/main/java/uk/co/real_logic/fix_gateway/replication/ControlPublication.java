@@ -20,6 +20,7 @@ import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
+import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.ConcensusHeartbeatEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageAcknowledgementEncoder;
 import uk.co.real_logic.fix_gateway.messages.RequestVoteEncoder;
@@ -45,7 +46,9 @@ public class ControlPublication extends AbstractionPublication
         super(maxClaimAttempts, idleStrategy, fails, reliefValve, dataPublication);
     }
 
-    public long saveMessageAcknowledgement(final long newAckedPosition, final short nodeId)
+    public long saveMessageAcknowledgement(final long newAckedPosition,
+                                           final short nodeId,
+                                           final AcknowledgementStatus status)
     {
         final long position = claim(MESSAGE_ACKNOWLEDGEMENT_LENGTH);
 
@@ -64,7 +67,8 @@ public class ControlPublication extends AbstractionPublication
         messageAcknowledgement
             .wrap(buffer, offset)
             .newAckedPosition(newAckedPosition)
-            .nodeId(nodeId);
+            .nodeId(nodeId)
+            .status(status);
 
         bufferClaim.commit();
 
