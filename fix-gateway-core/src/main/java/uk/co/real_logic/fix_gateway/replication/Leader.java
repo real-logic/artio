@@ -44,6 +44,7 @@ public class Leader implements Role, ControlHandler
     private long lastPosition = 0;
     private long nextHeartbeatTimeInMs;
     private int term;
+    private long timeInMs;
 
     public Leader(
         final short nodeId,
@@ -71,6 +72,7 @@ public class Leader implements Role, ControlHandler
 
     public int poll(int fragmentLimit, final long timeInMs)
     {
+        this.timeInMs = timeInMs;
         final int read = controlSubscription.poll(controlSubscriber, fragmentLimit);
 
         if (read > 0)
@@ -122,7 +124,7 @@ public class Leader implements Role, ControlHandler
         if (nodeId != this.nodeId && term > this.term)
         {
             // Should not receive this unless someone else is the leader
-            replicator.becomeFollower(term, position);
+            replicator.becomeFollower(timeInMs, term, position);
         }
     }
 

@@ -110,29 +110,29 @@ public class AbstractReplicationTest
         verify(replicator).becomeCandidate(anyLong(), anyInt(), anyLong());
     }
 
-    protected static void becomesFollower(final Replicator replicator)
-    {
-        verify(replicator).becomeFollower(anyInt(), anyLong());
-    }
-
     protected static void neverBecomesCandidate(final Replicator replicator)
     {
         verify(replicator, never()).becomeCandidate(anyLong(), anyInt(), anyLong());
     }
 
-    protected static void neverBecomesFollower(final Replicator replicator)
+    protected static void becomesFollower(final Replicator replicator)
     {
-        verify(replicator, never()).becomeFollower(anyInt(), anyLong());
+        verify(replicator).becomeFollower(anyLong(), anyInt(), anyLong());
     }
 
-    protected static void neverBecomesLeader(final Replicator replicator)
+    protected static void neverBecomesFollower(final Replicator replicator)
     {
-        verify(replicator, never()).becomeLeader(anyLong(), anyInt());
+        verify(replicator, never()).becomeFollower(anyLong(), anyInt(), anyLong());
     }
 
     protected static void becomesLeader(final Replicator replicator)
     {
         verify(replicator).becomeLeader(anyLong(), anyInt());
+    }
+
+    protected static void neverBecomesLeader(final Replicator replicator)
+    {
+        verify(replicator, never()).becomeLeader(anyLong(), anyInt());
     }
 
     protected static void staysFollower(final Replicator replicator)

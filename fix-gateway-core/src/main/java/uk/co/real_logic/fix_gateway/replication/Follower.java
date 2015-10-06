@@ -48,6 +48,7 @@ public class Follower implements Role, FragmentHandler, ControlHandler
 
     private short votedFor = NO_ONE;
     private int term;
+    private long timeInMs;
 
     public Follower(
         final short id,
@@ -71,6 +72,8 @@ public class Follower implements Role, FragmentHandler, ControlHandler
 
     public int poll(final int fragmentLimit, final long timeInMs)
     {
+        this.timeInMs = timeInMs;
+
         final int readControlMessages =
             controlSubscription.poll(controlSubscriber, fragmentLimit);
 
@@ -156,10 +159,15 @@ public class Follower implements Role, FragmentHandler, ControlHandler
     public void onConcensusHeartbeat(final short nodeId, final int term, final long position)
     {
         receivedHeartbeat = true;
+        if (nodeId != this.id && term > this.term)
+        {
+            follow(this.timeInMs, term, position);
+        }
     }
 
-    public Follower follow(final int term, final long position)
+    public Follower follow(final long timeInMs, final int term, final long position)
     {
+        onReceivedMessage(timeInMs);
         votedFor = NO_ONE;
         this.term = term;
         this.position = position;

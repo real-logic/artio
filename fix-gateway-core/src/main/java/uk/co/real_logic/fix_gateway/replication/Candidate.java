@@ -97,7 +97,7 @@ public class Candidate implements Role, ControlHandler
     {
         if (nodeId != id && term >= this.term)
         {
-            replicator.becomeFollower(term, position);
+            replicator.becomeFollower(timeInMs, term, position);
         }
     }
 
