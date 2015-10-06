@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
+import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,14 +36,14 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.library.LibraryConfiguration.DEFAULT_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasFluentProperty;
 
 public class EngineAndLibraryIntegrationTest
 {
@@ -78,8 +79,7 @@ public class EngineAndLibraryIntegrationTest
 
         awaitLibraryConnect(library);
 
-        final List<LibraryInfo> libraries = hasLibraries(1);
-        assertLibrary(libraries.get(0), true, DEFAULT_LIBRARY_ID);
+        assertHasLibraries(matchesLibrary(true, DEFAULT_LIBRARY_ID));
     }
 
     @Test
@@ -102,10 +102,9 @@ public class EngineAndLibraryIntegrationTest
         library2 = connectLibrary(3, false);
         awaitLibraryConnect(library2);
 
-        final List<LibraryInfo> libraries = hasLibraries(2);
-
-        assertLibrary2(libraries);
-        assertLibrary(libraries.get(1), true, 2);
+        assertHasLibraries(
+            matchesLibrary(true, 2),
+            matchesLibrary(false, 3));
     }
 
     @Test
@@ -126,8 +125,7 @@ public class EngineAndLibraryIntegrationTest
 
         assertLibrariesDisconnect(1, library2, engine);
 
-        final List<LibraryInfo> libraries = hasLibraries(1);
-        assertLibrary2(libraries);
+        assertHasLibraries(matchesLibrary(false, 3));
 
         return library2;
     }
@@ -141,9 +139,9 @@ public class EngineAndLibraryIntegrationTest
 
         awaitLibraryConnect(library);
 
-        final List<LibraryInfo> libraries = hasLibraries(2);
-        assertLibrary2(libraries);
-        assertLibrary(libraries.get(1), true, 4);
+        assertHasLibraries(
+            matchesLibrary(true, 4),
+            matchesLibrary(false, 3));
     }
 
     @Test
@@ -196,15 +194,22 @@ public class EngineAndLibraryIntegrationTest
 
     private void assertLibrary(final LibraryInfo library, final boolean expectedAcceptor, final int libraryId)
     {
-        assertEquals(expectedAcceptor, library.isAcceptor());
-        assertEquals("Has the wrong id", libraryId, library.libraryId());
+        assertThat(library,
+            matchesLibrary(expectedAcceptor, libraryId));
     }
 
-    private List<LibraryInfo> hasLibraries(final int count)
+    private Matcher<LibraryInfo> matchesLibrary(final boolean expectedAcceptor, final int libraryId)
+    {
+        return allOf(
+            hasFluentProperty("isAcceptor", is(expectedAcceptor)),
+            hasFluentProperty("libraryId", is(libraryId)));
+    }
+
+    @SafeVarargs
+    private final void assertHasLibraries(final Matcher<LibraryInfo>... libraryMatchers)
     {
         final List<LibraryInfo> libraries = engine.libraries();
-        assertThat(libraries, hasSize(count));
-        return libraries;
+        assertThat(libraries, containsInAnyOrder(libraryMatchers));
     }
 
     private void assertNoActiveLibraries(final int count)

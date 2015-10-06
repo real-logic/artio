@@ -28,7 +28,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
-import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasProperty;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasFluentProperty;
 
 @SuppressWarnings("unchecked")
 public class DictionaryParserTest
@@ -210,22 +210,22 @@ public class DictionaryParserTest
 
     private <T> Matcher<T> withElement(final Matcher<?> valueMatcher)
     {
-        return hasProperty("element", valueMatcher);
+        return hasFluentProperty("element", valueMatcher);
     }
 
     private <T> Matcher<T> withName(final Matcher<?> valueMatcher)
     {
-        return hasProperty("name", valueMatcher);
+        return hasFluentProperty("name", valueMatcher);
     }
 
     private <T> Matcher<T> isRequired(final boolean required)
     {
-        return hasProperty("required", equalTo(required));
+        return hasFluentProperty("required", equalTo(required));
     }
 
     private <T> Matcher<T> withEntries(final Matcher<?> valueMatcher)
     {
-        return hasProperty("entries", valueMatcher);
+        return hasFluentProperty("entries", valueMatcher);
     }
 
     private <T> Matcher<T> isField(final String name)

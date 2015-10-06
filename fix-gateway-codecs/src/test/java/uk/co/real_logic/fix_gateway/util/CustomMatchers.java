@@ -92,7 +92,7 @@ public final class CustomMatchers
     /**
      * Doesn't use getters for properties, like hamcrest.
      */
-    public static <T> Matcher<T> hasProperty(final String name, final Matcher<?> valueMatcher)
+    public static <T> Matcher<T> hasFluentProperty(final String name, final Matcher<?> valueMatcher)
     {
         return new TypeSafeMatcher<T>()
         {
