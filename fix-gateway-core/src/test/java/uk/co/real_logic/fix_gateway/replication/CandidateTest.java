@@ -1,0 +1,121 @@
+/*
+ * Copyright 2015 Real Logic Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package uk.co.real_logic.fix_gateway.replication;
+
+import org.junit.Test;
+
+import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
+import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
+
+public class CandidateTest
+{
+    private static final long INITIAL_POSITION = 40;
+    private static final int OLD_TERM = 1;
+    private static final int NEW_TERM = 2;
+    private static final int CLUSTER_SIZE = 3;
+    private static final short ID = 3;
+
+    private ControlPublication controlPublication = mock(ControlPublication.class);
+    private Replicator replicator = mock(Replicator.class);
+
+    private Candidate candidate = new Candidate(ID, controlPublication, replicator, CLUSTER_SIZE);
+
+    @Test
+    public void shouldVoteForSelfWhenStartingElection()
+    {
+        startElection();
+
+        verify(controlPublication).saveRequestVote(ID, INITIAL_POSITION, NEW_TERM);
+    }
+
+    @Test
+    public void shouldBecomeLeaderUponReceiptOfEnoughVotes()
+    {
+        startElection();
+
+        candidate.onReplyVote(ID, NEW_TERM, FOR);
+
+        verifyBecomeLeader();
+    }
+
+    @Test
+    public void shouldNotBecomeLeaderUponReceiptOfVotesForWrongTerm()
+    {
+        startElection();
+
+        candidate.onReplyVote(ID, OLD_TERM, FOR);
+
+        verifyNotBecomeLeader();
+    }
+
+    @Test
+    public void shouldNotBecomeLeaderUponReceiptOfVotesAgainst()
+    {
+        startElection();
+
+        candidate.onReplyVote(ID, NEW_TERM, AGAINST);
+
+        verifyNotBecomeLeader();
+    }
+
+    @Test
+    public void shouldNotBecomeLeaderUponReceiptOfVotesForOtherCandidates()
+    {
+        final short otherCandidate = (short) 2;
+
+        startElection();
+
+        candidate.onReplyVote(otherCandidate, NEW_TERM, FOR);
+
+        verifyNotBecomeLeader();
+    }
+
+    @Test
+    public void shouldBecomeFollowerUponReceiptOfHeartbeat()
+    {
+        final short otherCandidate = (short) 2;
+
+        startElection();
+
+        candidate.onConcensusHeartbeat(otherCandidate);
+
+        verify(replicator).becomeFollower();
+    }
+
+    @Test
+    public void shouldRestartElectionIfTimeoutElapses()
+    {
+
+    }
+
+    private void verifyBecomeLeader()
+    {
+        verify(replicator).becomeLeader();
+        verify(controlPublication).saveConcensusHeartbeat(ID);
+    }
+
+    private void verifyNotBecomeLeader()
+    {
+        verify(replicator, never()).becomeLeader();
+        verify(controlPublication, never()).saveConcensusHeartbeat(ID);
+    }
+
+    private void startElection()
+    {
+        candidate.startElection(OLD_TERM, INITIAL_POSITION);
+    }
+}

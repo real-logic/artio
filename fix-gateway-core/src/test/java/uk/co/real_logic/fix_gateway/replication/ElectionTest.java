@@ -15,17 +15,26 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
-import uk.co.real_logic.fix_gateway.messages.Vote;
+import org.junit.Test;
 
-public interface ControlHandler
+/**
+ * Test candidate instances in an election
+ */
+public class ElectionTest extends AbstractReplicationTest
 {
-    void onMessageAcknowledgement(
-        final long newAckedPosition, final short nodeId, final AcknowledgementStatus status);
+    private Candidate candidate1;
+    private Candidate candidate2;
+    private Candidate candidate3;
 
-    void onRequestVote(final short candidateId, final long lastAckedPosition);
+    @Test
+    public void shouldElectCandidateWithHighestPosition()
+    {
 
-    void onReplyVote(final short candidateId, final int term, final Vote vote);
+    }
 
-    void onConcensusHeartbeat(final short nodeId);
+    @Test
+    public void shouldResolveCandidatesWithHighPositions()
+    {
+
+    }
 }

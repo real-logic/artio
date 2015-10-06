@@ -20,6 +20,7 @@ import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
+import uk.co.real_logic.fix_gateway.messages.Vote;
 
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 
@@ -103,7 +104,12 @@ public class Leader implements Role, ControlHandler
 
     public void onRequestVote(final short candidateId, final long lastAckedPosition)
     {
-        // They're rebelling
+        // TODO: They're rebelling
+    }
+
+    public void onReplyVote(final short candidateId, final int term, final Vote vote)
+    {
+        // TODO: Still rebelling
     }
 
     public void onConcensusHeartbeat(final short nodeId)

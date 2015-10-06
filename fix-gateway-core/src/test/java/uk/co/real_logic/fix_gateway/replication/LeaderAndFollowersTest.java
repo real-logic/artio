@@ -15,25 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.TestFixtures;
-import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
@@ -41,19 +33,15 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.agrona.CloseHelper.close;
 
-public class ConfiguredReplicationTest
+/**
+ * Test an isolated set of leaders and followers
+ */
+public class LeaderAndFollowersTest extends AbstractReplicationTest
 {
 
-    private static final String IPC = "aeron:ipc";
-    private static final int CONTROL = 1;
-    private static final int DATA = 2;
     private static final int VALUE = 42;
     private static final int OFFSET = 42;
-    private static final int FRAGMENT_LIMIT = 10;
-    private static final long REPLY_TIMEOUT = 100;
-    private static final long HEARTBEAT_INTERVAL = REPLY_TIMEOUT / 2;
     private static final short LEADER_ID = (short) 1;
     private static final short FOLLOWER_1_ID = (short) 2;
     private static final short FOLLOWER_2_ID = (short) 3;
@@ -61,13 +49,8 @@ public class ConfiguredReplicationTest
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
 
     private BlockHandler leaderHandler = mock(BlockHandler.class);
-    private Replicator leaderReplicator = mock(Replicator.class);
-    private Replicator follower1Replicator = mock(Replicator.class);
-    private Replicator follower2Replicator = mock(Replicator.class);
     private FragmentHandler follower1Handler = mock(FragmentHandler.class);
 
-    private MediaDriver mediaDriver;
-    private Aeron aeron;
     private Leader leader;
     private Follower follower1;
     private Follower follower2;
@@ -77,9 +60,6 @@ public class ConfiguredReplicationTest
     public void setUp()
     {
         buffer.putInt(OFFSET, VALUE);
-
-        mediaDriver = TestFixtures.launchMediaDriver();
-        aeron = Aeron.connect(new Aeron.Context());
 
         final IntHashSet followers = new IntHashSet(10, -1);
         followers.add(2);
@@ -96,8 +76,8 @@ public class ConfiguredReplicationTest
             0,
             HEARTBEAT_INTERVAL);
 
-        follower1 = follower(FOLLOWER_1_ID, follower1Replicator, follower1Handler);
-        follower2 = follower(FOLLOWER_2_ID, follower2Replicator, mock(FragmentHandler.class));
+        follower1 = follower(FOLLOWER_1_ID, replicator2, follower1Handler);
+        follower2 = follower(FOLLOWER_2_ID, replicator3, mock(FragmentHandler.class));
 
         dataPublication = dataPublication();
     }
@@ -214,12 +194,6 @@ public class ConfiguredReplicationTest
         verify(controlHandler, never()).onConcensusHeartbeat(anyShort());
     }
 
-    @Test
-    public void shouldAccountForMissingLogEntries()
-    {
-        // TODO
-    }
-
     private int roundtripABuffer()
     {
         final int position = offerBuffer();
@@ -233,13 +207,13 @@ public class ConfiguredReplicationTest
 
     private void verifyBecomeCandidate()
     {
-        verify(follower1Replicator).becomeCandidate();
+        verify(replicator2).becomeCandidate();
     }
 
     private void verifyStayFollower()
     {
-        verify(follower1Replicator, never()).becomeCandidate();
-        verify(follower1Replicator, never()).becomeLeader();
+        verify(replicator2, never()).becomeCandidate();
+        verify(replicator2, never()).becomeLeader();
     }
 
     private void pollLeader(final int read)
@@ -272,11 +246,6 @@ public class ConfiguredReplicationTest
         verify(leaderHandler, never()).onBlock(any(), eq(offset), eq(length), anyInt(), anyInt());
     }
 
-    private int poll(final Role role)
-    {
-        return role.poll(FRAGMENT_LIMIT, 0);
-    }
-
     private Follower follower(final short id, final Replicator replicator, final FragmentHandler handler)
     {
         return new Follower(
@@ -290,35 +259,4 @@ public class ConfiguredReplicationTest
             REPLY_TIMEOUT);
     }
 
-    private Subscription controlSubscription()
-    {
-        return aeron.addSubscription(IPC, CONTROL);
-    }
-
-    private Subscription dataSubscription()
-    {
-        return aeron.addSubscription(IPC, DATA);
-    }
-
-    private ControlPublication controlPublication()
-    {
-        return new ControlPublication(
-            100,
-            new NoOpIdleStrategy(),
-            mock(AtomicCounter.class),
-            mock(ReliefValve.class),
-            aeron.addPublication(IPC, CONTROL));
-    }
-
-    private Publication dataPublication()
-    {
-        return aeron.addPublication(IPC, DATA);
-    }
-
-    @After
-    public void teardown()
-    {
-        close(aeron);
-        close(mediaDriver);
-    }
 }

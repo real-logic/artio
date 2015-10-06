@@ -20,6 +20,7 @@ import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
+import uk.co.real_logic.fix_gateway.messages.Vote;
 
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
@@ -116,6 +117,11 @@ public class Follower implements Role, FragmentHandler, ControlHandler
     public void onRequestVote(final short candidateId, final long lastAckedPosition)
     {
         // TODO
+    }
+
+    public void onReplyVote(final short candidateId, final int term, final Vote vote)
+    {
+        // not interested in this message
     }
 
     public void onConcensusHeartbeat(final short nodeId)

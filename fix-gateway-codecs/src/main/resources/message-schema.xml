@@ -60,6 +60,11 @@
             <validValue name="MISSING_LOG_ENTRIES">2</validValue>
         </enum>
 
+        <enum name="Vote" encodingType="uint8">
+            <validValue name="FOR">0</validValue>
+            <validValue name="AGAINST">1</validValue>
+        </enum>
+
     </types>
 
     <!-- MESSAGING PROTOCOL -->
@@ -163,6 +168,11 @@
     <sbe:message name="RequestVote" id="20" description="">
         <field name="lastAckedPosition" id="55" type="int64"/>
         <field name="candidateId" id="56" type="int16"/>
+        <field name="term" id="59" type="int32"/>
+    </sbe:message>
+    <sbe:message name="ReplyVote" id="22" description="">
+        <field name="term" id="60" type="int32"/>
+        <field name="vote" id="61" type="Vote"/>
     </sbe:message>
     <sbe:message name="ConcensusHeartbeat" id="21" description="">
         <field name="nodeId" id="57" type="int16"/>
