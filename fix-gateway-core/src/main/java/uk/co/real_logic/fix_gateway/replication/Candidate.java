@@ -36,6 +36,7 @@ public class Candidate implements Role, ControlHandler
     private int votesFor;
     private int term;
     private long position;
+    private long timeInMs;
 
     public Candidate(final short id,
                      final ControlPublication controlPublication,
@@ -54,6 +55,7 @@ public class Candidate implements Role, ControlHandler
 
     public int poll(int fragmentLimit, final long timeInMs)
     {
+        this.timeInMs = timeInMs;
         int work = controlSubscription.poll(controlSubscriber, fragmentLimit);
 
         if (timeInMs > currentVoteTimeout)
@@ -84,18 +86,18 @@ public class Candidate implements Role, ControlHandler
 
             if (votesFor > clusterSize / 2)
             {
-                replicator.becomeLeader();
+                replicator.becomeLeader(timeInMs, term);
 
-                controlPublication.saveConcensusHeartbeat(id, term);
+                controlPublication.saveConcensusHeartbeat(id, term, position);
             }
         }
     }
 
-    public void onConcensusHeartbeat(short nodeId, final int term)
+    public void onConcensusHeartbeat(short nodeId, final int term, final long position)
     {
         if (nodeId != id && term >= this.term)
         {
-            replicator.becomeFollower();
+            replicator.becomeFollower(term, position);
         }
     }
 

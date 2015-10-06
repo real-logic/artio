@@ -86,7 +86,7 @@ public class Leader implements Role, ControlHandler
 
         if (timeInMs > nextHeartbeatTimeInMs)
         {
-            controlPublication.saveConcensusHeartbeat(nodeId, term);
+            controlPublication.saveConcensusHeartbeat(nodeId, term, lastPosition);
             updateHeartbeatInterval(timeInMs);
         }
 
@@ -109,20 +109,20 @@ public class Leader implements Role, ControlHandler
 
     public void onRequestVote(final short candidateId, final int term, final long lastAckedPosition)
     {
-        // TODO: They're rebelling
+        // We've possibly timed out
     }
 
     public void onReplyVote(final short candidateId, final int term, final Vote vote)
     {
-        // TODO: Still rebelling
+        // We've possibly timed out
     }
 
-    public void onConcensusHeartbeat(final short nodeId, final int term)
+    public void onConcensusHeartbeat(final short nodeId, final int term, final long position)
     {
         if (nodeId != this.nodeId && term > this.term)
         {
             // Should not receive this unless someone else is the leader
-            replicator.becomeFollower();
+            replicator.becomeFollower(term, position);
         }
     }
 

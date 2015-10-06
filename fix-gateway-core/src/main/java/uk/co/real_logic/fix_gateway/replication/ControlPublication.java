@@ -128,9 +128,9 @@ public class ControlPublication extends AbstractionPublication
         return position;
     }
 
-    public long saveConcensusHeartbeat(final short nodeId, final int term)
+    public long saveConcensusHeartbeat(final short nodeId, final int term, final long position)
     {
-        final long position = claim(CONCENSUS_HEARTBEAT_LENGTH);
+        final long pos = claim(CONCENSUS_HEARTBEAT_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -147,10 +147,11 @@ public class ControlPublication extends AbstractionPublication
         concensusHeart
             .wrap(buffer, offset)
             .nodeId(nodeId)
-            .term(term);
+            .term(term)
+            .position(position);
 
         bufferClaim.commit();
 
-        return position;
+        return pos;
     }
 }

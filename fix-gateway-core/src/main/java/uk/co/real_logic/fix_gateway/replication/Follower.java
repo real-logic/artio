@@ -46,8 +46,8 @@ public class Follower implements Role, FragmentHandler, ControlHandler
     private long position;
     private boolean receivedHeartbeat = false;
 
-    private short votedFor = NO_ONE; // TODO: reset when new leader elected
-    private int term;                // TODO: update term when new leader elected
+    private short votedFor = NO_ONE;
+    private int term;
 
     public Follower(
         final short id,
@@ -91,7 +91,7 @@ public class Follower implements Role, FragmentHandler, ControlHandler
 
         if (timeInMs > latestNextReceiveTimeInMs)
         {
-            replicator.becomeCandidate();
+            replicator.becomeCandidate(timeInMs, term, position);
         }
 
         return readControlMessages + readDataMessages;
@@ -153,20 +153,16 @@ public class Follower implements Role, FragmentHandler, ControlHandler
         // not interested in this message
     }
 
-    public void onConcensusHeartbeat(final short nodeId, final int term)
+    public void onConcensusHeartbeat(final short nodeId, final int term, final long position)
     {
         receivedHeartbeat = true;
     }
 
-    public Follower position(final long position)
+    public Follower follow(final int term, final long position)
     {
-        this.position = position;
-        return this;
-    }
-
-    public Follower term(final int term)
-    {
+        votedFor = NO_ONE;
         this.term = term;
+        this.position = position;
         return this;
     }
 }

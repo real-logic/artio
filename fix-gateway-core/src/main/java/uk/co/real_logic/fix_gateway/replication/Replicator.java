@@ -39,20 +39,20 @@ public class Replicator implements Role
         currentRole = candidate;
     }
 
-    public void becomeFollower()
+    public void becomeFollower(final int term, final long position)
     {
-        currentRole = follower;
+        currentRole = follower.follow(term, position);
     }
 
-    public void becomeLeader()
+    public void becomeLeader(final long timeInMs, final int term)
     {
-        currentRole = leader;
+        currentRole = leader.getsElected(timeInMs, term);
     }
 
-    public void becomeCandidate()
+    public void becomeCandidate(final long timeInMs, final int oldTerm, final long position)
     {
         currentRole = candidate;
-        candidate.startNewElection(0L, 0, 0); // TODO
+        candidate.startNewElection(timeInMs, oldTerm, position);
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)

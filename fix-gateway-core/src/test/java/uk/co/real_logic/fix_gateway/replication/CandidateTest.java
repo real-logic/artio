@@ -21,10 +21,11 @@ import uk.co.real_logic.aeron.Subscription;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
+import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.*;
 
 public class CandidateTest
 {
-    private static final long INITIAL_POSITION = 40;
+    private static final long POSITION = 40;
     private static final long VOTE_TIMEOUT = 100;
     private static final int OLD_TERM = 1;
     private static final int NEW_TERM = 2;
@@ -53,7 +54,7 @@ public class CandidateTest
 
         candidate.onReplyVote(ID, NEW_TERM, FOR);
 
-        becomesLeader();
+        becomesLeader(replicator);
     }
 
     @Test
@@ -63,7 +64,7 @@ public class CandidateTest
 
         candidate.onReplyVote(ID, OLD_TERM, FOR);
 
-        neverBecomesLeader();
+        neverBecomesLeader(replicator);
     }
 
     @Test
@@ -73,7 +74,7 @@ public class CandidateTest
 
         candidate.onReplyVote(ID, NEW_TERM, AGAINST);
 
-        neverBecomesLeader();
+        neverBecomesLeader(replicator);
     }
 
     @Test
@@ -85,7 +86,7 @@ public class CandidateTest
 
         candidate.onReplyVote(otherCandidate, NEW_TERM, FOR);
 
-        neverBecomesLeader();
+        neverBecomesLeader(replicator);
     }
 
     @Test
@@ -95,9 +96,9 @@ public class CandidateTest
 
         startElection();
 
-        candidate.onConcensusHeartbeat(otherCandidate, NEW_TERM);
+        candidate.onConcensusHeartbeat(otherCandidate, NEW_TERM, POSITION);
 
-        verify(replicator).becomeFollower();
+        becomesFollower(replicator);
     }
 
     @Test
@@ -105,9 +106,9 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.onConcensusHeartbeat(ID, NEW_TERM);
+        candidate.onConcensusHeartbeat(ID, NEW_TERM, POSITION);
 
-        neverBecomesFollower();
+        neverBecomesFollower(replicator);
     }
 
     @Test
@@ -119,32 +120,17 @@ public class CandidateTest
 
         requestsVote(2);
 
-        neverBecomesLeader();
-        neverBecomesFollower();
-    }
-
-    private void neverBecomesFollower()
-    {
-        verify(replicator, never()).becomeFollower();
-    }
-
-    private void becomesLeader()
-    {
-        verify(replicator).becomeLeader();
+        neverBecomesLeader(replicator);
+        neverBecomesFollower(replicator);
     }
 
     private void requestsVote(final int wantedNumberOfInvocations)
     {
-        verify(controlPublication, times(wantedNumberOfInvocations)).saveRequestVote(ID, INITIAL_POSITION, NEW_TERM);
-    }
-
-    private void neverBecomesLeader()
-    {
-        verify(replicator, never()).becomeLeader();
+        verify(controlPublication, times(wantedNumberOfInvocations)).saveRequestVote(ID, POSITION, NEW_TERM);
     }
 
     private void startElection()
     {
-        candidate.startNewElection(0L, OLD_TERM, INITIAL_POSITION);
+        candidate.startNewElection(0L, OLD_TERM, POSITION);
     }
 }

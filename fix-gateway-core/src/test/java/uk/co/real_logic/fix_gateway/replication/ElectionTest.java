@@ -42,7 +42,7 @@ public class ElectionTest extends AbstractReplicationTest
     @Test
     public void shouldElectCandidateWithAtLeastQuorumPosition()
     {
-        node3.position(40).term(1);
+        node3.follow(1, 40);
 
         node1.startNewElection(TIME, 1, 32);
         node2.startNewElection(TIME, 1, 40);
@@ -55,7 +55,7 @@ public class ElectionTest extends AbstractReplicationTest
     @Test
     public void shouldElectCandidateWithCorrectTerm()
     {
-        node3.position(32).term(2);
+        node3.follow(2, 32);
 
         node1.startNewElection(TIME, 1, 40);
         node2.startNewElection(TIME, 2, 32);
@@ -68,7 +68,7 @@ public class ElectionTest extends AbstractReplicationTest
     @Test
     public void shouldResolveCandidatesWithEqualPositions()
     {
-        node3.position(40).term(1);
+        node3.follow(1, 40);
 
         node1.startNewElection(TIME, 1, 40);
         node2.startNewElection(TIME, 1, 40);

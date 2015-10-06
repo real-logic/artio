@@ -27,6 +27,8 @@ import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -105,32 +107,32 @@ public class AbstractReplicationTest
 
     protected static void becomesCandidate(final Replicator replicator)
     {
-        verify(replicator).becomeCandidate();
+        verify(replicator).becomeCandidate(anyLong(), anyInt(), anyLong());
     }
 
     protected static void becomesFollower(final Replicator replicator)
     {
-        verify(replicator).becomeFollower();
+        verify(replicator).becomeFollower(anyInt(), anyLong());
     }
 
     protected static void neverBecomesCandidate(final Replicator replicator)
     {
-        verify(replicator, never()).becomeCandidate();
+        verify(replicator, never()).becomeCandidate(anyLong(), anyInt(), anyLong());
     }
 
     protected static void neverBecomesFollower(final Replicator replicator)
     {
-        verify(replicator, never()).becomeFollower();
+        verify(replicator, never()).becomeFollower(anyInt(), anyLong());
     }
 
     protected static void neverBecomesLeader(final Replicator replicator)
     {
-        verify(replicator, never()).becomeLeader();
+        verify(replicator, never()).becomeLeader(anyLong(), anyInt());
     }
 
     protected static void becomesLeader(final Replicator replicator)
     {
-        verify(replicator).becomeLeader();
+        verify(replicator).becomeLeader(anyLong(), anyInt());
     }
 
     protected static void staysFollower(final Replicator replicator)

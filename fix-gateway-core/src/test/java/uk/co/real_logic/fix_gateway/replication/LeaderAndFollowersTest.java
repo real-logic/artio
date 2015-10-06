@@ -117,7 +117,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         final int position1 = roundtripABuffer();
         leaderCommitted(0, position1);
 
-        follower1.position(0);
+        follower1.follow(0, 1);
 
         final int position2 = roundtripABuffer();
 
@@ -192,7 +192,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         final int readMessages = controlSubscription().poll(new ControlSubscriber(controlHandler), 10);
         assertEquals(0, readMessages);
-        verify(controlHandler, never()).onConcensusHeartbeat(anyShort(), anyInt());
+        verify(controlHandler, never()).onConcensusHeartbeat(anyShort(), anyInt(), anyLong());
     }
 
     // TODO: test gapfill scenario

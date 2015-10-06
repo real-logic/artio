@@ -28,6 +28,7 @@ public class LeaderTest
     private static final short ID = 2;
     private static final int TERM = 1;
     private static final long TIME = 10L;
+    private static final long POSITION = 40L;
 
     private ControlPublication controlPublication = mock(ControlPublication.class);
     private Replicator replicator = mock(Replicator.class);
@@ -49,7 +50,7 @@ public class LeaderTest
     {
         final short newLeaderId = 3;
 
-        leader.onConcensusHeartbeat(newLeaderId, TERM + 1);
+        leader.onConcensusHeartbeat(newLeaderId, TERM + 1, POSITION);
 
         becomesFollower(replicator);
     }
@@ -59,7 +60,7 @@ public class LeaderTest
     {
         final short newLeaderId = 3;
 
-        leader.onConcensusHeartbeat(newLeaderId, TERM);
+        leader.onConcensusHeartbeat(newLeaderId, TERM, POSITION);
 
         neverBecomesFollower(replicator);
     }
@@ -67,7 +68,7 @@ public class LeaderTest
     @Test
     public void shouldNotBecomeFollowerFromOwnHeartbeats()
     {
-        leader.onConcensusHeartbeat(ID, TERM);
+        leader.onConcensusHeartbeat(ID, TERM, POSITION);
 
         neverBecomesFollower(replicator);
     }
