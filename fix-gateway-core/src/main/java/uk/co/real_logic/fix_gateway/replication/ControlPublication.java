@@ -128,7 +128,7 @@ public class ControlPublication extends AbstractionPublication
         return position;
     }
 
-    public long saveConcensusHeartbeat(final short nodeId)
+    public long saveConcensusHeartbeat(final short nodeId, final int term)
     {
         final long position = claim(CONCENSUS_HEARTBEAT_LENGTH);
 
@@ -146,7 +146,8 @@ public class ControlPublication extends AbstractionPublication
 
         concensusHeart
             .wrap(buffer, offset)
-            .nodeId(nodeId);
+            .nodeId(nodeId)
+            .term(term);
 
         bufferClaim.commit();
 

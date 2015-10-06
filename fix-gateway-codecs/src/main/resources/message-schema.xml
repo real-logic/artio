@@ -177,6 +177,7 @@
     </sbe:message>
     <sbe:message name="ConcensusHeartbeat" id="21" description="">
         <field name="nodeId" id="57" type="int16"/>
+        <field name="term" id="63" type="int32"/>
     </sbe:message>
 
 </sbe:messageSchema>

@@ -36,10 +36,13 @@ public class AbstractReplicationTest
 {
     protected static final String IPC = "aeron:ipc";
     protected static final int CONTROL = 1;
+    protected static final int DATA = 2;
     protected static final int FRAGMENT_LIMIT = 10;
     protected static final long TIMEOUT = 100;
     protected static final long HEARTBEAT_INTERVAL = TIMEOUT / 2;
-    private static final int DATA = 2;
+    protected static final int CLUSTER_SIZE = 3;
+    protected static final long TIME = 0L;
+
 
     protected Replicator replicator1 = mock(Replicator.class);
     protected Replicator replicator2 = mock(Replicator.class);
@@ -100,43 +103,43 @@ public class AbstractReplicationTest
         }
     }
 
-    protected void becomesCandidate(final Replicator replicator)
+    protected static void becomesCandidate(final Replicator replicator)
     {
         verify(replicator).becomeCandidate();
     }
 
-    protected void becomesFollower(final Replicator replicator)
+    protected static void becomesFollower(final Replicator replicator)
     {
         verify(replicator).becomeFollower();
     }
 
-    protected void neverBecomesCandidate(final Replicator replicator)
+    protected static void neverBecomesCandidate(final Replicator replicator)
     {
         verify(replicator, never()).becomeCandidate();
     }
 
-    protected void neverBecomesFollower(final Replicator replicator)
+    protected static void neverBecomesFollower(final Replicator replicator)
     {
         verify(replicator, never()).becomeFollower();
     }
 
-    protected void neverBecomesLeader(final Replicator replicator)
+    protected static void neverBecomesLeader(final Replicator replicator)
     {
         verify(replicator, never()).becomeLeader();
     }
 
-    protected void becomesLeader(final Replicator replicator)
+    protected static void becomesLeader(final Replicator replicator)
     {
         verify(replicator).becomeLeader();
     }
 
-    protected void staysFollower(final Replicator replicator)
+    protected static void staysFollower(final Replicator replicator)
     {
         neverBecomesCandidate(replicator);
         neverBecomesLeader(replicator);
     }
 
-    protected void staysLeader(final Replicator replicator)
+    protected static void staysLeader(final Replicator replicator)
     {
         neverBecomesCandidate(replicator);
         neverBecomesFollower(replicator);

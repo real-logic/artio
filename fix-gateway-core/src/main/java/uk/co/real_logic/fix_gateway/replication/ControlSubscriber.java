@@ -84,7 +84,8 @@ public class ControlSubscriber implements FragmentHandler
             {
                 concensusHeartbeat.wrap(buffer, offset, blockLength, version);
                 handler.onConcensusHeartbeat(
-                    concensusHeartbeat.nodeId()
+                    concensusHeartbeat.nodeId(),
+                    concensusHeartbeat.term()
                 );
                 return;
             }

@@ -72,6 +72,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             controlPublication(),
             controlSubscription(),
             dataSubscription(),
+            replicator1,
             leaderHandler,
             0,
             HEARTBEAT_INTERVAL);
@@ -183,7 +184,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     @Test
     public void shouldNotHeartbeatIfMessageRecentlySent()
     {
-        leader.onSentMessage(HEARTBEAT_INTERVAL / 2);
+        leader.updateHeartbeatInterval(HEARTBEAT_INTERVAL / 2);
 
         leader.poll(FRAGMENT_LIMIT, HEARTBEAT_INTERVAL + 1);
 
@@ -191,8 +192,10 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         final int readMessages = controlSubscription().poll(new ControlSubscriber(controlHandler), 10);
         assertEquals(0, readMessages);
-        verify(controlHandler, never()).onConcensusHeartbeat(anyShort());
+        verify(controlHandler, never()).onConcensusHeartbeat(anyShort(), anyInt());
     }
+
+    // TODO: test gapfill scenario
 
     private int roundtripABuffer()
     {

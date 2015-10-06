@@ -95,7 +95,7 @@ public class CandidateTest
 
         startElection();
 
-        candidate.onConcensusHeartbeat(otherCandidate);
+        candidate.onConcensusHeartbeat(otherCandidate, NEW_TERM);
 
         verify(replicator).becomeFollower();
     }
@@ -105,7 +105,7 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.onConcensusHeartbeat(ID);
+        candidate.onConcensusHeartbeat(ID, NEW_TERM);
 
         neverBecomesFollower();
     }
@@ -131,7 +131,6 @@ public class CandidateTest
     private void becomesLeader()
     {
         verify(replicator).becomeLeader();
-        verify(controlPublication).saveConcensusHeartbeat(ID);
     }
 
     private void requestsVote(final int wantedNumberOfInvocations)
@@ -142,7 +141,6 @@ public class CandidateTest
     private void neverBecomesLeader()
     {
         verify(replicator, never()).becomeLeader();
-        verify(controlPublication, never()).saveConcensusHeartbeat(ID);
     }
 
     private void startElection()

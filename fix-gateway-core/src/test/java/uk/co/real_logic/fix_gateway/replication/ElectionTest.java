@@ -26,8 +26,6 @@ import static org.mockito.Mockito.mock;
  */
 public class ElectionTest extends AbstractReplicationTest
 {
-    private static final int CLUSTER_SIZE = 3;
-    private static final long TIME = 0L;
 
     private Candidate node1;
     private Candidate node2;

@@ -27,5 +27,5 @@ public interface ControlHandler
 
     void onReplyVote(final short candidateId, final int term, final Vote vote);
 
-    void onConcensusHeartbeat(final short nodeId);
+    void onConcensusHeartbeat(final short nodeId, final int term);
 }

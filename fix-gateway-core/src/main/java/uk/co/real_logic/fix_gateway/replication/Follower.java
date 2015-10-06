@@ -153,7 +153,7 @@ public class Follower implements Role, FragmentHandler, ControlHandler
         // not interested in this message
     }
 
-    public void onConcensusHeartbeat(final short nodeId)
+    public void onConcensusHeartbeat(final short nodeId, final int term)
     {
         receivedHeartbeat = true;
     }

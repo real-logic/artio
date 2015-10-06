@@ -84,15 +84,16 @@ public class Candidate implements Role, ControlHandler
 
             if (votesFor > clusterSize / 2)
             {
-                controlPublication.saveConcensusHeartbeat(id);
                 replicator.becomeLeader();
+
+                controlPublication.saveConcensusHeartbeat(id, term);
             }
         }
     }
 
-    public void onConcensusHeartbeat(short nodeId)
+    public void onConcensusHeartbeat(short nodeId, final int term)
     {
-        if (nodeId != id)
+        if (nodeId != id && term >= this.term)
         {
             replicator.becomeFollower();
         }

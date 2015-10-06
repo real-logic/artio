@@ -34,6 +34,7 @@ public class Leader implements Role, ControlHandler
     private final ControlPublication controlPublication;
     private final Subscription controlSubscription;
     private final Subscription dataSubscription;
+    private final Replicator replicator;
     private final BlockHandler handler;
     private final long heartbeatIntervalInMs;
 
@@ -42,6 +43,7 @@ public class Leader implements Role, ControlHandler
 
     private long lastPosition = 0;
     private long nextHeartbeatTimeInMs;
+    private int term;
 
     public Leader(
         final short nodeId,
@@ -50,6 +52,7 @@ public class Leader implements Role, ControlHandler
         final ControlPublication controlPublication,
         final Subscription controlSubscription,
         final Subscription dataSubscription,
+        final Replicator replicator,
         final BlockHandler handler,
         final long timeInMs,
         final long heartbeatIntervalInMs)
@@ -59,10 +62,11 @@ public class Leader implements Role, ControlHandler
         this.controlPublication = controlPublication;
         this.controlSubscription = controlSubscription;
         this.dataSubscription = dataSubscription;
+        this.replicator = replicator;
         this.handler = handler;
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
-        onSentMessage(timeInMs);
+        updateHeartbeatInterval(timeInMs);
     }
 
     public int poll(int fragmentLimit, final long timeInMs)
@@ -76,19 +80,20 @@ public class Leader implements Role, ControlHandler
             if (delta > 0)
             {
                 lastPosition = dataSubscription.blockPoll(handler, delta);
-                nextHeartbeatTimeInMs = timeInMs + heartbeatIntervalInMs;
+                updateHeartbeatInterval(timeInMs);
             }
         }
 
         if (timeInMs > nextHeartbeatTimeInMs)
         {
-            controlPublication.saveConcensusHeartbeat(nodeId);
+            controlPublication.saveConcensusHeartbeat(nodeId, term);
+            updateHeartbeatInterval(timeInMs);
         }
 
         return read;
     }
 
-    public void onSentMessage(final long timeInMs)
+    public void updateHeartbeatInterval(final long timeInMs)
     {
         this.nextHeartbeatTimeInMs = timeInMs + nextHeartbeatTimeInMs;
     }
@@ -112,12 +117,19 @@ public class Leader implements Role, ControlHandler
         // TODO: Still rebelling
     }
 
-    public void onConcensusHeartbeat(final short nodeId)
+    public void onConcensusHeartbeat(final short nodeId, final int term)
     {
-        if (nodeId != this.nodeId)
+        if (nodeId != this.nodeId && term > this.term)
         {
             // Should not receive this unless someone else is the leader
+            replicator.becomeFollower();
         }
     }
 
+    public Leader getsElected(final long timeInMs, final int term)
+    {
+        this.term = term;
+        updateHeartbeatInterval(timeInMs);
+        return this;
+    }
 }
