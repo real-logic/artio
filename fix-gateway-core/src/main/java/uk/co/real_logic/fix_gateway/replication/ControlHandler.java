@@ -23,7 +23,7 @@ public interface ControlHandler
     void onMessageAcknowledgement(
         final long newAckedPosition, final short nodeId, final AcknowledgementStatus status);
 
-    void onRequestVote(final short candidateId, final long lastAckedPosition);
+    void onRequestVote(final short candidateId, final int term, final long lastAckedPosition);
 
     void onReplyVote(final short candidateId, final int term, final Vote vote);
 

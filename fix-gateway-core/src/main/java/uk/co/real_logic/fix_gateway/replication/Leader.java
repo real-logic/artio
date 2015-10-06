@@ -102,7 +102,7 @@ public class Leader implements Role, ControlHandler
         }
     }
 
-    public void onRequestVote(final short candidateId, final long lastAckedPosition)
+    public void onRequestVote(final short candidateId, final int term, final long lastAckedPosition)
     {
         // TODO: They're rebelling
     }

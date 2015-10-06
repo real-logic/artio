@@ -54,14 +54,15 @@ public class Candidate implements Role, ControlHandler
 
     public int poll(int fragmentLimit, final long timeInMs)
     {
-        int read = controlSubscription.poll(controlSubscriber, fragmentLimit);
+        int work = controlSubscription.poll(controlSubscriber, fragmentLimit);
 
         if (timeInMs > currentVoteTimeout)
         {
             startElection(timeInMs);
+            work++;
         }
 
-        return read;
+        return work;
     }
 
     public void onMessageAcknowledgement(
@@ -70,7 +71,7 @@ public class Candidate implements Role, ControlHandler
 
     }
 
-    public void onRequestVote(short candidateId, long lastAckedPosition)
+    public void onRequestVote(short candidateId, final int term, long lastAckedPosition)
     {
 
     }

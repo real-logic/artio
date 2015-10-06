@@ -24,9 +24,13 @@ import uk.co.real_logic.fix_gateway.messages.Vote;
 
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
+import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
+import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 
 public class Follower implements Role, FragmentHandler, ControlHandler
 {
+    private static final short NO_ONE = -1;
+
     private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
 
     private final short id;
@@ -41,6 +45,9 @@ public class Follower implements Role, FragmentHandler, ControlHandler
     private long oldPosition = 0;
     private long position;
     private boolean receivedHeartbeat = false;
+
+    private short votedFor = NO_ONE; // TODO: reset when new leader elected
+    private int term;                // TODO: update term when new leader elected
 
     public Follower(
         final short id,
@@ -114,9 +121,31 @@ public class Follower implements Role, FragmentHandler, ControlHandler
         // not interested in this message
     }
 
-    public void onRequestVote(final short candidateId, final long lastAckedPosition)
+    public void onRequestVote(final short candidateId, final int term, final long candidatePosition)
     {
-        // TODO
+        if (canVoteFor(candidateId) && safeToVote(term, candidatePosition))
+        {
+            //System.out.println("Voting for " + candidateId);
+            votedFor = candidateId;
+            controlPublication.saveReplyVote(candidateId, term, FOR);
+        }
+        else if (candidateId != this.id)
+        {
+            controlPublication.saveReplyVote(candidateId, term, AGAINST);
+        }
+    }
+
+    private boolean safeToVote(final int term, final long candidatePosition)
+    {
+        // Term has to be strictly greater because a follower has already
+        // Voted for someone in its current term and is electing for the
+        // next term
+        return candidatePosition >= position && term > this.term;
+    }
+
+    private boolean canVoteFor(final short candidateId)
+    {
+        return votedFor == NO_ONE || votedFor == candidateId;
     }
 
     public void onReplyVote(final short candidateId, final int term, final Vote vote)
@@ -129,8 +158,15 @@ public class Follower implements Role, FragmentHandler, ControlHandler
         receivedHeartbeat = true;
     }
 
-    public void position(final long position)
+    public Follower position(final long position)
     {
         this.position = position;
+        return this;
+    }
+
+    public Follower term(final int term)
+    {
+        this.term = term;
+        return this;
     }
 }

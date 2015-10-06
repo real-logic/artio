@@ -153,9 +153,9 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     @Test
     public void shouldTimeoutLeader()
     {
-        follower1.poll(FRAGMENT_LIMIT, REPLY_TIMEOUT + 1);
+        follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
-        verifyBecomeCandidate();
+        becomesCandidate(replicator2);
     }
 
     @Test
@@ -165,9 +165,9 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         follower1.poll(FRAGMENT_LIMIT, HEARTBEAT_INTERVAL);
 
-        follower1.poll(FRAGMENT_LIMIT, REPLY_TIMEOUT + 1);
+        follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
-        verifyStayFollower();
+        staysFollower(replicator2);
     }
 
     @Test
@@ -175,9 +175,9 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     {
         leader.poll(FRAGMENT_LIMIT, HEARTBEAT_INTERVAL + 1);
 
-        follower1.poll(FRAGMENT_LIMIT, REPLY_TIMEOUT + 1);
+        follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
-        verifyStayFollower();
+        staysFollower(replicator2);
     }
 
     @Test
@@ -203,17 +203,6 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         pollLeader(2);
         return position;
-    }
-
-    private void verifyBecomeCandidate()
-    {
-        verify(replicator2).becomeCandidate();
-    }
-
-    private void verifyStayFollower()
-    {
-        verify(replicator2, never()).becomeCandidate();
-        verify(replicator2, never()).becomeLeader();
     }
 
     private void pollLeader(final int read)
@@ -244,19 +233,6 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     private void leaderNotCommitted(final int offset, final int length)
     {
         verify(leaderHandler, never()).onBlock(any(), eq(offset), eq(length), anyInt(), anyInt());
-    }
-
-    private Follower follower(final short id, final Replicator replicator, final FragmentHandler handler)
-    {
-        return new Follower(
-            id,
-            controlPublication(),
-            handler,
-            dataSubscription(),
-            controlSubscription(),
-            replicator,
-            0,
-            REPLY_TIMEOUT);
     }
 
 }

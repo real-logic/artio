@@ -20,20 +20,19 @@ import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
-import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
-import uk.co.real_logic.fix_gateway.messages.ConcensusHeartbeatEncoder;
-import uk.co.real_logic.fix_gateway.messages.MessageAcknowledgementEncoder;
-import uk.co.real_logic.fix_gateway.messages.RequestVoteEncoder;
+import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.streams.AbstractionPublication;
 
 public class ControlPublication extends AbstractionPublication
 {
     private static final int MESSAGE_ACKNOWLEDGEMENT_LENGTH = HEADER_LENGTH + MessageAcknowledgementEncoder.BLOCK_LENGTH;
     private static final int REQUEST_VOTE_LENGTH = HEADER_LENGTH + RequestVoteEncoder.BLOCK_LENGTH;
+    private static final int REPLY_VOTE_LENGTH = HEADER_LENGTH + ReplyVoteEncoder.BLOCK_LENGTH;
     private static final int CONCENSUS_HEARTBEAT_LENGTH = HEADER_LENGTH + ConcensusHeartbeatEncoder.BLOCK_LENGTH;
 
     private final MessageAcknowledgementEncoder messageAcknowledgement = new MessageAcknowledgementEncoder();
     private final RequestVoteEncoder requestVote = new RequestVoteEncoder();
+    private final ReplyVoteEncoder replyVote = new ReplyVoteEncoder();
     private final ConcensusHeartbeatEncoder concensusHeart = new ConcensusHeartbeatEncoder();
 
     public ControlPublication(
@@ -96,6 +95,33 @@ public class ControlPublication extends AbstractionPublication
             .candidateId(candidateId)
             .lastAckedPosition(lastAckedPosition)
             .term(term);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long saveReplyVote(final short candidateId, final int term, final Vote vote)
+    {
+        final long position = claim(REPLY_VOTE_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(replyVote.sbeBlockLength())
+            .templateId(replyVote.sbeTemplateId())
+            .schemaId(replyVote.sbeSchemaId())
+            .version(replyVote.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        replyVote
+            .wrap(buffer, offset)
+            .candidateId(candidateId)
+            .term(term)
+            .vote(vote);
 
         bufferClaim.commit();
 

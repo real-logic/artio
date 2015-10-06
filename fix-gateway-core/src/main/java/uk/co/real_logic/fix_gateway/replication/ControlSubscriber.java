@@ -26,6 +26,7 @@ public class ControlSubscriber implements FragmentHandler
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final MessageAcknowledgementDecoder messageAcknowledgement = new MessageAcknowledgementDecoder();
     private final RequestVoteDecoder requestVote = new RequestVoteDecoder();
+    private final ReplyVoteDecoder replyVote = new ReplyVoteDecoder();
     private final ConcensusHeartbeatDecoder concensusHeartbeat = new ConcensusHeartbeatDecoder();
 
     private final ControlHandler handler;
@@ -45,7 +46,7 @@ public class ControlSubscriber implements FragmentHandler
 
         switch (messageHeader.templateId())
         {
-            case MessageAcknowledgementEncoder.TEMPLATE_ID:
+            case MessageAcknowledgementDecoder.TEMPLATE_ID:
             {
 
                 messageAcknowledgement.wrap(buffer, offset, blockLength, version);
@@ -57,17 +58,29 @@ public class ControlSubscriber implements FragmentHandler
                 return;
             }
 
-            case RequestVoteEncoder.TEMPLATE_ID:
+            case RequestVoteDecoder.TEMPLATE_ID:
             {
                 requestVote.wrap(buffer, offset, blockLength, version);
                 handler.onRequestVote(
                     requestVote.candidateId(),
+                    requestVote.term(),
                     requestVote.lastAckedPosition()
                 );
                 return;
             }
 
-            case ConcensusHeartbeatEncoder.TEMPLATE_ID:
+            case ReplyVoteDecoder.TEMPLATE_ID:
+            {
+                replyVote.wrap(buffer, offset, blockLength, version);
+                handler.onReplyVote(
+                    replyVote.candidateId(),
+                    replyVote.term(),
+                    replyVote.vote()
+                );
+                return;
+            }
+
+            case ConcensusHeartbeatDecoder.TEMPLATE_ID:
             {
                 concensusHeartbeat.wrap(buffer, offset, blockLength, version);
                 handler.onConcensusHeartbeat(
