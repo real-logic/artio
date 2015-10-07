@@ -38,14 +38,16 @@ public class NodeRunner implements AutoCloseable, Role
     public static final long TIMEOUT_IN_MS = 100;
     public static final String AERON_GROUP = "aeron:udp?group=224.0.1.1:40456";
 
-    private final BlockHandler handler = mock(BlockHandler.class);
+    private final BlockHandler handler = (buffer, offset, length, sessionId, termId) -> {
+        replicatedPosition = offset + length;
+    };
     private final SwitchableLossGenerator lossGenerator = new SwitchableLossGenerator();
 
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
     private final Replicator replicator;
-    private final Publication dataPublication;
 
+    private long replicatedPosition = -1;
     private long timeInMs = 0;
 
     public NodeRunner(final int nodeId, final int... otherNodes)
@@ -71,6 +73,7 @@ public class NodeRunner implements AutoCloseable, Role
         replicator = new Replicator(
             (short) nodeId,
             controlPublication(),
+            dataPublication(),
             controlSubscription(),
             dataSubscription(),
             otherNodeIds,
@@ -79,7 +82,6 @@ public class NodeRunner implements AutoCloseable, Role
             new EntireClusterTermAcknowledgementStrategy(),
             handler
         );
-        dataPublication = dataPublication();
     }
 
     protected Subscription controlSubscription()
@@ -126,6 +128,16 @@ public class NodeRunner implements AutoCloseable, Role
     public boolean isLeader()
     {
         return replicator.isLeader();
+    }
+
+    public Replicator replicator()
+    {
+        return replicator;
+    }
+
+    public long replicatedPosition()
+    {
+        return replicatedPosition;
     }
 
     public void close()

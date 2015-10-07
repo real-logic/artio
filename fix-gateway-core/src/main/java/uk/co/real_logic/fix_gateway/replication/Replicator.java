@@ -15,8 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 
@@ -25,8 +27,10 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
  */
 public class Replicator implements Role
 {
+    public static final long NOT_LEADER = -3;
 
     private final short nodeId;
+    private final Publication dataPublication;
     private Role currentRole;
 
     private final Leader leader;
@@ -36,6 +40,7 @@ public class Replicator implements Role
     public Replicator(
         final short nodeId,
         final ControlPublication controlPublication,
+        final Publication dataPublication,
         final Subscription controlSubscription,
         final Subscription dataSubscription,
         final IntHashSet otherNodes,
@@ -45,6 +50,7 @@ public class Replicator implements Role
         final BlockHandler handler)
     {
         this.nodeId = nodeId;
+        this.dataPublication = dataPublication;
 
         final long heartbeatTimeInMs = timeoutIntervalInMs / 2;
 
@@ -104,6 +110,16 @@ public class Replicator implements Role
     public int poll(final int fragmentLimit, final long timeInMs)
     {
         return currentRole.poll(fragmentLimit, timeInMs);
+    }
+
+    public long offer(final DirectBuffer buffer, final int offset, final int length)
+    {
+        if (!isLeader())
+        {
+            return NOT_LEADER;
+        }
+
+        return dataPublication.offer(buffer, offset, length);
     }
 
     public boolean isLeader()
