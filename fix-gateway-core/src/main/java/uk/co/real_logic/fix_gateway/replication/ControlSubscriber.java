@@ -48,7 +48,6 @@ public class ControlSubscriber implements FragmentHandler
         {
             case MessageAcknowledgementDecoder.TEMPLATE_ID:
             {
-
                 messageAcknowledgement.wrap(buffer, offset, blockLength, version);
                 handler.onMessageAcknowledgement(
                     messageAcknowledgement.newAckedPosition(),

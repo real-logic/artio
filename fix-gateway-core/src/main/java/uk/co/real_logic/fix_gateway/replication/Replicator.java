@@ -15,12 +15,18 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.logbuffer.BlockHandler;
+import uk.co.real_logic.agrona.collections.IntHashSet;
+import uk.co.real_logic.fix_gateway.DebugLogger;
+
 /**
  * .
  */
 public class Replicator implements Role
 {
 
+    private final short nodeId;
     private Role currentRole;
 
     private final Leader leader;
@@ -28,24 +34,64 @@ public class Replicator implements Role
     private final Follower follower;
 
     public Replicator(
-        final Leader leader,
-        final Candidate candidate,
-        final Follower follower)
+        final short nodeId,
+        final ControlPublication controlPublication,
+        final Subscription controlSubscription,
+        final Subscription dataSubscription,
+        final IntHashSet otherNodes,
+        final long timeInMs,
+        final long timeoutIntervalInMs,
+        final TermAcknowledgementStrategy termAcknowledgementStrategy,
+        final BlockHandler handler)
     {
-        this.leader = leader;
-        this.candidate = candidate;
-        this.follower = follower;
+        this.nodeId = nodeId;
 
-        currentRole = candidate;
+        final long heartbeatTimeInMs = timeoutIntervalInMs / 2;
+
+        leader = new Leader(
+            nodeId,
+            termAcknowledgementStrategy,
+            otherNodes,
+            controlPublication,
+            controlSubscription,
+            dataSubscription,
+            this,
+            handler,
+            timeInMs,
+            heartbeatTimeInMs);
+
+        candidate = new Candidate(
+            nodeId,
+            controlPublication,
+            controlSubscription,
+            this,
+            otherNodes.size() + 1,
+            timeoutIntervalInMs);
+
+        follower = new Follower(
+            nodeId,
+            controlPublication,
+            (buffer, offset, length, header) -> System.out.println("TODO"),
+            dataSubscription,
+            controlSubscription,
+            this,
+            timeInMs,
+            timeoutIntervalInMs);
+
+        currentRole = follower;
     }
 
     public void becomeFollower(final long timeInMs, final int term, final long position)
     {
+        DebugLogger.log("%d: Follower @ %d in %d\n", nodeId, timeInMs, term);
+
         currentRole = follower.follow(timeInMs, term, position);
     }
 
     public void becomeLeader(final long timeInMs, final int term)
     {
+        DebugLogger.log("%d: Leader @ %d in %d\n", nodeId, timeInMs, term);
+
         currentRole = leader.getsElected(timeInMs, term);
     }
 
@@ -58,5 +104,10 @@ public class Replicator implements Role
     public int poll(final int fragmentLimit, final long timeInMs)
     {
         return currentRole.poll(fragmentLimit, timeInMs);
+    }
+
+    public boolean isLeader()
+    {
+        return currentRole == leader;
     }
 }

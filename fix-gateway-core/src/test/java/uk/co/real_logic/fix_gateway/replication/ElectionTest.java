@@ -104,14 +104,7 @@ public class ElectionTest extends AbstractReplicationTest
 
     private void runElection()
     {
-        poll1(node1);
-        poll1(node2);
-        poll1(node3);
-
-        //noinspection StatementWithEmptyBody
-        while (poll(node1) + poll(node2) + poll(node3) > 0)
-        {
-        }
+        run(node1, node2, node3);
     }
 
     private Candidate candidate(final short id, final Replicator replicator)

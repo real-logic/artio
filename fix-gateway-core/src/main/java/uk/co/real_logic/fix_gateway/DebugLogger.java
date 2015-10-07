@@ -112,6 +112,14 @@ public final class DebugLogger
         }
     }
 
+    public static void log(final String formatString, final long first)
+    {
+        if (DEBUG_PRINT_MESSAGES)
+        {
+            OUTPUT.printf(formatString, first);
+        }
+    }
+
     public static void log(final String formatString, final Object first, final Object second)
     {
         if (DEBUG_PRINT_MESSAGES)
@@ -125,6 +133,14 @@ public final class DebugLogger
         if (DEBUG_PRINT_MESSAGES)
         {
             OUTPUT.printf(formatString, first, second);
+        }
+    }
+
+    public static void log(final String formatString, final long first, final long second, final long third)
+    {
+        if (DEBUG_PRINT_MESSAGES)
+        {
+            OUTPUT.printf(formatString, first, second, third);
         }
     }
 

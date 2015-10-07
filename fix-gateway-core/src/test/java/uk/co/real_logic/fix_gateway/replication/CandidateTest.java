@@ -28,7 +28,7 @@ public class CandidateTest
     private static final long POSITION = 40;
     private static final long VOTE_TIMEOUT = 100;
     private static final int OLD_TERM = 1;
-    private static final int NEW_TERM = 2;
+    private static final int NEW_TERM = OLD_TERM + 1;
     private static final int CLUSTER_SIZE = 3;
     private static final short ID = 3;
 
@@ -44,7 +44,7 @@ public class CandidateTest
     {
         startElection();
 
-        requestsVote(1);
+        requestsVote(NEW_TERM);
     }
 
     @Test
@@ -116,17 +116,18 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.poll(1, VOTE_TIMEOUT + 1);
+        candidate.poll(1, VOTE_TIMEOUT * 2 + 1);
 
-        requestsVote(2);
+        requestsVote(NEW_TERM);
+        requestsVote(NEW_TERM + 1);
 
         neverBecomesLeader(replicator);
         neverBecomesFollower(replicator);
     }
 
-    private void requestsVote(final int wantedNumberOfInvocations)
+    private void requestsVote(final int term)
     {
-        verify(controlPublication, times(wantedNumberOfInvocations)).saveRequestVote(ID, POSITION, NEW_TERM);
+        verify(controlPublication, times(1)).saveRequestVote(ID, POSITION, term);
     }
 
     private void startElection()

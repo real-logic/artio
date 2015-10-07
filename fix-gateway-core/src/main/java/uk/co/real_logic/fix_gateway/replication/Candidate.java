@@ -16,14 +16,19 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 
 public class Candidate implements Role, ControlHandler
 {
     private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
+
+    private final ThreadLocalRandom random = ThreadLocalRandom.current();
 
     private final short id;
     private final ControlPublication controlPublication;
@@ -75,7 +80,8 @@ public class Candidate implements Role, ControlHandler
 
     public void onRequestVote(short candidateId, final int term, long lastAckedPosition)
     {
-
+        followIfNextTerm(candidateId, term, position,
+            term > this.term);
     }
 
     public void onReplyVote(final short candidateId, final int term, final Vote vote)
@@ -95,28 +101,36 @@ public class Candidate implements Role, ControlHandler
 
     public void onConcensusHeartbeat(short nodeId, final int term, final long position)
     {
-        if (nodeId != id && term >= this.term)
-        {
-            replicator.becomeFollower(timeInMs, term, position);
-        }
+        followIfNextTerm(nodeId, term, position, term >= this.term);
     }
 
     public void startNewElection(final long timeInMs, final int oldTerm, final long position)
     {
         this.position = position;
-        term = oldTerm + 1;
+        this.term = oldTerm;
         startElection(timeInMs);
+    }
+
+    private void followIfNextTerm(final short nodeId, final int term, final long position, final boolean termOk)
+    {
+        if (nodeId != id && position >= this.position && termOk)
+        {
+            replicator.becomeFollower(timeInMs, term, position);
+        }
     }
 
     private void startElection(final long timeInMs)
     {
+        DebugLogger.log("%d: startElection @ %d in %d\n", id, timeInMs, term);
+
         resetTimeout(timeInMs);
+        term++;
         votesFor = 1; // Vote for yourself
         controlPublication.saveRequestVote(id, position, term);
     }
 
     private void resetTimeout(final long timeInMs)
     {
-        currentVoteTimeout = timeInMs + voteTimeout;
+        currentVoteTimeout = timeInMs + random.nextLong(voteTimeout / 2, voteTimeout);
     }
 }

@@ -29,9 +29,7 @@ import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.agrona.CloseHelper.close;
 
 public class AbstractReplicationTest
@@ -44,7 +42,6 @@ public class AbstractReplicationTest
     protected static final long HEARTBEAT_INTERVAL = TIMEOUT / 2;
     protected static final int CLUSTER_SIZE = 3;
     protected static final long TIME = 0L;
-
 
     protected Replicator replicator1 = mock(Replicator.class);
     protected Replicator replicator2 = mock(Replicator.class);
@@ -92,12 +89,12 @@ public class AbstractReplicationTest
         close(mediaDriver);
     }
 
-    protected int poll(final Role role)
+    protected static int poll(final Role role)
     {
         return role.poll(FRAGMENT_LIMIT, 0);
     }
 
-    protected void poll1(final Role role)
+    protected static void poll1(final Role role)
     {
         while (role.poll(FRAGMENT_LIMIT, 0) == 0)
         {
@@ -117,7 +114,7 @@ public class AbstractReplicationTest
 
     protected static void becomesFollower(final Replicator replicator)
     {
-        verify(replicator).becomeFollower(anyLong(), anyInt(), anyLong());
+        verify(replicator, atLeastOnce()).becomeFollower(anyLong(), anyInt(), anyLong());
     }
 
     protected static void neverBecomesFollower(final Replicator replicator)
@@ -158,5 +155,17 @@ public class AbstractReplicationTest
             replicator,
             0,
             TIMEOUT);
+    }
+
+    protected static void run(final Role node1, final Role node2, final Role node3)
+    {
+        poll1(node1);
+        poll1(node2);
+        poll1(node3);
+
+        //noinspection StatementWithEmptyBody
+        while (poll(node1) + poll(node2) + poll(node3) > 0)
+        {
+        }
     }
 }
