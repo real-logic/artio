@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
@@ -35,7 +36,7 @@ public class Follower implements Role, FragmentHandler, ControlHandler
 
     private final short id;
     private final ControlPublication controlPublication;
-    private final FragmentHandler delegate;
+    private final BlockHandler handler;
     private final Subscription dataSubscription;
     private final Subscription controlSubscription;
     private final Replicator replicator;
@@ -53,7 +54,7 @@ public class Follower implements Role, FragmentHandler, ControlHandler
     public Follower(
         final short id,
         final ControlPublication controlPublication,
-        final FragmentHandler delegate,
+        final BlockHandler handler,
         final Subscription dataSubscription,
         final Subscription controlSubscription,
         final Replicator replicator,
@@ -62,7 +63,7 @@ public class Follower implements Role, FragmentHandler, ControlHandler
     {
         this.id = id;
         this.controlPublication = controlPublication;
-        this.delegate = delegate;
+        this.handler = handler;
         this.dataSubscription = dataSubscription;
         this.controlSubscription = controlSubscription;
         this.replicator = replicator;

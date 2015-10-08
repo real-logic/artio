@@ -20,7 +20,6 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
-import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
@@ -49,7 +48,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
 
     private BlockHandler leaderHandler = mock(BlockHandler.class);
-    private FragmentHandler follower1Handler = mock(FragmentHandler.class);
+    private BlockHandler follower1Handler = mock(BlockHandler.class);
 
     private Leader leader;
     private Follower follower1;
@@ -78,7 +77,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             HEARTBEAT_INTERVAL);
 
         follower1 = follower(FOLLOWER_1_ID, replicator2, follower1Handler);
-        follower2 = follower(FOLLOWER_2_ID, replicator3, mock(FragmentHandler.class));
+        follower2 = follower(FOLLOWER_2_ID, replicator3, mock(BlockHandler.class));
 
         dataPublication = dataPublication();
     }
@@ -208,9 +207,12 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         return position;
     }
 
-    private void pollLeader(final int read)
+    private void pollLeader(int toRead)
     {
-        assertEquals(read, poll(leader));
+        while (toRead > 0)
+        {
+            toRead -= poll(leader);
+        }
     }
 
     private int offerBuffer()

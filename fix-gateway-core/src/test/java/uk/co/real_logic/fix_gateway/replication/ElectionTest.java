@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 
 import static org.mockito.Mockito.mock;
 
@@ -36,7 +36,7 @@ public class ElectionTest extends AbstractReplicationTest
     {
         node1 = candidate((short) 1, replicator1);
         node2 = candidate((short) 2, replicator2);
-        node3 = follower((short) 3, replicator2, mock(FragmentHandler.class));
+        node3 = follower((short) 3, replicator2, mock(BlockHandler.class));
     }
 
     @Test
