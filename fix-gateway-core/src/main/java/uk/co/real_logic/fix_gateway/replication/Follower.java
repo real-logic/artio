@@ -45,7 +45,8 @@ public class Follower implements Role, ControlHandler, BlockHandler
     private long latestNextReceiveTimeInMs;
 
     private long receivedPosition;
-    private long committedPosition = 0;
+    private long commitPosition = 0;
+    private long lastAppliedPosition = 0;
     private int toCommitBufferUsed = 0;
 
     private boolean receivedHeartbeat = false;
@@ -91,6 +92,18 @@ public class Follower implements Role, ControlHandler, BlockHandler
                 receivedPosition += bytesRead;
                 controlPublication.saveMessageAcknowledgement(receivedPosition, id, OK);
                 onReceivedMessage(timeInMs);
+            }
+        }
+
+        final int committableBytes = (int) (commitPosition - lastAppliedPosition);
+        if (committableBytes > 0)
+        {
+            handler.onBlock(toCommitBuffer, 0, committableBytes, 0, 0); // TODO: session & term
+            lastAppliedPosition = commitPosition;
+
+            if (committableBytes != toCommitBufferUsed)
+            {
+                System.out.println("TODO: shuffle buffer");
             }
         }
 
@@ -157,6 +170,11 @@ public class Follower implements Role, ControlHandler, BlockHandler
         if (nodeId != this.id && term > this.term)
         {
             follow(this.timeInMs, term, position);
+        }
+
+        if (position > commitPosition)
+        {
+            commitPosition = position;
         }
     }
 

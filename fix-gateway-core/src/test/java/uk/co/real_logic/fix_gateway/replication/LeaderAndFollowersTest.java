@@ -100,12 +100,24 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     }
 
     @Test
+    public void shouldCommitOnFollowers()
+    {
+        final int position = roundtripABuffer();
+
+        poll(follower1, 3);
+
+        verify(follower1Handler).onBlock(any(), eq(0), eq(position), anyInt(), anyInt());
+    }
+
+    @Test
     public void shouldProcessSuccessiveChunks()
     {
         final int position1 = roundtripABuffer();
         leaderCommitted(0, position1);
 
         final int position2 = roundtripABuffer();
+
+        poll1(leader);
 
         leaderCommitted(position1, position2 - position1);
     }
@@ -209,9 +221,14 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
     private void pollLeader(int toRead)
     {
+        poll(leader, toRead);
+    }
+
+    private void poll(final Role role, int toRead)
+    {
         while (toRead > 0)
         {
-            toRead -= poll(leader);
+            toRead -= poll(role);
         }
     }
 

@@ -41,7 +41,7 @@ public class Leader implements Role, ControlHandler
     // Counts of how many acknowledgements
     private final Long2LongHashMap nodeToPosition = new Long2LongHashMap(NO_SESSION_ID);
 
-    private long lastPosition = 0;
+    private long commitPosition = 0;
     private long nextHeartbeatTimeInMs;
     private int term;
     private long timeInMs;
@@ -78,21 +78,27 @@ public class Leader implements Role, ControlHandler
         if (read > 0)
         {
             final long newPosition = termAcknowledgementStrategy.findAckedTerm(nodeToPosition);
-            final int delta = (int) (newPosition - lastPosition);
+            final int delta = (int) (newPosition - commitPosition);
             if (delta > 0)
             {
-                lastPosition = dataSubscription.blockPoll(handler, delta);
+                commitPosition = dataSubscription.blockPoll(handler, delta);
+                heartbeat();
                 updateHeartbeatInterval(timeInMs);
             }
         }
 
         if (timeInMs > nextHeartbeatTimeInMs)
         {
-            controlPublication.saveConcensusHeartbeat(nodeId, term, lastPosition);
+            heartbeat();
             updateHeartbeatInterval(timeInMs);
         }
 
         return read;
+    }
+
+    private void heartbeat()
+    {
+        controlPublication.saveConcensusHeartbeat(nodeId, term, commitPosition);
     }
 
     public void updateHeartbeatInterval(final long timeInMs)
