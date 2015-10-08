@@ -20,6 +20,7 @@ import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
@@ -33,6 +34,8 @@ public class Follower implements Role, FragmentHandler, ControlHandler
     private static final short NO_ONE = -1;
 
     private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
+    // TODO: buffer sizing, and avoiding the buffer
+    private final UnsafeBuffer toCommitBuffer = new UnsafeBuffer(new byte[128 * 1024 * 1024]);
 
     private final short id;
     private final ControlPublication controlPublication;
@@ -43,8 +46,14 @@ public class Follower implements Role, FragmentHandler, ControlHandler
     private final long replyTimeoutInMs;
 
     private long latestNextReceiveTimeInMs;
-    private long oldPosition = 0;
-    private long position;
+
+    private long lastReceivedPosition = 0;
+    private long receivedPosition;
+
+    private long committedPosition = 0;
+
+    private int toCommitBufferUsed = 0;
+
     private boolean receivedHeartbeat = false;
 
     private short votedFor = NO_ONE;
@@ -80,11 +89,11 @@ public class Follower implements Role, FragmentHandler, ControlHandler
 
         final int readDataMessages = dataSubscription.poll(this, fragmentLimit);
 
-        if (position > oldPosition)
+        if (receivedPosition > lastReceivedPosition)
         {
-            controlPublication.saveMessageAcknowledgement(position, id, OK);
+            controlPublication.saveMessageAcknowledgement(receivedPosition, id, OK);
             onReceivedMessage(timeInMs);
-            oldPosition = position;
+            lastReceivedPosition = receivedPosition;
         }
 
         if (receivedHeartbeat)
@@ -95,7 +104,7 @@ public class Follower implements Role, FragmentHandler, ControlHandler
 
         if (timeInMs > latestNextReceiveTimeInMs)
         {
-            replicator.becomeCandidate(timeInMs, term, position);
+            replicator.becomeCandidate(timeInMs, term, receivedPosition);
         }
 
         return readControlMessages + readDataMessages;
@@ -109,13 +118,13 @@ public class Follower implements Role, FragmentHandler, ControlHandler
     public void onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         final int headerOffset = header.offset();
-        if (position == headerOffset)
+        if (receivedPosition == headerOffset)
         {
-            position = header.position();
+            receivedPosition = header.position();
         }
-        else if (position < headerOffset)
+        else if (receivedPosition < headerOffset)
         {
-            controlPublication.saveMessageAcknowledgement(position, id, MISSING_LOG_ENTRIES);
+            controlPublication.saveMessageAcknowledgement(receivedPosition, id, MISSING_LOG_ENTRIES);
         }
     }
 
@@ -144,7 +153,7 @@ public class Follower implements Role, FragmentHandler, ControlHandler
         // Term has to be strictly greater because a follower has already
         // Voted for someone in its current term and is electing for the
         // next term
-        return candidatePosition >= position && term > this.term;
+        return candidatePosition >= receivedPosition && term > this.term;
     }
 
     private boolean canVoteFor(final short candidateId)
@@ -171,7 +180,7 @@ public class Follower implements Role, FragmentHandler, ControlHandler
         onReceivedMessage(timeInMs);
         votedFor = NO_ONE;
         this.term = term;
-        this.position = position;
+        this.receivedPosition = position;
         return this;
     }
 }
