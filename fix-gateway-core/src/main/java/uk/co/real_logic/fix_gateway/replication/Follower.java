@@ -17,19 +17,16 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
-import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
-import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
-import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 
-public class Follower implements Role, FragmentHandler, ControlHandler
+public class Follower implements Role, ControlHandler, BlockHandler
 {
     private static final short NO_ONE = -1;
 
@@ -47,11 +44,8 @@ public class Follower implements Role, FragmentHandler, ControlHandler
 
     private long latestNextReceiveTimeInMs;
 
-    private long lastReceivedPosition = 0;
     private long receivedPosition;
-
     private long committedPosition = 0;
-
     private int toCommitBufferUsed = 0;
 
     private boolean receivedHeartbeat = false;
@@ -87,13 +81,17 @@ public class Follower implements Role, FragmentHandler, ControlHandler
         final int readControlMessages =
             controlSubscription.poll(controlSubscriber, fragmentLimit);
 
-        final int readDataMessages = dataSubscription.poll(this, fragmentLimit);
-
-        if (receivedPosition > lastReceivedPosition)
+        long bytesRead = 0;
+        final int bufferLimit = toCommitBuffer.capacity() - toCommitBufferUsed;
+        if (bufferLimit > 0)
         {
-            controlPublication.saveMessageAcknowledgement(receivedPosition, id, OK);
-            onReceivedMessage(timeInMs);
-            lastReceivedPosition = receivedPosition;
+            bytesRead = dataSubscription.blockPoll(this, bufferLimit);
+            if (bytesRead > 0)
+            {
+                receivedPosition += bytesRead;
+                controlPublication.saveMessageAcknowledgement(receivedPosition, id, OK);
+                onReceivedMessage(timeInMs);
+            }
         }
 
         if (receivedHeartbeat)
@@ -107,25 +105,12 @@ public class Follower implements Role, FragmentHandler, ControlHandler
             replicator.becomeCandidate(timeInMs, term, receivedPosition);
         }
 
-        return readControlMessages + readDataMessages;
+        return readControlMessages + (int) bytesRead;
     }
 
     private void onReceivedMessage(final long timeInMs)
     {
         latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
-    }
-
-    public void onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
-    {
-        final int headerOffset = header.offset();
-        if (receivedPosition == headerOffset)
-        {
-            receivedPosition = header.position();
-        }
-        else if (receivedPosition < headerOffset)
-        {
-            controlPublication.saveMessageAcknowledgement(receivedPosition, id, MISSING_LOG_ENTRIES);
-        }
     }
 
     public void onMessageAcknowledgement(
@@ -182,5 +167,15 @@ public class Follower implements Role, FragmentHandler, ControlHandler
         this.term = term;
         this.receivedPosition = position;
         return this;
+    }
+
+    public void onBlock(final DirectBuffer srcBuffer,
+                        final int offset,
+                        final int length,
+                        final int sessionId,
+                        final int termId)
+    {
+        toCommitBuffer.putBytes(toCommitBufferUsed, srcBuffer, offset, length);
+        toCommitBufferUsed += length;
     }
 }
