@@ -35,7 +35,7 @@ import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.D
 public class NodeRunner implements AutoCloseable, Role
 {
 
-    public static final long TIMEOUT_IN_MS = 100;
+    public static final long TIMEOUT_IN_MS = 10_000;
     public static final String AERON_GROUP = "aeron:udp?group=224.0.1.1:40456";
 
     private final BlockHandler handler = (buffer, offset, length, sessionId, termId) -> {

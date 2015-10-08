@@ -126,4 +126,9 @@ public class Replicator implements Role
     {
         return currentRole == leader;
     }
+
+    public short nodeId()
+    {
+        return nodeId;
+    }
 }
