@@ -127,6 +127,16 @@ public class Replicator implements Role
         return currentRole == leader;
     }
 
+    public boolean isCandidate()
+    {
+        return currentRole == candidate;
+    }
+
+    public boolean isFollower()
+    {
+        return currentRole == follower;
+    }
+
     public short nodeId()
     {
         return nodeId;

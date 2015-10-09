@@ -20,10 +20,14 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
+import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Stream;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.stream.Collectors.toList;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.poll;
 import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.run;
@@ -68,10 +72,73 @@ public class ClusterReplicationTest
 
         sendMessageTo(leader.replicator());
 
-        awaitMessage();
+        assertMessageReceived();
     }
 
-    private void awaitMessage()
+    @Test(timeout = 10000)
+    public void shouldReformClusterAfterLeaderNetsplit()
+    {
+        shouldEstablishCluster();
+
+        final NodeRunner leader = leader();
+        final List<NodeRunner> followers = followers();
+
+        leader.dropFrames(true);
+
+        assertElectsNewLeader(followers);
+
+        leader.dropFrames(false);
+
+        assertBecomesFollower(leader);
+    }
+
+    @Test(timeout = 10000)
+    public void shouldRejoinClusterAfterFollowerNetsplit()
+    {
+        shouldEstablishCluster();
+
+        final NodeRunner follower = followers().get(0);
+
+        follower.dropFrames(true);
+
+        assertBecomesCandidate(follower);
+
+        follower.dropFrames(false);
+
+        assertBecomesFollower(follower);
+    }
+
+    private void assertBecomesCandidate(final NodeRunner follower)
+    {
+        final Replicator replicator = follower.replicator();
+        assertFalse(replicator.isCandidate());
+        while (!replicator.isCandidate())
+        {
+            pollAll();
+        }
+        assertTrue(replicator.isCandidate());
+    }
+
+    private void assertBecomesFollower(final NodeRunner leader)
+    {
+        final Replicator replicator = leader.replicator();
+        assertFalse(replicator.isFollower());
+        while (!replicator.isFollower())
+        {
+            pollAll();
+        }
+        assertTrue(replicator.isFollower());
+    }
+
+    private void assertElectsNewLeader(final List<NodeRunner> followers)
+    {
+        while (!foundLeader(followers))
+        {
+            pollAll();
+        }
+    }
+
+    private void assertMessageReceived()
     {
         while (hasSeenMessage(node1)
             && hasSeenMessage(node2)
@@ -113,13 +180,28 @@ public class ClusterReplicationTest
         return node1.isLeader() || node2.isLeader() || node3.isLeader();
     }
 
+    private boolean foundLeader(List<NodeRunner> nodes)
+    {
+        return nodes.stream().anyMatch(NodeRunner::isLeader);
+    }
+
     private NodeRunner leader()
     {
-        return Stream
-            .of(node1, node2, node3)
+        return nodes()
             .filter(NodeRunner::isLeader)
             .findFirst()
             .get(); // Just error the test if there's not a leader
+    }
+
+    private List<NodeRunner> followers()
+    {
+        return nodes().filter(node -> !node.isLeader()).collect(toList());
+    }
+
+    private Stream<NodeRunner> nodes()
+    {
+        return Stream
+            .of(node1, node2, node3);
     }
 
     private void runCluster()
