@@ -49,8 +49,6 @@ public class Follower implements Role, ControlHandler, BlockHandler
     private long lastAppliedPosition = 0;
     private int toCommitBufferUsed = 0;
 
-    private boolean receivedHeartbeat = false;
-
     private short votedFor = NO_ONE;
     private int term;
     private long timeInMs;
@@ -107,10 +105,9 @@ public class Follower implements Role, ControlHandler, BlockHandler
             }
         }
 
-        if (receivedHeartbeat)
+        if (readControlMessages > 0)
         {
             onReceivedMessage(timeInMs);
-            receivedHeartbeat = false;
         }
 
         if (timeInMs > latestNextReceiveTimeInMs)
@@ -166,7 +163,6 @@ public class Follower implements Role, ControlHandler, BlockHandler
 
     public void onConcensusHeartbeat(final short nodeId, final int term, final long position)
     {
-        receivedHeartbeat = true;
         if (nodeId != this.id && term > this.term)
         {
             follow(this.timeInMs, term, position);

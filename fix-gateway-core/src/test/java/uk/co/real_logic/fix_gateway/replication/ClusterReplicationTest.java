@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
@@ -59,14 +58,12 @@ public class ClusterReplicationTest
         }
     }
 
-    @Ignore
     @Test(timeout = 10000)
     public void shouldReplicateMessage()
     {
         shouldEstablishCluster();
 
         final NodeRunner leader = leader();
-        System.out.println(leader.replicator().nodeId());
 
         sendMessageTo(leader.replicator());
 
@@ -102,7 +99,7 @@ public class ClusterReplicationTest
         poll(node2);
         poll(node3);
         advanceAllClocks(10);
-        LockSupport.parkNanos(1);
+        LockSupport.parkNanos(MILLISECONDS.toNanos(1));
     }
 
     private boolean foundLeader()

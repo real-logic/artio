@@ -65,6 +65,7 @@ public class Candidate implements Role, ControlHandler
 
         if (timeInMs > currentVoteTimeout)
         {
+            //System.out.println("Timeout: " + timeInMs + " : " + currentVoteTimeout);
             startElection(timeInMs);
             work++;
         }
@@ -101,7 +102,8 @@ public class Candidate implements Role, ControlHandler
 
     public void onConcensusHeartbeat(short nodeId, final int term, final long position)
     {
-        followIfNextTerm(nodeId, term, position, term >= this.term);
+        // System.out.println("YES @ " + this.id);
+        followIfNextTerm(nodeId, term, position, true);
     }
 
     public void startNewElection(final long timeInMs, final int oldTerm, final long position)
@@ -116,6 +118,7 @@ public class Candidate implements Role, ControlHandler
         if (nodeId != id && position >= this.position && termOk)
         {
             replicator.becomeFollower(timeInMs, term, position);
+            stopTimeout();
         }
     }
 
@@ -127,6 +130,11 @@ public class Candidate implements Role, ControlHandler
         term++;
         votesFor = 1; // Vote for yourself
         controlPublication.saveRequestVote(id, position, term);
+    }
+
+    private void stopTimeout()
+    {
+        currentVoteTimeout = Long.MAX_VALUE;
     }
 
     private void resetTimeout(final long timeInMs)

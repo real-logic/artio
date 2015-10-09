@@ -52,7 +52,7 @@ public class Replicator implements Role
         this.nodeId = nodeId;
         this.dataPublication = dataPublication;
 
-        final long heartbeatTimeInMs = timeoutIntervalInMs / 2;
+        final long heartbeatTimeInMs = timeoutIntervalInMs / 4;
 
         leader = new Leader(
             nodeId,
