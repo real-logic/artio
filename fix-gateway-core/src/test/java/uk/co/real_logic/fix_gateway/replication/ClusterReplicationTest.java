@@ -35,6 +35,7 @@ public class ClusterReplicationTest
 {
 
     public static final int BUFFER_SIZE = 16;
+    public static final int POSITION_AFTER_MESSAGE = BUFFER_SIZE + HEADER_LENGTH;
 
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
 
@@ -67,17 +68,22 @@ public class ClusterReplicationTest
 
         sendMessageTo(leader.replicator());
 
-        awaitMessage(leader);
-
-        // TODO: test message on followers
+        awaitMessage();
     }
 
-    private void awaitMessage(final NodeRunner leader)
+    private void awaitMessage()
     {
-        while (leader.replicatedPosition() < BUFFER_SIZE + HEADER_LENGTH)
+        while (hasSeenMessage(node1)
+            && hasSeenMessage(node2)
+            && hasSeenMessage(node3))
         {
             pollAll();
         }
+    }
+
+    private boolean hasSeenMessage(final NodeRunner leader)
+    {
+        return leader.replicatedPosition() < POSITION_AFTER_MESSAGE;
     }
 
     private void sendMessageTo(final Replicator leader)
