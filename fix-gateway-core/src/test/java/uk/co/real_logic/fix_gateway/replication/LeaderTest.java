@@ -17,11 +17,11 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 
 import static org.mockito.Mockito.mock;
-import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.*;
+import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.becomesFollower;
+import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.neverBecomesFollower;
 
 public class LeaderTest
 {
@@ -41,7 +41,7 @@ public class LeaderTest
         mock(Subscription.class),
         mock(Subscription.class),
         replicator,
-        mock(BlockHandler.class),
+        mock(ReplicationHandler.class),
         0,
         10).getsElected(TIME, LEADERSHIP_TERM);
 

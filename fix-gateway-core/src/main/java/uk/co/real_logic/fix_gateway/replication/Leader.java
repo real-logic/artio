@@ -35,7 +35,7 @@ public class Leader implements Role, ControlHandler
     private final Subscription controlSubscription;
     private final Subscription dataSubscription;
     private final Replicator replicator;
-    private final BlockHandler handler;
+    private final BlockHandler blockHandler;
     private final long heartbeatIntervalInMs;
 
     // Counts of how many acknowledgements
@@ -54,7 +54,7 @@ public class Leader implements Role, ControlHandler
         final Subscription controlSubscription,
         final Subscription dataSubscription,
         final Replicator replicator,
-        final BlockHandler handler,
+        final ReplicationHandler handler,
         final long timeInMs,
         final long heartbeatIntervalInMs)
     {
@@ -64,7 +64,7 @@ public class Leader implements Role, ControlHandler
         this.controlSubscription = controlSubscription;
         this.dataSubscription = dataSubscription;
         this.replicator = replicator;
-        this.handler = handler;
+        this.blockHandler = (buffer, offset, length, sessionId, termId) -> handler.onBlock(buffer, offset, length);
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
         updateHeartbeatInterval(timeInMs);
@@ -81,7 +81,7 @@ public class Leader implements Role, ControlHandler
             final int delta = (int) (newPosition - commitPosition);
             if (delta > 0)
             {
-                commitPosition = dataSubscription.blockPoll(handler, delta);
+                commitPosition = dataSubscription.blockPoll(blockHandler, delta);
                 heartbeat();
                 updateHeartbeatInterval(timeInMs);
             }

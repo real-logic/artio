@@ -19,7 +19,6 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
@@ -38,9 +37,6 @@ public class NodeRunner implements AutoCloseable, Role
     public static final long TIMEOUT_IN_MS = 1000;
     public static final String AERON_GROUP = "aeron:udp?group=224.0.1.1:40456";
 
-    private final BlockHandler handler = (buffer, offset, length, sessionId, termId) -> {
-        replicatedPosition = offset + length;
-    };
     private final SwitchableLossGenerator lossGenerator = new SwitchableLossGenerator();
 
     private final MediaDriver mediaDriver;
@@ -80,7 +76,7 @@ public class NodeRunner implements AutoCloseable, Role
             timeInMs,
             TIMEOUT_IN_MS,
             new EntireClusterLeadershipTermAcknowledgementStrategy(),
-            handler
+            (buffer, offset, length) -> replicatedPosition = offset + length
         );
     }
 

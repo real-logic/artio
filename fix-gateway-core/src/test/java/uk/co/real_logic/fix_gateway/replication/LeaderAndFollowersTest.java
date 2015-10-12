@@ -19,7 +19,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
@@ -47,8 +46,8 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
 
-    private BlockHandler leaderHandler = mock(BlockHandler.class);
-    private BlockHandler follower1Handler = mock(BlockHandler.class);
+    private ReplicationHandler leaderHandler = mock(ReplicationHandler.class);
+    private ReplicationHandler follower1Handler = mock(ReplicationHandler.class);
 
     private Leader leader;
     private Follower follower1;
@@ -77,7 +76,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             HEARTBEAT_INTERVAL);
 
         follower1 = follower(FOLLOWER_1_ID, replicator2, follower1Handler);
-        follower2 = follower(FOLLOWER_2_ID, replicator3, mock(BlockHandler.class));
+        follower2 = follower(FOLLOWER_2_ID, replicator3, mock(ReplicationHandler.class));
 
         dataPublication = dataPublication();
     }
@@ -106,7 +105,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         poll(follower1, 3);
 
-        verify(follower1Handler).onBlock(any(), eq(0), eq(position), anyInt(), anyInt());
+        verify(follower1Handler).onBlock(any(), eq(0), eq(position));
     }
 
     @Test
@@ -242,19 +241,19 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     private void leaderCommitted(final int offset, final int length)
     {
         final ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
-        verify(leaderHandler).onBlock(bufferCaptor.capture(), eq(offset), eq(length), anyInt(), anyInt());
+        verify(leaderHandler).onBlock(bufferCaptor.capture(), eq(offset), eq(length));
         final DirectBuffer buffer = bufferCaptor.getValue();
         assertEquals(VALUE, buffer.getInt(OFFSET + DataHeaderFlyweight.HEADER_LENGTH));
     }
 
     private void leaderNeverCommitted()
     {
-        verify(leaderHandler, never()).onBlock(any(), anyInt(), anyInt(), anyInt(), anyInt());
+        verify(leaderHandler, never()).onBlock(any(), anyInt(), anyInt());
     }
 
     private void leaderNotCommitted(final int offset, final int length)
     {
-        verify(leaderHandler, never()).onBlock(any(), eq(offset), eq(length), anyInt(), anyInt());
+        verify(leaderHandler, never()).onBlock(any(), eq(offset), eq(length));
     }
 
 }

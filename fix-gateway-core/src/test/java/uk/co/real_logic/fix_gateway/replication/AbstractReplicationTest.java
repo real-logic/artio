@@ -21,7 +21,6 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.fix_gateway.TestFixtures;
@@ -144,7 +143,7 @@ public class AbstractReplicationTest
         neverBecomesFollower(replicator);
     }
 
-    protected Follower follower(final short id, final Replicator replicator, final BlockHandler handler)
+    protected Follower follower(final short id, final Replicator replicator, final ReplicationHandler handler)
     {
         return new Follower(
             id,

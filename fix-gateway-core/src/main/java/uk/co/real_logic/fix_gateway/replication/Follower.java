@@ -36,7 +36,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
 
     private final short id;
     private final ControlPublication controlPublication;
-    private final BlockHandler handler;
+    private final ReplicationHandler handler;
     private final Subscription dataSubscription;
     private final Subscription controlSubscription;
     private final Replicator replicator;
@@ -56,7 +56,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
     public Follower(
         final short id,
         final ControlPublication controlPublication,
-        final BlockHandler handler,
+        final ReplicationHandler handler,
         final Subscription dataSubscription,
         final Subscription controlSubscription,
         final Replicator replicator,
@@ -96,7 +96,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
         final int committableBytes = (int) (commitPosition - lastAppliedPosition);
         if (committableBytes > 0)
         {
-            handler.onBlock(toCommitBuffer, 0, committableBytes, 0, 0); // TODO: session & leaderShipTerm
+            handler.onBlock(toCommitBuffer, 0, committableBytes);
             lastAppliedPosition = commitPosition;
 
             if (committableBytes != toCommitBufferUsed)

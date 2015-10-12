@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -47,7 +46,7 @@ public class Replicator implements Role
         final long timeInMs,
         final long timeoutIntervalInMs,
         final LeadershipTermAcknowledgementStrategy leadershipTermAcknowledgementStrategy,
-        final BlockHandler handler)
+        final ReplicationHandler handler)
     {
         this.nodeId = nodeId;
         this.dataPublication = dataPublication;
