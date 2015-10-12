@@ -54,7 +54,7 @@ public class ClusterReplicationTest
         LockSupport.parkNanos(MILLISECONDS.toNanos(100));
     }
 
-    @Test(timeout = 10000)
+    @Test(timeout = 3000)
     public void shouldEstablishCluster()
     {
         while (!foundLeader())
@@ -63,7 +63,7 @@ public class ClusterReplicationTest
         }
     }
 
-    @Test(timeout = 10000)
+    @Test(timeout = 3000)
     public void shouldReplicateMessage()
     {
         shouldEstablishCluster();
@@ -75,7 +75,7 @@ public class ClusterReplicationTest
         assertMessageReceived();
     }
 
-    @Test(timeout = 10000)
+    @Test(timeout = 3000)
     public void shouldReformClusterAfterLeaderNetsplit()
     {
         shouldEstablishCluster();
@@ -92,7 +92,7 @@ public class ClusterReplicationTest
         assertBecomesFollower(leader);
     }
 
-    @Test(timeout = 10000)
+    @Test(timeout = 3000)
     public void shouldRejoinClusterAfterFollowerNetsplit()
     {
         shouldEstablishCluster();

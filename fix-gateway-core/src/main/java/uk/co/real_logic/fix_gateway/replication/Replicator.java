@@ -77,7 +77,7 @@ public class Replicator implements Role
         follower = new Follower(
             nodeId,
             controlPublication,
-            (buffer, offset, length, sessionId, termId) -> System.out.println("TODO"),
+            handler,
             dataSubscription,
             controlSubscription,
             this,
