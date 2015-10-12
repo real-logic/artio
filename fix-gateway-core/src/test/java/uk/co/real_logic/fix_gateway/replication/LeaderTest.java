@@ -73,9 +73,4 @@ public class LeaderTest
         neverBecomesFollower(replicator);
     }
 
-    @Test
-    public void shouldBecomeFollowerUponOtherLeaderSendingData()
-    {
-        // TODO: identify how to detect this
-    }
 }
