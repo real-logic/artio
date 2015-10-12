@@ -99,9 +99,10 @@ public class Follower implements Role, ControlHandler, BlockHandler
             handler.onBlock(toCommitBuffer, 0, committableBytes);
             lastAppliedPosition = commitPosition;
 
-            if (committableBytes != toCommitBufferUsed)
+            final int uncommittedBytes = toCommitBufferUsed - committableBytes;
+            if (uncommittedBytes > 0)
             {
-                System.out.println("TODO: shuffle buffer");
+                toCommitBuffer.putBytes(0, toCommitBuffer, committableBytes, uncommittedBytes);
             }
         }
 
