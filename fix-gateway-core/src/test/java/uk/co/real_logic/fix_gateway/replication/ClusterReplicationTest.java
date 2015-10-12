@@ -20,17 +20,15 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
-import java.util.List;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.poll;
-import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.run;
 
 /**
  * Test simulated cluster.
@@ -81,7 +79,7 @@ public class ClusterReplicationTest
         shouldEstablishCluster();
 
         final NodeRunner leader = leader();
-        final List<NodeRunner> followers = followers();
+        final NodeRunner[] followers = followers();
 
         leader.dropFrames(true);
 
@@ -97,7 +95,7 @@ public class ClusterReplicationTest
     {
         shouldEstablishCluster();
 
-        final NodeRunner follower = followers().get(0);
+        final NodeRunner follower = aFollower();
 
         follower.dropFrames(true);
 
@@ -108,29 +106,84 @@ public class ClusterReplicationTest
         assertBecomesFollower(follower);
     }
 
-    private void assertBecomesCandidate(final NodeRunner follower)
+    @Test(timeout = 3000)
+    public void shouldNotReplicateMessageUntilClusterReformed()
     {
-        final Replicator replicator = follower.replicator();
-        assertFalse(replicator.isCandidate());
-        while (!replicator.isCandidate())
+        shouldEstablishCluster();
+
+        final NodeRunner leader = leader();
+        final NodeRunner follower = aFollower();
+
+        follower.dropFrames(true);
+
+        sendMessageTo(leader.replicator());
+
+        assertBecomesCandidate(follower);
+
+        assertTrue(notAllNodesReceivedMessage());
+
+        follower.dropFrames(false);
+
+        assertBecomesFollower(follower);
+
+        assertMessageReceived();
+    }
+
+    @Test(timeout = 3000)
+    public void shouldReformClusterAfterFollowerNetsplit()
+    {
+        shouldEstablishCluster();
+
+        final NodeRunner[] followers = followers();
+
+        nodes().forEach(nodeRunner -> nodeRunner.dropFrames(true));
+
+        assertBecomesCandidate(followers);
+
+        nodes().forEach(nodeRunner -> nodeRunner.dropFrames(false));
+
+        assertBecomesFollower(followers);
+
+        assertTrue(foundLeader());
+    }
+
+    private NodeRunner aFollower()
+    {
+        return followers()[0];
+    }
+
+    private void assertBecomesCandidate(final NodeRunner ... nodes)
+    {
+        assertBecomes(Replicator::isCandidate, nodes);
+    }
+
+    private void assertBecomesFollower(final NodeRunner ... nodes)
+    {
+        assertBecomes(Replicator::isFollower, nodes);
+    }
+
+    private void assertBecomes(final Predicate<Replicator> predicate, final NodeRunner... nodes)
+    {
+        final Replicator[] replicators = getReplicators(nodes);
+        assertFalse(allMatch(replicators, predicate));
+        while (!allMatch(replicators, predicate))
         {
             pollAll();
         }
-        assertTrue(replicator.isCandidate());
+        assertTrue(allMatch(replicators, predicate));
     }
 
-    private void assertBecomesFollower(final NodeRunner leader)
+    private Replicator[] getReplicators(final NodeRunner[] nodes)
     {
-        final Replicator replicator = leader.replicator();
-        assertFalse(replicator.isFollower());
-        while (!replicator.isFollower())
-        {
-            pollAll();
-        }
-        assertTrue(replicator.isFollower());
+        return Stream.of(nodes).map(NodeRunner::replicator).toArray(Replicator[]::new);
     }
 
-    private void assertElectsNewLeader(final List<NodeRunner> followers)
+    private static <T> boolean allMatch(final T[] values, final Predicate<T> predicate)
+    {
+        return Stream.of(values).allMatch(predicate);
+    }
+
+    private void assertElectsNewLeader(final NodeRunner ... followers)
     {
         while (!foundLeader(followers))
         {
@@ -140,17 +193,20 @@ public class ClusterReplicationTest
 
     private void assertMessageReceived()
     {
-        while (hasSeenMessage(node1)
-            && hasSeenMessage(node2)
-            && hasSeenMessage(node3))
+        while (notAllNodesReceivedMessage())
         {
             pollAll();
         }
     }
 
-    private boolean hasSeenMessage(final NodeRunner leader)
+    private boolean notAllNodesReceivedMessage()
     {
-        return leader.replicatedPosition() < POSITION_AFTER_MESSAGE;
+        return notReceivedMessage(node1) && notReceivedMessage(node2) && notReceivedMessage(node3);
+    }
+
+    private boolean notReceivedMessage(final NodeRunner node)
+    {
+        return node.replicatedPosition() < POSITION_AFTER_MESSAGE;
     }
 
     private void sendMessageTo(final Replicator leader)
@@ -177,12 +233,13 @@ public class ClusterReplicationTest
 
     private boolean foundLeader()
     {
-        return node1.isLeader() || node2.isLeader() || node3.isLeader();
+        return foundLeader(node1, node2, node3);
     }
 
-    private boolean foundLeader(List<NodeRunner> nodes)
+    private boolean foundLeader(NodeRunner ... nodes)
     {
-        return nodes.stream().anyMatch(NodeRunner::isLeader);
+        final long leaderCount = Stream.of(nodes).filter(NodeRunner::isLeader).count();
+        return leaderCount == 1;
     }
 
     private NodeRunner leader()
@@ -193,20 +250,14 @@ public class ClusterReplicationTest
             .get(); // Just error the test if there's not a leader
     }
 
-    private List<NodeRunner> followers()
+    private NodeRunner[] followers()
     {
-        return nodes().filter(node -> !node.isLeader()).collect(toList());
+        return nodes().filter(node -> !node.isLeader()).toArray(NodeRunner[]::new);
     }
 
     private Stream<NodeRunner> nodes()
     {
-        return Stream
-            .of(node1, node2, node3);
-    }
-
-    private void runCluster()
-    {
-        run(node1, node2, node3);
+        return Stream.of(node1, node2, node3);
     }
 
     private void advanceAllClocks(final long delta)
