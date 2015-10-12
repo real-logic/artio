@@ -26,7 +26,7 @@ import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.*
 public class LeaderTest
 {
     private static final short ID = 2;
-    private static final int TERM = 1;
+    private static final int LEADERSHIP_TERM = 1;
     private static final long TIME = 10L;
     private static final long POSITION = 40L;
 
@@ -35,7 +35,7 @@ public class LeaderTest
 
     private Leader leader = new Leader(
         ID,
-        new EntireClusterTermAcknowledgementStrategy(),
+        new EntireClusterLeadershipTermAcknowledgementStrategy(),
         new IntHashSet(40, -1),
         controlPublication,
         mock(Subscription.class),
@@ -43,14 +43,14 @@ public class LeaderTest
         replicator,
         mock(BlockHandler.class),
         0,
-        10).getsElected(TIME, TERM);
+        10).getsElected(TIME, LEADERSHIP_TERM);
 
     @Test
     public void shouldBecomeFollowerUponOtherLeaderHeartbeating()
     {
         final short newLeaderId = 3;
 
-        leader.onConcensusHeartbeat(newLeaderId, TERM + 1, POSITION);
+        leader.onConcensusHeartbeat(newLeaderId, LEADERSHIP_TERM + 1, POSITION);
 
         becomesFollower(replicator);
     }
@@ -60,7 +60,7 @@ public class LeaderTest
     {
         final short newLeaderId = 3;
 
-        leader.onConcensusHeartbeat(newLeaderId, TERM, POSITION);
+        leader.onConcensusHeartbeat(newLeaderId, LEADERSHIP_TERM, POSITION);
 
         neverBecomesFollower(replicator);
     }
@@ -68,7 +68,7 @@ public class LeaderTest
     @Test
     public void shouldNotBecomeFollowerFromOwnHeartbeats()
     {
-        leader.onConcensusHeartbeat(ID, TERM, POSITION);
+        leader.onConcensusHeartbeat(ID, LEADERSHIP_TERM, POSITION);
 
         neverBecomesFollower(replicator);
     }

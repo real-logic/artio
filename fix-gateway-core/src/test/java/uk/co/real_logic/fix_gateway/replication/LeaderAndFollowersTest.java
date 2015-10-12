@@ -66,7 +66,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         leader = new Leader(
             LEADER_ID,
-            new EntireClusterTermAcknowledgementStrategy(),
+            new EntireClusterLeadershipTermAcknowledgementStrategy(),
             followers,
             controlPublication(),
             controlSubscription(),

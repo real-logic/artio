@@ -27,8 +27,8 @@ public class CandidateTest
 {
     private static final long POSITION = 40;
     private static final long VOTE_TIMEOUT = 100;
-    private static final int OLD_TERM = 1;
-    private static final int NEW_TERM = OLD_TERM + 1;
+    private static final int OLD_LEADERSHIP_TERM = 1;
+    private static final int NEW_LEADERSHIP_TERM = OLD_LEADERSHIP_TERM + 1;
     private static final int CLUSTER_SIZE = 3;
     private static final short ID = 3;
 
@@ -44,7 +44,7 @@ public class CandidateTest
     {
         startElection();
 
-        requestsVote(NEW_TERM);
+        requestsVote(NEW_LEADERSHIP_TERM);
     }
 
     @Test
@@ -52,7 +52,7 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.onReplyVote(ID, NEW_TERM, FOR);
+        candidate.onReplyVote(ID, NEW_LEADERSHIP_TERM, FOR);
 
         becomesLeader(replicator);
     }
@@ -62,7 +62,7 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.onReplyVote(ID, OLD_TERM, FOR);
+        candidate.onReplyVote(ID, OLD_LEADERSHIP_TERM, FOR);
 
         neverBecomesLeader(replicator);
     }
@@ -72,7 +72,7 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.onReplyVote(ID, NEW_TERM, AGAINST);
+        candidate.onReplyVote(ID, NEW_LEADERSHIP_TERM, AGAINST);
 
         neverBecomesLeader(replicator);
     }
@@ -84,7 +84,7 @@ public class CandidateTest
 
         startElection();
 
-        candidate.onReplyVote(otherCandidate, NEW_TERM, FOR);
+        candidate.onReplyVote(otherCandidate, NEW_LEADERSHIP_TERM, FOR);
 
         neverBecomesLeader(replicator);
     }
@@ -96,7 +96,7 @@ public class CandidateTest
 
         startElection();
 
-        candidate.onConcensusHeartbeat(otherCandidate, NEW_TERM, POSITION);
+        candidate.onConcensusHeartbeat(otherCandidate, NEW_LEADERSHIP_TERM, POSITION);
 
         becomesFollower(replicator);
     }
@@ -106,7 +106,7 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.onConcensusHeartbeat(ID, NEW_TERM, POSITION);
+        candidate.onConcensusHeartbeat(ID, NEW_LEADERSHIP_TERM, POSITION);
 
         neverBecomesFollower(replicator);
     }
@@ -118,8 +118,8 @@ public class CandidateTest
 
         candidate.poll(1, VOTE_TIMEOUT * 2 + 1);
 
-        requestsVote(NEW_TERM);
-        requestsVote(NEW_TERM + 1);
+        requestsVote(NEW_LEADERSHIP_TERM);
+        requestsVote(NEW_LEADERSHIP_TERM + 1);
 
         neverBecomesLeader(replicator);
         neverBecomesFollower(replicator);
@@ -132,6 +132,6 @@ public class CandidateTest
 
     private void startElection()
     {
-        candidate.startNewElection(0L, OLD_TERM, POSITION);
+        candidate.startNewElection(0L, OLD_LEADERSHIP_TERM, POSITION);
     }
 }

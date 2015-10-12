@@ -50,7 +50,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
     private int toCommitBufferUsed = 0;
 
     private short votedFor = NO_ONE;
-    private int term;
+    private int leaderShipTerm;
     private long timeInMs;
 
     public Follower(
@@ -96,7 +96,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
         final int committableBytes = (int) (commitPosition - lastAppliedPosition);
         if (committableBytes > 0)
         {
-            handler.onBlock(toCommitBuffer, 0, committableBytes, 0, 0); // TODO: session & term
+            handler.onBlock(toCommitBuffer, 0, committableBytes, 0, 0); // TODO: session & leaderShipTerm
             lastAppliedPosition = commitPosition;
 
             if (committableBytes != toCommitBufferUsed)
@@ -112,7 +112,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
 
         if (timeInMs > latestNextReceiveTimeInMs)
         {
-            replicator.becomeCandidate(timeInMs, term, receivedPosition);
+            replicator.becomeCandidate(timeInMs, leaderShipTerm, receivedPosition);
         }
 
         return readControlMessages + (int) bytesRead;
@@ -129,26 +129,26 @@ public class Follower implements Role, ControlHandler, BlockHandler
         // not interested in this message
     }
 
-    public void onRequestVote(final short candidateId, final int term, final long candidatePosition)
+    public void onRequestVote(final short candidateId, final int leaderShipTerm, final long candidatePosition)
     {
-        if (canVoteFor(candidateId) && safeToVote(term, candidatePosition))
+        if (canVoteFor(candidateId) && safeToVote(leaderShipTerm, candidatePosition))
         {
             //System.out.println("Voting for " + candidateId);
             votedFor = candidateId;
-            controlPublication.saveReplyVote(candidateId, term, FOR);
+            controlPublication.saveReplyVote(candidateId, leaderShipTerm, FOR);
         }
         else if (candidateId != this.id)
         {
-            controlPublication.saveReplyVote(candidateId, term, AGAINST);
+            controlPublication.saveReplyVote(candidateId, leaderShipTerm, AGAINST);
         }
     }
 
-    private boolean safeToVote(final int term, final long candidatePosition)
+    private boolean safeToVote(final int leaderShipTerm, final long candidatePosition)
     {
         // Term has to be strictly greater because a follower has already
-        // Voted for someone in its current term and is electing for the
-        // next term
-        return candidatePosition >= receivedPosition && term > this.term;
+        // Voted for someone in its current leaderShipTerm and is electing for the
+        // next leaderShipTerm
+        return candidatePosition >= receivedPosition && leaderShipTerm > this.leaderShipTerm;
     }
 
     private boolean canVoteFor(final short candidateId)
@@ -156,16 +156,16 @@ public class Follower implements Role, ControlHandler, BlockHandler
         return votedFor == NO_ONE || votedFor == candidateId;
     }
 
-    public void onReplyVote(final short candidateId, final int term, final Vote vote)
+    public void onReplyVote(final short candidateId, final int leaderShipTerm, final Vote vote)
     {
         // not interested in this message
     }
 
-    public void onConcensusHeartbeat(final short nodeId, final int term, final long position)
+    public void onConcensusHeartbeat(final short nodeId, final int leaderShipTerm, final long position)
     {
-        if (nodeId != this.id && term > this.term)
+        if (nodeId != this.id && leaderShipTerm > this.leaderShipTerm)
         {
-            follow(this.timeInMs, term, position);
+            follow(this.timeInMs, leaderShipTerm, position);
         }
 
         if (position > commitPosition)
@@ -174,11 +174,11 @@ public class Follower implements Role, ControlHandler, BlockHandler
         }
     }
 
-    public Follower follow(final long timeInMs, final int term, final long position)
+    public Follower follow(final long timeInMs, final int leaderShipTerm, final long position)
     {
         onReceivedMessage(timeInMs);
         votedFor = NO_ONE;
-        this.term = term;
+        this.leaderShipTerm = leaderShipTerm;
         this.receivedPosition = position;
         return this;
     }
@@ -187,7 +187,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
                         final int offset,
                         final int length,
                         final int sessionId,
-                        final int termId)
+                        final int leaderShipTermId)
     {
         toCommitBuffer.putBytes(toCommitBufferUsed, srcBuffer, offset, length);
         toCommitBufferUsed += length;

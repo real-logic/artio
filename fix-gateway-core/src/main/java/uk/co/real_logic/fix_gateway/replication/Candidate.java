@@ -39,7 +39,7 @@ public class Candidate implements Role, ControlHandler
 
     private long currentVoteTimeout;
     private int votesFor;
-    private int term;
+    private int leaderShipTerm;
     private long position;
     private long timeInMs;
 
@@ -79,57 +79,58 @@ public class Candidate implements Role, ControlHandler
 
     }
 
-    public void onRequestVote(short candidateId, final int term, long lastAckedPosition)
+    public void onRequestVote(short candidateId, final int leaderShipTerm, long lastAckedPosition)
     {
-        followIfNextTerm(candidateId, term, position,
-            term > this.term);
+        followIfNextTerm(candidateId, leaderShipTerm, position,
+            leaderShipTerm > this.leaderShipTerm);
     }
 
-    public void onReplyVote(final short candidateId, final int term, final Vote vote)
+    public void onReplyVote(final short candidateId, final int leaderShipTerm, final Vote vote)
     {
-        if (candidateId == id && term == this.term && vote == FOR)
+        if (candidateId == id && leaderShipTerm == this.leaderShipTerm && vote == FOR)
         {
             votesFor++;
 
             if (votesFor > clusterSize / 2)
             {
-                replicator.becomeLeader(timeInMs, term);
+                replicator.becomeLeader(timeInMs, leaderShipTerm);
 
-                controlPublication.saveConcensusHeartbeat(id, term, position);
+                controlPublication.saveConcensusHeartbeat(id, leaderShipTerm, position);
             }
         }
     }
 
-    public void onConcensusHeartbeat(short nodeId, final int term, final long position)
+    public void onConcensusHeartbeat(short nodeId, final int leaderShipTerm, final long position)
     {
         // System.out.println("YES @ " + this.id);
-        followIfNextTerm(nodeId, term, position, true);
+        followIfNextTerm(nodeId, leaderShipTerm, position, true);
     }
 
-    public void startNewElection(final long timeInMs, final int oldTerm, final long position)
+    public void startNewElection(final long timeInMs, final int oldLeaderShipTerm, final long position)
     {
         this.position = position;
-        this.term = oldTerm;
+        this.leaderShipTerm = oldLeaderShipTerm;
         startElection(timeInMs);
     }
 
-    private void followIfNextTerm(final short nodeId, final int term, final long position, final boolean termOk)
+    private void followIfNextTerm(
+        final short nodeId, final int leaderShipTerm, final long position, final boolean leaderShipTermOk)
     {
-        if (nodeId != id && position >= this.position && termOk)
+        if (nodeId != id && position >= this.position && leaderShipTermOk)
         {
-            replicator.becomeFollower(timeInMs, term, position);
+            replicator.becomeFollower(timeInMs, leaderShipTerm, position);
             stopTimeout();
         }
     }
 
     private void startElection(final long timeInMs)
     {
-        DebugLogger.log("%d: startElection @ %d in %d\n", id, timeInMs, term);
+        DebugLogger.log("%d: startElection @ %d in %d\n", id, timeInMs, leaderShipTerm);
 
         resetTimeout(timeInMs);
-        term++;
+        leaderShipTerm++;
         votesFor = 1; // Vote for yourself
-        controlPublication.saveRequestVote(id, position, term);
+        controlPublication.saveRequestVote(id, position, leaderShipTerm);
     }
 
     private void stopTimeout()

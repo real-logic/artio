@@ -62,7 +62,7 @@ public class ControlSubscriber implements FragmentHandler
                 requestVote.wrap(buffer, offset, blockLength, version);
                 handler.onRequestVote(
                     requestVote.candidateId(),
-                    requestVote.term(),
+                    requestVote.leaderShipTerm(),
                     requestVote.lastAckedPosition()
                 );
                 return;
@@ -73,7 +73,7 @@ public class ControlSubscriber implements FragmentHandler
                 replyVote.wrap(buffer, offset, blockLength, version);
                 handler.onReplyVote(
                     replyVote.candidateId(),
-                    replyVote.term(),
+                    replyVote.leaderShipTerm(),
                     replyVote.vote()
                 );
                 return;
@@ -84,7 +84,7 @@ public class ControlSubscriber implements FragmentHandler
                 concensusHeartbeat.wrap(buffer, offset, blockLength, version);
                 handler.onConcensusHeartbeat(
                     concensusHeartbeat.nodeId(),
-                    concensusHeartbeat.term(),
+                    concensusHeartbeat.leaderShipTerm(),
                     concensusHeartbeat.position()
                 );
                 return;

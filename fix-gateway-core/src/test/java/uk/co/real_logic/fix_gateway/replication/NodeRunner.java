@@ -79,7 +79,7 @@ public class NodeRunner implements AutoCloseable, Role
             otherNodeIds,
             timeInMs,
             TIMEOUT_IN_MS,
-            new EntireClusterTermAcknowledgementStrategy(),
+            new EntireClusterLeadershipTermAcknowledgementStrategy(),
             handler
         );
     }

@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 
-public interface TermAcknowledgementStrategy
+public interface LeadershipTermAcknowledgementStrategy
 {
     long findAckedTerm(final Long2LongHashMap sessionIdToPosition);
 }

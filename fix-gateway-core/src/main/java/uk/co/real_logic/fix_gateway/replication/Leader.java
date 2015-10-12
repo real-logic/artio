@@ -29,7 +29,7 @@ public class Leader implements Role, ControlHandler
     public static final int NO_SESSION_ID = -1;
 
     private final short nodeId;
-    private final TermAcknowledgementStrategy termAcknowledgementStrategy;
+    private final LeadershipTermAcknowledgementStrategy leadershipTermAcknowledgementStrategy;
     private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
     private final ControlPublication controlPublication;
     private final Subscription controlSubscription;
@@ -43,12 +43,12 @@ public class Leader implements Role, ControlHandler
 
     private long commitPosition = 0;
     private long nextHeartbeatTimeInMs;
-    private int term;
+    private int leaderShipTerm;
     private long timeInMs;
 
     public Leader(
         final short nodeId,
-        final TermAcknowledgementStrategy termAcknowledgementStrategy,
+        final LeadershipTermAcknowledgementStrategy leadershipTermAcknowledgementStrategy,
         final IntHashSet followers,
         final ControlPublication controlPublication,
         final Subscription controlSubscription,
@@ -59,7 +59,7 @@ public class Leader implements Role, ControlHandler
         final long heartbeatIntervalInMs)
     {
         this.nodeId = nodeId;
-        this.termAcknowledgementStrategy = termAcknowledgementStrategy;
+        this.leadershipTermAcknowledgementStrategy = leadershipTermAcknowledgementStrategy;
         this.controlPublication = controlPublication;
         this.controlSubscription = controlSubscription;
         this.dataSubscription = dataSubscription;
@@ -77,7 +77,7 @@ public class Leader implements Role, ControlHandler
 
         if (read > 0)
         {
-            final long newPosition = termAcknowledgementStrategy.findAckedTerm(nodeToPosition);
+            final long newPosition = leadershipTermAcknowledgementStrategy.findAckedTerm(nodeToPosition);
             final int delta = (int) (newPosition - commitPosition);
             if (delta > 0)
             {
@@ -98,7 +98,7 @@ public class Leader implements Role, ControlHandler
 
     private void heartbeat()
     {
-        controlPublication.saveConcensusHeartbeat(nodeId, term, commitPosition);
+        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition);
     }
 
     public void updateHeartbeatInterval(final long timeInMs)
@@ -115,28 +115,28 @@ public class Leader implements Role, ControlHandler
         }
     }
 
-    public void onRequestVote(final short candidateId, final int term, final long lastAckedPosition)
+    public void onRequestVote(final short candidateId, final int leaderShipTerm, final long lastAckedPosition)
     {
         // We've possibly timed out
     }
 
-    public void onReplyVote(final short candidateId, final int term, final Vote vote)
+    public void onReplyVote(final short candidateId, final int leaderShipTerm, final Vote vote)
     {
         // We've possibly timed out
     }
 
-    public void onConcensusHeartbeat(final short nodeId, final int term, final long position)
+    public void onConcensusHeartbeat(final short nodeId, final int leaderShipTerm, final long position)
     {
-        if (nodeId != this.nodeId && term > this.term)
+        if (nodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
         {
             // Should not receive this unless someone else is the leader
-            replicator.becomeFollower(timeInMs, term, position);
+            replicator.becomeFollower(timeInMs, leaderShipTerm, position);
         }
     }
 
-    public Leader getsElected(final long timeInMs, final int term)
+    public Leader getsElected(final long timeInMs, final int leaderShipTerm)
     {
-        this.term = term;
+        this.leaderShipTerm = leaderShipTerm;
         updateHeartbeatInterval(timeInMs);
         return this;
     }

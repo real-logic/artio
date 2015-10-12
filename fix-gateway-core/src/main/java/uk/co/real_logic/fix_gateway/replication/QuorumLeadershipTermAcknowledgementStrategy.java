@@ -21,9 +21,9 @@ import java.util.Arrays;
 import java.util.Iterator;
 
 /**
- * A term is acknowledged if a quorum of cluster members acknowledge it
+ * A leaderShipTerm is acknowledged if a quorum of cluster members acknowledge it
  */
-public class QuorumTermAcknowledgementStrategy implements TermAcknowledgementStrategy
+public class QuorumLeadershipTermAcknowledgementStrategy implements LeadershipTermAcknowledgementStrategy
 {
     private long[] positions = new long[0];
 

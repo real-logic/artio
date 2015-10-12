@@ -74,7 +74,7 @@ public class ControlPublication extends AbstractionPublication
         return position;
     }
 
-    public long saveRequestVote(final short candidateId, final long lastAckedPosition, final int term)
+    public long saveRequestVote(final short candidateId, final long lastAckedPosition, final int leaderShipTerm)
     {
         final long position = claim(REQUEST_VOTE_LENGTH);
 
@@ -94,14 +94,14 @@ public class ControlPublication extends AbstractionPublication
             .wrap(buffer, offset)
             .candidateId(candidateId)
             .lastAckedPosition(lastAckedPosition)
-            .term(term);
+            .leaderShipTerm(leaderShipTerm);
 
         bufferClaim.commit();
 
         return position;
     }
 
-    public long saveReplyVote(final short candidateId, final int term, final Vote vote)
+    public long saveReplyVote(final short candidateId, final int leaderShipTerm, final Vote vote)
     {
         final long position = claim(REPLY_VOTE_LENGTH);
 
@@ -120,7 +120,7 @@ public class ControlPublication extends AbstractionPublication
         replyVote
             .wrap(buffer, offset)
             .candidateId(candidateId)
-            .term(term)
+            .leaderShipTerm(leaderShipTerm)
             .vote(vote);
 
         bufferClaim.commit();
@@ -128,7 +128,7 @@ public class ControlPublication extends AbstractionPublication
         return position;
     }
 
-    public long saveConcensusHeartbeat(final short nodeId, final int term, final long position)
+    public long saveConcensusHeartbeat(final short nodeId, final int leaderShipTerm, final long position)
     {
         final long pos = claim(CONCENSUS_HEARTBEAT_LENGTH);
 
@@ -147,7 +147,7 @@ public class ControlPublication extends AbstractionPublication
         concensusHeart
             .wrap(buffer, offset)
             .nodeId(nodeId)
-            .term(term)
+            .leaderShipTerm(leaderShipTerm)
             .position(position);
 
         bufferClaim.commit();

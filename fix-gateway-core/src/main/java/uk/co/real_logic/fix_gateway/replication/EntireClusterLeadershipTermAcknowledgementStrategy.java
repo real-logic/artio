@@ -19,9 +19,9 @@ import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 
 
 /**
- * A term is acknowledged if the entire cluster acknowledges it.
+ * A leaderShipTerm is acknowledged if the entire cluster acknowledges it.
  */
-public class EntireClusterTermAcknowledgementStrategy implements TermAcknowledgementStrategy
+public class EntireClusterLeadershipTermAcknowledgementStrategy implements LeadershipTermAcknowledgementStrategy
 {
     @Override
     public long findAckedTerm(final Long2LongHashMap sessionIdToPosition)

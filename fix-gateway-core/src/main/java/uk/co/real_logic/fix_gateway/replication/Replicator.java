@@ -46,7 +46,7 @@ public class Replicator implements Role
         final IntHashSet otherNodes,
         final long timeInMs,
         final long timeoutIntervalInMs,
-        final TermAcknowledgementStrategy termAcknowledgementStrategy,
+        final LeadershipTermAcknowledgementStrategy leadershipTermAcknowledgementStrategy,
         final BlockHandler handler)
     {
         this.nodeId = nodeId;
@@ -56,7 +56,7 @@ public class Replicator implements Role
 
         leader = new Leader(
             nodeId,
-            termAcknowledgementStrategy,
+            leadershipTermAcknowledgementStrategy,
             otherNodes,
             controlPublication,
             controlSubscription,
