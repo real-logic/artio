@@ -83,14 +83,12 @@ public class Leader implements Role, ControlHandler
             {
                 commitPosition = dataSubscription.blockPoll(blockHandler, delta);
                 heartbeat();
-                updateHeartbeatInterval(timeInMs);
             }
         }
 
         if (timeInMs > nextHeartbeatTimeInMs)
         {
             heartbeat();
-            updateHeartbeatInterval(timeInMs);
         }
 
         return read;
@@ -99,11 +97,13 @@ public class Leader implements Role, ControlHandler
     private void heartbeat()
     {
         controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition);
+        updateHeartbeatInterval(timeInMs);
     }
 
     public void updateHeartbeatInterval(final long timeInMs)
     {
-        this.nextHeartbeatTimeInMs = timeInMs + nextHeartbeatTimeInMs;
+        // this.nextHeartbeatTimeInMs = timeInMs + nextHeartbeatTimeInMs;
+        this.nextHeartbeatTimeInMs = timeInMs + heartbeatIntervalInMs;
     }
 
     public void onMessageAcknowledgement(

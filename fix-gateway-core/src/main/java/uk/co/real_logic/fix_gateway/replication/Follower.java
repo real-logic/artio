@@ -31,8 +31,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
     private static final short NO_ONE = -1;
 
     private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
-    // TODO: buffer sizing, and avoiding the buffer
-    private final UnsafeBuffer toCommitBuffer = new UnsafeBuffer(new byte[128 * 1024 * 1024]);
+    private final UnsafeBuffer toCommitBuffer;
 
     private final short id;
     private final ControlPublication controlPublication;
@@ -61,7 +60,8 @@ public class Follower implements Role, ControlHandler, BlockHandler
         final Subscription controlSubscription,
         final Replicator replicator,
         final long timeInMs,
-        long replyTimeoutInMs)
+        long replyTimeoutInMs,
+        final int bufferSize)
     {
         this.id = id;
         this.controlPublication = controlPublication;
@@ -70,7 +70,8 @@ public class Follower implements Role, ControlHandler, BlockHandler
         this.controlSubscription = controlSubscription;
         this.replicator = replicator;
         this.replyTimeoutInMs = replyTimeoutInMs;
-        this.latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
+        updateReceiverTimeout(timeInMs);
+        toCommitBuffer = new UnsafeBuffer(new byte[bufferSize]);
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)
@@ -89,7 +90,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
             {
                 receivedPosition += bytesRead;
                 controlPublication.saveMessageAcknowledgement(receivedPosition, id, OK);
-                onReceivedMessage(timeInMs);
+                updateReceiverTimeout(timeInMs);
             }
         }
 
@@ -108,7 +109,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
 
         if (readControlMessages > 0)
         {
-            onReceivedMessage(timeInMs);
+            updateReceiverTimeout(timeInMs);
         }
 
         if (timeInMs > latestNextReceiveTimeInMs)
@@ -119,7 +120,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
         return readControlMessages + (int) bytesRead;
     }
 
-    private void onReceivedMessage(final long timeInMs)
+    private void updateReceiverTimeout(final long timeInMs)
     {
         latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
     }
@@ -177,7 +178,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
 
     public Follower follow(final long timeInMs, final int leaderShipTerm, final long position)
     {
-        onReceivedMessage(timeInMs);
+        updateReceiverTimeout(timeInMs);
         votedFor = NO_ONE;
         this.leaderShipTerm = leaderShipTerm;
         this.receivedPosition = position;

@@ -51,7 +51,7 @@ public class Replicator implements Role
         this.nodeId = nodeId;
         this.dataPublication = dataPublication;
 
-        final long heartbeatTimeInMs = timeoutIntervalInMs / 4;
+        final long heartbeatTimeInMs = timeoutIntervalInMs / 2;
 
         leader = new Leader(
             nodeId,
@@ -81,7 +81,8 @@ public class Replicator implements Role
             controlSubscription,
             this,
             timeInMs,
-            timeoutIntervalInMs);
+            timeoutIntervalInMs,
+            128 * 1024 * 1024);
 
         currentRole = follower;
     }

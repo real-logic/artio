@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
@@ -33,6 +34,7 @@ import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.p
 /**
  * Test simulated cluster.
  */
+@Ignore
 public class ClusterReplicationTest
 {
 

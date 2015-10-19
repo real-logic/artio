@@ -153,7 +153,8 @@ public class AbstractReplicationTest
             controlSubscription(),
             replicator,
             0,
-            TIMEOUT);
+            TIMEOUT,
+            1024 * 1024);
     }
 
     protected static void run(final Role node1, final Role node2, final Role node3)
