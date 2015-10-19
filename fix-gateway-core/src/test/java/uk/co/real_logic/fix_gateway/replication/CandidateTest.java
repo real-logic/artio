@@ -29,8 +29,11 @@ public class CandidateTest
     private static final long VOTE_TIMEOUT = 100;
     private static final int OLD_LEADERSHIP_TERM = 1;
     private static final int NEW_LEADERSHIP_TERM = OLD_LEADERSHIP_TERM + 1;
-    private static final int CLUSTER_SIZE = 3;
+    private static final int CLUSTER_SIZE = 5;
+
     private static final short ID = 3;
+    private static final short ID_4 = 4;
+    private static final short ID_5 = 5;
 
     private ControlPublication controlPublication = mock(ControlPublication.class);
     private Subscription controlSubscription = mock(Subscription.class);
@@ -52,7 +55,8 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.onReplyVote(ID, NEW_LEADERSHIP_TERM, FOR);
+        candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR);
+        candidate.onReplyVote(ID_5, ID, NEW_LEADERSHIP_TERM, FOR);
 
         becomesLeader(replicator);
     }
@@ -62,7 +66,8 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.onReplyVote(ID, OLD_LEADERSHIP_TERM, FOR);
+        candidate.onReplyVote(ID_4, ID, OLD_LEADERSHIP_TERM, FOR);
+        candidate.onReplyVote(ID_5, ID, OLD_LEADERSHIP_TERM, FOR);
 
         neverBecomesLeader(replicator);
     }
@@ -72,7 +77,7 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.onReplyVote(ID, NEW_LEADERSHIP_TERM, AGAINST);
+        candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, AGAINST);
 
         neverBecomesLeader(replicator);
     }
@@ -84,7 +89,19 @@ public class CandidateTest
 
         startElection();
 
-        candidate.onReplyVote(otherCandidate, NEW_LEADERSHIP_TERM, FOR);
+        candidate.onReplyVote(ID_4, otherCandidate, NEW_LEADERSHIP_TERM, FOR);
+        candidate.onReplyVote(ID_5, otherCandidate, NEW_LEADERSHIP_TERM, FOR);
+
+        neverBecomesLeader(replicator);
+    }
+
+    @Test
+    public void shouldNotDoubleCountVotes()
+    {
+        startElection();
+
+        candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR);
+        candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR);
 
         neverBecomesLeader(replicator);
     }

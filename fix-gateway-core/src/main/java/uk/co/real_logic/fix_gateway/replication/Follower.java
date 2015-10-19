@@ -33,7 +33,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
     private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
     private final UnsafeBuffer toCommitBuffer;
 
-    private final short id;
+    private final short nodeId;
     private final ControlPublication controlPublication;
     private final ReplicationHandler handler;
     private final Subscription dataSubscription;
@@ -53,7 +53,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
     private long timeInMs;
 
     public Follower(
-        final short id,
+        final short nodeId,
         final ControlPublication controlPublication,
         final ReplicationHandler handler,
         final Subscription dataSubscription,
@@ -63,7 +63,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
         long replyTimeoutInMs,
         final int bufferSize)
     {
-        this.id = id;
+        this.nodeId = nodeId;
         this.controlPublication = controlPublication;
         this.handler = handler;
         this.dataSubscription = dataSubscription;
@@ -89,7 +89,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
             if (bytesRead > 0)
             {
                 receivedPosition += bytesRead;
-                controlPublication.saveMessageAcknowledgement(receivedPosition, id, OK);
+                controlPublication.saveMessageAcknowledgement(receivedPosition, nodeId, OK);
                 updateReceiverTimeout(timeInMs);
             }
         }
@@ -137,11 +137,11 @@ public class Follower implements Role, ControlHandler, BlockHandler
         {
             //System.out.println("Voting for " + candidateId);
             votedFor = candidateId;
-            controlPublication.saveReplyVote(candidateId, leaderShipTerm, FOR);
+            controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR);
         }
-        else if (candidateId != this.id)
+        else if (candidateId != nodeId)
         {
-            controlPublication.saveReplyVote(candidateId, leaderShipTerm, AGAINST);
+            controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST);
         }
     }
 
@@ -158,14 +158,15 @@ public class Follower implements Role, ControlHandler, BlockHandler
         return votedFor == NO_ONE || votedFor == candidateId;
     }
 
-    public void onReplyVote(final short candidateId, final int leaderShipTerm, final Vote vote)
+    public void onReplyVote(
+        final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
         // not interested in this message
     }
 
     public void onConcensusHeartbeat(final short nodeId, final int leaderShipTerm, final long position)
     {
-        if (nodeId != this.id && leaderShipTerm > this.leaderShipTerm)
+        if (nodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
         {
             follow(this.timeInMs, leaderShipTerm, position);
         }

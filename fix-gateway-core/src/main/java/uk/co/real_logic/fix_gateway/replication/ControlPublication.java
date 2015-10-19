@@ -101,7 +101,9 @@ public class ControlPublication extends AbstractionPublication
         return position;
     }
 
-    public long saveReplyVote(final short candidateId, final int leaderShipTerm, final Vote vote)
+    public long saveReplyVote(final short senderNodeId, final short candidateId,
+                              final int leaderShipTerm,
+                              final Vote vote)
     {
         final long position = claim(REPLY_VOTE_LENGTH);
 
@@ -119,6 +121,7 @@ public class ControlPublication extends AbstractionPublication
 
         replyVote
             .wrap(buffer, offset)
+            .senderNodeId(senderNodeId)
             .candidateId(candidateId)
             .leaderShipTerm(leaderShipTerm)
             .vote(vote);

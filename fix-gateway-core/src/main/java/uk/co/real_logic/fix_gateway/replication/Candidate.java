@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
@@ -36,9 +37,9 @@ public class Candidate implements Role, ControlHandler
     private final Replicator replicator;
     private final int clusterSize;
     private final long voteTimeout;
+    private final IntHashSet votesFor;
 
     private long currentVoteTimeout;
-    private int votesFor;
     private int leaderShipTerm;
     private long position;
     private long timeInMs;
@@ -56,6 +57,7 @@ public class Candidate implements Role, ControlHandler
         this.replicator = replicator;
         this.clusterSize = clusterSize;
         this.voteTimeout = voteTimeout;
+        votesFor = new IntHashSet(2 * clusterSize, -1);
     }
 
     public int poll(int fragmentLimit, final long timeInMs)
@@ -85,13 +87,12 @@ public class Candidate implements Role, ControlHandler
             leaderShipTerm > this.leaderShipTerm);
     }
 
-    public void onReplyVote(final short candidateId, final int leaderShipTerm, final Vote vote)
+    public void onReplyVote(
+        final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
-        if (candidateId == id && leaderShipTerm == this.leaderShipTerm && vote == FOR)
+        if (candidateId == id && leaderShipTerm == this.leaderShipTerm && vote == FOR && votesFor.add(senderNodeId))
         {
-            votesFor++;
-
-            if (votesFor > clusterSize / 2)
+            if (votesFor.size() > clusterSize / 2)
             {
                 replicator.becomeLeader(timeInMs, leaderShipTerm);
 
@@ -118,6 +119,7 @@ public class Candidate implements Role, ControlHandler
     {
         if (nodeId != id && position >= this.position && leaderShipTermOk)
         {
+            votesFor.clear();
             replicator.becomeFollower(timeInMs, leaderShipTerm, position);
             stopTimeout();
         }
@@ -129,7 +131,7 @@ public class Candidate implements Role, ControlHandler
 
         resetTimeout(timeInMs);
         leaderShipTerm++;
-        votesFor = 1; // Vote for yourself
+        votesFor.add(id); // Vote for yourself
         controlPublication.saveRequestVote(id, position, leaderShipTerm);
     }
 

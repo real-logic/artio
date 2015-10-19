@@ -120,7 +120,8 @@ public class Leader implements Role, ControlHandler
         // We've possibly timed out
     }
 
-    public void onReplyVote(final short candidateId, final int leaderShipTerm, final Vote vote)
+    public void onReplyVote(
+        final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
         // We've possibly timed out
     }

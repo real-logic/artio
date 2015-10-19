@@ -25,7 +25,7 @@ public interface ControlHandler
 
     void onRequestVote(final short candidateId, final int leaderShipTerm, final long lastAckedPosition);
 
-    void onReplyVote(final short candidateId, final int leaderShipTerm, final Vote vote);
+    void onReplyVote(final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote);
 
     void onConcensusHeartbeat(final short nodeId, final int leaderShipTerm, final long position);
 }

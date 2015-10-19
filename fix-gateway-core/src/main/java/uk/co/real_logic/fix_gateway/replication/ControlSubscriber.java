@@ -72,6 +72,7 @@ public class ControlSubscriber implements FragmentHandler
             {
                 replyVote.wrap(buffer, offset, blockLength, version);
                 handler.onReplyVote(
+                    replyVote.senderNodeId(),
                     replyVote.candidateId(),
                     replyVote.leaderShipTerm(),
                     replyVote.vote()
