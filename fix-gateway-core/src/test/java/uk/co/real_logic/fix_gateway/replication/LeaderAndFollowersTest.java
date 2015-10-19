@@ -165,8 +165,10 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     public void shouldTimeoutLeader()
     {
         follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
+        follower2.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
         becomesCandidate(replicator2);
+        becomesCandidate(replicator3);
     }
 
     @Test
