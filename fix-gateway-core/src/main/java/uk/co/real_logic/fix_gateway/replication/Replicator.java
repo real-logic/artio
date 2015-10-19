@@ -82,7 +82,7 @@ public class Replicator implements Role
             this,
             timeInMs,
             timeoutIntervalInMs,
-            128 * 1024 * 1024);
+            128 * 1024 * 1024); // TODO: make configurable
 
         currentRole = follower;
     }

@@ -164,9 +164,9 @@ public class Follower implements Role, ControlHandler, BlockHandler
         // not interested in this message
     }
 
-    public void onConcensusHeartbeat(final short nodeId, final int leaderShipTerm, final long position)
+    public void onConcensusHeartbeat(final short leaderNodeId, final int leaderShipTerm, final long position)
     {
-        if (nodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
+        if (leaderNodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
         {
             follow(this.timeInMs, leaderShipTerm, position);
         }

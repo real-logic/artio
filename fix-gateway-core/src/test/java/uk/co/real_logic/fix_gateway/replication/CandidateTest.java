@@ -62,7 +62,7 @@ public class CandidateTest
     }
 
     @Test
-    public void shouldNotBecomeLeaderUponReceiptOfVotesForWrongTerm()
+    public void shouldNotCountVotesForWrongTerm()
     {
         startElection();
 
@@ -73,7 +73,7 @@ public class CandidateTest
     }
 
     @Test
-    public void shouldNotBecomeLeaderUponReceiptOfVotesAgainst()
+    public void shouldNotCountVotesAgainst()
     {
         startElection();
 
@@ -83,7 +83,7 @@ public class CandidateTest
     }
 
     @Test
-    public void shouldNotBecomeLeaderUponReceiptOfVotesForOtherCandidates()
+    public void shouldNotCountVotesForOtherCandidates()
     {
         final short otherCandidate = (short) 2;
 
