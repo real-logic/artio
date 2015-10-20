@@ -42,9 +42,13 @@ public class AbstractReplicationTest
     protected static final int CLUSTER_SIZE = 3;
     protected static final long TIME = 0L;
 
-    protected Replicator replicator1 = mock(Replicator.class);
-    protected Replicator replicator2 = mock(Replicator.class);
-    protected Replicator replicator3 = mock(Replicator.class);
+    protected RaftNode raftNode1 = mock(RaftNode.class);
+    protected RaftNode raftNode2 = mock(RaftNode.class);
+    protected RaftNode raftNode3 = mock(RaftNode.class);
+
+    protected TermState termState1 = new TermState();
+    protected TermState termState2 = new TermState();
+    protected TermState termState3 = new TermState();
 
     protected MediaDriver mediaDriver;
     protected Aeron aeron;
@@ -101,49 +105,50 @@ public class AbstractReplicationTest
         }
     }
 
-    protected static void becomesCandidate(final Replicator replicator)
+    protected static void becomesCandidate(final RaftNode raftNode)
     {
-        verify(replicator).becomeCandidate(anyLong(), anyInt(), anyLong());
+        verify(raftNode).becomeCandidate(anyLong(), anyInt(), anyLong());
     }
 
-    protected static void neverBecomesCandidate(final Replicator replicator)
+    protected static void neverBecomesCandidate(final RaftNode raftNode)
     {
-        verify(replicator, never()).becomeCandidate(anyLong(), anyInt(), anyLong());
+        verify(raftNode, never()).becomeCandidate(anyLong(), anyInt(), anyLong());
     }
 
-    protected static void becomesFollower(final Replicator replicator)
+    protected static void becomesFollower(final RaftNode raftNode)
     {
-        verify(replicator, atLeastOnce()).becomeFollower(anyLong(), anyInt(), anyLong());
+        verify(raftNode, atLeastOnce()).transitionToFollower(any(Candidate.class), anyLong());
     }
 
-    protected static void neverBecomesFollower(final Replicator replicator)
+    protected static void neverBecomesFollower(final RaftNode raftNode)
     {
-        verify(replicator, never()).becomeFollower(anyLong(), anyInt(), anyLong());
+        verify(raftNode, never()).transitionToFollower(any(Leader.class), anyLong());
     }
 
-    protected static void becomesLeader(final Replicator replicator)
+    protected static void becomesLeader(final RaftNode raftNode)
     {
-        verify(replicator).becomeLeader(anyLong(), anyInt());
+        verify(raftNode).transitionToLeader(anyLong());
     }
 
-    protected static void neverBecomesLeader(final Replicator replicator)
+    protected static void neverBecomesLeader(final RaftNode raftNode)
     {
-        verify(replicator, never()).becomeLeader(anyLong(), anyInt());
+        verify(raftNode, never()).transitionToLeader(anyLong());
     }
 
-    protected static void staysFollower(final Replicator replicator)
+    protected static void staysFollower(final RaftNode raftNode)
     {
-        neverBecomesCandidate(replicator);
-        neverBecomesLeader(replicator);
+        neverBecomesCandidate(raftNode);
+        neverBecomesLeader(raftNode);
     }
 
-    protected static void staysLeader(final Replicator replicator)
+    protected static void staysLeader(final RaftNode raftNode)
     {
-        neverBecomesCandidate(replicator);
-        neverBecomesFollower(replicator);
+        neverBecomesCandidate(raftNode);
+        neverBecomesFollower(raftNode);
     }
 
-    protected Follower follower(final short id, final Replicator replicator, final ReplicationHandler handler)
+    protected Follower follower(
+        final short id, final RaftNode raftNode, final ReplicationHandler handler, final TermState termState)
     {
         return new Follower(
             id,
@@ -151,10 +156,11 @@ public class AbstractReplicationTest
             handler,
             dataSubscription(),
             controlSubscription(),
-            replicator,
+            raftNode,
             0,
             TIMEOUT,
-            1024 * 1024);
+            1024 * 1024,
+            termState);
     }
 
     protected static void run(final Role node1, final Role node2, final Role node3)

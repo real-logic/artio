@@ -24,7 +24,7 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 /**
  * .
  */
-public class Replicator implements Role
+public class RaftNode implements Role
 {
     public static final long NOT_LEADER = -3;
 
@@ -32,11 +32,82 @@ public class Replicator implements Role
     private final Publication dataPublication;
     private Role currentRole;
 
+    private final TermState termState = new TermState();
     private final Leader leader;
     private final Candidate candidate;
     private final Follower follower;
 
-    public Replicator(
+    private abstract class ClusterRole
+    {
+        public void transitionToLeader(final Candidate candidate, final long timeInMs)
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        public void transitionToCandidate(final Follower follower, final long timeInMs)
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        public void transitionToFollower(final Candidate candidate, final long timeInMs)
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        public void transitionToFollower(final Leader leader, final long timeInMs)
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        public void transitionToCandidate(final Candidate candidate, final TermState termState)
+        {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private final ClusterRole leaderRole = new ClusterRole()
+    {
+        public void transitionToFollower(final Leader leader, final TermState termState, final long timeInMs)
+        {
+            DebugLogger.log("%d: Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+
+            currentRole = follower.follow(timeInMs, termState.leadershipTerm(), termState.position());
+        }
+    };
+
+    private final ClusterRole followerRole = new ClusterRole()
+    {
+        public void transitionToCandidate(final Follower follower, final long timeInMs)
+        {
+            currentRole = candidate;
+
+            candidate.startNewElection(timeInMs);
+        }
+    };
+
+    private final ClusterRole candidateRole = new ClusterRole()
+    {
+        public void transitionToLeader(final Candidate candidate, long timeInMs)
+        {
+            DebugLogger.log("%d: Leader @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+
+            currentRole = leader.getsElected(timeInMs);
+        }
+
+        public void transitionToFollower(final Candidate candidate, final long timeInMs)
+        {
+            DebugLogger.log("%d: Follower @ %d in %d\n", nodeId, timeInMs);
+
+            currentRole = follower.follow(timeInMs, termState.leadershipTerm(), termState.position());
+        }
+
+        public void transitionToCandidate(final Candidate candidate, TermState termState)
+        {
+
+        }
+    };
+
+    public RaftNode(
         final short nodeId,
         final ControlPublication controlPublication,
         final Publication dataPublication,
@@ -63,7 +134,8 @@ public class Replicator implements Role
             this,
             handler,
             timeInMs,
-            heartbeatTimeInMs);
+            heartbeatTimeInMs,
+            termState);
 
         candidate = new Candidate(
             nodeId,
@@ -71,7 +143,8 @@ public class Replicator implements Role
             controlSubscription,
             this,
             otherNodes.size() + 1,
-            timeoutIntervalInMs);
+            timeoutIntervalInMs,
+            termState);
 
         follower = new Follower(
             nodeId,
@@ -82,29 +155,30 @@ public class Replicator implements Role
             this,
             timeInMs,
             timeoutIntervalInMs,
-            128 * 1024 * 1024); // TODO: make configurable
+            128 * 1024 * 1024, // TODO: make configurable
+            termState);
 
         currentRole = follower;
     }
 
-    public void becomeFollower(final long timeInMs, final int term, final long position)
+    public void transitionToFollower(final Candidate candidate, final long timeInMs)
     {
-        DebugLogger.log("%d: Follower @ %d in %d\n", nodeId, timeInMs, term);
-
-        currentRole = follower.follow(timeInMs, term, position);
+        candidateRole.transitionToFollower(candidate, timeInMs);
     }
 
-    public void becomeLeader(final long timeInMs, final int term)
+    public void transitionToFollower(final Leader leader, final long timeInMs)
     {
-        DebugLogger.log("%d: Leader @ %d in %d\n", nodeId, timeInMs, term);
+        leaderRole.transitionToFollower(leader, timeInMs);
+    }
 
-        currentRole = leader.getsElected(timeInMs, term);
+    public void transitionToLeader(final long timeInMs)
+    {
+        candidateRole.transitionToLeader(candidate, timeInMs);
     }
 
     public void becomeCandidate(final long timeInMs, final int oldTerm, final long position)
     {
-        currentRole = candidate;
-        candidate.startNewElection(timeInMs, oldTerm, position);
+        followerRole.transitionToCandidate(follower, timeInMs);
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)

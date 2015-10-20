@@ -37,10 +37,11 @@ public class CandidateTest
 
     private ControlPublication controlPublication = mock(ControlPublication.class);
     private Subscription controlSubscription = mock(Subscription.class);
-    private Replicator replicator = mock(Replicator.class);
+    private RaftNode raftNode = mock(RaftNode.class);
+    private TermState termState = new TermState();
 
     private Candidate candidate = new Candidate(
-        ID, controlPublication, controlSubscription, replicator, CLUSTER_SIZE, VOTE_TIMEOUT);
+        ID, controlPublication, controlSubscription, raftNode, CLUSTER_SIZE, VOTE_TIMEOUT, termState);
 
     @Test
     public void shouldVoteForSelfWhenStartingElection()
@@ -58,7 +59,7 @@ public class CandidateTest
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR);
         candidate.onReplyVote(ID_5, ID, NEW_LEADERSHIP_TERM, FOR);
 
-        becomesLeader(replicator);
+        becomesLeader(raftNode);
     }
 
     @Test
@@ -69,7 +70,7 @@ public class CandidateTest
         candidate.onReplyVote(ID_4, ID, OLD_LEADERSHIP_TERM, FOR);
         candidate.onReplyVote(ID_5, ID, OLD_LEADERSHIP_TERM, FOR);
 
-        neverBecomesLeader(replicator);
+        neverBecomesLeader(raftNode);
     }
 
     @Test
@@ -79,7 +80,7 @@ public class CandidateTest
 
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, AGAINST);
 
-        neverBecomesLeader(replicator);
+        neverBecomesLeader(raftNode);
     }
 
     @Test
@@ -92,7 +93,7 @@ public class CandidateTest
         candidate.onReplyVote(ID_4, otherCandidate, NEW_LEADERSHIP_TERM, FOR);
         candidate.onReplyVote(ID_5, otherCandidate, NEW_LEADERSHIP_TERM, FOR);
 
-        neverBecomesLeader(replicator);
+        neverBecomesLeader(raftNode);
     }
 
     @Test
@@ -103,7 +104,7 @@ public class CandidateTest
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR);
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR);
 
-        neverBecomesLeader(replicator);
+        neverBecomesLeader(raftNode);
     }
 
     @Test
@@ -115,7 +116,7 @@ public class CandidateTest
 
         candidate.onConcensusHeartbeat(otherCandidate, NEW_LEADERSHIP_TERM, POSITION);
 
-        becomesFollower(replicator);
+        becomesFollower(raftNode);
     }
 
     @Test
@@ -125,7 +126,7 @@ public class CandidateTest
 
         candidate.onConcensusHeartbeat(ID, NEW_LEADERSHIP_TERM, POSITION);
 
-        neverBecomesFollower(replicator);
+        candidateNeverBecomesLeader();
     }
 
     @Test
@@ -138,8 +139,13 @@ public class CandidateTest
         requestsVote(NEW_LEADERSHIP_TERM);
         requestsVote(NEW_LEADERSHIP_TERM + 1);
 
-        neverBecomesLeader(replicator);
-        neverBecomesFollower(replicator);
+        neverBecomesLeader(raftNode);
+        candidateNeverBecomesLeader();
+    }
+
+    private void candidateNeverBecomesLeader()
+    {
+        verify(raftNode, never()).transitionToFollower(any(Candidate.class), anyLong());
     }
 
     private void requestsVote(final int term)
@@ -149,6 +155,7 @@ public class CandidateTest
 
     private void startElection()
     {
-        candidate.startNewElection(0L, OLD_LEADERSHIP_TERM, POSITION);
+        termState.leadershipTerm(OLD_LEADERSHIP_TERM).position(POSITION);
+        candidate.startNewElection(0L);
     }
 }

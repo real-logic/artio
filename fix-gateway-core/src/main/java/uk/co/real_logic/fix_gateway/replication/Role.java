@@ -21,6 +21,7 @@ package uk.co.real_logic.fix_gateway.replication;
 public interface Role
 {
 
+    // TODO: template pattern the poll - control stream, data stream, conditions, state change
     int poll(final int fragmentLimit, final long timeInMs);
 
 }

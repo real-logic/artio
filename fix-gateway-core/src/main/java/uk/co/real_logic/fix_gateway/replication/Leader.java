@@ -28,13 +28,14 @@ public class Leader implements Role, ControlHandler
 {
     public static final int NO_SESSION_ID = -1;
 
+    private final TermState termState;
     private final short nodeId;
     private final LeadershipTermAcknowledgementStrategy leadershipTermAcknowledgementStrategy;
     private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
     private final ControlPublication controlPublication;
     private final Subscription controlSubscription;
     private final Subscription dataSubscription;
-    private final Replicator replicator;
+    private final RaftNode raftNode;
     private final BlockHandler blockHandler;
     private final long heartbeatIntervalInMs;
 
@@ -53,17 +54,19 @@ public class Leader implements Role, ControlHandler
         final ControlPublication controlPublication,
         final Subscription controlSubscription,
         final Subscription dataSubscription,
-        final Replicator replicator,
+        final RaftNode raftNode,
         final ReplicationHandler handler,
         final long timeInMs,
-        final long heartbeatIntervalInMs)
+        final long heartbeatIntervalInMs,
+        final TermState termState)
     {
         this.nodeId = nodeId;
         this.leadershipTermAcknowledgementStrategy = leadershipTermAcknowledgementStrategy;
         this.controlPublication = controlPublication;
         this.controlSubscription = controlSubscription;
         this.dataSubscription = dataSubscription;
-        this.replicator = replicator;
+        this.raftNode = raftNode;
+        this.termState = termState;
         this.blockHandler = (buffer, offset, length, sessionId, termId) -> handler.onBlock(buffer, offset, length);
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
@@ -131,13 +134,14 @@ public class Leader implements Role, ControlHandler
         if (nodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
         {
             // Should not receive this unless someone else is the leader
-            replicator.becomeFollower(timeInMs, leaderShipTerm, position);
+            termState.leadershipTerm(leaderShipTerm).position(position);
+            raftNode.transitionToFollower(this, timeInMs);
         }
     }
 
-    public Leader getsElected(final long timeInMs, final int leaderShipTerm)
+    public Leader getsElected(final long timeInMs)
     {
-        this.leaderShipTerm = leaderShipTerm;
+        leaderShipTerm = termState.leadershipTerm();
         updateHeartbeatInterval(timeInMs);
         return this;
     }

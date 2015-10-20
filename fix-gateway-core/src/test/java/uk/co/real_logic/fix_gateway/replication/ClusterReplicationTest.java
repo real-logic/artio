@@ -50,6 +50,7 @@ public class ClusterReplicationTest
     @Before
     public void awaitClusterJoin()
     {
+        // TODO: decide whether this is needed at all
         // TODO: decide upon a better way to do this
         LockSupport.parkNanos(MILLISECONDS.toNanos(100));
     }
@@ -156,28 +157,28 @@ public class ClusterReplicationTest
 
     private void assertBecomesCandidate(final NodeRunner ... nodes)
     {
-        assertBecomes(Replicator::isCandidate, nodes);
+        assertBecomes(RaftNode::isCandidate, nodes);
     }
 
     private void assertBecomesFollower(final NodeRunner ... nodes)
     {
-        assertBecomes(Replicator::isFollower, nodes);
+        assertBecomes(RaftNode::isFollower, nodes);
     }
 
-    private void assertBecomes(final Predicate<Replicator> predicate, final NodeRunner... nodes)
+    private void assertBecomes(final Predicate<RaftNode> predicate, final NodeRunner... nodes)
     {
-        final Replicator[] replicators = getReplicators(nodes);
-        assertFalse(allMatch(replicators, predicate));
-        while (!allMatch(replicators, predicate))
+        final RaftNode[] raftNodes = getReplicators(nodes);
+        assertFalse(allMatch(raftNodes, predicate));
+        while (!allMatch(raftNodes, predicate))
         {
             pollAll();
         }
-        assertTrue(allMatch(replicators, predicate));
+        assertTrue(allMatch(raftNodes, predicate));
     }
 
-    private Replicator[] getReplicators(final NodeRunner[] nodes)
+    private RaftNode[] getReplicators(final NodeRunner[] nodes)
     {
-        return Stream.of(nodes).map(NodeRunner::replicator).toArray(Replicator[]::new);
+        return Stream.of(nodes).map(NodeRunner::replicator).toArray(RaftNode[]::new);
     }
 
     private static <T> boolean allMatch(final T[] values, final Predicate<T> predicate)
@@ -211,7 +212,7 @@ public class ClusterReplicationTest
         return node.replicatedPosition() < POSITION_AFTER_MESSAGE;
     }
 
-    private void sendMessageTo(final Replicator leader)
+    private void sendMessageTo(final RaftNode leader)
     {
         while (leader.offer(buffer, 0, BUFFER_SIZE) < 0)
         {

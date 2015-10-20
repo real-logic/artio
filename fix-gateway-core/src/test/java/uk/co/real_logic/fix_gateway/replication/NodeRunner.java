@@ -41,7 +41,7 @@ public class NodeRunner implements AutoCloseable, Role
 
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
-    private final Replicator replicator;
+    private final RaftNode raftNode;
 
     private long replicatedPosition = -1;
     private long timeInMs = 0;
@@ -66,7 +66,7 @@ public class NodeRunner implements AutoCloseable, Role
         final Aeron.Context clientContext = new Aeron.Context();
         clientContext.dirName(context.dirName());
         aeron = Aeron.connect(clientContext);
-        replicator = new Replicator(
+        raftNode = new RaftNode(
             (short) nodeId,
             controlPublication(),
             dataPublication(),
@@ -108,7 +108,7 @@ public class NodeRunner implements AutoCloseable, Role
     public int poll(final int fragmentLimit, final long timeInMs)
     {
         // NB: ignores other time
-        return replicator.poll(fragmentLimit, this.timeInMs);
+        return raftNode.poll(fragmentLimit, this.timeInMs);
     }
 
     public void advanceClock(final long delta)
@@ -123,12 +123,12 @@ public class NodeRunner implements AutoCloseable, Role
 
     public boolean isLeader()
     {
-        return replicator.isLeader();
+        return raftNode.isLeader();
     }
 
-    public Replicator replicator()
+    public RaftNode replicator()
     {
-        return replicator;
+        return raftNode;
     }
 
     public long replicatedPosition()

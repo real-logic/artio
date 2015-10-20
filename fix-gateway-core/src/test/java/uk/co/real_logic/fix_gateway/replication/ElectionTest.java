@@ -33,9 +33,9 @@ public class ElectionTest extends AbstractReplicationTest
     @Before
     public void setUp()
     {
-        node1 = candidate((short) 1, replicator1);
-        node2 = candidate((short) 2, replicator2);
-        node3 = follower((short) 3, replicator2, mock(ReplicationHandler.class));
+        node1 = candidate((short) 1, raftNode1, termState1);
+        node2 = candidate((short) 2, raftNode2, termState2);
+        node3 = follower((short) 3, raftNode2, mock(ReplicationHandler.class), termState3);
     }
 
     @Test
@@ -43,12 +43,14 @@ public class ElectionTest extends AbstractReplicationTest
     {
         node3.follow(TIME, 1, 40);
 
-        node1.startNewElection(TIME, 1, 32);
-        node2.startNewElection(TIME, 1, 40);
+        termState1.leadershipTerm(1).position(32);
+        termState2.leadershipTerm(1).position(40);
+        node1.startNewElection(TIME);
+        node2.startNewElection(TIME);
 
         runElection();
 
-        electionResultsAre(replicator2, replicator1);
+        electionResultsAre(raftNode2, raftNode1);
     }
 
     @Test
@@ -61,12 +63,14 @@ public class ElectionTest extends AbstractReplicationTest
 
     private void electCandidateWithCorrectTerm()
     {
-        node1.startNewElection(TIME, 1, 40);
-        node2.startNewElection(TIME, 2, 32);
+        termState1.leadershipTerm(1).position(40);
+        termState2.leadershipTerm(2).position(32);
+        node1.startNewElection(TIME);
+        node2.startNewElection(TIME);
 
         runElection();
 
-        electionResultsAre(replicator2, replicator1);
+        electionResultsAre(raftNode2, raftNode1);
     }
 
     @Test
@@ -74,12 +78,14 @@ public class ElectionTest extends AbstractReplicationTest
     {
         node3.follow(TIME, 1, 40);
 
-        node1.startNewElection(TIME, 1, 40);
-        node2.startNewElection(TIME, 1, 40);
+        termState1.leadershipTerm(1).position(40);
+        termState2.leadershipTerm(1).position(40);
+        node1.startNewElection(TIME);
+        node2.startNewElection(TIME);
 
         runElection();
 
-        electionResultsAre(replicator1, replicator2);
+        electionResultsAre(raftNode1, raftNode2);
     }
 
     @Test
@@ -90,7 +96,7 @@ public class ElectionTest extends AbstractReplicationTest
         electCandidateWithCorrectTerm();
     }
 
-    private void electionResultsAre(final Replicator leader, final Replicator follower)
+    private void electionResultsAre(final RaftNode leader, final RaftNode follower)
     {
         becomesLeader(leader);
         staysLeader(leader);
@@ -98,7 +104,7 @@ public class ElectionTest extends AbstractReplicationTest
         becomesFollower(follower);
         staysFollower(follower);
 
-        staysFollower(replicator3);
+        staysFollower(raftNode3);
     }
 
     private void runElection()
@@ -106,9 +112,9 @@ public class ElectionTest extends AbstractReplicationTest
         run(node1, node2, node3);
     }
 
-    private Candidate candidate(final short id, final Replicator replicator)
+    private Candidate candidate(final short id, final RaftNode raftNode, final TermState termState)
     {
         return new Candidate(
-            id, controlPublication(), controlSubscription(), replicator, CLUSTER_SIZE, TIMEOUT);
+            id, controlPublication(), controlSubscription(), raftNode, CLUSTER_SIZE, TIMEOUT, termState);
     }
 }

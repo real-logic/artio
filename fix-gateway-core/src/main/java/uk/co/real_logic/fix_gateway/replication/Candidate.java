@@ -31,10 +31,11 @@ public class Candidate implements Role, ControlHandler
 
     private final ThreadLocalRandom random = ThreadLocalRandom.current();
 
+    private final TermState termState;
     private final short id;
     private final ControlPublication controlPublication;
     private final Subscription controlSubscription;
-    private final Replicator replicator;
+    private final RaftNode raftNode;
     private final int clusterSize;
     private final long voteTimeout;
     private final IntHashSet votesFor;
@@ -47,16 +48,18 @@ public class Candidate implements Role, ControlHandler
     public Candidate(final short id,
                      final ControlPublication controlPublication,
                      final Subscription controlSubscription,
-                     final Replicator replicator,
+                     final RaftNode raftNode,
                      final int clusterSize,
-                     final long voteTimeout)
+                     final long voteTimeout,
+                     final TermState termState)
     {
         this.id = id;
         this.controlPublication = controlPublication;
         this.controlSubscription = controlSubscription;
-        this.replicator = replicator;
+        this.raftNode = raftNode;
         this.clusterSize = clusterSize;
         this.voteTimeout = voteTimeout;
+        this.termState = termState;
         votesFor = new IntHashSet(2 * clusterSize, -1);
     }
 
@@ -94,7 +97,8 @@ public class Candidate implements Role, ControlHandler
         {
             if (votesFor.size() > clusterSize / 2)
             {
-                replicator.becomeLeader(timeInMs, leaderShipTerm);
+                termState.leadershipTerm(leaderShipTerm);
+                raftNode.transitionToLeader(timeInMs);
 
                 controlPublication.saveConcensusHeartbeat(id, leaderShipTerm, position);
             }
@@ -107,10 +111,10 @@ public class Candidate implements Role, ControlHandler
         followIfNextTerm(nodeId, leaderShipTerm, position, true);
     }
 
-    public void startNewElection(final long timeInMs, final int oldLeaderShipTerm, final long position)
+    public void startNewElection(final long timeInMs)
     {
-        this.position = position;
-        this.leaderShipTerm = oldLeaderShipTerm;
+        this.position = termState.position();
+        this.leaderShipTerm = termState.leadershipTerm();
         startElection(timeInMs);
     }
 
@@ -120,7 +124,10 @@ public class Candidate implements Role, ControlHandler
         if (nodeId != id && position >= this.position && leaderShipTermOk)
         {
             votesFor.clear();
-            replicator.becomeFollower(timeInMs, leaderShipTerm, position);
+            termState
+                .position(position)
+                .leadershipTerm(leaderShipTerm);
+            raftNode.transitionToFollower(this, timeInMs);
             stopTimeout();
         }
     }

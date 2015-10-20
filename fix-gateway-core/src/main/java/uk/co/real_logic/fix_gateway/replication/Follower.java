@@ -38,8 +38,9 @@ public class Follower implements Role, ControlHandler, BlockHandler
     private final ReplicationHandler handler;
     private final Subscription dataSubscription;
     private final Subscription controlSubscription;
-    private final Replicator replicator;
+    private final RaftNode raftNode;
     private final long replyTimeoutInMs;
+    private final TermState termState;
 
     private long latestNextReceiveTimeInMs;
 
@@ -58,18 +59,20 @@ public class Follower implements Role, ControlHandler, BlockHandler
         final ReplicationHandler handler,
         final Subscription dataSubscription,
         final Subscription controlSubscription,
-        final Replicator replicator,
+        final RaftNode raftNode,
         final long timeInMs,
         long replyTimeoutInMs,
-        final int bufferSize)
+        final int bufferSize,
+        final TermState termState)
     {
         this.nodeId = nodeId;
         this.controlPublication = controlPublication;
         this.handler = handler;
         this.dataSubscription = dataSubscription;
         this.controlSubscription = controlSubscription;
-        this.replicator = replicator;
+        this.raftNode = raftNode;
         this.replyTimeoutInMs = replyTimeoutInMs;
+        this.termState = termState;
         updateReceiverTimeout(timeInMs);
         toCommitBuffer = new UnsafeBuffer(new byte[bufferSize]);
     }
@@ -114,7 +117,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
 
         if (timeInMs > latestNextReceiveTimeInMs)
         {
-            replicator.becomeCandidate(timeInMs, leaderShipTerm, receivedPosition);
+            raftNode.becomeCandidate(timeInMs, leaderShipTerm, receivedPosition);
         }
 
         return readControlMessages + (int) bytesRead;

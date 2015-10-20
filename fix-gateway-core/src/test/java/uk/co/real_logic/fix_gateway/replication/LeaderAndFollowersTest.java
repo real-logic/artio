@@ -70,13 +70,14 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             controlPublication(),
             controlSubscription(),
             dataSubscription(),
-            replicator1,
+            raftNode1,
             leaderHandler,
             0,
-            HEARTBEAT_INTERVAL);
+            HEARTBEAT_INTERVAL,
+            new TermState());
 
-        follower1 = follower(FOLLOWER_1_ID, replicator2, follower1Handler);
-        follower2 = follower(FOLLOWER_2_ID, replicator3, mock(ReplicationHandler.class));
+        follower1 = follower(FOLLOWER_1_ID, raftNode2, follower1Handler, new TermState());
+        follower2 = follower(FOLLOWER_2_ID, raftNode3, mock(ReplicationHandler.class), new TermState());
 
         dataPublication = dataPublication();
     }
@@ -167,8 +168,8 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
         follower2.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
-        becomesCandidate(replicator2);
-        becomesCandidate(replicator3);
+        becomesCandidate(raftNode2);
+        becomesCandidate(raftNode3);
     }
 
     @Test
@@ -180,7 +181,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
-        staysFollower(replicator2);
+        staysFollower(raftNode2);
     }
 
     @Test
@@ -190,7 +191,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
-        staysFollower(replicator2);
+        staysFollower(raftNode2);
     }
 
     @Test

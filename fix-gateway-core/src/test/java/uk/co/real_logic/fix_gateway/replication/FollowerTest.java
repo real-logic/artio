@@ -40,7 +40,7 @@ public class FollowerTest
     private ReplicationHandler handler = mock(ReplicationHandler.class);
     private Subscription dataSubscription = mock(Subscription.class);
     private Subscription controlSubscription = mock(Subscription.class);
-    private Replicator replicator = mock(Replicator.class);
+    private RaftNode raftNode = mock(RaftNode.class);
 
     private Follower follower = new Follower(
         ID,
@@ -48,10 +48,11 @@ public class FollowerTest
         handler,
         dataSubscription,
         controlSubscription,
-        replicator,
+        raftNode,
         0,
         VOTE_TIMEOUT,
-        8 * 1024 * 1024);
+        8 * 1024 * 1024,
+        new TermState());
 
     @Test
     public void shouldOnlyVoteForOneCandidateDuringTerm()
