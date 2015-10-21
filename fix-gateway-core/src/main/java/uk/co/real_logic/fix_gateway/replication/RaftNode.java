@@ -37,7 +37,7 @@ public class RaftNode implements Role
     private final Candidate candidate;
     private final Follower follower;
 
-    private abstract class ClusterRole
+    private abstract class NodeState
     {
         public void transitionToLeader(final Candidate candidate, final long timeInMs)
         {
@@ -65,7 +65,7 @@ public class RaftNode implements Role
         }
     }
 
-    private final ClusterRole leaderRole = new ClusterRole()
+    private final NodeState leaderState = new NodeState()
     {
         public void transitionToFollower(final Leader leader, final long timeInMs)
         {
@@ -79,7 +79,7 @@ public class RaftNode implements Role
         }
     };
 
-    private final ClusterRole followerRole = new ClusterRole()
+    private final NodeState followerState = new NodeState()
     {
         public void transitionToCandidate(final Follower follower, final long timeInMs)
         {
@@ -93,7 +93,7 @@ public class RaftNode implements Role
         }
     };
 
-    private final ClusterRole candidateRole = new ClusterRole()
+    private final NodeState candidateState = new NodeState()
     {
         public void transitionToLeader(final Candidate candidate, long timeInMs)
         {
@@ -209,22 +209,22 @@ public class RaftNode implements Role
 
     public void transitionToFollower(final Candidate candidate, final long timeInMs)
     {
-        candidateRole.transitionToFollower(candidate, timeInMs);
+        candidateState.transitionToFollower(candidate, timeInMs);
     }
 
     public void transitionToFollower(final Leader leader, final long timeInMs)
     {
-        leaderRole.transitionToFollower(leader, timeInMs);
+        leaderState.transitionToFollower(leader, timeInMs);
     }
 
     public void transitionToLeader(final long timeInMs)
     {
-        candidateRole.transitionToLeader(candidate, timeInMs);
+        candidateState.transitionToLeader(candidate, timeInMs);
     }
 
     public void transitionToCandidate(final long timeInMs)
     {
-        followerRole.transitionToCandidate(follower, timeInMs);
+        followerState.transitionToCandidate(follower, timeInMs);
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)

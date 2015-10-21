@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Publication;
@@ -100,18 +99,16 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderCommitted(0, position);
     }
 
-    @Ignore
     @Test
     public void shouldCommitOnFollowers()
     {
         final int position = roundtripABuffer();
 
-        poll(follower1, 3);
+        poll(follower1, 1);
 
         verify(follower1Handler).onBlock(any(), eq(0), eq(position));
     }
 
-    @Ignore
     @Test
     public void shouldProcessSuccessiveChunks()
     {
@@ -119,8 +116,6 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderCommitted(0, position1);
 
         final int position2 = roundtripABuffer();
-
-        poll1(leader);
 
         leaderCommitted(position1, position2 - position1);
     }
