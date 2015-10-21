@@ -39,7 +39,7 @@ public class Leader implements Role, ControlHandler
     // Counts of how many acknowledgements
     private final Long2LongHashMap nodeToPosition = new Long2LongHashMap(NO_SESSION_ID);
 
-    private ControlPublication controlPublication;
+    private RaftPublication controlPublication;
     private Subscription acknowledgementSubscription;
     private Subscription dataSubscription;
     private long commitPosition = 0;
@@ -159,7 +159,7 @@ public class Leader implements Role, ControlHandler
         return this;
     }
 
-    public Leader controlPublication(final ControlPublication controlPublication)
+    public Leader controlPublication(final RaftPublication controlPublication)
     {
         this.controlPublication = controlPublication;
         return this;

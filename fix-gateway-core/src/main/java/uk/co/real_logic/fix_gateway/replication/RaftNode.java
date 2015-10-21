@@ -126,7 +126,7 @@ public class RaftNode implements Role
     private void injectLeaderStreams()
     {
         leader
-            .controlPublication(controlPublication(configuration.controlStream()))
+            .controlPublication(raftPublication(configuration.controlStream()))
             .acknowledgementSubscription(subscription(configuration.acknowledgementStream()))
             .dataSubscription(subscription(configuration.dataStream()));
     }
@@ -135,16 +135,18 @@ public class RaftNode implements Role
     {
         final StreamIdentifier control = configuration.controlStream();
         candidate
-            .controlPublication(controlPublication(control))
+            .controlPublication(raftPublication(control))
             .controlSubscription(subscription(control));
     }
 
     private void injectFollowerStreams()
     {
+        final StreamIdentifier controlStream = configuration.controlStream();
         follower
-            .acknowledgementPublication(controlPublication(configuration.acknowledgementStream()))
+            .acknowledgementPublication(raftPublication(configuration.acknowledgementStream()))
+            .controlPublication(raftPublication(controlStream))
             .dataSubscription(subscription(configuration.dataStream()))
-            .controlSubscription(subscription(configuration.controlStream()));
+            .controlSubscription(subscription(controlStream));
     }
 
     public RaftNode(final RaftNodeConfiguration configuration, final long timeInMs)
@@ -190,9 +192,9 @@ public class RaftNode implements Role
         return configuration.aeron().addPublication(id.channel(), id.streamId());
     }
 
-    private ControlPublication controlPublication(final StreamIdentifier id)
+    private RaftPublication raftPublication(final StreamIdentifier id)
     {
-        return new ControlPublication(
+        return new RaftPublication(
             configuration.maxClaimAttempts(),
             configuration.idleStrategy(),
             configuration.failCounter(),

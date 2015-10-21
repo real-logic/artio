@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
 
@@ -35,13 +36,21 @@ public class CandidateTest
     private static final short ID_4 = 4;
     private static final short ID_5 = 5;
 
-    private ControlPublication controlPublication = mock(ControlPublication.class);
+    private RaftPublication controlPublication = mock(RaftPublication.class);
     private Subscription controlSubscription = mock(Subscription.class);
     private RaftNode raftNode = mock(RaftNode.class);
     private TermState termState = new TermState();
 
     private Candidate candidate = new Candidate(
         ID, raftNode, CLUSTER_SIZE, VOTE_TIMEOUT, termState);
+
+    @Before
+    public void setUp()
+    {
+        candidate
+            .controlPublication(controlPublication)
+            .controlSubscription(controlSubscription);
+    }
 
     @Test
     public void shouldVoteForSelfWhenStartingElection()
@@ -59,7 +68,7 @@ public class CandidateTest
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR);
         candidate.onReplyVote(ID_5, ID, NEW_LEADERSHIP_TERM, FOR);
 
-        becomesLeader(raftNode);
+        transitionsToLeader(raftNode);
     }
 
     @Test
@@ -70,7 +79,7 @@ public class CandidateTest
         candidate.onReplyVote(ID_4, ID, OLD_LEADERSHIP_TERM, FOR);
         candidate.onReplyVote(ID_5, ID, OLD_LEADERSHIP_TERM, FOR);
 
-        neverBecomesLeader(raftNode);
+        neverTransitionsToLeader(raftNode);
     }
 
     @Test
@@ -80,7 +89,7 @@ public class CandidateTest
 
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, AGAINST);
 
-        neverBecomesLeader(raftNode);
+        neverTransitionsToLeader(raftNode);
     }
 
     @Test
@@ -93,7 +102,7 @@ public class CandidateTest
         candidate.onReplyVote(ID_4, otherCandidate, NEW_LEADERSHIP_TERM, FOR);
         candidate.onReplyVote(ID_5, otherCandidate, NEW_LEADERSHIP_TERM, FOR);
 
-        neverBecomesLeader(raftNode);
+        neverTransitionsToLeader(raftNode);
     }
 
     @Test
@@ -104,7 +113,7 @@ public class CandidateTest
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR);
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR);
 
-        neverBecomesLeader(raftNode);
+        neverTransitionsToLeader(raftNode);
     }
 
     @Test
@@ -116,7 +125,7 @@ public class CandidateTest
 
         candidate.onConcensusHeartbeat(otherCandidate, NEW_LEADERSHIP_TERM, POSITION);
 
-        becomesFollower(raftNode);
+        transitionsToFollower(raftNode);
     }
 
     @Test
@@ -139,7 +148,7 @@ public class CandidateTest
         requestsVote(NEW_LEADERSHIP_TERM);
         requestsVote(NEW_LEADERSHIP_TERM + 1);
 
-        neverBecomesLeader(raftNode);
+        neverTransitionsToLeader(raftNode);
         candidateNeverBecomesLeader();
     }
 

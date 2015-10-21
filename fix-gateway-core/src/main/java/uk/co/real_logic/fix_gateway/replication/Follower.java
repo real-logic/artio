@@ -39,7 +39,8 @@ public class Follower implements Role, ControlHandler, BlockHandler
     private final long replyTimeoutInMs;
     private final TermState termState;
 
-    private ControlPublication acknowledgementPublication;
+    private RaftPublication acknowledgementPublication;
+    private RaftPublication controlPublication;
     private Subscription dataSubscription;
     private Subscription controlSubscription;
     private long receivedPosition;
@@ -117,6 +118,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
 
     public void closeStreams()
     {
+        controlPublication.close();
         acknowledgementPublication.close();
         controlSubscription.close();
         dataSubscription.close();
@@ -139,11 +141,11 @@ public class Follower implements Role, ControlHandler, BlockHandler
         {
             //System.out.println("Voting for " + candidateId);
             votedFor = candidateId;
-            acknowledgementPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR);
+            controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR);
         }
         else if (candidateId != nodeId)
         {
-            acknowledgementPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST);
+            controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST);
         }
     }
 
@@ -170,6 +172,8 @@ public class Follower implements Role, ControlHandler, BlockHandler
     {
         if (leaderNodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
         {
+            termState.leadershipTerm(leaderShipTerm).position(position);
+
             follow(this.timeInMs);
         }
 
@@ -198,9 +202,15 @@ public class Follower implements Role, ControlHandler, BlockHandler
         toCommitBufferUsed += length;
     }
 
-    public Follower acknowledgementPublication(final ControlPublication acknowledgementPublication)
+    public Follower acknowledgementPublication(final RaftPublication acknowledgementPublication)
     {
         this.acknowledgementPublication = acknowledgementPublication;
+        return this;
+    }
+
+    public Follower controlPublication(final RaftPublication controlPublication)
+    {
+        this.controlPublication = controlPublication;
         return this;
     }
 

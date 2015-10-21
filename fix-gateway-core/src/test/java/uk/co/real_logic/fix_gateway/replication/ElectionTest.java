@@ -41,6 +41,7 @@ public class ElectionTest extends AbstractReplicationTest
     @Test
     public void shouldElectCandidateWithAtLeastQuorumPosition()
     {
+        termState3.position(40);
         node3.follow(TIME);
 
         termState1.leadershipTerm(1).position(32);
@@ -56,6 +57,7 @@ public class ElectionTest extends AbstractReplicationTest
     @Test
     public void shouldElectCandidateWithCorrectTerm()
     {
+        termState3.leadershipTerm(2).position(32);
         node3.follow(TIME);
 
         electCandidateWithCorrectTerm();
@@ -98,10 +100,10 @@ public class ElectionTest extends AbstractReplicationTest
 
     private void electionResultsAre(final RaftNode leader, final RaftNode follower)
     {
-        becomesLeader(leader);
+        transitionsToLeader(leader);
         staysLeader(leader);
 
-        becomesFollower(follower);
+        transitionsToFollower(follower);
         staysFollower(follower);
 
         staysFollower(raftNode3);
@@ -114,7 +116,8 @@ public class ElectionTest extends AbstractReplicationTest
 
     private Candidate candidate(final short id, final RaftNode raftNode, final TermState termState)
     {
-        return new Candidate(
-            id, raftNode, CLUSTER_SIZE, TIMEOUT, termState);
+        return new Candidate(id, raftNode, CLUSTER_SIZE, TIMEOUT, termState)
+                    .controlSubscription(controlSubscription())
+                    .controlPublication(raftPublication(CONTROL));
     }
 }

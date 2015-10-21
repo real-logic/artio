@@ -36,7 +36,8 @@ public class FollowerTest
     private static final short ID_4 = 4;
     private static final short ID_5 = 5;
 
-    private ControlPublication controlPublication = mock(ControlPublication.class);
+    private RaftPublication acknowledgementPublication = mock(RaftPublication.class);
+    private RaftPublication controlPublication = mock(RaftPublication.class);
     private ReplicationHandler handler = mock(ReplicationHandler.class);
     private Subscription dataSubscription = mock(Subscription.class);
     private Subscription controlSubscription = mock(Subscription.class);
@@ -49,7 +50,11 @@ public class FollowerTest
         0,
         VOTE_TIMEOUT,
         8 * 1024 * 1024,
-        new TermState());
+        new TermState())
+        .controlPublication(controlPublication)
+        .acknowledgementPublication(acknowledgementPublication)
+        .dataSubscription(dataSubscription)
+        .controlSubscription(controlSubscription);
 
     @Test
     public void shouldOnlyVoteForOneCandidateDuringTerm()

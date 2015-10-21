@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Test;
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 
 import static org.mockito.Matchers.any;
@@ -23,7 +24,7 @@ import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.neverBecomesFollower;
+import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.neverTransitionsToFollower;
 
 public class LeaderTest
 {
@@ -32,8 +33,10 @@ public class LeaderTest
     private static final long TIME = 10L;
     private static final long POSITION = 40L;
 
-    private ControlPublication controlPublication = mock(ControlPublication.class);
+    private RaftPublication controlPublication = mock(RaftPublication.class);
     private RaftNode raftNode = mock(RaftNode.class);
+    private Subscription acknowledgementSubscription = mock(Subscription.class);
+    private Subscription dataSubscription = mock(Subscription.class);
 
     private Leader leader = new Leader(
         ID,
@@ -43,7 +46,10 @@ public class LeaderTest
         mock(ReplicationHandler.class),
         0,
         10, new TermState().leadershipTerm(LEADERSHIP_TERM))
-        .getsElected(TIME);
+        .getsElected(TIME)
+        .controlPublication(controlPublication)
+        .acknowledgementSubscription(acknowledgementSubscription)
+        .dataSubscription(dataSubscription);
 
     @Test
     public void shouldBecomeFollowerUponOtherLeaderHeartbeating()
@@ -62,7 +68,7 @@ public class LeaderTest
 
         leader.onConcensusHeartbeat(newLeaderId, LEADERSHIP_TERM, POSITION);
 
-        neverBecomesFollower(raftNode);
+        neverTransitionsToFollower(raftNode);
     }
 
     @Test
@@ -70,7 +76,7 @@ public class LeaderTest
     {
         leader.onConcensusHeartbeat(ID, LEADERSHIP_TERM, POSITION);
 
-        neverBecomesFollower(raftNode);
+        neverTransitionsToFollower(raftNode);
     }
 
 }

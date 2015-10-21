@@ -58,19 +58,24 @@ public class AbstractReplicationTest
         return aeron.addSubscription(IPC, CONTROL);
     }
 
+    protected Subscription acknowledgementSubscription()
+    {
+        return aeron.addSubscription(IPC, ACKNOWLEDGEMENT);
+    }
+
     protected Subscription dataSubscription()
     {
         return aeron.addSubscription(IPC, DATA);
     }
 
-    protected ControlPublication controlPublication()
+    protected RaftPublication raftPublication(final int streamId)
     {
-        return new ControlPublication(
+        return new RaftPublication(
             100,
             new NoOpIdleStrategy(),
             mock(AtomicCounter.class),
             mock(ReliefValve.class),
-            aeron.addPublication(IPC, CONTROL));
+            aeron.addPublication(IPC, streamId));
     }
 
     protected Publication dataPublication()
@@ -105,46 +110,46 @@ public class AbstractReplicationTest
         }
     }
 
-    protected static void becomesCandidate(final RaftNode raftNode)
+    protected static void transitionsToCandidate(final RaftNode raftNode)
     {
         verify(raftNode).transitionToCandidate(anyLong());
     }
 
-    protected static void neverBecomesCandidate(final RaftNode raftNode)
+    protected static void neverTransitionsToCandidate(final RaftNode raftNode)
     {
         verify(raftNode, never()).transitionToCandidate(anyLong());
     }
 
-    protected static void becomesFollower(final RaftNode raftNode)
+    protected static void transitionsToFollower(final RaftNode raftNode)
     {
         verify(raftNode, atLeastOnce()).transitionToFollower(any(Candidate.class), anyLong());
     }
 
-    protected static void neverBecomesFollower(final RaftNode raftNode)
+    protected static void neverTransitionsToFollower(final RaftNode raftNode)
     {
         verify(raftNode, never()).transitionToFollower(any(Leader.class), anyLong());
     }
 
-    protected static void becomesLeader(final RaftNode raftNode)
+    protected static void transitionsToLeader(final RaftNode raftNode)
     {
         verify(raftNode).transitionToLeader(anyLong());
     }
 
-    protected static void neverBecomesLeader(final RaftNode raftNode)
+    protected static void neverTransitionsToLeader(final RaftNode raftNode)
     {
         verify(raftNode, never()).transitionToLeader(anyLong());
     }
 
     protected static void staysFollower(final RaftNode raftNode)
     {
-        neverBecomesCandidate(raftNode);
-        neverBecomesLeader(raftNode);
+        neverTransitionsToCandidate(raftNode);
+        neverTransitionsToLeader(raftNode);
     }
 
     protected static void staysLeader(final RaftNode raftNode)
     {
-        neverBecomesCandidate(raftNode);
-        neverBecomesFollower(raftNode);
+        neverTransitionsToCandidate(raftNode);
+        neverTransitionsToFollower(raftNode);
     }
 
     protected Follower follower(
@@ -157,7 +162,11 @@ public class AbstractReplicationTest
             0,
             TIMEOUT,
             1024 * 1024,
-            termState);
+            termState)
+            .dataSubscription(dataSubscription())
+            .controlSubscription(controlSubscription())
+            .acknowledgementPublication(raftPublication(ACKNOWLEDGEMENT))
+            .controlPublication(raftPublication(CONTROL));
     }
 
     protected static void run(final Role node1, final Role node2, final Role node3)

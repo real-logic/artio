@@ -23,7 +23,7 @@ import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.streams.AbstractionPublication;
 
-public class ControlPublication extends AbstractionPublication
+public class RaftPublication extends AbstractionPublication
 {
     private static final int MESSAGE_ACKNOWLEDGEMENT_LENGTH = HEADER_LENGTH + MessageAcknowledgementEncoder.BLOCK_LENGTH;
     private static final int REQUEST_VOTE_LENGTH = HEADER_LENGTH + RequestVoteEncoder.BLOCK_LENGTH;
@@ -35,7 +35,7 @@ public class ControlPublication extends AbstractionPublication
     private final ReplyVoteEncoder replyVote = new ReplyVoteEncoder();
     private final ConcensusHeartbeatEncoder concensusHeart = new ConcensusHeartbeatEncoder();
 
-    public ControlPublication(
+    public RaftPublication(
         final int maxClaimAttempts,
         final IdleStrategy idleStrategy,
         final AtomicCounter fails,

@@ -38,7 +38,7 @@ public class Candidate implements Role, ControlHandler
     private final long voteTimeout;
     private final IntHashSet votesFor;
 
-    private ControlPublication controlPublication;
+    private RaftPublication controlPublication;
     private Subscription controlSubscription;
     private long currentVoteTimeout;
     private int leaderShipTerm;
@@ -155,7 +155,7 @@ public class Candidate implements Role, ControlHandler
         currentVoteTimeout = timeInMs + random.nextLong(voteTimeout / 2, voteTimeout);
     }
 
-    public Candidate controlPublication(final ControlPublication controlPublication)
+    public Candidate controlPublication(final RaftPublication controlPublication)
     {
         this.controlPublication = controlPublication;
         return this;
