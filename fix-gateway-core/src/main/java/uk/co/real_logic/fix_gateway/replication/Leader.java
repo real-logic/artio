@@ -143,6 +143,7 @@ public class Leader implements Role, ControlHandler
     public Leader getsElected(final long timeInMs)
     {
         leaderShipTerm = termState.leadershipTerm();
+        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, termState.position());
         updateHeartbeatInterval(timeInMs);
         return this;
     }

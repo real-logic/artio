@@ -45,11 +45,17 @@ public class LeaderTest
         raftNode,
         mock(ReplicationHandler.class),
         0,
-        10, new TermState().leadershipTerm(LEADERSHIP_TERM))
-        .getsElected(TIME)
+        10, new TermState().leadershipTerm(LEADERSHIP_TERM).position(POSITION))
         .controlPublication(controlPublication)
         .acknowledgementSubscription(acknowledgementSubscription)
-        .dataSubscription(dataSubscription);
+        .dataSubscription(dataSubscription)
+        .getsElected(TIME);
+
+    @Test
+    public void shouldNotifyOtherNodesThatItIsTheLeader()
+    {
+        verify(controlPublication).saveConcensusHeartbeat(ID, LEADERSHIP_TERM, POSITION);
+    }
 
     @Test
     public void shouldBecomeFollowerUponOtherLeaderHeartbeating()

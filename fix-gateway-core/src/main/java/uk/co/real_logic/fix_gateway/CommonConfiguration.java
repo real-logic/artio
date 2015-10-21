@@ -200,7 +200,7 @@ public class CommonConfiguration
         return IoUtil.tmpDirName();
     }
 
-    protected IdleStrategy backoffIdleStrategy()
+    public static IdleStrategy backoffIdleStrategy()
     {
         return new BackoffIdleStrategy(BACKOFF_SPINS, BACKOFF_YIELDS, 1, 1 << 20);
     }

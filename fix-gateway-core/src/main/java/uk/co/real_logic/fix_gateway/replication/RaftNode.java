@@ -184,7 +184,15 @@ public class RaftNode implements Role
             128 * 1024 * 1024,
             termState);
 
-        currentRole = follower;
+
+        startAsFollower(timeInMs);
+    }
+
+    private void startAsFollower(final long timeInMs)
+    {
+        injectFollowerStreams();
+
+        currentRole = follower.follow(timeInMs);
     }
 
     private Publication publication(final StreamIdentifier id)

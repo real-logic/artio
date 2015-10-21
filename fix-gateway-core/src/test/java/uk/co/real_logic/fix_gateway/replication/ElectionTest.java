@@ -103,7 +103,6 @@ public class ElectionTest extends AbstractReplicationTest
         transitionsToLeader(leader);
         staysLeader(leader);
 
-        transitionsToFollower(follower);
         staysFollower(follower);
 
         staysFollower(raftNode3);

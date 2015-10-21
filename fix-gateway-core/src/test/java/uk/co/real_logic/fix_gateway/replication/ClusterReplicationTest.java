@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -46,14 +45,6 @@ public class ClusterReplicationTest
     private NodeRunner node1 = new NodeRunner(1, 2, 3);
     private NodeRunner node2 = new NodeRunner(2, 1, 3);
     private NodeRunner node3 = new NodeRunner(3, 1, 2);
-
-    @Before
-    public void awaitClusterJoin()
-    {
-        // TODO: decide whether this is needed at all
-        // TODO: decide upon a better way to do this
-        LockSupport.parkNanos(MILLISECONDS.toNanos(100));
-    }
 
     @Test(timeout = 3000)
     public void shouldEstablishCluster()

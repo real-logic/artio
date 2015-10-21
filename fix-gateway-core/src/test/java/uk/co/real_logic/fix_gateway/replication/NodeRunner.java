@@ -24,6 +24,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.*;
 
 public class NodeRunner implements AutoCloseable, Role
@@ -70,10 +71,11 @@ public class NodeRunner implements AutoCloseable, Role
             .acknowledgementStrategy(new EntireClusterAcknowledgementStrategy())
             .handler((buffer, offset, length) -> replicatedPosition = offset + length)
             .failCounter(mock(AtomicCounter.class))
-            .maxClaimAttempts(100)
+            .maxClaimAttempts(10_000)
             .acknowledgementStream(new StreamIdentifier(ACKNOWLEDGEMENT, AERON_GROUP))
             .controlStream(new StreamIdentifier(CONTROL, AERON_GROUP))
-            .dataStream(new StreamIdentifier(DATA, AERON_GROUP));
+            .dataStream(new StreamIdentifier(DATA, AERON_GROUP))
+            .idleStrategy(backoffIdleStrategy());
 
         raftNode = new RaftNode(configuration, timeInMs);
     }

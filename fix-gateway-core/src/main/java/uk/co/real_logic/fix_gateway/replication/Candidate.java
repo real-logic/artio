@@ -101,8 +101,6 @@ public class Candidate implements Role, ControlHandler
             {
                 termState.leadershipTerm(leaderShipTerm);
                 raftNode.transitionToLeader(timeInMs);
-
-                controlPublication.saveConcensusHeartbeat(id, leaderShipTerm, position);
             }
         }
     }
