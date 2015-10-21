@@ -33,7 +33,6 @@ import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.p
 /**
  * Test simulated cluster.
  */
-@Ignore
 public class ClusterReplicationTest
 {
 
@@ -55,6 +54,7 @@ public class ClusterReplicationTest
         }
     }
 
+    @Ignore
     @Test(timeout = 3000)
     public void shouldReplicateMessage()
     {
@@ -67,6 +67,7 @@ public class ClusterReplicationTest
         assertMessageReceived();
     }
 
+    @Ignore
     @Test(timeout = 3000)
     public void shouldReformClusterAfterLeaderNetsplit()
     {
@@ -100,6 +101,7 @@ public class ClusterReplicationTest
         assertBecomesFollower(follower);
     }
 
+    @Ignore
     @Test(timeout = 3000)
     public void shouldNotReplicateMessageUntilClusterReformed()
     {
@@ -123,6 +125,7 @@ public class ClusterReplicationTest
         assertMessageReceived();
     }
 
+    @Ignore
     @Test(timeout = 3000)
     public void shouldReformClusterAfterFollowerNetsplit()
     {
