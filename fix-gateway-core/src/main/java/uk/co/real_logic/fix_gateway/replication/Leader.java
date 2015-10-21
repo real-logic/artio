@@ -29,6 +29,7 @@ public class Leader implements Role, ControlHandler
     public static final int NO_SESSION_ID = -1;
 
     private final TermState termState;
+    private final int dataSessionId;
     private final short nodeId;
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final ControlSubscriber acknowledgementSubscriber = new ControlSubscriber(this);
@@ -55,12 +56,14 @@ public class Leader implements Role, ControlHandler
         final ReplicationHandler handler,
         final long timeInMs,
         final long heartbeatIntervalInMs,
-        final TermState termState)
+        final TermState termState,
+        final int dataSessionId)
     {
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
         this.raftNode = raftNode;
         this.termState = termState;
+        this.dataSessionId = dataSessionId;
         this.blockHandler = (buffer, offset, length, sessionId, termId) -> handler.onBlock(buffer, offset, length);
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         followers.forEach(follower -> nodeToPosition.put(follower, 0));

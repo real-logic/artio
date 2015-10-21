@@ -50,7 +50,7 @@ public class LeaderTest
         mock(ReplicationHandler.class),
         0,
         HEARTBEAT_INTERVAL_IN_MS,
-        termState)
+        termState, configuration.dataSessionId())
         .controlPublication(controlPublication)
         .acknowledgementSubscription(acknowledgementSubscription)
         .dataSubscription(dataSubscription)

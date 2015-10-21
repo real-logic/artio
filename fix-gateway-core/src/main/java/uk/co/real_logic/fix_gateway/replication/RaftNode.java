@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 
@@ -26,8 +25,6 @@ import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
  */
 public class RaftNode implements Role
 {
-    public static final long NOT_LEADER = -3;
-
     private final short nodeId;
     private final RaftNodeConfiguration configuration;
     private Role currentRole;
@@ -125,6 +122,7 @@ public class RaftNode implements Role
 
     private void injectLeaderStreams()
     {
+
         leader
             .controlPublication(raftPublication(configuration.controlStream()))
             .acknowledgementSubscription(subscription(configuration.acknowledgementStream()))
@@ -166,7 +164,8 @@ public class RaftNode implements Role
             configuration.handler(),
             timeInMs,
             heartbeatTimeInMs,
-            termState);
+            termState,
+            configuration.dataSessionId());
 
         candidate = new Candidate(
             nodeId,
@@ -243,17 +242,6 @@ public class RaftNode implements Role
     public void closeStreams()
     {
         currentRole.closeStreams();
-    }
-
-    public long offer(final DirectBuffer buffer, final int offset, final int length)
-    {
-        if (!roleIsLeader())
-        {
-            return NOT_LEADER;
-        }
-
-        //return dataPublication.offer(buffer, offset, length);
-        return 0;
     }
 
     public boolean roleIsLeader()

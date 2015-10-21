@@ -16,8 +16,10 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Aeron;
+import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.CloseHelper;
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 
@@ -29,6 +31,7 @@ import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.*
 
 public class NodeRunner implements AutoCloseable, Role
 {
+    public static final long NOT_LEADER = -3;
 
     public static final long TIMEOUT_IN_MS = 1000;
     public static final String AERON_GROUP = "aeron:udp?group=224.0.1.1:40456";
@@ -38,6 +41,7 @@ public class NodeRunner implements AutoCloseable, Role
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
     private final RaftNode raftNode;
+    private final Publication dataPublication;
 
     private long replicatedPosition = -1;
     private long timeInMs = 0;
@@ -63,6 +67,8 @@ public class NodeRunner implements AutoCloseable, Role
         clientContext.dirName(context.dirName());
         aeron = Aeron.connect(clientContext);
 
+        dataPublication = aeron.addPublication(AERON_GROUP, DATA);
+
         final RaftNodeConfiguration configuration = new RaftNodeConfiguration()
             .nodeId((short) nodeId)
             .aeron(aeron)
@@ -75,7 +81,8 @@ public class NodeRunner implements AutoCloseable, Role
             .acknowledgementStream(new StreamIdentifier(ACKNOWLEDGEMENT, AERON_GROUP))
             .controlStream(new StreamIdentifier(CONTROL, AERON_GROUP))
             .dataStream(new StreamIdentifier(DATA, AERON_GROUP))
-            .idleStrategy(backoffIdleStrategy());
+            .idleStrategy(backoffIdleStrategy())
+            .dataSessionId(dataPublication.sessionId());
 
         raftNode = new RaftNode(configuration, timeInMs);
     }
@@ -115,6 +122,17 @@ public class NodeRunner implements AutoCloseable, Role
     {
         return replicatedPosition;
     }
+
+    public long offer(final DirectBuffer buffer, final int offset, final int length)
+    {
+        if (!raftNode.roleIsLeader())
+        {
+            return NOT_LEADER;
+        }
+
+        return dataPublication.offer(buffer, offset, length);
+    }
+
 
     public void close()
     {

@@ -71,7 +71,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             leaderHandler,
             0,
             HEARTBEAT_INTERVAL,
-            termState1)
+            termState1, configuration.dataSessionId())
             .controlPublication(raftPublication(CONTROL))
             .acknowledgementSubscription(acknowledgementSubscription())
             .dataSubscription(dataSubscription());

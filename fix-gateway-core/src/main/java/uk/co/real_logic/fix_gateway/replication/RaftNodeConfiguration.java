@@ -37,6 +37,7 @@ public class RaftNodeConfiguration
     private ReplicationHandler handler;
     private int maxClaimAttempts;
     private AtomicCounter failCounter;
+    private int dataSessionId;
 
     public RaftNodeConfiguration controlStream(final StreamIdentifier controlStream)
     {
@@ -110,6 +111,12 @@ public class RaftNodeConfiguration
         return this;
     }
 
+    public RaftNodeConfiguration dataSessionId(final int dataSessionId)
+    {
+        this.dataSessionId = dataSessionId;
+        return this;
+    }
+
     public StreamIdentifier controlStream()
     {
         return controlStream;
@@ -168,5 +175,10 @@ public class RaftNodeConfiguration
     public AtomicCounter failCounter()
     {
         return failCounter;
+    }
+
+    public int dataSessionId()
+    {
+        return dataSessionId;
     }
 }

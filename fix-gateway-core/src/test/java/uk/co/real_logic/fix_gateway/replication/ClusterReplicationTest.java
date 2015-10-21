@@ -62,7 +62,7 @@ public class ClusterReplicationTest
 
         final NodeRunner leader = leader();
 
-        sendMessageTo(leader.replicator());
+        sendMessageTo(leader);
 
         assertMessageReceived();
     }
@@ -112,7 +112,7 @@ public class ClusterReplicationTest
 
         follower.dropFrames(true);
 
-        sendMessageTo(leader.replicator());
+        sendMessageTo(leader);
 
         assertBecomesCandidate(follower);
 
@@ -206,7 +206,7 @@ public class ClusterReplicationTest
         return node.replicatedPosition() < POSITION_AFTER_MESSAGE;
     }
 
-    private void sendMessageTo(final RaftNode leader)
+    private void sendMessageTo(final NodeRunner leader)
     {
         while (leader.offer(buffer, 0, BUFFER_SIZE) < 0)
         {
