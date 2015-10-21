@@ -75,7 +75,7 @@ public class NodeRunner implements AutoCloseable, Role
             otherNodeIds,
             timeInMs,
             TIMEOUT_IN_MS,
-            new EntireClusterLeadershipTermAcknowledgementStrategy(),
+            new EntireClusterAcknowledgementStrategy(),
             (buffer, offset, length) -> replicatedPosition = offset + length
         );
     }

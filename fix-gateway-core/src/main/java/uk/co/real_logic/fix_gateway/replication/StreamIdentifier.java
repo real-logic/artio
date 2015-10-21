@@ -15,9 +15,27 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import uk.co.real_logic.agrona.collections.Long2LongHashMap;
-
-public interface LeadershipTermAcknowledgementStrategy
+/**
+ * .
+ */
+public final class StreamIdentifier
 {
-    long findAckedTerm(final Long2LongHashMap sessionIdToPosition);
+    private final int streamId;
+    private final String channel;
+
+    public StreamIdentifier(final int streamId, final String channel)
+    {
+        this.streamId = streamId;
+        this.channel = channel;
+    }
+
+    public int streamId()
+    {
+        return streamId;
+    }
+
+    public String channel()
+    {
+        return channel;
+    }
 }

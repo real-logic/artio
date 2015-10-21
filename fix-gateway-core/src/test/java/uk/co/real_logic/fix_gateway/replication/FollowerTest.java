@@ -44,10 +44,7 @@ public class FollowerTest
 
     private Follower follower = new Follower(
         ID,
-        controlPublication,
         handler,
-        dataSubscription,
-        controlSubscription,
         raftNode,
         0,
         VOTE_TIMEOUT,

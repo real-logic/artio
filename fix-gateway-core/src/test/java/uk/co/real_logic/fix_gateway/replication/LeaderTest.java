@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Test;
-import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 
 import static org.mockito.Matchers.any;
@@ -38,11 +37,8 @@ public class LeaderTest
 
     private Leader leader = new Leader(
         ID,
-        new EntireClusterLeadershipTermAcknowledgementStrategy(),
+        new EntireClusterAcknowledgementStrategy(),
         new IntHashSet(40, -1),
-        controlPublication,
-        mock(Subscription.class),
-        mock(Subscription.class),
         raftNode,
         mock(ReplicationHandler.class),
         0,

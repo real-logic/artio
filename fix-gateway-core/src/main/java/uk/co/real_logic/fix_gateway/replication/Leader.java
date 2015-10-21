@@ -30,11 +30,8 @@ public class Leader implements Role, ControlHandler
 
     private final TermState termState;
     private final short nodeId;
-    private final LeadershipTermAcknowledgementStrategy leadershipTermAcknowledgementStrategy;
-    private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
-    private final ControlPublication controlPublication;
-    private final Subscription controlSubscription;
-    private final Subscription dataSubscription;
+    private final AcknowledgementStrategy acknowledgementStrategy;
+    private final ControlSubscriber acknowledgementSubscriber = new ControlSubscriber(this);
     private final RaftNode raftNode;
     private final BlockHandler blockHandler;
     private final long heartbeatIntervalInMs;
@@ -42,6 +39,9 @@ public class Leader implements Role, ControlHandler
     // Counts of how many acknowledgements
     private final Long2LongHashMap nodeToPosition = new Long2LongHashMap(NO_SESSION_ID);
 
+    private ControlPublication controlPublication;
+    private Subscription acknowledgementSubscription;
+    private Subscription dataSubscription;
     private long commitPosition = 0;
     private long nextHeartbeatTimeInMs;
     private int leaderShipTerm;
@@ -49,11 +49,8 @@ public class Leader implements Role, ControlHandler
 
     public Leader(
         final short nodeId,
-        final LeadershipTermAcknowledgementStrategy leadershipTermAcknowledgementStrategy,
+        final AcknowledgementStrategy acknowledgementStrategy,
         final IntHashSet followers,
-        final ControlPublication controlPublication,
-        final Subscription controlSubscription,
-        final Subscription dataSubscription,
         final RaftNode raftNode,
         final ReplicationHandler handler,
         final long timeInMs,
@@ -61,10 +58,7 @@ public class Leader implements Role, ControlHandler
         final TermState termState)
     {
         this.nodeId = nodeId;
-        this.leadershipTermAcknowledgementStrategy = leadershipTermAcknowledgementStrategy;
-        this.controlPublication = controlPublication;
-        this.controlSubscription = controlSubscription;
-        this.dataSubscription = dataSubscription;
+        this.acknowledgementStrategy = acknowledgementStrategy;
         this.raftNode = raftNode;
         this.termState = termState;
         this.blockHandler = (buffer, offset, length, sessionId, termId) -> handler.onBlock(buffer, offset, length);
@@ -76,11 +70,11 @@ public class Leader implements Role, ControlHandler
     public int poll(int fragmentLimit, final long timeInMs)
     {
         this.timeInMs = timeInMs;
-        final int read = controlSubscription.poll(controlSubscriber, fragmentLimit);
+        final int read = acknowledgementSubscription.poll(acknowledgementSubscriber, fragmentLimit);
 
         if (read > 0)
         {
-            final long newPosition = leadershipTermAcknowledgementStrategy.findAckedTerm(nodeToPosition);
+            final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
             final int delta = (int) (newPosition - commitPosition);
             if (delta > 0)
             {
@@ -143,6 +137,24 @@ public class Leader implements Role, ControlHandler
     {
         leaderShipTerm = termState.leadershipTerm();
         updateHeartbeatInterval(timeInMs);
+        return this;
+    }
+
+    public Leader acknowledgementSubscription(final Subscription acknowledgementSubscription)
+    {
+        this.acknowledgementSubscription = acknowledgementSubscription;
+        return this;
+    }
+
+    public Leader dataSubscription(final Subscription dataSubscription)
+    {
+        this.dataSubscription = dataSubscription;
+        return this;
+    }
+
+    public Leader controlPublication(final ControlPublication controlPublication)
+    {
+        this.controlPublication = controlPublication;
         return this;
     }
 }

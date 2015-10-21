@@ -17,20 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 
-
-/**
- * A leaderShipTerm is acknowledged if the entire cluster acknowledges it.
- */
-public class EntireClusterLeadershipTermAcknowledgementStrategy implements LeadershipTermAcknowledgementStrategy
+public interface AcknowledgementStrategy
 {
-    @Override
-    public long findAckedTerm(final Long2LongHashMap sessionIdToPosition)
-    {
-        if (sessionIdToPosition.isEmpty())
-        {
-            return 0;
-        }
-
-        return sessionIdToPosition.minValue();
-    }
+    long findAckedTerm(final Long2LongHashMap sessionIdToPosition);
 }

@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.replication;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 
 /**
@@ -29,7 +28,7 @@ public class RaftNode implements Role
     public static final long NOT_LEADER = -3;
 
     private final short nodeId;
-    private final Publication dataPublication;
+    private final RaftNodeConfiguration configuration;
     private Role currentRole;
 
     private final TermState termState = new TermState();
@@ -71,6 +70,9 @@ public class RaftNode implements Role
         {
             DebugLogger.log("%d: Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
+            follower
+                .acknowledgementPublication(publication(configuration.acknowledgementStream()));
+
             currentRole = follower.follow(timeInMs, termState.leadershipTerm(), termState.position());
         }
     };
@@ -107,58 +109,52 @@ public class RaftNode implements Role
         }
     };
 
-    public RaftNode(
-        final short nodeId,
-        final ControlPublication controlPublication,
-        final Publication dataPublication,
-        final Subscription controlSubscription,
-        final Subscription dataSubscription,
-        final IntHashSet otherNodes,
-        final long timeInMs,
-        final long timeoutIntervalInMs,
-        final LeadershipTermAcknowledgementStrategy leadershipTermAcknowledgementStrategy,
-        final ReplicationHandler handler)
+    public RaftNode(final RaftNodeConfiguration configuration, final long timeInMs)
     {
-        this.nodeId = nodeId;
-        this.dataPublication = dataPublication;
+        this.configuration = configuration;
+        this.nodeId = configuration.nodeId();
 
-        final long heartbeatTimeInMs = timeoutIntervalInMs / 2;
+        final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
+        final long heartbeatTimeInMs = timeoutIntervalInMs / 4;
+        final int clusterSize = configuration.otherNodes().size() + 1;
 
         leader = new Leader(
             nodeId,
-            leadershipTermAcknowledgementStrategy,
-            otherNodes,
-            controlPublication,
-            controlSubscription,
-            dataSubscription,
+            configuration.acknowledgementStrategy(),
+            configuration.otherNodes(),
             this,
-            handler,
+            configuration.handler(),
             timeInMs,
             heartbeatTimeInMs,
             termState);
 
         candidate = new Candidate(
             nodeId,
-            controlPublication,
-            controlSubscription,
             this,
-            otherNodes.size() + 1,
+            clusterSize,
             timeoutIntervalInMs,
             termState);
 
         follower = new Follower(
             nodeId,
-            controlPublication,
-            handler,
-            dataSubscription,
-            controlSubscription,
+            configuration.handler(),
             this,
             timeInMs,
             timeoutIntervalInMs,
-            128 * 1024 * 1024, // TODO: make configurable
+            128 * 1024 * 1024,
             termState);
 
         currentRole = follower;
+    }
+
+    private Publication publication(final StreamIdentifier id)
+    {
+        return configuration.aeron().addPublication(id.channel(), id.streamId());
+    }
+
+    private Subscription subscription(final StreamIdentifier id)
+    {
+        return configuration.aeron().addSubscription(id.channel(), id.streamId());
     }
 
     public void transitionToFollower(final Candidate candidate, final long timeInMs)
@@ -193,7 +189,8 @@ public class RaftNode implements Role
             return NOT_LEADER;
         }
 
-        return dataPublication.offer(buffer, offset, length);
+        //return dataPublication.offer(buffer, offset, length);
+        return 0;
     }
 
     public boolean isLeader()

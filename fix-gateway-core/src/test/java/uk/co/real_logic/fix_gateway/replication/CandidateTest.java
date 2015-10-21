@@ -41,7 +41,7 @@ public class CandidateTest
     private TermState termState = new TermState();
 
     private Candidate candidate = new Candidate(
-        ID, controlPublication, controlSubscription, raftNode, CLUSTER_SIZE, VOTE_TIMEOUT, termState);
+        ID, raftNode, CLUSTER_SIZE, VOTE_TIMEOUT, termState);
 
     @Test
     public void shouldVoteForSelfWhenStartingElection()

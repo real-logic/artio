@@ -20,10 +20,10 @@ import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 
 import static org.junit.Assert.assertEquals;
 
-public class QuorumLeadershipTermAcknowledgementStrategyTest
+public class QuorumAcknowledgementStrategyTest
 {
 
-    private QuorumLeadershipTermAcknowledgementStrategy strategy = new QuorumLeadershipTermAcknowledgementStrategy();
+    private QuorumAcknowledgementStrategy strategy = new QuorumAcknowledgementStrategy();
 
     @Test
     public void shouldAcknowledgeZeroForEmptyMap()

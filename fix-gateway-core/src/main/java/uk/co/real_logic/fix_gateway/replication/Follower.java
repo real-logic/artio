@@ -34,31 +34,26 @@ public class Follower implements Role, ControlHandler, BlockHandler
     private final UnsafeBuffer toCommitBuffer;
 
     private final short nodeId;
-    private final ControlPublication controlPublication;
     private final ReplicationHandler handler;
-    private final Subscription dataSubscription;
-    private final Subscription controlSubscription;
     private final RaftNode raftNode;
     private final long replyTimeoutInMs;
     private final TermState termState;
 
-    private long latestNextReceiveTimeInMs;
-
+    private ControlPublication acknowledgementPublication;
+    private Subscription dataSubscription;
+    private Subscription controlSubscription;
     private long receivedPosition;
     private long commitPosition = 0;
     private long lastAppliedPosition = 0;
     private int toCommitBufferUsed = 0;
-
+    private long latestNextReceiveTimeInMs;
     private short votedFor = NO_ONE;
     private int leaderShipTerm;
     private long timeInMs;
 
     public Follower(
         final short nodeId,
-        final ControlPublication controlPublication,
         final ReplicationHandler handler,
-        final Subscription dataSubscription,
-        final Subscription controlSubscription,
         final RaftNode raftNode,
         final long timeInMs,
         long replyTimeoutInMs,
@@ -66,10 +61,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
         final TermState termState)
     {
         this.nodeId = nodeId;
-        this.controlPublication = controlPublication;
         this.handler = handler;
-        this.dataSubscription = dataSubscription;
-        this.controlSubscription = controlSubscription;
         this.raftNode = raftNode;
         this.replyTimeoutInMs = replyTimeoutInMs;
         this.termState = termState;
@@ -92,7 +84,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
             if (bytesRead > 0)
             {
                 receivedPosition += bytesRead;
-                controlPublication.saveMessageAcknowledgement(receivedPosition, nodeId, OK);
+                acknowledgementPublication.saveMessageAcknowledgement(receivedPosition, nodeId, OK);
                 updateReceiverTimeout(timeInMs);
             }
         }
@@ -140,11 +132,11 @@ public class Follower implements Role, ControlHandler, BlockHandler
         {
             //System.out.println("Voting for " + candidateId);
             votedFor = candidateId;
-            controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR);
+            acknowledgementPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR);
         }
         else if (candidateId != nodeId)
         {
-            controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST);
+            acknowledgementPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST);
         }
     }
 
@@ -197,5 +189,23 @@ public class Follower implements Role, ControlHandler, BlockHandler
     {
         toCommitBuffer.putBytes(toCommitBufferUsed, srcBuffer, offset, length);
         toCommitBufferUsed += length;
+    }
+
+    public Follower acknowledgementPublication(final ControlPublication acknowledgementPublication)
+    {
+        this.acknowledgementPublication = acknowledgementPublication;
+        return this;
+    }
+
+    public Follower dataSubscription(final Subscription dataSubscription)
+    {
+        this.dataSubscription = dataSubscription;
+        return this;
+    }
+
+    public Follower controlSubscription(final Subscription controlSubscription)
+    {
+        this.controlSubscription = controlSubscription;
+        return this;
     }
 }

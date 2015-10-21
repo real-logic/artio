@@ -152,10 +152,7 @@ public class AbstractReplicationTest
     {
         return new Follower(
             id,
-            controlPublication(),
             handler,
-            dataSubscription(),
-            controlSubscription(),
             raftNode,
             0,
             TIMEOUT,

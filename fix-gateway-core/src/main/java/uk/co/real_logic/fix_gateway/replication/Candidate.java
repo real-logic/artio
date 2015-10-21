@@ -33,29 +33,25 @@ public class Candidate implements Role, ControlHandler
 
     private final TermState termState;
     private final short id;
-    private final ControlPublication controlPublication;
-    private final Subscription controlSubscription;
     private final RaftNode raftNode;
     private final int clusterSize;
     private final long voteTimeout;
     private final IntHashSet votesFor;
 
+    private ControlPublication controlPublication;
+    private Subscription controlSubscription;
     private long currentVoteTimeout;
     private int leaderShipTerm;
     private long position;
     private long timeInMs;
 
     public Candidate(final short id,
-                     final ControlPublication controlPublication,
-                     final Subscription controlSubscription,
                      final RaftNode raftNode,
                      final int clusterSize,
                      final long voteTimeout,
                      final TermState termState)
     {
         this.id = id;
-        this.controlPublication = controlPublication;
-        this.controlSubscription = controlSubscription;
         this.raftNode = raftNode;
         this.clusterSize = clusterSize;
         this.voteTimeout = voteTimeout;
@@ -150,5 +146,17 @@ public class Candidate implements Role, ControlHandler
     private void resetTimeout(final long timeInMs)
     {
         currentVoteTimeout = timeInMs + random.nextLong(voteTimeout / 2, voteTimeout);
+    }
+
+    public Candidate controlPublication(final ControlPublication controlPublication)
+    {
+        this.controlPublication = controlPublication;
+        return this;
+    }
+
+    public Candidate controlSubscription(final Subscription controlSubscription)
+    {
+        this.controlSubscription = controlSubscription;
+        return this;
     }
 }
