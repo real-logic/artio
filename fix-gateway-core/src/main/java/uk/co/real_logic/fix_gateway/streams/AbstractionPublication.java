@@ -28,7 +28,7 @@ import static uk.co.real_logic.aeron.Publication.NOT_CONNECTED;
 /**
  * .
  */
-public class AbstractionPublication
+public class AbstractionPublication implements AutoCloseable
 {
     public static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
 
@@ -89,5 +89,10 @@ public class AbstractionPublication
             // TODO: remove this exception, once you've made the framer else backpressure-aware.
             throw new RuntimeException("Backpressured");
         }
+    }
+
+    public void close()
+    {
+        dataPublication.close();
     }
 }

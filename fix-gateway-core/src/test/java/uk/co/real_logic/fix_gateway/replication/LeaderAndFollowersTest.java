@@ -125,7 +125,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         final int position1 = roundtripABuffer();
         leaderCommitted(0, position1);
 
-        follower1.follow(0, 0, 1);
+        follower1.follow(0);
 
         final int position2 = roundtripABuffer();
 

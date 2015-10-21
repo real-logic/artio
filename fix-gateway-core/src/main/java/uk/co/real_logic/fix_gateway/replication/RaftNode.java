@@ -19,6 +19,7 @@ import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 
 /**
  * .
@@ -58,7 +59,7 @@ public class RaftNode implements Role
             throw new UnsupportedOperationException();
         }
 
-        public void transitionToCandidate(final Candidate candidate, final TermState termState)
+        public void transitionToCandidate(final Candidate candidate, final long timeInMs)
         {
             throw new UnsupportedOperationException();
         }
@@ -66,14 +67,15 @@ public class RaftNode implements Role
 
     private final ClusterRole leaderRole = new ClusterRole()
     {
-        public void transitionToFollower(final Leader leader, final TermState termState, final long timeInMs)
+        public void transitionToFollower(final Leader leader, final long timeInMs)
         {
             DebugLogger.log("%d: Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
-            follower
-                .acknowledgementPublication(publication(configuration.acknowledgementStream()));
+            leader.closeStreams();
 
-            currentRole = follower.follow(timeInMs, termState.leadershipTerm(), termState.position());
+            injectFollowerStreams();
+
+            currentRole = follower.follow(timeInMs);
         }
     };
 
@@ -81,9 +83,13 @@ public class RaftNode implements Role
     {
         public void transitionToCandidate(final Follower follower, final long timeInMs)
         {
-            currentRole = candidate;
+            DebugLogger.log("%d: Candidate @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
-            candidate.startNewElection(timeInMs);
+            follower.closeStreams();
+
+            injectCandidateStreams();
+
+            currentRole = candidate.startNewElection(timeInMs);
         }
     };
 
@@ -93,6 +99,10 @@ public class RaftNode implements Role
         {
             DebugLogger.log("%d: Leader @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
+            candidate.closeStreams();
+
+            injectLeaderStreams();
+
             currentRole = leader.getsElected(timeInMs);
         }
 
@@ -100,14 +110,42 @@ public class RaftNode implements Role
         {
             DebugLogger.log("%d: Follower @ %d in %d\n", nodeId, timeInMs);
 
-            currentRole = follower.follow(timeInMs, termState.leadershipTerm(), termState.position());
+            candidate.closeStreams();
+
+            injectFollowerStreams();
+
+            currentRole = follower.follow(timeInMs);
         }
 
-        public void transitionToCandidate(final Candidate candidate, TermState termState)
+        public void transitionToCandidate(final Candidate candidate, final long timeInMs)
         {
-
+            currentRole = candidate.startNewElection(timeInMs);
         }
     };
+
+    private void injectLeaderStreams()
+    {
+        leader
+            .controlPublication(controlPublication(configuration.controlStream()))
+            .acknowledgementSubscription(subscription(configuration.acknowledgementStream()))
+            .dataSubscription(subscription(configuration.dataStream()));
+    }
+
+    private void injectCandidateStreams()
+    {
+        final StreamIdentifier control = configuration.controlStream();
+        candidate
+            .controlPublication(controlPublication(control))
+            .controlSubscription(subscription(control));
+    }
+
+    private void injectFollowerStreams()
+    {
+        follower
+            .acknowledgementPublication(controlPublication(configuration.acknowledgementStream()))
+            .dataSubscription(subscription(configuration.dataStream()))
+            .controlSubscription(subscription(configuration.controlStream()));
+    }
 
     public RaftNode(final RaftNodeConfiguration configuration, final long timeInMs)
     {
@@ -152,6 +190,16 @@ public class RaftNode implements Role
         return configuration.aeron().addPublication(id.channel(), id.streamId());
     }
 
+    private ControlPublication controlPublication(final StreamIdentifier id)
+    {
+        return new ControlPublication(
+            configuration.maxClaimAttempts(),
+            configuration.idleStrategy(),
+            configuration.failCounter(),
+            ReliefValve.NONE,
+            publication(id));
+    }
+
     private Subscription subscription(final StreamIdentifier id)
     {
         return configuration.aeron().addSubscription(id.channel(), id.streamId());
@@ -172,7 +220,7 @@ public class RaftNode implements Role
         candidateRole.transitionToLeader(candidate, timeInMs);
     }
 
-    public void becomeCandidate(final long timeInMs, final int oldTerm, final long position)
+    public void transitionToCandidate(final long timeInMs)
     {
         followerRole.transitionToCandidate(follower, timeInMs);
     }
@@ -182,9 +230,14 @@ public class RaftNode implements Role
         return currentRole.poll(fragmentLimit, timeInMs);
     }
 
+    public void closeStreams()
+    {
+        currentRole.closeStreams();
+    }
+
     public long offer(final DirectBuffer buffer, final int offset, final int length)
     {
-        if (!isLeader())
+        if (!roleIsLeader())
         {
             return NOT_LEADER;
         }
@@ -193,17 +246,17 @@ public class RaftNode implements Role
         return 0;
     }
 
-    public boolean isLeader()
+    public boolean roleIsLeader()
     {
         return currentRole == leader;
     }
 
-    public boolean isCandidate()
+    public boolean roleIsCandidate()
     {
         return currentRole == candidate;
     }
 
-    public boolean isFollower()
+    public boolean roleIsFollower()
     {
         return currentRole == follower;
     }

@@ -26,7 +26,6 @@ import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.agrona.CloseHelper.close;
@@ -36,6 +35,7 @@ public class AbstractReplicationTest
     protected static final String IPC = "aeron:ipc";
     protected static final int CONTROL = 1;
     protected static final int DATA = 2;
+    protected static final int ACKNOWLEDGEMENT = 3;
     protected static final int FRAGMENT_LIMIT = 1;
     protected static final long TIMEOUT = 100;
     protected static final long HEARTBEAT_INTERVAL = TIMEOUT / 2;
@@ -107,12 +107,12 @@ public class AbstractReplicationTest
 
     protected static void becomesCandidate(final RaftNode raftNode)
     {
-        verify(raftNode).becomeCandidate(anyLong(), anyInt(), anyLong());
+        verify(raftNode).transitionToCandidate(anyLong());
     }
 
     protected static void neverBecomesCandidate(final RaftNode raftNode)
     {
-        verify(raftNode, never()).becomeCandidate(anyLong(), anyInt(), anyLong());
+        verify(raftNode, never()).transitionToCandidate(anyLong());
     }
 
     protected static void becomesFollower(final RaftNode raftNode)

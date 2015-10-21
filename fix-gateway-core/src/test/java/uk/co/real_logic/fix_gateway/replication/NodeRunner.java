@@ -16,20 +16,15 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Aeron;
-import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
-import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
-import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.CONTROL;
-import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.DATA;
+import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.*;
 
 public class NodeRunner implements AutoCloseable, Role
 {
@@ -66,49 +61,32 @@ public class NodeRunner implements AutoCloseable, Role
         final Aeron.Context clientContext = new Aeron.Context();
         clientContext.dirName(context.dirName());
         aeron = Aeron.connect(clientContext);
-        raftNode = new RaftNode(
-            (short) nodeId,
-            controlPublication(),
-            dataPublication(),
-            controlSubscription(),
-            dataSubscription(),
-            otherNodeIds,
-            timeInMs,
-            TIMEOUT_IN_MS,
-            new EntireClusterAcknowledgementStrategy(),
-            (buffer, offset, length) -> replicatedPosition = offset + length
-        );
-    }
 
-    protected Subscription controlSubscription()
-    {
-        return aeron.addSubscription(AERON_GROUP, CONTROL);
-    }
+        final RaftNodeConfiguration configuration = new RaftNodeConfiguration()
+            .nodeId((short) nodeId)
+            .aeron(aeron)
+            .otherNodes(otherNodeIds)
+            .timeoutIntervalInMs(TIMEOUT_IN_MS)
+            .acknowledgementStrategy(new EntireClusterAcknowledgementStrategy())
+            .handler((buffer, offset, length) -> replicatedPosition = offset + length)
+            .failCounter(mock(AtomicCounter.class))
+            .maxClaimAttempts(100)
+            .acknowledgementStream(new StreamIdentifier(ACKNOWLEDGEMENT, AERON_GROUP))
+            .controlStream(new StreamIdentifier(CONTROL, AERON_GROUP))
+            .dataStream(new StreamIdentifier(DATA, AERON_GROUP));
 
-    protected Subscription dataSubscription()
-    {
-        return aeron.addSubscription(AERON_GROUP, DATA);
-    }
-
-    protected ControlPublication controlPublication()
-    {
-        return new ControlPublication(
-            100,
-            new NoOpIdleStrategy(),
-            mock(AtomicCounter.class),
-            mock(ReliefValve.class),
-            aeron.addPublication(AERON_GROUP, CONTROL));
-    }
-
-    protected Publication dataPublication()
-    {
-        return aeron.addPublication(AERON_GROUP, DATA);
+        raftNode = new RaftNode(configuration, timeInMs);
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)
     {
         // NB: ignores other time
         return raftNode.poll(fragmentLimit, this.timeInMs);
+    }
+
+    public void closeStreams()
+    {
+        raftNode.closeStreams();
     }
 
     public void advanceClock(final long delta)
@@ -123,7 +101,7 @@ public class NodeRunner implements AutoCloseable, Role
 
     public boolean isLeader()
     {
-        return raftNode.isLeader();
+        return raftNode.roleIsLeader();
     }
 
     public RaftNode replicator()

@@ -91,6 +91,13 @@ public class Leader implements Role, ControlHandler
         return read;
     }
 
+    public void closeStreams()
+    {
+        controlPublication.close();
+        acknowledgementSubscription.close();
+        dataSubscription.close();
+    }
+
     private void heartbeat()
     {
         controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition);

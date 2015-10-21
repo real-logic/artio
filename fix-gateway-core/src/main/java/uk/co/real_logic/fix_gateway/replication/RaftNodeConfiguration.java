@@ -17,6 +17,8 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.collections.IntHashSet;
+import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 
 /**
  * .
@@ -27,11 +29,14 @@ public class RaftNodeConfiguration
     private StreamIdentifier controlStream;
     private StreamIdentifier dataStream;
     private StreamIdentifier acknowledgementStream;
+    private IdleStrategy idleStrategy;
     private short nodeId;
     private IntHashSet otherNodes;
     private long timeoutIntervalInMs;
     private AcknowledgementStrategy acknowledgementStrategy;
     private ReplicationHandler handler;
+    private int maxClaimAttempts;
+    private AtomicCounter failCounter;
 
     public RaftNodeConfiguration controlStream(final StreamIdentifier controlStream)
     {
@@ -87,6 +92,24 @@ public class RaftNodeConfiguration
         return this;
     }
 
+    public RaftNodeConfiguration idleStrategy(final IdleStrategy idleStrategy)
+    {
+        this.idleStrategy = idleStrategy;
+        return this;
+    }
+
+    public RaftNodeConfiguration maxClaimAttempts(final int maxClaimAttempts)
+    {
+        this.maxClaimAttempts = maxClaimAttempts;
+        return this;
+    }
+
+    public RaftNodeConfiguration failCounter(final AtomicCounter failCounter)
+    {
+        this.failCounter = failCounter;
+        return this;
+    }
+
     public StreamIdentifier controlStream()
     {
         return controlStream;
@@ -130,5 +153,20 @@ public class RaftNodeConfiguration
     public Aeron aeron()
     {
         return aeron;
+    }
+
+    public IdleStrategy idleStrategy()
+    {
+        return idleStrategy;
+    }
+
+    public int maxClaimAttempts()
+    {
+        return maxClaimAttempts;
+    }
+
+    public AtomicCounter failCounter()
+    {
+        return failCounter;
     }
 }

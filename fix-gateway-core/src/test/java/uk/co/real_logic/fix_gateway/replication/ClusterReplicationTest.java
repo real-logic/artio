@@ -157,12 +157,12 @@ public class ClusterReplicationTest
 
     private void assertBecomesCandidate(final NodeRunner ... nodes)
     {
-        assertBecomes(RaftNode::isCandidate, nodes);
+        assertBecomes(RaftNode::roleIsCandidate, nodes);
     }
 
     private void assertBecomesFollower(final NodeRunner ... nodes)
     {
-        assertBecomes(RaftNode::isFollower, nodes);
+        assertBecomes(RaftNode::roleIsFollower, nodes);
     }
 
     private void assertBecomes(final Predicate<RaftNode> predicate, final NodeRunner... nodes)

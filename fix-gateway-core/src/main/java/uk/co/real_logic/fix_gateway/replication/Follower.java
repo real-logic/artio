@@ -109,10 +109,17 @@ public class Follower implements Role, ControlHandler, BlockHandler
 
         if (timeInMs > latestNextReceiveTimeInMs)
         {
-            raftNode.becomeCandidate(timeInMs, leaderShipTerm, receivedPosition);
+            raftNode.transitionToCandidate(timeInMs);
         }
 
         return readControlMessages + (int) bytesRead;
+    }
+
+    public void closeStreams()
+    {
+        acknowledgementPublication.close();
+        controlSubscription.close();
+        dataSubscription.close();
     }
 
     private void updateReceiverTimeout(final long timeInMs)
@@ -163,7 +170,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
     {
         if (leaderNodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
         {
-            follow(this.timeInMs, leaderShipTerm, position);
+            follow(this.timeInMs);
         }
 
         if (position > commitPosition)
@@ -172,12 +179,12 @@ public class Follower implements Role, ControlHandler, BlockHandler
         }
     }
 
-    public Follower follow(final long timeInMs, final int leaderShipTerm, final long position)
+    public Follower follow(final long timeInMs)
     {
         updateReceiverTimeout(timeInMs);
         votedFor = NO_ONE;
-        this.leaderShipTerm = leaderShipTerm;
-        this.receivedPosition = position;
+        this.leaderShipTerm = termState.leadershipTerm();
+        this.receivedPosition = termState.position();
         return this;
     }
 

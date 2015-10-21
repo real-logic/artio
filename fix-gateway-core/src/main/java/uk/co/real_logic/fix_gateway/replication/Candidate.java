@@ -74,6 +74,12 @@ public class Candidate implements Role, ControlHandler
         return work;
     }
 
+    public void closeStreams()
+    {
+        controlPublication.close();
+        controlSubscription.close();
+    }
+
     public void onMessageAcknowledgement(
         final long newAckedPosition, final short nodeId, final AcknowledgementStatus status)
     {
@@ -107,11 +113,12 @@ public class Candidate implements Role, ControlHandler
         followIfNextTerm(nodeId, leaderShipTerm, position, true);
     }
 
-    public void startNewElection(final long timeInMs)
+    public Candidate startNewElection(final long timeInMs)
     {
         this.position = termState.position();
         this.leaderShipTerm = termState.leadershipTerm();
         startElection(timeInMs);
+        return this;
     }
 
     private void followIfNextTerm(
