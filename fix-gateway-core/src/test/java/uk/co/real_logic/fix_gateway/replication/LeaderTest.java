@@ -32,11 +32,15 @@ public class LeaderTest
     private static final int LEADERSHIP_TERM = 1;
     private static final long TIME = 10L;
     private static final long POSITION = 40L;
+    private static final int HEARTBEAT_INTERVAL_IN_MS = 10;
 
     private RaftPublication controlPublication = mock(RaftPublication.class);
     private RaftNode raftNode = mock(RaftNode.class);
     private Subscription acknowledgementSubscription = mock(Subscription.class);
     private Subscription dataSubscription = mock(Subscription.class);
+    private TermState termState = new TermState()
+        .leadershipTerm(LEADERSHIP_TERM)
+        .position(POSITION);
 
     private Leader leader = new Leader(
         ID,
@@ -45,7 +49,8 @@ public class LeaderTest
         raftNode,
         mock(ReplicationHandler.class),
         0,
-        10, new TermState().leadershipTerm(LEADERSHIP_TERM).position(POSITION))
+        HEARTBEAT_INTERVAL_IN_MS,
+        termState)
         .controlPublication(controlPublication)
         .acknowledgementSubscription(acknowledgementSubscription)
         .dataSubscription(dataSubscription)
@@ -62,7 +67,7 @@ public class LeaderTest
     {
         final short newLeaderId = 3;
 
-        leader.onConcensusHeartbeat(newLeaderId, LEADERSHIP_TERM + 1, POSITION);
+        receivesHeartbeat(newLeaderId, LEADERSHIP_TERM + 1);
 
         verify(raftNode, atLeastOnce()).transitionToFollower(any(Leader.class), anyLong());
     }
@@ -72,7 +77,7 @@ public class LeaderTest
     {
         final short newLeaderId = 3;
 
-        leader.onConcensusHeartbeat(newLeaderId, LEADERSHIP_TERM, POSITION);
+        receivesHeartbeat(newLeaderId, LEADERSHIP_TERM);
 
         neverTransitionsToFollower(raftNode);
     }
@@ -80,9 +85,14 @@ public class LeaderTest
     @Test
     public void shouldNotBecomeFollowerFromOwnHeartbeats()
     {
-        leader.onConcensusHeartbeat(ID, LEADERSHIP_TERM, POSITION);
+        receivesHeartbeat(ID, LEADERSHIP_TERM);
 
         neverTransitionsToFollower(raftNode);
+    }
+
+    private void receivesHeartbeat(final short leaderId, final int leaderShipTerm)
+    {
+        leader.onConcensusHeartbeat(leaderId, leaderShipTerm, POSITION);
     }
 
 }
