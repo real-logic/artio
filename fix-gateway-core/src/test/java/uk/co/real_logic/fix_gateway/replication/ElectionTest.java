@@ -19,12 +19,17 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.mockito.Mockito.mock;
+import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.staysFollower;
+import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.staysLeader;
+import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.transitionsToLeader;
 
 /**
  * Test candidate instances in an election
  */
 public class ElectionTest extends AbstractReplicationTest
 {
+    private static final long LOW_POSITION = 32;
+    private static final long HIGH_POSITION = 40;
 
     private Candidate node1;
     private Candidate node2;
@@ -43,11 +48,11 @@ public class ElectionTest extends AbstractReplicationTest
     @Test
     public void shouldElectCandidateWithAtLeastQuorumPosition()
     {
-        termState3.position(40);
+        termState3.allPositions(HIGH_POSITION);
         node3.follow(TIME);
 
-        termState1.leadershipTerm(1).position(32);
-        termState2.leadershipTerm(1).position(40);
+        termState1.leadershipTerm(1).allPositions(32);
+        termState2.leadershipTerm(1).allPositions(40);
         node1.startNewElection(TIME);
         node2.startNewElection(TIME);
 
@@ -59,7 +64,7 @@ public class ElectionTest extends AbstractReplicationTest
     @Test
     public void shouldElectCandidateWithCorrectTerm()
     {
-        termState3.leadershipTerm(2).position(32);
+        termState3.leadershipTerm(2).commitPosition(32);
         node3.follow(TIME);
 
         electCandidateWithCorrectTerm();
@@ -67,8 +72,8 @@ public class ElectionTest extends AbstractReplicationTest
 
     private void electCandidateWithCorrectTerm()
     {
-        termState1.leadershipTerm(1).position(40);
-        termState2.leadershipTerm(2).position(32);
+        termState1.leadershipTerm(1).allPositions(40);
+        termState2.leadershipTerm(2).allPositions(32);
         node1.startNewElection(TIME);
         node2.startNewElection(TIME);
 
@@ -82,8 +87,8 @@ public class ElectionTest extends AbstractReplicationTest
     {
         node3.follow(TIME);
 
-        termState1.leadershipTerm(1).position(40);
-        termState2.leadershipTerm(1).position(40);
+        termState1.leadershipTerm(1).allPositions(HIGH_POSITION);
+        termState2.leadershipTerm(1).allPositions(HIGH_POSITION);
         node1.startNewElection(TIME);
         node2.startNewElection(TIME);
 
@@ -102,12 +107,12 @@ public class ElectionTest extends AbstractReplicationTest
 
     private void electionResultsAre(final RaftNode leader, final RaftNode follower)
     {
-        ReplicationAsserts.transitionsToLeader(leader);
-        ReplicationAsserts.staysLeader(leader);
+        transitionsToLeader(leader);
+        staysLeader(leader);
 
-        ReplicationAsserts.staysFollower(follower);
+        staysFollower(follower);
 
-        ReplicationAsserts.staysFollower(raftNode3);
+        staysFollower(raftNode3);
     }
 
     private void runElection()

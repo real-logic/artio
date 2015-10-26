@@ -208,7 +208,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             .onConcensusHeartbeat(anyShort(), anyInt(), anyLong(), eq(dataPublication.sessionId()));
     }
 
-    // TODO: test gapfill scenario
+    // TODO: test resend scenario
 
     private int roundtripABuffer()
     {

@@ -44,8 +44,9 @@ public class Follower implements Role, RaftHandler, BlockHandler
     private Subscription dataSubscription;
     private Subscription controlSubscription;
     private long receivedPosition;
-    private long commitPosition = 0;
-    private long lastAppliedPosition = 0;
+    private long commitPosition;
+    private long lastAppliedPosition;
+
     private int toCommitBufferUsed = 0;
     private long latestNextReceiveTimeInMs;
     private short votedFor = NO_ONE;
@@ -90,7 +91,8 @@ public class Follower implements Role, RaftHandler, BlockHandler
             }
         }
 
-        final int committableBytes = (int) (commitPosition - lastAppliedPosition);
+        final long canCommitUpToPosition = Math.min(commitPosition, receivedPosition);
+        final int committableBytes = (int) (canCommitUpToPosition - lastAppliedPosition);
         if (committableBytes > 0)
         {
             handler.onBlock(toCommitBuffer, 0, committableBytes);
@@ -110,6 +112,11 @@ public class Follower implements Role, RaftHandler, BlockHandler
 
         if (timeInMs > latestNextReceiveTimeInMs)
         {
+            termState
+                .receivedPosition(receivedPosition)
+                .lastAppliedPosition(lastAppliedPosition)
+                .commitPosition(commitPosition);
+
             raftNode.transitionToCandidate(timeInMs);
         }
 
@@ -177,7 +184,9 @@ public class Follower implements Role, RaftHandler, BlockHandler
         {
             termState
                 .leadershipTerm(leaderShipTerm)
-                .position(position)
+                .receivedPosition(receivedPosition)
+                .lastAppliedPosition(lastAppliedPosition)
+                .commitPosition(position)
                 .leaderSessionId(leaderSessionId);
 
             follow(this.timeInMs);
@@ -193,9 +202,16 @@ public class Follower implements Role, RaftHandler, BlockHandler
     {
         updateReceiverTimeout(timeInMs);
         votedFor = NO_ONE;
-        this.leaderShipTerm = termState.leadershipTerm();
-        this.receivedPosition = termState.position();
+        readTermState();
         return this;
+    }
+
+    private void readTermState()
+    {
+        leaderShipTerm = termState.leadershipTerm();
+        receivedPosition = termState.receivedPosition();
+        lastAppliedPosition = termState.lastAppliedPosition();
+        commitPosition = termState.commitPosition();
     }
 
     public void onBlock(final DirectBuffer srcBuffer,

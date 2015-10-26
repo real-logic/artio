@@ -31,6 +31,8 @@ import static uk.co.real_logic.agrona.CloseHelper.close;
 
 public class AbstractReplicationTest
 {
+
+
     protected static final String IPC = "aeron:ipc";
     protected static final int CONTROL = 1;
     protected static final int DATA = 2;

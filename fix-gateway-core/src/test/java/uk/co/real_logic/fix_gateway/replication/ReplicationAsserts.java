@@ -72,4 +72,5 @@ public final class ReplicationAsserts
     {
         return hasFluentProperty("leaderSessionId", leaderSessionId);
     }
+
 }

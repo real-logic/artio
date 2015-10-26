@@ -21,7 +21,15 @@ public class TermState
     private int previousLeaderSessionId;
     private int leaderSessionId;
     private int leadershipTerm;
-    private long position;
+
+    /** The position within the current leadership term that we have read data on the session up to. */
+    private long receivedPosition;
+
+    /** The position within the current leadership term that we have applied to our state machine. */
+    private long lastAppliedPosition;
+
+    /** The position within the current leadership term that we have committed. */
+    private long commitPosition;
 
     public TermState previousLeaderSessionId(int previousLeadershipSessionId)
     {
@@ -41,9 +49,29 @@ public class TermState
         return this;
     }
 
-    public TermState position(long position)
+    public TermState receivedPosition(final long receivedPosition)
     {
-        this.position = position;
+        this.receivedPosition = receivedPosition;
+        return this;
+    }
+
+    public TermState lastAppliedPosition(final long lastAppliedPosition)
+    {
+        this.lastAppliedPosition = lastAppliedPosition;
+        return this;
+    }
+
+    public TermState commitPosition(long commitPosition)
+    {
+        this.commitPosition = commitPosition;
+        return this;
+    }
+
+    public TermState allPositions(long position)
+    {
+        receivedPosition(position);
+        lastAppliedPosition(position);
+        commitPosition(position);
         return this;
     }
 
@@ -62,9 +90,19 @@ public class TermState
         return leadershipTerm;
     }
 
-    public long position()
+    public long receivedPosition()
     {
-        return position;
+        return receivedPosition;
+    }
+
+    public long lastAppliedPosition()
+    {
+        return lastAppliedPosition;
+    }
+
+    public long commitPosition()
+    {
+        return commitPosition;
     }
 
     public String toString()
@@ -73,7 +111,7 @@ public class TermState
             "previousLeaderSessionId=" + previousLeaderSessionId +
             ", leaderSessionId=" + leaderSessionId +
             ", leadershipTerm=" + leadershipTerm +
-            ", position=" + position +
+            ", commitPosition=" + commitPosition +
             '}';
     }
 }

@@ -115,7 +115,7 @@ public class Candidate implements Role, RaftHandler
 
     public Candidate startNewElection(final long timeInMs)
     {
-        this.position = termState.position();
+        this.position = termState.commitPosition();
         this.leaderShipTerm = termState.leadershipTerm();
         startElection(timeInMs);
         return this;
@@ -132,7 +132,7 @@ public class Candidate implements Role, RaftHandler
         {
             votesFor.clear();
             termState
-                .position(position)
+                .commitPosition(position)
                 .leadershipTerm(leaderShipTerm)
                 .leaderSessionId(dataSessionId);
 

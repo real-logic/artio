@@ -45,7 +45,7 @@ public class LeaderTest
     private Subscription dataSubscription = mock(Subscription.class);
     private TermState termState = new TermState()
         .leadershipTerm(LEADERSHIP_TERM)
-        .position(POSITION);
+        .commitPosition(POSITION);
 
     private Leader leader = new Leader(
         ID,

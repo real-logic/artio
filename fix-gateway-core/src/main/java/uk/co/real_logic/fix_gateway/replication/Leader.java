@@ -143,7 +143,7 @@ public class Leader implements Role, RaftHandler
             // Should not receive this unless someone else is the leader
             termState
                 .leadershipTerm(leaderShipTerm)
-                .position(position)
+                .commitPosition(position)
                 .leaderSessionId(leaderSessionId);
 
             raftNode.transitionToFollower(this, timeInMs);
@@ -153,7 +153,7 @@ public class Leader implements Role, RaftHandler
     public Leader getsElected(final long timeInMs)
     {
         leaderShipTerm = termState.leadershipTerm();
-        commitPosition = termState.position();
+        commitPosition = termState.commitPosition();
         heartbeat();
         return this;
     }
