@@ -200,11 +200,12 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         leader.poll(FRAGMENT_LIMIT, HEARTBEAT_INTERVAL + 1);
 
-        final ControlHandler controlHandler = mock(ControlHandler.class);
+        final RaftHandler raftHandler = mock(RaftHandler.class);
 
-        final int readMessages = controlSubscription().poll(new ControlSubscriber(controlHandler), 10);
+        final int readMessages = controlSubscription().poll(new RaftSubscriber(raftHandler), 10);
         assertEquals(0, readMessages);
-        verify(controlHandler, never()).onConcensusHeartbeat(anyShort(), anyInt(), anyLong());
+        verify(raftHandler, never())
+            .onConcensusHeartbeat(anyShort(), anyInt(), anyLong(), eq(dataPublication.sessionId()));
     }
 
     // TODO: test gapfill scenario

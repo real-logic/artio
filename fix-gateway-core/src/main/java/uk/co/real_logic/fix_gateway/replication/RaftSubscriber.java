@@ -20,7 +20,7 @@ import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
-public class ControlSubscriber implements FragmentHandler
+public class RaftSubscriber implements FragmentHandler
 {
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
@@ -29,9 +29,9 @@ public class ControlSubscriber implements FragmentHandler
     private final ReplyVoteDecoder replyVote = new ReplyVoteDecoder();
     private final ConcensusHeartbeatDecoder concensusHeartbeat = new ConcensusHeartbeatDecoder();
 
-    private final ControlHandler handler;
+    private final RaftHandler handler;
 
-    public ControlSubscriber(final ControlHandler handler)
+    public RaftSubscriber(final RaftHandler handler)
     {
         this.handler = handler;
     }
@@ -86,8 +86,8 @@ public class ControlSubscriber implements FragmentHandler
                 handler.onConcensusHeartbeat(
                     concensusHeartbeat.nodeId(),
                     concensusHeartbeat.leaderShipTerm(),
-                    concensusHeartbeat.position()
-                );
+                    concensusHeartbeat.position(),
+                    concensusHeartbeat.dataSessionId());
                 return;
             }
         }

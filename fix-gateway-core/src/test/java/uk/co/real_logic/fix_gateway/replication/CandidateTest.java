@@ -30,6 +30,7 @@ public class CandidateTest
     private static final long VOTE_TIMEOUT = 100;
     private static final int OLD_LEADERSHIP_TERM = 1;
     private static final int NEW_LEADERSHIP_TERM = OLD_LEADERSHIP_TERM + 1;
+    private static final int DATA_SESSION_ID = 42;
     private static final int CLUSTER_SIZE = 5;
 
     private static final short ID = 3;
@@ -123,7 +124,7 @@ public class CandidateTest
 
         startElection();
 
-        candidate.onConcensusHeartbeat(otherCandidate, NEW_LEADERSHIP_TERM, POSITION);
+        candidate.onConcensusHeartbeat(otherCandidate, NEW_LEADERSHIP_TERM, POSITION, DATA_SESSION_ID);
 
         transitionsToFollower(raftNode);
     }
@@ -133,7 +134,7 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.onConcensusHeartbeat(ID, NEW_LEADERSHIP_TERM, POSITION);
+        candidate.onConcensusHeartbeat(ID, NEW_LEADERSHIP_TERM, POSITION, DATA_SESSION_ID);
 
         candidateNeverBecomesLeader();
     }

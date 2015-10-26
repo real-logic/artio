@@ -25,9 +25,9 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 
-public class Candidate implements Role, ControlHandler
+public class Candidate implements Role, RaftHandler
 {
-    private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
+    private final RaftSubscriber raftSubscriber = new RaftSubscriber(this);
 
     private final ThreadLocalRandom random = ThreadLocalRandom.current();
 
@@ -62,7 +62,7 @@ public class Candidate implements Role, ControlHandler
     public int poll(int fragmentLimit, final long timeInMs)
     {
         this.timeInMs = timeInMs;
-        int work = controlSubscription.poll(controlSubscriber, fragmentLimit);
+        int work = controlSubscription.poll(raftSubscriber, fragmentLimit);
 
         if (timeInMs > currentVoteTimeout)
         {
@@ -105,7 +105,10 @@ public class Candidate implements Role, ControlHandler
         }
     }
 
-    public void onConcensusHeartbeat(short nodeId, final int leaderShipTerm, final long position)
+    public void onConcensusHeartbeat(short nodeId,
+                                     final int leaderShipTerm,
+                                     final long position,
+                                     final int dataSessionId)
     {
         // System.out.println("YES @ " + this.id);
         followIfNextTerm(nodeId, leaderShipTerm, position, true);

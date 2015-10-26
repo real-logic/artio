@@ -160,7 +160,8 @@
     </sbe:message>
 
     <!-- Clustering/Replication Protocol -->
-    <sbe:message name="MessageAcknowledgement" id="2" description="An acknowledgement of a received FIX Message">
+    <sbe:message name="MessageAcknowledgement" id="2"
+                 description="Acknowledgement that you've received up to a certain position">
         <field name="newAckedPosition" id="53" type="int64"/>
         <field name="nodeId" id="54" type="int16"/>
         <field name="status" id="58" type="AcknowledgementStatus"/>
@@ -178,7 +179,8 @@
     </sbe:message>
     <sbe:message name="ConcensusHeartbeat" id="21" description="">
         <field name="nodeId" id="57" type="int16"/>
-        <field name="leaderShipTerm" id="63" type="int32"/>
+        <field name="dataSessionId" id="27" type="int32"/>
+        <field name="leaderShipTerm" id="66" type="int32"/>
         <field name="position" id="64" type="int64"/>
     </sbe:message>
 

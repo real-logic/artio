@@ -31,6 +31,7 @@ public class FollowerTest
     private static final long VOTE_TIMEOUT = 100;
     private static final int OLD_LEADERSHIP_TERM = 1;
     private static final int NEW_LEADERSHIP_TERM = OLD_LEADERSHIP_TERM + 1;
+    private static final int DATA_SESSION_ID = 42;
 
     private static final short ID = 3;
     private static final short ID_4 = 4;
@@ -63,7 +64,7 @@ public class FollowerTest
 
         verify(controlPublication).saveReplyVote(eq(ID), eq(ID_4), anyInt(), eq(FOR));
 
-        follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION);
+        follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION, DATA_SESSION_ID);
 
         follower.onRequestVote(ID_5, NEW_LEADERSHIP_TERM, POSITION);
 

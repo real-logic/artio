@@ -131,7 +131,10 @@ public class RaftPublication extends AbstractionPublication
         return position;
     }
 
-    public long saveConcensusHeartbeat(final short nodeId, final int leaderShipTerm, final long position)
+    public long saveConcensusHeartbeat(final short nodeId,
+                                       final int leaderShipTerm,
+                                       final long position,
+                                       final int dataSessionId)
     {
         final long pos = claim(CONCENSUS_HEARTBEAT_LENGTH);
 
@@ -151,7 +154,8 @@ public class RaftPublication extends AbstractionPublication
             .wrap(buffer, offset)
             .nodeId(nodeId)
             .leaderShipTerm(leaderShipTerm)
-            .position(position);
+            .position(position)
+            .dataSessionId(dataSessionId);
 
         bufferClaim.commit();
 

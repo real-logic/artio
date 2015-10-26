@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.replication;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
-public interface ControlHandler
+public interface RaftHandler
 {
     void onMessageAcknowledgement(
         final long newAckedPosition, final short nodeId, final AcknowledgementStatus status);
@@ -27,5 +27,8 @@ public interface ControlHandler
 
     void onReplyVote(final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote);
 
-    void onConcensusHeartbeat(final short nodeId, final int leaderShipTerm, final long position);
+    void onConcensusHeartbeat(final short nodeId,
+                              final int leaderShipTerm,
+                              final long position,
+                              final int dataSessionId);
 }

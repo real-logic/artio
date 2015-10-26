@@ -26,11 +26,11 @@ import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 
-public class Follower implements Role, ControlHandler, BlockHandler
+public class Follower implements Role, RaftHandler, BlockHandler
 {
     private static final short NO_ONE = -1;
 
-    private final ControlSubscriber controlSubscriber = new ControlSubscriber(this);
+    private final RaftSubscriber raftSubscriber = new RaftSubscriber(this);
     private final UnsafeBuffer toCommitBuffer;
 
     private final short nodeId;
@@ -75,7 +75,7 @@ public class Follower implements Role, ControlHandler, BlockHandler
         this.timeInMs = timeInMs;
 
         final int readControlMessages =
-            controlSubscription.poll(controlSubscriber, fragmentLimit);
+            controlSubscription.poll(raftSubscriber, fragmentLimit);
 
         long bytesRead = 0;
         final int bufferLimit = toCommitBuffer.capacity() - toCommitBufferUsed;
@@ -168,7 +168,10 @@ public class Follower implements Role, ControlHandler, BlockHandler
         // not interested in this message
     }
 
-    public void onConcensusHeartbeat(final short leaderNodeId, final int leaderShipTerm, final long position)
+    public void onConcensusHeartbeat(final short leaderNodeId,
+                                     final int leaderShipTerm,
+                                     final long position,
+                                     final int dataSessionId)
     {
         if (leaderNodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
         {

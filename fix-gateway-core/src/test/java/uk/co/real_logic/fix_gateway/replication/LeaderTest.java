@@ -61,7 +61,7 @@ public class LeaderTest
     @Test
     public void shouldNotifyOtherNodesThatItIsTheLeader()
     {
-        verify(controlPublication).saveConcensusHeartbeat(ID, LEADERSHIP_TERM, POSITION);
+        verify(controlPublication).saveConcensusHeartbeat(ID, LEADERSHIP_TERM, POSITION, DATA_SESSION_ID);
     }
 
     @Test
@@ -94,7 +94,7 @@ public class LeaderTest
 
     private void receivesHeartbeat(final short leaderId, final int leaderShipTerm)
     {
-        leader.onConcensusHeartbeat(leaderId, leaderShipTerm, POSITION);
+        leader.onConcensusHeartbeat(leaderId, leaderShipTerm, POSITION, DATA_SESSION_ID);
     }
 
 }

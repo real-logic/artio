@@ -24,7 +24,7 @@ import uk.co.real_logic.fix_gateway.messages.Vote;
 
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 
-public class Leader implements Role, ControlHandler
+public class Leader implements Role, RaftHandler
 {
     public static final int NO_SESSION_ID = -1;
 
@@ -32,7 +32,7 @@ public class Leader implements Role, ControlHandler
     private final int dataSessionId;
     private final short nodeId;
     private final AcknowledgementStrategy acknowledgementStrategy;
-    private final ControlSubscriber acknowledgementSubscriber = new ControlSubscriber(this);
+    private final RaftSubscriber acknowledgementSubscriber = new RaftSubscriber(this);
     private final RaftNode raftNode;
     private final BlockHandler blockHandler;
     private final long heartbeatIntervalInMs;
@@ -103,7 +103,7 @@ public class Leader implements Role, ControlHandler
 
     private void heartbeat()
     {
-        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition);
+        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition, dataSessionId);
         updateHeartbeatInterval(timeInMs);
     }
 
@@ -133,7 +133,10 @@ public class Leader implements Role, ControlHandler
         // We've possibly timed out
     }
 
-    public void onConcensusHeartbeat(final short nodeId, final int leaderShipTerm, final long position)
+    public void onConcensusHeartbeat(final short nodeId,
+                                     final int leaderShipTerm,
+                                     final long position,
+                                     final int dataSessionId)
     {
         if (nodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
         {

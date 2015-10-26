@@ -122,7 +122,6 @@ public class RaftNode implements Role
 
     private void injectLeaderStreams()
     {
-
         leader
             .controlPublication(raftPublication(configuration.controlStream()))
             .acknowledgementSubscription(subscription(configuration.acknowledgementStream()))
