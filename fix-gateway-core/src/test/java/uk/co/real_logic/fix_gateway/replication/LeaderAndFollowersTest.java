@@ -63,6 +63,8 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         followers.add(2);
         followers.add(3);
 
+        dataPublication = dataPublication();
+
         leader = new Leader(
             LEADER_ID,
             new EntireClusterAcknowledgementStrategy(),
@@ -71,15 +73,14 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             leaderHandler,
             0,
             HEARTBEAT_INTERVAL,
-            termState1, configuration.dataSessionId())
+            termState1,
+            dataPublication.sessionId())
             .controlPublication(raftPublication(CONTROL))
             .acknowledgementSubscription(acknowledgementSubscription())
             .dataSubscription(dataSubscription());
 
         follower1 = follower(FOLLOWER_1_ID, raftNode2, follower1Handler, termState2);
         follower2 = follower(FOLLOWER_2_ID, raftNode3, mock(ReplicationHandler.class), termState3);
-
-        dataPublication = dataPublication();
     }
 
     @Test

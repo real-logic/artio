@@ -30,6 +30,7 @@ public class LeaderTest
 {
     private static final short ID = 2;
     private static final int LEADERSHIP_TERM = 1;
+    private static final int DATA_SESSION_ID = 42;
     private static final long TIME = 10L;
     private static final long POSITION = 40L;
     private static final int HEARTBEAT_INTERVAL_IN_MS = 10;
@@ -50,7 +51,8 @@ public class LeaderTest
         mock(ReplicationHandler.class),
         0,
         HEARTBEAT_INTERVAL_IN_MS,
-        termState, configuration.dataSessionId())
+        termState,
+        DATA_SESSION_ID)
         .controlPublication(controlPublication)
         .acknowledgementSubscription(acknowledgementSubscription)
         .dataSubscription(dataSubscription)
