@@ -19,21 +19,25 @@ import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 
+import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.neverTransitionsToFollower;
+import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.hasLeaderSessionId;
+import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.neverTransitionsToFollower;
 
 public class LeaderTest
 {
     private static final short ID = 2;
     private static final int LEADERSHIP_TERM = 1;
-    private static final int DATA_SESSION_ID = 42;
+    private static final int LEADER_SESSION_ID = 42;
     private static final long TIME = 10L;
     private static final long POSITION = 40L;
     private static final int HEARTBEAT_INTERVAL_IN_MS = 10;
+    private static final short NEW_LEADER_ID = 3;
+    private static final int NEW_LEADER_SESSION_ID = 43;
 
     private RaftPublication controlPublication = mock(RaftPublication.class);
     private RaftNode raftNode = mock(RaftNode.class);
@@ -52,7 +56,7 @@ public class LeaderTest
         0,
         HEARTBEAT_INTERVAL_IN_MS,
         termState,
-        DATA_SESSION_ID)
+        LEADER_SESSION_ID)
         .controlPublication(controlPublication)
         .acknowledgementSubscription(acknowledgementSubscription)
         .dataSubscription(dataSubscription)
@@ -61,25 +65,22 @@ public class LeaderTest
     @Test
     public void shouldNotifyOtherNodesThatItIsTheLeader()
     {
-        verify(controlPublication).saveConcensusHeartbeat(ID, LEADERSHIP_TERM, POSITION, DATA_SESSION_ID);
+        verify(controlPublication).saveConcensusHeartbeat(ID, LEADERSHIP_TERM, POSITION, LEADER_SESSION_ID);
     }
 
     @Test
     public void shouldBecomeFollowerUponOtherLeaderHeartbeating()
     {
-        final short newLeaderId = 3;
-
-        receivesHeartbeat(newLeaderId, LEADERSHIP_TERM + 1);
+        receivesHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM + 1, NEW_LEADER_SESSION_ID);
 
         verify(raftNode, atLeastOnce()).transitionToFollower(any(Leader.class), anyLong());
+        assertThat(termState, hasLeaderSessionId(NEW_LEADER_SESSION_ID));
     }
 
     @Test
     public void shouldNotBecomeFollowerFromOldTermHeartbeating()
     {
-        final short newLeaderId = 3;
-
-        receivesHeartbeat(newLeaderId, LEADERSHIP_TERM);
+        receivesHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, NEW_LEADER_SESSION_ID);
 
         neverTransitionsToFollower(raftNode);
     }
@@ -87,14 +88,14 @@ public class LeaderTest
     @Test
     public void shouldNotBecomeFollowerFromOwnHeartbeats()
     {
-        receivesHeartbeat(ID, LEADERSHIP_TERM);
+        receivesHeartbeat(ID, LEADERSHIP_TERM, LEADER_SESSION_ID);
 
         neverTransitionsToFollower(raftNode);
     }
 
-    private void receivesHeartbeat(final short leaderId, final int leaderShipTerm)
+    private void receivesHeartbeat(final short leaderId, final int leaderShipTerm, final int dataSessionId)
     {
-        leader.onConcensusHeartbeat(leaderId, leaderShipTerm, POSITION, DATA_SESSION_ID);
+        leader.onConcensusHeartbeat(leaderId, leaderShipTerm, POSITION, dataSessionId);
     }
 
 }

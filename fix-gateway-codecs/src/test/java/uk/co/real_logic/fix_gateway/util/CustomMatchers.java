@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.util;
 
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeMatcher;
 import uk.co.real_logic.agrona.DirectBuffer;
 
@@ -125,6 +126,11 @@ public final class CustomMatchers
                 }
             }
         };
+    }
+
+    public static <T> Matcher<T> hasFluentProperty(final String name, final Object value)
+    {
+        return hasFluentProperty(name, Matchers.equalTo(value));
     }
 
     public static void assertCharsEquals(final String expectedValue, final char[] chars, final int length)

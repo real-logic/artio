@@ -19,10 +19,11 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
 
+import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
-import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.*;
+import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.*;
 
 public class CandidateTest
 {
@@ -126,6 +127,7 @@ public class CandidateTest
 
         candidate.onConcensusHeartbeat(otherCandidate, NEW_LEADERSHIP_TERM, POSITION, DATA_SESSION_ID);
 
+        assertThat(termState, hasLeaderSessionId(DATA_SESSION_ID));
         transitionsToFollower(raftNode);
     }
 

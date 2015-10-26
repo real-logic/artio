@@ -85,6 +85,7 @@ public class ClusterReplicationTest
         assertBecomesFollower(leader);
     }
 
+    @Ignore
     @Test(timeout = 3000)
     public void shouldRejoinClusterAfterFollowerNetsplit()
     {

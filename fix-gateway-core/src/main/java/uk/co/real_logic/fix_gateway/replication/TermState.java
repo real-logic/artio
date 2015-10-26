@@ -18,20 +18,20 @@ package uk.co.real_logic.fix_gateway.replication;
 // TODO: hold config information for aeron streams
 public class TermState
 {
-    private int previousLeadershipSessionId;
-    private int leadershipSessionId;
+    private int previousLeaderSessionId;
+    private int leaderSessionId;
     private int leadershipTerm;
     private long position;
 
-    public TermState previousLeadershipSessionId(int previousLeadershipSessionId)
+    public TermState previousLeaderSessionId(int previousLeadershipSessionId)
     {
-        this.previousLeadershipSessionId = previousLeadershipSessionId;
+        this.previousLeaderSessionId = previousLeadershipSessionId;
         return this;
     }
 
-    public TermState leadershipSessionId(int leadershipSessionId)
+    public TermState leaderSessionId(int leadershipSessionId)
     {
-        this.leadershipSessionId = leadershipSessionId;
+        this.leaderSessionId = leadershipSessionId;
         return this;
     }
 
@@ -47,14 +47,14 @@ public class TermState
         return this;
     }
 
-    public int previousLeadershipSessionId()
+    public int previousLeaderSessionId()
     {
-        return previousLeadershipSessionId;
+        return previousLeaderSessionId;
     }
 
-    public int leadershipSessionId()
+    public int leaderSessionId()
     {
-        return leadershipSessionId;
+        return leaderSessionId;
     }
 
     public int leadershipTerm()
@@ -65,5 +65,15 @@ public class TermState
     public long position()
     {
         return position;
+    }
+
+    public String toString()
+    {
+        return "TermState{" +
+            "previousLeaderSessionId=" + previousLeaderSessionId +
+            ", leaderSessionId=" + leaderSessionId +
+            ", leadershipTerm=" + leadershipTerm +
+            ", position=" + position +
+            '}';
     }
 }

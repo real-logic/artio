@@ -29,7 +29,7 @@ public class Leader implements Role, RaftHandler
     public static final int NO_SESSION_ID = -1;
 
     private final TermState termState;
-    private final int dataSessionId;
+    private final int leaderSessionId;
     private final short nodeId;
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final RaftSubscriber acknowledgementSubscriber = new RaftSubscriber(this);
@@ -57,13 +57,13 @@ public class Leader implements Role, RaftHandler
         final long timeInMs,
         final long heartbeatIntervalInMs,
         final TermState termState,
-        final int dataSessionId)
+        final int leaderSessionId)
     {
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
         this.raftNode = raftNode;
         this.termState = termState;
-        this.dataSessionId = dataSessionId;
+        this.leaderSessionId = leaderSessionId;
         this.blockHandler = (buffer, offset, length, sessionId, termId) -> handler.onBlock(buffer, offset, length);
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
@@ -103,7 +103,7 @@ public class Leader implements Role, RaftHandler
 
     private void heartbeat()
     {
-        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition, dataSessionId);
+        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition, leaderSessionId);
         updateHeartbeatInterval(timeInMs);
     }
 
@@ -136,12 +136,16 @@ public class Leader implements Role, RaftHandler
     public void onConcensusHeartbeat(final short nodeId,
                                      final int leaderShipTerm,
                                      final long position,
-                                     final int dataSessionId)
+                                     final int leaderSessionId)
     {
         if (nodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
         {
             // Should not receive this unless someone else is the leader
-            termState.leadershipTerm(leaderShipTerm).position(position);
+            termState
+                .leadershipTerm(leaderShipTerm)
+                .position(position)
+                .leaderSessionId(leaderSessionId);
+
             raftNode.transitionToFollower(this, timeInMs);
         }
     }

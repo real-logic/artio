@@ -164,7 +164,7 @@ public class RaftNode implements Role
             timeInMs,
             heartbeatTimeInMs,
             termState,
-            configuration.dataSessionId());
+            configuration.leaderSessionId());
 
         candidate = new Candidate(
             nodeId,
@@ -181,7 +181,6 @@ public class RaftNode implements Role
             timeoutIntervalInMs,
             128 * 1024 * 1024,
             termState);
-
 
         startAsFollower(timeInMs);
     }

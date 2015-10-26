@@ -167,8 +167,8 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
         follower2.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
-        transitionsToCandidate(raftNode2);
-        transitionsToCandidate(raftNode3);
+        ReplicationAsserts.transitionsToCandidate(raftNode2);
+        ReplicationAsserts.transitionsToCandidate(raftNode3);
     }
 
     @Test
@@ -180,7 +180,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
-        staysFollower(raftNode2);
+        ReplicationAsserts.staysFollower(raftNode2);
     }
 
     @Test
@@ -190,7 +190,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
-        staysFollower(raftNode2);
+        ReplicationAsserts.staysFollower(raftNode2);
     }
 
     @Test

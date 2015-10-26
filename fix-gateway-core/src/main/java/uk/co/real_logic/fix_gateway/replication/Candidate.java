@@ -88,8 +88,7 @@ public class Candidate implements Role, RaftHandler
 
     public void onRequestVote(short candidateId, final int leaderShipTerm, long lastAckedPosition)
     {
-        followIfNextTerm(candidateId, leaderShipTerm, position,
-            leaderShipTerm > this.leaderShipTerm);
+
     }
 
     public void onReplyVote(
@@ -111,7 +110,7 @@ public class Candidate implements Role, RaftHandler
                                      final int dataSessionId)
     {
         // System.out.println("YES @ " + this.id);
-        followIfNextTerm(nodeId, leaderShipTerm, position, true);
+        followIfNextTerm(nodeId, dataSessionId, leaderShipTerm, position, true);
     }
 
     public Candidate startNewElection(final long timeInMs)
@@ -123,14 +122,20 @@ public class Candidate implements Role, RaftHandler
     }
 
     private void followIfNextTerm(
-        final short nodeId, final int leaderShipTerm, final long position, final boolean leaderShipTermOk)
+        final short nodeId,
+        final int dataSessionId,
+        final int leaderShipTerm,
+        final long position,
+        final boolean leaderShipTermOk)
     {
         if (nodeId != id && position >= this.position && leaderShipTermOk)
         {
             votesFor.clear();
             termState
                 .position(position)
-                .leadershipTerm(leaderShipTerm);
+                .leadershipTerm(leaderShipTerm)
+                .leaderSessionId(dataSessionId);
+
             raftNode.transitionToFollower(this, timeInMs);
             stopTimeout();
         }

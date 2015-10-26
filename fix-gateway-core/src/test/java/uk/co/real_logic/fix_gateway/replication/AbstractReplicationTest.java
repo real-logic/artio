@@ -26,8 +26,7 @@ import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.agrona.CloseHelper.close;
 
 public class AbstractReplicationTest
@@ -41,6 +40,7 @@ public class AbstractReplicationTest
     protected static final long HEARTBEAT_INTERVAL = TIMEOUT / 2;
     protected static final int CLUSTER_SIZE = 3;
     protected static final long TIME = 0L;
+    protected static final int DATA_SESSION_ID = 43;
 
     protected RaftNode raftNode1 = mock(RaftNode.class);
     protected RaftNode raftNode2 = mock(RaftNode.class);
@@ -108,48 +108,6 @@ public class AbstractReplicationTest
         {
 
         }
-    }
-
-    protected static void transitionsToCandidate(final RaftNode raftNode)
-    {
-        verify(raftNode).transitionToCandidate(anyLong());
-    }
-
-    protected static void neverTransitionsToCandidate(final RaftNode raftNode)
-    {
-        verify(raftNode, never()).transitionToCandidate(anyLong());
-    }
-
-    protected static void transitionsToFollower(final RaftNode raftNode)
-    {
-        verify(raftNode, atLeastOnce()).transitionToFollower(any(Candidate.class), anyLong());
-    }
-
-    protected static void neverTransitionsToFollower(final RaftNode raftNode)
-    {
-        verify(raftNode, never()).transitionToFollower(any(Leader.class), anyLong());
-    }
-
-    protected static void transitionsToLeader(final RaftNode raftNode)
-    {
-        verify(raftNode).transitionToLeader(anyLong());
-    }
-
-    protected static void neverTransitionsToLeader(final RaftNode raftNode)
-    {
-        verify(raftNode, never()).transitionToLeader(anyLong());
-    }
-
-    protected static void staysFollower(final RaftNode raftNode)
-    {
-        neverTransitionsToCandidate(raftNode);
-        neverTransitionsToLeader(raftNode);
-    }
-
-    protected static void staysLeader(final RaftNode raftNode)
-    {
-        neverTransitionsToCandidate(raftNode);
-        neverTransitionsToFollower(raftNode);
     }
 
     protected Follower follower(

@@ -87,7 +87,7 @@ public class RaftSubscriber implements FragmentHandler
                     concensusHeartbeat.nodeId(),
                     concensusHeartbeat.leaderShipTerm(),
                     concensusHeartbeat.position(),
-                    concensusHeartbeat.dataSessionId());
+                    concensusHeartbeat.leaderSessionId());
                 return;
             }
         }

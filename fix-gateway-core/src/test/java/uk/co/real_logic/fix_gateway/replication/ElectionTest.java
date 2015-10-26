@@ -33,6 +33,8 @@ public class ElectionTest extends AbstractReplicationTest
     @Before
     public void setUp()
     {
+        termState3.leaderSessionId(DATA_SESSION_ID);
+
         node1 = candidate((short) 1, raftNode1, termState1);
         node2 = candidate((short) 2, raftNode2, termState2);
         node3 = follower((short) 3, raftNode2, mock(ReplicationHandler.class), termState3);
@@ -100,12 +102,12 @@ public class ElectionTest extends AbstractReplicationTest
 
     private void electionResultsAre(final RaftNode leader, final RaftNode follower)
     {
-        transitionsToLeader(leader);
-        staysLeader(leader);
+        ReplicationAsserts.transitionsToLeader(leader);
+        ReplicationAsserts.staysLeader(leader);
 
-        staysFollower(follower);
+        ReplicationAsserts.staysFollower(follower);
 
-        staysFollower(raftNode3);
+        ReplicationAsserts.staysFollower(raftNode3);
     }
 
     private void runElection()

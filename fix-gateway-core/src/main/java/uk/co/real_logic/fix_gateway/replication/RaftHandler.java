@@ -30,5 +30,5 @@ public interface RaftHandler
     void onConcensusHeartbeat(final short nodeId,
                               final int leaderShipTerm,
                               final long position,
-                              final int dataSessionId);
+                              final int leaderSessionId);
 }

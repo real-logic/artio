@@ -171,11 +171,14 @@ public class Follower implements Role, RaftHandler, BlockHandler
     public void onConcensusHeartbeat(final short leaderNodeId,
                                      final int leaderShipTerm,
                                      final long position,
-                                     final int dataSessionId)
+                                     final int leaderSessionId)
     {
         if (leaderNodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
         {
-            termState.leadershipTerm(leaderShipTerm).position(position);
+            termState
+                .leadershipTerm(leaderShipTerm)
+                .position(position)
+                .leaderSessionId(leaderSessionId);
 
             follow(this.timeInMs);
         }
@@ -199,10 +202,13 @@ public class Follower implements Role, RaftHandler, BlockHandler
                         final int offset,
                         final int length,
                         final int sessionId,
-                        final int leaderShipTermId)
+                        final int termId)
     {
-        toCommitBuffer.putBytes(toCommitBufferUsed, srcBuffer, offset, length);
-        toCommitBufferUsed += length;
+        if (sessionId == termState.leaderSessionId())
+        {
+            toCommitBuffer.putBytes(toCommitBufferUsed, srcBuffer, offset, length);
+            toCommitBufferUsed += length;
+        }
     }
 
     public Follower acknowledgementPublication(final RaftPublication acknowledgementPublication)

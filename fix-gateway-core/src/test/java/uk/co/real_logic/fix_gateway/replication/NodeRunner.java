@@ -82,7 +82,7 @@ public class NodeRunner implements AutoCloseable, Role
             .controlStream(new StreamIdentifier(CONTROL, AERON_GROUP))
             .dataStream(new StreamIdentifier(DATA, AERON_GROUP))
             .idleStrategy(backoffIdleStrategy())
-            .dataSessionId(dataPublication.sessionId());
+            .leaderSessionId(dataPublication.sessionId());
 
         raftNode = new RaftNode(configuration, timeInMs);
     }
