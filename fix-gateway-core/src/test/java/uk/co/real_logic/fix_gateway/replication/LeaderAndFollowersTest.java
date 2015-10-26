@@ -64,6 +64,11 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         followers.add(3);
 
         dataPublication = dataPublication();
+        final int leaderSessionId = dataPublication.sessionId();
+
+        termState1.leaderSessionId(leaderSessionId);
+        termState2.leaderSessionId(leaderSessionId);
+        termState3.leaderSessionId(leaderSessionId);
 
         leader = new Leader(
             LEADER_ID,
@@ -74,7 +79,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             0,
             HEARTBEAT_INTERVAL,
             termState1,
-            dataPublication.sessionId())
+            leaderSessionId)
             .controlPublication(raftPublication(CONTROL))
             .acknowledgementSubscription(acknowledgementSubscription())
             .dataSubscription(dataSubscription());

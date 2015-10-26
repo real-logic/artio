@@ -34,7 +34,8 @@ public class FollowerTest
     private static final long VOTE_TIMEOUT = 100;
     private static final int OLD_LEADERSHIP_TERM = 1;
     private static final int NEW_LEADERSHIP_TERM = OLD_LEADERSHIP_TERM + 1;
-    private static final int DATA_SESSION_ID = 42;
+    private static final int LEADER_SESSION_ID = 42;
+    private static final int OTHER_SESSION_ID = LEADER_SESSION_ID + 1;
 
     private static final short ID = 3;
     private static final short ID_4 = 4;
@@ -51,7 +52,7 @@ public class FollowerTest
     private final TermState termState = new TermState()
         .commitPosition(POSITION)
         .leadershipTerm(OLD_LEADERSHIP_TERM)
-        .leaderSessionId(DATA_SESSION_ID);
+        .leaderSessionId(LEADER_SESSION_ID);
 
     private Follower follower = new Follower(
         ID,
@@ -73,7 +74,7 @@ public class FollowerTest
 
         verify(controlPublication).saveReplyVote(eq(ID), eq(ID_4), anyInt(), eq(FOR));
 
-        follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION, DATA_SESSION_ID);
+        follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION, LEADER_SESSION_ID);
 
         follower.onRequestVote(ID_5, NEW_LEADERSHIP_TERM, POSITION);
 
@@ -83,7 +84,7 @@ public class FollowerTest
     @Test
     public void shouldCommitDataWithAck()
     {
-        dataToBeCommitted(OFFSET);
+        dataToBeCommitted();
 
         receivesHeartbeat();
 
@@ -95,7 +96,7 @@ public class FollowerTest
     @Test
     public void shouldNotCommitDataWithoutAck()
     {
-        dataToBeCommitted(OFFSET);
+        dataToBeCommitted();
 
         poll();
 
@@ -112,15 +113,45 @@ public class FollowerTest
         noDataCommitted();
     }
 
-    // TODO: ack on data not yet received
-    // TODO: resend case - connect behind leader and get data with gap
-    // TODO: published data from non-leader
+    @Test
+    public void shouldCommitDataReceivedAfterAck()
+    {
+        receivesHeartbeat();
+
+        dataToBeCommitted();
+
+        poll();
+
+        dataCommitted();
+    }
+
+    @Test
+    public void shouldNotCommitDataFromNonLeader()
+    {
+        dataToBeCommitted(OTHER_SESSION_ID, OFFSET);
+
+        receivesHeartbeat();
+
+        poll();
+
+        noDataCommitted();
+    }
+
+    @Test
+    public void shouldRequestResendWhenTheresMissingData()
+    {
+        dataToBeCommitted();
+
+        poll();
+    }
+
+    // TODO: connect, resend, update ensure backfilled
 
     private void receivesHeartbeat()
     {
         when(controlSubscription.poll(any(), anyInt())).then(inv ->
         {
-            follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION + LENGTH, DATA_SESSION_ID);
+            follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION + LENGTH, LEADER_SESSION_ID);
 
             return 1;
         });
@@ -131,11 +162,16 @@ public class FollowerTest
         verify(handler).onBlock(any(), eq(0), eq(LENGTH));
     }
 
-    private void dataToBeCommitted(final int offset)
+    private void dataToBeCommitted()
+    {
+        dataToBeCommitted(LEADER_SESSION_ID, OFFSET);
+    }
+
+    private void dataToBeCommitted(final int dataSessionId, final int offset)
     {
         when(dataSubscription.blockPoll(eq(follower), anyInt())).then(inv ->
         {
-            follower.onBlock(buffer, offset, LENGTH, DATA_SESSION_ID, 0);
+            follower.onBlock(buffer, offset, LENGTH, dataSessionId, 0);
 
             return LENGTH;
         });
@@ -150,6 +186,5 @@ public class FollowerTest
     {
         follower.poll(10, 0);
     }
-
 
 }

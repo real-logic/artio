@@ -29,7 +29,7 @@ public class Leader implements Role, RaftHandler
     public static final int NO_SESSION_ID = -1;
 
     private final TermState termState;
-    private final int leaderSessionId;
+    private final int ourSessionId;
     private final short nodeId;
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final RaftSubscriber acknowledgementSubscriber = new RaftSubscriber(this);
@@ -57,13 +57,13 @@ public class Leader implements Role, RaftHandler
         final long timeInMs,
         final long heartbeatIntervalInMs,
         final TermState termState,
-        final int leaderSessionId)
+        final int ourSessionId)
     {
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
         this.raftNode = raftNode;
         this.termState = termState;
-        this.leaderSessionId = leaderSessionId;
+        this.ourSessionId = ourSessionId;
         this.blockHandler = (buffer, offset, length, sessionId, termId) -> handler.onBlock(buffer, offset, length);
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
@@ -103,7 +103,7 @@ public class Leader implements Role, RaftHandler
 
     private void heartbeat()
     {
-        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition, leaderSessionId);
+        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition, ourSessionId);
         updateHeartbeatInterval(timeInMs);
     }
 

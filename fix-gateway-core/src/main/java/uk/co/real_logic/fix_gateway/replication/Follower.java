@@ -75,14 +75,45 @@ public class Follower implements Role, RaftHandler, BlockHandler
     {
         this.timeInMs = timeInMs;
 
-        final int readControlMessages =
-            controlSubscription.poll(raftSubscriber, fragmentLimit);
+        final int messagesRead = pollControlMessages(fragmentLimit);
+        final long bytesRead = readData(timeInMs);
+        attemptToCommitData();
+        testTimeout(timeInMs);
+        return messagesRead + (int) bytesRead;
+    }
 
+    private int pollControlMessages(final int fragmentLimit)
+    {
+        final int read = controlSubscription.poll(raftSubscriber, fragmentLimit);
+        if (read > 0)
+        {
+            updateReceiverTimeout(timeInMs);
+        }
+        return read;
+    }
+
+    private void testTimeout(final long timeInMs)
+    {
+        if (timeInMs > latestNextReceiveTimeInMs)
+        {
+            termState
+                .receivedPosition(receivedPosition)
+                .lastAppliedPosition(lastAppliedPosition)
+                .commitPosition(commitPosition);
+
+            raftNode.transitionToCandidate(timeInMs);
+        }
+    }
+
+    private long readData(final long timeInMs)
+    {
         long bytesRead = 0;
-        final int bufferLimit = toCommitBuffer.capacity() - toCommitBufferUsed;
+        final int previousToCommitBufferUsed = toCommitBufferUsed;
+        final int bufferLimit = toCommitBuffer.capacity() - previousToCommitBufferUsed;
         if (bufferLimit > 0)
         {
-            bytesRead = dataSubscription.blockPoll(this, bufferLimit);
+            dataSubscription.blockPoll(this, bufferLimit);
+            bytesRead = toCommitBufferUsed - previousToCommitBufferUsed;
             if (bytesRead > 0)
             {
                 receivedPosition += bytesRead;
@@ -90,7 +121,11 @@ public class Follower implements Role, RaftHandler, BlockHandler
                 updateReceiverTimeout(timeInMs);
             }
         }
+        return bytesRead;
+    }
 
+    private void attemptToCommitData()
+    {
         final long canCommitUpToPosition = Math.min(commitPosition, receivedPosition);
         final int committableBytes = (int) (canCommitUpToPosition - lastAppliedPosition);
         if (committableBytes > 0)
@@ -104,23 +139,6 @@ public class Follower implements Role, RaftHandler, BlockHandler
                 toCommitBuffer.putBytes(0, toCommitBuffer, committableBytes, uncommittedBytes);
             }
         }
-
-        if (readControlMessages > 0)
-        {
-            updateReceiverTimeout(timeInMs);
-        }
-
-        if (timeInMs > latestNextReceiveTimeInMs)
-        {
-            termState
-                .receivedPosition(receivedPosition)
-                .lastAppliedPosition(lastAppliedPosition)
-                .commitPosition(commitPosition);
-
-            raftNode.transitionToCandidate(timeInMs);
-        }
-
-        return readControlMessages + (int) bytesRead;
     }
 
     public void closeStreams()
