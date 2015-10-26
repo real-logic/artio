@@ -15,7 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -24,6 +26,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 
 public class FollowerTest
@@ -46,11 +49,12 @@ public class FollowerTest
     private RaftPublication controlPublication = mock(RaftPublication.class);
     private ReplicationHandler handler = mock(ReplicationHandler.class);
     private Subscription dataSubscription = mock(Subscription.class);
+    private Image leaderDataImage = mock(Image.class);
     private Subscription controlSubscription = mock(Subscription.class);
     private RaftNode raftNode = mock(RaftNode.class);
 
     private final TermState termState = new TermState()
-        .commitPosition(POSITION)
+        .allPositions(POSITION)
         .leadershipTerm(OLD_LEADERSHIP_TERM)
         .leaderSessionId(LEADER_SESSION_ID);
 
@@ -61,11 +65,21 @@ public class FollowerTest
         0,
         VOTE_TIMEOUT,
         8 * 1024 * 1024,
-        termState)
-        .controlPublication(controlPublication)
-        .acknowledgementPublication(acknowledgementPublication)
-        .dataSubscription(dataSubscription)
-        .controlSubscription(controlSubscription);
+        termState);
+
+    @Before
+    public void setUp()
+    {
+        follower
+            .controlPublication(controlPublication)
+            .acknowledgementPublication(acknowledgementPublication)
+            .dataSubscription(dataSubscription)
+            .controlSubscription(controlSubscription);
+
+        when(dataSubscription.getImage(LEADER_SESSION_ID)).thenReturn(leaderDataImage);
+
+        follower.follow(0);
+    }
 
     @Test
     public void shouldOnlyVoteForOneCandidateDuringTerm()
@@ -126,26 +140,23 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldNotCommitDataFromNonLeader()
+    public void shouldNotifyMissingLogEntries()
     {
-        dataToBeCommitted(OTHER_SESSION_ID, OFFSET);
-
-        receivesHeartbeat();
+        dataToBeCommitted(POSITION + LENGTH);
 
         poll();
 
-        noDataCommitted();
+        notifyMissingLogEntries();
     }
 
-    @Test
-    public void shouldRequestResendWhenTheresMissingData()
-    {
-        dataToBeCommitted();
-
-        poll();
-    }
-
+    // TODO: commits resend
     // TODO: connect, resend, update ensure backfilled
+
+    private void notifyMissingLogEntries()
+    {
+        verify(acknowledgementPublication)
+            .saveMessageAcknowledgement(POSITION, ID, MISSING_LOG_ENTRIES);
+    }
 
     private void receivesHeartbeat()
     {
@@ -164,17 +175,19 @@ public class FollowerTest
 
     private void dataToBeCommitted()
     {
-        dataToBeCommitted(LEADER_SESSION_ID, OFFSET);
+        dataToBeCommitted(POSITION);
     }
 
-    private void dataToBeCommitted(final int dataSessionId, final int offset)
+    private void dataToBeCommitted(final long position)
     {
-        when(dataSubscription.blockPoll(eq(follower), anyInt())).then(inv ->
+        when(leaderDataImage.blockPoll(eq(follower), anyInt())).then(inv ->
         {
-            follower.onBlock(buffer, offset, LENGTH, dataSessionId, 0);
+            follower.onBlock(buffer, (int) position, LENGTH, LEADER_SESSION_ID, 0);
 
             return LENGTH;
         });
+
+        when(leaderDataImage.position()).thenReturn(position);
     }
 
     private void noDataCommitted()

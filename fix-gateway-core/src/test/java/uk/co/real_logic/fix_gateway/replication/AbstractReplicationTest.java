@@ -126,7 +126,8 @@ public class AbstractReplicationTest
             .dataSubscription(dataSubscription())
             .controlSubscription(controlSubscription())
             .acknowledgementPublication(raftPublication(ACKNOWLEDGEMENT))
-            .controlPublication(raftPublication(CONTROL));
+            .controlPublication(raftPublication(CONTROL))
+            .follow(0);
     }
 
     protected static void run(final Role node1, final Role node2, final Role node3)

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.agrona.DirectBuffer;
@@ -22,6 +23,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
+import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
@@ -42,6 +44,7 @@ public class Follower implements Role, RaftHandler, BlockHandler
     private RaftPublication acknowledgementPublication;
     private RaftPublication controlPublication;
     private Subscription dataSubscription;
+    private Image leaderDataImage;
     private Subscription controlSubscription;
     private long receivedPosition;
     private long commitPosition;
@@ -107,21 +110,44 @@ public class Follower implements Role, RaftHandler, BlockHandler
 
     private long readData(final long timeInMs)
     {
+        if (leaderDataImage == null)
+        {
+            return 0;
+        }
+
+        final long imagePosition = leaderDataImage.position();
+        if (imagePosition < receivedPosition)
+        {
+            // TODO: theoretically not possible, but maybe have a sanity check?
+        }
+
+        if (imagePosition > receivedPosition)
+        {
+            saveMessageAcknowledgement(MISSING_LOG_ENTRIES);
+
+            return 1;
+        }
+
         long bytesRead = 0;
         final int previousToCommitBufferUsed = toCommitBufferUsed;
         final int bufferLimit = toCommitBuffer.capacity() - previousToCommitBufferUsed;
         if (bufferLimit > 0)
         {
-            dataSubscription.blockPoll(this, bufferLimit);
+            leaderDataImage.blockPoll(this, bufferLimit);
             bytesRead = toCommitBufferUsed - previousToCommitBufferUsed;
             if (bytesRead > 0)
             {
                 receivedPosition += bytesRead;
-                acknowledgementPublication.saveMessageAcknowledgement(receivedPosition, nodeId, OK);
+                saveMessageAcknowledgement(OK);
                 updateReceiverTimeout(timeInMs);
             }
         }
         return bytesRead;
+    }
+
+    private void saveMessageAcknowledgement(final AcknowledgementStatus status)
+    {
+        acknowledgementPublication.saveMessageAcknowledgement(receivedPosition, nodeId, status);
     }
 
     private void attemptToCommitData()
@@ -230,6 +256,7 @@ public class Follower implements Role, RaftHandler, BlockHandler
         receivedPosition = termState.receivedPosition();
         lastAppliedPosition = termState.lastAppliedPosition();
         commitPosition = termState.commitPosition();
+        leaderDataImage = dataSubscription.getImage(termState.leaderSessionId());
     }
 
     public void onBlock(final DirectBuffer srcBuffer,
@@ -238,11 +265,8 @@ public class Follower implements Role, RaftHandler, BlockHandler
                         final int sessionId,
                         final int termId)
     {
-        if (sessionId == termState.leaderSessionId())
-        {
-            toCommitBuffer.putBytes(toCommitBufferUsed, srcBuffer, offset, length);
-            toCommitBufferUsed += length;
-        }
+        toCommitBuffer.putBytes(toCommitBufferUsed, srcBuffer, offset, length);
+        toCommitBufferUsed += length;
     }
 
     public Follower acknowledgementPublication(final RaftPublication acknowledgementPublication)
