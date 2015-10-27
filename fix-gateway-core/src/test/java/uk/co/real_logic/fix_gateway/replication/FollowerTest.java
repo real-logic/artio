@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.stubbing.OngoingStubbing;
 import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
@@ -149,8 +150,35 @@ public class FollowerTest
         notifyMissingLogEntries();
     }
 
-    // TODO: commits resend
-    // TODO: connect, resend, update ensure backfilled
+    @Test
+    public void shouldCommitResentLogEntries()
+    {
+        receivesHeartbeat();
+
+        poll();
+
+        receivesResend();
+
+        poll();
+
+        dataCommitted();
+    }
+
+    @Test
+    public void shouldCommitMoreDataAfterResend()
+    {
+        shouldCommitResentLogEntries();
+
+        final long endOfResendPosition = POSITION + LENGTH;
+
+        dataToBeCommitted(endOfResendPosition);
+
+        receivesHeartbeat(endOfResendPosition + LENGTH);
+
+        poll();
+
+        dataCommitted();
+    }
 
     private void notifyMissingLogEntries()
     {
@@ -160,17 +188,37 @@ public class FollowerTest
 
     private void receivesHeartbeat()
     {
-        when(controlSubscription.poll(any(), anyInt())).then(inv ->
+        receivesHeartbeat(POSITION + LENGTH);
+    }
+
+    private void receivesHeartbeat(final long position)
+    {
+        whenControlPolled().then(inv ->
         {
-            follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION + LENGTH, LEADER_SESSION_ID);
+            follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, position, LEADER_SESSION_ID);
 
             return 1;
         });
     }
 
+    private void receivesResend()
+    {
+        whenControlPolled().then(inv ->
+        {
+            follower.onResend(ID_4, NEW_LEADERSHIP_TERM, POSITION, buffer, 0, LENGTH);
+
+            return 1;
+        });
+    }
+
+    private OngoingStubbing<Integer> whenControlPolled()
+    {
+        return when(controlSubscription.poll(any(), anyInt()));
+    }
+
     private void dataCommitted()
     {
-        verify(handler).onBlock(any(), eq(0), eq(LENGTH));
+        verify(handler, atLeastOnce()).onBlock(any(), eq(0), eq(LENGTH));
     }
 
     private void dataToBeCommitted()

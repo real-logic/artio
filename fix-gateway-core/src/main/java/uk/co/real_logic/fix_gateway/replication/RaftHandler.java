@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
@@ -31,4 +32,12 @@ public interface RaftHandler
                               final int leaderShipTerm,
                               final long position,
                               final int leaderSessionId);
+
+    void onResend(
+        final short leaderNodeId,
+        final int leaderShipTerm,
+        final long startPosition,
+        final DirectBuffer bodyBuffer,
+        final int bodyOffset,
+        final int bodyLength);
 }

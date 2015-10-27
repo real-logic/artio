@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Publication;
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
@@ -29,11 +30,14 @@ public class RaftPublication extends AbstractionPublication
     private static final int REQUEST_VOTE_LENGTH = HEADER_LENGTH + RequestVoteEncoder.BLOCK_LENGTH;
     private static final int REPLY_VOTE_LENGTH = HEADER_LENGTH + ReplyVoteEncoder.BLOCK_LENGTH;
     private static final int CONCENSUS_HEARTBEAT_LENGTH = HEADER_LENGTH + ConcensusHeartbeatEncoder.BLOCK_LENGTH;
+    private static final int RESEND_BLOCK_LENGTH =
+        HEADER_LENGTH + ResendEncoder.BLOCK_LENGTH + ResendDecoder.bodyHeaderLength();
 
     private final MessageAcknowledgementEncoder messageAcknowledgement = new MessageAcknowledgementEncoder();
     private final RequestVoteEncoder requestVote = new RequestVoteEncoder();
     private final ReplyVoteEncoder replyVote = new ReplyVoteEncoder();
     private final ConcensusHeartbeatEncoder concensusHeart = new ConcensusHeartbeatEncoder();
+    private final ResendEncoder resend = new ResendEncoder();
 
     public RaftPublication(
         final int maxClaimAttempts,
@@ -156,6 +160,39 @@ public class RaftPublication extends AbstractionPublication
             .leaderShipTerm(leaderShipTerm)
             .position(position)
             .leaderSessionId(leaderSessionId);
+
+        bufferClaim.commit();
+
+        return pos;
+    }
+
+    public long saveResend(final short leaderNodeId,
+                           final int leaderShipTerm,
+                           final long startPosition,
+                           final DirectBuffer bodyBuffer,
+                           final int bodyOffset,
+                           final int bodyLength)
+    {
+        final long pos = claim(RESEND_BLOCK_LENGTH + bodyLength);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(resend.sbeBlockLength())
+            .templateId(resend.sbeTemplateId())
+            .schemaId(resend.sbeSchemaId())
+            .version(resend.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        resend
+            .wrap(buffer, offset)
+            .leaderNodeId(leaderNodeId)
+            .leaderShipTerm(leaderShipTerm)
+            .startPosition(startPosition)
+            .putBody(bodyBuffer, bodyOffset, bodyLength);
 
         bufferClaim.commit();
 

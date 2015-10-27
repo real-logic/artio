@@ -20,6 +20,9 @@ import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
+import static uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder.ENCODED_LENGTH;
+import static uk.co.real_logic.fix_gateway.messages.ResendDecoder.bodyHeaderLength;
+
 public class RaftSubscriber implements FragmentHandler
 {
 
@@ -28,6 +31,7 @@ public class RaftSubscriber implements FragmentHandler
     private final RequestVoteDecoder requestVote = new RequestVoteDecoder();
     private final ReplyVoteDecoder replyVote = new ReplyVoteDecoder();
     private final ConcensusHeartbeatDecoder concensusHeartbeat = new ConcensusHeartbeatDecoder();
+    private final ResendDecoder resend = new ResendDecoder();
 
     private final RaftHandler handler;
 
@@ -88,6 +92,21 @@ public class RaftSubscriber implements FragmentHandler
                     concensusHeartbeat.leaderShipTerm(),
                     concensusHeartbeat.position(),
                     concensusHeartbeat.leaderSessionId());
+                return;
+            }
+
+            case ResendDecoder.TEMPLATE_ID:
+            {
+                resend.wrap(buffer, offset, blockLength, version);
+                final int bodyOffset = offset + ENCODED_LENGTH + blockLength + bodyHeaderLength();
+                handler.onResend(
+                    resend.leaderNodeId(),
+                    resend.leaderShipTerm(),
+                    resend.startPosition(),
+                    buffer,
+                    bodyOffset,
+                    resend.bodyLength()
+                );
                 return;
             }
         }

@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
@@ -131,6 +132,16 @@ public class Leader implements Role, RaftHandler
         final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
         // We've possibly timed out
+    }
+
+    public void onResend(final short leaderNodeId,
+                         final int leaderShipTerm,
+                         final long startPosition,
+                         final DirectBuffer bodyBuffer,
+                         final int bodyOffset,
+                         final int bodyLength)
+    {
+        // Ignore this message
     }
 
     public void onConcensusHeartbeat(final short nodeId,

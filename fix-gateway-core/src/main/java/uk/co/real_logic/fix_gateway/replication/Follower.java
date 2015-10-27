@@ -242,6 +242,18 @@ public class Follower implements Role, RaftHandler, BlockHandler
         }
     }
 
+    public void onResend(final short leaderNodeId,
+                         final int leaderShipTerm,
+                         final long startPosition,
+                         final DirectBuffer bodyBuffer,
+                         final int bodyOffset,
+                         final int bodyLength)
+    {
+        saveData(bodyBuffer, bodyOffset, bodyLength);
+        receivedPosition += bodyLength;
+        updateReceiverTimeout(timeInMs);
+    }
+
     public Follower follow(final long timeInMs)
     {
         updateReceiverTimeout(timeInMs);
@@ -264,6 +276,11 @@ public class Follower implements Role, RaftHandler, BlockHandler
                         final int length,
                         final int sessionId,
                         final int termId)
+    {
+        saveData(srcBuffer, offset, length);
+    }
+
+    private void saveData(final DirectBuffer srcBuffer, final int offset, final int length)
     {
         toCommitBuffer.putBytes(toCommitBufferUsed, srcBuffer, offset, length);
         toCommitBufferUsed += length;

@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
@@ -111,6 +112,17 @@ public class Candidate implements Role, RaftHandler
     {
         // System.out.println("YES @ " + this.id);
         followIfNextTerm(nodeId, dataSessionId, leaderShipTerm, position, true);
+    }
+
+
+    public void onResend(final short leaderNodeId,
+                         final int leaderShipTerm,
+                         final long startPosition,
+                         final DirectBuffer bodyBuffer,
+                         final int bodyOffset,
+                         final int bodyLength)
+    {
+        // Ignore this message
     }
 
     public Candidate startNewElection(final long timeInMs)
