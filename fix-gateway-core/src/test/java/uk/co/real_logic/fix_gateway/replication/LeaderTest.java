@@ -22,9 +22,8 @@ import uk.co.real_logic.agrona.collections.IntHashSet;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.hasLeaderSessionId;
 import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.neverTransitionsToFollower;
 
@@ -37,6 +36,7 @@ public class LeaderTest
     private static final long POSITION = 40L;
     private static final int HEARTBEAT_INTERVAL_IN_MS = 10;
     private static final short NEW_LEADER_ID = 3;
+    private static final short FOLLOWER_ID = 4;
     private static final int NEW_LEADER_SESSION_ID = 43;
 
     private RaftPublication controlPublication = mock(RaftPublication.class);
@@ -91,6 +91,32 @@ public class LeaderTest
         receivesHeartbeat(ID, LEADERSHIP_TERM, LEADER_SESSION_ID);
 
         neverTransitionsToFollower(raftNode);
+    }
+
+    @Test
+    public void shouldResendDataInResponseToMissingLogEntries()
+    {
+        final long followerPosition = 0;
+
+        receivesMissingLogEntries(followerPosition);
+
+        resendsMissingLogEntries(followerPosition);
+    }
+
+    private void receivesMissingLogEntries(final long followerPosition)
+    {
+        leader.onMessageAcknowledgement(followerPosition, FOLLOWER_ID, MISSING_LOG_ENTRIES);
+    }
+
+    private void resendsMissingLogEntries(final long followerPosition)
+    {
+        verify(controlPublication).saveResend(
+            eq(LEADER_SESSION_ID),
+            eq(LEADERSHIP_TERM),
+            eq(followerPosition),
+            any(),
+            eq(0),
+            eq((int) POSITION));
     }
 
     private void receivesHeartbeat(final short leaderId, final int leaderShipTerm, final int dataSessionId)

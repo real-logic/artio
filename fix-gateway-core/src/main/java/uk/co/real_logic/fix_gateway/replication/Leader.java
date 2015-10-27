@@ -20,10 +20,12 @@ import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
-import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
+import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
+import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.WRONG_TERM;
 
 public class Leader implements Role, RaftHandler
 {
@@ -117,9 +119,18 @@ public class Leader implements Role, RaftHandler
     public void onMessageAcknowledgement(
         final long newAckedPosition, final short nodeId, final AcknowledgementStatus status)
     {
-        if (status == OK)
+        if (status != WRONG_TERM)
         {
             nodeToPosition.put(nodeId, newAckedPosition);
+        }
+
+        if (status == MISSING_LOG_ENTRIES)
+        {
+            final int delta = (int) (commitPosition - newAckedPosition);
+            // TODO: read from the archive
+            final UnsafeBuffer buffer = new UnsafeBuffer(new byte[delta]);
+            controlPublication
+                .saveResend(ourSessionId, leaderShipTerm, newAckedPosition, buffer, 0, delta);
         }
     }
 

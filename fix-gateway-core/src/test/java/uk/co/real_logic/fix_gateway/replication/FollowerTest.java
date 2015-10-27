@@ -205,8 +205,6 @@ public class FollowerTest
         noDataCommitted();
     }
 
-    // TODO: Repeat onBlock sends with the same position
-
     @Test
     public void shouldCommitMoreDataAfterResend()
     {
