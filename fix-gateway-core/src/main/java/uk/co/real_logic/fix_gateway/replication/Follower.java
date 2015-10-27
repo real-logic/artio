@@ -254,6 +254,7 @@ public class Follower implements Role, RaftHandler, BlockHandler
             saveData(bodyBuffer, bodyOffset, bodyLength);
             receivedPosition += bodyLength;
             updateReceiverTimeout(timeInMs);
+            saveMessageAcknowledgement(OK);
         }
     }
 

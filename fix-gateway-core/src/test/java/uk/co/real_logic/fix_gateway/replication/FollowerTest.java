@@ -28,6 +28,7 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
+import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 
 public class FollowerTest
@@ -164,6 +165,20 @@ public class FollowerTest
     }
 
     @Test
+    public void shouldAcknowledgeResentLogEntries()
+    {
+        receivesHeartbeat();
+
+        poll();
+
+        receivesResend();
+
+        poll();
+
+        acknowledgeLogEntries();
+    }
+
+    @Test
     public void shouldNotCommitResentLogEntriesWithGap()
     {
         receivesHeartbeat();
@@ -245,6 +260,12 @@ public class FollowerTest
     private void receivesResend()
     {
         receivesResendFrom(POSITION, LEADER_SESSION_ID, NEW_LEADERSHIP_TERM);
+    }
+
+    private void acknowledgeLogEntries()
+    {
+        verify(acknowledgementPublication)
+            .saveMessageAcknowledgement(POSITION + LENGTH, ID, OK);
     }
 
     private void receivesResendFrom(final long position, final int leaderSessionId, final int leaderShipTerm)
