@@ -242,16 +242,27 @@ public class Follower implements Role, RaftHandler, BlockHandler
         }
     }
 
-    public void onResend(final short leaderNodeId,
+    public void onResend(final int leaderSessionId,
                          final int leaderShipTerm,
                          final long startPosition,
                          final DirectBuffer bodyBuffer,
                          final int bodyOffset,
                          final int bodyLength)
     {
-        saveData(bodyBuffer, bodyOffset, bodyLength);
-        receivedPosition += bodyLength;
-        updateReceiverTimeout(timeInMs);
+        if (isValidPosition(leaderSessionId, leaderShipTerm, startPosition))
+        {
+            saveData(bodyBuffer, bodyOffset, bodyLength);
+            receivedPosition += bodyLength;
+            updateReceiverTimeout(timeInMs);
+        }
+    }
+
+    private boolean isValidPosition(
+        final int leaderSessionId, final int leaderShipTerm, final long position)
+    {
+        return position == receivedPosition
+            && leaderSessionId == termState.leaderSessionId()
+            && leaderShipTerm == this.leaderShipTerm;
     }
 
     public Follower follow(final long timeInMs)

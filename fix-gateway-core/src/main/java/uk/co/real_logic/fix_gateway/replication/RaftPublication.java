@@ -166,7 +166,7 @@ public class RaftPublication extends AbstractionPublication
         return pos;
     }
 
-    public long saveResend(final short leaderNodeId,
+    public long saveResend(final int leaderSessionId,
                            final int leaderShipTerm,
                            final long startPosition,
                            final DirectBuffer bodyBuffer,
@@ -189,7 +189,7 @@ public class RaftPublication extends AbstractionPublication
 
         resend
             .wrap(buffer, offset)
-            .leaderNodeId(leaderNodeId)
+            .leaderSessionId(leaderSessionId)
             .leaderShipTerm(leaderShipTerm)
             .startPosition(startPosition)
             .putBody(bodyBuffer, bodyOffset, bodyLength);

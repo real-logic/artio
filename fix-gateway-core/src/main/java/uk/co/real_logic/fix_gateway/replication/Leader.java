@@ -134,7 +134,7 @@ public class Leader implements Role, RaftHandler
         // We've possibly timed out
     }
 
-    public void onResend(final short leaderNodeId,
+    public void onResend(final int leaderSessionId,
                          final int leaderShipTerm,
                          final long startPosition,
                          final DirectBuffer bodyBuffer,

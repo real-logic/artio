@@ -100,7 +100,7 @@ public class RaftSubscriber implements FragmentHandler
                 resend.wrap(buffer, offset, blockLength, version);
                 final int bodyOffset = offset + ENCODED_LENGTH + blockLength + bodyHeaderLength();
                 handler.onResend(
-                    resend.leaderNodeId(),
+                    resend.leaderSessionId(),
                     resend.leaderShipTerm(),
                     resend.startPosition(),
                     buffer,

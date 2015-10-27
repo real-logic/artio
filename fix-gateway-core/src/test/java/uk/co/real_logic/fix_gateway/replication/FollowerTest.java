@@ -33,7 +33,6 @@ import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 public class FollowerTest
 {
     private static final long POSITION = 40;
-    private static final int OFFSET = (int) POSITION;
     private static final int LENGTH = 100;
     private static final long VOTE_TIMEOUT = 100;
     private static final int OLD_LEADERSHIP_TERM = 1;
@@ -165,6 +164,50 @@ public class FollowerTest
     }
 
     @Test
+    public void shouldNotCommitResentLogEntriesWithGap()
+    {
+        receivesHeartbeat();
+
+        poll();
+
+        receivesResendFrom(POSITION + LENGTH, LEADER_SESSION_ID, NEW_LEADERSHIP_TERM);
+
+        poll();
+
+        noDataCommitted();
+    }
+
+    @Test
+    public void shouldNotCommitResentLogEntriesFromWrongLeader()
+    {
+        receivesHeartbeat();
+
+        poll();
+
+        receivesResendFrom(POSITION, OTHER_SESSION_ID, NEW_LEADERSHIP_TERM);
+
+        poll();
+
+        noDataCommitted();
+    }
+
+    @Test
+    public void shouldNotCommitResentLogEntriesFromOldTerm()
+    {
+        receivesHeartbeat();
+
+        poll();
+
+        receivesResendFrom(POSITION, LEADER_SESSION_ID, OLD_LEADERSHIP_TERM);
+
+        poll();
+
+        noDataCommitted();
+    }
+
+    // TODO: Repeat onBlock sends with the same position
+
+    @Test
     public void shouldCommitMoreDataAfterResend()
     {
         shouldCommitResentLogEntries();
@@ -203,9 +246,14 @@ public class FollowerTest
 
     private void receivesResend()
     {
+        receivesResendFrom(POSITION, LEADER_SESSION_ID, NEW_LEADERSHIP_TERM);
+    }
+
+    private void receivesResendFrom(final long position, final int leaderSessionId, final int leaderShipTerm)
+    {
         whenControlPolled().then(inv ->
         {
-            follower.onResend(ID_4, NEW_LEADERSHIP_TERM, POSITION, buffer, 0, LENGTH);
+            follower.onResend(leaderSessionId, leaderShipTerm, position, buffer, 0, LENGTH);
 
             return 1;
         });

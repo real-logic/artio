@@ -34,7 +34,7 @@ public interface RaftHandler
                               final int leaderSessionId);
 
     void onResend(
-        final short leaderNodeId,
+        final int leaderSessionId,
         final int leaderShipTerm,
         final long startPosition,
         final DirectBuffer bodyBuffer,
