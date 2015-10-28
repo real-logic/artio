@@ -32,24 +32,18 @@ public class LogDirectoryDescriptor
     public LogDirectoryDescriptor(final String logFileDir)
     {
         this.logFileDir = logFileDir;
-        logFileFormat = logFileDir + File.separator + "archive_%d_%d_%d.log";
-        metaDataLogFileFormat = logFileDir + File.separator + "meta-data_%d_%d.log";
+        logFileFormat = logFileDir + File.separator + "archive_%s_%d_%d_%d.log";
+        metaDataLogFileFormat = logFileDir + File.separator + "meta-data_%s_%d_%d.log";
     }
 
-    public File logFile(final int streamId, final int sessionId, final int termId)
+    public File logFile(final StreamIdentifier stream, final int sessionId, final int termId)
     {
-        return new File(String.format(logFileFormat, streamId, sessionId, termId));
-    }
-
-    public File metaDataLogFile(final int streamId, final int sessionId)
-    {
-        return new File(String.format(metaDataLogFileFormat, streamId, sessionId));
+        return new File(String.format(logFileFormat, stream.channel(), stream.streamId(), sessionId, termId));
     }
 
     public File metaDataLogFile(final StreamIdentifier stream, final int sessionId)
     {
-        return new File(String.format(logFileDir + File.separator +
-            "meta-data_%s_%d_%d.log", stream.channel(), stream.streamId(), sessionId));
+        return new File(String.format(metaDataLogFileFormat, stream.channel(), stream.streamId(), sessionId));
     }
 
     public List<File> listLogFiles(final int streamId)

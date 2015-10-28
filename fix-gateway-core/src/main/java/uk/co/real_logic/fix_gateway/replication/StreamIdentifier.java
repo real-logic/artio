@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.driver.media.UdpChannel;
 
 import static uk.co.real_logic.aeron.CommonContext.IPC_CHANNEL;
@@ -26,6 +27,11 @@ public final class StreamIdentifier
 {
     private final int streamId;
     private final String channel;
+
+    public StreamIdentifier(final Subscription subscription)
+    {
+        this(subscription.streamId(), subscription.channel());
+    }
 
     public StreamIdentifier(final int streamId, final String channel)
     {
@@ -47,8 +53,14 @@ public final class StreamIdentifier
 
     public boolean equals(final Object o)
     {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+        {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
 
         final StreamIdentifier that = (StreamIdentifier) o;
 

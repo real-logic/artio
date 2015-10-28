@@ -47,7 +47,7 @@ public class Archiver implements Agent, FileBlockHandler
         this.metaData = metaData;
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
         this.subscription = subscription;
-        streamId = new StreamIdentifier(subscription.streamId(), subscription.channel());
+        streamId = new StreamIdentifier(subscription);
         sessionIdToArchive = new IntLruCache<>(loggerCacheCapacity, sessionId ->
         {
             final int initialTermId = subscription.getImage(sessionId).initialTermId();
@@ -66,13 +66,6 @@ public class Archiver implements Agent, FileBlockHandler
         return "Archiver";
     }
 
-    public void onClose()
-    {
-        subscription.close();
-        sessionIdToArchive.close();
-        metaData.close();
-    }
-
     public void onBlock(
         final FileChannel fileChannel,
         final long offset,
@@ -83,6 +76,13 @@ public class Archiver implements Agent, FileBlockHandler
         sessionIdToArchive
             .lookup(sessionId)
             .archive(fileChannel, offset, length, termId);
+    }
+
+    public void onClose()
+    {
+        subscription.close();
+        sessionIdToArchive.close();
+        metaData.close();
     }
 
     private final class SessionArchive implements AutoCloseable

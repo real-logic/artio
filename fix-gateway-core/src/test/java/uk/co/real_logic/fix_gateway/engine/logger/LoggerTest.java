@@ -112,7 +112,7 @@ public class LoggerTest
 
     private void assertCanReadValueAt(final int position)
     {
-        archiveReader.read(STREAM_ID, publication.sessionId(), position,
+        archiveReader.read(publication.sessionId(), position,
             (messageFrame, srcBuffer, startOffset, messageOffset, messageLength) -> {
                 assertEquals(VALUE, srcBuffer.getInt(startOffset + OFFSET));
                 return false;

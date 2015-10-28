@@ -75,7 +75,7 @@ public class ArchiveMetaData implements AutoCloseable
         }
     }
 
-    public ArchiveMetaDataDecoder read(final int streamId, final int sessionId)
+    public ArchiveMetaDataDecoder read(final StreamIdentifier streamId, final int sessionId)
     {
         ensureBufferNotMapped();
         metaDataBuffer.wrap(existingBufferFactory.map(directoryDescriptor.metaDataLogFile(streamId, sessionId)));

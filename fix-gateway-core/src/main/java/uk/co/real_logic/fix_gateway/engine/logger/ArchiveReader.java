@@ -17,17 +17,18 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.agrona.collections.BiInt2ObjectMap;
-import uk.co.real_logic.agrona.collections.BiInt2ObjectMap.EntryFunction;
+import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.collections.IntLruCache;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
+import java.util.function.IntFunction;
 
 import static java.lang.Integer.numberOfTrailingZeros;
 import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
@@ -41,42 +42,44 @@ public class ArchiveReader implements AutoCloseable
 
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
 
-    private final EntryFunction<SessionReader> newSessionReader = SessionReader::new;
-    private final BiInt2ObjectMap<SessionReader> streamAndSessionToReader;
+    private final IntFunction<SessionReader> newSessionReader = SessionReader::new;
+    private final Int2ObjectHashMap<SessionReader> aeronSessionIdToReader;
     private final ExistingBufferFactory archiveBufferFactory;
     private final ArchiveMetaData metaData;
     private final int loggerCacheCapacity;
+    private final StreamIdentifier streamId;
     private final LogDirectoryDescriptor directoryDescriptor;
 
     public ArchiveReader(
         final ExistingBufferFactory archiveBufferFactory,
         final ArchiveMetaData metaData,
         final String logFileDir,
-        final int loggerCacheCapacity)
+        final int loggerCacheCapacity,
+        final StreamIdentifier streamId)
     {
         this.archiveBufferFactory = archiveBufferFactory;
         this.metaData = metaData;
         this.loggerCacheCapacity = loggerCacheCapacity;
+        this.streamId = streamId;
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
-        streamAndSessionToReader = new BiInt2ObjectMap<>();
+        aeronSessionIdToReader = new Int2ObjectHashMap<>();
     }
 
     public void close()
     {
         metaData.close();
-        streamAndSessionToReader.forEach(SessionReader::close);
+        aeronSessionIdToReader.values().forEach(SessionReader::close);
     }
 
-    public boolean read(final int streamId, final int aeronSessionId, final long position, final LogHandler handler)
+    public boolean read(final int aeronSessionId, final long position, final LogHandler handler)
     {
-        return streamAndSessionToReader
-            .computeIfAbsent(streamId, aeronSessionId, newSessionReader)
+        return aeronSessionIdToReader
+            .computeIfAbsent(aeronSessionId, newSessionReader)
             .read(position, handler);
     }
 
     private final class SessionReader implements AutoCloseable
     {
-        private final int streamId;
         private final int sessionId;
         private final IntLruCache<ByteBuffer> termIdToBuffer =
             new IntLruCache<>(loggerCacheCapacity, this::newBuffer, this::closeBuffer);
@@ -85,9 +88,8 @@ public class ArchiveReader implements AutoCloseable
         private final int initialTermId;
         private final int positionBitsToShift;
 
-        private SessionReader(final int streamId, final int sessionId)
+        private SessionReader(final int sessionId)
         {
-            this.streamId = streamId;
             this.sessionId = sessionId;
             final ArchiveMetaDataDecoder streamMetaData = metaData.read(streamId, sessionId);
             initialTermId = streamMetaData.initialTermId();

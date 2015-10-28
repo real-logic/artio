@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
+import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,10 +28,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.co.real_logic.aeron.CommonContext.IPC_CHANNEL;
 
 public class ArchiveMetaDataTest
 {
-    public static final int STREAM_ID = 1;
+    public static final StreamIdentifier STREAM_ID = new StreamIdentifier(1, IPC_CHANNEL);
     public static final int SESSION_ID = 2;
     public static final int INITIAL_TERM_ID = 12;
     public static final int TERM_BUFFER_LENGTH = 13;

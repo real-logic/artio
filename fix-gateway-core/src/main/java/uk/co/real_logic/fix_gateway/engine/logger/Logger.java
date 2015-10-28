@@ -23,6 +23,7 @@ import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import uk.co.real_logic.fix_gateway.streams.Streams;
 
 import java.util.ArrayList;
@@ -45,7 +46,7 @@ public class Logger implements AutoCloseable
     private final List<Archiver> archivers = new ArrayList<>();
 
     private AgentRunner loggingRunner;
-    private ArchiveReader archiveReader;
+    private ArchiveReader outboundArchiveReader;
 
     public Logger(
         final EngineConfiguration configuration,
@@ -84,7 +85,7 @@ public class Logger implements AutoCloseable
             final Indexer indexer = new Indexer(indices, outboundLibraryStreams.subscription());
 
             final ReplayQuery replayQuery = new ReplayQuery(
-                logFileDir, loggerCacheCapacity, LoggerUtil::mapExistingFile, archiveReader);
+                logFileDir, loggerCacheCapacity, LoggerUtil::mapExistingFile, outboundArchiveReader);
             final Replayer replayer = new Replayer(
                 inboundLibraryStreams.subscription(),
                 replayQuery,
@@ -102,11 +103,6 @@ public class Logger implements AutoCloseable
         }
     }
 
-    private AgentRunner newRunner(final Agent loggingAgent)
-    {
-        return new AgentRunner(configuration.loggerIdleStrategy(), errorHandler, null, loggingAgent);
-    }
-
     public void initArchival()
     {
         final int loggerCacheCapacity = configuration.loggerCacheCapacity();
@@ -116,16 +112,24 @@ public class Logger implements AutoCloseable
         {
             addArchiver(loggerCacheCapacity, logFileDir, inboundLibraryStreams.subscription());
         }
+
         if (configuration.logOutboundMessages())
         {
-            addArchiver(loggerCacheCapacity, logFileDir, outboundLibraryStreams.subscription());
-        }
+            final Subscription outboundSubscription = outboundLibraryStreams.subscription();
+            addArchiver(loggerCacheCapacity, logFileDir, outboundSubscription);
 
-        archiveReader = new ArchiveReader(
-            LoggerUtil::mapExistingFile,
-            LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
-            logFileDir,
-            loggerCacheCapacity);
+            outboundArchiveReader = new ArchiveReader(
+                LoggerUtil::mapExistingFile,
+                LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
+                logFileDir,
+                loggerCacheCapacity,
+                new StreamIdentifier(outboundSubscription));
+        }
+    }
+
+    private AgentRunner newRunner(final Agent loggingAgent)
+    {
+        return new AgentRunner(configuration.loggerIdleStrategy(), errorHandler, null, loggingAgent);
     }
 
     private void addArchiver(final int loggerCacheCapacity,
@@ -147,7 +151,7 @@ public class Logger implements AutoCloseable
 
     public ArchiveReader archiveReader()
     {
-        return archiveReader;
+        return outboundArchiveReader;
     }
 
     public void start()
@@ -179,6 +183,6 @@ public class Logger implements AutoCloseable
             archivers.forEach(Archiver::onClose);
         }
 
-        archiveReader.close();
+        outboundArchiveReader.close();
     }
 }

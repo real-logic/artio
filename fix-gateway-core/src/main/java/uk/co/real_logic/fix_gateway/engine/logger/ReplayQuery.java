@@ -39,17 +39,17 @@ public class ReplayQuery implements AutoCloseable
     private final String logFileDir;
     private final ExistingBufferFactory indexBufferFactory;
 
-    private final ArchiveReader archiveReader;
+    private final ArchiveReader outboundArchiveReader;
 
     public ReplayQuery(
         final String logFileDir,
         final int loggerCacheCapacity,
         final ExistingBufferFactory indexBufferFactory,
-        final ArchiveReader archiveReader)
+        final ArchiveReader outboundArchiveReader)
     {
         this.logFileDir = logFileDir;
         this.indexBufferFactory = indexBufferFactory;
-        this.archiveReader = archiveReader;
+        this.outboundArchiveReader = outboundArchiveReader;
         sessionToIndex = new LongLruCache<>(loggerCacheCapacity, SessionQuery::new, SessionQuery::close);
     }
 
@@ -102,7 +102,7 @@ public class ReplayQuery implements AutoCloseable
                 if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo && streamId == OUTBOUND_LIBRARY_STREAM)
                 {
                     count++;
-                    if (!archiveReader.read(streamId, aeronSessionId, position, handler))
+                    if (!outboundArchiveReader.read(aeronSessionId, position, handler))
                     {
                         return count;
                     }
