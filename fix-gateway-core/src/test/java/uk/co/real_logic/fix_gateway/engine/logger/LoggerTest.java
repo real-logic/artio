@@ -73,7 +73,7 @@ public class LoggerTest
             configuration, inboundStreams, null, Throwable::printStackTrace, null, mock(SequenceNumbers.class));
 
         logger.initArchival();
-        archiver = logger.archiver();
+        archiver = logger.archivers().get(0);
         archiveReader = logger.archiveReader();
         publication = inboundStreams.dataPublication();
 

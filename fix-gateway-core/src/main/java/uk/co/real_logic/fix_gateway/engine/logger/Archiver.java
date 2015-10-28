@@ -26,71 +26,61 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
-import java.util.List;
 
-import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
-import static uk.co.real_logic.agrona.collections.CollectionUtil.sum;
 
-public class Archiver implements Agent
+public class Archiver implements Agent, FileBlockHandler
 {
     private final ArchiveMetaData metaData;
-    private final List<SubscriptionArchive> subscriptions;
+    private final IntLruCache<SessionArchive> sessionIdToArchive;
+    private final Subscription subscription;
     private final LogDirectoryDescriptor directoryDescriptor;
 
     public Archiver(
         final ArchiveMetaData metaData,
         final String logFileDir,
         final int loggerCacheCapacity,
-        final List<Subscription> subscriptions)
+        final Subscription subscription)
     {
         this.metaData = metaData;
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
-        this.subscriptions = subscriptions
-            .stream()
-            .map(subscription -> new SubscriptionArchive(loggerCacheCapacity, subscription))
-            .collect(toList());
+        this.subscription = subscription;
+        sessionIdToArchive = new IntLruCache<>(loggerCacheCapacity, sessionId ->
+        {
+            final int streamId = subscription.streamId();
+            final int initialTermId = subscription.getImage(sessionId).initialTermId();
+            metaData.write(streamId, sessionId, initialTermId, termBufferLength());
+            return new SessionArchive(streamId, sessionId);
+        }, SessionArchive::close);
     }
 
-    private final class SubscriptionArchive implements FileBlockHandler, AutoCloseable
+    public int doWork()
     {
-        private final IntLruCache<SessionArchive> sessionIdToArchive;
-        private final Subscription subscription;
+        return (int) subscription.filePoll(this, termBufferLength());
+    }
 
-        private SubscriptionArchive(final int loggerCacheCapacity, final Subscription subscription)
-        {
-            this.subscription = subscription;
-            sessionIdToArchive = new IntLruCache<>(loggerCacheCapacity, sessionId ->
-            {
-                final int streamId = subscription.streamId();
-                final int initialTermId = subscription.getImage(sessionId).initialTermId();
-                metaData.write(streamId, sessionId, initialTermId, termBufferLength());
-                return new SessionArchive(streamId, sessionId);
-            }, SessionArchive::close);
-        }
+    public String roleName()
+    {
+        return "Archiver";
+    }
 
-        public void onBlock(
-            final FileChannel fileChannel,
-            final long offset,
-            final int length,
-            final int sessionId,
-            final int termId)
-        {
-            sessionIdToArchive
-                .lookup(sessionId)
-                .archive(fileChannel, offset, length, termId);
-        }
+    public void onClose()
+    {
+        subscription.close();
+        sessionIdToArchive.close();
+        metaData.close();
+    }
 
-        private int poll()
-        {
-            return (int) subscription.filePoll(this, termBufferLength());
-        }
-
-        public void close()
-        {
-            subscription.close();
-            sessionIdToArchive.close();
-        }
+    public void onBlock(
+        final FileChannel fileChannel,
+        final long offset,
+        final int length,
+        final int sessionId,
+        final int termId)
+    {
+        sessionIdToArchive
+            .lookup(sessionId)
+            .archive(fileChannel, offset, length, termId);
     }
 
     private final class SessionArchive implements AutoCloseable
@@ -139,21 +129,5 @@ public class Archiver implements Agent
         {
             CloseHelper.close(currentLogFile);
         }
-    }
-
-    public int doWork()
-    {
-        return sum(subscriptions, SubscriptionArchive::poll);
-    }
-
-    public String roleName()
-    {
-        return "Archiver";
-    }
-
-    public void onClose()
-    {
-        subscriptions.forEach(SubscriptionArchive::close);
-        metaData.close();
     }
 }

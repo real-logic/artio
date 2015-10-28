@@ -42,10 +42,10 @@ public class Logger implements AutoCloseable
     private final Publication replayPublication;
     private final ErrorHandler errorHandler;
     private final SequenceNumbers sequenceNumbers;
+    private final List<Archiver> archivers = new ArrayList<>();
 
-    private Archiver archiver;
-    private ArchiveReader archiveReader;
     private AgentRunner loggingRunner;
+    private ArchiveReader archiveReader;
 
     public Logger(
         final EngineConfiguration configuration,
@@ -92,7 +92,11 @@ public class Logger implements AutoCloseable
                 new BufferClaim(),
                 configuration.loggerIdleStrategy());
 
-            final Agent loggingAgent = new CompositeAgent(archiver, new CompositeAgent(indexer, replayer));
+            final List<Agent> agents = new ArrayList<>(archivers);
+            agents.add(indexer);
+            agents.add(replayer);
+
+            final Agent loggingAgent = new CompositeAgent(agents);
 
             loggingRunner = newRunner(loggingAgent);
         }
@@ -108,17 +112,14 @@ public class Logger implements AutoCloseable
         final int loggerCacheCapacity = configuration.loggerCacheCapacity();
         final String logFileDir = configuration.logFileDir();
 
-        final List<Subscription> subscriptions = new ArrayList<>();
         if (configuration.logInboundMessages())
         {
-            subscriptions.add(inboundLibraryStreams.subscription());
+            addArchiver(loggerCacheCapacity, logFileDir, inboundLibraryStreams.subscription());
         }
         if (configuration.logOutboundMessages())
         {
-            subscriptions.add(outboundLibraryStreams.subscription());
+            addArchiver(loggerCacheCapacity, logFileDir, outboundLibraryStreams.subscription());
         }
-        archiver = new Archiver(
-            LoggerUtil.newArchiveMetaData(configuration.logFileDir()), logFileDir, loggerCacheCapacity, subscriptions);
 
         archiveReader = new ArchiveReader(
             LoggerUtil::mapExistingFile,
@@ -127,9 +128,21 @@ public class Logger implements AutoCloseable
             loggerCacheCapacity);
     }
 
-    public Archiver archiver()
+    private void addArchiver(final int loggerCacheCapacity,
+                             final String logFileDir,
+                             final Subscription subscription)
     {
-        return archiver;
+        final Archiver archiver = new Archiver(
+            LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
+            logFileDir,
+            loggerCacheCapacity,
+            subscription);
+        archivers.add(archiver);
+    }
+
+    public List<Archiver> archivers()
+    {
+        return archivers;
     }
 
     public ArchiveReader archiveReader()
@@ -143,7 +156,7 @@ public class Logger implements AutoCloseable
         {
             if (loggingRunner == null)
             {
-                loggingRunner = newRunner(archiver);
+                loggingRunner = newRunner(new CompositeAgent(archivers));
             }
 
             startOnThread(loggingRunner);
@@ -163,7 +176,7 @@ public class Logger implements AutoCloseable
         }
         else
         {
-            archiver.onClose();
+            archivers.forEach(Archiver::onClose);
         }
 
         archiveReader.close();
