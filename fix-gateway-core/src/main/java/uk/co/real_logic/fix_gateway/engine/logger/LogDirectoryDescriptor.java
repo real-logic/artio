@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
+
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -25,11 +27,13 @@ public class LogDirectoryDescriptor
 
     private final String logFileDir;
     private final String logFileFormat;
+    private final String metaDataLogFileFormat;
 
     public LogDirectoryDescriptor(final String logFileDir)
     {
         this.logFileDir = logFileDir;
         logFileFormat = logFileDir + File.separator + "archive_%d_%d_%d.log";
+        metaDataLogFileFormat = logFileDir + File.separator + "meta-data_%d_%d.log";
     }
 
     public File logFile(final int streamId, final int sessionId, final int termId)
@@ -39,7 +43,13 @@ public class LogDirectoryDescriptor
 
     public File metaDataLogFile(final int streamId, final int sessionId)
     {
-        return new File(String.format(logFileDir + File.separator + "meta-data_%d_%d.log", streamId, sessionId));
+        return new File(String.format(metaDataLogFileFormat, streamId, sessionId));
+    }
+
+    public File metaDataLogFile(final StreamIdentifier stream, final int sessionId)
+    {
+        return new File(String.format(logFileDir + File.separator +
+            "meta-data_%s_%d_%d.log", stream.channel(), stream.streamId(), sessionId));
     }
 
     public List<File> listLogFiles(final int streamId)

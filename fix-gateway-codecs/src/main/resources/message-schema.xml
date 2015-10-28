@@ -141,7 +141,6 @@
     </sbe:message>
 
     <!-- ARCHIVAL DATA STRUCTURES -->
-
     <sbe:message name="ReplayIndexRecord" id="5" description="Stores index information about a single record">
         <field name="streamId" id="12" type="int32"/>
         <field name="aeronSessionId" id="27" type="int32"/>

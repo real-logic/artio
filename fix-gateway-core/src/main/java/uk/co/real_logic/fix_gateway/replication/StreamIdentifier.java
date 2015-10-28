@@ -15,6 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import uk.co.real_logic.aeron.driver.media.UdpChannel;
+
+import static uk.co.real_logic.aeron.CommonContext.IPC_CHANNEL;
+
 /**
  * .
  */
@@ -26,7 +30,9 @@ public final class StreamIdentifier
     public StreamIdentifier(final int streamId, final String channel)
     {
         this.streamId = streamId;
-        this.channel = channel;
+        this.channel = IPC_CHANNEL.equals(channel)
+                     ? channel
+                     : UdpChannel.parse(channel).canonicalForm();
     }
 
     public int streamId()
@@ -37,5 +43,20 @@ public final class StreamIdentifier
     public String channel()
     {
         return channel;
+    }
+
+    public boolean equals(final Object o)
+    {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        final StreamIdentifier that = (StreamIdentifier) o;
+
+        return streamId == that.streamId && channel.equals(that.channel);
+    }
+
+    public int hashCode()
+    {
+        return 31 * streamId + channel.hashCode();
     }
 }

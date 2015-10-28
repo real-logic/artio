@@ -21,6 +21,7 @@ import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.collections.IntLruCache;
 import uk.co.real_logic.agrona.concurrent.Agent;
+import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +35,7 @@ public class Archiver implements Agent, FileBlockHandler
     private final ArchiveMetaData metaData;
     private final IntLruCache<SessionArchive> sessionIdToArchive;
     private final Subscription subscription;
+    private final StreamIdentifier streamId;
     private final LogDirectoryDescriptor directoryDescriptor;
 
     public Archiver(
@@ -45,12 +47,12 @@ public class Archiver implements Agent, FileBlockHandler
         this.metaData = metaData;
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
         this.subscription = subscription;
+        streamId = new StreamIdentifier(subscription.streamId(), subscription.channel());
         sessionIdToArchive = new IntLruCache<>(loggerCacheCapacity, sessionId ->
         {
-            final int streamId = subscription.streamId();
             final int initialTermId = subscription.getImage(sessionId).initialTermId();
             metaData.write(streamId, sessionId, initialTermId, termBufferLength());
-            return new SessionArchive(streamId, sessionId);
+            return new SessionArchive(sessionId);
         }, SessionArchive::close);
     }
 
@@ -86,15 +88,13 @@ public class Archiver implements Agent, FileBlockHandler
     private final class SessionArchive implements AutoCloseable
     {
         public static final int UNKNOWN = -1;
-        private final int streamId;
         private final int sessionId;
 
         private int currentTermId = UNKNOWN;
         private FileChannel currentLogFile;
 
-        private SessionArchive(final int streamId, final int sessionId)
+        private SessionArchive(final int sessionId)
         {
-            this.streamId = streamId;
             this.sessionId = sessionId;
         }
 

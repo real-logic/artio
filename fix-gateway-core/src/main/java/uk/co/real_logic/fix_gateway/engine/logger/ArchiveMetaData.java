@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
+import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -49,7 +50,7 @@ public class ArchiveMetaData implements AutoCloseable
         this.newBufferFactory = newBufferFactory;
     }
 
-    public void write(final int streamId,
+    public void write(final StreamIdentifier streamId,
                       final int sessionId,
                       final int initialTermId,
                       final int termBufferLength)
