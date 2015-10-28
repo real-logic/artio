@@ -45,6 +45,7 @@ public class ClusterReplicationTest
     private NodeRunner node2 = new NodeRunner(2, 1, 3);
     private NodeRunner node3 = new NodeRunner(3, 1, 2);
 
+    @Ignore
     @Test(timeout = 3000)
     public void shouldEstablishCluster()
     {

@@ -68,9 +68,9 @@ public class LoggerTest
         final Streams inboundStreams = new Streams(
             "udp://localhost:9999", aeron, mock(AtomicCounter.class), STREAM_ID, mock(NanoClock.class), 12000);
 
-        final EngineConfiguration configuration = new EngineConfiguration().logOutboundMessages(false);
+        final EngineConfiguration configuration = new EngineConfiguration().logInboundMessages(false);
         logger = new Logger(
-            configuration, inboundStreams, null, Throwable::printStackTrace, null, mock(SequenceNumbers.class));
+            configuration, null, inboundStreams, Throwable::printStackTrace, null, mock(SequenceNumbers.class));
 
         logger.initArchival();
         archiver = logger.archivers().get(0);
