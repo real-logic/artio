@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.FileBlockHandler;
 import uk.co.real_logic.agrona.CloseHelper;
@@ -32,6 +33,8 @@ import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
 
 public class Archiver implements Agent, FileBlockHandler
 {
+    public static final long UNKNOWN_POSITION = -1;
+
     private final ArchiveMetaData metaData;
     private final IntLruCache<SessionArchive> sessionIdToArchive;
     private final Subscription subscription;
@@ -50,9 +53,10 @@ public class Archiver implements Agent, FileBlockHandler
         streamId = new StreamIdentifier(subscription);
         sessionIdToArchive = new IntLruCache<>(loggerCacheCapacity, sessionId ->
         {
-            final int initialTermId = subscription.getImage(sessionId).initialTermId();
+            final Image image = subscription.getImage(sessionId);
+            final int initialTermId = image.initialTermId();
             metaData.write(streamId, sessionId, initialTermId, termBufferLength());
-            return new SessionArchive(sessionId);
+            return new SessionArchive(sessionId, image);
         }, SessionArchive::close);
     }
 
@@ -70,12 +74,24 @@ public class Archiver implements Agent, FileBlockHandler
         final FileChannel fileChannel,
         final long offset,
         final int length,
-        final int sessionId,
+        final int aeronSessionId,
         final int termId)
     {
         sessionIdToArchive
-            .lookup(sessionId)
+            .lookup(aeronSessionId)
             .archive(fileChannel, offset, length, termId);
+    }
+
+    public long positionOf(final int aeronSessionId)
+    {
+        final SessionArchive archive = sessionIdToArchive.lookup(aeronSessionId);
+
+        if (archive == null)
+        {
+            return UNKNOWN_POSITION;
+        }
+
+        return archive.position();
     }
 
     public void onClose()
@@ -89,13 +105,15 @@ public class Archiver implements Agent, FileBlockHandler
     {
         public static final int UNKNOWN = -1;
         private final int sessionId;
+        private final Image image;
 
         private int currentTermId = UNKNOWN;
         private FileChannel currentLogFile;
 
-        private SessionArchive(final int sessionId)
+        private SessionArchive(final int sessionId, final Image image)
         {
             this.sessionId = sessionId;
+            this.image = image;
         }
 
         private void archive(
@@ -128,6 +146,11 @@ public class Archiver implements Agent, FileBlockHandler
         public void close()
         {
             CloseHelper.close(currentLogFile);
+        }
+
+        public long position()
+        {
+            return image.position();
         }
     }
 }

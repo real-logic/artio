@@ -83,31 +83,67 @@ public class LoggerTest
     @Test
     public void shouldReadDataThatWasWritten()
     {
-        final long endPosition = writeBuffer();
-
-        assertThat("Publication has failed an offer", endPosition, greaterThan((long) SIZE));
-
-        archiveUpTo(endPosition);
+        final long endPosition = writeAndArchiveBuffer();
 
         assertCanReadValueAt(DataHeaderFlyweight.HEADER_LENGTH);
     }
 
     @Test
+    public void shouldUpdatePosition()
+    {
+        final long endPosition = writeAndArchiveBuffer();
+
+        assertPosition(endPosition);
+    }
+
+    @Test
     public void shouldSupportRotatingFilesAtEndOfTerm()
+    {
+        archiveBeyondEndOfTerm();
+
+        assertCanReadValueAt(TERM_LENGTH + DataHeaderFlyweight.HEADER_LENGTH);
+    }
+
+    @Test
+    public void shouldUpdatePositionDuringRotation()
+    {
+        final long position = archiveBeyondEndOfTerm();
+
+        assertPosition(position);
+    }
+
+    private void assertPosition(final long endPosition)
+    {
+        assertEquals(endPosition, archiver.positionOf(publication.sessionId()));
+    }
+
+    private long archiveBeyondEndOfTerm()
     {
         long endPosition;
 
         do
         {
-            endPosition = writeBuffer();
-
-            assertThat("Publication has failed an offer", endPosition, greaterThan((long) SIZE));
-
-            archiveUpTo(endPosition);
+            endPosition = writeAndArchiveBuffer();
         }
         while (endPosition <= TERM_LENGTH);
 
-        assertCanReadValueAt(TERM_LENGTH + DataHeaderFlyweight.HEADER_LENGTH);
+        return endPosition;
+    }
+
+    private long writeAndArchiveBuffer()
+    {
+        final long endPosition = writeBuffer();
+
+        assertDataPublished(endPosition);
+
+        archiveUpTo(endPosition);
+
+        return endPosition;
+    }
+
+    private void assertDataPublished(final long endPosition)
+    {
+        assertThat("Publication has failed an offer", endPosition, greaterThan((long) SIZE));
     }
 
     private void assertCanReadValueAt(final int position)
