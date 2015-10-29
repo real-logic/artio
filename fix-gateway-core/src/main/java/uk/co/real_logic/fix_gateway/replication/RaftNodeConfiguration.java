@@ -19,6 +19,8 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
 /**
  * .
@@ -38,6 +40,8 @@ public class RaftNodeConfiguration
     private int maxClaimAttempts;
     private AtomicCounter failCounter;
     private int leaderSessionId;
+    private ArchiveReader archiveReader;
+    private Archiver archiver;
 
     public RaftNodeConfiguration controlStream(final StreamIdentifier controlStream)
     {
@@ -117,6 +121,18 @@ public class RaftNodeConfiguration
         return this;
     }
 
+    public RaftNodeConfiguration archiveReader(final ArchiveReader archiveReader)
+    {
+        this.archiveReader = archiveReader;
+        return this;
+    }
+
+    public RaftNodeConfiguration archiver(final Archiver archiver)
+    {
+        this.archiver = archiver;
+        return this;
+    }
+
     public StreamIdentifier controlStream()
     {
         return controlStream;
@@ -180,5 +196,15 @@ public class RaftNodeConfiguration
     public int leaderSessionId()
     {
         return leaderSessionId;
+    }
+
+    public ArchiveReader archiveReader()
+    {
+        return archiveReader;
+    }
+
+    public Archiver archiver()
+    {
+        return archiver;
     }
 }

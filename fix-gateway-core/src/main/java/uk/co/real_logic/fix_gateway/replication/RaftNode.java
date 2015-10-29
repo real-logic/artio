@@ -164,7 +164,8 @@ public class RaftNode implements Role
             timeInMs,
             heartbeatTimeInMs,
             termState,
-            configuration.leaderSessionId());
+            configuration.leaderSessionId(),
+            configuration.archiveReader());
 
         candidate = new Candidate(
             nodeId,

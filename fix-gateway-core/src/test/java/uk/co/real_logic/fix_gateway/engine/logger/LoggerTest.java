@@ -76,14 +76,12 @@ public class LoggerTest
         archiver = logger.archivers().get(0);
         archiveReader = logger.archiveReader();
         publication = inboundStreams.dataPublication();
-
-        buffer.putInt(OFFSET, VALUE);
     }
 
     @Test
     public void shouldReadDataThatWasWritten()
     {
-        final long endPosition = writeAndArchiveBuffer();
+        writeAndArchiveBuffer();
 
         assertCanReadValueAt(DataHeaderFlyweight.HEADER_LENGTH);
     }
@@ -132,7 +130,7 @@ public class LoggerTest
 
     private long writeAndArchiveBuffer()
     {
-        final long endPosition = writeBuffer();
+        final long endPosition = writeBuffer(VALUE);
 
         assertDataPublished(endPosition);
 
@@ -155,8 +153,10 @@ public class LoggerTest
             });
     }
 
-    private long writeBuffer()
+    private long writeBuffer(final int value)
     {
+        buffer.putInt(OFFSET, value);
+
         long endPosition;
         do
         {

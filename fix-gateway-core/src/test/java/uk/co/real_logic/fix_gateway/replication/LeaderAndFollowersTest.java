@@ -24,6 +24,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
@@ -79,7 +80,8 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             0,
             HEARTBEAT_INTERVAL,
             termState1,
-            leaderSessionId)
+            leaderSessionId,
+            mock(ArchiveReader.class))
             .controlPublication(raftPublication(CONTROL))
             .acknowledgementSubscription(acknowledgementSubscription())
             .dataSubscription(dataSubscription());

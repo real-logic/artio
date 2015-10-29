@@ -15,9 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.collections.IntHashSet;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
@@ -39,10 +42,12 @@ public class LeaderTest
     private static final short FOLLOWER_ID = 4;
     private static final int NEW_LEADER_SESSION_ID = 43;
 
+    private UnsafeBuffer buffer = new UnsafeBuffer(new byte[1024]);
     private RaftPublication controlPublication = mock(RaftPublication.class);
     private RaftNode raftNode = mock(RaftNode.class);
     private Subscription acknowledgementSubscription = mock(Subscription.class);
     private Subscription dataSubscription = mock(Subscription.class);
+    private ArchiveReader archiveReader = mock(ArchiveReader.class);
     private TermState termState = new TermState()
         .leadershipTerm(LEADERSHIP_TERM)
         .commitPosition(POSITION);
@@ -56,11 +61,18 @@ public class LeaderTest
         0,
         HEARTBEAT_INTERVAL_IN_MS,
         termState,
-        LEADER_SESSION_ID)
-        .controlPublication(controlPublication)
-        .acknowledgementSubscription(acknowledgementSubscription)
-        .dataSubscription(dataSubscription)
-        .getsElected(TIME);
+        LEADER_SESSION_ID,
+        archiveReader);
+
+    @Before
+    public void setUp()
+    {
+        leader
+            .controlPublication(controlPublication)
+            .acknowledgementSubscription(acknowledgementSubscription)
+            .dataSubscription(dataSubscription)
+            .getsElected(TIME);
+    }
 
     @Test
     public void shouldNotifyOtherNodesThatItIsTheLeader()

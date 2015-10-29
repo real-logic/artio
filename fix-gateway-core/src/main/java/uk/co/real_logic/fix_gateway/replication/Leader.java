@@ -21,6 +21,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
@@ -33,6 +34,7 @@ public class Leader implements Role, RaftHandler
 
     private final TermState termState;
     private final int ourSessionId;
+    private final ArchiveReader archiveReader;
     private final short nodeId;
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final RaftSubscriber acknowledgementSubscriber = new RaftSubscriber(this);
@@ -60,13 +62,15 @@ public class Leader implements Role, RaftHandler
         final long timeInMs,
         final long heartbeatIntervalInMs,
         final TermState termState,
-        final int ourSessionId)
+        final int ourSessionId,
+        final ArchiveReader archiveReader)
     {
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
         this.raftNode = raftNode;
         this.termState = termState;
         this.ourSessionId = ourSessionId;
+        this.archiveReader = archiveReader;
         this.blockHandler = (buffer, offset, length, sessionId, termId) -> handler.onBlock(buffer, offset, length);
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
