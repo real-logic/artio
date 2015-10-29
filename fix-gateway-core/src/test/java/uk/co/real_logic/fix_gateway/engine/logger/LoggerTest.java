@@ -110,6 +110,24 @@ public class LoggerTest
         assertPosition(position);
     }
 
+    @Test
+    public void shouldPatchCurrentTerm()
+    {
+        // TODO
+    }
+
+    @Test
+    public void shouldPatchPreviousTerm()
+    {
+        // TODO
+    }
+
+    @Test
+    public void shouldPatchMissingTerm()
+    {
+        // TODO
+    }
+
     private void assertPosition(final long endPosition)
     {
         assertEquals(endPosition, archiver.positionOf(publication.sessionId()));

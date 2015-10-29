@@ -19,6 +19,7 @@ import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.FileBlockHandler;
 import uk.co.real_logic.agrona.CloseHelper;
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.collections.IntLruCache;
 import uk.co.real_logic.agrona.concurrent.Agent;
@@ -27,9 +28,14 @@ import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import static java.nio.file.StandardOpenOption.APPEND;
+import static java.nio.file.StandardOpenOption.WRITE;
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
+import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
+import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
 
 public class Archiver implements Agent, FileBlockHandler
 {
@@ -40,6 +46,9 @@ public class Archiver implements Agent, FileBlockHandler
     private final Subscription subscription;
     private final StreamIdentifier streamId;
     private final LogDirectoryDescriptor directoryDescriptor;
+    // TODO: detect these the image API once added
+    private final int termBufferLength = termBufferLength();
+    private final int positionBitsToShift = Integer.numberOfTrailingZeros(termBufferLength);
 
     public Archiver(
         final ArchiveMetaData metaData,
@@ -55,14 +64,14 @@ public class Archiver implements Agent, FileBlockHandler
         {
             final Image image = subscription.getImage(sessionId);
             final int initialTermId = image.initialTermId();
-            metaData.write(streamId, sessionId, initialTermId, termBufferLength());
+            metaData.write(streamId, sessionId, initialTermId, termBufferLength);
             return new SessionArchive(sessionId, image);
         }, SessionArchive::close);
     }
 
     public int doWork()
     {
-        return (int) subscription.filePoll(this, termBufferLength());
+        return (int) subscription.filePoll(this, termBufferLength);
     }
 
     public String roleName()
@@ -92,6 +101,17 @@ public class Archiver implements Agent, FileBlockHandler
         }
 
         return archive.position();
+    }
+
+    public void patch(final int aeronSessionId,
+                      final long position,
+                      final DirectBuffer bodyBuffer,
+                      final int bodyOffset,
+                      final int bodyLength)
+    {
+        sessionIdToArchive
+            .lookup(aeronSessionId)
+            .patch(position, bodyBuffer, bodyOffset, bodyLength);
     }
 
     public void onClose()
@@ -124,9 +144,9 @@ public class Archiver implements Agent, FileBlockHandler
                 if (termId != currentTermId)
                 {
                     close();
-                    final File location = directoryDescriptor.logFile(streamId, sessionId, termId);
+                    final File location = logFile(termId);
                     final RandomAccessFile file = new RandomAccessFile(location, "rwd");
-                    file.setLength(termBufferLength());
+                    file.setLength(termBufferLength);
                     currentLogFile = file.getChannel();
                     currentTermId = termId;
                 }
@@ -143,14 +163,69 @@ public class Archiver implements Agent, FileBlockHandler
             }
         }
 
+        private File logFile(final int termId)
+        {
+            return directoryDescriptor.logFile(streamId, sessionId, termId);
+        }
+
+        private long position()
+        {
+            return image.position();
+        }
+
+        private void patch(
+            final long position, final DirectBuffer bodyBuffer, final int bodyOffset, final int bodyLength)
+        {
+            try
+            {
+                final int patchTermId = computeTermIdFromPosition(position, positionBitsToShift, image.initialTermId());
+                final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
+                final ByteBuffer byteBuffer = bodyBuffer.byteBuffer();
+                if (byteBuffer == null)
+                {
+                    // TODO: does this case even matter, we won't be patching byte[]s
+                    return;
+                }
+
+                final FileChannel patchTermLogFile;
+                if (patchTermId == currentTermId)
+                {
+                    patchTermLogFile = currentLogFile;
+                }
+                else
+                {
+                    final File file = logFile(patchTermId);
+                    if (!file.exists())
+                    {
+                        // TODO
+                    }
+
+                    patchTermLogFile = FileChannel.open(file.toPath(), WRITE, APPEND);
+                }
+
+                byteBuffer
+                    .position(bodyOffset)
+                    .limit(bodyOffset + bodyLength);
+
+                if (patchTermLogFile.write(byteBuffer, termOffset) != bodyLength)
+                {
+                    // TODO: error case?
+                }
+
+                if (patchTermLogFile != currentLogFile)
+                {
+                    patchTermLogFile.close();
+                }
+            }
+            catch (IOException e)
+            {
+                LangUtil.rethrowUnchecked(e);
+            }
+        }
+
         public void close()
         {
             CloseHelper.close(currentLogFile);
-        }
-
-        public long position()
-        {
-            return image.position();
         }
     }
 }
