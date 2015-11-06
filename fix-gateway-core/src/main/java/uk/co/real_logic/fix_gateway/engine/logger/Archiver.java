@@ -41,14 +41,13 @@ public class Archiver implements Agent, FileBlockHandler
 {
     public static final long UNKNOWN_POSITION = -1;
 
+    private static final int POLL_LENGTH = termBufferLength();
+
     private final ArchiveMetaData metaData;
     private final IntLruCache<SessionArchive> sessionIdToArchive;
     private final Subscription subscription;
     private final StreamIdentifier streamId;
     private final LogDirectoryDescriptor directoryDescriptor;
-    // TODO: detect these the image API once added
-    private final int termBufferLength = termBufferLength();
-    private final int positionBitsToShift = Integer.numberOfTrailingZeros(termBufferLength);
 
     public Archiver(
         final ArchiveMetaData metaData,
@@ -64,6 +63,7 @@ public class Archiver implements Agent, FileBlockHandler
         {
             final Image image = subscription.getImage(sessionId);
             final int initialTermId = image.initialTermId();
+            final int termBufferLength = image.termBufferLength();
             metaData.write(streamId, sessionId, initialTermId, termBufferLength);
             return new SessionArchive(sessionId, image);
         }, SessionArchive::close);
@@ -71,7 +71,7 @@ public class Archiver implements Agent, FileBlockHandler
 
     public int doWork()
     {
-        return (int) subscription.filePoll(this, termBufferLength);
+        return (int) subscription.filePoll(this, POLL_LENGTH);
     }
 
     public String roleName()
@@ -126,6 +126,8 @@ public class Archiver implements Agent, FileBlockHandler
         public static final int UNKNOWN = -1;
         private final int sessionId;
         private final Image image;
+        private final int termBufferLength;
+        private final int positionBitsToShift;
 
         private int currentTermId = UNKNOWN;
         private FileChannel currentLogFile;
@@ -134,6 +136,8 @@ public class Archiver implements Agent, FileBlockHandler
         {
             this.sessionId = sessionId;
             this.image = image;
+            termBufferLength = image.termBufferLength();
+            positionBitsToShift = Integer.numberOfTrailingZeros(termBufferLength);
         }
 
         private void archive(
