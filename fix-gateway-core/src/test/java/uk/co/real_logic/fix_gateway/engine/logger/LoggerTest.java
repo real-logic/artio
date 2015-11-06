@@ -228,10 +228,7 @@ public class LoggerTest
     private boolean assertCanReadValueAt(final int value, final long position)
     {
         return archiveReader.read(publication.sessionId(), position,
-            (messageFrame, srcBuffer, startOffset, messageOffset, messageLength) -> {
-                assertEquals(value, srcBuffer.getInt(startOffset + OFFSET));
-                return false;
-            });
+            (buffer, offset, length, header) -> assertEquals(value, buffer.getInt(offset + OFFSET)));
     }
 
     private long writeBuffer(final int value)

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.LongLruCache;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -54,7 +55,7 @@ public class ReplayQuery implements AutoCloseable
     }
 
     public int query(
-        final LogHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
+        final FragmentHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
     {
         return sessionToIndex
             .lookup(sessionId)
@@ -79,7 +80,7 @@ public class ReplayQuery implements AutoCloseable
 
         // TODO: potential optimisation of jumping straight to the beginSeqNo offset
         // Needs thinking about out of order sequence numbers due to duplicates and resends
-        private int query(final LogHandler handler, final int beginSeqNo, final int endSeqNo)
+        private int query(final FragmentHandler handler, final int beginSeqNo, final int endSeqNo)
         {
             messageFrameHeader.wrap(buffer, 0);
             int index = messageFrameHeader.encodedLength();

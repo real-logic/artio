@@ -15,14 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import uk.co.real_logic.aeron.logbuffer.BlockHandler;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.collections.IntLruCache;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
@@ -37,11 +38,6 @@ import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 public class ArchiveReader implements AutoCloseable
 {
-    public static final int MESSAGE_FRAME_BLOCK_LENGTH =
-        MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
-
-    private final FixMessageDecoder messageFrame = new FixMessageDecoder();
-
     private final IntFunction<SessionReader> newSessionReader = SessionReader::new;
     private final Int2ObjectHashMap<SessionReader> aeronSessionIdToReader;
     private final ExistingBufferFactory archiveBufferFactory;
@@ -71,11 +67,38 @@ public class ArchiveReader implements AutoCloseable
         aeronSessionIdToReader.values().forEach(SessionReader::close);
     }
 
-    public boolean read(final int aeronSessionId, final long position, final LogHandler handler)
+    /**
+     * Reads a message out of the log archive.
+     *
+     * @param aeronSessionId the session to read from
+     * @param position the log position to start reading at
+     * @param handler the handler to pass the data into
+     * @return true if the message has been read, false otherwise
+     */
+    public boolean read(final int aeronSessionId, final long position, final FragmentHandler handler)
     {
         return aeronSessionIdToReader
             .computeIfAbsent(aeronSessionId, newSessionReader)
             .read(position, handler);
+    }
+
+    /**
+     * Reads a block of bytes out of the log archive.
+     *
+     * A block will only be read if the archive contains the whole block.
+     *
+     * @param aeronSessionId the session to read from
+     * @param position the log position to start reading at
+     * @param length the length of data read
+     * @param handler the handler to pass the data into
+     * @return true if the message has been read, false otherwise
+     */
+    public boolean readBlock(
+        final int aeronSessionId, final long position, final int length, final BlockHandler handler)
+    {
+        return aeronSessionIdToReader
+            .computeIfAbsent(aeronSessionId, newSessionReader)
+            .read(position, length, handler);
     }
 
     private final class SessionReader implements AutoCloseable
@@ -87,13 +110,16 @@ public class ArchiveReader implements AutoCloseable
         private final DataHeaderFlyweight dataHeader = new DataHeaderFlyweight();
         private final int initialTermId;
         private final int positionBitsToShift;
+        private final Header header;
 
         private SessionReader(final int sessionId)
         {
             this.sessionId = sessionId;
             final ArchiveMetaDataDecoder streamMetaData = metaData.read(streamId, sessionId);
             initialTermId = streamMetaData.initialTermId();
-            positionBitsToShift = numberOfTrailingZeros(streamMetaData.termBufferLength());
+            final int termBufferLength = streamMetaData.termBufferLength();
+            positionBitsToShift = numberOfTrailingZeros(termBufferLength);
+            header = new Header(initialTermId, termBufferLength);
         }
 
         private ByteBuffer newBuffer(final int termId)
@@ -102,20 +128,27 @@ public class ArchiveReader implements AutoCloseable
             return archiveBufferFactory.map(logFile);
         }
 
-        private boolean read(final long position, final LogHandler handler)
+        private boolean read(final long position, final FragmentHandler handler)
         {
             final int termId = computeTermIdFromPosition(position, positionBitsToShift, initialTermId);
             final ByteBuffer termBuffer = termIdToBuffer.lookup(termId);
-            final int aeronHeaderOffset = computeTermOffsetFromPosition(position, positionBitsToShift) - HEADER_LENGTH;
+            final int headerOffset = computeTermOffsetFromPosition(position, positionBitsToShift) - HEADER_LENGTH;
 
             buffer.wrap(termBuffer);
-            dataHeader.wrap(buffer, aeronHeaderOffset);
+            dataHeader.wrap(buffer, headerOffset);
 
-            final int aeronDataOffset = aeronHeaderOffset + HEADER_LENGTH;
-            final int fixMessageOffset = aeronDataOffset + MESSAGE_FRAME_BLOCK_LENGTH;
-            final int messageLength = dataHeader.frameLength() - (HEADER_LENGTH + MESSAGE_FRAME_BLOCK_LENGTH);
+            header.buffer(buffer);
+            header.offset(headerOffset);
 
-            return handler.onLogEntry(messageFrame, buffer, aeronDataOffset, fixMessageOffset, messageLength);
+            handler.onFragment(buffer, headerOffset + HEADER_LENGTH, dataHeader.frameLength() - HEADER_LENGTH, header);
+
+            // TODO: failure to read case
+            return true;
+        }
+
+        private boolean read(final long position, final int length, final BlockHandler handler)
+        {
+            return false;
         }
 
         public void close()

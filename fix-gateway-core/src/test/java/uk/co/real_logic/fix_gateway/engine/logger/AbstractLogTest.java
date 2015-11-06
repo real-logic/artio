@@ -84,7 +84,7 @@ public class AbstractLogTest
         offset += messageFrame.sbeBlockLength() + SIZE_OF_LENGTH_FIELD;
     }
 
-    protected int messageLength()
+    protected int fragmentLength()
     {
         return offset + logEntryLength - START;
     }

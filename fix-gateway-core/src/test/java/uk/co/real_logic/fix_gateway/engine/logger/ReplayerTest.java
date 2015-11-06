@@ -31,6 +31,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.POSS_DUP_FIELD;
 import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
 
@@ -66,11 +67,11 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldPublishMessagesWithSetPossDupFlag()
     {
         bufferContainsMessage(true);
-        final int srcLength = messageLength();
+        final int srcLength = fragmentLength();
         setupClaim(srcLength);
         setupPublication(srcLength);
 
-        replayer.onLogEntry(null, buffer, START, offset, srcLength);
+        replayer.onFragment(buffer, START, srcLength, null);
 
         verifyClaim(srcLength);
         assertHasSetPossDupFlag();
@@ -81,11 +82,11 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldPublishMessagesWithoutSetPossDupFlag()
     {
         bufferContainsMessage(false);
-        final int srcLength = messageLength();
+        final int srcLength = fragmentLength();
         setupClaim(srcLength);
         setupPublication(srcLength);
 
-        replayer.onLogEntry(null, buffer, START, offset, srcLength);
+        replayer.onFragment(buffer, START, srcLength, null);
 
         verifyClaim(SIZE_OF_FRAME + srcLength + POSS_DUP_FIELD.length);
         assertHasSetPossDupFlag();
@@ -123,7 +124,7 @@ public class ReplayerTest extends AbstractLogTest
 
     private void verifyClaim(final int srcLength)
     {
-        verify(mockPublication).tryClaim(srcLength, mockClaim);
+        verify(mockPublication).tryClaim(srcLength - MESSAGE_FRAME_BLOCK_LENGTH, mockClaim);
     }
 
     private void verifyCommit()

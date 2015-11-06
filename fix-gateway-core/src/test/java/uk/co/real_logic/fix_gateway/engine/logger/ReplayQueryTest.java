@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 
 import java.nio.ByteBuffer;
 
@@ -29,7 +30,7 @@ public class ReplayQueryTest extends AbstractLogTest
 {
     private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024);
     private ExistingBufferFactory mockBufferFactory = mock(ExistingBufferFactory.class);
-    private LogHandler mockHandler = mock(LogHandler.class);
+    private FragmentHandler mockHandler = mock(FragmentHandler.class);
     private ArchiveReader mockReader = mock(ArchiveReader.class);
     private ReplayIndex replayIndex = new ReplayIndex(
         DEFAULT_LOG_FILE_DIR, DEFAULT_INDEX_FILE_SIZE, DEFAULT_LOGGER_CACHE_CAPACITY, (name, size) -> indexBuffer);
@@ -42,7 +43,7 @@ public class ReplayQueryTest extends AbstractLogTest
     {
         returnBuffer(indexBuffer, SESSION_ID);
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
-        when(mockReader.read(anyInt(), anyLong(), any(LogHandler.class))).thenReturn(false);
+        when(mockReader.read(anyInt(), anyLong(), any(FragmentHandler.class))).thenReturn(false);
 
         bufferContainsMessage(true);
         indexRecord();
@@ -115,6 +116,6 @@ public class ReplayQueryTest extends AbstractLogTest
 
     private void indexRecord()
     {
-        replayIndex.indexRecord(buffer, START, messageLength(), STREAM_ID, AERON_STREAM_ID);
+        replayIndex.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_STREAM_ID);
     }
 }

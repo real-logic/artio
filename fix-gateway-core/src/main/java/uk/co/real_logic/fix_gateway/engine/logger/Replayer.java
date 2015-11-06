@@ -18,6 +18,8 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BufferClaim;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
@@ -39,8 +41,10 @@ import java.nio.charset.StandardCharsets;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static uk.co.real_logic.fix_gateway.engine.logger.PossDupFinder.NO_ENTRY;
 
-public class Replayer implements SessionHandler, LogHandler, Agent
+public class Replayer implements SessionHandler, FragmentHandler, Agent
 {
+    public static final int MESSAGE_FRAME_BLOCK_LENGTH =
+        MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
     public static final int SIZE_OF_LENGTH_FIELD = 2;
     public static final byte[] POSS_DUP_FIELD = "43=Y\001".getBytes(StandardCharsets.US_ASCII);
     public static final int POLL_LIMIT = 10;
@@ -109,13 +113,12 @@ public class Replayer implements SessionHandler, LogHandler, Agent
         }
     }
 
-    public boolean onLogEntry(
-        final FixMessageDecoder messageFrame,
-        final DirectBuffer srcBuffer,
-        final int srcOffset,
-        final int messageOffset,
-        final int messageLength)
+    public void onFragment(
+        final DirectBuffer srcBuffer, final int srcOffset, final int length, final Header header)
     {
+        final int messageOffset = srcOffset + MESSAGE_FRAME_BLOCK_LENGTH;
+        final int messageLength = length - MESSAGE_FRAME_BLOCK_LENGTH;
+
         parser.onMessage(srcBuffer, messageOffset, messageLength);
         final int possDupSrcOffset = possDupFinder.possDupOffset();
         if (possDupSrcOffset == NO_ENTRY)
@@ -138,10 +141,9 @@ public class Replayer implements SessionHandler, LogHandler, Agent
 
         // TODO: tombstone the claim on exception
         claim.commit();
-
-        return true;
     }
 
+    // TODO: eventually fail
     private void claimBuffer(final int newLength)
     {
         while (publication.tryClaim(newLength, claim) < 0)

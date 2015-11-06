@@ -86,7 +86,7 @@ public class SequenceNumbersTest extends AbstractLogTest
 
     private void indexRecord()
     {
-        writer.indexRecord(buffer, START, messageLength(), STREAM_ID, AERON_STREAM_ID);
+        writer.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_STREAM_ID);
     }
 
     private void assertLastKnownSequenceNumberIs(final int expectedSequenceNumber, final long sessionId)
