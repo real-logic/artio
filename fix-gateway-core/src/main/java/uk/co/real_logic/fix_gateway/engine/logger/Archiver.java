@@ -190,10 +190,7 @@ public class Archiver implements Agent, FileBlockHandler
                 final int patchTermId = computeTermIdFromPosition(position, positionBitsToShift, image.initialTermId());
                 final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
 
-                if (termOffset + bodyLength > termBufferLength)
-                {
-                    throw new IllegalArgumentException("Unable to write patch beyond the length of the log buffer");
-                }
+                checkOverflow(bodyLength, termOffset);
 
                 // Find the files to patch
                 final RandomAccessFile patchTermLogFile;
@@ -222,11 +219,19 @@ public class Archiver implements Agent, FileBlockHandler
             }
         }
 
+        private void checkOverflow(final int bodyLength, final int termOffset)
+        {
+            if (termOffset + bodyLength > termBufferLength)
+            {
+                throw new IllegalArgumentException("Unable to write patch beyond the length of the log buffer");
+            }
+        }
+
         private void writeToFile(
             final DirectBuffer bodyBuffer,
             final int bodyOffset,
             final int bodyLength,
-            final int termOffset,
+            int termOffset,
             final FileChannel patchTermLogChannel,
             final RandomAccessFile patchTermLogFile) throws IOException
         {
@@ -237,9 +242,9 @@ public class Archiver implements Agent, FileBlockHandler
                     .position(bodyOffset)
                     .limit(bodyOffset + bodyLength);
 
-                if (patchTermLogChannel.write(byteBuffer, termOffset) != bodyLength)
+                while (byteBuffer.remaining() > 0)
                 {
-                    // TODO: error case?
+                    termOffset += patchTermLogChannel.write(byteBuffer, termOffset);
                 }
             }
             else
