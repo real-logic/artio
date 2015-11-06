@@ -45,6 +45,7 @@ public class Logger implements AutoCloseable
     private final SequenceNumbers sequenceNumbers;
     private final List<Archiver> archivers = new ArrayList<>();
 
+    private LogDirectoryDescriptor directoryDescriptor;
     private AgentRunner loggingRunner;
     private ArchiveReader outboundArchiveReader;
 
@@ -108,15 +109,17 @@ public class Logger implements AutoCloseable
         final int loggerCacheCapacity = configuration.loggerCacheCapacity();
         final String logFileDir = configuration.logFileDir();
 
+        directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
+
         if (configuration.logInboundMessages())
         {
-            addArchiver(loggerCacheCapacity, logFileDir, inboundLibraryStreams.subscription());
+            addArchiver(loggerCacheCapacity, directoryDescriptor, inboundLibraryStreams.subscription());
         }
 
         if (configuration.logOutboundMessages())
         {
             final Subscription outboundSubscription = outboundLibraryStreams.subscription();
-            addArchiver(loggerCacheCapacity, logFileDir, outboundSubscription);
+            addArchiver(loggerCacheCapacity, directoryDescriptor, outboundSubscription);
 
             outboundArchiveReader = new ArchiveReader(
                 LoggerUtil::mapExistingFile,
@@ -133,12 +136,12 @@ public class Logger implements AutoCloseable
     }
 
     private void addArchiver(final int loggerCacheCapacity,
-                             final String logFileDir,
+                             final LogDirectoryDescriptor directoryDescriptor,
                              final Subscription subscription)
     {
         final Archiver archiver = new Archiver(
             LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
-            logFileDir,
+            directoryDescriptor,
             loggerCacheCapacity,
             subscription);
         archivers.add(archiver);
@@ -152,6 +155,11 @@ public class Logger implements AutoCloseable
     public ArchiveReader archiveReader()
     {
         return outboundArchiveReader;
+    }
+
+    public LogDirectoryDescriptor directoryDescriptor()
+    {
+        return directoryDescriptor;
     }
 
     public void start()

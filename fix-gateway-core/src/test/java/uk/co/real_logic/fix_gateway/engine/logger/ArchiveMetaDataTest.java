@@ -32,7 +32,7 @@ import static uk.co.real_logic.aeron.CommonContext.IPC_CHANNEL;
 
 public class ArchiveMetaDataTest
 {
-    public static final StreamIdentifier STREAM_ID = new StreamIdentifier(1, IPC_CHANNEL);
+    public static final StreamIdentifier STREAM_ID = new StreamIdentifier(IPC_CHANNEL, 1);
     public static final int SESSION_ID = 2;
     public static final int INITIAL_TERM_ID = 12;
     public static final int TERM_BUFFER_LENGTH = 13;

@@ -31,8 +31,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import static java.nio.file.StandardOpenOption.APPEND;
-import static java.nio.file.StandardOpenOption.WRITE;
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
 import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
 import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
@@ -51,12 +49,12 @@ public class Archiver implements Agent, FileBlockHandler
 
     public Archiver(
         final ArchiveMetaData metaData,
-        final String logFileDir,
+        final LogDirectoryDescriptor directoryDescriptor,
         final int loggerCacheCapacity,
         final Subscription subscription)
     {
         this.metaData = metaData;
-        directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
+        this.directoryDescriptor = directoryDescriptor;
         this.subscription = subscription;
         streamId = new StreamIdentifier(subscription);
         sessionIdToArchive = new IntLruCache<>(loggerCacheCapacity, sessionId ->
@@ -130,7 +128,8 @@ public class Archiver implements Agent, FileBlockHandler
         private final int positionBitsToShift;
 
         private int currentTermId = UNKNOWN;
-        private FileChannel currentLogFile;
+        private RandomAccessFile currentLogFile;
+        private FileChannel currentLogChannel;
 
         private SessionArchive(final int sessionId, final Image image)
         {
@@ -149,13 +148,12 @@ public class Archiver implements Agent, FileBlockHandler
                 {
                     close();
                     final File location = logFile(termId);
-                    final RandomAccessFile file = new RandomAccessFile(location, "rwd");
-                    file.setLength(termBufferLength);
-                    currentLogFile = file.getChannel();
+                    currentLogFile = openFile(location);
+                    currentLogChannel = currentLogFile.getChannel();
                     currentTermId = termId;
                 }
 
-                if (fileChannel.transferTo(offset, length, currentLogFile) != length)
+                if (fileChannel.transferTo(offset, length, currentLogChannel) != length)
                 {
                     // TODO
                     System.err.println("Transfer to failure");
@@ -165,6 +163,13 @@ public class Archiver implements Agent, FileBlockHandler
             {
                 LangUtil.rethrowUnchecked(e);
             }
+        }
+
+        private RandomAccessFile openFile(final File location) throws IOException
+        {
+            final RandomAccessFile file = new RandomAccessFile(location, "rwd");
+            file.setLength(termBufferLength);
+            return file;
         }
 
         private File logFile(final int termId)
@@ -184,42 +189,32 @@ public class Archiver implements Agent, FileBlockHandler
             {
                 final int patchTermId = computeTermIdFromPosition(position, positionBitsToShift, image.initialTermId());
                 final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
-                final ByteBuffer byteBuffer = bodyBuffer.byteBuffer();
-                if (byteBuffer == null)
+
+                if (termOffset + bodyLength > termBufferLength)
                 {
-                    // TODO: does this case even matter, we won't be patching byte[]s
-                    return;
+                    throw new IllegalArgumentException("Unable to write patch beyond the length of the log buffer");
                 }
 
-                final FileChannel patchTermLogFile;
+                // Find the files to patch
+                final RandomAccessFile patchTermLogFile;
+                final FileChannel patchTermLogChannel;
                 if (patchTermId == currentTermId)
                 {
+                    patchTermLogChannel = currentLogChannel;
                     patchTermLogFile = currentLogFile;
                 }
                 else
                 {
                     final File file = logFile(patchTermId);
-                    if (!file.exists())
-                    {
-                        // TODO
-                    }
-
-                    patchTermLogFile = FileChannel.open(file.toPath(), WRITE, APPEND);
+                    // NB: if file doesn't exist it gets created here
+                    patchTermLogFile = openFile(file);
+                    patchTermLogChannel = patchTermLogFile.getChannel();
                 }
 
-                byteBuffer
-                    .position(bodyOffset)
-                    .limit(bodyOffset + bodyLength);
+                writeToFile(
+                    bodyBuffer, bodyOffset, bodyLength, termOffset, patchTermLogChannel, patchTermLogFile);
 
-                if (patchTermLogFile.write(byteBuffer, termOffset) != bodyLength)
-                {
-                    // TODO: error case?
-                }
-
-                if (patchTermLogFile != currentLogFile)
-                {
-                    patchTermLogFile.close();
-                }
+                close(patchTermLogChannel);
             }
             catch (IOException e)
             {
@@ -227,9 +222,45 @@ public class Archiver implements Agent, FileBlockHandler
             }
         }
 
+        private void writeToFile(
+            final DirectBuffer bodyBuffer,
+            final int bodyOffset,
+            final int bodyLength,
+            final int termOffset,
+            final FileChannel patchTermLogChannel,
+            final RandomAccessFile patchTermLogFile) throws IOException
+        {
+            final ByteBuffer byteBuffer = bodyBuffer.byteBuffer();
+            if (byteBuffer != null)
+            {
+                byteBuffer
+                    .position(bodyOffset)
+                    .limit(bodyOffset + bodyLength);
+
+                if (patchTermLogChannel.write(byteBuffer, termOffset) != bodyLength)
+                {
+                    // TODO: error case?
+                }
+            }
+            else
+            {
+                final byte[] bytes = bodyBuffer.byteArray();
+                patchTermLogFile.seek(termOffset);
+                patchTermLogFile.write(bytes, bodyOffset, bodyLength);
+            }
+        }
+
+        private void close(final FileChannel patchTermLogChannel) throws IOException
+        {
+            if (patchTermLogChannel != currentLogChannel)
+            {
+                patchTermLogChannel.close();
+            }
+        }
+
         public void close()
         {
-            CloseHelper.close(currentLogFile);
+            CloseHelper.close(currentLogChannel);
         }
     }
 }

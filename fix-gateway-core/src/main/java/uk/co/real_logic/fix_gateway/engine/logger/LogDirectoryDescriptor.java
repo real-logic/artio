@@ -46,17 +46,14 @@ public class LogDirectoryDescriptor
         return new File(String.format(metaDataLogFileFormat, stream.channel(), stream.streamId(), sessionId));
     }
 
-    public List<File> listLogFiles(final int streamId)
+    public List<File> listLogFiles(final StreamIdentifier stream)
     {
-        final String prefix = String.format("archive_%d", streamId);
+        final String prefix = String.format("archive_%s_%d", stream.channel(), stream.streamId());
         final File logFileDir = new File(this.logFileDir);
-        return Arrays.asList(logFileDir.listFiles(file ->
-        {
-            return file.getName().startsWith(prefix);
-        }));
+        return Arrays.asList(logFileDir.listFiles(file -> file.getName().startsWith(prefix)));
     }
 
-    public int computeTermId(final File logFile)
+    public static int computeTermId(final File logFile)
     {
         final String logFileName = logFile.getName();
         final int startOfTermId = logFileName.lastIndexOf('-');

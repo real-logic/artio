@@ -78,9 +78,9 @@ public class NodeRunner implements AutoCloseable, Role
             .handler((buffer, offset, length) -> replicatedPosition = offset + length)
             .failCounter(mock(AtomicCounter.class))
             .maxClaimAttempts(100_000)
-            .acknowledgementStream(new StreamIdentifier(ACKNOWLEDGEMENT, AERON_GROUP))
-            .controlStream(new StreamIdentifier(CONTROL, AERON_GROUP))
-            .dataStream(new StreamIdentifier(DATA, AERON_GROUP))
+            .acknowledgementStream(new StreamIdentifier(AERON_GROUP, ACKNOWLEDGEMENT))
+            .controlStream(new StreamIdentifier(AERON_GROUP, CONTROL))
+            .dataStream(new StreamIdentifier(AERON_GROUP, DATA))
             .idleStrategy(backoffIdleStrategy())
             .leaderSessionId(dataPublication.sessionId());
 

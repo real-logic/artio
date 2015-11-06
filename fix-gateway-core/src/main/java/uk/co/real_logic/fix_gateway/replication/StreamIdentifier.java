@@ -30,10 +30,10 @@ public final class StreamIdentifier
 
     public StreamIdentifier(final Subscription subscription)
     {
-        this(subscription.streamId(), subscription.channel());
+        this(subscription.channel(), subscription.streamId());
     }
 
-    public StreamIdentifier(final int streamId, final String channel)
+    public StreamIdentifier(final String channel, final int streamId)
     {
         this.streamId = streamId;
         this.channel = IPC_CHANNEL.equals(channel)

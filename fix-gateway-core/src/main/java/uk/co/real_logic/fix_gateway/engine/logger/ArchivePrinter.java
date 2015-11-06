@@ -77,7 +77,7 @@ public class ArchivePrinter implements SessionHandler
     {
         final UnsafeBuffer termBuffer = new UnsafeBuffer(0, 0);
 
-        for (final File logFile : directoryDescriptor.listLogFiles(streamId))
+        for (final File logFile : directoryDescriptor.listLogFiles(null))
         {
             // System.out.printf("Printing %s\n", logFile);
             final ByteBuffer byteBuffer = bufferFactory.map(logFile);
