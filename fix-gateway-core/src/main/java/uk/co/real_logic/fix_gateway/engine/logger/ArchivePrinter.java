@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
+import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
@@ -31,28 +32,33 @@ import java.nio.ByteBuffer;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 /**
- * Eg: -Dlogging.dir=/home/richard/monotonic/Fix-Engine/fix-gateway-system-tests/client-logs ArchivePrinter 0
+ * Eg: -Dlogging.dir=/home/richard/monotonic/Fix-Engine/fix-gateway-system-tests/client-logs \
+ *     ArchivePrinter 'UDP-00000000-0-7f000001-10048' 0
  */
 public class ArchivePrinter implements SessionHandler
 {
+
+    private static final int CHANNEL_ARG = 0;
+    private static final int ID_ARG = 1;
 
     private final DataSubscriber subscriber = new DataSubscriber(this);
     private final AsciiFlyweight ascii = new AsciiFlyweight();
 
     private final LogDirectoryDescriptor directoryDescriptor;
     private final ExistingBufferFactory bufferFactory;
-    private final int streamId;
+    private final StreamIdentifier streamId;
     private final PrintStream output;
 
     public static void main(String[] args)
     {
-        if (args.length < 1)
+        if (args.length < 2)
         {
-            System.err.println("Usage: ArchivePrinter <streamId>");
+            System.err.println("Usage: ArchivePrinter <channel> <streamId>");
             System.exit(-1);
         }
 
-        final int streamId = Integer.parseInt(args[0]);
+        final StreamIdentifier streamId =
+            new StreamIdentifier(args[CHANNEL_ARG], Integer.parseInt(args[ID_ARG]));
         final EngineConfiguration configuration = new EngineConfiguration();
         final String logFileDir = configuration.logFileDir();
         final ArchivePrinter printer = new ArchivePrinter(
@@ -62,7 +68,7 @@ public class ArchivePrinter implements SessionHandler
 
     public ArchivePrinter(
         final ExistingBufferFactory bufferFactory,
-        final int streamId,
+        final StreamIdentifier streamId,
         final String logFileDir,
         final PrintStream output)
     {
@@ -77,7 +83,7 @@ public class ArchivePrinter implements SessionHandler
     {
         final UnsafeBuffer termBuffer = new UnsafeBuffer(0, 0);
 
-        for (final File logFile : directoryDescriptor.listLogFiles(null))
+        for (final File logFile : directoryDescriptor.listLogFiles(streamId))
         {
             // System.out.printf("Printing %s\n", logFile);
             final ByteBuffer byteBuffer = bufferFactory.map(logFile);
