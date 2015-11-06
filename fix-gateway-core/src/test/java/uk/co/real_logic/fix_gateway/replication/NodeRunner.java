@@ -54,7 +54,7 @@ public class NodeRunner implements AutoCloseable, Role
             .controlLossGenerator(lossGenerator)
             .dataLossGenerator(lossGenerator)
             .dirsDeleteOnStart(true)
-            .dirName(AERON_DIR_PROP_DEFAULT + nodeId);
+            .aeronDirectoryName(AERON_DIR_PROP_DEFAULT + nodeId);
 
         final IntHashSet otherNodeIds = new IntHashSet(40, -1);
         for (final int node : otherNodes)
@@ -64,7 +64,7 @@ public class NodeRunner implements AutoCloseable, Role
 
         mediaDriver = MediaDriver.launch(context);
         final Aeron.Context clientContext = new Aeron.Context();
-        clientContext.dirName(context.dirName());
+        clientContext.aeronDirectoryName(context.aeronDirectoryName());
         aeron = Aeron.connect(clientContext);
 
         dataPublication = aeron.addPublication(AERON_GROUP, DATA);

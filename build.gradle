@@ -25,7 +25,8 @@ buildscript {
 apply plugin: 'maven'
 apply plugin: 'signing'
 
-def aeronVersion = '0.1.6-SNAPSHOT'
+def aeronVersion = '0.2'
+def agronaVersion = '0.4.6'
 
 defaultTasks 'clean', 'build', 'install'
 
@@ -137,7 +138,7 @@ project(':fix-gateway-codecs') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
     dependencies {
-        compile 'uk.co.real-logic:Agrona:0.4.6-SNAPSHOT'
+        compile "uk.co.real-logic:Agrona:${agronaVersion}"
         compile 'uk.co.real-logic:sbe:1.1.1-RC2'
     }
 
