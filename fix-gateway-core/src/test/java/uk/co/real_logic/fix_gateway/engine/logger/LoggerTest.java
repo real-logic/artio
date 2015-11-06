@@ -18,6 +18,9 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.driver.MediaDriver;
@@ -31,6 +34,8 @@ import uk.co.real_logic.fix_gateway.streams.Streams;
 
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.concurrent.locks.LockSupport;
 
 import static org.hamcrest.Matchers.greaterThan;
@@ -43,9 +48,10 @@ import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
 import static uk.co.real_logic.agrona.BitUtil.findNextPositivePowerOfTwo;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 
-// TODO: test with byte buffer backed unsafe buffers and heap byte buffers
+@RunWith(Parameterized.class)
 public class LoggerTest
 {
+
     public static final int SIZE = 8 * 1024;
     public static final int TERM_LENGTH = findNextPositivePowerOfTwo(SIZE * 8);
     public static final int STREAM_ID = 1;
@@ -54,7 +60,16 @@ public class LoggerTest
     public static final int PATCH_VALUE = 44;
     public static final String CHANNEL = "udp://localhost:9999";
 
-    private UnsafeBuffer buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(SIZE));
+    @Parameters
+    public static Collection<Object[]> data()
+    {
+        return Arrays.asList(new Object[][] {
+            { new UnsafeBuffer(ByteBuffer.allocateDirect(SIZE)) },
+            { new UnsafeBuffer(new byte[SIZE]) },
+        });
+    }
+
+    private final UnsafeBuffer buffer;
 
     private MediaDriver mediaDriver;
     private Aeron aeron;
@@ -64,6 +79,11 @@ public class LoggerTest
     private Publication publication;
 
     private int work = 0;
+
+    public LoggerTest(final UnsafeBuffer buffer)
+    {
+        this.buffer = buffer;
+    }
 
     @Before
     public void setUp()
