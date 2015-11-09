@@ -18,8 +18,8 @@ package uk.co.real_logic.fix_gateway.replication;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.agrona.collections.IntHashSet;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
 import static org.junit.Assert.assertThat;
@@ -42,7 +42,6 @@ public class LeaderTest
     private static final short FOLLOWER_ID = 4;
     private static final int NEW_LEADER_SESSION_ID = 43;
 
-    private UnsafeBuffer buffer = new UnsafeBuffer(new byte[1024]);
     private RaftPublication controlPublication = mock(RaftPublication.class);
     private RaftNode raftNode = mock(RaftNode.class);
     private Subscription acknowledgementSubscription = mock(Subscription.class);
@@ -72,6 +71,17 @@ public class LeaderTest
             .acknowledgementSubscription(acknowledgementSubscription)
             .dataSubscription(dataSubscription)
             .getsElected(TIME);
+
+        when(archiveReader.readBlock(eq(LEADER_SESSION_ID), anyLong(), anyInt(), any())).then(inv ->
+        {
+            final Object[] arguments = inv.getArguments();
+            final int length = (int) arguments[2];
+            final BlockHandler handler = (BlockHandler) arguments[3];
+
+            handler.onBlock(null, 0, length, LEADER_SESSION_ID, 1);
+
+            return true;
+        });
     }
 
     @Test

@@ -20,7 +20,6 @@ import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
@@ -44,6 +43,7 @@ public class Leader implements Role, RaftHandler
 
     // Counts of how many acknowledgements
     private final Long2LongHashMap nodeToPosition = new Long2LongHashMap(NO_SESSION_ID);
+    private final ResendHandler resendHandler = new ResendHandler();
 
     private RaftPublication controlPublication;
     private Subscription acknowledgementSubscription;
@@ -121,20 +121,18 @@ public class Leader implements Role, RaftHandler
     }
 
     public void onMessageAcknowledgement(
-        final long newAckedPosition, final short nodeId, final AcknowledgementStatus status)
+        final long position, final short nodeId, final AcknowledgementStatus status)
     {
         if (status != WRONG_TERM)
         {
-            nodeToPosition.put(nodeId, newAckedPosition);
+            nodeToPosition.put(nodeId, position);
         }
 
         if (status == MISSING_LOG_ENTRIES)
         {
-            final int delta = (int) (commitPosition - newAckedPosition);
-            // TODO: read from the archive
-            final UnsafeBuffer buffer = new UnsafeBuffer(new byte[delta]);
-            controlPublication
-                .saveResend(ourSessionId, leaderShipTerm, newAckedPosition, buffer, 0, delta);
+            final int length = (int) (commitPosition - position);
+            resendHandler.position(position);
+            archiveReader.readBlock(ourSessionId, position, length, resendHandler);
         }
     }
 
@@ -178,6 +176,7 @@ public class Leader implements Role, RaftHandler
 
     public Leader getsElected(final long timeInMs)
     {
+        this.timeInMs = timeInMs;
         leaderShipTerm = termState.leadershipTerm();
         commitPosition = termState.commitPosition();
         heartbeat();
@@ -200,5 +199,21 @@ public class Leader implements Role, RaftHandler
     {
         this.controlPublication = controlPublication;
         return this;
+    }
+
+    private class ResendHandler implements BlockHandler
+    {
+        private long position;
+
+        public void onBlock(
+            final DirectBuffer buffer, final int offset, final int length, final int sessionId, final int termId)
+        {
+            controlPublication.saveResend(ourSessionId, leaderShipTerm, position, buffer, offset, length);
+        }
+
+        public void position(final long position)
+        {
+            this.position = position;
+        }
     }
 }
