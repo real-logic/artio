@@ -40,14 +40,10 @@ import java.util.Collection;
 import java.util.concurrent.locks.LockSupport;
 
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.aeron.driver.Configuration.TERM_BUFFER_LENGTH_PROP_NAME;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
@@ -69,12 +65,13 @@ public class LoggerTest
     @Parameters
     public static Collection<Object[]> data()
     {
-        return Arrays.asList(new Object[][] {
-            { new UnsafeBuffer(ByteBuffer.allocateDirect(SIZE)) },
-            { new UnsafeBuffer(new byte[SIZE]) },
+        return Arrays.asList(new Object[][]{
+            {new UnsafeBuffer(ByteBuffer.allocateDirect(SIZE))},
+            {new UnsafeBuffer(new byte[SIZE])},
         });
     }
 
+    private final FragmentHandler mockHandler = mock(FragmentHandler.class);
     private final UnsafeBuffer buffer;
 
     private MediaDriver mediaDriver;
@@ -120,14 +117,39 @@ public class LoggerTest
     }
 
     @Test
-    public void shouldNotReadMissingData()
+    public void shouldSupportRotatingFilesAtEndOfTerm()
     {
-        final FragmentHandler mockHandler = mock(FragmentHandler.class);
+        archiveBeyondEndOfTerm();
 
-        final boolean wasRead = archiveReader.read(publication.sessionId(), (long) HEADER_LENGTH, mockHandler);
+        assertCanReadValueAt(TERM_LENGTH + HEADER_LENGTH);
+    }
 
-        assertFalse("Claimed to read missing data", wasRead);
-        verify(mockHandler, never()).onFragment(any(), anyInt(), anyInt(), any());
+    @Test
+    public void shouldNotReadDataForNotArchivedSession()
+    {
+        final boolean wasRead = readTo((long) HEADER_LENGTH);
+
+        assertNothingRead(wasRead);
+    }
+
+    @Test
+    public void shouldNotReadDataForNotArchivedTerm()
+    {
+        writeAndArchiveBuffer();
+
+        final boolean wasRead = readTo(TERM_LENGTH + HEADER_LENGTH);
+
+        assertNothingRead(wasRead);
+    }
+
+    @Test
+    public void shouldNotReadNotArchivedDataInCurrentTerm()
+    {
+        final long endPosition = writeAndArchiveBuffer();
+
+        final boolean wasRead = readTo(endPosition * 2);
+
+        assertNothingRead(wasRead);
     }
 
     @Test
@@ -136,14 +158,6 @@ public class LoggerTest
         final long endPosition = writeAndArchiveBuffer();
 
         assertPosition(endPosition);
-    }
-
-    @Test
-    public void shouldSupportRotatingFilesAtEndOfTerm()
-    {
-        archiveBeyondEndOfTerm();
-
-        assertCanReadValueAt(TERM_LENGTH + HEADER_LENGTH);
     }
 
     @Test
@@ -186,12 +200,23 @@ public class LoggerTest
         assertCanReadValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
 
+    private boolean readTo(final long position)
+    {
+        return archiveReader.read(publication.sessionId(), position, mockHandler);
+    }
+
     private void removeLogFiles()
     {
         logger
             .directoryDescriptor()
             .listLogFiles(new StreamIdentifier(CHANNEL, STREAM_ID))
             .forEach(File::delete);
+    }
+
+    private void assertNothingRead(final boolean wasRead)
+    {
+        assertFalse("Claimed to read missing data", wasRead);
+        verify(mockHandler, never()).onFragment(any(), anyInt(), anyInt(), any());
     }
 
     private void patchBuffer(final long position)

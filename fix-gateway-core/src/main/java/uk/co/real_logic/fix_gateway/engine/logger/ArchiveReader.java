@@ -138,6 +138,11 @@ public class ArchiveReader implements AutoCloseable
         private ByteBuffer newBuffer(final int termId)
         {
             final File logFile = directoryDescriptor.logFile(streamId, sessionId, termId);
+            if (!logFile.exists())
+            {
+                return null;
+            }
+
             return archiveBufferFactory.map(logFile);
         }
 
@@ -145,17 +150,27 @@ public class ArchiveReader implements AutoCloseable
         {
             final int termId = computeTermIdFromPosition(position, positionBitsToShift, initialTermId);
             final ByteBuffer termBuffer = termIdToBuffer.lookup(termId);
-            final int headerOffset = computeTermOffsetFromPosition(position, positionBitsToShift) - HEADER_LENGTH;
+            if (termBuffer == null)
+            {
+                return false;
+            }
+
+            final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
+            final int headerOffset = termOffset - HEADER_LENGTH;
 
             buffer.wrap(termBuffer);
             dataHeader.wrap(buffer, headerOffset);
+            final int frameLength = dataHeader.frameLength();
+            if (frameLength == 0)
+            {
+                return false;
+            }
 
             header.buffer(buffer);
             header.offset(headerOffset);
 
-            handler.onFragment(buffer, headerOffset + HEADER_LENGTH, dataHeader.frameLength() - HEADER_LENGTH, header);
+            handler.onFragment(buffer, termOffset, frameLength - HEADER_LENGTH, header);
 
-            // TODO: failure to read case
             return true;
         }
 
