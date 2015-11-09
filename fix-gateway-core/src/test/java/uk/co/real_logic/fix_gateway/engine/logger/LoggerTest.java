@@ -17,15 +17,19 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.CloseHelper;
+import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -71,7 +75,11 @@ public class LoggerTest
         });
     }
 
-    private final FragmentHandler mockHandler = mock(FragmentHandler.class);
+    private final BlockHandler blockHandler = mock(BlockHandler.class);
+    private final FragmentHandler fragmentHandler = mock(FragmentHandler.class);
+    private final ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
+    private final ArgumentCaptor<Integer> offsetCaptor = ArgumentCaptor.forClass(Integer.class);
+
     private final UnsafeBuffer buffer;
 
     private MediaDriver mediaDriver;
@@ -153,6 +161,40 @@ public class LoggerTest
     }
 
     @Test
+    public void shouldBlockReadDataThatWasWritten()
+    {
+        writeAndArchiveBuffer();
+
+        assertCanBlockReadValueAt(HEADER_LENGTH);
+    }
+
+    @Test
+    public void shouldSupportRotatingFilesAtEndOfTermInBlockRead()
+    {
+        archiveBeyondEndOfTerm();
+
+        assertCanBlockReadValueAt(TERM_LENGTH + HEADER_LENGTH);
+    }
+
+    @Test
+    public void shouldNotBlockReadDataForNotArchivedSession()
+    {
+        final boolean wasRead = readBlockTo((long) HEADER_LENGTH);
+
+        assertNothingBlockRead(wasRead);
+    }
+
+    @Test
+    public void shouldNotBlockReadDataForNotArchivedTerm()
+    {
+        writeAndArchiveBuffer();
+
+        final boolean wasRead = readBlockTo(TERM_LENGTH + HEADER_LENGTH);
+
+        assertNothingBlockRead(wasRead);
+    }
+
+    @Test
     public void shouldUpdatePosition()
     {
         final long endPosition = writeAndArchiveBuffer();
@@ -188,6 +230,7 @@ public class LoggerTest
         assertCanReadValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
 
+    @Ignore // TODO: add writing of header to test
     @Test
     public void shouldPatchMissingTerm()
     {
@@ -202,7 +245,12 @@ public class LoggerTest
 
     private boolean readTo(final long position)
     {
-        return archiveReader.read(publication.sessionId(), position, mockHandler);
+        return archiveReader.read(publication.sessionId(), position, fragmentHandler);
+    }
+
+    private boolean readBlockTo(final long position)
+    {
+        return archiveReader.readBlock(publication.sessionId(), position, SIZE, blockHandler);
     }
 
     private void removeLogFiles()
@@ -216,7 +264,13 @@ public class LoggerTest
     private void assertNothingRead(final boolean wasRead)
     {
         assertFalse("Claimed to read missing data", wasRead);
-        verify(mockHandler, never()).onFragment(any(), anyInt(), anyInt(), any());
+        verify(fragmentHandler, never()).onFragment(any(), anyInt(), anyInt(), any());
+    }
+
+    private void assertNothingBlockRead(final boolean wasRead)
+    {
+        assertFalse("Claimed to read missing data", wasRead);
+        verify(blockHandler, never()).onBlock(any(), anyInt(), anyInt(), anyInt(), anyInt());
     }
 
     private void patchBuffer(final long position)
@@ -267,10 +321,34 @@ public class LoggerTest
         assertCanReadValueAt(VALUE, position);
     }
 
-    private boolean assertCanReadValueAt(final int value, final long position)
+    private void assertCanReadValueAt(final int value, final long position)
     {
-        return archiveReader.read(publication.sessionId(), position,
-            (buffer, offset, length, header) -> assertEquals(value, buffer.getInt(offset + OFFSET)));
+        final boolean hasRead = readTo(position);
+
+        verify(fragmentHandler).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
+
+        assertReadValue(value, position, hasRead);
+    }
+
+    private void assertCanBlockReadValueAt(final int position)
+    {
+        assertCanBlockReadValueAt(VALUE, position);
+    }
+
+    private void assertCanBlockReadValueAt(final int value, final long position)
+    {
+        final boolean hasRead = readBlockTo(position);
+
+        verify(blockHandler).onBlock(
+            bufferCaptor.capture(), offsetCaptor.capture(), eq(SIZE), eq(publication.sessionId()), anyInt());
+
+        assertReadValue(value, position, hasRead);
+    }
+
+    private void assertReadValue(final int value, final long position, final boolean hasRead)
+    {
+        assertEquals(value, bufferCaptor.getValue().getInt(offsetCaptor.getValue() + OFFSET));
+        assertTrue("Failed to read value at " + position, hasRead);
     }
 
     private long writeBuffer(final int value)

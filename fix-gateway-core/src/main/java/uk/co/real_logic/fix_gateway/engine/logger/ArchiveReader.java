@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
+import uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor;
 import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
@@ -32,8 +33,6 @@ import java.nio.MappedByteBuffer;
 import java.util.function.IntFunction;
 
 import static java.lang.Integer.numberOfTrailingZeros;
-import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
-import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 public class ArchiveReader implements AutoCloseable
@@ -148,14 +147,14 @@ public class ArchiveReader implements AutoCloseable
 
         private boolean read(final long position, final FragmentHandler handler)
         {
-            final int termId = computeTermIdFromPosition(position, positionBitsToShift, initialTermId);
+            final int termId = computeTermIdFromPosition(position);
             final ByteBuffer termBuffer = termIdToBuffer.lookup(termId);
             if (termBuffer == null)
             {
                 return false;
             }
 
-            final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
+            final int termOffset = computeTermOffsetFromPosition(position);
             final int headerOffset = termOffset - HEADER_LENGTH;
 
             buffer.wrap(termBuffer);
@@ -174,9 +173,33 @@ public class ArchiveReader implements AutoCloseable
             return true;
         }
 
-        private boolean readBlock(final long position, final int length, final BlockHandler handler)
+        private boolean readBlock(final long position, final int requestedLength, final BlockHandler handler)
         {
-            return false;
+            final int termId = computeTermIdFromPosition(position);
+            final ByteBuffer termBuffer = termIdToBuffer.lookup(termId);
+            if (termBuffer == null)
+            {
+                return false;
+            }
+
+            buffer.wrap(termBuffer);
+            final int offset = computeTermOffsetFromPosition(position);
+            final int remainder = termBuffer.capacity() - offset;
+            final int length = Math.min(requestedLength, remainder);
+
+            handler.onBlock(buffer, offset, length, sessionId, termId);
+
+            return true;
+        }
+
+        private int computeTermOffsetFromPosition(final long position)
+        {
+            return LogBufferDescriptor.computeTermOffsetFromPosition(position, positionBitsToShift);
+        }
+
+        private int computeTermIdFromPosition(final long position)
+        {
+            return LogBufferDescriptor.computeTermIdFromPosition(position, positionBitsToShift, initialTermId);
         }
 
         public void close()
