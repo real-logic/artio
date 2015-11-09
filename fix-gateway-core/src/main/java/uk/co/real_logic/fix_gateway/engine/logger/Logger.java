@@ -122,9 +122,7 @@ public class Logger implements AutoCloseable
             addArchiver(loggerCacheCapacity, directoryDescriptor, outboundSubscription);
 
             outboundArchiveReader = new ArchiveReader(
-                LoggerUtil::mapExistingFile,
-                LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
-                logFileDir,
+                LoggerUtil.newArchiveMetaData(logFileDir),
                 loggerCacheCapacity,
                 new StreamIdentifier(outboundSubscription));
         }
@@ -141,7 +139,6 @@ public class Logger implements AutoCloseable
     {
         final Archiver archiver = new Archiver(
             LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
-            directoryDescriptor,
             loggerCacheCapacity,
             subscription);
         archivers.add(archiver);

@@ -40,6 +40,11 @@ public class ArchiveMetaData implements AutoCloseable
     private final BufferFactory newBufferFactory;
     private final LogDirectoryDescriptor directoryDescriptor;
 
+    public ArchiveMetaData(final LogDirectoryDescriptor directoryDescriptor)
+    {
+        this(directoryDescriptor, LoggerUtil::mapExistingFile, LoggerUtil::map);
+    }
+
     public ArchiveMetaData(
         final LogDirectoryDescriptor directoryDescriptor,
         final ExistingBufferFactory existingBufferFactory,
@@ -98,6 +103,11 @@ public class ArchiveMetaData implements AutoCloseable
         {
             IoUtil.unmap((MappedByteBuffer) buffer);
         }
+    }
+
+    public LogDirectoryDescriptor directoryDescriptor()
+    {
+        return directoryDescriptor;
     }
 
     @Override

@@ -47,17 +47,15 @@ public class ArchiveReader implements AutoCloseable
     private final LogDirectoryDescriptor directoryDescriptor;
 
     public ArchiveReader(
-        final ExistingBufferFactory archiveBufferFactory,
         final ArchiveMetaData metaData,
-        final String logFileDir,
         final int loggerCacheCapacity,
         final StreamIdentifier streamId)
     {
-        this.archiveBufferFactory = archiveBufferFactory;
+        archiveBufferFactory = LoggerUtil::mapExistingFile;
         this.metaData = metaData;
         this.loggerCacheCapacity = loggerCacheCapacity;
         this.streamId = streamId;
-        directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
+        directoryDescriptor = metaData.directoryDescriptor();
         aeronSessionIdToReader = new Int2ObjectHashMap<>();
     }
 

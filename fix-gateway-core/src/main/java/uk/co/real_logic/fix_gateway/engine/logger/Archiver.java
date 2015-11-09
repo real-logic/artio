@@ -42,29 +42,33 @@ public class Archiver implements Agent, FileBlockHandler
     private static final int POLL_LENGTH = termBufferLength();
 
     private final ArchiveMetaData metaData;
-    private final IntLruCache<SessionArchive> sessionIdToArchive;
+    private final IntLruCache<SessionArchiver> sessionIdToArchive;
     private final Subscription subscription;
     private final StreamIdentifier streamId;
     private final LogDirectoryDescriptor directoryDescriptor;
 
     public Archiver(
         final ArchiveMetaData metaData,
-        final LogDirectoryDescriptor directoryDescriptor,
         final int loggerCacheCapacity,
         final Subscription subscription)
     {
         this.metaData = metaData;
-        this.directoryDescriptor = directoryDescriptor;
+        this.directoryDescriptor = metaData.directoryDescriptor();
         this.subscription = subscription;
         streamId = new StreamIdentifier(subscription);
         sessionIdToArchive = new IntLruCache<>(loggerCacheCapacity, sessionId ->
         {
             final Image image = subscription.getImage(sessionId);
+            if (image == null)
+            {
+                return null;
+            }
+
             final int initialTermId = image.initialTermId();
             final int termBufferLength = image.termBufferLength();
             metaData.write(streamId, sessionId, initialTermId, termBufferLength);
-            return new SessionArchive(sessionId, image);
-        }, SessionArchive::close);
+            return new SessionArchiver(sessionId, image);
+        }, SessionArchiver::close);
     }
 
     public int doWork()
@@ -84,14 +88,12 @@ public class Archiver implements Agent, FileBlockHandler
         final int aeronSessionId,
         final int termId)
     {
-        sessionIdToArchive
-            .lookup(aeronSessionId)
-            .archive(fileChannel, offset, length, termId);
+        getSession(aeronSessionId).onBlock(fileChannel, offset, length, aeronSessionId, termId);
     }
 
     public long positionOf(final int aeronSessionId)
     {
-        final SessionArchive archive = sessionIdToArchive.lookup(aeronSessionId);
+        final SessionArchiver archive = getSession(aeronSessionId);
 
         if (archive == null)
         {
@@ -107,9 +109,12 @@ public class Archiver implements Agent, FileBlockHandler
                       final int bodyOffset,
                       final int bodyLength)
     {
-        sessionIdToArchive
-            .lookup(aeronSessionId)
-            .patch(position, bodyBuffer, bodyOffset, bodyLength);
+        getSession(aeronSessionId).patch(position, bodyBuffer, bodyOffset, bodyLength);
+    }
+
+    public SessionArchiver getSession(final int sessionId)
+    {
+        return sessionIdToArchive.lookup(sessionId);
     }
 
     public void onClose()
@@ -119,7 +124,7 @@ public class Archiver implements Agent, FileBlockHandler
         metaData.close();
     }
 
-    private final class SessionArchive implements AutoCloseable
+    public class SessionArchiver implements AutoCloseable, FileBlockHandler
     {
         public static final int UNKNOWN = -1;
         private final int sessionId;
@@ -131,7 +136,7 @@ public class Archiver implements Agent, FileBlockHandler
         private RandomAccessFile currentLogFile;
         private FileChannel currentLogChannel;
 
-        private SessionArchive(final int sessionId, final Image image)
+        protected SessionArchiver(final int sessionId, final Image image)
         {
             this.sessionId = sessionId;
             this.image = image;
@@ -139,8 +144,13 @@ public class Archiver implements Agent, FileBlockHandler
             positionBitsToShift = Integer.numberOfTrailingZeros(termBufferLength);
         }
 
-        private void archive(
-            final FileChannel fileChannel, final long offset, final int length, final int termId)
+        public int poll()
+        {
+            return image.filePoll(this, POLL_LENGTH);
+        }
+
+        public void onBlock(
+            final FileChannel fileChannel, final long offset, final int length, final int sessionId, final int termId)
         {
             try
             {
@@ -165,24 +175,12 @@ public class Archiver implements Agent, FileBlockHandler
             }
         }
 
-        private RandomAccessFile openFile(final File location) throws IOException
-        {
-            final RandomAccessFile file = new RandomAccessFile(location, "rwd");
-            file.setLength(termBufferLength);
-            return file;
-        }
-
-        private File logFile(final int termId)
-        {
-            return directoryDescriptor.logFile(streamId, sessionId, termId);
-        }
-
-        private long position()
+        public long position()
         {
             return image.position();
         }
 
-        private void patch(
+        public void patch(
             final long position, final DirectBuffer bodyBuffer, final int bodyOffset, final int bodyLength)
         {
             try
@@ -217,6 +215,23 @@ public class Archiver implements Agent, FileBlockHandler
             {
                 LangUtil.rethrowUnchecked(e);
             }
+        }
+
+        public void close()
+        {
+            CloseHelper.close(currentLogChannel);
+        }
+
+        private RandomAccessFile openFile(final File location) throws IOException
+        {
+            final RandomAccessFile file = new RandomAccessFile(location, "rwd");
+            file.setLength(termBufferLength);
+            return file;
+        }
+
+        private File logFile(final int termId)
+        {
+            return directoryDescriptor.logFile(streamId, sessionId, termId);
         }
 
         private void checkOverflow(final int bodyLength, final int termOffset)
@@ -263,9 +278,5 @@ public class Archiver implements Agent, FileBlockHandler
             }
         }
 
-        public void close()
-        {
-            CloseHelper.close(currentLogChannel);
-        }
     }
 }

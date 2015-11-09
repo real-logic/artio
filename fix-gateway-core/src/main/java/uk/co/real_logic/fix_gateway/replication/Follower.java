@@ -15,11 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
@@ -28,29 +28,28 @@ import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 
-public class Follower implements Role, RaftHandler, BlockHandler
+public class Follower implements Role, RaftHandler
 {
     private static final short NO_ONE = -1;
 
     private final RaftSubscriber raftSubscriber = new RaftSubscriber(this);
-    private final UnsafeBuffer toCommitBuffer;
 
     private final short nodeId;
     private final ReplicationHandler handler;
     private final RaftNode raftNode;
     private final long replyTimeoutInMs;
     private final TermState termState;
+    private final ArchiveReader archiveReader;
+    private final Archiver archiver;
 
     private RaftPublication acknowledgementPublication;
     private RaftPublication controlPublication;
-    private Subscription dataSubscription;
-    private Image leaderDataImage;
+    private SessionArchiver leaderArchiver;
     private Subscription controlSubscription;
     private long receivedPosition;
     private long commitPosition;
     private long lastAppliedPosition;
 
-    private int toCommitBufferUsed = 0;
     private long latestNextReceiveTimeInMs;
     private short votedFor = NO_ONE;
     private int leaderShipTerm;
@@ -61,17 +60,19 @@ public class Follower implements Role, RaftHandler, BlockHandler
         final ReplicationHandler handler,
         final RaftNode raftNode,
         final long timeInMs,
-        long replyTimeoutInMs,
-        final int bufferSize,
-        final TermState termState)
+        final long replyTimeoutInMs,
+        final TermState termState,
+        final ArchiveReader archiveReader,
+        final Archiver archiver)
     {
         this.nodeId = nodeId;
         this.handler = handler;
         this.raftNode = raftNode;
         this.replyTimeoutInMs = replyTimeoutInMs;
         this.termState = termState;
+        this.archiveReader = archiveReader;
+        this.archiver = archiver;
         updateReceiverTimeout(timeInMs);
-        toCommitBuffer = new UnsafeBuffer(new byte[bufferSize]);
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)
@@ -110,12 +111,12 @@ public class Follower implements Role, RaftHandler, BlockHandler
 
     private long readData(final long timeInMs)
     {
-        if (leaderDataImage == null)
+        if (leaderArchiver == null)
         {
             return 0;
         }
 
-        final long imagePosition = leaderDataImage.position();
+        final long imagePosition = leaderArchiver.position();
         if (imagePosition < receivedPosition)
         {
             // TODO: theoretically not possible, but maybe have a sanity check?
@@ -128,19 +129,12 @@ public class Follower implements Role, RaftHandler, BlockHandler
             return 1;
         }
 
-        long bytesRead = 0;
-        final int previousToCommitBufferUsed = toCommitBufferUsed;
-        final int bufferLimit = toCommitBuffer.capacity() - previousToCommitBufferUsed;
-        if (bufferLimit > 0)
+        final long bytesRead = leaderArchiver.poll();
+        if (bytesRead > 0)
         {
-            leaderDataImage.blockPoll(this, bufferLimit);
-            bytesRead = toCommitBufferUsed - previousToCommitBufferUsed;
-            if (bytesRead > 0)
-            {
-                receivedPosition += bytesRead;
-                saveMessageAcknowledgement(OK);
-                updateReceiverTimeout(timeInMs);
-            }
+            receivedPosition += bytesRead;
+            saveMessageAcknowledgement(OK);
+            updateReceiverTimeout(timeInMs);
         }
         return bytesRead;
     }
@@ -156,14 +150,8 @@ public class Follower implements Role, RaftHandler, BlockHandler
         final int committableBytes = (int) (canCommitUpToPosition - lastAppliedPosition);
         if (committableBytes > 0)
         {
-            handler.onBlock(toCommitBuffer, 0, committableBytes);
-            lastAppliedPosition = commitPosition;
-
-            final int uncommittedBytes = toCommitBufferUsed - committableBytes;
-            if (uncommittedBytes > 0)
-            {
-                toCommitBuffer.putBytes(0, toCommitBuffer, committableBytes, uncommittedBytes);
-            }
+            archiveReader.readBlock(termState.leaderSessionId(), lastAppliedPosition, committableBytes,
+                (buffer, offset, length, sessionId, termId) -> handler.onBlock(buffer, offset, length));
         }
     }
 
@@ -172,7 +160,6 @@ public class Follower implements Role, RaftHandler, BlockHandler
         controlPublication.close();
         acknowledgementPublication.close();
         controlSubscription.close();
-        dataSubscription.close();
     }
 
     private void updateReceiverTimeout(final long timeInMs)
@@ -251,7 +238,7 @@ public class Follower implements Role, RaftHandler, BlockHandler
     {
         if (isValidPosition(leaderSessionId, leaderShipTerm, startPosition))
         {
-            saveData(bodyBuffer, bodyOffset, bodyLength);
+            leaderArchiver.patch(startPosition, bodyBuffer, bodyOffset, bodyLength);
             receivedPosition += bodyLength;
             updateReceiverTimeout(timeInMs);
             saveMessageAcknowledgement(OK);
@@ -280,22 +267,7 @@ public class Follower implements Role, RaftHandler, BlockHandler
         receivedPosition = termState.receivedPosition();
         lastAppliedPosition = termState.lastAppliedPosition();
         commitPosition = termState.commitPosition();
-        leaderDataImage = dataSubscription.getImage(termState.leaderSessionId());
-    }
-
-    public void onBlock(final DirectBuffer srcBuffer,
-                        final int offset,
-                        final int length,
-                        final int sessionId,
-                        final int termId)
-    {
-        saveData(srcBuffer, offset, length);
-    }
-
-    private void saveData(final DirectBuffer srcBuffer, final int offset, final int length)
-    {
-        toCommitBuffer.putBytes(toCommitBufferUsed, srcBuffer, offset, length);
-        toCommitBufferUsed += length;
+        leaderArchiver = archiver.getSession(termState.leaderSessionId());
     }
 
     public Follower acknowledgementPublication(final RaftPublication acknowledgementPublication)
@@ -307,12 +279,6 @@ public class Follower implements Role, RaftHandler, BlockHandler
     public Follower controlPublication(final RaftPublication controlPublication)
     {
         this.controlPublication = controlPublication;
-        return this;
-    }
-
-    public Follower dataSubscription(final Subscription dataSubscription)
-    {
-        this.dataSubscription = dataSubscription;
         return this;
     }
 

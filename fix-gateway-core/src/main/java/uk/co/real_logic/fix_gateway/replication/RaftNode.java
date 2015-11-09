@@ -142,7 +142,6 @@ public class RaftNode implements Role
         follower
             .acknowledgementPublication(raftPublication(configuration.acknowledgementStream()))
             .controlPublication(raftPublication(controlStream))
-            .dataSubscription(subscription(configuration.dataStream()))
             .controlSubscription(subscription(controlStream));
     }
 
@@ -180,8 +179,9 @@ public class RaftNode implements Role
             this,
             timeInMs,
             timeoutIntervalInMs,
-            128 * 1024 * 1024,
-            termState);
+            termState,
+            configuration.archiveReader(),
+            configuration.archiver());
 
         startAsFollower(timeInMs);
     }

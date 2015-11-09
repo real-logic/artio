@@ -19,9 +19,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.mockito.Mockito.mock;
-import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.staysFollower;
-import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.staysLeader;
-import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.transitionsToLeader;
+import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.*;
 
 /**
  * Test candidate instances in an election

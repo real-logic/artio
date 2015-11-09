@@ -21,17 +21,23 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
+import uk.co.real_logic.fix_gateway.engine.logger.LogDirectoryDescriptor;
+
+import java.io.File;
 
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.agrona.CloseHelper.close;
 
 public class AbstractReplicationTest
 {
-
 
     protected static final String IPC = "aeron:ipc";
     protected static final int CONTROL = 1;
@@ -43,6 +49,7 @@ public class AbstractReplicationTest
     protected static final int CLUSTER_SIZE = 3;
     protected static final long TIME = 0L;
     protected static final int DATA_SESSION_ID = 43;
+    protected static final int LOGGER_CACHE_CAPACITY = 10;
 
     protected RaftNode raftNode1 = mock(RaftNode.class);
     protected RaftNode raftNode2 = mock(RaftNode.class);
@@ -95,8 +102,17 @@ public class AbstractReplicationTest
     @After
     public void teardownAeron()
     {
+        deleteLogDir(1);
+        deleteLogDir(2);
+        deleteLogDir(3);
+
         close(aeron);
         close(mediaDriver);
+    }
+
+    private void deleteLogDir(final int id)
+    {
+        IoUtil.delete(new File(logFileDir((short) id)), true);
     }
 
     protected static int poll(final Role role)
@@ -113,21 +129,36 @@ public class AbstractReplicationTest
     }
 
     protected Follower follower(
-        final short id, final RaftNode raftNode, final ReplicationHandler handler, final TermState termState)
+        final short id,
+        final RaftNode raftNode,
+        final ReplicationHandler handler,
+        final TermState termState)
     {
+        final LogDirectoryDescriptor descriptor = new LogDirectoryDescriptor(logFileDir(id));
+        final ArchiveMetaData metaData = new ArchiveMetaData(descriptor);
+        final Subscription subscription = dataSubscription();
+        final ArchiveReader archiveReader = new ArchiveReader(
+            metaData, LOGGER_CACHE_CAPACITY, new StreamIdentifier(subscription));
+        final Archiver archiver = new Archiver(metaData, LOGGER_CACHE_CAPACITY, subscription);
+
         return new Follower(
             id,
             handler,
             raftNode,
             0,
             TIMEOUT,
-            1024 * 1024,
-            termState)
-            .dataSubscription(dataSubscription())
+            termState,
+            archiveReader,
+            archiver)
             .controlSubscription(controlSubscription())
             .acknowledgementPublication(raftPublication(ACKNOWLEDGEMENT))
             .controlPublication(raftPublication(CONTROL))
             .follow(0);
+    }
+
+    private String logFileDir(final short id)
+    {
+        return IoUtil.tmpDirName() + "/node" + id;
     }
 
     protected static void run(final Role node1, final Role node2, final Role node3)

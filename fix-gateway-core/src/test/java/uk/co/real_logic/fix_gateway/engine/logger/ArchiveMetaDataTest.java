@@ -36,7 +36,7 @@ public class ArchiveMetaDataTest
 
     private ByteBuffer buffer = ByteBuffer.allocate(8 * 1024);
     private ExistingBufferFactory existingBufferFactory = LoggerUtil::mapExistingFile;
-    private BufferFactory newBufferFactory = LoggerUtil::map;
+    private BufferFactory newBufferFactory = IoUtil::mapNewFile;
     private String tempDir = IoUtil.tmpDirName() + File.separator + "amdt";
     private LogDirectoryDescriptor directory = new LogDirectoryDescriptor(tempDir);
     private ArchiveMetaData archiveMetaData = new ArchiveMetaData(directory, existingBufferFactory, newBufferFactory);

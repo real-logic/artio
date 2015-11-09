@@ -18,10 +18,13 @@ package uk.co.real_logic.fix_gateway.replication;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.OngoingStubbing;
-import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -49,10 +52,11 @@ public class FollowerTest
     private RaftPublication acknowledgementPublication = mock(RaftPublication.class);
     private RaftPublication controlPublication = mock(RaftPublication.class);
     private ReplicationHandler handler = mock(ReplicationHandler.class);
-    private Subscription dataSubscription = mock(Subscription.class);
-    private Image leaderDataImage = mock(Image.class);
+    private SessionArchiver leaderArchiver = mock(SessionArchiver.class);
     private Subscription controlSubscription = mock(Subscription.class);
     private RaftNode raftNode = mock(RaftNode.class);
+    private ArchiveReader archiveReader = mock(ArchiveReader.class);
+    private Archiver archiver = mock(Archiver.class);
 
     private final TermState termState = new TermState()
         .allPositions(POSITION)
@@ -65,8 +69,9 @@ public class FollowerTest
         raftNode,
         0,
         VOTE_TIMEOUT,
-        8 * 1024 * 1024,
-        termState);
+        termState,
+        archiveReader,
+        archiver);
 
     @Before
     public void setUp()
@@ -74,10 +79,9 @@ public class FollowerTest
         follower
             .controlPublication(controlPublication)
             .acknowledgementPublication(acknowledgementPublication)
-            .dataSubscription(dataSubscription)
             .controlSubscription(controlSubscription);
 
-        when(dataSubscription.getImage(LEADER_SESSION_ID)).thenReturn(leaderDataImage);
+        when(archiver.getSession(LEADER_SESSION_ID)).thenReturn(leaderArchiver);
 
         follower.follow(0);
     }
@@ -276,6 +280,8 @@ public class FollowerTest
 
             return 1;
         });
+
+        dataInArchive(position);
     }
 
     private OngoingStubbing<Integer> whenControlPolled()
@@ -295,14 +301,23 @@ public class FollowerTest
 
     private void dataToBeCommitted(final long position)
     {
-        when(leaderDataImage.blockPoll(eq(follower), anyInt())).then(inv ->
+        when(leaderArchiver.poll()).thenReturn(LENGTH);
+
+        when(leaderArchiver.position()).thenReturn(position);
+
+        dataInArchive(position);
+    }
+
+    private void dataInArchive(final long position)
+    {
+        when(archiveReader.readBlock(eq(LEADER_SESSION_ID), eq(position), eq(LENGTH), any())).then(inv ->
         {
-            follower.onBlock(buffer, (int) position, LENGTH, LEADER_SESSION_ID, 0);
+            final Object[] arguments = inv.getArguments();
+            final BlockHandler handler = (BlockHandler) arguments[3];
+            handler.onBlock(buffer, 0, LENGTH, LEADER_SESSION_ID, 0);
 
-            return LENGTH;
+            return true;
         });
-
-        when(leaderDataImage.position()).thenReturn(position);
     }
 
     private void noDataCommitted()
