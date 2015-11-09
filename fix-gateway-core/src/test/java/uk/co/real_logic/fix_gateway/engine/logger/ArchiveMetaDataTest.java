@@ -15,19 +15,16 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static uk.co.real_logic.aeron.CommonContext.IPC_CHANNEL;
 
 public class ArchiveMetaDataTest
@@ -38,17 +35,16 @@ public class ArchiveMetaDataTest
     public static final int TERM_BUFFER_LENGTH = 13;
 
     private ByteBuffer buffer = ByteBuffer.allocate(8 * 1024);
-    private ExistingBufferFactory existingBufferFactory = file -> buffer;
-    private BufferFactory newBufferFactory = (file, size) -> buffer;
-    private LogDirectoryDescriptor mockDirectory = mock(LogDirectoryDescriptor.class);
-    private ArchiveMetaData archiveMetaData = new ArchiveMetaData(mockDirectory, existingBufferFactory, newBufferFactory);
+    private ExistingBufferFactory existingBufferFactory = LoggerUtil::mapExistingFile;
+    private BufferFactory newBufferFactory = LoggerUtil::map;
+    private String tempDir = IoUtil.tmpDirName() + File.separator + "amdt";
+    private LogDirectoryDescriptor directory = new LogDirectoryDescriptor(tempDir);
+    private ArchiveMetaData archiveMetaData = new ArchiveMetaData(directory, existingBufferFactory, newBufferFactory);
 
-    @Before
-    public void setUp() throws IOException
+    @After
+    public void teardown()
     {
-        final File tempFile = File.createTempFile("metadata", "txt");
-        assertTrue(tempFile.delete());
-        when(mockDirectory.metaDataLogFile(STREAM_ID, SESSION_ID)).thenReturn(tempFile);
+        IoUtil.delete(new File(tempDir), true);
     }
 
     @Test
