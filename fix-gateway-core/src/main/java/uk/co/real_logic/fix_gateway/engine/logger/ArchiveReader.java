@@ -38,7 +38,8 @@ import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 public class ArchiveReader implements AutoCloseable
 {
-    private final IntFunction<SessionReader> newSessionReader = SessionReader::new;
+    private final IntFunction<SessionReader> newSessionReader = this::newSessionReader;
+
     private final Int2ObjectHashMap<SessionReader> aeronSessionIdToReader;
     private final ExistingBufferFactory archiveBufferFactory;
     private final ArchiveMetaData metaData;
@@ -77,9 +78,8 @@ public class ArchiveReader implements AutoCloseable
      */
     public boolean read(final int aeronSessionId, final long position, final FragmentHandler handler)
     {
-        return aeronSessionIdToReader
-            .computeIfAbsent(aeronSessionId, newSessionReader)
-            .read(position, handler);
+        final SessionReader sessionReader = sessionReader(aeronSessionId);
+        return sessionReader != null && sessionReader.read(position, handler);
     }
 
     /**
@@ -96,9 +96,24 @@ public class ArchiveReader implements AutoCloseable
     public boolean readBlock(
         final int aeronSessionId, final long position, final int length, final BlockHandler handler)
     {
-        return aeronSessionIdToReader
-            .computeIfAbsent(aeronSessionId, newSessionReader)
-            .read(position, length, handler);
+        final SessionReader sessionReader = sessionReader(aeronSessionId);
+        return sessionReader != null && sessionReader.readBlock(position, length, handler);
+    }
+
+    private SessionReader sessionReader(final int aeronSessionId)
+    {
+        return aeronSessionIdToReader.computeIfAbsent(aeronSessionId, newSessionReader);
+    }
+
+    private SessionReader newSessionReader(final int sessionId)
+    {
+        final ArchiveMetaDataDecoder streamMetaData = metaData.read(streamId, sessionId);
+        if (streamMetaData == null)
+        {
+            return null;
+        }
+
+        return new SessionReader(sessionId, streamMetaData.initialTermId(), streamMetaData.termBufferLength());
     }
 
     private final class SessionReader implements AutoCloseable
@@ -112,14 +127,12 @@ public class ArchiveReader implements AutoCloseable
         private final int positionBitsToShift;
         private final Header header;
 
-        private SessionReader(final int sessionId)
+        private SessionReader(final int sessionId, final int initialTermId, final int termBufferLength)
         {
             this.sessionId = sessionId;
-            final ArchiveMetaDataDecoder streamMetaData = metaData.read(streamId, sessionId);
-            initialTermId = streamMetaData.initialTermId();
-            final int termBufferLength = streamMetaData.termBufferLength();
+            this.initialTermId = initialTermId;
             positionBitsToShift = numberOfTrailingZeros(termBufferLength);
-            header = new Header(initialTermId, termBufferLength);
+            header = new Header(this.initialTermId, termBufferLength);
         }
 
         private ByteBuffer newBuffer(final int termId)
@@ -146,7 +159,7 @@ public class ArchiveReader implements AutoCloseable
             return true;
         }
 
-        private boolean read(final long position, final int length, final BlockHandler handler)
+        private boolean readBlock(final long position, final int length, final BlockHandler handler)
         {
             return false;
         }

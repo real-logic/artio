@@ -203,7 +203,7 @@ public class Archiver implements Agent, FileBlockHandler
                 else
                 {
                     final File file = logFile(patchTermId);
-                    // NB: if file doesn't exist it gets created here
+                    // if file doesn't exist it gets created here
                     patchTermLogFile = openFile(file);
                     patchTermLogChannel = patchTermLogFile.getChannel();
                 }

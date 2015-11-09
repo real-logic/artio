@@ -24,6 +24,7 @@ import org.junit.runners.Parameterized.Parameters;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
@@ -40,8 +41,13 @@ import java.util.concurrent.locks.LockSupport;
 
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.aeron.driver.Configuration.TERM_BUFFER_LENGTH_PROP_NAME;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
@@ -111,6 +117,17 @@ public class LoggerTest
         writeAndArchiveBuffer();
 
         assertCanReadValueAt(HEADER_LENGTH);
+    }
+
+    @Test
+    public void shouldNotReadMissingData()
+    {
+        final FragmentHandler mockHandler = mock(FragmentHandler.class);
+
+        final boolean wasRead = archiveReader.read(publication.sessionId(), (long) HEADER_LENGTH, mockHandler);
+
+        assertFalse("Claimed to read missing data", wasRead);
+        verify(mockHandler, never()).onFragment(any(), anyInt(), anyInt(), any());
     }
 
     @Test

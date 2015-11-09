@@ -78,7 +78,13 @@ public class ArchiveMetaData implements AutoCloseable
     public ArchiveMetaDataDecoder read(final StreamIdentifier streamId, final int sessionId)
     {
         ensureBufferNotMapped();
-        metaDataBuffer.wrap(existingBufferFactory.map(directoryDescriptor.metaDataLogFile(streamId, sessionId)));
+        final File file = directoryDescriptor.metaDataLogFile(streamId, sessionId);
+        if (!file.exists())
+        {
+            return null;
+        }
+
+        metaDataBuffer.wrap(existingBufferFactory.map(file));
         headerDecoder.wrap(metaDataBuffer, 0);
         decoder.wrap(metaDataBuffer, headerDecoder.encodedLength(), headerDecoder.blockLength(), headerDecoder.version());
 
