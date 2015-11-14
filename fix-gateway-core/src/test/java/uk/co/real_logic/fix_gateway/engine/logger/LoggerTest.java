@@ -125,6 +125,8 @@ public class LoggerTest
         assertCanReadValueAt(HEADER_LENGTH);
     }
 
+    // TODO: test read return position
+
     @Test
     public void shouldSupportRotatingFilesAtEndOfTerm()
     {
@@ -134,25 +136,36 @@ public class LoggerTest
     }
 
     @Test
-    public void shouldReadingFragmentsUpToAPosition()
+    public void shouldReadFragmentsUpToAPosition()
+    {
+        shouldReadFragmentsUpToAPosition(0);
+    }
+
+    @Test
+    public void shouldNotReadBeyondEndOfFragment()
+    {
+        shouldReadFragmentsUpToAPosition(30);
+    }
+
+    private void shouldReadFragmentsUpToAPosition(final int offsetIntoNextMessage)
     {
         archiveBeyondEndOfTerm();
 
-        final int begin = HEADER_LENGTH;
+        final long begin = HEADER_LENGTH;
         final int lengthOfTwoMessages = SIZE * 2 + HEADER_LENGTH;
-        final int end = begin + lengthOfTwoMessages + 30;
-        final int res = archiveReader.readUpTo(publication.sessionId(), begin, end, fragmentHandler);
+        final long end = begin + lengthOfTwoMessages + offsetIntoNextMessage;
+        final long res = archiveReader.readUpTo(publication.sessionId(), begin, end, fragmentHandler);
 
-        verify(fragmentHandler, times(3)).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
+        verify(fragmentHandler, times(2)).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
 
-        final int threeMessagesIn = begin + SIZE * 3 + HEADER_LENGTH * 3;
-        assertEquals("Failed to return new position", threeMessagesIn, res);
+        final long twoMessagesIn = begin + lengthOfTwoMessages + HEADER_LENGTH;
+        assertEquals("Failed to return new position", twoMessagesIn, res);
     }
 
     @Test
     public void shouldNotReadDataForNotArchivedSession()
     {
-        final int position = readTo((long) HEADER_LENGTH);
+        final long position = readTo((long) HEADER_LENGTH);
 
         assertNothingRead(position, UNKNOWN_SESSION);
     }
@@ -162,7 +175,7 @@ public class LoggerTest
     {
         writeAndArchiveBuffer();
 
-        final int position = readTo(TERM_LENGTH + HEADER_LENGTH);
+        final long position = readTo(TERM_LENGTH + HEADER_LENGTH);
 
         assertNothingRead(position, UNKNOWN_TERM);
     }
@@ -172,7 +185,7 @@ public class LoggerTest
     {
         final long endPosition = writeAndArchiveBuffer();
 
-        final int position = readTo(endPosition * 2);
+        final long position = readTo(endPosition * 2);
 
         assertNothingRead(position, NO_MESSAGE);
     }
@@ -260,7 +273,7 @@ public class LoggerTest
         assertCanReadValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
 
-    private int readTo(final long position)
+    private long readTo(final long position)
     {
         return archiveReader.read(publication.sessionId(), position, fragmentHandler);
     }
@@ -278,7 +291,7 @@ public class LoggerTest
             .forEach(File::delete);
     }
 
-    private void assertNothingRead(final int position, final int expectedReason)
+    private void assertNothingRead(final long position, final long expectedReason)
     {
         assertEquals("Claimed to read missing data", expectedReason, position);
         verify(fragmentHandler, never()).onFragment(any(), anyInt(), anyInt(), any());

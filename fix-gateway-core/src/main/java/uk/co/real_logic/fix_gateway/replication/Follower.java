@@ -152,6 +152,8 @@ public class Follower implements Role, RaftHandler
         {
             archiveReader.readBlock(termState.leaderSessionId(), lastAppliedPosition, committableBytes,
                 (buffer, offset, length, sessionId, termId) -> handler.onBlock(buffer, offset, length));
+
+            //archiveReader.readUpTo(termState.leaderSessionId(), lastAppliedPosition, committableBytes, null);
         }
     }
 

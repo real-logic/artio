@@ -44,7 +44,7 @@ public class ReplayQueryTest extends AbstractLogTest
     {
         returnBuffer(indexBuffer, SESSION_ID);
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
-        when(mockReader.read(anyInt(), anyLong(), any(FragmentHandler.class))).thenReturn(UNKNOWN_SESSION);
+        when(mockReader.read(anyInt(), anyLong(), any(FragmentHandler.class))).thenReturn((long) UNKNOWN_SESSION);
 
         bufferContainsMessage(true);
         indexRecord();

@@ -88,7 +88,7 @@ public class ArchiveReader implements AutoCloseable
      * @param handler the handler to pass the data into
      * @return the position after the end of this message. If there's another message, then this is its start.
      */
-    public int read(final int aeronSessionId, final long position, final FragmentHandler handler)
+    public long read(final int aeronSessionId, final long position, final FragmentHandler handler)
     {
         final SessionReader sessionReader = sessionReader(aeronSessionId);
         if (sessionReader == null)
@@ -108,8 +108,8 @@ public class ArchiveReader implements AutoCloseable
      * @param handler the handler to pass the data into
      * @return the position after the end of this message. If there's another message, then this is its start.
      */
-    public int readUpTo(
-        final int aeronSessionId, final int beginPosition, final int endPosition, final FragmentHandler handler)
+    public long readUpTo(
+        final int aeronSessionId, final long beginPosition, final long endPosition, final FragmentHandler handler)
     {
         final SessionReader sessionReader = sessionReader(aeronSessionId);
         if (sessionReader == null)
@@ -184,7 +184,56 @@ public class ArchiveReader implements AutoCloseable
             return archiveBufferFactory.map(logFile);
         }
 
-        private int read(final long position, final FragmentHandler handler)
+        private long read(final long position, final FragmentHandler handler)
+        {
+            final int termOffset = scan(position);
+            if (termOffset == UNKNOWN_TERM)
+            {
+                return UNKNOWN_TERM;
+            }
+
+            final int frameLength = dataHeader.frameLength();
+            if (frameLength == 0)
+            {
+                return NO_MESSAGE;
+            }
+
+            handler.onFragment(buffer, termOffset, frameLength - HEADER_LENGTH, header);
+
+            return position + frameLength;
+        }
+
+        private long readUpTo(final long beginPosition, final long endPosition, final FragmentHandler handler)
+        {
+            long position = beginPosition;
+            while (true)
+            {
+                final int termOffset = scan(position);
+                if (termOffset == UNKNOWN_TERM)
+                {
+                    return position;
+                }
+
+                final int frameLength = dataHeader.frameLength();
+                if (frameLength == 0)
+                {
+                    return position;
+                }
+
+                final int bodyLength = frameLength - HEADER_LENGTH;
+                final long messageEnd = position + bodyLength;
+                if (messageEnd > endPosition)
+                {
+                    return position;
+                }
+
+                handler.onFragment(buffer, termOffset, bodyLength, header);
+
+                position += frameLength;
+            }
+        }
+
+        private int scan(final long position)
         {
             final int termId = computeTermIdFromPosition(position);
             final ByteBuffer termBuffer = termIdToBuffer.lookup(termId);
@@ -198,18 +247,10 @@ public class ArchiveReader implements AutoCloseable
 
             buffer.wrap(termBuffer);
             dataHeader.wrap(buffer, headerOffset);
-            final int frameLength = dataHeader.frameLength();
-            if (frameLength == 0)
-            {
-                return NO_MESSAGE;
-            }
-
             header.buffer(buffer);
             header.offset(headerOffset);
 
-            handler.onFragment(buffer, termOffset, frameLength - HEADER_LENGTH, header);
-
-            return termOffset + frameLength;
+            return termOffset;
         }
 
         private boolean readBlock(final long position, final int requestedLength, final BlockHandler handler)
@@ -229,17 +270,6 @@ public class ArchiveReader implements AutoCloseable
             handler.onBlock(buffer, offset, length, sessionId, termId);
 
             return true;
-        }
-
-        public int readUpTo(final int beginPosition, final int endPosition, final FragmentHandler handler)
-        {
-            int position = beginPosition;
-            while (position > 0 && position < endPosition)
-            {
-                position = read(position, handler);
-            }
-
-            return position;
         }
 
         private int computeTermOffsetFromPosition(final long position)
