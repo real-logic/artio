@@ -19,6 +19,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
@@ -56,7 +57,7 @@ public class LeaderTest
         new EntireClusterAcknowledgementStrategy(),
         new IntHashSet(40, -1),
         raftNode,
-        mock(ReplicationHandler.class),
+        mock(FragmentHandler.class),
         0,
         HEARTBEAT_INTERVAL_IN_MS,
         termState,

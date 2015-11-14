@@ -21,6 +21,7 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
@@ -131,7 +132,7 @@ public class AbstractReplicationTest
     protected Follower follower(
         final short id,
         final RaftNode raftNode,
-        final ReplicationHandler handler,
+        final FragmentHandler handler,
         final TermState termState)
     {
         final LogDirectoryDescriptor descriptor = new LogDirectoryDescriptor(logFileDir(id));

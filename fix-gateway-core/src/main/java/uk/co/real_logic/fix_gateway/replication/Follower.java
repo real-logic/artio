@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
@@ -35,7 +36,7 @@ public class Follower implements Role, RaftHandler
     private final RaftSubscriber raftSubscriber = new RaftSubscriber(this);
 
     private final short nodeId;
-    private final ReplicationHandler handler;
+    private final FragmentHandler handler;
     private final RaftNode raftNode;
     private final long replyTimeoutInMs;
     private final TermState termState;
@@ -57,7 +58,7 @@ public class Follower implements Role, RaftHandler
 
     public Follower(
         final short nodeId,
-        final ReplicationHandler handler,
+        final FragmentHandler handler,
         final RaftNode raftNode,
         final long timeInMs,
         final long replyTimeoutInMs,
@@ -150,10 +151,7 @@ public class Follower implements Role, RaftHandler
         final int committableBytes = (int) (canCommitUpToPosition - lastAppliedPosition);
         if (committableBytes > 0)
         {
-            archiveReader.readBlock(termState.leaderSessionId(), lastAppliedPosition, committableBytes,
-                (buffer, offset, length, sessionId, termId) -> handler.onBlock(buffer, offset, length));
-
-            //archiveReader.readUpTo(termState.leaderSessionId(), lastAppliedPosition, committableBytes, null);
+            archiveReader.readUpTo(termState.leaderSessionId(), lastAppliedPosition, committableBytes, handler);
         }
     }
 

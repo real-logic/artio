@@ -75,7 +75,7 @@ public class NodeRunner implements AutoCloseable, Role
             .otherNodes(otherNodeIds)
             .timeoutIntervalInMs(TIMEOUT_IN_MS)
             .acknowledgementStrategy(new EntireClusterAcknowledgementStrategy())
-            .handler((buffer, offset, length) -> replicatedPosition = offset + length)
+            .fragmentHandler((buffer, offset, length, header) -> replicatedPosition = offset + length)
             .failCounter(mock(AtomicCounter.class))
             .maxClaimAttempts(100_000)
             .acknowledgementStream(new StreamIdentifier(AERON_GROUP, ACKNOWLEDGEMENT))

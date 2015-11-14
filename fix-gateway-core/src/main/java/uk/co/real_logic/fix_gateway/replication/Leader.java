@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
@@ -38,7 +39,7 @@ public class Leader implements Role, RaftHandler
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final RaftSubscriber acknowledgementSubscriber = new RaftSubscriber(this);
     private final RaftNode raftNode;
-    private final BlockHandler blockHandler;
+    private final FragmentHandler handler;
     private final long heartbeatIntervalInMs;
 
     // Counts of how many acknowledgements
@@ -58,7 +59,7 @@ public class Leader implements Role, RaftHandler
         final AcknowledgementStrategy acknowledgementStrategy,
         final IntHashSet followers,
         final RaftNode raftNode,
-        final ReplicationHandler handler,
+        final FragmentHandler handler,
         final long timeInMs,
         final long heartbeatIntervalInMs,
         final TermState termState,
@@ -68,10 +69,10 @@ public class Leader implements Role, RaftHandler
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
         this.raftNode = raftNode;
+        this.handler = handler;
         this.termState = termState;
         this.ourSessionId = ourSessionId;
         this.archiveReader = archiveReader;
-        this.blockHandler = (buffer, offset, length, sessionId, termId) -> handler.onBlock(buffer, offset, length);
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
         updateHeartbeatInterval(timeInMs);
@@ -88,7 +89,13 @@ public class Leader implements Role, RaftHandler
             final int delta = (int) (newPosition - commitPosition);
             if (delta > 0)
             {
-                commitPosition = dataSubscription.blockPoll(blockHandler, delta);
+                // TODO: poll fragments up to a position?
+                commitPosition = dataSubscription.poll(handler, 1);
+                if (commitPosition > newPosition)
+                {
+                    System.out.println("Temporary Fail!");
+                    commitPosition = newPosition;
+                }
                 heartbeat();
             }
         }

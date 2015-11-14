@@ -19,7 +19,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.OngoingStubbing;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.logbuffer.BlockHandler;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
@@ -51,7 +52,7 @@ public class FollowerTest
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
     private RaftPublication acknowledgementPublication = mock(RaftPublication.class);
     private RaftPublication controlPublication = mock(RaftPublication.class);
-    private ReplicationHandler handler = mock(ReplicationHandler.class);
+    private FragmentHandler handler = mock(FragmentHandler.class);
     private SessionArchiver leaderArchiver = mock(SessionArchiver.class);
     private Subscription controlSubscription = mock(Subscription.class);
     private RaftNode raftNode = mock(RaftNode.class);
@@ -291,7 +292,7 @@ public class FollowerTest
 
     private void dataCommitted()
     {
-        verify(handler, atLeastOnce()).onBlock(any(), eq(0), eq(LENGTH));
+        verify(handler, atLeastOnce()).onFragment(any(), eq(0), eq(LENGTH), any());
     }
 
     private void dataToBeCommitted()
@@ -310,19 +311,20 @@ public class FollowerTest
 
     private void dataInArchive(final long position)
     {
-        when(archiveReader.readBlock(eq(LEADER_SESSION_ID), eq(position), eq(LENGTH), any())).then(inv ->
+        System.out.println();
+        when(archiveReader.readUpTo(eq(LEADER_SESSION_ID), eq(position), eq((long) LENGTH), any())).then(inv ->
         {
             final Object[] arguments = inv.getArguments();
-            final BlockHandler handler = (BlockHandler) arguments[3];
-            handler.onBlock(buffer, 0, LENGTH, LEADER_SESSION_ID, 0);
+            final FragmentHandler handler = (FragmentHandler) arguments[3];
+            handler.onFragment(buffer, 0, LENGTH, mock(Header.class));
 
-            return true;
+            return LENGTH + 24;
         });
     }
 
     private void noDataCommitted()
     {
-        verify(handler, never()).onBlock(any(), anyInt(), anyInt());
+        verify(handler, never()).onFragment(any(), anyInt(), anyInt(), any());
     }
 
     private void poll()

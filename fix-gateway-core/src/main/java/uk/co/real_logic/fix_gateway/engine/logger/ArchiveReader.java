@@ -206,7 +206,7 @@ public class ArchiveReader implements AutoCloseable
         private long readUpTo(final long beginPosition, final long endPosition, final FragmentHandler handler)
         {
             long position = beginPosition;
-            while (true)
+            while (position > 0)
             {
                 final int termOffset = scan(position);
                 if (termOffset == UNKNOWN_TERM)
@@ -231,6 +231,8 @@ public class ArchiveReader implements AutoCloseable
 
                 position += frameLength;
             }
+
+            return position;
         }
 
         private int scan(final long position)

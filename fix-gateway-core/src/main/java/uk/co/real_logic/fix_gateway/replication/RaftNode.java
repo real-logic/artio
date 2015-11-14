@@ -159,7 +159,7 @@ public class RaftNode implements Role
             configuration.acknowledgementStrategy(),
             configuration.otherNodes(),
             this,
-            configuration.handler(),
+            configuration.fragmentHandler(),
             timeInMs,
             heartbeatTimeInMs,
             termState,
@@ -175,7 +175,7 @@ public class RaftNode implements Role
 
         follower = new Follower(
             nodeId,
-            configuration.handler(),
+            configuration.fragmentHandler(),
             this,
             timeInMs,
             timeoutIntervalInMs,

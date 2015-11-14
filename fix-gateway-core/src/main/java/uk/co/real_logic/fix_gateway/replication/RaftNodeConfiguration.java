@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Aeron;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
@@ -36,7 +37,7 @@ public class RaftNodeConfiguration
     private IntHashSet otherNodes;
     private long timeoutIntervalInMs;
     private AcknowledgementStrategy acknowledgementStrategy;
-    private ReplicationHandler handler;
+    private FragmentHandler fragmentHandler;
     private int maxClaimAttempts;
     private AtomicCounter failCounter;
     private int leaderSessionId;
@@ -85,9 +86,9 @@ public class RaftNodeConfiguration
         return this;
     }
 
-    public RaftNodeConfiguration handler(final ReplicationHandler handler)
+    public RaftNodeConfiguration fragmentHandler(final FragmentHandler fragmentHandler)
     {
-        this.handler = handler;
+        this.fragmentHandler = fragmentHandler;
         return this;
     }
 
@@ -168,9 +169,9 @@ public class RaftNodeConfiguration
         return acknowledgementStrategy;
     }
 
-    public ReplicationHandler handler()
+    public FragmentHandler fragmentHandler()
     {
-        return handler;
+        return fragmentHandler;
     }
 
     public Aeron aeron()
