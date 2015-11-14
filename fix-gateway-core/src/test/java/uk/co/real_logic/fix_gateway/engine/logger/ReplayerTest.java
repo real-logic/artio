@@ -19,6 +19,7 @@ import org.junit.Test;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BufferClaim;
+import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
@@ -41,14 +42,17 @@ public class ReplayerTest extends AbstractLogTest
     private static final int END_SEQ_NO = 2;
     public static final int SIZE_OF_FRAME =
         FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength() + MessageHeaderDecoder.ENCODED_LENGTH;
+    public static final int MAX_CLAIM_ATTEMPTS = 100;
 
-    private ReplayQuery mockReplayQuery = mock(ReplayQuery.class);
-    private Publication mockPublication = mock(Publication.class);
-    private Subscription mockSubscription = mock(Subscription.class);
-    private BufferClaim mockClaim = mock(BufferClaim.class);
+    private ReplayQuery replayQuery = mock(ReplayQuery.class);
+    private Publication publication = mock(Publication.class);
+    private Subscription subscription = mock(Subscription.class);
+    private BufferClaim claim = mock(BufferClaim.class);
     private IdleStrategy idleStrategy = mock(IdleStrategy.class);
+    private ErrorHandler errorHandler = mock(ErrorHandler.class);
 
-    private Replayer replayer = new Replayer(mockSubscription, mockReplayQuery, mockPublication, mockClaim, idleStrategy);
+    private Replayer replayer = new Replayer(
+        subscription, replayQuery, publication, claim, idleStrategy, errorHandler, MAX_CLAIM_ATTEMPTS);
 
     private UnsafeBuffer resultBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
@@ -60,7 +64,7 @@ public class ReplayerTest extends AbstractLogTest
         onMessage(ResendRequestDecoder.MESSAGE_TYPE);
 
         verifyQueriedService();
-        verifyNoMoreInteractions(mockPublication);
+        verifyNoMoreInteractions(publication);
     }
 
     @Test
@@ -98,7 +102,7 @@ public class ReplayerTest extends AbstractLogTest
     {
         onMessage(LogonDecoder.MESSAGE_TYPE);
 
-        verifyNoMoreInteractions(mockReplayQuery, mockPublication);
+        verifyNoMoreInteractions(replayQuery, publication);
     }
 
     @Test
@@ -107,34 +111,34 @@ public class ReplayerTest extends AbstractLogTest
         bufferHasResendRequest(BEGIN_SEQ_NO - 1);
         onMessage(ResendRequestDecoder.MESSAGE_TYPE);
 
-        verifyNoMoreInteractions(mockReplayQuery, mockPublication);
+        verifyNoMoreInteractions(replayQuery, publication);
     }
 
     private void setupPublication(final int srcLength)
     {
-        when(mockPublication.tryClaim(srcLength, mockClaim)).thenReturn((long) srcLength);
+        when(publication.tryClaim(srcLength, claim)).thenReturn((long) srcLength);
     }
 
     private void setupClaim(final int srcLength)
     {
-        when(mockClaim.buffer()).thenReturn(resultBuffer);
-        when(mockClaim.offset()).thenReturn(START + 1);
-        when(mockClaim.length()).thenReturn(srcLength);
+        when(claim.buffer()).thenReturn(resultBuffer);
+        when(claim.offset()).thenReturn(START + 1);
+        when(claim.length()).thenReturn(srcLength);
     }
 
     private void verifyClaim(final int srcLength)
     {
-        verify(mockPublication).tryClaim(srcLength - MESSAGE_FRAME_BLOCK_LENGTH, mockClaim);
+        verify(publication).tryClaim(srcLength - MESSAGE_FRAME_BLOCK_LENGTH, claim);
     }
 
     private void verifyCommit()
     {
-        verify(mockClaim).commit();
+        verify(claim).commit();
     }
 
     private void verifyQueriedService()
     {
-        verify(mockReplayQuery).query(replayer, SESSION_ID, BEGIN_SEQ_NO, END_SEQ_NO);
+        verify(replayQuery).query(replayer, SESSION_ID, BEGIN_SEQ_NO, END_SEQ_NO);
     }
 
     private void assertHasSetPossDupFlag()

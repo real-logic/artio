@@ -92,7 +92,9 @@ public class Logger implements AutoCloseable
                 replayQuery,
                 replayPublication,
                 new BufferClaim(),
-                configuration.loggerIdleStrategy());
+                configuration.loggerIdleStrategy(),
+                errorHandler,
+                configuration.outboundMaxClaimAttempts());
 
             final List<Agent> agents = new ArrayList<>(archivers);
             agents.add(indexer);

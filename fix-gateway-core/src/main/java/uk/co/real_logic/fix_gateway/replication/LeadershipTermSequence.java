@@ -19,6 +19,7 @@ package uk.co.real_logic.fix_gateway.replication;
  * A sequence of session id and position intervals that correspond to leadership terms
  */
 // TODO: move this to persistent off-heap storage
+// TODO: decide on storage structure, perhaps a tree of intervals?
 public class LeadershipTermSequence
 {
     public void onNewLeader(

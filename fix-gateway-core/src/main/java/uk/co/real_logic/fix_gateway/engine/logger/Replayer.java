@@ -21,6 +21,7 @@ import uk.co.real_logic.aeron.logbuffer.BufferClaim;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
@@ -62,6 +63,8 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
     private final Publication publication;
     private final BufferClaim claim;
     private final IdleStrategy idleStrategy;
+    private final ErrorHandler errorHandler;
+    private final int maxClaimAttempts;
 
     private final PossDupFinder possDupFinder = new PossDupFinder();
     private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
@@ -72,13 +75,17 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
         final ReplayQuery replayQuery,
         final Publication publication,
         final BufferClaim claim,
-        final IdleStrategy idleStrategy)
+        final IdleStrategy idleStrategy,
+        final ErrorHandler errorHandler,
+        final int maxClaimAttempts)
     {
         this.subscription = subscription;
         this.replayQuery = replayQuery;
         this.publication = publication;
         this.claim = claim;
         this.idleStrategy = idleStrategy;
+        this.errorHandler = errorHandler;
+        this.maxClaimAttempts = maxClaimAttempts;
     }
 
     public void onMessage(
@@ -126,27 +133,44 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
             final int fullLength = (messageOffset - srcOffset) + messageLength;
             final int newLength = fullLength + POSS_DUP_FIELD.length;
             claimBuffer(newLength);
-            addPossDupField(
-                srcBuffer, srcOffset, fullLength, messageOffset, messageLength, claim.buffer(), claim.offset());
+
+            try
+            {
+                addPossDupField(
+                    srcBuffer, srcOffset, fullLength, messageOffset, messageLength, claim.buffer(), claim.offset());
+
+                claim.commit();
+            }
+            catch (Exception e)
+            {
+                claim.abort();
+                errorHandler.onError(e);
+            }
         }
         else
         {
             claimBuffer(messageLength);
 
-            final MutableDirectBuffer claimBuffer = claim.buffer();
-            final int claimOffset = claim.offset();
-            claimBuffer.putBytes(claimOffset, srcBuffer, srcOffset, messageLength);
-            setPossDupFlag(srcOffset, possDupSrcOffset, claimBuffer, claimOffset);
-        }
+            try
+            {
+                final MutableDirectBuffer claimBuffer = claim.buffer();
+                final int claimOffset = claim.offset();
+                claimBuffer.putBytes(claimOffset, srcBuffer, srcOffset, messageLength);
+                setPossDupFlag(srcOffset, possDupSrcOffset, claimBuffer, claimOffset);
 
-        // TODO: tombstone the claim on exception
-        claim.commit();
+                claim.commit();
+            }
+            catch (Exception e)
+            {
+                claim.abort();
+                errorHandler.onError(e);
+            }
+        }
     }
 
-    // TODO: eventually fail
     private void claimBuffer(final int newLength)
     {
-        while (publication.tryClaim(newLength, claim) < 0)
+        for (int i = 0; i < maxClaimAttempts && publication.tryClaim(newLength, claim) < 0; i++)
         {
             idleStrategy.idle(0);
         }
