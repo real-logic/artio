@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.fields;
 
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
-import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.*;
+import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.MILLIS_IN_DAY;
 
 /**
  * Parser for Fix's UTC timestamps - see http://fixwiki.org/fixwiki/UTCTimestampDataType for details
@@ -43,36 +43,9 @@ public final class UtcTimestampDecoder
      */
     public static long decode(final AsciiFlyweight timestamp, final int offset, final int length)
     {
-        final int endYear = offset + 4;
-        final int endMonth = endYear + 2;
-        final int endDay = endMonth + 2;
-
-        final int startHour = endDay + 1;
-        final int endHour = startHour + 2;
-
-        final int startMinute = endHour + 1;
-        final int endMinute = startMinute + 2;
-
-        final int startSecond = endMinute + 1;
-        final int endSecond = startSecond + 2;
-
-        final int startMillisecond = endSecond + 1;
-        final int endMillisecond = startMillisecond + 3;
-
-        final int year = timestamp.getNatural(offset, endYear);
-        final int month = getValidInt(timestamp, endYear, endMonth, 1, 12);
-        final int day = getValidInt(timestamp, endMonth, endDay, 1, 31);
-
-        final int hour = getValidInt(timestamp, startHour, endHour, 0, 23);
-        final int minute = getValidInt(timestamp, startMinute, endMinute, 0, 59);
-        final int second = getValidInt(timestamp, startSecond, endSecond, 0, 60);
-        final int millisecond = length > endSecond ? timestamp.getNatural(startMillisecond, endMillisecond) : 0;
-
-        final int secondOfDay = hour * SECONDS_IN_HOUR + minute * SECONDS_IN_MINUTE + second;
-
-        final long epochDay = toEpochDay(year, month, day);
-        final long secs = epochDay * SECONDS_IN_DAY + secondOfDay;
-
-        return secs * MILLIS_IN_SECOND + millisecond;
+        final long epochDay = UtcDateOnlyDecoder.decode(timestamp, offset);
+        final long millisecondOfDay = UtcTimeOnlyDecoder.decode(timestamp, offset, length);
+        return epochDay * MILLIS_IN_DAY + millisecondOfDay;
     }
+
 }
