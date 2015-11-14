@@ -53,6 +53,9 @@ import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
 import static uk.co.real_logic.agrona.BitUtil.findNextPositivePowerOfTwo;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.NO_MESSAGE;
+import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.UNKNOWN_SESSION;
+import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.UNKNOWN_TERM;
 
 @RunWith(Parameterized.class)
 public class LoggerTest
@@ -135,9 +138,9 @@ public class LoggerTest
     @Test
     public void shouldNotReadDataForNotArchivedSession()
     {
-        final boolean wasRead = readTo((long) HEADER_LENGTH);
+        final int position = readTo((long) HEADER_LENGTH);
 
-        assertNothingRead(wasRead);
+        assertNothingRead(position, UNKNOWN_SESSION);
     }
 
     @Test
@@ -145,9 +148,9 @@ public class LoggerTest
     {
         writeAndArchiveBuffer();
 
-        final boolean wasRead = readTo(TERM_LENGTH + HEADER_LENGTH);
+        final int position = readTo(TERM_LENGTH + HEADER_LENGTH);
 
-        assertNothingRead(wasRead);
+        assertNothingRead(position, UNKNOWN_TERM);
     }
 
     @Test
@@ -155,9 +158,9 @@ public class LoggerTest
     {
         final long endPosition = writeAndArchiveBuffer();
 
-        final boolean wasRead = readTo(endPosition * 2);
+        final int position = readTo(endPosition * 2);
 
-        assertNothingRead(wasRead);
+        assertNothingRead(position, NO_MESSAGE);
     }
 
     @Test
@@ -243,7 +246,7 @@ public class LoggerTest
         assertCanReadValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
 
-    private boolean readTo(final long position)
+    private int readTo(final long position)
     {
         return archiveReader.read(publication.sessionId(), position, fragmentHandler);
     }
@@ -261,9 +264,9 @@ public class LoggerTest
             .forEach(File::delete);
     }
 
-    private void assertNothingRead(final boolean wasRead)
+    private void assertNothingRead(final int position, final int expectedReason)
     {
-        assertFalse("Claimed to read missing data", wasRead);
+        assertEquals("Claimed to read missing data", expectedReason, position);
         verify(fragmentHandler, never()).onFragment(any(), anyInt(), anyInt(), any());
     }
 
@@ -323,7 +326,7 @@ public class LoggerTest
 
     private void assertCanReadValueAt(final int value, final long position)
     {
-        final boolean hasRead = readTo(position);
+        final boolean hasRead = readTo(position) > 0;
 
         verify(fragmentHandler).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
 

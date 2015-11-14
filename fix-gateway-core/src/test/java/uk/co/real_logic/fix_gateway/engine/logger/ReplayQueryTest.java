@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
+import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
 public class ReplayQueryTest extends AbstractLogTest
@@ -43,7 +44,7 @@ public class ReplayQueryTest extends AbstractLogTest
     {
         returnBuffer(indexBuffer, SESSION_ID);
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
-        when(mockReader.read(anyInt(), anyLong(), any(FragmentHandler.class))).thenReturn(false);
+        when(mockReader.read(anyInt(), anyLong(), any(FragmentHandler.class))).thenReturn(UNKNOWN_SESSION);
 
         bufferContainsMessage(true);
         indexRecord();

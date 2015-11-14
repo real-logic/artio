@@ -39,6 +39,21 @@ public class ArchiveReader implements AutoCloseable
 {
     private final IntFunction<SessionReader> newSessionReader = this::newSessionReader;
 
+    /**
+     * Cannot read this fragment - your session id doesn't exist in the archive.
+     */
+    public static final int UNKNOWN_SESSION = -1;
+
+    /**
+     * Cannot read this fragment - your term doesn't exist in the archive for this session.
+     */
+    public static final int UNKNOWN_TERM = -2;
+
+    /**
+     * Cannot read this fragment - your session/term/position combination isn't the beginning of a message.
+     */
+    public static final int NO_MESSAGE = -3;
+
     private final Int2ObjectHashMap<SessionReader> aeronSessionIdToReader;
     private final ExistingBufferFactory archiveBufferFactory;
     private final ArchiveMetaData metaData;
@@ -71,12 +86,17 @@ public class ArchiveReader implements AutoCloseable
      * @param aeronSessionId the session to read from
      * @param position the log position to start reading at
      * @param handler the handler to pass the data into
-     * @return true if the message has been read, false otherwise
+     * @return the position after the end of this message. If there's another message, then this is its start.
      */
-    public boolean read(final int aeronSessionId, final long position, final FragmentHandler handler)
+    public int read(final int aeronSessionId, final long position, final FragmentHandler handler)
     {
         final SessionReader sessionReader = sessionReader(aeronSessionId);
-        return sessionReader != null && sessionReader.read(position, handler);
+        if (sessionReader == null)
+        {
+            return UNKNOWN_SESSION;
+        }
+
+        return sessionReader.read(position, handler);
     }
 
     /**
@@ -143,13 +163,13 @@ public class ArchiveReader implements AutoCloseable
             return archiveBufferFactory.map(logFile);
         }
 
-        private boolean read(final long position, final FragmentHandler handler)
+        private int read(final long position, final FragmentHandler handler)
         {
             final int termId = computeTermIdFromPosition(position);
             final ByteBuffer termBuffer = termIdToBuffer.lookup(termId);
             if (termBuffer == null)
             {
-                return false;
+                return UNKNOWN_TERM;
             }
 
             final int termOffset = computeTermOffsetFromPosition(position);
@@ -160,15 +180,16 @@ public class ArchiveReader implements AutoCloseable
             final int frameLength = dataHeader.frameLength();
             if (frameLength == 0)
             {
-                return false;
+                return NO_MESSAGE;
             }
 
             header.buffer(buffer);
             header.offset(headerOffset);
+            final int bodyLength = frameLength - HEADER_LENGTH;
 
-            handler.onFragment(buffer, termOffset, frameLength - HEADER_LENGTH, header);
+            handler.onFragment(buffer, termOffset, bodyLength, header);
 
-            return true;
+            return termOffset + bodyLength;
         }
 
         private boolean readBlock(final long position, final int requestedLength, final BlockHandler handler)

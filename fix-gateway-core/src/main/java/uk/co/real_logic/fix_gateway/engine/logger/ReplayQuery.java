@@ -103,7 +103,7 @@ public class ReplayQuery implements AutoCloseable
                 if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo && streamId == OUTBOUND_LIBRARY_STREAM)
                 {
                     count++;
-                    if (!outboundArchiveReader.read(aeronSessionId, position, handler))
+                    if (outboundArchiveReader.read(aeronSessionId, position, handler) < 0)
                     {
                         return count;
                     }
