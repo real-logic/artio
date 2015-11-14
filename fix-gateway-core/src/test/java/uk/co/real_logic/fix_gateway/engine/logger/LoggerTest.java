@@ -53,16 +53,14 @@ import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
 import static uk.co.real_logic.agrona.BitUtil.findNextPositivePowerOfTwo;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.NO_MESSAGE;
-import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.UNKNOWN_SESSION;
-import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.UNKNOWN_TERM;
+import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.*;
 
 @RunWith(Parameterized.class)
 public class LoggerTest
 {
 
-    public static final int SIZE = 8 * 1024;
-    public static final int TERM_LENGTH = findNextPositivePowerOfTwo(SIZE * 8);
+    public static final int SIZE = 2 * 1024;
+    public static final int TERM_LENGTH = findNextPositivePowerOfTwo(SIZE * 32);
     public static final int STREAM_ID = 1;
     public static final int OFFSET = 42;
     public static final int VALUE = 43;
@@ -133,6 +131,22 @@ public class LoggerTest
         archiveBeyondEndOfTerm();
 
         assertCanReadValueAt(TERM_LENGTH + HEADER_LENGTH);
+    }
+
+    @Test
+    public void shouldReadingFragmentsUpToAPosition()
+    {
+        archiveBeyondEndOfTerm();
+
+        final int begin = HEADER_LENGTH;
+        final int lengthOfTwoMessages = SIZE * 2 + HEADER_LENGTH;
+        final int end = begin + lengthOfTwoMessages + 30;
+        final int res = archiveReader.readUpTo(publication.sessionId(), begin, end, fragmentHandler);
+
+        verify(fragmentHandler, times(3)).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
+
+        final int threeMessagesIn = begin + SIZE * 3 + HEADER_LENGTH * 3;
+        assertEquals("Failed to return new position", threeMessagesIn, res);
     }
 
     @Test

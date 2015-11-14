@@ -100,6 +100,27 @@ public class ArchiveReader implements AutoCloseable
     }
 
     /**
+     * Reads a message out of the log archive.
+     *
+     * @param aeronSessionId the session to read from
+     * @param beginPosition the log position to start reading at
+     * @param endPosition the last start position of a message to stop reading at (NB: can read up to a fragment beyond)
+     * @param handler the handler to pass the data into
+     * @return the position after the end of this message. If there's another message, then this is its start.
+     */
+    public int readUpTo(
+        final int aeronSessionId, final int beginPosition, final int endPosition, final FragmentHandler handler)
+    {
+        final SessionReader sessionReader = sessionReader(aeronSessionId);
+        if (sessionReader == null)
+        {
+            return UNKNOWN_SESSION;
+        }
+
+        return sessionReader.readUpTo(beginPosition, endPosition, handler);
+    }
+
+    /**
      * Reads a block of bytes out of the log archive.
      *
      * A block will only be read if the archive contains the whole block.
@@ -185,11 +206,10 @@ public class ArchiveReader implements AutoCloseable
 
             header.buffer(buffer);
             header.offset(headerOffset);
-            final int bodyLength = frameLength - HEADER_LENGTH;
 
-            handler.onFragment(buffer, termOffset, bodyLength, header);
+            handler.onFragment(buffer, termOffset, frameLength - HEADER_LENGTH, header);
 
-            return termOffset + bodyLength;
+            return termOffset + frameLength;
         }
 
         private boolean readBlock(final long position, final int requestedLength, final BlockHandler handler)
@@ -209,6 +229,17 @@ public class ArchiveReader implements AutoCloseable
             handler.onBlock(buffer, offset, length, sessionId, termId);
 
             return true;
+        }
+
+        public int readUpTo(final int beginPosition, final int endPosition, final FragmentHandler handler)
+        {
+            int position = beginPosition;
+            while (position > 0 && position < endPosition)
+            {
+                position = read(position, handler);
+            }
+
+            return position;
         }
 
         private int computeTermOffsetFromPosition(final long position)
