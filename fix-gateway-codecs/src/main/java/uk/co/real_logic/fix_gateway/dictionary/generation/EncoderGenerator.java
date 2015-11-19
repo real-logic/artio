@@ -205,8 +205,6 @@ public class EncoderGenerator extends Generator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-            case UTCTIMEONLY:
-            case UTCDATEONLY:
             case MONTHYEAR:
                 return generateStringSetter(className, fieldName, hasField, hasAssign);
 
@@ -225,6 +223,7 @@ public class EncoderGenerator extends Generator
             case NUMINGROUP:
             case DAYOFMONTH:
             case LOCALMKTDATE:
+            case UTCDATEONLY:
                 return generateSetter.apply("int");
 
             case FLOAT:
@@ -235,9 +234,9 @@ public class EncoderGenerator extends Generator
             case AMT:
                 return generateSetter.apply("DecimalFloat");
 
+            case UTCTIMEONLY:
             case UTCTIMESTAMP:
                 return generateSetter.apply("long");
-
 
             default: throw new UnsupportedOperationException("Unknown type: " + field.type());
         }
@@ -469,17 +468,10 @@ public class EncoderGenerator extends Generator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-            case UTCTIMEONLY:
-            case UTCDATEONLY:
             case MONTHYEAR:
-                return String.format(
-                    "%s" +
-                        "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
-                        "        position += %2$sLength;\n" +
-                        SUFFIX,
-                    tag,
-                    fieldName,
-                    optionalSuffix);
+                return formatEncoder(fieldName, optionalSuffix, tag,
+                    "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
+                    "        position += %2$sLength;\n");
 
             case BOOLEAN:
                 return generatePut(fieldName, tag, "Boolean", optionalSuffix);
@@ -488,26 +480,34 @@ public class EncoderGenerator extends Generator
                 return generatePut(fieldName, tag, "Bytes", optionalSuffix);
 
             case LOCALMKTDATE:
-                return String.format(
-                    "%s" +
-                    "        position += LocalMktDateEncoder.encode(%s, buffer, position);\n" +
-                    SUFFIX,
-                    tag,
-                    fieldName,
-                    optionalSuffix);
+                return formatEncoder(fieldName, optionalSuffix, tag,
+                    "        position += LocalMktDateEncoder.encode(%s, buffer, position);\n");
 
             case UTCTIMESTAMP:
-                return String.format(
-                    "%s" +
-                    "        position += UtcTimestampEncoder.encode(%s, buffer, position);\n" +
-                    SUFFIX,
-                    tag,
-                    fieldName,
-                    optionalSuffix);
+                return formatEncoder(fieldName, optionalSuffix, tag,
+                    "        position += UtcTimestampEncoder.encode(%s, buffer, position);\n");
+
+            case UTCTIMEONLY:
+                return formatEncoder(fieldName, optionalSuffix, tag,
+                    "        position += UtcTimeOnlyEncoder.encode(%s, buffer, position);\n");
+
+            case UTCDATEONLY:
+                return formatEncoder(fieldName, optionalSuffix, tag,
+                    "        position += UtcDateOnlyEncoder.encode(%s, buffer, position);\n");
 
             default:
                 throw new UnsupportedOperationException("Unknown type: " + field.type());
         }
+    }
+
+    private String formatEncoder(
+        final String fieldName, final String optionalSuffix, final String tag, final String format)
+    {
+        return String.format(
+            "%s" + format + SUFFIX,
+            tag,
+            fieldName,
+            optionalSuffix);
     }
 
     private String encodeGroup(final Entry entry)
@@ -584,7 +584,7 @@ public class EncoderGenerator extends Generator
 
         out.append(String.format(
             "    private static final int %sHeaderLength = %d;\n" +
-            "    private static final byte[] %1$sHeader = new byte[] {%s};\n\n",
+                "    private static final byte[] %1$sHeader = new byte[] {%s};\n\n",
             fieldName,
             length + 1,
             bytes));
