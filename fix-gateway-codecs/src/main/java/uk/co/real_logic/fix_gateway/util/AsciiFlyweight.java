@@ -16,9 +16,7 @@
 package uk.co.real_logic.fix_gateway.util;
 
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
-import uk.co.real_logic.fix_gateway.fields.LocalMktDateDecoder;
-import uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder;
+import uk.co.real_logic.fix_gateway.fields.*;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
@@ -210,6 +208,16 @@ public class AsciiFlyweight
     public long getUtcTimestamp(final int offset, final int length)
     {
         return UtcTimestampDecoder.decode(this, offset, length);
+    }
+
+    public long getUtcTimeOnly(final int offset, final int length)
+    {
+        return UtcTimeOnlyDecoder.decode(this, offset, length);
+    }
+
+    public int getUtcDateOnly(final int offset)
+    {
+        return UtcDateOnlyDecoder.decode(this, offset);
     }
 
     public int scanBack(final int startInclusive, final int endExclusive, final char terminatingCharacter)

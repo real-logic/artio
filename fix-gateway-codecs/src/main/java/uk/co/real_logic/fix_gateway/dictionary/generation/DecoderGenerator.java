@@ -505,8 +505,6 @@ public class DecoderGenerator extends Generator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-            case UTCTIMEONLY:
-            case UTCDATEONLY:
             case MONTHYEAR:
                 return String.format(" = new char[%d]", initialBufferSize);
 
@@ -530,6 +528,8 @@ public class DecoderGenerator extends Generator
             case CHAR:
             case LOCALMKTDATE:
             case UTCTIMESTAMP:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
                 return "";
 
             default:
@@ -580,8 +580,6 @@ public class DecoderGenerator extends Generator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-            case UTCDATEONLY:
-            case UTCTIMEONLY:
             case MONTHYEAR:
                 return "char[]";
 
@@ -591,8 +589,12 @@ public class DecoderGenerator extends Generator
             case DATA:
                 return "byte[]";
 
+            case UTCTIMEONLY:
             case UTCTIMESTAMP:
                 return "long";
+
+            case UTCDATEONLY:
+                return "int";
 
             default:
                 throw new UnsupportedOperationException("Unknown type: " + type);
@@ -831,8 +833,6 @@ public class DecoderGenerator extends Generator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-            case UTCTIMEONLY:
-            case UTCDATEONLY:
             case MONTHYEAR:
                 return String.format("getChars(%s, valueOffset, valueLength", fieldName);
 
@@ -847,6 +847,12 @@ public class DecoderGenerator extends Generator
 
             case UTCTIMESTAMP:
                 return "getUtcTimestamp(valueOffset, valueLength";
+
+            case UTCTIMEONLY:
+                return "getUtcTimeOnly(valueOffset, valueLength";
+
+            case UTCDATEONLY:
+                return "getUtcDateOnly(valueOffset";
 
             default:
                 throw new UnsupportedOperationException("Unknown type: " + type);
