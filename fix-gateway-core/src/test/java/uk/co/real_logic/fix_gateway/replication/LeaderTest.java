@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
@@ -47,6 +48,7 @@ public class LeaderTest
     private RaftNode raftNode = mock(RaftNode.class);
     private Subscription acknowledgementSubscription = mock(Subscription.class);
     private Subscription dataSubscription = mock(Subscription.class);
+    private Image leaderDataImage = mock(Image.class);
     private ArchiveReader archiveReader = mock(ArchiveReader.class);
     private TermState termState = new TermState()
         .leadershipTerm(LEADERSHIP_TERM)
@@ -67,6 +69,8 @@ public class LeaderTest
     @Before
     public void setUp()
     {
+        when(dataSubscription.getImage(LEADER_SESSION_ID)).thenReturn(leaderDataImage);
+
         leader
             .controlPublication(controlPublication)
             .acknowledgementSubscription(acknowledgementSubscription)

@@ -15,16 +15,22 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
+import uk.co.real_logic.agrona.BitUtil;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
+import static uk.co.real_logic.aeron.logbuffer.FrameDescriptor.*;
+import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.WRONG_TERM;
 
@@ -49,6 +55,8 @@ public class Leader implements Role, RaftHandler
     private RaftPublication controlPublication;
     private Subscription acknowledgementSubscription;
     private Subscription dataSubscription;
+    private Image leaderDataImage;
+    private Fragmenter fragmenter;
     private long commitPosition = 0;
     private long nextHeartbeatTimeInMs;
     private int leaderShipTerm;
@@ -83,20 +91,25 @@ public class Leader implements Role, RaftHandler
         this.timeInMs = timeInMs;
         final int read = acknowledgementSubscription.poll(acknowledgementSubscriber, fragmentLimit);
 
-        if (read > 0)
+        if (leaderDataImage == null)
         {
-            final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
-            final int delta = (int) (newPosition - commitPosition);
-            if (delta > 0)
+            leaderDataImage = dataSubscription.getImage(ourSessionId);
+            if (fragmenter == null && leaderDataImage != null)
             {
-                // TODO: poll fragments up to a position?
-                commitPosition = dataSubscription.poll(handler, 1);
-                if (commitPosition > newPosition)
+                fragmenter = new Fragmenter(leaderDataImage);
+            }
+        }
+        else
+        {
+            if (read > 0)
+            {
+                final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
+                final int delta = (int) (newPosition - commitPosition);
+                if (delta > 0)
                 {
-                    System.out.println("Temporary Fail!");
-                    commitPosition = newPosition;
+                    commitPosition += leaderDataImage.blockPoll(fragmenter, delta);
+                    heartbeat();
                 }
-                heartbeat();
             }
         }
 
@@ -221,6 +234,57 @@ public class Leader implements Role, RaftHandler
         public void position(final long position)
         {
             this.position = position;
+        }
+    }
+
+    private final class Fragmenter implements BlockHandler
+    {
+        private Header header;
+
+        private Fragmenter(final Image image)
+        {
+            header = new Header(image.initialTermId(), image.termBufferLength());
+        }
+
+        public void onBlock(
+            final DirectBuffer buffer,
+            int termOffset,
+            final int length,
+            final int sessionId,
+            final int termId)
+        {
+            final UnsafeBuffer termBuffer = (UnsafeBuffer) buffer;
+            final int limit = Math.min(termOffset + length, termBuffer.capacity());
+
+            try
+            {
+                do
+                {
+                    final int frameLength = frameLengthVolatile(termBuffer, termOffset);
+                    if (frameLength <= 0)
+                    {
+                        break;
+                    }
+
+                    final int fragmentOffset = termOffset;
+                    termOffset += BitUtil.align(frameLength, FRAME_ALIGNMENT);
+
+                    if (!isPaddingFrame(termBuffer, fragmentOffset))
+                    {
+                        header.buffer(termBuffer);
+                        header.offset(fragmentOffset);
+
+                        handler.onFragment(termBuffer, fragmentOffset + HEADER_LENGTH, frameLength - HEADER_LENGTH, header);
+                    }
+                }
+                while (termOffset < limit);
+            }
+            catch (final Exception ex)
+            {
+                //errorHandler.onError(ex);
+                // TODO
+                ex.printStackTrace();
+            }
         }
     }
 }
