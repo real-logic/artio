@@ -44,34 +44,8 @@ public final class UtcTimestampEncoder
 
         encodeDate(epochDay, string, offset);
         string.putChar(offset + 8, '-');
-        encodeTime(localSecond, fractionOfSecond, string, offset + 9);
+        UtcTimeOnlyEncoder.encode(localSecond, fractionOfSecond, string, offset + 9);
 
         return fractionOfSecond > 0 ? LENGTH_WITH_MILLISECONDS : LENGTH_WITHOUT_MILLISECONDS;
-    }
-
-
-    private static void encodeTime(
-        final long epochSecond,
-        final int epochMillis,
-        final MutableAsciiFlyweight string,
-        final int offset)
-    {
-        int secondOfDay = (int)Math.floorMod(epochSecond, SECONDS_IN_DAY);
-        final int hours = secondOfDay / SECONDS_IN_HOUR;
-        secondOfDay -= hours * SECONDS_IN_HOUR;
-        final int minutes = secondOfDay / SECONDS_IN_MINUTE;
-        secondOfDay -= minutes * SECONDS_IN_MINUTE;
-
-        string.putNatural(offset, 2, hours);
-        string.putChar(offset + 2, ':');
-        string.putNatural(offset + 3, 2, minutes);
-        string.putChar(offset + 5, ':');
-        string.putNatural(offset + 6, 2, secondOfDay);
-
-        if (epochMillis > 0)
-        {
-            string.putChar(offset + 8, '.');
-            string.putNatural(offset + 9, 3, epochMillis);
-        }
     }
 }
