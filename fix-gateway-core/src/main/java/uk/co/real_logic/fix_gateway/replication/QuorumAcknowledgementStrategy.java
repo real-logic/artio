@@ -58,6 +58,7 @@ public class QuorumAcknowledgementStrategy implements AcknowledgementStrategy
             this.positions = positions = new long[size];
         }
 
+        // TODO: remove garbage on iteration
         final Iterator<Long> it = sessionIdToPosition.values().iterator();
         for (int i = 0; i < size; i++)
         {
