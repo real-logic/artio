@@ -56,6 +56,7 @@ public class DecoderGenerator extends Generator
     private static final double HASHSET_SIZE_FACTOR = 1.0 / 0.6;
 
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
+    public static final String GROUP_FIELDS = "GROUP_FIELDS";
 
     public static final int INVALID_TAG_NUMBER = 0;
     public static final int REQUIRED_TAG_MISSING = 1;
@@ -137,6 +138,13 @@ public class DecoderGenerator extends Generator
     {
         final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
         out.append(generateFieldDictionary(requiredFields, REQUIRED_FIELDS));
+
+        if (aggregate.containsGroup())
+        {
+            final List<Field> groupFields = aggregate.allGroupFields().collect(toList());
+            final String groupFieldString = generateFieldDictionary(groupFields, GROUP_FIELDS);
+            out.append(groupFieldString);
+        }
 
         final String enumValidation =
             aggregate.allChildEntries()
@@ -662,9 +670,12 @@ public class DecoderGenerator extends Generator
                    .map(this::decodeEntry)
                    .collect(joining("\n", "", "\n"));
 
+        final String groupSuffix = aggregate.containsGroup() ? " && !" + GROUP_FIELDS + ".contains(tag)" : "";
+
         final String suffix =
             "            default:\n" +
-            "                if (" + CODEC_VALIDATION_ENABLED + " && !TrailerDecoder.REQUIRED_FIELDS.contains(tag))\n" +
+            "                if (" + CODEC_VALIDATION_ENABLED +
+            " && !TrailerDecoder." + REQUIRED_FIELDS + ".contains(tag)" + groupSuffix + ")\n" +
             "                {\n" +
             "                    unknownFields.add(tag);\n" +
             "                }\n" +

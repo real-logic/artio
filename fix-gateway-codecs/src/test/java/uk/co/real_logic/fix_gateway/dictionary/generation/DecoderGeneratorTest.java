@@ -233,7 +233,7 @@ public class DecoderGeneratorTest
         assertEquals(2, getGroupField(group));
         assertNull(next(group));
 
-        // TODO: assertValid(decoder);
+        assertValid(decoder);
     }
 
     @Test
@@ -251,7 +251,7 @@ public class DecoderGeneratorTest
         assertEquals(1, get(nestedGroup, "nestedField"));
         assertNull(next(nestedGroup));
 
-        // TODO: assertValid(decoder);
+        assertValid(decoder);
     }
 
     @Test

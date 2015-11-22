@@ -41,4 +41,5 @@ public final class Group extends Aggregate implements Element
         final Field numberField = new Field(field.number(), fieldName, Field.Type.NUMINGROUP);
         return new Group(groupName, new Entry(false, numberField));
     }
+
 }

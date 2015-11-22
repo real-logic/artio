@@ -56,11 +56,22 @@ public abstract class Aggregate
     {
         return entries.stream()
                       .flatMap(entry ->
-                          entry.match(
-                              (ele, field) -> Stream.of(ele),
-                              (ele, group) -> Stream.empty(),
-                              (ele, component) -> component.allChildEntries()
-                          ));
+                        entry.match(
+                            (ele, field) -> Stream.of(ele),
+                            (ele, group) -> Stream.empty(),
+                            (ele, component) -> component.allChildEntries()
+                        ));
+    }
+
+    public Stream<Field> allGroupFields()
+    {
+        return entries.stream()
+                      .flatMap(entry ->
+                        entry.match(
+                            (ele, field) -> Stream.of(field),
+                            (ele, group) -> group.allGroupFields(),
+                            (ele, component) -> component.allGroupFields()
+                        ));
     }
 
     public Aggregate optionalEntry(final Entry.Element element)
@@ -87,4 +98,15 @@ public abstract class Aggregate
     {
         return entries().stream().anyMatch(e -> msgType.equals(e.element().name()));
     }
+
+    public boolean containsGroup()
+    {
+        return entries.stream()
+                      .anyMatch(entry -> entry.match(
+                          (ele, field) -> false,
+                          (ele, group) -> true,
+                          (ele, component) -> component.containsGroup()
+                      ));
+    }
+
 }
