@@ -584,7 +584,7 @@ public class EncoderGenerator extends Generator
 
         out.append(String.format(
             "    private static final int %sHeaderLength = %d;\n" +
-                "    private static final byte[] %1$sHeader = new byte[] {%s};\n\n",
+            "    private static final byte[] %1$sHeader = new byte[] {%s};\n\n",
             fieldName,
             length + 1,
             bytes));
@@ -609,10 +609,10 @@ public class EncoderGenerator extends Generator
     {
         return String.format(
             "    private final %1$s %2$s = new %1$s();\n" +
-                "    public %1$s %2$s()\n" +
-                "    {" +
-                "        return %2$s;" +
-                "    }",
+            "    public %1$s %2$s()\n" +
+            "    {" +
+            "        return %2$s;" +
+            "    }",
             className,
             formatPropertyName(element.name())
         );
