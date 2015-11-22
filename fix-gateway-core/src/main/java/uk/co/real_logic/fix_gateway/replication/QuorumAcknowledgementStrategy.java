@@ -50,7 +50,7 @@ public class QuorumAcknowledgementStrategy implements AcknowledgementStrategy
         return positions[quorumPoint];
     }
 
-    private long[] copyPositions(Long2LongHashMap sessionIdToPosition, int size)
+    private long[] copyPositions(final Long2LongHashMap sessionIdToPosition, final int size)
     {
         long[] positions = this.positions;
         if (positions.length != size)
@@ -58,7 +58,6 @@ public class QuorumAcknowledgementStrategy implements AcknowledgementStrategy
             this.positions = positions = new long[size];
         }
 
-        // TODO: remove garbage on iteration
         final Iterator<Long> it = sessionIdToPosition.values().iterator();
         for (int i = 0; i < size; i++)
         {
