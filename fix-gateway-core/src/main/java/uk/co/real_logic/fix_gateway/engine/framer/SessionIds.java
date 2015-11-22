@@ -30,7 +30,6 @@ public class SessionIds
 
     private static long counter = 0L;
 
-    // TODO: allow the hash set to resize
     private final LongHashSet currentlyAuthenticated = new LongHashSet(40, MISSING);
     private final Map<Object, Long> compositeToSurrogate = new HashMap<>();
 
