@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -125,7 +122,25 @@ public class LoggerTest
         assertCanReadValueAt(HEADER_LENGTH);
     }
 
-    // TODO: test read return position
+    @Test
+    public void shouldReadAfterException()
+    {
+        writeAndArchiveBuffer();
+
+        try
+        {
+            archiveReader.read(publication.sessionId(), (long) HEADER_LENGTH,
+                (buffer, offset, length, header) -> { throw new RuntimeException(); });
+
+            fail("continued despite exception");
+        }
+        catch (RuntimeException e)
+        {
+            // Deliberately Blank
+        }
+
+        assertCanReadValueAt(HEADER_LENGTH);
+    }
 
     @Test
     public void shouldSupportRotatingFilesAtEndOfTerm()
@@ -194,6 +209,26 @@ public class LoggerTest
     public void shouldBlockReadDataThatWasWritten()
     {
         writeAndArchiveBuffer();
+
+        assertCanBlockReadValueAt(HEADER_LENGTH);
+    }
+
+    @Test
+    public void shouldBlockReadAfterException()
+    {
+        writeAndArchiveBuffer();
+
+        try
+        {
+            archiveReader.readBlock(publication.sessionId(), (long) HEADER_LENGTH, SIZE,
+                (buffer, offset, length, sessionId, termId) -> { throw new RuntimeException(); });
+
+            fail("continued despite exception");
+        }
+        catch (RuntimeException e)
+        {
+            // Deliberately Blank
+        }
 
         assertCanBlockReadValueAt(HEADER_LENGTH);
     }
