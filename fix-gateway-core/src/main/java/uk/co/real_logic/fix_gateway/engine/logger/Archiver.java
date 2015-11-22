@@ -163,10 +163,16 @@ public class Archiver implements Agent, FileBlockHandler
                     currentTermId = termId;
                 }
 
-                if (fileChannel.transferTo(offset, length, currentLogChannel) != length)
+                final long transferred = fileChannel.transferTo(offset, length, currentLogChannel);
+                if (transferred != length)
                 {
-                    // TODO
-                    System.err.println("Transfer to failure");
+                    final File location = logFile(termId);
+                    throw new IllegalStateException(
+                        String.format(
+                            "Failed to transfer %d bytes to %s, only transferred %d bytes",
+                            length,
+                            location,
+                            transferred));
                 }
             }
             catch (IOException e)
