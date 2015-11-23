@@ -15,18 +15,21 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
-import org.junit.Ignore;
 import org.junit.experimental.theories.DataPoints;
 import org.junit.experimental.theories.FromDataPoints;
 import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
 import org.junit.runner.RunWith;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.util.Arrays;
 
 import static java.time.Month.*;
 import static org.hamcrest.Matchers.hasToString;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(Theories.class)
 public class MonthYearTest
@@ -92,7 +95,7 @@ public class MonthYearTest
     }
 
     @Theory
-    public void shouldToStringValidDatesWithWeek(@FromDataPoints("validMonthYearsWithDay") final Object[] data)
+    public void shouldToStringValidDatesWithWeek(@FromDataPoints("validMonthYearsWithWeek") final Object[] data)
     {
         final String input = (String) data[0];
         final MonthYear expectedMonthYear = (MonthYear) data[1];
@@ -100,15 +103,20 @@ public class MonthYearTest
         assertThat(expectedMonthYear, hasToString(input));
     }
 
-    @Ignore
     @Theory
-    public void shouldDecodeValidDatesWithDay(@FromDataPoints("validMonthYearsWithWeek") final Object[] data)
+    public void shouldDecodeValidDatesWithDay(@FromDataPoints("validMonthYearsWithDay") final Object[] data)
     {
         final String input = (String) data[0];
         final MonthYear expectedMonthYear = (MonthYear) data[1];
 
-        System.out.println(input);
-        System.out.println(expectedMonthYear);
+        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[input.length()]);
+        final MutableAsciiFlyweight asciiFlyweight = new MutableAsciiFlyweight(buffer);
+        asciiFlyweight.putAscii(0, input);
+
+        final boolean decode = monthYear.decode(asciiFlyweight, 0, input.length());
+
+        assertTrue(String.format("Failed to decode %s correctly", input), decode);
+        assertEquals(expectedMonthYear, monthYear);
     }
 
 }

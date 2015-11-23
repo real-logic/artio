@@ -41,7 +41,26 @@ final class CalendricalUtil
     static final int DAYS_IN_400_YEAR_CYCLE = 146097;
     static final int DAYS_UNTIL_START_OF_UNIX_EPOCH = 719528;
 
+    static final int MIN_MONTH = 1;
+    static final int MAX_MONTH = 12;
+
+    static final int MIN_DAY_OF_MONTH = 1;
+    static final int MAX_DAY_OF_MONTH = 31;
+
+    static final int MIN_WEEK_OF_MONTH = 1;
+    static final int MAX_WEEK_OF_MONTH = 5;
+
     // ------------ Decoding ------------
+
+    public static boolean isValidMonth(final int month)
+    {
+        return month >= MIN_MONTH && month <= MAX_MONTH;
+    }
+
+    public static boolean isValidDayOfMonth(final int dayOfMonth)
+    {
+        return dayOfMonth >= MIN_DAY_OF_MONTH && dayOfMonth <= MAX_DAY_OF_MONTH;
+    }
 
     static int getValidInt(
         final AsciiFlyweight timestamp,

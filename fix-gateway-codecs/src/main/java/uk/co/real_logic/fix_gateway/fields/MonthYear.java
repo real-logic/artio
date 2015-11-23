@@ -15,7 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
+import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+
 import java.time.Month;
+
+import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.isValidDayOfMonth;
+import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.isValidMonth;
 
 /**
  * Allocation free representation + codec for the FIX MonthYear data type.
@@ -33,34 +38,33 @@ import java.time.Month;
  */
 public final class MonthYear
 {
+    private static final int SIZE_OF_YEAR = 4;
+    private static final int SIZE_OF_MONTH = 2;
+    private static final int SIZE_OF_DAY = 2;
+    private static final int SIZE_OF_WEEK = 1;
+
     public static final int NONE = -1;
+    public static final int SHORT_LENGTH = 6;
+    public static final int LONG_LENGTH = 8;
 
     private int year;
-    private Month month;
-    private int dayOfMonth;
-    private int weekOfMonth;
+    private Month month = Month.JANUARY;
+    private int dayOfMonth = NONE;
+    private int weekOfMonth = NONE;
 
     public static MonthYear of(final int year, final Month month)
     {
-        return new MonthYear()
-            .year(year)
-            .month(month)
-            .dayOfMonth(NONE)
-            .weekOfMonth(NONE);
+        return new MonthYear().year(year).month(month);
     }
 
     public static MonthYear withDayOfMonth(final int year, final Month month, final int dayOfMonth)
     {
-        return of (year, month)
-            .dayOfMonth(dayOfMonth)
-            .weekOfMonth(NONE);
+        return of(year, month).dayOfMonth(dayOfMonth);
     }
 
     public static MonthYear withWeekOfMonth(final int year, final Month month, final int weekOfMonth)
     {
-        return of(year, month)
-            .dayOfMonth(NONE)
-            .weekOfMonth(weekOfMonth);
+        return of(year, month).weekOfMonth(weekOfMonth);
     }
 
     public int year()
@@ -117,17 +121,61 @@ public final class MonthYear
         return weekOfMonth() != NONE;
     }
 
+    public boolean decode(final AsciiFlyweight buffer, final int offset, final int length)
+    {
+        if (length != SHORT_LENGTH && length != LONG_LENGTH)
+        {
+            return false;
+        }
+
+        final int endYear = offset + SIZE_OF_YEAR;
+        final int endMonth = endYear + SIZE_OF_MONTH;
+
+        final int year = buffer.getNatural(offset, endYear);
+        final int month = buffer.getNatural(endYear, endMonth);
+
+        if (!isValidMonth(month))
+        {
+            return false;
+        }
+
+        if (length == LONG_LENGTH)
+        {
+            final int endDay = endMonth + SIZE_OF_DAY;
+            final int dayOfMonth = buffer.getNatural(endMonth, endDay);
+
+            if (!isValidDayOfMonth(dayOfMonth))
+            {
+                return false;
+            }
+
+            dayOfMonth(dayOfMonth);
+        }
+
+        year(year);
+        month(Month.of(month));
+
+        return true;
+    }
+
     public boolean equals(final Object o)
     {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+        {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
 
         final MonthYear monthYear = (MonthYear) o;
 
-        if (year != monthYear.year) return false;
-        if (month != monthYear.month) return false;
-        if (dayOfMonth != monthYear.dayOfMonth) return false;
-        return weekOfMonth == monthYear.weekOfMonth;
+        return year == monthYear.year
+            && month == monthYear.month
+            && dayOfMonth == monthYear.dayOfMonth
+            && weekOfMonth == monthYear.weekOfMonth;
     }
 
     public int hashCode()
