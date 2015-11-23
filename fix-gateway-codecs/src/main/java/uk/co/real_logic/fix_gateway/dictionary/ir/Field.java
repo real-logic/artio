@@ -166,8 +166,6 @@ public final class Field implements Element
     }
 
     // TODO: properly provide parsing support for:
-    // UTCTIMEONLY
-    // UTCDATEONLY
     // MONTHYEAR
 
     // TODO: provide lookup table support for:
