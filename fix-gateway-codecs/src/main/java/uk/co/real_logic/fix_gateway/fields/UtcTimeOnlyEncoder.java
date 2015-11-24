@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.*;
@@ -26,6 +27,15 @@ public final class UtcTimeOnlyEncoder
 {
     public static final int LENGTH_WITH_MILLISECONDS = 12;
     public static final int LENGTH_WITHOUT_MILLISECONDS = 8;
+
+    private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
+    private final MutableAsciiFlyweight flyweight = new MutableAsciiFlyweight(buffer);
+
+    public int encode(final long millisecondOfDay, final byte[] bytes)
+    {
+        buffer.wrap(bytes);
+        return encode(millisecondOfDay, flyweight, 0);
+    }
 
     public static int encode(final long millisecondOfDay,
                               final MutableAsciiFlyweight string,

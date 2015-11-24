@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.*;
@@ -26,8 +27,13 @@ import static uk.co.real_logic.fix_gateway.fields.UtcDateOnlyDecoder.SIZE_OF_DAT
 public final class UtcTimeOnlyDecoder
 {
 
-    private UtcTimeOnlyDecoder()
+    private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
+    private final AsciiFlyweight flyweight = new AsciiFlyweight(buffer);
+
+    public long decode(final byte[] bytes, final int length)
     {
+        buffer.wrap(bytes);
+        return decode(flyweight, 0, length);
     }
 
     public static long decode(final AsciiFlyweight time, final int offset, final int length)

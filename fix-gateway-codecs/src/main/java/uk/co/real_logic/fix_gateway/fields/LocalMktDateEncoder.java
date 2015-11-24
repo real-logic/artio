@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 /**
@@ -26,8 +27,13 @@ public final class LocalMktDateEncoder
     public static final int MIN_EPOCH_DAYS = LocalMktDateDecoder.MIN_EPOCH_DAYS;
     public static final int MAX_EPOCH_DAYS = LocalMktDateDecoder.MAX_EPOCH_DAYS;
 
-    private LocalMktDateEncoder()
+    private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
+    private final MutableAsciiFlyweight flyweight = new MutableAsciiFlyweight(buffer);
+
+    public int encode(final int localEpochDays, final byte[] bytes)
     {
+        buffer.wrap(bytes);
+        return encode(localEpochDays, flyweight, 0);
     }
 
     public static int encode(final int localEpochDays, final MutableAsciiFlyweight string, final int offset)

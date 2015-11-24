@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.MILLIS_IN_DAY;
@@ -31,8 +32,13 @@ public final class UtcTimestampDecoder
     public static final long MIN_EPOCH_MILLIS = -62135596800000L;
     public static final long MAX_EPOCH_MILLIS = 253402300799999L;
 
-    private UtcTimestampDecoder()
+    private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
+    private final AsciiFlyweight flyweight = new AsciiFlyweight(buffer);
+
+    public long decode(final byte[] bytes, final int length)
     {
+        buffer.wrap(bytes);
+        return decode(flyweight, 0, length);
     }
 
     /**

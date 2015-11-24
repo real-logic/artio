@@ -19,8 +19,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -65,8 +63,8 @@ public class LocalMktDateDecoderValidCasesTest
     {
         final int expected = toLocalDay(timestamp);
 
-        final AsciiFlyweight timestampBytes = new AsciiFlyweight(new UnsafeBuffer(timestamp.getBytes(US_ASCII)));
-        final int epochDay = LocalMktDateDecoder.decode(timestampBytes, 0, timestamp.length());
+        final LocalMktDateDecoder decoder = new LocalMktDateDecoder();
+        final int epochDay = decoder.decode(timestamp.getBytes(US_ASCII));
         assertEquals("Failed testcase for: " + timestamp, expected, epochDay);
     }
 }
