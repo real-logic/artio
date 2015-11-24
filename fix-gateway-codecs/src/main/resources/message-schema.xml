@@ -189,4 +189,11 @@
         <data name="body" id="70" type="varDataEncoding"/>
     </sbe:message>
 
+    <sbe:message name="LeadershipTerm" id="24" description="">
+        <field name="sessionId" id="71" type="int32"/>
+        <field name="initialPosition" id="74" type="int64"/>
+        <field name="initialStreamPosition" id="72" type="int64"/>
+        <field name="finalStreamPosition" id="73" type="int64"/>
+    </sbe:message>
+
 </sbe:messageSchema>
