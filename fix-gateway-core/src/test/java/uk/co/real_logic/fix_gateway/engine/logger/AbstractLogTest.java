@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
@@ -51,10 +52,12 @@ public class AbstractLogTest
 
     protected void bufferContainsMessage(final boolean hasPossDupFlag, final long sessionId, int sequenceNumber)
     {
+        final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
+        timestampEncoder.encode(System.currentTimeMillis());
         final UnsafeBuffer msgBuffer = new UnsafeBuffer(new byte[8 * 1024]);
         final MutableAsciiFlyweight asciiFlyweight = new MutableAsciiFlyweight(msgBuffer);
         final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest.testReqID("abc");
+        testRequest.testReqID("abc").header().sendingTime(timestampEncoder.buffer());
         if (hasPossDupFlag)
         {
             testRequest

@@ -205,14 +205,10 @@ public class EncoderGenerator extends Generator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-            case MONTHYEAR:
                 return generateStringSetter(className, fieldName, hasField, hasAssign);
 
             case BOOLEAN:
                 return generateSetter.apply("boolean");
-
-            case DATA:
-                return generateSetter.apply("byte[]");
 
             case CHAR:
                 return generateSetter.apply("char");
@@ -222,8 +218,6 @@ public class EncoderGenerator extends Generator
             case SEQNUM:
             case NUMINGROUP:
             case DAYOFMONTH:
-            case LOCALMKTDATE:
-            case UTCDATEONLY:
                 return generateSetter.apply("int");
 
             case FLOAT:
@@ -234,9 +228,13 @@ public class EncoderGenerator extends Generator
             case AMT:
                 return generateSetter.apply("DecimalFloat");
 
-            case UTCTIMEONLY:
+            case DATA:
             case UTCTIMESTAMP:
-                return generateSetter.apply("long");
+            case LOCALMKTDATE:
+            case UTCDATEONLY:
+            case UTCTIMEONLY:
+            case MONTHYEAR:
+                return generateSetter.apply("byte[]");
 
             default: throw new UnsupportedOperationException("Unknown type: " + field.type());
         }
@@ -468,7 +466,6 @@ public class EncoderGenerator extends Generator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-            case MONTHYEAR:
                 return formatEncoder(fieldName, optionalSuffix, tag,
                     "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
                     "        position += %2$sLength;\n");
@@ -477,23 +474,12 @@ public class EncoderGenerator extends Generator
                 return generatePut(fieldName, tag, "Boolean", optionalSuffix);
 
             case DATA:
-                return generatePut(fieldName, tag, "Bytes", optionalSuffix);
-
             case LOCALMKTDATE:
-                return formatEncoder(fieldName, optionalSuffix, tag,
-                    "        position += LocalMktDateEncoder.encode(%s, buffer, position);\n");
-
             case UTCTIMESTAMP:
-                return formatEncoder(fieldName, optionalSuffix, tag,
-                    "        position += UtcTimestampEncoder.encode(%s, buffer, position);\n");
-
+            case MONTHYEAR:
             case UTCTIMEONLY:
-                return formatEncoder(fieldName, optionalSuffix, tag,
-                    "        position += UtcTimeOnlyEncoder.encode(%s, buffer, position);\n");
-
             case UTCDATEONLY:
-                return formatEncoder(fieldName, optionalSuffix, tag,
-                    "        position += UtcDateOnlyEncoder.encode(%s, buffer, position);\n");
+                return generatePut(fieldName, tag, "Bytes", optionalSuffix);
 
             default:
                 throw new UnsupportedOperationException("Unknown type: " + field.type());

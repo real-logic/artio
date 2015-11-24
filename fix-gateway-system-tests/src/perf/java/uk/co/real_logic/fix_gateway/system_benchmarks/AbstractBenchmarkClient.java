@@ -6,6 +6,7 @@ import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ public abstract class AbstractBenchmarkClient
     protected static final int BUFFER_SIZE = 16 * 1024;
     protected static final byte NINE = (byte) '9';
 
+    protected final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
     protected final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     protected final MutableAsciiFlyweight writeFlyweight =
         new MutableAsciiFlyweight(new UnsafeBuffer(writeBuffer));
@@ -40,6 +42,7 @@ public abstract class AbstractBenchmarkClient
         final TestRequestEncoder testRequest = new TestRequestEncoder();
         testRequest
             .header()
+            .sendingTime(timestampEncoder.buffer())
             .senderCompID(INITIATOR_ID)
             .targetCompID(ACCEPTOR_ID);
         testRequest.testReqID("a");
@@ -52,10 +55,12 @@ public abstract class AbstractBenchmarkClient
         logon.heartBtInt(10);
         logon
             .header()
-            .sendingTime(System.currentTimeMillis())
+            .sendingTime(timestampEncoder.buffer())
             .senderCompID(INITIATOR_ID)
             .targetCompID(ACCEPTOR_ID)
             .msgSeqNum(1);
+
+        timestampEncoder.encode(System.currentTimeMillis());
 
         write(socketChannel, logon.encode(writeFlyweight, 0));
 
@@ -162,9 +167,8 @@ public abstract class AbstractBenchmarkClient
 
     protected int encode(final TestRequestEncoder testRequest, final HeaderEncoder header, final int seqNum)
     {
-        header
-            .sendingTime(System.currentTimeMillis())
-            .msgSeqNum(seqNum);
+        header.msgSeqNum(seqNum);
+        timestampEncoder.encode(System.currentTimeMillis());
 
         return testRequest.encode(writeFlyweight, 0);
     }

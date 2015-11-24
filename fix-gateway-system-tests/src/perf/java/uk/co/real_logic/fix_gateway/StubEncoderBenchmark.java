@@ -19,6 +19,7 @@ import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.util.concurrent.TimeUnit;
@@ -31,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 @Fork(1)
 public class StubEncoderBenchmark
 {
+    private UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
     private LogonEncoder logonEncoder = new LogonEncoder();
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
     private MutableAsciiFlyweight asciiFlyweight = new MutableAsciiFlyweight(buffer);
@@ -46,7 +48,8 @@ public class StubEncoderBenchmark
         logonEncoder
             .header()
             .senderCompID("ABC_DEFG01")
-            .targetCompID("CCG");
+            .targetCompID("CCG")
+            .sendingTime(timestampEncoder.buffer());
     }
 
     @Benchmark
@@ -54,14 +57,15 @@ public class StubEncoderBenchmark
     {
         logonEncoder
             .header()
-            .msgSeqNum(sequenceNumber)
-            .sendingTime(System.currentTimeMillis());
+            .msgSeqNum(sequenceNumber);
 
         logonEncoder
             .password(password)
             .username(username)
             .maxMessageSize(512)
             .heartBtInt(10);
+
+        timestampEncoder.encode(System.currentTimeMillis());
 
         bh.consume(logonEncoder.encode(asciiFlyweight, 0));
     }

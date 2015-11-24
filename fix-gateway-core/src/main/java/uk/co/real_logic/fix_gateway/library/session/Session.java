@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
@@ -54,6 +55,8 @@ public class Session
 
     public static final String TEST_REQ_ID = "TEST";
     public static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
+
+    private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
 
     private final EpochClock clock;
 
@@ -301,10 +304,11 @@ public class Session
             throw new IllegalStateException("Session isn't active, and thus can't send a message");
         }
 
+        timestampEncoder.encode(time());
         final HeaderEncoder header = (HeaderEncoder) encoder.header();
         header
             .msgSeqNum(newSentSeqNum())
-            .sendingTime(time());
+            .sendingTime(timestampEncoder.buffer());
 
         if (!header.hasSenderCompID())
         {

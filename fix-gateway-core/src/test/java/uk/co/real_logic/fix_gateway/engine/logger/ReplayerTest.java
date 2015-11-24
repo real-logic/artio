@@ -25,6 +25,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
@@ -149,12 +150,20 @@ public class ReplayerTest extends AbstractLogTest
 
     private void bufferHasResendRequest(final int endSeqNo)
     {
+        final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
+        timestampEncoder.encode(System.currentTimeMillis());
+
         final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
+
+        resendRequest
+            .header()
+            .sendingTime(timestampEncoder.buffer())
+            .msgSeqNum(1);
 
         resendRequest
             .beginSeqNo(BEGIN_SEQ_NO)
             .endSeqNo(endSeqNo)
-            .encode(new MutableAsciiFlyweight(buffer), 1);
+        .encode(new MutableAsciiFlyweight(buffer), 1);
     }
 
     private void onMessage(final int messageType)

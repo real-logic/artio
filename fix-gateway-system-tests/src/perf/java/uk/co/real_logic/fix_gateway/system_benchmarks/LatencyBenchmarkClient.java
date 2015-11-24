@@ -84,7 +84,8 @@ public final class LatencyBenchmarkClient extends AbstractBenchmarkClient
         final Histogram histogram)
         throws IOException
     {
-        header.sendingTime(System.currentTimeMillis()).msgSeqNum(index + 2);
+        header.msgSeqNum(index + 2);
+        timestampEncoder.encode(System.currentTimeMillis());
 
         final int length = testRequest.encode(writeFlyweight, 0);
 

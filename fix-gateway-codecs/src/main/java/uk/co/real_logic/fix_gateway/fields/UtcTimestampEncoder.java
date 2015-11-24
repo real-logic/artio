@@ -28,13 +28,19 @@ public final class UtcTimestampEncoder
     public static final int LENGTH_WITH_MILLISECONDS = 21;
     public static final int LENGTH_WITHOUT_MILLISECONDS = 17;
 
-    private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
+    private final byte[] bytes = new byte[LENGTH_WITH_MILLISECONDS];
+    private final UnsafeBuffer buffer = new UnsafeBuffer(bytes);
     private final MutableAsciiFlyweight flyweight = new MutableAsciiFlyweight(buffer);
 
-    public int encode(final long epochMillis, final byte[] bytes)
+    public int encode(final long epochMillis)
     {
         buffer.wrap(bytes);
         return encode(epochMillis, flyweight, 0);
+    }
+
+    public byte[] buffer()
+    {
+        return bytes;
     }
 
     public static int encode(final long epochMillis, final MutableAsciiFlyweight string, final int offset)
