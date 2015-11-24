@@ -130,6 +130,33 @@ public class MonthYearTest
         assertDecodesMonthYear(input, expectedMonthYear);
     }
 
+    @Theory
+    public void shouldEncodeValidDates(@FromDataPoints("validMonthYears") final Object[] data)
+    {
+        final String input = (String) data[0];
+        final MonthYear expectedMonthYear = (MonthYear) data[1];
+
+        assertEncodesMonthYear(input, expectedMonthYear);
+    }
+
+    @Theory
+    public void shouldEncodeValidDatesWithDay(@FromDataPoints("validMonthYearsWithDay") final Object[] data)
+    {
+        final String input = (String) data[0];
+        final MonthYear expectedMonthYear = (MonthYear) data[1];
+
+        assertEncodesMonthYear(input, expectedMonthYear);
+    }
+
+    @Theory
+    public void shouldEncodeValidDatesWithWeek(@FromDataPoints("validMonthYearsWithWeek") final Object[] data)
+    {
+        final String input = (String) data[0];
+        final MonthYear expectedMonthYear = (MonthYear) data[1];
+
+        assertEncodesMonthYear(input, expectedMonthYear);
+    }
+
     private void assertDecodesMonthYear(final String input, final MonthYear expectedMonthYear)
     {
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[input.length()]);
@@ -140,6 +167,17 @@ public class MonthYearTest
 
         assertTrue(String.format("Failed to decode %s correctly", input), decode);
         assertEquals(expectedMonthYear, monthYear);
+    }
+
+    private void assertEncodesMonthYear(final String input, final MonthYear monthYear)
+    {
+        final int expectedLength = input.length();
+        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[expectedLength]);
+        final MutableAsciiFlyweight asciiFlyweight = new MutableAsciiFlyweight(buffer);
+
+        final int length = monthYear.encode(asciiFlyweight, 0);
+
+        assertEquals(String.format("Failed to encode %s correctly", input), expectedLength, length);
     }
 
 }

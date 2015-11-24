@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.fields;
 
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
 import java.time.Month;
 
@@ -40,8 +41,8 @@ public final class MonthYear
 {
     private static final int SIZE_OF_YEAR = 4;
     private static final int SIZE_OF_MONTH = 2;
-    private static final int SIZE_OF_DAY = 2;
-    private static final int SIZE_OF_WEEK = 1;
+    private static final int SIZE_OF_DAY_OF_MONTH = 2;
+    private static final int SIZE_OF_WEEK_OF_MONTH = 1;
 
     public static final int NONE = -1;
     public static final int SHORT_LENGTH = 6;
@@ -144,7 +145,7 @@ public final class MonthYear
             if (buffer.getChar(endMonth) == 'w')
             {
                 final int startWeek = endMonth + 1;
-                final int endWeek = startWeek + SIZE_OF_WEEK;
+                final int endWeek = startWeek + SIZE_OF_WEEK_OF_MONTH;
                 final int weekOfMonth = buffer.getNatural(startWeek, endWeek);
 
                 if (!isValidDayOfMonth(weekOfMonth))
@@ -156,7 +157,7 @@ public final class MonthYear
             }
             else
             {
-                final int endDay = endMonth + SIZE_OF_DAY;
+                final int endDay = endMonth + SIZE_OF_DAY_OF_MONTH;
                 final int dayOfMonth = buffer.getNatural(endMonth, endDay);
 
                 if (!isValidDayOfMonth(dayOfMonth))
@@ -172,6 +173,34 @@ public final class MonthYear
         month(Month.of(month));
 
         return true;
+    }
+
+    public int encode(final MutableAsciiFlyweight buffer, final int offset)
+    {
+        final int endYear = offset + SIZE_OF_YEAR;
+        final int endMonth = endYear + SIZE_OF_MONTH;
+
+        buffer.putNatural(offset, SIZE_OF_YEAR, year());
+        buffer.putNatural(endYear, SIZE_OF_MONTH, month().getValue());
+
+        final int dayOfMonth = dayOfMonth();
+        if (dayOfMonth != NONE)
+        {
+            buffer.putNatural(endMonth, SIZE_OF_DAY_OF_MONTH, dayOfMonth);
+            return LONG_LENGTH;
+        }
+        else
+        {
+            final int weekOfMonth = weekOfMonth();
+            if (weekOfMonth != NONE)
+            {
+                buffer.putChar(endMonth, 'w');
+                buffer.putNatural(endMonth + 1, SIZE_OF_WEEK_OF_MONTH, weekOfMonth);
+                return LONG_LENGTH;
+            }
+        }
+
+        return SHORT_LENGTH;
     }
 
     public boolean equals(final Object o)
