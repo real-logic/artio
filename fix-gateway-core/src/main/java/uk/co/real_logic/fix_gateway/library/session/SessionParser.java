@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -27,6 +28,7 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.fix_gateway.builder.Validation.isValidMsgType;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.AWAITING_LOGOUT;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
@@ -35,6 +37,7 @@ public class SessionParser
 {
 
     private final AsciiFlyweight string = new AsciiFlyweight();
+    private final UtcTimestampDecoder timestampDecoder = new UtcTimestampDecoder();
     private final LogonDecoder logon = new LogonDecoder();
     private final LogoutDecoder logout = new LogoutDecoder();
     private final RejectDecoder reject = new RejectDecoder();
@@ -129,8 +132,8 @@ public class SessionParser
         }
         else if (heartbeat.hasTestReqID())
         {
-            final long origSendingTime = getSendingTime(header);
-            final long sendingTime = header.sendingTime();
+            final long origSendingTime = origSendingTime(header);
+            final long sendingTime = sendingTime(header);
             final int testReqIDLength = heartbeat.testReqIDLength();
             final char[] testReqID = heartbeat.testReqID();
             final int msgSeqNum = header.msgSeqNum();
@@ -141,6 +144,19 @@ public class SessionParser
         {
             onMessage(header);
         }
+    }
+
+    private long sendingTime(final HeaderDecoder header)
+    {
+        final byte[] sendingTime = header.sendingTime();
+        return decodeTimestamp(sendingTime);
+    }
+
+    private long decodeTimestamp(final byte[] sendingTime)
+    {
+        return CODEC_VALIDATION_ENABLED
+             ? timestampDecoder.decode(sendingTime, sendingTime.length)
+             : MISSING_LONG;
     }
 
     private void onAnyOtherMessage(final int offset, final int length)
@@ -167,8 +183,8 @@ public class SessionParser
 
     private void onMessage(final HeaderDecoder header)
     {
-        final long origSendingTime = getSendingTime(header);
-        final long sendingTime = header.sendingTime();
+        final long origSendingTime = origSendingTime(header);
+        final long sendingTime = sendingTime(header);
         final int msgTypeLength = header.msgTypeLength();
         final byte[] msgType = extractMsgType(header, msgTypeLength);
         session.onMessage(
@@ -181,9 +197,9 @@ public class SessionParser
         return msgTypeBuffer;
     }
 
-    private long getSendingTime(final HeaderDecoder header)
+    private long origSendingTime(final HeaderDecoder header)
     {
-        return header.hasOrigSendingTime() ? header.origSendingTime() : UNKNOWN;
+        return header.hasOrigSendingTime() ? decodeTimestamp(header.origSendingTime()) : UNKNOWN;
     }
 
     private void onSequenceReset(final int offset, final int length)
@@ -218,8 +234,8 @@ public class SessionParser
         else
         {
             final int msgSeqNo = header.msgSeqNum();
-            final long origSendingTime = getSendingTime(header);
-            final long sendingTime = header.sendingTime();
+            final long origSendingTime = origSendingTime(header);
+            final long sendingTime = sendingTime(header);
             session.onTestRequest(
                 msgSeqNo,
                 testRequest.testReqID(),
@@ -241,8 +257,8 @@ public class SessionParser
         }
         else
         {
-            final long origSendingTime = getSendingTime(header);
-            final long sendingTime = header.sendingTime();
+            final long origSendingTime = origSendingTime(header);
+            final long sendingTime = sendingTime(header);
             session.onReject(header.msgSeqNum(), sendingTime, origSendingTime, isPossDup(header));
         }
     }
@@ -258,8 +274,8 @@ public class SessionParser
         }
         else
         {
-            final long origSendingTime = getSendingTime(header);
-            final long sendingTime = header.sendingTime();
+            final long origSendingTime = origSendingTime(header);
+            final long sendingTime = sendingTime(header);
             session.onLogout(header.msgSeqNum(), sendingTime, origSendingTime, isPossDup(header));
         }
     }
@@ -284,13 +300,13 @@ public class SessionParser
             {
                 final Object sessionKey = sessionIdStrategy.onAcceptorLogon(header);
 
-                final long origSendingTime = getSendingTime(header);
+                final long origSendingTime = origSendingTime(header);
                 session.onLogon(
                     logon.heartBtInt(),
                     header.msgSeqNum(),
                     sessionId,
                     sessionKey,
-                    header.sendingTime(),
+                    sendingTime(header),
                     origSendingTime,
                     logon.usernameAsString(), logon.passwordAsString(), isPossDup(header)
                 );
@@ -332,8 +348,8 @@ public class SessionParser
 
             if (header.msgSeqNum() == MISSING_INT)
             {
-                final long origSendingTime = getSendingTime(header);
-                final long sendingTime = header.sendingTime();
+                final long origSendingTime = origSendingTime(header);
+                final long sendingTime = sendingTime(header);
                 final byte[] msgType = extractMsgType(header, msgTypeLength);
                 session.onMessage(MISSING_INT, msgType, msgTypeLength, sendingTime, origSendingTime, false);
                 return true;

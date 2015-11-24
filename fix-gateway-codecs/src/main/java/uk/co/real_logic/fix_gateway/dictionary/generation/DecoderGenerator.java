@@ -23,9 +23,7 @@ import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
-import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
-import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
-import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
+import uk.co.real_logic.fix_gateway.fields.*;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
 
@@ -513,11 +511,7 @@ public class DecoderGenerator extends Generator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-            case MONTHYEAR:
                 return String.format(" = new char[%d]", initialBufferSize);
-
-            case DATA:
-                return String.format(" = new byte[%d]", initialBufferSize);
 
             case FLOAT:
             case PRICE:
@@ -534,15 +528,34 @@ public class DecoderGenerator extends Generator
             case NUMINGROUP:
             case DAYOFMONTH:
             case CHAR:
-            case LOCALMKTDATE:
-            case UTCTIMESTAMP:
-            case UTCTIMEONLY:
-            case UTCDATEONLY:
                 return "";
+
+            case DATA:
+                return initByteArray(initialBufferSize);
+
+            case UTCTIMESTAMP:
+                return initByteArray(UtcTimestampDecoder.LONG_LENGTH);
+
+            case LOCALMKTDATE:
+                return initByteArray(LocalMktDateDecoder.LENGTH);
+
+            case UTCTIMEONLY:
+                return initByteArray(UtcTimeOnlyDecoder.LONG_LENGTH);
+
+            case UTCDATEONLY:
+                return initByteArray(UtcDateOnlyDecoder.LENGTH);
+
+            case MONTHYEAR:
+                return initByteArray(MonthYear.LONG_LENGTH);
 
             default:
                 throw new UnsupportedOperationException("Unknown type: " + type);
         }
+    }
+
+    private String initByteArray(final int initialBufferSize)
+    {
+        return String.format(" = new byte[%d]", initialBufferSize);
     }
 
     private String optionalGetter(final Entry entry)
@@ -569,7 +582,6 @@ public class DecoderGenerator extends Generator
             case SEQNUM:
             case NUMINGROUP:
             case DAYOFMONTH:
-            case LOCALMKTDATE:
                 return "int";
 
             case FLOAT:
@@ -588,21 +600,18 @@ public class DecoderGenerator extends Generator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-            case MONTHYEAR:
                 return "char[]";
 
             case BOOLEAN:
                 return "boolean";
 
             case DATA:
-                return "byte[]";
-
-            case UTCTIMEONLY:
             case UTCTIMESTAMP:
-                return "long";
-
+            case UTCTIMEONLY:
             case UTCDATEONLY:
-                return "int";
+            case MONTHYEAR:
+            case LOCALMKTDATE:
+                return "byte[]";
 
             default:
                 throw new UnsupportedOperationException("Unknown type: " + type);
@@ -844,26 +853,18 @@ public class DecoderGenerator extends Generator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-            case MONTHYEAR:
                 return String.format("getChars(%s, valueOffset, valueLength", fieldName);
 
             case BOOLEAN:
                 return "getBoolean(valueOffset";
 
             case DATA:
-                return String.format("getBytes(%s, valueOffset, valueLength", fieldName);
-
-            case LOCALMKTDATE:
-                return "getLocalMktDate(valueOffset, valueLength";
-
             case UTCTIMESTAMP:
-                return "getUtcTimestamp(valueOffset, valueLength";
-
+            case LOCALMKTDATE:
             case UTCTIMEONLY:
-                return "getUtcTimeOnly(valueOffset, valueLength";
-
             case UTCDATEONLY:
-                return "getUtcDateOnly(valueOffset";
+            case MONTHYEAR:
+                return String.format("getBytes(%s, valueOffset, valueLength", fieldName);
 
             default:
                 throw new UnsupportedOperationException("Unknown type: " + type);

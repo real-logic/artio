@@ -218,7 +218,6 @@ public abstract class Generator
             case SEQNUM:
             case NUMINGROUP:
             case DAYOFMONTH:
-            case LOCALMKTDATE:
                 return resetFieldValue(name, "MISSING_INT");
 
             case FLOAT:
@@ -232,15 +231,14 @@ public abstract class Generator
             case CHAR:
                 return resetFieldValue(name, "MISSING_CHAR");
 
-            case UTCTIMESTAMP:
-                return resetFieldValue(name, "MISSING_LONG");
-
             // TODO
             case STRING:
             case MULTIPLEVALUESTRING:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
+            case UTCTIMESTAMP:
+            case LOCALMKTDATE:
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case MONTHYEAR:
@@ -248,7 +246,7 @@ public abstract class Generator
             case DATA:
                 return String.format(
                     "    public void %1$s()\n" +
-                        "    {\n" +
+                    "    {\n" +
                     "    }\n\n",
                     resetMethodName(name)
                 );

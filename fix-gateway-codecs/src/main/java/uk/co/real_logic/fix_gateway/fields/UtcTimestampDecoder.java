@@ -32,6 +32,9 @@ public final class UtcTimestampDecoder
     public static final long MIN_EPOCH_MILLIS = -62135596800000L;
     public static final long MAX_EPOCH_MILLIS = 253402300799999L;
 
+    public static final int SHORT_LENGTH = 17;
+    public static final int LONG_LENGTH = 21;
+
     private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
     private final AsciiFlyweight flyweight = new AsciiFlyweight(buffer);
 

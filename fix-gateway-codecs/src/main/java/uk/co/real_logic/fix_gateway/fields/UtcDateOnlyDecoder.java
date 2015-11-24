@@ -26,10 +26,11 @@ import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.toEpochDay;
  */
 public final class UtcDateOnlyDecoder
 {
+
     public static final int SIZE_OF_YEAR = 4;
     public static final int SIZE_OF_MONTH = 2;
     public static final int SIZE_OF_DAY = 2;
-    public static final int SIZE_OF_DATE = SIZE_OF_YEAR + SIZE_OF_MONTH + SIZE_OF_DAY;
+    public static final int LENGTH = SIZE_OF_YEAR + SIZE_OF_MONTH + SIZE_OF_DAY;
 
     private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
     private final AsciiFlyweight flyweight = new AsciiFlyweight(buffer);

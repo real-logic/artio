@@ -28,6 +28,7 @@ public final class LocalMktDateDecoder
 {
     public static final int MIN_EPOCH_DAYS = -719162;
     public static final int MAX_EPOCH_DAYS = 2932896;
+    public static final int LENGTH = 8;
 
     private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
     private final AsciiFlyweight flyweight = new AsciiFlyweight(buffer);

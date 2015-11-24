@@ -19,13 +19,16 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 
 import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.*;
-import static uk.co.real_logic.fix_gateway.fields.UtcDateOnlyDecoder.SIZE_OF_DATE;
+import static uk.co.real_logic.fix_gateway.fields.UtcDateOnlyDecoder.LENGTH;
 
 /**
- * .
+ * "HH:mm:ss[.SSS]"
  */
 public final class UtcTimeOnlyDecoder
 {
+
+    public static final int SHORT_LENGTH = 8;
+    public static final int LONG_LENGTH = 12;
 
     private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
     private final AsciiFlyweight flyweight = new AsciiFlyweight(buffer);
@@ -38,7 +41,7 @@ public final class UtcTimeOnlyDecoder
 
     public static long decode(final AsciiFlyweight time, final int offset, final int length)
     {
-        final int startHour = offset + SIZE_OF_DATE + 1;
+        final int startHour = offset + LENGTH + 1;
         final int endHour = startHour + 2;
 
         final int startMinute = endHour + 1;
