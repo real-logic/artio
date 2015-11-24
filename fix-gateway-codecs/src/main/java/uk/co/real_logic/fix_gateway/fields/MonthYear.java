@@ -141,15 +141,31 @@ public final class MonthYear
 
         if (length == LONG_LENGTH)
         {
-            final int endDay = endMonth + SIZE_OF_DAY;
-            final int dayOfMonth = buffer.getNatural(endMonth, endDay);
-
-            if (!isValidDayOfMonth(dayOfMonth))
+            if (buffer.getChar(endMonth) == 'w')
             {
-                return false;
-            }
+                final int startWeek = endMonth + 1;
+                final int endWeek = startWeek + SIZE_OF_WEEK;
+                final int weekOfMonth = buffer.getNatural(startWeek, endWeek);
 
-            dayOfMonth(dayOfMonth);
+                if (!isValidDayOfMonth(weekOfMonth))
+                {
+                    return false;
+                }
+
+                weekOfMonth(weekOfMonth);
+            }
+            else
+            {
+                final int endDay = endMonth + SIZE_OF_DAY;
+                final int dayOfMonth = buffer.getNatural(endMonth, endDay);
+
+                if (!isValidDayOfMonth(dayOfMonth))
+                {
+                    return false;
+                }
+
+                dayOfMonth(dayOfMonth);
+            }
         }
 
         year(year);

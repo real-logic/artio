@@ -62,6 +62,11 @@ final class CalendricalUtil
         return dayOfMonth >= MIN_DAY_OF_MONTH && dayOfMonth <= MAX_DAY_OF_MONTH;
     }
 
+    public static boolean isValidWeekOfMonth(final int weekOfMonth)
+    {
+        return weekOfMonth >= MIN_WEEK_OF_MONTH && weekOfMonth <= MAX_WEEK_OF_MONTH;
+    }
+
     static int getValidInt(
         final AsciiFlyweight timestamp,
         final int startInclusive,

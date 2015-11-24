@@ -104,11 +104,34 @@ public class MonthYearTest
     }
 
     @Theory
+    public void shouldDecodeValidDates(@FromDataPoints("validMonthYears") final Object[] data)
+    {
+        final String input = (String) data[0];
+        final MonthYear expectedMonthYear = (MonthYear) data[1];
+
+        assertDecodesMonthYear(input, expectedMonthYear);
+    }
+
+    @Theory
     public void shouldDecodeValidDatesWithDay(@FromDataPoints("validMonthYearsWithDay") final Object[] data)
     {
         final String input = (String) data[0];
         final MonthYear expectedMonthYear = (MonthYear) data[1];
 
+        assertDecodesMonthYear(input, expectedMonthYear);
+    }
+
+    @Theory
+    public void shouldDecodeValidDatesWithWeek(@FromDataPoints("validMonthYearsWithWeek") final Object[] data)
+    {
+        final String input = (String) data[0];
+        final MonthYear expectedMonthYear = (MonthYear) data[1];
+
+        assertDecodesMonthYear(input, expectedMonthYear);
+    }
+
+    private void assertDecodesMonthYear(final String input, final MonthYear expectedMonthYear)
+    {
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[input.length()]);
         final MutableAsciiFlyweight asciiFlyweight = new MutableAsciiFlyweight(buffer);
         asciiFlyweight.putAscii(0, input);
