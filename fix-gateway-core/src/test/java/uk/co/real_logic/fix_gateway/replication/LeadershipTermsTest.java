@@ -33,7 +33,7 @@ public class LeadershipTermsTest
     @Test
     public void shouldFindNothingWithNoTerms()
     {
-        assertFalse("Found term when there was none", leadershipTerms.find(1, cursor));
+        findsNoTerm(1);
     }
 
     @Test
@@ -41,7 +41,7 @@ public class LeadershipTermsTest
     {
         leadershipTerms.onNewLeader(0, 0, 0, 1);
 
-        assertFindsPosition();
+        assertFindsPosition(10);
 
         assertCursor(1, 10);
     }
@@ -52,29 +52,47 @@ public class LeadershipTermsTest
         leadershipTerms.onNewLeader(0, 0, 0, 1);
         leadershipTerms.onNewLeader(5, 5, 0, 2);
 
-        assertFindsPosition();
+        assertFindsPosition(10);
 
         assertCursor(2, 5);
     }
 
     @Test
+    public void shouldSearchStore()
+    {
+        storesHistory();
+
+        assertFindsPosition(18);
+
+        assertCursor(2, 11);
+    }
+
+    @Test
     public void shouldFindUpperPosition()
     {
-        // TODO
-        // 5 terms
+        storesHistory();
+
+        assertFindsPosition(30);
+
+        assertCursor(1, 18);
     }
 
     @Test
     public void shouldFindLowerPosition()
     {
-        // TODO
-        // 5 terms
+        storesHistory();
+
+        assertFindsPosition(1);
+
+        assertCursor(1, 1);
     }
 
     @Test
     public void shouldFindNothingWhenOutOfLowerBound()
     {
-        // TODO
+        storesHistory();
+
+        findsNoTerm(-1);
     }
 
     @Test
@@ -83,14 +101,28 @@ public class LeadershipTermsTest
         // TODO
     }
 
+    private void findsNoTerm(final int position)
+    {
+        assertFalse("Found term when there was none", leadershipTerms.find(position, cursor));
+    }
+
+    private void storesHistory()
+    {
+        leadershipTerms.onNewLeader(0, 0, 0, 1);
+        leadershipTerms.onNewLeader(5, 5, 0, 2);
+        leadershipTerms.onNewLeader(10, 15, 5, 1);
+        leadershipTerms.onNewLeader(7, 17, 10, 2);
+        leadershipTerms.onNewLeader(12, 19, 7, 1);
+    }
+
     private void assertCursor(final int expectedSessionId, final int expectedStreamPosition)
     {
         assertEquals(expectedSessionId, cursor.sessionId());
         assertEquals(expectedStreamPosition, cursor.streamPosition());
     }
 
-    private void assertFindsPosition()
+    private void assertFindsPosition(final int position)
     {
-        assertTrue("Unable to find term", leadershipTerms.find(10, cursor));
+        assertTrue("Unable to find term", leadershipTerms.find(position, cursor));
     }
 }

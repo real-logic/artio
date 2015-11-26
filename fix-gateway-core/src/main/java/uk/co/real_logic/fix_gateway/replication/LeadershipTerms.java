@@ -21,19 +21,20 @@ import uk.co.real_logic.fix_gateway.messages.LeadershipTermEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 
+import java.nio.ByteOrder;
+
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
 
 /**
  * A sequence of session id and position intervals that correspond to leadership terms
  */
-// TODO: move this to persistent off-heap storage
-// TODO: decide on storage structure, perhaps a tree of intervals?
 public class LeadershipTerms
 {
     private static final int CURRENT_ROW_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int HEADER_SIZE = CURRENT_ROW_OFFSET + SIZE_OF_INT;
     private static final int ROW_SIZE = LeadershipTermEncoder.BLOCK_LENGTH;
+    public static final int INITIAL_POSITION_OFFSET = SIZE_OF_INT;
 
     private final MutableDirectBuffer buffer;
     private final MessageHeaderEncoder messageHeaderEncoder = new MessageHeaderEncoder();
@@ -82,7 +83,7 @@ public class LeadershipTerms
         final long initialStreamPosition,
         final int sessionId)
     {
-        int currentRow = currentRow();
+        final int currentRow = currentRow();
 
         if (buffer.getInt(currentRow) != 0)
         {
@@ -91,34 +92,84 @@ public class LeadershipTerms
                 .finalStreamPosition(finalStreamPositionOfPreviousLeader);
         }
 
-        currentRow += ROW_SIZE;
-
         encoder
             .wrap(buffer, currentRow)
             .initialPosition(initialPosition)
             .initialStreamPosition(initialStreamPosition)
             .sessionId(sessionId);
 
-        currentRow(currentRow);
+        currentRow(currentRow + ROW_SIZE);
     }
 
     public boolean find(final long position, final Cursor cursor)
     {
         requireNonNull(cursor, "Cursor cannot be null");
 
-        decoder.wrap(buffer, currentRow(), actingBlockLength, actingVersion);
+        final MutableDirectBuffer buffer = this.buffer;
 
-        if (decoder.sessionId() == 0)
+        final int currentRow = currentRow();
+        if (currentRow == HEADER_SIZE)
         {
             return false;
         }
 
-        final long termOffset = position - decoder.initialPosition();
+        int minIndex = 0;
+        int maxIndex = (currentRow - HEADER_SIZE) / ROW_SIZE - 1;
+        while (minIndex <= maxIndex)
+        {
+            final int midIndex = (minIndex + maxIndex) >>> 1;
+            final int midOffset = offset(midIndex);
+            final long startOfMid = initialPosition(buffer, midOffset);
+            final long endOfMid = readEndOfMid(buffer, midOffset);
 
-        cursor.sessionId = decoder.sessionId();
-        cursor.streamPosition = decoder.initialStreamPosition() + termOffset;
+            if (position < startOfMid)
+            {
+                maxIndex = midIndex - 1;
+            }
+            else if (position < endOfMid)
+            {
+                final long termOffset = position - startOfMid;
 
-        return true;
+                final LeadershipTermDecoder decoder =
+                    this.decoder.wrap(buffer, midOffset, actingBlockLength, actingVersion);
+
+                cursor.sessionId = decoder.sessionId();
+                cursor.streamPosition = decoder.initialStreamPosition() + termOffset;
+
+                return true;
+            }
+            else
+            {
+                minIndex = midIndex + 1;
+            }
+        }
+
+        return false;
+    }
+
+    private long readEndOfMid(final MutableDirectBuffer buffer, final int midOffset)
+    {
+        long endOfMid = initialPosition(buffer, midOffset + ROW_SIZE);
+        if (endOfMid == 0)
+        {
+            endOfMid = Long.MAX_VALUE;
+        }
+        return endOfMid;
+    }
+
+    private long initialPosition(final MutableDirectBuffer buffer, final int offset)
+    {
+        return buffer.getLong(offset + INITIAL_POSITION_OFFSET, ByteOrder.LITTLE_ENDIAN);
+    }
+
+    private int offset(final int index)
+    {
+        return HEADER_SIZE + index * ROW_SIZE;
+    }
+
+    private LeadershipTermDecoder wrap(final int mid)
+    {
+        return decoder.wrap(buffer, offset(mid), actingBlockLength, actingVersion);
     }
 
     public static class Cursor
