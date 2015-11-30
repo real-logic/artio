@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Publication;
@@ -109,8 +108,6 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderCommitted(0, position);
     }
 
-    // TODO: add header to make the data readable
-    @Ignore
     @Test
     public void shouldCommitOnFollowers()
     {
@@ -118,7 +115,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         poll(follower1, 1);
 
-        verify(follower1Handler).onFragment(any(), eq(0), eq(position), any());
+        verify(follower1Handler).onFragment(any(), eq(HEADER_LENGTH), eq(position - HEADER_LENGTH), any());
     }
 
     @Test

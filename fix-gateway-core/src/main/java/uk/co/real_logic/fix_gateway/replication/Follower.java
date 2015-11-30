@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
+import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
@@ -156,7 +157,13 @@ public class Follower implements Role, RaftHandler
         final int committableBytes = (int) (canCommitUpToPosition - lastAppliedPosition);
         if (committableBytes > 0)
         {
-            archiveReader.readUpTo(termState.leaderSessionId(), lastAppliedPosition, committableBytes, handler);
+            final long readBytes = archiveReader.readUpTo(
+                termState.leaderSessionId(), lastAppliedPosition + HEADER_LENGTH, committableBytes, handler);
+
+            if (readBytes < committableBytes)
+            {
+                System.err.printf("Wanted to read %d, but only read %d%n", committableBytes, readBytes);
+            }
         }
     }
 

@@ -31,6 +31,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
@@ -312,13 +313,14 @@ public class FollowerTest
     private void dataInArchive(final long position)
     {
         System.out.println();
-        when(archiveReader.readUpTo(eq(LEADER_SESSION_ID), eq(position), eq((long) LENGTH), any())).then(inv ->
+        when(archiveReader.readUpTo(
+            eq(LEADER_SESSION_ID), eq(position + HEADER_LENGTH), eq((long) LENGTH), any())).then(inv ->
         {
             final Object[] arguments = inv.getArguments();
             final FragmentHandler handler = (FragmentHandler) arguments[3];
             handler.onFragment(buffer, 0, LENGTH, mock(Header.class));
 
-            return LENGTH + 24;
+            return LENGTH + HEADER_LENGTH;
         });
     }
 
