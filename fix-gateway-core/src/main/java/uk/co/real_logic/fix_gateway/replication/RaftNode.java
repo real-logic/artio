@@ -106,7 +106,7 @@ public class RaftNode implements Role
 
         public void transitionToFollower(final Candidate candidate, final long timeInMs)
         {
-            DebugLogger.log("%d: Follower @ %d in %d\n", nodeId, timeInMs);
+            DebugLogger.log("%d: Follower @ %d\n", nodeId, timeInMs);
 
             candidate.closeStreams();
 

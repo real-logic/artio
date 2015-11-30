@@ -161,8 +161,7 @@ public class Leader implements Role, RaftHandler
 
     public void updateHeartbeatInterval(final long timeInMs)
     {
-        // this.nextHeartbeatTimeInMs = timeInMs + nextHeartbeatTimeInMs;
-        this.nextHeartbeatTimeInMs = timeInMs + heartbeatIntervalInMs;
+        this.nextHeartbeatTimeInMs = timeInMs + nextHeartbeatTimeInMs;
     }
 
     public void onMessageAcknowledgement(
