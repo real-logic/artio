@@ -44,6 +44,7 @@ public class ClusterReplicationTest
     private NodeRunner node2 = new NodeRunner(2, 1, 3);
     private NodeRunner node3 = new NodeRunner(3, 1, 2);
 
+    @Ignore
     @Test(timeout = 3000)
     public void shouldEstablishCluster()
     {
@@ -51,6 +52,8 @@ public class ClusterReplicationTest
         {
             pollAll();
         }
+
+        checkClusterStable();
     }
 
     @Ignore
@@ -201,6 +204,22 @@ public class ClusterReplicationTest
         return notReceivedMessage(node1) && notReceivedMessage(node2) && notReceivedMessage(node3);
     }
 
+    private void checkClusterStable()
+    {
+        final NodeRunner leader = leader();
+        final NodeRunner[] followers = followers();
+
+        for (int i = 0; i < 100; i++)
+        {
+            pollAll();
+
+            assertTrue(leader.isLeader());
+
+            assertFalse(followers[0].isLeader());
+            assertFalse(followers[1].isLeader());
+        }
+    }
+
     private boolean notReceivedMessage(final NodeRunner node)
     {
         return node.replicatedPosition() < POSITION_AFTER_MESSAGE;
@@ -226,7 +245,7 @@ public class ClusterReplicationTest
         node1.poll(fragmentLimit, time);
         node2.poll(fragmentLimit, time);
         node3.poll(fragmentLimit, time);
-        LockSupport.parkNanos(MILLISECONDS.toNanos(1));
+        LockSupport.parkNanos(MILLISECONDS.toNanos(10));
     }
 
     private boolean foundLeader()

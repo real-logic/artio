@@ -218,6 +218,8 @@ public class Leader implements Role, RaftHandler
 
         leaderShipTerm = termState.leadershipTerm();
         commitAndLastAppliedPosition = termState.commitPosition();
+        heartbeat();
+
         final int toBeCommitted = (int) (commitAndLastAppliedPosition - termState.lastAppliedPosition());
         if (toBeCommitted > 0)
         {
@@ -225,7 +227,6 @@ public class Leader implements Role, RaftHandler
 
             leaderDataImage.blockPoll(fragmenter, toBeCommitted);
         }
-        heartbeat();
         return this;
     }
 

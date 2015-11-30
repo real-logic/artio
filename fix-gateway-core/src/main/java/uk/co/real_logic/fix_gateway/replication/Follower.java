@@ -182,14 +182,14 @@ public class Follower implements Role, RaftHandler
     {
         if (canVoteFor(candidateId) && safeToVote(leaderShipTerm, candidatePosition))
         {
-            System.out.println(nodeId + ": Voting for " + candidateId);
+            //System.out.println(nodeId + ": Voting for " + candidateId);
             votedFor = candidateId;
             controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR);
         }
         else if (candidateId != nodeId)
         {
             controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST);
-            System.out.println(nodeId + ": Voting against " + candidateId);
+            //System.out.println(nodeId + ": Voting against " + candidateId);
         }
     }
 

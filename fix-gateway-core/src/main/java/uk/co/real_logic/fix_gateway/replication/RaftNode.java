@@ -67,7 +67,7 @@ public class RaftNode implements Role
     {
         public void transitionToFollower(final Leader leader, final long timeInMs)
         {
-            DebugLogger.log("%d: Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+            DebugLogger.log("%d: L -> Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
             leader.closeStreams();
 
@@ -81,7 +81,7 @@ public class RaftNode implements Role
     {
         public void transitionToCandidate(final Follower follower, final long timeInMs)
         {
-            DebugLogger.log("%d: Candidate @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+            DebugLogger.log("%d: F -> Candidate @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
             follower.closeStreams();
 
@@ -95,7 +95,7 @@ public class RaftNode implements Role
     {
         public void transitionToLeader(final Candidate candidate, long timeInMs)
         {
-            DebugLogger.log("%d: Leader @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+            DebugLogger.log("%d: C -> Leader @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
             candidate.closeStreams();
 
@@ -106,18 +106,13 @@ public class RaftNode implements Role
 
         public void transitionToFollower(final Candidate candidate, final long timeInMs)
         {
-            DebugLogger.log("%d: Follower @ %d\n", nodeId, timeInMs);
+            DebugLogger.log("%d: C -> Follower @ %d\n", nodeId, timeInMs);
 
             candidate.closeStreams();
 
             injectFollowerStreams();
 
             currentRole = follower.follow(timeInMs);
-        }
-
-        public void transitionToCandidate(final Candidate candidate, final long timeInMs)
-        {
-            currentRole = candidate.startNewElection(timeInMs);
         }
     };
 

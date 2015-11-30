@@ -63,7 +63,8 @@ public class Candidate implements Role, RaftHandler
     {
         if (voteTimeout.hasTimedOut(timeInMs))
         {
-            //System.out.println("Timeout: " + timeInMs + " : " + currentVoteTimeout);
+            DebugLogger.log("%d: restartElection @ %d in %d\n", id, timeInMs, leaderShipTerm);
+
             startElection(timeInMs);
 
             return 1;
@@ -99,6 +100,8 @@ public class Candidate implements Role, RaftHandler
     public void onReplyVote(
         final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
+        //System.out.println("RECV VOTE from " + senderNodeId + ", to " + candidateId);
+
         if (shouldCountVote(candidateId, leaderShipTerm, vote) && countVote(senderNodeId))
         {
             if (votesFor.size() > clusterSize / 2)
@@ -125,7 +128,16 @@ public class Candidate implements Role, RaftHandler
                                      final int dataSessionId)
     {
         // System.out.println("YES @ " + this.id);
-        followIfNextTerm(nodeId, dataSessionId, leaderShipTerm, position, true);
+        if (nodeId != id && position >= this.position)
+        {
+            votesFor.clear();
+            termState
+                .commitPosition(position)
+                .leadershipTerm(leaderShipTerm)
+                .leaderSessionId(dataSessionId);
+
+            raftNode.transitionToFollower(this, timeInMs);
+        }
     }
 
     public void onResend(final int leaderSessionId,
@@ -142,6 +154,9 @@ public class Candidate implements Role, RaftHandler
     {
         this.position = termState.commitPosition();
         this.leaderShipTerm = termState.leadershipTerm();
+
+        DebugLogger.log("%d: startNewElection @ %d in %d\n", id, timeInMs, leaderShipTerm);
+
         startElection(timeInMs);
         return this;
     }
@@ -167,8 +182,6 @@ public class Candidate implements Role, RaftHandler
 
     private void startElection(final long timeInMs)
     {
-        DebugLogger.log("%d: startElection @ %d in %d\n", id, timeInMs, leaderShipTerm);
-
         voteTimeout.onKeepAlive(timeInMs);
         leaderShipTerm++;
         countVote(id); // Vote for yourself

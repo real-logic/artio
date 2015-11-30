@@ -38,17 +38,17 @@ public class LogDirectoryDescriptor
 
     public File logFile(final StreamIdentifier stream, final int sessionId, final int termId)
     {
-        return new File(String.format(logFileFormat, stream.channel(), stream.streamId(), sessionId, termId));
+        return new File(String.format(logFileFormat, stream.canonicalForm(), stream.streamId(), sessionId, termId));
     }
 
     public File metaDataLogFile(final StreamIdentifier stream, final int sessionId)
     {
-        return new File(String.format(metaDataLogFileFormat, stream.channel(), stream.streamId(), sessionId));
+        return new File(String.format(metaDataLogFileFormat, stream.canonicalForm(), stream.streamId(), sessionId));
     }
 
     public List<File> listLogFiles(final StreamIdentifier stream)
     {
-        final String prefix = String.format("archive_%s_%d", stream.channel(), stream.streamId());
+        final String prefix = String.format("archive_%s_%d", stream.canonicalForm(), stream.streamId());
         final File logFileDir = new File(this.logFileDir);
         return Arrays.asList(logFileDir.listFiles(file -> file.getName().startsWith(prefix)));
     }
