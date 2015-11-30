@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-// TODO: hold config information for aeron streams
 public class TermState
 {
     private int previousLeaderSessionId;

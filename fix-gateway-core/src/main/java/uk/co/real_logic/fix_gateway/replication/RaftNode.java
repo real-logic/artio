@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
  */
 public class RaftNode implements Role
 {
+    public static final int HEARTBEAT_TO_TIMEOUT_RATIO = 4;
     private final short nodeId;
     private final RaftNodeConfiguration configuration;
     private Role currentRole;
@@ -151,7 +152,7 @@ public class RaftNode implements Role
         this.nodeId = configuration.nodeId();
 
         final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
-        final long heartbeatTimeInMs = timeoutIntervalInMs / 4;
+        final long heartbeatTimeInMs = timeoutIntervalInMs / HEARTBEAT_TO_TIMEOUT_RATIO;
         final int clusterSize = configuration.otherNodes().size() + 1;
 
         leader = new Leader(

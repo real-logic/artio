@@ -22,6 +22,7 @@ import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.BitUtil;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -305,9 +306,7 @@ public class Leader implements Role, RaftHandler
             }
             catch (final Exception ex)
             {
-                //errorHandler.onError(ex);
-                // TODO
-                ex.printStackTrace();
+                LangUtil.rethrowUnchecked(ex);
             }
         }
     }
