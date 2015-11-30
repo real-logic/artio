@@ -36,12 +36,11 @@ public class Candidate implements Role, RaftHandler
     private final short id;
     private final RaftNode raftNode;
     private final int clusterSize;
-    private final long voteTimeout;
     private final IntHashSet votesFor;
+    private final RandomTimeout voteTimeout;
 
     private RaftPublication controlPublication;
     private Subscription controlSubscription;
-    private long currentVoteTimeout;
     private int leaderShipTerm;
     private long position;
     private long timeInMs;
@@ -55,22 +54,14 @@ public class Candidate implements Role, RaftHandler
         this.id = id;
         this.raftNode = raftNode;
         this.clusterSize = clusterSize;
-        this.voteTimeout = voteTimeout;
+        this.voteTimeout = new RandomTimeout(voteTimeout, 0L);
         this.termState = termState;
         votesFor = new IntHashSet(2 * clusterSize, -1);
     }
 
-    public int poll(int fragmentLimit, final long timeInMs)
+    public int checkConditions(final long timeInMs)
     {
-        this.timeInMs = timeInMs;
-
-        return pollCommands(fragmentLimit) +
-               checkConditions(timeInMs);
-    }
-
-    private int checkConditions(final long timeInMs)
-    {
-        if (timeInMs > currentVoteTimeout)
+        if (voteTimeout.hasTimedOut(timeInMs))
         {
             //System.out.println("Timeout: " + timeInMs + " : " + currentVoteTimeout);
             startElection(timeInMs);
@@ -81,8 +72,10 @@ public class Candidate implements Role, RaftHandler
         return 0;
     }
 
-    private int pollCommands(final int fragmentLimit)
+    public int pollCommands(final int fragmentLimit, final long timeInMs)
     {
+        this.timeInMs = timeInMs;
+
         return controlSubscription.poll(raftSubscriber, fragmentLimit);
     }
 
@@ -169,7 +162,6 @@ public class Candidate implements Role, RaftHandler
                 .leaderSessionId(dataSessionId);
 
             raftNode.transitionToFollower(this, timeInMs);
-            stopTimeout();
         }
     }
 
@@ -177,20 +169,10 @@ public class Candidate implements Role, RaftHandler
     {
         DebugLogger.log("%d: startElection @ %d in %d\n", id, timeInMs, leaderShipTerm);
 
-        resetTimeout(timeInMs);
+        voteTimeout.onKeepAlive(timeInMs);
         leaderShipTerm++;
         countVote(id); // Vote for yourself
         controlPublication.saveRequestVote(id, position, leaderShipTerm);
-    }
-
-    private void stopTimeout()
-    {
-        currentVoteTimeout = Long.MAX_VALUE;
-    }
-
-    private void resetTimeout(final long timeInMs)
-    {
-        currentVoteTimeout = timeInMs + random.nextLong(voteTimeout / 2, voteTimeout);
     }
 
     public Candidate controlPublication(final RaftPublication controlPublication)

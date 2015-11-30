@@ -39,10 +39,10 @@ public class Follower implements Role, RaftHandler
     private final short nodeId;
     private final FragmentHandler handler;
     private final RaftNode raftNode;
-    private final long replyTimeoutInMs;
     private final TermState termState;
     private final ArchiveReader archiveReader;
     private final Archiver archiver;
+    private final RandomTimeout replyTimeout;
 
     private RaftPublication acknowledgementPublication;
     private RaftPublication controlPublication;
@@ -52,7 +52,6 @@ public class Follower implements Role, RaftHandler
     private long commitPosition;
     private long lastAppliedPosition;
 
-    private long latestNextReceiveTimeInMs;
     private short votedFor = NO_ONE;
     private int leaderShipTerm;
     private long timeInMs;
@@ -70,40 +69,34 @@ public class Follower implements Role, RaftHandler
         this.nodeId = nodeId;
         this.handler = handler;
         this.raftNode = raftNode;
-        this.replyTimeoutInMs = replyTimeoutInMs;
         this.termState = termState;
         this.archiveReader = archiveReader;
         this.archiver = archiver;
-        updateReceiverTimeout(timeInMs);
+        replyTimeout = new RandomTimeout(replyTimeoutInMs, timeInMs);
     }
 
-    public int poll(final int fragmentLimit, final long timeInMs)
+    public int pollCommands(final int fragmentLimit, final long timeInMs)
     {
         this.timeInMs = timeInMs;
 
-        return pollCommands(fragmentLimit) +
-               readData(timeInMs) +
-               checkConditions(timeInMs);
-    }
-
-    private int pollCommands(final int fragmentLimit)
-    {
         final int read = controlSubscription.poll(raftSubscriber, fragmentLimit);
         if (read > 0)
         {
-            updateReceiverTimeout(timeInMs);
+            onReplyKeepAlive(this.timeInMs);
         }
         return read;
     }
 
-    private int checkConditions(final long timeInMs)
+    public int checkConditions(final long timeInMs)
     {
-        if (timeInMs > latestNextReceiveTimeInMs)
+        if (replyTimeout.hasTimedOut(timeInMs))
         {
             termState
                 .receivedPosition(receivedPosition)
                 .lastAppliedPosition(lastAppliedPosition)
                 .commitPosition(commitPosition);
+
+            //System.out.printf("Timeout: %d vs %d", timeInMs, latestNextReceiveTimeInMs);
 
             raftNode.transitionToCandidate(timeInMs);
 
@@ -113,7 +106,7 @@ public class Follower implements Role, RaftHandler
         return 0;
     }
 
-    private int readData(final long timeInMs)
+    public int readData()
     {
         if (leaderArchiver == null)
         {
@@ -138,7 +131,7 @@ public class Follower implements Role, RaftHandler
         {
             receivedPosition += bytesRead;
             saveMessageAcknowledgement(OK);
-            updateReceiverTimeout(timeInMs);
+            onReplyKeepAlive(timeInMs);
         }
 
         attemptToCommitData();
@@ -174,9 +167,9 @@ public class Follower implements Role, RaftHandler
         controlSubscription.close();
     }
 
-    private void updateReceiverTimeout(final long timeInMs)
+    private void onReplyKeepAlive(final long timeInMs)
     {
-        latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
+        replyTimeout.onKeepAlive(timeInMs);
     }
 
     public void onMessageAcknowledgement(
@@ -189,13 +182,14 @@ public class Follower implements Role, RaftHandler
     {
         if (canVoteFor(candidateId) && safeToVote(leaderShipTerm, candidatePosition))
         {
-            //System.out.println("Voting for " + candidateId);
+            System.out.println(nodeId + ": Voting for " + candidateId);
             votedFor = candidateId;
             controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR);
         }
         else if (candidateId != nodeId)
         {
             controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST);
+            System.out.println(nodeId + ": Voting against " + candidateId);
         }
     }
 
@@ -252,7 +246,7 @@ public class Follower implements Role, RaftHandler
         {
             leaderArchiver.patch(startPosition, bodyBuffer, bodyOffset, bodyLength);
             receivedPosition += bodyLength;
-            updateReceiverTimeout(timeInMs);
+            onReplyKeepAlive(timeInMs);
             saveMessageAcknowledgement(OK);
         }
     }
@@ -267,7 +261,7 @@ public class Follower implements Role, RaftHandler
 
     public Follower follow(final long timeInMs)
     {
-        updateReceiverTimeout(timeInMs);
+        onReplyKeepAlive(timeInMs);
         votedFor = NO_ONE;
         readTermState();
         return this;

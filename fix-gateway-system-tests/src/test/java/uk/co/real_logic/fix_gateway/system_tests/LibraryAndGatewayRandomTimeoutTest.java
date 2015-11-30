@@ -31,7 +31,7 @@ import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-public class LibraryAndGatewayTimeoutTest
+public class LibraryAndGatewayRandomTimeoutTest
 {
     private int aeronPort = unusedPort();
     private int port = unusedPort();

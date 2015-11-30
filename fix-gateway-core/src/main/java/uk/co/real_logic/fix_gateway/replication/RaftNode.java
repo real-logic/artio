@@ -239,7 +239,17 @@ public class RaftNode implements Role
 
     public int poll(final int fragmentLimit, final long timeInMs)
     {
-        return currentRole.poll(fragmentLimit, timeInMs);
+        final Role role = currentRole;
+        final int commandCount = role.pollCommands(fragmentLimit, timeInMs);
+
+        if (role != currentRole)
+        {
+            return commandCount + poll(fragmentLimit, timeInMs);
+        }
+
+        return commandCount +
+               role.readData() +
+               role.checkConditions(timeInMs);
     }
 
     public void closeStreams()

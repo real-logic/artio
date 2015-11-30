@@ -36,7 +36,7 @@ public class NodeRunner implements AutoCloseable, Role
 {
     public static final long NOT_LEADER = -3;
 
-    public static final long TIMEOUT_IN_MS = 1000;
+    public static final long TIMEOUT_IN_MS = 100;
     public static final String AERON_GROUP = "aeron:udp?group=224.0.1.1:40456";
 
     private final SwitchableLossGenerator lossGenerator = new SwitchableLossGenerator();
@@ -47,7 +47,6 @@ public class NodeRunner implements AutoCloseable, Role
     private final Publication dataPublication;
 
     private long replicatedPosition = -1;
-    private long timeInMs = 0;
 
     public NodeRunner(final int nodeId, final int... otherNodes)
     {
@@ -95,23 +94,17 @@ public class NodeRunner implements AutoCloseable, Role
             .archiver(archiver)
             .archiveReader(archiveReader);
 
-        raftNode = new RaftNode(configuration, timeInMs);
+        raftNode = new RaftNode(configuration, System.currentTimeMillis());
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)
     {
-        // NB: ignores other time
-        return raftNode.poll(fragmentLimit, this.timeInMs);
+        return raftNode.poll(fragmentLimit, timeInMs);
     }
 
     public void closeStreams()
     {
         raftNode.closeStreams();
-    }
-
-    public void advanceClock(final long delta)
-    {
-        timeInMs += delta;
     }
 
     public void dropFrames(final boolean dropFrames)

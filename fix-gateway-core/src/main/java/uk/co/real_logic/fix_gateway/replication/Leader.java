@@ -87,31 +87,18 @@ public class Leader implements Role, RaftHandler
         updateHeartbeatInterval(timeInMs);
     }
 
-    public int poll(int fragmentLimit, final long timeInMs)
-    {
-        this.timeInMs = timeInMs;
-
-        final int commandCount = pollCommands(fragmentLimit);
-        return commandCount +
-               readData(commandCount) +
-               checkConditions(timeInMs);
-    }
-
-    private int readData(final int commandCount)
+    public int readData()
     {
         checkFragmenter();
 
-        if (commandCount > 0)
+        final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
+        final int delta = (int) (newPosition - commitAndLastAppliedPosition);
+        if (delta > 0)
         {
-            final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
-            final int delta = (int) (newPosition - commitAndLastAppliedPosition);
-            if (delta > 0)
-            {
-                commitAndLastAppliedPosition += leaderDataImage.blockPoll(fragmenter, delta);
-                heartbeat();
+            commitAndLastAppliedPosition += leaderDataImage.blockPoll(fragmenter, delta);
+            heartbeat();
 
-                return delta;
-            }
+            return delta;
         }
 
         return 0;
@@ -129,7 +116,7 @@ public class Leader implements Role, RaftHandler
         }
     }
 
-    private int checkConditions(final long timeInMs)
+    public int checkConditions(final long timeInMs)
     {
         if (timeInMs > nextHeartbeatTimeInMs)
         {
@@ -141,8 +128,10 @@ public class Leader implements Role, RaftHandler
         return 0;
     }
 
-    private int pollCommands(final int fragmentLimit)
+    public int pollCommands(final int fragmentLimit, final long timeInMs)
     {
+        this.timeInMs = timeInMs;
+
         return acknowledgementSubscription.poll(acknowledgementSubscriber, fragmentLimit);
     }
 
@@ -161,7 +150,7 @@ public class Leader implements Role, RaftHandler
 
     public void updateHeartbeatInterval(final long timeInMs)
     {
-        this.nextHeartbeatTimeInMs = timeInMs + nextHeartbeatTimeInMs;
+        this.nextHeartbeatTimeInMs = timeInMs + heartbeatIntervalInMs;
     }
 
     public void onMessageAcknowledgement(

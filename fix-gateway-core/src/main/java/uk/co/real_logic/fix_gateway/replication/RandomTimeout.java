@@ -15,32 +15,32 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-/**
- * Replication role determines your actions.
- */
-public interface Role
+import java.util.concurrent.ThreadLocalRandom;
+
+public class RandomTimeout
 {
-    default int poll(final int fragmentLimit, final long timeInMs)
+    private static final int MIN_TIMEOUT_FACTOR = 2;
+
+    private final long maxTimeout;
+    private final long minTimeout;
+
+    private long nextExpiry;
+
+    public RandomTimeout(final long maxTimeout, final long timeInMs)
     {
-        return pollCommands(fragmentLimit, timeInMs) +
-               readData() +
-               checkConditions(timeInMs);
+        this.maxTimeout = maxTimeout;
+        this.minTimeout = maxTimeout / MIN_TIMEOUT_FACTOR;
+        onKeepAlive(timeInMs);
     }
 
-    default int pollCommands(final int fragmentLimit, final long timeInMs)
+    public void onKeepAlive(final long timeInMs)
     {
-        return 0;
+        nextExpiry = timeInMs + ThreadLocalRandom.current().nextLong(minTimeout, maxTimeout);
     }
 
-    default int readData()
+    public boolean hasTimedOut(final long timeInMs)
     {
-        return 0;
+        return timeInMs > nextExpiry;
     }
 
-    default int checkConditions(final long timeInMs)
-    {
-        return 0;
-    }
-
-    void closeStreams();
 }
