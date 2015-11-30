@@ -27,14 +27,18 @@ import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
 
 /**
- * A sequence of session id and position intervals that correspond to leadership terms
+ * A sequence of session id and position intervals that correspond to leadership terms.
+ *
+ * This acts as an off-heap archive that does a binary search over the underlying
+ * intervals.
  */
 public class LeadershipTerms
 {
     private static final int CURRENT_ROW_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int HEADER_SIZE = CURRENT_ROW_OFFSET + SIZE_OF_INT;
     private static final int ROW_SIZE = LeadershipTermEncoder.BLOCK_LENGTH;
-    public static final int INITIAL_POSITION_OFFSET = SIZE_OF_INT;
+    private static final int INITIAL_POSITION_OFFSET = SIZE_OF_INT;
+    public static final int NO_HEADER_WRITTEN = 0;
 
     private final MutableDirectBuffer buffer;
     private final MessageHeaderEncoder messageHeaderEncoder = new MessageHeaderEncoder();
@@ -55,14 +59,22 @@ public class LeadershipTerms
 
     private void setupHeader()
     {
+        messageHeaderDecoder.wrap(buffer, 0);
+
+        if (messageHeaderDecoder.schemaId() == NO_HEADER_WRITTEN)
+        {
+            writeNewHeader();
+        }
+    }
+
+    private void writeNewHeader()
+    {
         messageHeaderEncoder
             .wrap(buffer, 0)
             .blockLength(encoder.sbeBlockLength())
             .templateId(encoder.sbeTemplateId())
             .schemaId(encoder.sbeSchemaId())
             .version(encoder.sbeSchemaVersion());
-
-        messageHeaderDecoder.wrap(buffer, 0);
 
         currentRow(HEADER_SIZE);
     }

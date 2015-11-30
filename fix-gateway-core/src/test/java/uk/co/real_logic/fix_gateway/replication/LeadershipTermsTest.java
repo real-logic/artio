@@ -98,7 +98,13 @@ public class LeadershipTermsTest
     @Test
     public void shouldLoadPreviouslySavedTerms()
     {
-        // TODO
+        storesHistory();
+
+        final LeadershipTerms newLeadershipTerms = new LeadershipTerms(buffer);
+
+        assertTrue("Unable to find term", newLeadershipTerms.find(18, cursor));
+
+        assertCursor(2, 11);
     }
 
     private void findsNoTerm(final int position)
