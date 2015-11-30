@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.replication;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 
 import java.util.Arrays;
-import java.util.Iterator;
 
 /**
  * A leaderShipTerm is acknowledged if a quorum of cluster members acknowledge it
@@ -58,11 +57,12 @@ public class QuorumAcknowledgementStrategy implements AcknowledgementStrategy
             this.positions = positions = new long[size];
         }
 
-        // TODO: remove garbage on iteration
-        final Iterator<Long> it = sessionIdToPosition.values().iterator();
+        // TODO: remove cast on next agrona release:
+        final Long2LongHashMap.Values values = (Long2LongHashMap.Values) sessionIdToPosition.values();
+        final Long2LongHashMap.LongIterator it = values.iterator();
         for (int i = 0; i < size; i++)
         {
-            positions[i] = it.next();
+            positions[i] = it.nextValue();
         }
         return positions;
     }
