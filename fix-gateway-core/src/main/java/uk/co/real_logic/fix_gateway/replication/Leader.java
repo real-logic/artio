@@ -89,8 +89,35 @@ public class Leader implements Role, RaftHandler
     public int poll(int fragmentLimit, final long timeInMs)
     {
         this.timeInMs = timeInMs;
-        final int read = acknowledgementSubscription.poll(acknowledgementSubscriber, fragmentLimit);
 
+        final int commandCount = pollCommands(fragmentLimit);
+        return commandCount +
+               readData(commandCount) +
+               checkConditions(timeInMs);
+    }
+
+    private int readData(final int commandCount)
+    {
+        checkFragmenter();
+
+        if (commandCount > 0)
+        {
+            final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
+            final int delta = (int) (newPosition - commitPosition);
+            if (delta > 0)
+            {
+                commitPosition += leaderDataImage.blockPoll(fragmenter, delta);
+                heartbeat();
+
+                return delta;
+            }
+        }
+
+        return 0;
+    }
+
+    private void checkFragmenter()
+    {
         if (leaderDataImage == null)
         {
             leaderDataImage = dataSubscription.getImage(ourSessionId);
@@ -99,26 +126,23 @@ public class Leader implements Role, RaftHandler
                 fragmenter = new Fragmenter(leaderDataImage);
             }
         }
-        else
-        {
-            if (read > 0)
-            {
-                final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
-                final int delta = (int) (newPosition - commitPosition);
-                if (delta > 0)
-                {
-                    commitPosition += leaderDataImage.blockPoll(fragmenter, delta);
-                    heartbeat();
-                }
-            }
-        }
+    }
 
+    private int checkConditions(final long timeInMs)
+    {
         if (timeInMs > nextHeartbeatTimeInMs)
         {
             heartbeat();
+
+            return 1;
         }
 
-        return read;
+        return 0;
+    }
+
+    private int pollCommands(final int fragmentLimit)
+    {
+        return acknowledgementSubscription.poll(acknowledgementSubscriber, fragmentLimit);
     }
 
     public void closeStreams()

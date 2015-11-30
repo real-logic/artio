@@ -63,16 +63,27 @@ public class Candidate implements Role, RaftHandler
     public int poll(int fragmentLimit, final long timeInMs)
     {
         this.timeInMs = timeInMs;
-        int work = controlSubscription.poll(raftSubscriber, fragmentLimit);
 
+        return pollCommands(fragmentLimit) +
+               checkConditions(timeInMs);
+    }
+
+    private int checkConditions(final long timeInMs)
+    {
         if (timeInMs > currentVoteTimeout)
         {
             //System.out.println("Timeout: " + timeInMs + " : " + currentVoteTimeout);
             startElection(timeInMs);
-            work++;
+
+            return 1;
         }
 
-        return work;
+        return 0;
+    }
+
+    private int pollCommands(final int fragmentLimit)
+    {
+        return controlSubscription.poll(raftSubscriber, fragmentLimit);
     }
 
     public void closeStreams()

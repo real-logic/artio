@@ -80,14 +80,12 @@ public class Follower implements Role, RaftHandler
     {
         this.timeInMs = timeInMs;
 
-        final int messagesRead = pollControlMessages(fragmentLimit);
-        final long bytesRead = readData(timeInMs);
-        attemptToCommitData();
-        testTimeout(timeInMs);
-        return messagesRead + (int) bytesRead;
+        return pollCommands(fragmentLimit) +
+               readData(timeInMs) +
+               checkConditions(timeInMs);
     }
 
-    private int pollControlMessages(final int fragmentLimit)
+    private int pollCommands(final int fragmentLimit)
     {
         final int read = controlSubscription.poll(raftSubscriber, fragmentLimit);
         if (read > 0)
@@ -97,7 +95,7 @@ public class Follower implements Role, RaftHandler
         return read;
     }
 
-    private void testTimeout(final long timeInMs)
+    private int checkConditions(final long timeInMs)
     {
         if (timeInMs > latestNextReceiveTimeInMs)
         {
@@ -107,10 +105,14 @@ public class Follower implements Role, RaftHandler
                 .commitPosition(commitPosition);
 
             raftNode.transitionToCandidate(timeInMs);
+
+            return 1;
         }
+
+        return 0;
     }
 
-    private long readData(final long timeInMs)
+    private int readData(final long timeInMs)
     {
         if (leaderArchiver == null)
         {
@@ -130,13 +132,16 @@ public class Follower implements Role, RaftHandler
             return 1;
         }
 
-        final long bytesRead = leaderArchiver.poll();
+        final int bytesRead = leaderArchiver.poll();
         if (bytesRead > 0)
         {
             receivedPosition += bytesRead;
             saveMessageAcknowledgement(OK);
             updateReceiverTimeout(timeInMs);
         }
+
+        attemptToCommitData();
+
         return bytesRead;
     }
 
