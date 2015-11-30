@@ -58,7 +58,7 @@ public class Leader implements Role, RaftHandler
     private Subscription dataSubscription;
     private Image leaderDataImage;
     private Fragmenter fragmenter;
-    private long commitPosition = 0;
+    private long commitAndLastAppliedPosition = 0;
     private long nextHeartbeatTimeInMs;
     private int leaderShipTerm;
     private long timeInMs;
@@ -104,10 +104,10 @@ public class Leader implements Role, RaftHandler
         if (commandCount > 0)
         {
             final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
-            final int delta = (int) (newPosition - commitPosition);
+            final int delta = (int) (newPosition - commitAndLastAppliedPosition);
             if (delta > 0)
             {
-                commitPosition += leaderDataImage.blockPoll(fragmenter, delta);
+                commitAndLastAppliedPosition += leaderDataImage.blockPoll(fragmenter, delta);
                 heartbeat();
 
                 return delta;
@@ -155,7 +155,7 @@ public class Leader implements Role, RaftHandler
 
     private void heartbeat()
     {
-        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition, ourSessionId);
+        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitAndLastAppliedPosition, ourSessionId);
         updateHeartbeatInterval(timeInMs);
     }
 
@@ -175,9 +175,12 @@ public class Leader implements Role, RaftHandler
 
         if (status == MISSING_LOG_ENTRIES)
         {
-            final int length = (int) (commitPosition - position);
+            final int length = (int) (commitAndLastAppliedPosition - position);
             resendHandler.position(position);
-            archiveReader.readBlock(ourSessionId, position, length, resendHandler);
+            if (!archiveReader.readBlock(ourSessionId, position, length, resendHandler))
+            {
+                // TODO: error
+            }
         }
     }
 
@@ -213,6 +216,8 @@ public class Leader implements Role, RaftHandler
             termState
                 .leadershipTerm(leaderShipTerm)
                 .commitPosition(position)
+                .lastAppliedPosition(commitAndLastAppliedPosition)
+                .receivedPosition(commitAndLastAppliedPosition)
                 .leaderSessionId(leaderSessionId);
 
             raftNode.transitionToFollower(this, timeInMs);
@@ -222,8 +227,16 @@ public class Leader implements Role, RaftHandler
     public Leader getsElected(final long timeInMs)
     {
         this.timeInMs = timeInMs;
+
         leaderShipTerm = termState.leadershipTerm();
-        commitPosition = termState.commitPosition();
+        commitAndLastAppliedPosition = termState.commitPosition();
+        final int toBeCommitted = (int) (commitAndLastAppliedPosition - termState.lastAppliedPosition());
+        if (toBeCommitted > 0)
+        {
+            checkFragmenter();
+
+            leaderDataImage.blockPoll(fragmenter, toBeCommitted);
+        }
         heartbeat();
         return this;
     }

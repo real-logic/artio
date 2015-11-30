@@ -166,8 +166,8 @@ public class RaftNode implements Role
             termState,
             configuration.leaderSessionId(),
             configuration.archiveReader());
-
         candidate = new Candidate(
+
             nodeId,
             this,
             clusterSize,

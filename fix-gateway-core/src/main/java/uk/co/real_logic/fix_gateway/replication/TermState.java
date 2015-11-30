@@ -17,8 +17,10 @@ package uk.co.real_logic.fix_gateway.replication;
 
 public class TermState
 {
-    private int previousLeaderSessionId;
+    /** the aeron session id of the current leader */
     private int leaderSessionId;
+
+    /** The raft leader's current term number */
     private int leadershipTerm;
 
     /** The position within the current leadership term that we have read data on the session up to. */
@@ -27,14 +29,8 @@ public class TermState
     /** The position within the current leadership term that we have applied to our state machine. */
     private long lastAppliedPosition;
 
-    /** The position within the current leadership term that we have committed. */
+    /** The position within the current leadership term that we can commit up to. */
     private long commitPosition;
-
-    public TermState previousLeaderSessionId(int previousLeadershipSessionId)
-    {
-        this.previousLeaderSessionId = previousLeadershipSessionId;
-        return this;
-    }
 
     public TermState leaderSessionId(int leadershipSessionId)
     {
@@ -74,11 +70,6 @@ public class TermState
         return this;
     }
 
-    public int previousLeaderSessionId()
-    {
-        return previousLeaderSessionId;
-    }
-
     public int leaderSessionId()
     {
         return leaderSessionId;
@@ -107,9 +98,10 @@ public class TermState
     public String toString()
     {
         return "TermState{" +
-            "previousLeaderSessionId=" + previousLeaderSessionId +
             ", leaderSessionId=" + leaderSessionId +
             ", leadershipTerm=" + leadershipTerm +
+            ", receivedPosition=" + receivedPosition +
+            ", lastAppliedPosition=" + lastAppliedPosition +
             ", commitPosition=" + commitPosition +
             '}';
     }

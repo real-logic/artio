@@ -106,7 +106,7 @@ public class Candidate implements Role, RaftHandler
     public void onReplyVote(
         final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
-        if (candidateId == id && leaderShipTerm == this.leaderShipTerm && vote == FOR && votesFor.add(senderNodeId))
+        if (shouldCountVote(candidateId, leaderShipTerm, vote) && countVote(senderNodeId))
         {
             if (votesFor.size() > clusterSize / 2)
             {
@@ -114,6 +114,16 @@ public class Candidate implements Role, RaftHandler
                 raftNode.transitionToLeader(timeInMs);
             }
         }
+    }
+
+    private boolean countVote(final short senderNodeId)
+    {
+        return votesFor.add(senderNodeId);
+    }
+
+    private boolean shouldCountVote(final short candidateId, final int leaderShipTerm, final Vote vote)
+    {
+        return candidateId == id && leaderShipTerm == this.leaderShipTerm && vote == FOR;
     }
 
     public void onConcensusHeartbeat(short nodeId,
@@ -169,7 +179,7 @@ public class Candidate implements Role, RaftHandler
 
         resetTimeout(timeInMs);
         leaderShipTerm++;
-        votesFor.add(id); // Vote for yourself
+        countVote(id); // Vote for yourself
         controlPublication.saveRequestVote(id, position, leaderShipTerm);
     }
 
