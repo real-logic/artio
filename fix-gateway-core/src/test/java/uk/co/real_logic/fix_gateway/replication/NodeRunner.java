@@ -22,6 +22,9 @@ import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
@@ -69,6 +72,12 @@ public class NodeRunner implements AutoCloseable, Role
 
         dataPublication = aeron.addPublication(AERON_GROUP, DATA);
 
+        final StreamIdentifier dataStream = new StreamIdentifier(AERON_GROUP, DATA);
+        final ArchiveMetaData metaData = AbstractReplicationTest.archiveMetaData((short) nodeId);
+        final ArchiveReader archiveReader = new ArchiveReader(
+            metaData, LOGGER_CACHE_CAPACITY, dataStream);
+        final Archiver archiver = new Archiver(metaData, LOGGER_CACHE_CAPACITY, dataStream);
+
         final RaftNodeConfiguration configuration = new RaftNodeConfiguration()
             .nodeId((short) nodeId)
             .aeron(aeron)
@@ -80,9 +89,11 @@ public class NodeRunner implements AutoCloseable, Role
             .maxClaimAttempts(100_000)
             .acknowledgementStream(new StreamIdentifier(AERON_GROUP, ACKNOWLEDGEMENT))
             .controlStream(new StreamIdentifier(AERON_GROUP, CONTROL))
-            .dataStream(new StreamIdentifier(AERON_GROUP, DATA))
+            .dataStream(dataStream)
             .idleStrategy(backoffIdleStrategy())
-            .leaderSessionId(dataPublication.sessionId());
+            .leaderSessionId(dataPublication.sessionId())
+            .archiver(archiver)
+            .archiveReader(archiveReader);
 
         raftNode = new RaftNode(configuration, timeInMs);
     }

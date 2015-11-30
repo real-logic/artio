@@ -135,12 +135,13 @@ public class AbstractReplicationTest
         final FragmentHandler handler,
         final TermState termState)
     {
-        final LogDirectoryDescriptor descriptor = new LogDirectoryDescriptor(logFileDir(id));
-        final ArchiveMetaData metaData = new ArchiveMetaData(descriptor);
+        final ArchiveMetaData metaData = archiveMetaData(id);
         final Subscription subscription = dataSubscription();
+        final StreamIdentifier streamId = new StreamIdentifier(subscription);
         final ArchiveReader archiveReader = new ArchiveReader(
-            metaData, LOGGER_CACHE_CAPACITY, new StreamIdentifier(subscription));
-        final Archiver archiver = new Archiver(metaData, LOGGER_CACHE_CAPACITY, subscription);
+            metaData, LOGGER_CACHE_CAPACITY, streamId);
+        final Archiver archiver = new Archiver(metaData, LOGGER_CACHE_CAPACITY, streamId)
+            .subscription(subscription);
 
         return new Follower(
             id,
@@ -157,7 +158,13 @@ public class AbstractReplicationTest
             .follow(0);
     }
 
-    private String logFileDir(final short id)
+    public static ArchiveMetaData archiveMetaData(final short nodeId)
+    {
+        final LogDirectoryDescriptor descriptor = new LogDirectoryDescriptor(logFileDir(nodeId));
+        return new ArchiveMetaData(descriptor);
+    }
+
+    private static String logFileDir(final short id)
     {
         return IoUtil.tmpDirName() + "/node" + id;
     }

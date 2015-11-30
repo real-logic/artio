@@ -43,19 +43,19 @@ public class Archiver implements Agent, FileBlockHandler
 
     private final ArchiveMetaData metaData;
     private final IntLruCache<SessionArchiver> sessionIdToArchive;
-    private final Subscription subscription;
     private final StreamIdentifier streamId;
     private final LogDirectoryDescriptor directoryDescriptor;
+
+    private Subscription subscription;
 
     public Archiver(
         final ArchiveMetaData metaData,
         final int loggerCacheCapacity,
-        final Subscription subscription)
+        final StreamIdentifier streamId)
     {
         this.metaData = metaData;
         this.directoryDescriptor = metaData.directoryDescriptor();
-        this.subscription = subscription;
-        streamId = new StreamIdentifier(subscription);
+        this.streamId = streamId;
         sessionIdToArchive = new IntLruCache<>(loggerCacheCapacity, sessionId ->
         {
             final Image image = subscription.getImage(sessionId);
@@ -69,6 +69,12 @@ public class Archiver implements Agent, FileBlockHandler
             metaData.write(streamId, sessionId, initialTermId, termBufferLength);
             return new SessionArchiver(sessionId, image);
         }, SessionArchiver::close);
+    }
+
+    public Archiver subscription(final Subscription subscription)
+    {
+        this.subscription = subscription;
+        return this;
     }
 
     public int doWork()

@@ -139,6 +139,9 @@ public class RaftNode implements Role
 
     private void injectFollowerStreams()
     {
+        configuration.archiver()
+                     .subscription(subscription(configuration.dataStream()));
+
         final StreamIdentifier controlStream = configuration.controlStream();
         follower
             .acknowledgementPublication(raftPublication(configuration.acknowledgementStream()))
@@ -166,8 +169,8 @@ public class RaftNode implements Role
             termState,
             configuration.leaderSessionId(),
             configuration.archiveReader());
-        candidate = new Candidate(
 
+        candidate = new Candidate(
             nodeId,
             this,
             clusterSize,

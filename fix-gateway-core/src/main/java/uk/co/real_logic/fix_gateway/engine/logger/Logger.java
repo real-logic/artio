@@ -115,13 +115,13 @@ public class Logger implements AutoCloseable
 
         if (configuration.logInboundMessages())
         {
-            addArchiver(loggerCacheCapacity, directoryDescriptor, inboundLibraryStreams.subscription());
+            addArchiver(loggerCacheCapacity, inboundLibraryStreams.subscription());
         }
 
         if (configuration.logOutboundMessages())
         {
             final Subscription outboundSubscription = outboundLibraryStreams.subscription();
-            addArchiver(loggerCacheCapacity, directoryDescriptor, outboundSubscription);
+            addArchiver(loggerCacheCapacity, outboundSubscription);
 
             outboundArchiveReader = new ArchiveReader(
                 LoggerUtil.newArchiveMetaData(logFileDir),
@@ -136,13 +136,12 @@ public class Logger implements AutoCloseable
     }
 
     private void addArchiver(final int loggerCacheCapacity,
-                             final LogDirectoryDescriptor directoryDescriptor,
                              final Subscription subscription)
     {
         final Archiver archiver = new Archiver(
             LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
-            loggerCacheCapacity,
-            subscription);
+            loggerCacheCapacity, new StreamIdentifier(subscription))
+            .subscription(subscription);
         archivers.add(archiver);
     }
 
