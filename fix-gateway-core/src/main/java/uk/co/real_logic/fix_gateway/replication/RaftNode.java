@@ -25,15 +25,16 @@ import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
  */
 public class RaftNode implements Role
 {
-    public static final int HEARTBEAT_TO_TIMEOUT_RATIO = 4;
+    public static final int HEARTBEAT_TO_TIMEOUT_RATIO = 5;
+
     private final short nodeId;
     private final RaftNodeConfiguration configuration;
-    private Role currentRole;
-
     private final TermState termState = new TermState();
     private final Leader leader;
     private final Candidate candidate;
     private final Follower follower;
+
+    private Role currentRole;
 
     private abstract class NodeState
     {
@@ -252,17 +253,17 @@ public class RaftNode implements Role
         currentRole.closeStreams();
     }
 
-    public boolean roleIsLeader()
+    public boolean isLeader()
     {
         return currentRole == leader;
     }
 
-    public boolean roleIsCandidate()
+    public boolean isCandidate()
     {
         return currentRole == candidate;
     }
 
-    public boolean roleIsFollower()
+    public boolean isFollower()
     {
         return currentRole == follower;
     }

@@ -15,10 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import org.junit.After;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
+import org.junit.rules.Timeout;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Predicate;
@@ -44,24 +44,31 @@ public class ClusterReplicationTest
     private NodeRunner node2 = new NodeRunner(2, 1, 3);
     private NodeRunner node3 = new NodeRunner(3, 1, 2);
 
-    @Ignore
-    @Test(timeout = 3000)
-    public void shouldEstablishCluster()
+    @Rule
+    public Timeout timeout = Timeout.seconds(3);
+
+    @Before
+    public void electLeader()
     {
         while (!foundLeader())
         {
             pollAll();
         }
 
+        DebugLogger.log("Leader elected");
+    }
+
+    @Ignore
+    @Test
+    public void shouldEstablishCluster()
+    {
         checkClusterStable();
     }
 
     @Ignore
-    @Test(timeout = 3000)
+    @Test
     public void shouldReplicateMessage()
     {
-        shouldEstablishCluster();
-
         final NodeRunner leader = leader();
 
         sendMessageTo(leader);
@@ -70,11 +77,9 @@ public class ClusterReplicationTest
     }
 
     @Ignore
-    @Test(timeout = 3000)
+    @Test
     public void shouldReformClusterAfterLeaderNetsplit()
     {
-        shouldEstablishCluster();
-
         final NodeRunner leader = leader();
         final NodeRunner[] followers = followers();
 
@@ -88,11 +93,9 @@ public class ClusterReplicationTest
     }
 
     @Ignore
-    @Test(timeout = 3000)
+    @Test
     public void shouldRejoinClusterAfterFollowerNetsplit()
     {
-        shouldEstablishCluster();
-
         final NodeRunner follower = aFollower();
 
         follower.dropFrames(true);
@@ -105,11 +108,9 @@ public class ClusterReplicationTest
     }
 
     @Ignore
-    @Test(timeout = 3000)
+    @Test
     public void shouldNotReplicateMessageUntilClusterReformed()
     {
-        shouldEstablishCluster();
-
         final NodeRunner leader = leader();
         final NodeRunner follower = aFollower();
 
@@ -129,11 +130,9 @@ public class ClusterReplicationTest
     }
 
     @Ignore
-    @Test(timeout = 3000)
+    @Test
     public void shouldReformClusterAfterFollowerNetsplit()
     {
-        shouldEstablishCluster();
-
         final NodeRunner[] followers = followers();
 
         nodes().forEach(nodeRunner -> nodeRunner.dropFrames(true));
@@ -154,12 +153,12 @@ public class ClusterReplicationTest
 
     private void assertBecomesCandidate(final NodeRunner ... nodes)
     {
-        assertBecomes(RaftNode::roleIsCandidate, nodes);
+        assertBecomes(RaftNode::isCandidate, nodes);
     }
 
     private void assertBecomesFollower(final NodeRunner ... nodes)
     {
-        assertBecomes(RaftNode::roleIsFollower, nodes);
+        assertBecomes(RaftNode::isFollower, nodes);
     }
 
     private void assertBecomes(final Predicate<RaftNode> predicate, final NodeRunner... nodes)
@@ -175,7 +174,7 @@ public class ClusterReplicationTest
 
     private RaftNode[] getReplicators(final NodeRunner[] nodes)
     {
-        return Stream.of(nodes).map(NodeRunner::replicator).toArray(RaftNode[]::new);
+        return Stream.of(nodes).map(NodeRunner::raftNode).toArray(RaftNode[]::new);
     }
 
     private static <T> boolean allMatch(final T[] values, final Predicate<T> predicate)
@@ -213,11 +212,17 @@ public class ClusterReplicationTest
         {
             pollAll();
 
-            assertTrue(leader.isLeader());
+            assertTrue("Leader no longer leader", leader.isLeader());
 
-            assertFalse(followers[0].isLeader());
-            assertFalse(followers[1].isLeader());
+            assertIsFollower(followers[0]);
+            assertIsFollower(followers[1]);
         }
+    }
+
+    private void assertIsFollower(final NodeRunner follower)
+    {
+        final RaftNode node = follower.raftNode();
+        assertTrue(node.nodeId() + " no longer follower", node.isFollower());
     }
 
     private boolean notReceivedMessage(final NodeRunner node)
@@ -241,11 +246,10 @@ public class ClusterReplicationTest
     private void pollAll()
     {
         final int fragmentLimit = 1;
-        final long time = System.currentTimeMillis();
-        node1.poll(fragmentLimit, time);
-        node2.poll(fragmentLimit, time);
-        node3.poll(fragmentLimit, time);
-        LockSupport.parkNanos(MILLISECONDS.toNanos(10));
+        node1.poll(fragmentLimit, System.currentTimeMillis());
+        node2.poll(fragmentLimit, System.currentTimeMillis());
+        node3.poll(fragmentLimit, System.currentTimeMillis());
+        LockSupport.parkNanos(MILLISECONDS.toNanos(1));
     }
 
     private boolean foundLeader()

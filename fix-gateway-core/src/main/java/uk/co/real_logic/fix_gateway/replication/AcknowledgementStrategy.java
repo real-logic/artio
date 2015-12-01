@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 
+// TODO: have strategies also count election votes
 public interface AcknowledgementStrategy
 {
     long findAckedTerm(final Long2LongHashMap sessionIdToPosition);

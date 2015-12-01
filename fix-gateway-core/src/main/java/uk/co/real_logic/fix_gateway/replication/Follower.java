@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.replication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
@@ -182,14 +183,14 @@ public class Follower implements Role, RaftHandler
     {
         if (canVoteFor(candidateId) && safeToVote(leaderShipTerm, candidatePosition))
         {
-            //System.out.println(nodeId + ": Voting for " + candidateId);
             votedFor = candidateId;
             controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR);
+            DebugLogger.log("%d: vote for %d in %d%n", nodeId, candidateId, leaderShipTerm);
         }
         else if (candidateId != nodeId)
         {
             controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST);
-            //System.out.println(nodeId + ": Voting against " + candidateId);
+            DebugLogger.log("%d: vote against %d in %d%n", nodeId, candidateId, leaderShipTerm);
         }
     }
 

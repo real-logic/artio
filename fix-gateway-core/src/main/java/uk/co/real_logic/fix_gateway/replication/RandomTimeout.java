@@ -19,24 +19,25 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class RandomTimeout
 {
-    private static final int MIN_TIMEOUT_FACTOR = 2;
+    public static final int MAX_TO_MIN_TIMEOUT = 2;
 
     private final long maxTimeout;
     private final long minTimeout;
 
     private long nextExpiry;
 
-    public RandomTimeout(final long maxTimeout, final long timeInMs)
+    public RandomTimeout(final long minTimeout, final long timeInMs)
     {
-        this.maxTimeout = maxTimeout;
-        this.minTimeout = maxTimeout / MIN_TIMEOUT_FACTOR;
+        this.minTimeout = minTimeout;
+        this.maxTimeout = minTimeout * MAX_TO_MIN_TIMEOUT;
         onKeepAlive(timeInMs);
     }
 
     public void onKeepAlive(final long timeInMs)
     {
-        nextExpiry = timeInMs + ThreadLocalRandom.current().nextLong(minTimeout, maxTimeout);
-        //System.out.println("WAT? " + (nextExpiry - timeInMs));
+        final long timeout = ThreadLocalRandom.current().nextLong(minTimeout, maxTimeout);
+        // System.out.println(timeout);
+        nextExpiry = timeInMs + timeout;
     }
 
     public boolean hasTimedOut(final long timeInMs)

@@ -33,6 +33,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.fix_gateway.replication.RandomTimeout.MAX_TO_MIN_TIMEOUT;
 
 /**
  * Test an isolated set of leaders and followers
@@ -172,8 +173,9 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     @Test
     public void shouldTimeoutLeader()
     {
-        follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
-        follower2.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
+        final long afterTimeout = MAX_TO_MIN_TIMEOUT * TIMEOUT + 1;
+        follower1.poll(FRAGMENT_LIMIT, afterTimeout);
+        follower2.poll(FRAGMENT_LIMIT, afterTimeout);
 
         ReplicationAsserts.transitionsToCandidate(raftNode2);
         ReplicationAsserts.transitionsToCandidate(raftNode3);

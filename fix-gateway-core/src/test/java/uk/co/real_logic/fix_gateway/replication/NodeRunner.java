@@ -36,7 +36,7 @@ public class NodeRunner implements AutoCloseable, Role
 {
     public static final long NOT_LEADER = -3;
 
-    public static final long TIMEOUT_IN_MS = 100;
+    public static final long TIMEOUT_IN_MS = 500;
     public static final String AERON_GROUP = "aeron:udp?group=224.0.1.1:40456";
 
     private final SwitchableLossGenerator lossGenerator = new SwitchableLossGenerator();
@@ -114,10 +114,10 @@ public class NodeRunner implements AutoCloseable, Role
 
     public boolean isLeader()
     {
-        return raftNode.roleIsLeader();
+        return raftNode.isLeader();
     }
 
-    public RaftNode replicator()
+    public RaftNode raftNode()
     {
         return raftNode;
     }
@@ -129,7 +129,7 @@ public class NodeRunner implements AutoCloseable, Role
 
     public long offer(final DirectBuffer buffer, final int offset, final int length)
     {
-        if (!raftNode.roleIsLeader())
+        if (!raftNode.isLeader())
         {
             return NOT_LEADER;
         }

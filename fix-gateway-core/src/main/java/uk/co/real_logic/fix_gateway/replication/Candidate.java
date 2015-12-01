@@ -22,15 +22,11 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 
 public class Candidate implements Role, RaftHandler
 {
     private final RaftSubscriber raftSubscriber = new RaftSubscriber(this);
-
-    private final ThreadLocalRandom random = ThreadLocalRandom.current();
 
     private final TermState termState;
     private final short id;
@@ -100,10 +96,12 @@ public class Candidate implements Role, RaftHandler
     public void onReplyVote(
         final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
-        //System.out.println("RECV VOTE from " + senderNodeId + ", to " + candidateId);
+        DebugLogger.log("%d: Received vote from %d about %d in %d%n", id, senderNodeId, candidateId, leaderShipTerm);
 
         if (shouldCountVote(candidateId, leaderShipTerm, vote) && countVote(senderNodeId))
         {
+            voteTimeout.onKeepAlive(timeInMs);
+
             if (votesFor.size() > clusterSize / 2)
             {
                 termState.leadershipTerm(leaderShipTerm);
@@ -127,16 +125,20 @@ public class Candidate implements Role, RaftHandler
                                      final long position,
                                      final int dataSessionId)
     {
-        // System.out.println("YES @ " + this.id);
-        if (nodeId != id && position >= this.position)
+        if (nodeId != id)
         {
-            votesFor.clear();
-            termState
-                .commitPosition(position)
-                .leadershipTerm(leaderShipTerm)
-                .leaderSessionId(dataSessionId);
+            final boolean hasHigherPosition = position >= this.position;
+            if (hasHigherPosition)
+            {
+                votesFor.clear();
+                termState
+                    .commitPosition(position)
+                    .leadershipTerm(leaderShipTerm)
+                    .leaderSessionId(dataSessionId);
 
-            raftNode.transitionToFollower(this, timeInMs);
+                raftNode.transitionToFollower(this, timeInMs);
+            }
+            DebugLogger.log("%d: New Leader %s%n", id, hasHigherPosition);
         }
     }
 

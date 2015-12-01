@@ -112,6 +112,14 @@ public final class DebugLogger
         }
     }
 
+    public static void log(final String formatString, final long first, final boolean second)
+    {
+        if (DEBUG_PRINT_MESSAGES)
+        {
+            OUTPUT.printf(formatString, first, second);
+        }
+    }
+
     public static void log(final String formatString, final long first)
     {
         if (DEBUG_PRINT_MESSAGES)
@@ -141,6 +149,15 @@ public final class DebugLogger
         if (DEBUG_PRINT_MESSAGES)
         {
             OUTPUT.printf(formatString, first, second, third);
+        }
+    }
+
+    public static void log(
+        final String formatString, final long first, final long second, final long third, final long fourth)
+    {
+        if (DEBUG_PRINT_MESSAGES)
+        {
+            OUTPUT.printf(formatString, first, second, third, fourth);
         }
     }
 

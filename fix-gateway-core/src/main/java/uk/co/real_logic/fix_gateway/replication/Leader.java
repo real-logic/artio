@@ -174,13 +174,13 @@ public class Leader implements Role, RaftHandler
 
     public void onRequestVote(final short candidateId, final int leaderShipTerm, final long lastAckedPosition)
     {
-        // We've possibly timed out
+        // TODO: We've possibly timed out
     }
 
     public void onReplyVote(
         final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
-        // We've possibly timed out
+        // TODO: We've possibly timed out
     }
 
     public void onResend(final int leaderSessionId,
