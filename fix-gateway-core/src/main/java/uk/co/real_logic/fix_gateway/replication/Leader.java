@@ -137,7 +137,6 @@ public class Leader implements Role, RaftHandler
 
     public void closeStreams()
     {
-        controlPublication.close();
         acknowledgementSubscription.close();
         dataSubscription.close();
     }

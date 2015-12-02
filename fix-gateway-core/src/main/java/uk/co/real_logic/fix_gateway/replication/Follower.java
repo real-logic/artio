@@ -163,8 +163,6 @@ public class Follower implements Role, RaftHandler
 
     public void closeStreams()
     {
-        controlPublication.close();
-        acknowledgementPublication.close();
         controlSubscription.close();
     }
 

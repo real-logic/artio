@@ -72,7 +72,7 @@ public class RaftNode implements Role
 
             leader.closeStreams();
 
-            injectFollowerStreams();
+            injectFollowerSubscriptions();
 
             currentRole = follower.votedFor(votedFor)
                                   .follow(timeInMs);
@@ -87,7 +87,7 @@ public class RaftNode implements Role
 
             follower.closeStreams();
 
-            injectCandidateStreams();
+            injectCandidateSubscriptions();
 
             currentRole = candidate.startNewElection(timeInMs);
         }
@@ -101,7 +101,7 @@ public class RaftNode implements Role
 
             candidate.closeStreams();
 
-            injectLeaderStreams();
+            injectLeaderSubscriptions();
 
             currentRole = leader.getsElected(timeInMs);
         }
@@ -112,38 +112,32 @@ public class RaftNode implements Role
 
             candidate.closeStreams();
 
-            injectFollowerStreams();
+            injectFollowerSubscriptions();
 
             currentRole = follower.follow(timeInMs);
         }
     };
 
-    private void injectLeaderStreams()
+    private void injectLeaderSubscriptions()
     {
         leader
-            .controlPublication(raftPublication(configuration.controlStream()))
             .acknowledgementSubscription(subscription(configuration.acknowledgementStream()))
             .dataSubscription(subscription(configuration.dataStream()));
     }
 
-    private void injectCandidateStreams()
+    private void injectCandidateSubscriptions()
     {
-        final StreamIdentifier control = configuration.controlStream();
         candidate
-            .controlPublication(raftPublication(control))
-            .controlSubscription(subscription(control));
+            .controlSubscription(subscription(configuration.controlStream()));
     }
 
-    private void injectFollowerStreams()
+    private void injectFollowerSubscriptions()
     {
         configuration.archiver()
                      .subscription(subscription(configuration.dataStream()));
 
-        final StreamIdentifier controlStream = configuration.controlStream();
         follower
-            .acknowledgementPublication(raftPublication(configuration.acknowledgementStream()))
-            .controlPublication(raftPublication(controlStream))
-            .controlSubscription(subscription(controlStream));
+            .controlSubscription(subscription(configuration.controlStream()));
     }
 
     public RaftNode(final RaftNodeConfiguration configuration, final long timeInMs)
@@ -155,6 +149,9 @@ public class RaftNode implements Role
         final long heartbeatTimeInMs = timeoutIntervalInMs / HEARTBEAT_TO_TIMEOUT_RATIO;
         final int clusterSize = configuration.otherNodes().size() + 1;
 
+        final RaftPublication acknowledgementPublication = raftPublication(configuration.acknowledgementStream());
+        final RaftPublication controlPublication = raftPublication(configuration.controlStream());
+
         leader = new Leader(
             nodeId,
             configuration.acknowledgementStrategy(),
@@ -165,7 +162,8 @@ public class RaftNode implements Role
             heartbeatTimeInMs,
             termState,
             configuration.leaderSessionId(),
-            configuration.archiveReader());
+            configuration.archiveReader())
+            .controlPublication(controlPublication);
 
         candidate = new Candidate(
             nodeId,
@@ -173,7 +171,8 @@ public class RaftNode implements Role
             clusterSize,
             timeoutIntervalInMs,
             termState,
-            configuration.acknowledgementStrategy());
+            configuration.acknowledgementStrategy())
+            .controlPublication(controlPublication);
 
         follower = new Follower(
             nodeId,
@@ -183,14 +182,16 @@ public class RaftNode implements Role
             timeoutIntervalInMs,
             termState,
             configuration.archiveReader(),
-            configuration.archiver());
+            configuration.archiver())
+            .controlPublication(controlPublication)
+            .acknowledgementPublication(acknowledgementPublication);
 
         startAsFollower(timeInMs);
     }
 
     private void startAsFollower(final long timeInMs)
     {
-        injectFollowerStreams();
+        injectFollowerSubscriptions();
 
         currentRole = follower.follow(timeInMs);
     }

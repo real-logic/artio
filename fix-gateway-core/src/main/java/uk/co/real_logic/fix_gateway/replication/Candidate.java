@@ -83,7 +83,6 @@ public class Candidate implements Role, RaftHandler
 
     public void closeStreams()
     {
-        controlPublication.close();
         controlSubscription.close();
     }
 
