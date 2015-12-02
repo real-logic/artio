@@ -53,7 +53,7 @@ public class RaftNode implements Role
             throw new UnsupportedOperationException();
         }
 
-        public void transitionToFollower(final Leader leader, final long timeInMs)
+        public void transitionToFollower(final Leader leader, final int votedFor, final long timeInMs)
         {
             throw new UnsupportedOperationException();
         }
@@ -66,7 +66,7 @@ public class RaftNode implements Role
 
     private final NodeState leaderState = new NodeState()
     {
-        public void transitionToFollower(final Leader leader, final long timeInMs)
+        public void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
         {
             DebugLogger.log("%d: L -> Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
@@ -74,7 +74,8 @@ public class RaftNode implements Role
 
             injectFollowerStreams();
 
-            currentRole = follower.follow(timeInMs);
+            currentRole = follower.votedFor(votedFor)
+                                  .follow(timeInMs);
         }
     };
 
@@ -218,9 +219,9 @@ public class RaftNode implements Role
         candidateState.transitionToFollower(candidate, timeInMs);
     }
 
-    public void transitionToFollower(final Leader leader, final long timeInMs)
+    public void transitionToFollower(final Leader leader, final int votedFor, final long timeInMs)
     {
-        leaderState.transitionToFollower(leader, timeInMs);
+        leaderState.transitionToFollower(leader, votedFor, timeInMs);
     }
 
     public void transitionToLeader(final long timeInMs)

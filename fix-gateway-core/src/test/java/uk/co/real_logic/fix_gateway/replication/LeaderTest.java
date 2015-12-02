@@ -29,6 +29,8 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
+import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
+import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
 import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.hasLeaderSessionId;
 import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.neverTransitionsToFollower;
 
@@ -36,12 +38,14 @@ public class LeaderTest
 {
     private static final short ID = 2;
     private static final int LEADERSHIP_TERM = 1;
+    private static final int NEW_TERM = LEADERSHIP_TERM + 1;
     private static final int LEADER_SESSION_ID = 42;
     private static final long TIME = 10L;
     private static final long POSITION = 40L;
     private static final int HEARTBEAT_INTERVAL_IN_MS = 10;
     private static final short NEW_LEADER_ID = 3;
     private static final short FOLLOWER_ID = 4;
+    private static final short CANDIDATE_ID = 5;
     private static final int NEW_LEADER_SESSION_ID = 43;
 
     private RaftPublication controlPublication = mock(RaftPublication.class);
@@ -100,7 +104,7 @@ public class LeaderTest
     {
         receivesHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM + 1, NEW_LEADER_SESSION_ID);
 
-        verify(raftNode, atLeastOnce()).transitionToFollower(any(Leader.class), anyLong());
+        transitionsToFollower(NO_ONE);
         assertThat(termState, hasLeaderSessionId(NEW_LEADER_SESSION_ID));
     }
 
@@ -130,9 +134,38 @@ public class LeaderTest
         resendsMissingLogEntries(followerPosition);
     }
 
+    @Test
+    public void shouldIgnoreRequestVotesForCurrentTerm()
+    {
+        leader.onRequestVote(CANDIDATE_ID, LEADERSHIP_TERM, POSITION);
+
+        verifyNoMoreInteractions(raftNode);
+    }
+
+    @Test
+    public void shouldReplyToVoteForNewTerm()
+    {
+        leader.onRequestVote(CANDIDATE_ID, NEW_TERM, POSITION);
+
+        voteForCandidate();
+        transitionsToFollower(CANDIDATE_ID);
+    }
+
+    // TODO: reply vote position
+
+    private void voteForCandidate()
+    {
+        verify(controlPublication).saveReplyVote(ID, CANDIDATE_ID, NEW_TERM, FOR);
+    }
+
     private void receivesMissingLogEntries(final long followerPosition)
     {
         leader.onMessageAcknowledgement(followerPosition, FOLLOWER_ID, MISSING_LOG_ENTRIES);
+    }
+
+    private void transitionsToFollower(final int votedFor)
+    {
+        verify(raftNode, atLeastOnce()).transitionToFollower(eq(leader), eq(votedFor), anyLong());
     }
 
     private void resendsMissingLogEntries(final long followerPosition)

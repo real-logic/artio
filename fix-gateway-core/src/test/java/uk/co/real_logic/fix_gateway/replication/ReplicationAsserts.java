@@ -41,7 +41,7 @@ public final class ReplicationAsserts
 
     public static void neverTransitionsToFollower(final RaftNode raftNode)
     {
-        verify(raftNode, never()).transitionToFollower(any(Leader.class), anyLong());
+        verify(raftNode, never()).transitionToFollower(any(Leader.class), anyShort(), anyLong());
     }
 
     public static void transitionsToLeader(final RaftNode raftNode)

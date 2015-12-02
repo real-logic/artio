@@ -33,7 +33,7 @@ import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 
 public class Follower implements Role, RaftHandler
 {
-    private static final short NO_ONE = -1;
+    public static final short NO_ONE = -1;
 
     private final RaftSubscriber raftSubscriber = new RaftSubscriber(this);
 
@@ -292,6 +292,12 @@ public class Follower implements Role, RaftHandler
     public Follower controlSubscription(final Subscription controlSubscription)
     {
         this.controlSubscription = controlSubscription;
+        return this;
+    }
+
+    public Follower votedFor(final short votedFor)
+    {
+        this.votedFor = votedFor;
         return this;
     }
 }

@@ -48,7 +48,7 @@ public class ClusterReplicationTest
     public Timeout timeout = Timeout.seconds(3);
 
     @Before
-    public void electLeader()
+    public void hasElectedLeader()
     {
         while (!foundLeader())
         {
@@ -58,7 +58,6 @@ public class ClusterReplicationTest
         DebugLogger.log("Leader elected");
     }
 
-    @Ignore
     @Test
     public void shouldEstablishCluster()
     {
@@ -205,18 +204,12 @@ public class ClusterReplicationTest
 
     private void checkClusterStable()
     {
-        final NodeRunner leader = leader();
-        final NodeRunner[] followers = followers();
-
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 10; i++)
         {
             pollAll();
-
-            assertTrue("Leader no longer leader", leader.isLeader());
-
-            assertIsFollower(followers[0]);
-            assertIsFollower(followers[1]);
         }
+
+        hasElectedLeader();
     }
 
     private void assertIsFollower(final NodeRunner follower)

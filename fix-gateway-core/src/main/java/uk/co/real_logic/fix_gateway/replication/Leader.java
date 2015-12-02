@@ -174,13 +174,18 @@ public class Leader implements Role, RaftHandler
 
     public void onRequestVote(final short candidateId, final int leaderShipTerm, final long lastAckedPosition)
     {
-        // TODO: We've possibly timed out
+        if (this.leaderShipTerm < leaderShipTerm)
+        {
+            controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.FOR);
+
+            raftNode.transitionToFollower(this, candidateId, timeInMs);
+        }
     }
 
     public void onReplyVote(
         final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
-        // TODO: We've possibly timed out
+        // Ignore this message
     }
 
     public void onResend(final int leaderSessionId,
@@ -208,7 +213,7 @@ public class Leader implements Role, RaftHandler
                 .receivedPosition(commitAndLastAppliedPosition)
                 .leaderSessionId(leaderSessionId);
 
-            raftNode.transitionToFollower(this, timeInMs);
+            raftNode.transitionToFollower(this, Follower.NO_ONE, timeInMs);
         }
     }
 
