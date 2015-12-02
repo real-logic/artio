@@ -44,7 +44,7 @@ public class CandidateTest
     private TermState termState = new TermState();
 
     private Candidate candidate = new Candidate(
-        ID, raftNode, CLUSTER_SIZE, VOTE_TIMEOUT, termState);
+        ID, raftNode, CLUSTER_SIZE, VOTE_TIMEOUT, termState, new QuorumAcknowledgementStrategy());
 
     @Before
     public void setUp()

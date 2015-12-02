@@ -26,7 +26,6 @@ public class QuorumAcknowledgementStrategy implements AcknowledgementStrategy
 {
     private long[] positions = new long[0];
 
-    @Override
     public long findAckedTerm(final Long2LongHashMap sessionIdToPosition)
     {
         final int size = sessionIdToPosition.size();
@@ -47,6 +46,11 @@ public class QuorumAcknowledgementStrategy implements AcknowledgementStrategy
         final int quorumPoint = (size % 2 == 0) ? size / 2 - 1 : size / 2;
 
         return positions[quorumPoint];
+    }
+
+    public boolean isElected(final int receivedVotes, final int clusterSize)
+    {
+        return receivedVotes > clusterSize / 2;
     }
 
     private long[] copyPositions(final Long2LongHashMap sessionIdToPosition, final int size)

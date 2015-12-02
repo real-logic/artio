@@ -121,7 +121,7 @@ public class ElectionTest extends AbstractReplicationTest
 
     private Candidate candidate(final short id, final RaftNode raftNode, final TermState termState)
     {
-        return new Candidate(id, raftNode, CLUSTER_SIZE, TIMEOUT, termState)
+        return new Candidate(id, raftNode, CLUSTER_SIZE, TIMEOUT, termState, new QuorumAcknowledgementStrategy())
                     .controlSubscription(controlSubscription())
                     .controlPublication(raftPublication(CONTROL));
     }

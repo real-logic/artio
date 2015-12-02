@@ -172,7 +172,8 @@ public class RaftNode implements Role
             this,
             clusterSize,
             timeoutIntervalInMs,
-            termState);
+            termState,
+            configuration.acknowledgementStrategy());
 
         follower = new Follower(
             nodeId,

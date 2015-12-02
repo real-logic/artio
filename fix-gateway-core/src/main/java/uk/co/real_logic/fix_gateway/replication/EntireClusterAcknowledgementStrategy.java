@@ -23,7 +23,6 @@ import uk.co.real_logic.agrona.collections.Long2LongHashMap;
  */
 public class EntireClusterAcknowledgementStrategy implements AcknowledgementStrategy
 {
-    @Override
     public long findAckedTerm(final Long2LongHashMap sessionIdToPosition)
     {
         if (sessionIdToPosition.isEmpty())
@@ -32,5 +31,10 @@ public class EntireClusterAcknowledgementStrategy implements AcknowledgementStra
         }
 
         return sessionIdToPosition.minValue();
+    }
+
+    public boolean isElected(final int receivedVotes, final int clusterSize)
+    {
+        return receivedVotes == clusterSize;
     }
 }
