@@ -25,7 +25,7 @@ import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.*;
 /**
  * Test candidate instances in an election
  */
-public class ElectionTest extends AbstractReplicationTest
+public class TwoCandidateElectionTest extends AbstractReplicationTest
 {
     private static final long LOW_POSITION = 32;
     private static final long HIGH_POSITION = 40;
@@ -41,7 +41,7 @@ public class ElectionTest extends AbstractReplicationTest
 
         node1 = candidate((short) 1, raftNode1, termState1);
         node2 = candidate((short) 2, raftNode2, termState2);
-        node3 = follower((short) 3, raftNode2, mock(FragmentHandler.class), termState3);
+        node3 = follower((short) 3, raftNode3, mock(FragmentHandler.class), termState3);
     }
 
     @Test
