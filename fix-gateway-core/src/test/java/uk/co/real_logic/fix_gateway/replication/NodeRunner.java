@@ -22,6 +22,7 @@ import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.agrona.concurrent.YieldingIdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
@@ -36,7 +37,7 @@ public class NodeRunner implements AutoCloseable, Role
 {
     public static final long NOT_LEADER = -3;
 
-    public static final long TIMEOUT_IN_MS = 500;
+    public static final long TIMEOUT_IN_MS = 3000;
     public static final String AERON_GROUP = "aeron:udp?group=224.0.1.1:40456";
 
     private final SwitchableLossGenerator lossGenerator = new SwitchableLossGenerator();
@@ -53,6 +54,7 @@ public class NodeRunner implements AutoCloseable, Role
         final MediaDriver.Context context = new MediaDriver.Context();
         context
             .threadingMode(SHARED)
+            .sharedIdleStrategy(new YieldingIdleStrategy())
             .controlLossGenerator(lossGenerator)
             .dataLossGenerator(lossGenerator)
             .dirsDeleteOnStart(true)
@@ -83,7 +85,11 @@ public class NodeRunner implements AutoCloseable, Role
             .otherNodes(otherNodeIds)
             .timeoutIntervalInMs(TIMEOUT_IN_MS)
             .acknowledgementStrategy(new EntireClusterAcknowledgementStrategy())
-            .fragmentHandler((buffer, offset, length, header) -> replicatedPosition = offset + length)
+            .fragmentHandler((buffer, offset, length, header) ->
+            {
+                System.out.println("Fragment");
+                replicatedPosition = offset + length;
+            })
             .failCounter(mock(AtomicCounter.class))
             .maxClaimAttempts(100_000)
             .acknowledgementStream(new StreamIdentifier(AERON_GROUP, ACKNOWLEDGEMENT))

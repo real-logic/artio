@@ -45,7 +45,7 @@ public class ClusterReplicationTest
     private NodeRunner node3 = new NodeRunner(3, 1, 2);
 
     @Rule
-    public Timeout timeout = Timeout.seconds(3);
+    public Timeout timeout = Timeout.seconds(8);
 
     @Before
     public void hasElectedLeader()

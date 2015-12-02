@@ -34,6 +34,7 @@ public class Candidate implements Role, RaftHandler
     private final int clusterSize;
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final IntHashSet votesFor;
+    private final IntHashSet votesAgainst;
     private final RandomTimeout voteTimeout;
 
     private RaftPublication controlPublication;
@@ -56,6 +57,7 @@ public class Candidate implements Role, RaftHandler
         this.voteTimeout = new RandomTimeout(voteTimeout, 0L);
         this.termState = termState;
         votesFor = new IntHashSet(2 * clusterSize, -1);
+        votesAgainst = new IntHashSet(2 * clusterSize, -1);
     }
 
     public int checkConditions(final long timeInMs)

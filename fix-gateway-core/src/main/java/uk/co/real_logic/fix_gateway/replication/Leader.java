@@ -174,11 +174,15 @@ public class Leader implements Role, RaftHandler
 
     public void onRequestVote(final short candidateId, final int leaderShipTerm, final long lastAckedPosition)
     {
-        if (this.leaderShipTerm < leaderShipTerm)
+        if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= commitAndLastAppliedPosition)
         {
             controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.FOR);
 
             raftNode.transitionToFollower(this, candidateId, timeInMs);
+        }
+        else
+        {
+            controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.AGAINST);
         }
     }
 
