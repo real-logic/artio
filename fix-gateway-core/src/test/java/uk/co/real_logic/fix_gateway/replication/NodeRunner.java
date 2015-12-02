@@ -22,7 +22,6 @@ import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.agrona.concurrent.YieldingIdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
@@ -37,7 +36,7 @@ public class NodeRunner implements AutoCloseable, Role
 {
     public static final long NOT_LEADER = -3;
 
-    public static final long TIMEOUT_IN_MS = 3000;
+    public static final long TIMEOUT_IN_MS = 2000;
     public static final String AERON_GROUP = "aeron:udp?group=224.0.1.1:40456";
 
     private final SwitchableLossGenerator lossGenerator = new SwitchableLossGenerator();
