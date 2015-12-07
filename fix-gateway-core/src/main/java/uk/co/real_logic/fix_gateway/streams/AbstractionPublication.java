@@ -34,7 +34,7 @@ public class AbstractionPublication implements AutoCloseable
 
     protected final MessageHeaderEncoder header = new MessageHeaderEncoder();
 
-    protected final int maxClaimAttempts;
+    protected final long maxClaimAttempts;
     protected final ReliefValve reliefValve;
     protected final BufferClaim bufferClaim;
     protected final Publication dataPublication;
@@ -59,7 +59,8 @@ public class AbstractionPublication implements AutoCloseable
     protected long claim(final int framedLength)
     {
         long position = 0;
-        for (int i = 0; i < maxClaimAttempts; i++)
+        long i = 0;
+        do
         {
             position = dataPublication.tryClaim(framedLength, bufferClaim);
 
@@ -77,7 +78,8 @@ public class AbstractionPublication implements AutoCloseable
             }
 
             fails.increment();
-        }
+            i++;
+        } while (i <= maxClaimAttempts);
 
         if (position == NOT_CONNECTED)
         {

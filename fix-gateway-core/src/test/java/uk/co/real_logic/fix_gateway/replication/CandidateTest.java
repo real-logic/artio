@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
 
@@ -31,6 +32,7 @@ public class CandidateTest
     private static final long VOTE_TIMEOUT = 100;
     private static final int OLD_LEADERSHIP_TERM = 1;
     private static final int NEW_LEADERSHIP_TERM = OLD_LEADERSHIP_TERM + 1;
+    private static final int NEXT_LEADERSHIP_TERM = NEW_LEADERSHIP_TERM + 1;
     private static final int DATA_SESSION_ID = 42;
     private static final int CLUSTER_SIZE = 5;
 
@@ -153,6 +155,22 @@ public class CandidateTest
 
         neverTransitionsToLeader(raftNode);
         candidateNeverBecomesLeader();
+    }
+
+    @Ignore
+    @Test
+    public void shouldNotReplyVoteToSameTermCandidates()
+    {
+        startElection();
+
+        candidate.onRequestVote(ID_4, NEW_LEADERSHIP_TERM, POSITION);
+    }
+
+    @Ignore
+    @Test
+    public void shouldReplyVoteToHigherTermCandidates()
+    {
+
     }
 
     private void candidateNeverBecomesLeader()
