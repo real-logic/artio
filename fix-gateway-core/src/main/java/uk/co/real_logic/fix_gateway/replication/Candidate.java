@@ -22,6 +22,7 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
+import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 
 public class Candidate implements Role, RaftHandler
@@ -94,7 +95,21 @@ public class Candidate implements Role, RaftHandler
 
     public void onRequestVote(short candidateId, final int leaderShipTerm, long lastAckedPosition)
     {
+        if (leaderShipTerm > this.leaderShipTerm && lastAckedPosition >= this.position)
+        {
+            replyVote(candidateId, leaderShipTerm, FOR);
 
+            raftNode.transitionToFollower(this, timeInMs);
+        }
+        else
+        {
+            replyVote(candidateId, leaderShipTerm, AGAINST);
+        }
+    }
+
+    private long replyVote(final short candidateId, final int leaderShipTerm, final Vote vote)
+    {
+        return controlPublication.saveReplyVote(id, candidateId, leaderShipTerm, vote);
     }
 
     public void onReplyVote(

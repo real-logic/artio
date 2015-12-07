@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
 
@@ -140,7 +139,7 @@ public class CandidateTest
 
         candidate.onConcensusHeartbeat(ID, NEW_LEADERSHIP_TERM, POSITION, DATA_SESSION_ID);
 
-        candidateNeverBecomesLeader();
+        neverTransitionsToFollower(raftNode);
     }
 
     @Test
@@ -154,28 +153,53 @@ public class CandidateTest
         requestsVote(NEW_LEADERSHIP_TERM + 1);
 
         neverTransitionsToLeader(raftNode);
-        candidateNeverBecomesLeader();
+        neverTransitionsToFollower(raftNode);
     }
 
-    @Ignore
     @Test
     public void shouldNotReplyVoteToSameTermCandidates()
     {
         startElection();
 
-        candidate.onRequestVote(ID_4, NEW_LEADERSHIP_TERM, POSITION);
+        candidate.onRequestVote(ID_4, OLD_LEADERSHIP_TERM, POSITION);
+
+        neverTransitionsToLeader(raftNode);
+        neverTransitionsToFollower(raftNode);
+        neverVotesFor();
     }
 
-    @Ignore
+    @Test
+    public void shouldNotReplyVoteToLowerPositionedCandidates()
+    {
+        startElection();
+
+        candidate.onRequestVote(ID_4, NEXT_LEADERSHIP_TERM, 0L);
+
+        neverTransitionsToLeader(raftNode);
+        neverTransitionsToFollower(raftNode);
+        neverVotesFor();
+    }
+
     @Test
     public void shouldReplyVoteToHigherTermCandidates()
     {
+        startElection();
 
+        candidate.onRequestVote(ID_4, NEXT_LEADERSHIP_TERM, POSITION);
+
+        neverTransitionsToLeader(raftNode);
+        transitionsToFollower(raftNode);
+        voteForCandidateInNextTerm();
     }
 
-    private void candidateNeverBecomesLeader()
+    private void voteForCandidateInNextTerm()
     {
-        verify(raftNode, never()).transitionToFollower(any(Candidate.class), anyLong());
+        verify(controlPublication).saveReplyVote(ID, ID_4, NEXT_LEADERSHIP_TERM, FOR);
+    }
+
+    private void neverVotesFor()
+    {
+        verify(controlPublication, never()).saveReplyVote(anyShort(), anyShort(), anyInt(), eq(FOR));
     }
 
     private void requestsVote(final int term)

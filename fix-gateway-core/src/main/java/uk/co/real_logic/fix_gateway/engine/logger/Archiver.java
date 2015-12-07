@@ -192,6 +192,10 @@ public class Archiver implements Agent, FileBlockHandler
             return image.position();
         }
 
+        // TODO: validate the body buffer genuinely starts with a fragment and validate the position against the header,
+        // Look at rebuilder
+        // TODO: remove position
+        // TODO: ban patching the future
         public void patch(
             final long position, final DirectBuffer bodyBuffer, final int bodyOffset, final int bodyLength)
         {
