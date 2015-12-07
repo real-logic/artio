@@ -43,6 +43,7 @@ public class RaftNodeConfiguration
     private int leaderSessionId;
     private ArchiveReader archiveReader;
     private Archiver archiver;
+    private RaftTransport raftTransport = new RaftTransport(this);
 
     public RaftNodeConfiguration controlStream(final StreamIdentifier controlStream)
     {
@@ -134,6 +135,12 @@ public class RaftNodeConfiguration
         return this;
     }
 
+    public RaftNodeConfiguration raftTransport(final RaftTransport raftTransport)
+    {
+        this.raftTransport = raftTransport;
+        return this;
+    }
+
     public StreamIdentifier controlStream()
     {
         return controlStream;
@@ -207,5 +214,10 @@ public class RaftNodeConfiguration
     public Archiver archiver()
     {
         return archiver;
+    }
+
+    public RaftTransport raftTransport()
+    {
+        return raftTransport;
     }
 }

@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 
 /**
  * .
@@ -33,6 +30,7 @@ public class RaftNode implements Role
     private final Leader leader;
     private final Candidate candidate;
     private final Follower follower;
+    private final RaftTransport transport;
 
     private Role currentRole;
 
@@ -72,7 +70,7 @@ public class RaftNode implements Role
 
             leader.closeStreams();
 
-            injectFollowerSubscriptions();
+            transport.injectFollowerSubscriptions(follower);
 
             currentRole = follower.votedFor(votedFor)
                                   .follow(timeInMs);
@@ -87,7 +85,7 @@ public class RaftNode implements Role
 
             follower.closeStreams();
 
-            injectCandidateSubscriptions();
+            transport.injectCandidateSubscriptions(candidate);
 
             currentRole = candidate.startNewElection(timeInMs);
         }
@@ -101,7 +99,7 @@ public class RaftNode implements Role
 
             candidate.closeStreams();
 
-            injectLeaderSubscriptions();
+            transport.injectLeaderSubscriptions(leader);
 
             currentRole = leader.getsElected(timeInMs);
         }
@@ -112,45 +110,21 @@ public class RaftNode implements Role
 
             candidate.closeStreams();
 
-            injectFollowerSubscriptions();
+            transport.injectFollowerSubscriptions(follower);
 
             currentRole = follower.follow(timeInMs);
         }
     };
 
-    private void injectLeaderSubscriptions()
-    {
-        leader
-            .acknowledgementSubscription(subscription(configuration.acknowledgementStream()))
-            .dataSubscription(subscription(configuration.dataStream()));
-    }
-
-    private void injectCandidateSubscriptions()
-    {
-        candidate
-            .controlSubscription(subscription(configuration.controlStream()));
-    }
-
-    private void injectFollowerSubscriptions()
-    {
-        configuration.archiver()
-                     .subscription(subscription(configuration.dataStream()));
-
-        follower
-            .controlSubscription(subscription(configuration.controlStream()));
-    }
-
     public RaftNode(final RaftNodeConfiguration configuration, final long timeInMs)
     {
         this.configuration = configuration;
         this.nodeId = configuration.nodeId();
+        this.transport = configuration.raftTransport();
 
         final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
         final long heartbeatTimeInMs = timeoutIntervalInMs / HEARTBEAT_TO_TIMEOUT_RATIO;
         final int clusterSize = configuration.otherNodes().size() + 1;
-
-        final RaftPublication acknowledgementPublication = raftPublication(configuration.acknowledgementStream());
-        final RaftPublication controlPublication = raftPublication(configuration.controlStream());
 
         leader = new Leader(
             nodeId,
@@ -162,8 +136,7 @@ public class RaftNode implements Role
             heartbeatTimeInMs,
             termState,
             configuration.leaderSessionId(),
-            configuration.archiveReader())
-            .controlPublication(controlPublication);
+            configuration.archiveReader());
 
         candidate = new Candidate(
             nodeId,
@@ -171,8 +144,7 @@ public class RaftNode implements Role
             clusterSize,
             timeoutIntervalInMs,
             termState,
-            configuration.acknowledgementStrategy())
-            .controlPublication(controlPublication);
+            configuration.acknowledgementStrategy());
 
         follower = new Follower(
             nodeId,
@@ -182,38 +154,18 @@ public class RaftNode implements Role
             timeoutIntervalInMs,
             termState,
             configuration.archiveReader(),
-            configuration.archiver())
-            .controlPublication(controlPublication)
-            .acknowledgementPublication(acknowledgementPublication);
+            configuration.archiver());
+
+        transport.initialiseRoles(leader, candidate, follower);
 
         startAsFollower(timeInMs);
     }
 
     private void startAsFollower(final long timeInMs)
     {
-        injectFollowerSubscriptions();
+        transport.injectFollowerSubscriptions(follower);
 
         currentRole = follower.follow(timeInMs);
-    }
-
-    private Publication publication(final StreamIdentifier id)
-    {
-        return configuration.aeron().addPublication(id.channel(), id.streamId());
-    }
-
-    private RaftPublication raftPublication(final StreamIdentifier id)
-    {
-        return new RaftPublication(
-            configuration.maxClaimAttempts(),
-            configuration.idleStrategy(),
-            configuration.failCounter(),
-            ReliefValve.NONE,
-            publication(id));
-    }
-
-    private Subscription subscription(final StreamIdentifier id)
-    {
-        return configuration.aeron().addSubscription(id.channel(), id.streamId());
     }
 
     public void transitionToFollower(final Candidate candidate, final long timeInMs)
