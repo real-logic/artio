@@ -91,6 +91,9 @@ public class Leader implements Role, RaftHandler
     {
         checkFragmenter();
 
+        // TODO: archive the data, don't just put into handler
+        // TODO: push archived log into handler
+        // TODO: split commit and last applied positions
         final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
         final int delta = (int) (newPosition - commitAndLastAppliedPosition);
         if (delta > 0)
@@ -177,7 +180,9 @@ public class Leader implements Role, RaftHandler
         {
             controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.FOR);
 
-            raftNode.transitionToFollower(this, candidateId, timeInMs);
+            termState.noLeader();
+
+            transitionToFollower(leaderShipTerm, commitAndLastAppliedPosition, candidateId);
         }
         else
         {
@@ -208,16 +213,21 @@ public class Leader implements Role, RaftHandler
     {
         if (nodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
         {
-            // Should not receive this unless someone else is the leader
-            termState
-                .leadershipTerm(leaderShipTerm)
-                .commitPosition(position)
-                .lastAppliedPosition(commitAndLastAppliedPosition)
-                .receivedPosition(commitAndLastAppliedPosition)
-                .leaderSessionId(leaderSessionId);
+            termState.leaderSessionId(leaderSessionId);
 
-            raftNode.transitionToFollower(this, Follower.NO_ONE, timeInMs);
+            transitionToFollower(leaderShipTerm, position, Follower.NO_ONE);
         }
+    }
+
+    private void transitionToFollower(final int leaderShipTerm, final long position, final short votedFor)
+    {
+        termState
+            .leadershipTerm(leaderShipTerm)
+            .commitPosition(position)
+            .lastAppliedPosition(commitAndLastAppliedPosition)
+            .receivedPosition(commitAndLastAppliedPosition);
+
+        raftNode.transitionToFollower(this, votedFor, timeInMs);
     }
 
     public Leader getsElected(final long timeInMs)

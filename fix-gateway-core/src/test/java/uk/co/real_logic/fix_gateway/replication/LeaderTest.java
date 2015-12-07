@@ -31,8 +31,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
-import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.hasLeaderSessionId;
-import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.neverTransitionsToFollower;
+import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.*;
 
 public class LeaderTest
 {
@@ -94,22 +93,19 @@ public class LeaderTest
     }
 
     @Test
-    public void shouldNotifyOtherNodesThatItIsTheLeader()
+    public void onNewLeaderHeartbeatBecomeFollower()
     {
-        verify(controlPublication).saveConcensusHeartbeat(ID, LEADERSHIP_TERM, POSITION, LEADER_SESSION_ID);
-    }
-
-    @Test
-    public void shouldBecomeFollowerUponOtherLeaderHeartbeating()
-    {
-        receivesHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM + 1, NEW_LEADER_SESSION_ID);
+        receivesHeartbeat(NEW_LEADER_ID, NEW_TERM, NEW_LEADER_SESSION_ID);
 
         transitionsToFollower(NO_ONE);
+
         assertThat(termState, hasLeaderSessionId(NEW_LEADER_SESSION_ID));
+        assertThat(termState, hasLeadershipTerm(NEW_TERM));
+        assertThat(termState, hasPositions(POSITION));
     }
 
     @Test
-    public void shouldNotBecomeFollowerFromOldTermHeartbeating()
+    public void onHeartbeatFromOldTermStayLeader()
     {
         receivesHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, NEW_LEADER_SESSION_ID);
 
@@ -117,11 +113,46 @@ public class LeaderTest
     }
 
     @Test
-    public void shouldNotBecomeFollowerFromOwnHeartbeats()
+    public void onHeartbeatFromSelfStayLeader()
     {
         receivesHeartbeat(ID, LEADERSHIP_TERM, LEADER_SESSION_ID);
 
         neverTransitionsToFollower(raftNode);
+    }
+
+    @Test
+    public void onRequestVoteWithHigherTermBecomeFollower()
+    {
+        leader.onRequestVote(CANDIDATE_ID, NEW_TERM, POSITION);
+
+        voteForCandidate();
+        transitionsToFollower(CANDIDATE_ID);
+
+        assertThat(termState, hasNoLeader());
+        assertThat(termState, hasLeadershipTerm(NEW_TERM));
+        assertThat(termState, hasPositions(POSITION));
+    }
+
+    @Test
+    public void onRequestVoteWithLowerTermStayLeader()
+    {
+        leader.onRequestVote(CANDIDATE_ID, LEADERSHIP_TERM, POSITION);
+
+        neverTransitionsToFollower(raftNode);
+    }
+
+    @Test
+    public void onRequestVoteWithLowerPositionStayLeader()
+    {
+        leader.onRequestVote(CANDIDATE_ID, LEADERSHIP_TERM, 0L);
+
+        neverTransitionsToFollower(raftNode);
+    }
+
+    @Test
+    public void onElectionHeartbeat()
+    {
+        verify(controlPublication).saveConcensusHeartbeat(ID, LEADERSHIP_TERM, POSITION, LEADER_SESSION_ID);
     }
 
     @Test
@@ -133,25 +164,6 @@ public class LeaderTest
 
         resendsMissingLogEntries(followerPosition);
     }
-
-    @Test
-    public void shouldIgnoreRequestVotesForCurrentTerm()
-    {
-        leader.onRequestVote(CANDIDATE_ID, LEADERSHIP_TERM, POSITION);
-
-        verifyNoMoreInteractions(raftNode);
-    }
-
-    @Test
-    public void shouldReplyToVoteForNewTerm()
-    {
-        leader.onRequestVote(CANDIDATE_ID, NEW_TERM, POSITION);
-
-        voteForCandidate();
-        transitionsToFollower(CANDIDATE_ID);
-    }
-
-    // TODO: reply vote position
 
     private void voteForCandidate()
     {

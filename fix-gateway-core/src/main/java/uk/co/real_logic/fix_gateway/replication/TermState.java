@@ -20,6 +20,9 @@ public class TermState
     /** the aeron session id of the current leader */
     private int leaderSessionId;
 
+    /** flag to indicate whether the node knows about its leader */
+    private boolean hasLeader;
+
     /** The raft leader's current term number */
     private int leadershipTerm;
 
@@ -35,6 +38,13 @@ public class TermState
     public TermState leaderSessionId(int leadershipSessionId)
     {
         this.leaderSessionId = leadershipSessionId;
+        this.hasLeader = true;
+        return this;
+    }
+
+    public TermState noLeader()
+    {
+        this.hasLeader = false;
         return this;
     }
 
@@ -75,6 +85,11 @@ public class TermState
         return leaderSessionId;
     }
 
+    public boolean hasLeader()
+    {
+        return hasLeader;
+    }
+
     public int leadershipTerm()
     {
         return leadershipTerm;
@@ -95,10 +110,12 @@ public class TermState
         return commitPosition;
     }
 
+    @Override
     public String toString()
     {
         return "TermState{" +
-            ", leaderSessionId=" + leaderSessionId +
+            "leaderSessionId=" + leaderSessionId +
+            ", hasLeader=" + hasLeader +
             ", leadershipTerm=" + leadershipTerm +
             ", receivedPosition=" + receivedPosition +
             ", lastAppliedPosition=" + lastAppliedPosition +

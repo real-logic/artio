@@ -79,7 +79,6 @@ public class RaftTransport
             .controlSubscription(subscription(configuration.controlStream()));
     }
 
-
     private Publication publication(final StreamIdentifier id)
     {
         return configuration.aeron().addPublication(id.channel(), id.streamId());
