@@ -58,7 +58,6 @@ public class ClusterReplicationTest
         DebugLogger.log("Leader elected");
     }
 
-    @Ignore
     @Test
     public void shouldEstablishCluster()
     {

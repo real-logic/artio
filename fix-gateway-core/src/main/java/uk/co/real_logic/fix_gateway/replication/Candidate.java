@@ -99,7 +99,7 @@ public class Candidate implements Role, RaftHandler
         {
             replyVote(candidateId, leaderShipTerm, FOR);
 
-            raftNode.transitionToFollower(this, timeInMs);
+            transitionToFollower(leaderShipTerm, this.position);
         }
         else
         {
@@ -149,16 +149,21 @@ public class Candidate implements Role, RaftHandler
             final boolean hasHigherPosition = position >= this.position;
             if (hasHigherPosition)
             {
-                votesFor.clear();
-                termState
-                    .commitPosition(position)
-                    .leadershipTerm(leaderShipTerm)
-                    .leaderSessionId(dataSessionId);
-
-                raftNode.transitionToFollower(this, timeInMs);
+                termState.leaderSessionId(dataSessionId);
+                transitionToFollower(leaderShipTerm, position);
             }
             DebugLogger.log("%d: New Leader %s%n", id, hasHigherPosition);
         }
+    }
+
+    private void transitionToFollower(final int leaderShipTerm, final long position)
+    {
+        votesFor.clear();
+        termState
+            .commitPosition(position)
+            .leadershipTerm(leaderShipTerm);
+
+        raftNode.transitionToFollower(this, timeInMs);
     }
 
     public void onResend(final int leaderSessionId,
@@ -180,25 +185,6 @@ public class Candidate implements Role, RaftHandler
 
         startElection(timeInMs);
         return this;
-    }
-
-    private void followIfNextTerm(
-        final short nodeId,
-        final int dataSessionId,
-        final int leaderShipTerm,
-        final long position,
-        final boolean leaderShipTermOk)
-    {
-        if (nodeId != id && position >= this.position && leaderShipTermOk)
-        {
-            votesFor.clear();
-            termState
-                .commitPosition(position)
-                .leadershipTerm(leaderShipTerm)
-                .leaderSessionId(dataSessionId);
-
-            raftNode.transitionToFollower(this, timeInMs);
-        }
     }
 
     private void startElection(final long timeInMs)

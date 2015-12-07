@@ -95,7 +95,8 @@ public class Follower implements Role, RaftHandler
             termState
                 .receivedPosition(receivedPosition)
                 .lastAppliedPosition(lastAppliedPosition)
-                .commitPosition(commitPosition);
+                .commitPosition(commitPosition)
+                .leadershipTerm(leaderShipTerm);
 
             //System.out.printf("Timeout: %d vs %d", timeInMs, latestNextReceiveTimeInMs);
 
