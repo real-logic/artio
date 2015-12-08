@@ -110,6 +110,15 @@ public class TermState
         return commitPosition;
     }
 
+    public TermState reset()
+    {
+        noLeader();
+        leaderSessionId(0);
+        leadershipTerm(0);
+        allPositions(0);
+        return this;
+    }
+
     @Override
     public String toString()
     {

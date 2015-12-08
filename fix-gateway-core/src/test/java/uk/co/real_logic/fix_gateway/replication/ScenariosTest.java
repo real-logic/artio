@@ -213,11 +213,13 @@ public class ScenariosTest
             LEADER_SESSION_ID,
             archiveReader);
 
-        return leader
+        leader
             .controlPublication(controlPublication)
             .acknowledgementSubscription(acknowledgementSubscription)
             .dataSubscription(dataSubscription)
             .getsElected(TIME);
+
+        return leader;
     }
 
     private static Effect voteForCandidate = namedEffect(st ->
@@ -266,6 +268,8 @@ public class ScenariosTest
     private void setup()
     {
         when(dataSubscription.getImage(LEADER_SESSION_ID)).thenReturn(leaderDataImage);
+
+        termState.reset();
     }
 
     private static Object[] scenario(
