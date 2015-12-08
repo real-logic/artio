@@ -95,11 +95,23 @@ public class FollowerTest
 
         verify(controlPublication).saveReplyVote(eq(ID), eq(ID_4), anyInt(), eq(FOR));
 
-        follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION, LEADER_SESSION_ID);
+        onHeartbeat();
 
         follower.onRequestVote(ID_5, NEW_LEADERSHIP_TERM, POSITION);
 
         verify(controlPublication, never()).saveReplyVote(eq(ID), eq(ID_5), anyInt(), eq(FOR));
+    }
+
+    @Test
+    public void shouldRecogniseNewLeader()
+    {
+        termState.noLeader();
+        follower.follow(0);
+        reset(archiver);
+
+        onHeartbeat();
+
+        verify(archiver).getSession(LEADER_SESSION_ID);
     }
 
     @Test
@@ -240,6 +252,11 @@ public class FollowerTest
         poll();
 
         dataCommitted();
+    }
+
+    private void onHeartbeat()
+    {
+        follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION, LEADER_SESSION_ID);
     }
 
     private void notifyMissingLogEntries()

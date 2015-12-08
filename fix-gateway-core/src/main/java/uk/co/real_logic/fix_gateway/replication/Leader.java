@@ -136,8 +136,8 @@ public class Leader implements Role, RaftHandler
     {
         this.timeInMs = timeInMs;
 
-        return acknowledgementSubscription.poll(raftSubscriber, fragmentLimit)
-             + controlSubscription.poll(raftSubscriber, fragmentLimit);
+        return acknowledgementSubscription.poll(raftSubscriber, fragmentLimit) +
+               controlSubscription.poll(raftSubscriber, fragmentLimit);
     }
 
     public void closeStreams()
