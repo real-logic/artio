@@ -37,7 +37,7 @@ public class NodeRunner implements AutoCloseable, Role
 {
     public static final long NOT_LEADER = -3;
 
-    public static final long TIMEOUT_IN_MS = 2000;
+    public static final long TIMEOUT_IN_MS = 1000;
     public static final String AERON_GROUP = "aeron:udp?group=224.0.1.1:40456";
 
     private final SwitchableLossGenerator lossGenerator = new SwitchableLossGenerator();

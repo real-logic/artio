@@ -85,7 +85,7 @@ public class Candidate implements Role, RaftHandler
 
     public void closeStreams()
     {
-        controlSubscription.close();
+
     }
 
     public void onMessageAcknowledgement(

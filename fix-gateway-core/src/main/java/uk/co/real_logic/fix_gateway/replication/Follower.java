@@ -165,7 +165,6 @@ public class Follower implements Role, RaftHandler
 
     public void closeStreams()
     {
-        controlSubscription.close();
     }
 
     private void onReplyKeepAlive(final long timeInMs)

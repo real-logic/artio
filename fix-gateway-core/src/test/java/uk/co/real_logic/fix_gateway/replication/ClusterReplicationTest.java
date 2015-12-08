@@ -45,7 +45,7 @@ public class ClusterReplicationTest
     private NodeRunner node3 = new NodeRunner(3, 1, 2);
 
     @Rule
-    public Timeout timeout = Timeout.seconds(8);
+    public Timeout timeout = Timeout.seconds(10);
 
     @Before
     public void hasElectedLeader()
@@ -58,7 +58,6 @@ public class ClusterReplicationTest
         DebugLogger.log("Leader elected");
     }
 
-    @Ignore
     @Test
     public void shouldEstablishCluster()
     {
