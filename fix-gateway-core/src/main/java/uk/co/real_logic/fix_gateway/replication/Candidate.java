@@ -31,11 +31,11 @@ public class Candidate implements Role, RaftHandler
 
     private final TermState termState;
     private final short id;
+    private final int sessionId;
     private final RaftNode raftNode;
     private final int clusterSize;
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final IntHashSet votesFor;
-    private final IntHashSet votesAgainst;
     private final RandomTimeout voteTimeout;
 
     private RaftPublication controlPublication;
@@ -45,6 +45,7 @@ public class Candidate implements Role, RaftHandler
     private long timeInMs;
 
     public Candidate(final short id,
+                     final int sessionId,
                      final RaftNode raftNode,
                      final int clusterSize,
                      final long voteTimeout,
@@ -52,13 +53,13 @@ public class Candidate implements Role, RaftHandler
                      final AcknowledgementStrategy acknowledgementStrategy)
     {
         this.id = id;
+        this.sessionId = sessionId;
         this.raftNode = raftNode;
         this.clusterSize = clusterSize;
         this.acknowledgementStrategy = acknowledgementStrategy;
         this.voteTimeout = new RandomTimeout(voteTimeout, 0L);
         this.termState = termState;
         votesFor = new IntHashSet(2 * clusterSize, -1);
-        votesAgainst = new IntHashSet(2 * clusterSize, -1);
     }
 
     public int checkConditions(final long timeInMs)
@@ -123,7 +124,10 @@ public class Candidate implements Role, RaftHandler
 
             if (acknowledgementStrategy.isElected(votesFor.size(), clusterSize))
             {
-                termState.leadershipTerm(leaderShipTerm);
+                termState
+                    .leadershipTerm(leaderShipTerm)
+                    .leaderSessionId(sessionId);
+
                 raftNode.transitionToLeader(timeInMs);
             }
         }

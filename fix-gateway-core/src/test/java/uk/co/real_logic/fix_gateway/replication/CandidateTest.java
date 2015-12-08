@@ -45,7 +45,7 @@ public class CandidateTest
     private TermState termState = new TermState();
 
     private Candidate candidate = new Candidate(
-        ID, raftNode, CLUSTER_SIZE, VOTE_TIMEOUT, termState, new QuorumAcknowledgementStrategy());
+        ID, DATA_SESSION_ID, raftNode, CLUSTER_SIZE, VOTE_TIMEOUT, termState, new QuorumAcknowledgementStrategy());
 
     @Before
     public void setUp()
@@ -53,25 +53,6 @@ public class CandidateTest
         candidate
             .controlPublication(controlPublication)
             .controlSubscription(controlSubscription);
-    }
-
-    @Test
-    public void shouldVoteForSelfWhenStartingElection()
-    {
-        startElection();
-
-        requestsVote(NEW_LEADERSHIP_TERM);
-    }
-
-    @Test
-    public void shouldBecomeLeaderUponReceiptOfEnoughVotes()
-    {
-        startElection();
-
-        candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR);
-        candidate.onReplyVote(ID_5, ID, NEW_LEADERSHIP_TERM, FOR);
-
-        transitionsToLeader(raftNode);
     }
 
     @Test

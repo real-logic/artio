@@ -138,6 +138,7 @@ public class RaftNode implements Role
 
         candidate = new Candidate(
             nodeId,
+            configuration.leaderSessionId(),
             this,
             clusterSize,
             timeoutIntervalInMs,
