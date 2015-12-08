@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.messages.Vote;
 
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
+import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
 
 public class Candidate implements Role, RaftHandler
 {
@@ -94,13 +95,13 @@ public class Candidate implements Role, RaftHandler
 
     }
 
-    public void onRequestVote(short candidateId, final int leaderShipTerm, long lastAckedPosition)
+    public void onRequestVote(final short candidateId, final int leaderShipTerm, long lastAckedPosition)
     {
         if (leaderShipTerm > this.leaderShipTerm && lastAckedPosition >= this.position)
         {
             replyVote(candidateId, leaderShipTerm, FOR);
 
-            transitionToFollower(leaderShipTerm, this.position);
+            transitionToFollower(leaderShipTerm, candidateId, this.position);
         }
         else
         {
@@ -154,20 +155,20 @@ public class Candidate implements Role, RaftHandler
             if (hasHigherPosition)
             {
                 termState.leaderSessionId(dataSessionId);
-                transitionToFollower(leaderShipTerm, position);
+                transitionToFollower(leaderShipTerm, NO_ONE, position);
             }
             DebugLogger.log("%d: New Leader %s%n", id, hasHigherPosition);
         }
     }
 
-    private void transitionToFollower(final int leaderShipTerm, final long position)
+    private void transitionToFollower(final int leaderShipTerm, final short votedFor, final long position)
     {
         votesFor.clear();
         termState
-            .commitPosition(position)
+            .allPositions(position)
             .leadershipTerm(leaderShipTerm);
 
-        raftNode.transitionToFollower(this, timeInMs);
+        raftNode.transitionToFollower(this, votedFor, timeInMs);
     }
 
     public void onResend(final int leaderSessionId,

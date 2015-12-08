@@ -30,8 +30,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
@@ -91,31 +89,31 @@ public class ScenariosTest
             scenario(
                 leader,
                 receivesHeartbeat(NEW_LEADER_ID, OLD_LEADERSHIP_TERM, NEW_LEADER_SESSION_ID, "oldTermLeaderHeartbeat"),
-                neverTransitionsToFollower,
+                neverTransitions,
                 ignored),
 
             scenario(
                 leader,
                 receivesHeartbeat(ID, NEW_TERM, SESSION_ID, "selfHeartbeat"),
-                neverTransitionsToFollower,
+                neverTransitions,
                 ignored),
 
             scenario(
                 leader,
-                onRequestVote(CANDIDATE_ID, NEW_TERM, POSITION, "newLeaderRequestVote"),
-                voteForCandidate.and(transitionsToFollowerOf(CANDIDATE_ID)),
+                newLeaderRequestVote,
+                votesAndFollows(CANDIDATE_ID),
                 hasNoLeader(NEW_TERM)),
 
             scenario(
                 leader,
-                onRequestVote(CANDIDATE_ID, LEADERSHIP_TERM, POSITION, "lowerTermRequestVote"),
-                neverTransitionsToFollower,
+                lowerTermRequestVote,
+                neverTransitions,
                 ignored),
 
             scenario(
                 leader,
-                onRequestVote(CANDIDATE_ID, NEW_TERM, 0L, "lowerPositionRequestVote"),
-                neverTransitionsToFollower,
+                lowerPositionRequestVote,
+                neverTransitions,
                 ignored),
 
             scenario(
@@ -123,6 +121,24 @@ public class ScenariosTest
                 timesOut,
                 transitionsToCandidate,
                 hasNoLeader(LEADERSHIP_TERM)),
+
+            scenario(
+                follower,
+                newLeaderRequestVote,
+                voteForCandidate,
+                ignored),
+
+            scenario(
+                follower,
+                lowerTermRequestVote,
+                neverTransitions,
+                ignored),
+
+            scenario(
+                follower,
+                lowerPositionRequestVote,
+                neverTransitions,
+                ignored),
 
             scenario(
                 candidate,
@@ -134,7 +150,25 @@ public class ScenariosTest
                 candidate,
                 onMajority,
                 transitionsToLeader,
-                isLeader(SESSION_ID))
+                isLeader(SESSION_ID)),
+
+            scenario(
+                candidate,
+                newLeaderRequestVote,
+                votesAndFollows(CANDIDATE_ID),
+                hasNoLeader(NEW_TERM)),
+
+            scenario(
+                candidate,
+                lowerTermRequestVote,
+                neverTransitions,
+                ignored),
+
+            scenario(
+                candidate,
+                lowerPositionRequestVote,
+                neverTransitions,
+                ignored)
         );
 
         // TODO: follower doesn't time out
@@ -309,7 +343,8 @@ public class ScenariosTest
 
         candidate
             .controlPublication(controlPublication)
-            .controlSubscription(controlSubscription);
+            .controlSubscription(controlSubscription)
+            .startNewElection(TIME);
 
         return candidate;
     }
@@ -320,17 +355,29 @@ public class ScenariosTest
     private static Effect transitionsToFollower =
         transitionsToFollower(NO_ONE, "transitionsToFollower");
 
-    private static Effect transitionsToFollowerOf(final int votedFor)
+    private static Effect votesAndFollows(final int votedFor)
     {
-        return transitionsToFollower(votedFor, "transitionsToFollowerOf" + votedFor);
+        return voteForCandidate.and(transitionsToFollower(votedFor, "transitionsToFollowerOf" + votedFor));
     }
 
     private static Effect transitionsToFollower(final int votedFor, final String name)
     {
         return namedEffect(st ->
         {
-            final Leader leader = (Leader) st.role;
-            verify(st.raftNode, atLeastOnce()).transitionToFollower(eq(leader), eq(votedFor), anyLong());
+            final RaftNode node = verify(st.raftNode, atLeastOnce());
+            if (st.role instanceof Leader)
+            {
+                final Leader leader = (Leader) st.role;
+                node.transitionToFollower(eq(leader), eq((short) votedFor), anyLong());
+            }
+            else
+            {
+                final Candidate candidate = (Candidate) st.role;
+                node.transitionToFollower(eq(candidate), eq((short) votedFor), anyLong());
+            }
+
+            ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
+            ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
         }, name);
     }
 
@@ -354,8 +401,13 @@ public class ScenariosTest
             },
             "transitionsToLeader");
 
-    private static Effect neverTransitionsToFollower =
-        namedEffect(st -> ReplicationAsserts.neverTransitionsToFollower(st.raftNode), "neverTransitionsToFollower");
+    private static Effect neverTransitions =
+        namedEffect(st ->
+        {
+            ReplicationAsserts.neverTransitionsToFollower(st.raftNode);
+            ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
+            ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
+        }, "neverTransitions");
 
     private static Effect requestsVote =
         namedEffect(st ->
@@ -382,21 +434,23 @@ public class ScenariosTest
             st.role.poll(1, TIME + TIMEOUT_IN_MS * 5),
             "timesOut");
 
-    private static Stimulus startElection = namedStimulus(ScenariosTest::startElection, "startElection");
+    private static Stimulus startElection = namedStimulus(st -> { }, "startElection");
 
     private static Stimulus onMajority =
         namedStimulus(st ->
         {
-            startElection(st);
             st.raftHandler.onReplyVote(ID_4, ID, LEADERSHIP_TERM, FOR);
             st.raftHandler.onReplyVote(ID_5, ID, LEADERSHIP_TERM, FOR);
         }, "onMajority");
 
-    private static void startElection(final ScenariosTest st)
-    {
-        final Candidate candidate = (Candidate) st.role;
-        candidate.startNewElection(TIME);
-    }
+    private static Stimulus lowerPositionRequestVote =
+        onRequestVote(CANDIDATE_ID, NEW_TERM, 0L, "lowerPositionRequestVote");
+
+    private static Stimulus lowerTermRequestVote =
+        onRequestVote(CANDIDATE_ID, LEADERSHIP_TERM, POSITION, "lowerTermRequestVote");
+
+    private static Stimulus newLeaderRequestVote =
+        onRequestVote(CANDIDATE_ID, NEW_TERM, POSITION, "newLeaderRequestVote");
 
     private static Stimulus onRequestVote(
         final short candidateId, final int leaderShipTerm, final long lastAckedPosition, final String name)

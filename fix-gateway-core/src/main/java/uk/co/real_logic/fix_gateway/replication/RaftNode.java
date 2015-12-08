@@ -46,12 +46,12 @@ public class RaftNode implements Role
             throw new UnsupportedOperationException();
         }
 
-        public void transitionToFollower(final Candidate candidate, final long timeInMs)
+        public void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
         {
             throw new UnsupportedOperationException();
         }
 
-        public void transitionToFollower(final Leader leader, final int votedFor, final long timeInMs)
+        public void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
         {
             throw new UnsupportedOperationException();
         }
@@ -102,7 +102,7 @@ public class RaftNode implements Role
             currentRole = leader.getsElected(timeInMs);
         }
 
-        public void transitionToFollower(final Candidate candidate, final long timeInMs)
+        public void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
         {
             DebugLogger.log("%d: C -> Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
@@ -110,7 +110,8 @@ public class RaftNode implements Role
 
             transport.injectFollowerSubscriptions(follower);
 
-            currentRole = follower.follow(timeInMs);
+            currentRole = follower.votedFor(votedFor)
+                                  .follow(timeInMs);
         }
     };
 
@@ -167,12 +168,12 @@ public class RaftNode implements Role
         currentRole = follower.follow(timeInMs);
     }
 
-    public void transitionToFollower(final Candidate candidate, final long timeInMs)
+    public void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
     {
-        candidateState.transitionToFollower(candidate, timeInMs);
+        candidateState.transitionToFollower(candidate, votedFor, timeInMs);
     }
 
-    public void transitionToFollower(final Leader leader, final int votedFor, final long timeInMs)
+    public void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
     {
         leaderState.transitionToFollower(leader, votedFor, timeInMs);
     }
