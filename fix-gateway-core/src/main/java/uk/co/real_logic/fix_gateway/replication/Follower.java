@@ -186,6 +186,7 @@ public class Follower implements Role, RaftHandler
             votedFor = candidateId;
             controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR);
             DebugLogger.log("%d: vote for %d in %d%n", nodeId, candidateId, leaderShipTerm);
+            onReplyKeepAlive(timeInMs);
         }
         else if (candidateId != nodeId)
         {
