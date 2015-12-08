@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Publication;
@@ -85,6 +86,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             leaderSessionId,
             mock(ArchiveReader.class))
             .controlPublication(raftPublication(CONTROL))
+            .controlSubscription(controlSubscription())
             .acknowledgementSubscription(acknowledgementSubscription())
             .dataSubscription(dataSubscription());
 
@@ -119,6 +121,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         verify(follower1Handler).onFragment(any(), eq(HEADER_LENGTH), eq(position - HEADER_LENGTH), any());
     }
 
+    @Ignore
     @Test
     public void shouldProcessSuccessiveChunks()
     {

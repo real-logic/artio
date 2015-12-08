@@ -44,7 +44,7 @@ public class Leader implements Role, RaftHandler
     private final ArchiveReader archiveReader;
     private final short nodeId;
     private final AcknowledgementStrategy acknowledgementStrategy;
-    private final RaftSubscriber acknowledgementSubscriber = new RaftSubscriber(this);
+    private final RaftSubscriber raftSubscriber = new RaftSubscriber(this);
     private final RaftNode raftNode;
     private final FragmentHandler handler;
     private final long heartbeatIntervalInMs;
@@ -56,6 +56,7 @@ public class Leader implements Role, RaftHandler
     private RaftPublication controlPublication;
     private Subscription acknowledgementSubscription;
     private Subscription dataSubscription;
+    private Subscription controlSubscription;
     private Image leaderDataImage;
     private Fragmenter fragmenter;
     private long commitAndLastAppliedPosition = 0;
@@ -135,7 +136,8 @@ public class Leader implements Role, RaftHandler
     {
         this.timeInMs = timeInMs;
 
-        return acknowledgementSubscription.poll(acknowledgementSubscriber, fragmentLimit);
+        return acknowledgementSubscription.poll(raftSubscriber, fragmentLimit)
+             + controlSubscription.poll(raftSubscriber, fragmentLimit);
     }
 
     public void closeStreams()
@@ -263,6 +265,12 @@ public class Leader implements Role, RaftHandler
     public Leader controlPublication(final RaftPublication controlPublication)
     {
         this.controlPublication = controlPublication;
+        return this;
+    }
+
+    public Leader controlSubscription(final Subscription controlSubscription)
+    {
+        this.controlSubscription = controlSubscription;
         return this;
     }
 

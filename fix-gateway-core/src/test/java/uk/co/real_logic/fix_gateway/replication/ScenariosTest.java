@@ -73,37 +73,37 @@ public class ScenariosTest
     public static Iterable<Object[]> parameters()
     {
         return Arrays.<Object[]>asList(
-            where(
+            scenario(
                 leader,
                 receivesHeartbeat(NEW_LEADER_ID, NEW_TERM, NEW_LEADER_SESSION_ID, "newLeaderHeartbeat"),
                 transitionsToFollower,
                 hasNewLeader),
 
-            where(
+            scenario(
                 leader,
                 receivesHeartbeat(NEW_LEADER_ID, OLD_TERM, NEW_LEADER_SESSION_ID, "oldTermLeaderHeartbeat"),
                 neverTransitionsToFollower,
                 ignored),
 
-            where(
+            scenario(
                 leader,
                 receivesHeartbeat(ID, NEW_TERM, LEADER_SESSION_ID, "selfHeartbeat"),
                 neverTransitionsToFollower,
                 ignored),
 
-            where(
+            scenario(
                 leader,
                 onRequestVote(CANDIDATE_ID, NEW_TERM, POSITION, "newLeaderRequestVote"),
                 voteForCandidate.and(transitionsToFollowerOf(CANDIDATE_ID)),
                 hasNoLeader),
 
-            where(
+            scenario(
                 leader,
                 onRequestVote(CANDIDATE_ID, LEADERSHIP_TERM, POSITION, "lowerTermRequestVote"),
                 neverTransitionsToFollower,
                 ignored),
 
-            where(
+            scenario(
                 leader,
                 onRequestVote(CANDIDATE_ID, NEW_TERM, 0L, "lowerPositionRequestVote"),
                 neverTransitionsToFollower,
@@ -268,7 +268,7 @@ public class ScenariosTest
         when(dataSubscription.getImage(LEADER_SESSION_ID)).thenReturn(leaderDataImage);
     }
 
-    private static Object[] where(
+    private static Object[] scenario(
         final RoleFixture roleFixture,
         final Stimulus stimulus,
         final Effect effect,

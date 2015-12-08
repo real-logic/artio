@@ -85,8 +85,6 @@ public class RaftNode implements Role
 
             follower.closeStreams();
 
-            transport.injectCandidateSubscriptions(candidate);
-
             currentRole = candidate.startNewElection(timeInMs);
         }
     };

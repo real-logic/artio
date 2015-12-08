@@ -19,9 +19,6 @@ import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 
-/**
- * .
- */
 public class RaftTransport
 {
     private final RaftNodeConfiguration configuration;
@@ -35,26 +32,20 @@ public class RaftTransport
     {
         final RaftPublication acknowledgementPublication = raftPublication(configuration.acknowledgementStream());
         final RaftPublication controlPublication = raftPublication(configuration.controlStream());
+        final Subscription controlSubscription = subscription(configuration.controlStream());
 
         leader
-            .controlPublication(controlPublication);
+            .controlPublication(controlPublication)
+            .controlSubscription(controlSubscription);
 
         candidate
-            .controlPublication(controlPublication);
+            .controlPublication(controlPublication)
+            .controlSubscription(controlSubscription);
 
         follower
             .controlPublication(controlPublication)
-            .acknowledgementPublication(acknowledgementPublication);
-    }
-
-    private RaftPublication raftPublication(final StreamIdentifier id)
-    {
-        return new RaftPublication(
-            configuration.maxClaimAttempts(),
-            configuration.idleStrategy(),
-            configuration.failCounter(),
-            ReliefValve.NONE,
-            publication(id));
+            .acknowledgementPublication(acknowledgementPublication)
+            .controlSubscription(controlSubscription);
     }
 
     public void injectLeaderSubscriptions(final Leader leader)
@@ -64,19 +55,10 @@ public class RaftTransport
             .dataSubscription(subscription(configuration.dataStream()));
     }
 
-    public void injectCandidateSubscriptions(final Candidate candidate)
-    {
-        candidate
-            .controlSubscription(subscription(configuration.controlStream()));
-    }
-
     public void injectFollowerSubscriptions(final Follower follower)
     {
         configuration.archiver()
-            .subscription(subscription(configuration.dataStream()));
-
-        follower
-            .controlSubscription(subscription(configuration.controlStream()));
+                     .subscription(subscription(configuration.dataStream()));
     }
 
     private Publication publication(final StreamIdentifier id)
@@ -87,6 +69,16 @@ public class RaftTransport
     private Subscription subscription(final StreamIdentifier id)
     {
         return configuration.aeron().addSubscription(id.channel(), id.streamId());
+    }
+
+    private RaftPublication raftPublication(final StreamIdentifier id)
+    {
+        return new RaftPublication(
+            configuration.maxClaimAttempts(),
+            configuration.idleStrategy(),
+            configuration.failCounter(),
+            ReliefValve.NONE,
+            publication(id));
     }
 
 }
