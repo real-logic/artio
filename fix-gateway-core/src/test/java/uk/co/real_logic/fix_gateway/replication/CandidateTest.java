@@ -72,6 +72,7 @@ public class CandidateTest
         startElection();
 
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, AGAINST);
+        candidate.onReplyVote(ID_5, ID, NEW_LEADERSHIP_TERM, AGAINST);
 
         neverTransitionsToLeader(raftNode);
     }
