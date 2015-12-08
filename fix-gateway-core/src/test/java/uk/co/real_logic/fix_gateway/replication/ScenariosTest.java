@@ -23,6 +23,7 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
 import java.util.Arrays;
 import java.util.function.Consumer;
@@ -39,27 +40,32 @@ import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.*;
 @RunWith(Parameterized.class)
 public class ScenariosTest
 {
-    private static final short ID = 2;
-    private static final int OLD_TERM = 0;
-    private static final int LEADERSHIP_TERM = OLD_TERM + 1;
-    private static final int NEW_TERM = LEADERSHIP_TERM + 1;
-    private static final int LEADER_SESSION_ID = 42;
     private static final long TIME = 10L;
     private static final long POSITION = 40L;
+    private static final long REPLY_TIMEOUT_IN_MS = 100;
+    private static final int OLD_LEADERSHIP_TERM = 0;
+    private static final int LEADERSHIP_TERM = OLD_LEADERSHIP_TERM + 1;
+    private static final int NEW_TERM = LEADERSHIP_TERM + 1;
+    private static final int LEADER_SESSION_ID = 42;
     private static final int HEARTBEAT_INTERVAL_IN_MS = 10;
+    private static final int NEW_LEADER_SESSION_ID = 43;
+    private static final short ID = 2;
     private static final short NEW_LEADER_ID = 3;
     private static final short FOLLOWER_ID = 4;
     private static final short CANDIDATE_ID = 5;
-    private static final int NEW_LEADER_SESSION_ID = 43;
 
-    private final RaftPublication controlPublication = mock(RaftPublication.class);
     private final RaftNode raftNode = mock(RaftNode.class);
+    private final RaftPublication controlPublication = mock(RaftPublication.class);
+    private final RaftPublication acknowledgementPublication = mock(RaftPublication.class);
+    private final Subscription controlSubscription = mock(Subscription.class);
     private final Subscription acknowledgementSubscription = mock(Subscription.class);
     private final Subscription dataSubscription = mock(Subscription.class);
     private final Image leaderDataImage = mock(Image.class);
     private final ArchiveReader archiveReader = mock(ArchiveReader.class);
     private final TermState termState = new TermState();
     private final FragmentHandler fragmentHandler = mock(FragmentHandler.class);
+    private final Archiver.SessionArchiver leaderArchiver = mock(Archiver.SessionArchiver.class);
+    private final Archiver archiver = mock(Archiver.class);
 
     private final RoleFixture roleFixture;
     private final Stimulus stimulus;
@@ -81,7 +87,7 @@ public class ScenariosTest
 
             scenario(
                 leader,
-                receivesHeartbeat(NEW_LEADER_ID, OLD_TERM, NEW_LEADER_SESSION_ID, "oldTermLeaderHeartbeat"),
+                receivesHeartbeat(NEW_LEADER_ID, OLD_LEADERSHIP_TERM, NEW_LEADER_SESSION_ID, "oldTermLeaderHeartbeat"),
                 neverTransitionsToFollower,
                 ignored),
 
@@ -95,7 +101,7 @@ public class ScenariosTest
                 leader,
                 onRequestVote(CANDIDATE_ID, NEW_TERM, POSITION, "newLeaderRequestVote"),
                 voteForCandidate.and(transitionsToFollowerOf(CANDIDATE_ID)),
-                hasNoLeader),
+                hasNoLeader(NEW_TERM)),
 
             scenario(
                 leader,
@@ -107,7 +113,13 @@ public class ScenariosTest
                 leader,
                 onRequestVote(CANDIDATE_ID, NEW_TERM, 0L, "lowerPositionRequestVote"),
                 neverTransitionsToFollower,
-                ignored)
+                ignored),
+
+            scenario(
+                follower,
+                timesOut,
+                transitionsToCandidate,
+                hasNoLeader(LEADERSHIP_TERM))
         );
     }
 
@@ -187,19 +199,25 @@ public class ScenariosTest
             assertThat(termState, hasPositions(POSITION));
         }, "hasNewLeader");
 
-    private static State hasNoLeader =
-        named(termState ->
+    private static State hasNoLeader(final int leadershipTerm)
+    {
+        return named(termState ->
         {
-            assertThat(termState, hasNoLeader());
-            assertThat(termState, hasLeadershipTerm(NEW_TERM));
+            assertThat(termState, noLeaderMatcher());
+            assertThat(termState, hasLeadershipTerm(leadershipTerm));
             assertThat(termState, hasPositions(POSITION));
         }, "hasNoLeader");
+    }
 
     private static RoleFixture leader = named(ScenariosTest::leader, "leader");
 
+    private static RoleFixture follower = named(ScenariosTest::follower, "follower");
+
     private Role leader()
     {
-        termState.leadershipTerm(LEADERSHIP_TERM).commitPosition(POSITION);
+        termState
+            .leadershipTerm(LEADERSHIP_TERM)
+            .commitPosition(POSITION);
 
         final Leader leader = new Leader(
             ID,
@@ -222,6 +240,32 @@ public class ScenariosTest
         return leader;
     }
 
+    private Follower follower()
+    {
+        termState
+            .allPositions(POSITION)
+            .leadershipTerm(LEADERSHIP_TERM)
+            .leaderSessionId(LEADER_SESSION_ID);
+
+        final Follower follower = new Follower(
+            ID,
+            fragmentHandler,
+            raftNode,
+            TIME,
+            REPLY_TIMEOUT_IN_MS,
+            termState,
+            archiveReader,
+            archiver);
+
+        follower
+            .controlPublication(controlPublication)
+            .acknowledgementPublication(acknowledgementPublication)
+            .controlSubscription(controlSubscription)
+            .follow(TIME);
+
+        return follower;
+    }
+
     private static Effect voteForCandidate = namedEffect(st ->
             verify(st.controlPublication).saveReplyVote(ID, CANDIDATE_ID, NEW_TERM, FOR), "voteForCandidate");
 
@@ -242,6 +286,13 @@ public class ScenariosTest
         }, name);
     }
 
+    private static Effect transitionsToCandidate =
+        namedEffect(st ->
+        {
+            ReplicationAsserts.transitionsToCandidate(st.raftNode);
+        },
+        "transitionsToCandidate");
+
     private static Effect neverTransitionsToFollower =
         namedEffect(st -> ReplicationAsserts.neverTransitionsToFollower(st.raftNode), "neverTransitionsToFollower");
 
@@ -256,6 +307,11 @@ public class ScenariosTest
         }, name);
     }
 
+    private static Stimulus timesOut =
+        namedStimulus(st ->
+            st.role.poll(1, TIME + REPLY_TIMEOUT_IN_MS * 5),
+            "timesOut");
+
     private static Stimulus onRequestVote(
         final short candidateId, final int leaderShipTerm, final long lastAckedPosition, final String name)
     {
@@ -268,6 +324,7 @@ public class ScenariosTest
     private void setup()
     {
         when(dataSubscription.getImage(LEADER_SESSION_ID)).thenReturn(leaderDataImage);
+        when(archiver.getSession(LEADER_SESSION_ID)).thenReturn(leaderArchiver);
 
         termState.reset();
     }

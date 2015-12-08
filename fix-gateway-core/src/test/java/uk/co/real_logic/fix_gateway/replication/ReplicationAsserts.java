@@ -75,7 +75,7 @@ public final class ReplicationAsserts
             hasFluentProperty("leaderSessionId", leaderSessionId));
     }
 
-    public static Matcher<TermState> hasNoLeader()
+    public static Matcher<TermState> noLeaderMatcher()
     {
         return hasFluentProperty("hasLeader", false);
     }

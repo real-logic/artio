@@ -128,7 +128,7 @@ public class LeaderTest
         voteForCandidate();
         transitionsToFollower(CANDIDATE_ID);
 
-        assertThat(termState, hasNoLeader());
+        assertThat(termState, noLeaderMatcher());
         assertThat(termState, hasLeadershipTerm(NEW_TERM));
         assertThat(termState, hasPositions(POSITION));
     }
