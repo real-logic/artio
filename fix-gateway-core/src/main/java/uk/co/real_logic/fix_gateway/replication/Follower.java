@@ -273,7 +273,14 @@ public class Follower implements Role, RaftHandler
         receivedPosition = termState.receivedPosition();
         lastAppliedPosition = termState.lastAppliedPosition();
         commitPosition = termState.commitPosition();
-        leaderArchiver = archiver.getSession(termState.leaderSessionId());
+        if (termState.hasLeader())
+        {
+            leaderArchiver = archiver.getSession(termState.leaderSessionId());
+        }
+        else
+        {
+            leaderArchiver = null;
+        }
     }
 
     public Follower acknowledgementPublication(final RaftPublication acknowledgementPublication)
