@@ -41,6 +41,7 @@ public class ScenariosTest
     private static final long TIME = 10L;
     private static final long POSITION = 40L;
     private static final long TIMEOUT_IN_MS = 100;
+    private static final long BELOW_TIMEOUT = TIMEOUT_IN_MS - 1;
     private static final int OLD_LEADERSHIP_TERM = 0;
     private static final int LEADERSHIP_TERM = OLD_LEADERSHIP_TERM + 1;
     private static final int NEW_TERM = LEADERSHIP_TERM + 1;
@@ -80,99 +81,50 @@ public class ScenariosTest
     public static Iterable<Object[]> parameters()
     {
         return Arrays.<Object[]>asList(
-            scenario(
-                leader,
-                receivesHeartbeat(NEW_LEADER_ID, NEW_TERM, NEW_LEADER_SESSION_ID, "newLeaderHeartbeat"),
-                transitionsToFollower,
-                hasNewLeader(NEW_LEADER_SESSION_ID)),
+            scenario(leader,    newLeaderHeartbeat, transitionsToFollower, hasNewLeader(NEW_LEADER_SESSION_ID)),
 
-            scenario(
-                leader,
-                receivesHeartbeat(NEW_LEADER_ID, OLD_LEADERSHIP_TERM, NEW_LEADER_SESSION_ID, "oldTermLeaderHeartbeat"),
-                neverTransitions,
-                ignored),
+            scenario(leader,    oldTermLeaderHeartbeat, neverTransitions, ignored),
 
-            scenario(
-                leader,
-                receivesHeartbeat(ID, NEW_TERM, SESSION_ID, "selfHeartbeat"),
-                neverTransitions,
-                ignored),
+            scenario(leader,    selfHeartbeat, neverTransitions, ignored),
 
-            scenario(
-                leader,
-                newLeaderRequestVote,
-                votesAndFollows(CANDIDATE_ID),
-                hasNoLeader(NEW_TERM)),
+            scenario(leader,    newLeaderRequestVote, votesAndFollows(CANDIDATE_ID), hasNoLeader(NEW_TERM)),
 
-            scenario(
-                leader,
-                lowerTermRequestVote,
-                neverTransitions,
-                ignored),
+            scenario(leader,    lowerTermRequestVote, neverTransitions, ignored),
 
-            scenario(
-                leader,
-                lowerPositionRequestVote,
-                neverTransitions,
-                ignored),
+            scenario(leader,    lowerPositionRequestVote, neverTransitions, ignored),
 
-            scenario(
-                follower,
-                timesOut,
-                transitionsToCandidate,
-                hasNoLeader(LEADERSHIP_TERM)),
+            scenario(follower,  timesOut, transitionsToCandidate, hasNoLeader(LEADERSHIP_TERM)),
 
-            scenario(
-                follower,
-                newLeaderRequestVote,
-                voteForCandidate,
-                ignored),
+            scenario(follower,  heartbeatBeforeTimeout, neverTransitions, ignored),
 
-            scenario(
-                follower,
-                lowerTermRequestVote,
-                neverTransitions,
-                ignored),
+            scenario(follower,  newLeaderRequestVote, voteForCandidate, ignored),
 
-            scenario(
-                follower,
-                lowerPositionRequestVote,
-                neverTransitions,
-                ignored),
+            scenario(follower,  lowerTermRequestVote, neverTransitions, ignored),
 
-            scenario(
-                candidate,
-                startElection,
-                requestsVote,
-                ignored),
+            scenario(follower,  lowerPositionRequestVote, neverTransitions, ignored),
 
-            scenario(
-                candidate,
-                onMajority,
-                transitionsToLeader,
-                isLeader(SESSION_ID)),
+            scenario(follower,  newLeaderHeartbeat, neverTransitions, hasNewLeader(NEW_LEADER_SESSION_ID)),
 
-            scenario(
-                candidate,
-                newLeaderRequestVote,
-                votesAndFollows(CANDIDATE_ID),
-                hasNoLeader(NEW_TERM)),
+            scenario(follower,  oldTermLeaderHeartbeat, neverTransitions, ignored),
 
-            scenario(
-                candidate,
-                lowerTermRequestVote,
-                neverTransitions,
-                ignored),
+            scenario(candidate, startElection, requestsVote, ignored),
 
-            scenario(
-                candidate,
-                lowerPositionRequestVote,
-                neverTransitions,
-                ignored)
+            scenario(candidate, onMajority, transitionsToLeader, isLeader(SESSION_ID)),
+
+            scenario(candidate, newLeaderRequestVote, votesAndFollows(CANDIDATE_ID), hasNoLeader(NEW_TERM)),
+
+            scenario(candidate, lowerTermRequestVote, neverTransitions, ignored),
+
+            scenario(candidate, lowerPositionRequestVote, neverTransitions, ignored),
+
+            scenario(candidate, newLeaderHeartbeat, transitionsToFollower, hasNewLeader(NEW_LEADER_SESSION_ID)),
+
+            scenario(candidate, oldTermLeaderHeartbeat, neverTransitions, ignored),
+
+            scenario(candidate, selfHeartbeat, neverTransitions, ignored)
         );
 
         // TODO: follower doesn't time out
-        // TODO: follower receiving leadership heartbeats
     }
 
     public ScenariosTest(
@@ -350,7 +302,7 @@ public class ScenariosTest
     }
 
     private static Effect voteForCandidate = namedEffect(st ->
-            verify(st.controlPublication).saveReplyVote(ID, CANDIDATE_ID, NEW_TERM, FOR), "voteForCandidate");
+        verify(st.controlPublication).saveReplyVote(ID, CANDIDATE_ID, NEW_TERM, FOR), "voteForCandidate");
 
     private static Effect transitionsToFollower =
         transitionsToFollower(NO_ONE, "transitionsToFollower");
@@ -383,13 +335,13 @@ public class ScenariosTest
 
     private static Effect transitionsToCandidate =
         namedEffect(st ->
-        {
-            ReplicationAsserts.transitionsToCandidate(st.raftNode);
+            {
+                ReplicationAsserts.transitionsToCandidate(st.raftNode);
 
-            ReplicationAsserts.neverTransitionsToFollower(st.raftNode);
-            ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
-        },
-        "transitionsToCandidate");
+                ReplicationAsserts.neverTransitionsToFollower(st.raftNode);
+                ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
+            },
+            "transitionsToCandidate");
 
     private static Effect transitionsToLeader =
         namedEffect(st ->
@@ -409,7 +361,7 @@ public class ScenariosTest
             ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
         }, "neverTransitions");
 
-    private static Effect requestsVote =
+    public static Effect requestsVote =
         namedEffect(st ->
         {
             st.requestsVote(LEADERSHIP_TERM);
@@ -417,6 +369,15 @@ public class ScenariosTest
             ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
             ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
         }, "requestsVote");
+
+    public static Stimulus oldTermLeaderHeartbeat =
+        receivesHeartbeat(NEW_LEADER_ID, OLD_LEADERSHIP_TERM, NEW_LEADER_SESSION_ID, "oldTermLeaderHeartbeat");
+
+    public static Stimulus newLeaderHeartbeat =
+        receivesHeartbeat(NEW_LEADER_ID, NEW_TERM, NEW_LEADER_SESSION_ID, "newLeaderHeartbeat");
+
+    public static Stimulus selfHeartbeat =
+        receivesHeartbeat(ID, NEW_TERM, SESSION_ID, "selfHeartbeat");
 
     private static Stimulus receivesHeartbeat(final short leaderId,
                                               final int leaderShipTerm,
@@ -431,10 +392,40 @@ public class ScenariosTest
 
     private static Stimulus timesOut =
         namedStimulus(st ->
-            st.role.poll(1, TIME + TIMEOUT_IN_MS * 5),
+                st.role.poll(1, TIME + TIMEOUT_IN_MS * 2 + 1),
             "timesOut");
 
-    private static Stimulus startElection = namedStimulus(st -> { }, "startElection");
+    private static Stimulus heartbeatBeforeTimeout =
+        namedStimulus(st ->
+            {
+                when(st.controlSubscription.poll(any(), anyInt())).thenAnswer(inv ->
+                {
+                    st.raftHandler.onConcensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
+
+                    return 1;
+                });
+
+                long time = TIME + BELOW_TIMEOUT;
+
+                st.role.poll(1, time);
+
+                time += BELOW_TIMEOUT;
+
+                st.role.poll(1, time);
+
+                time += BELOW_TIMEOUT;
+
+                st.role.poll(1, time);
+            },
+            "heartbeatBeforeTimeout");
+
+    private static void heartbeat(final ScenariosTest st)
+    {
+        st.raftHandler.onConcensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
+    }
+
+    private static Stimulus startElection = namedStimulus(st -> {
+    }, "startElection");
 
     private static Stimulus onMajority =
         namedStimulus(st ->
@@ -553,6 +544,7 @@ public class ScenariosTest
         };
     }
 
-    private static State ignored = named(st -> { } , "");
+    private static State ignored = named(st -> {
+    }, "");
 
 }

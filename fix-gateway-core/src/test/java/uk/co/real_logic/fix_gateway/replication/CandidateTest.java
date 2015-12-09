@@ -19,11 +19,11 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Subscription;
 
-import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
-import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.*;
+import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.neverTransitionsToFollower;
+import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.neverTransitionsToLeader;
 
 public class CandidateTest
 {
@@ -31,7 +31,6 @@ public class CandidateTest
     private static final long VOTE_TIMEOUT = 100;
     private static final int OLD_LEADERSHIP_TERM = 1;
     private static final int NEW_LEADERSHIP_TERM = OLD_LEADERSHIP_TERM + 1;
-    private static final int NEXT_LEADERSHIP_TERM = NEW_LEADERSHIP_TERM + 1;
     private static final int DATA_SESSION_ID = 42;
     private static final int CLUSTER_SIZE = 5;
 
@@ -102,29 +101,6 @@ public class CandidateTest
     }
 
     @Test
-    public void shouldBecomeFollowerUponReceiptOfHeartbeat()
-    {
-        final short otherCandidate = (short) 2;
-
-        startElection();
-
-        candidate.onConcensusHeartbeat(otherCandidate, NEW_LEADERSHIP_TERM, POSITION, DATA_SESSION_ID);
-
-        assertThat(termState, hasLeaderSessionId(DATA_SESSION_ID));
-        transitionsToFollower(raftNode);
-    }
-
-    @Test
-    public void shouldNotBecomeFollowerUponReceiptOfOwnHeartbeat()
-    {
-        startElection();
-
-        candidate.onConcensusHeartbeat(ID, NEW_LEADERSHIP_TERM, POSITION, DATA_SESSION_ID);
-
-        neverTransitionsToFollower(raftNode);
-    }
-
-    @Test
     public void shouldRestartElectionIfTimeoutElapses()
     {
         startElection();
@@ -136,52 +112,6 @@ public class CandidateTest
 
         neverTransitionsToLeader(raftNode);
         neverTransitionsToFollower(raftNode);
-    }
-
-    @Test
-    public void shouldNotReplyVoteToSameTermCandidates()
-    {
-        startElection();
-
-        candidate.onRequestVote(ID_4, OLD_LEADERSHIP_TERM, POSITION);
-
-        neverTransitionsToLeader(raftNode);
-        neverTransitionsToFollower(raftNode);
-        neverVotesFor();
-    }
-
-    @Test
-    public void shouldNotReplyVoteToLowerPositionedCandidates()
-    {
-        startElection();
-
-        candidate.onRequestVote(ID_4, NEXT_LEADERSHIP_TERM, 0L);
-
-        neverTransitionsToLeader(raftNode);
-        neverTransitionsToFollower(raftNode);
-        neverVotesFor();
-    }
-
-    @Test
-    public void shouldReplyVoteToHigherTermCandidates()
-    {
-        startElection();
-
-        candidate.onRequestVote(ID_4, NEXT_LEADERSHIP_TERM, POSITION);
-
-        neverTransitionsToLeader(raftNode);
-        transitionsToFollower(raftNode);
-        voteForCandidateInNextTerm();
-    }
-
-    private void voteForCandidateInNextTerm()
-    {
-        verify(controlPublication).saveReplyVote(ID, ID_4, NEXT_LEADERSHIP_TERM, FOR);
-    }
-
-    private void neverVotesFor()
-    {
-        verify(controlPublication, never()).saveReplyVote(anyShort(), anyShort(), anyInt(), eq(FOR));
     }
 
     private void requestsVote(final int term)

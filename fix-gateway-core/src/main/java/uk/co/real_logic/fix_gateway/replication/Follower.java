@@ -99,7 +99,7 @@ public class Follower implements Role, RaftHandler
                 .leadershipTerm(leaderShipTerm)
                 .noLeader();
 
-            //System.out.printf("Timeout: %d vs %d", timeInMs, latestNextReceiveTimeInMs);
+            // System.out.printf("Timeout: %d%n", timeInMs);
 
             raftNode.transitionToCandidate(timeInMs);
 
