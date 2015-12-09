@@ -123,8 +123,6 @@ public class ScenariosTest
 
             scenario(candidate, selfHeartbeat, neverTransitions, ignored)
         );
-
-        // TODO: follower doesn't time out
     }
 
     public ScenariosTest(

@@ -84,6 +84,7 @@ public class FollowerTest
             .controlSubscription(controlSubscription);
 
         when(archiver.getSession(LEADER_SESSION_ID)).thenReturn(leaderArchiver);
+        //when(archiver.getSession(OTHER_SESSION_ID)).thenReturn(leaderArchiver);
 
         follower.follow(0);
     }

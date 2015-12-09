@@ -218,7 +218,8 @@ public class Follower implements Role, RaftHandler
                                      final long position,
                                      final int leaderSessionId)
     {
-        if (leaderNodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
+        if (leaderNodeId != this.nodeId &&
+            leaderShipTerm > this.leaderShipTerm)
         {
             termState
                 .leadershipTerm(leaderShipTerm)
@@ -226,6 +227,11 @@ public class Follower implements Role, RaftHandler
                 .lastAppliedPosition(lastAppliedPosition)
                 .commitPosition(position)
                 .leaderSessionId(leaderSessionId);
+
+            if (leaderSessionId != termState.leaderSessionId())
+            {
+                leaderArchiver = archiver.getSession(leaderSessionId);
+            }
 
             follow(this.timeInMs);
         }
