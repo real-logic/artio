@@ -36,6 +36,8 @@ import java.io.File;
 
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.agrona.CloseHelper.close;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
 
 public class AbstractReplicationTest
 {
@@ -50,7 +52,6 @@ public class AbstractReplicationTest
     protected static final int CLUSTER_SIZE = 3;
     protected static final long TIME = 0L;
     protected static final int DATA_SESSION_ID = 43;
-    protected static final int LOGGER_CACHE_CAPACITY = 10;
 
     protected RaftNode raftNode1 = mock(RaftNode.class);
     protected RaftNode raftNode2 = mock(RaftNode.class);
@@ -139,8 +140,12 @@ public class AbstractReplicationTest
         final Subscription subscription = dataSubscription();
         final StreamIdentifier streamId = new StreamIdentifier(subscription);
         final ArchiveReader archiveReader = new ArchiveReader(
-            metaData, LOGGER_CACHE_CAPACITY, streamId);
-        final Archiver archiver = new Archiver(metaData, LOGGER_CACHE_CAPACITY, streamId)
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, streamId);
+        final Archiver archiver = new Archiver(
+            metaData,
+            DEFAULT_LOGGER_CACHE_NUM_SETS,
+            DEFAULT_LOGGER_CACHE_SET_SIZE,
+            streamId)
             .subscription(subscription);
 
         return new Follower(

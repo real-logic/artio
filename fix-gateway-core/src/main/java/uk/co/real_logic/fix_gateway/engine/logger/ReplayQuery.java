@@ -17,13 +17,14 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.agrona.collections.LongLruCache;
+import uk.co.real_logic.agrona.collections.Long2ObjectCache;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordDecoder;
 
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
+import java.util.function.LongFunction;
 
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
@@ -36,7 +37,8 @@ public class ReplayQuery implements AutoCloseable
     private final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
     private final ReplayIndexRecordDecoder indexRecord = new ReplayIndexRecordDecoder();
 
-    private final LongLruCache<SessionQuery> sessionToIndex;
+    private final LongFunction<SessionQuery> newSessionQuery = SessionQuery::new;
+    private final Long2ObjectCache<SessionQuery> sessionToIndex;
     private final String logFileDir;
     private final ExistingBufferFactory indexBufferFactory;
 
@@ -44,27 +46,28 @@ public class ReplayQuery implements AutoCloseable
 
     public ReplayQuery(
         final String logFileDir,
-        final int loggerCacheCapacity,
+        final int cacheNumSets,
+        final int cacheSetSize,
         final ExistingBufferFactory indexBufferFactory,
         final ArchiveReader outboundArchiveReader)
     {
         this.logFileDir = logFileDir;
         this.indexBufferFactory = indexBufferFactory;
         this.outboundArchiveReader = outboundArchiveReader;
-        sessionToIndex = new LongLruCache<>(loggerCacheCapacity, SessionQuery::new, SessionQuery::close);
+        sessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionQuery::close);
     }
 
     public int query(
         final FragmentHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
     {
         return sessionToIndex
-            .lookup(sessionId)
+            .computeIfAbsent(sessionId, newSessionQuery)
             .query(handler, beginSeqNo, endSeqNo);
     }
 
     public void close()
     {
-        sessionToIndex.close();
+        sessionToIndex.clear();
     }
 
     private final class SessionQuery implements AutoCloseable

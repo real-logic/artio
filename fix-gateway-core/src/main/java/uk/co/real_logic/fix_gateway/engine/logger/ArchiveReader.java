@@ -21,8 +21,8 @@ import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor;
 import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.IoUtil;
+import uk.co.real_logic.agrona.collections.Int2ObjectCache;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
-import uk.co.real_logic.agrona.collections.IntLruCache;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
@@ -57,18 +57,21 @@ public class ArchiveReader implements AutoCloseable
     private final Int2ObjectHashMap<SessionReader> aeronSessionIdToReader;
     private final ExistingBufferFactory archiveBufferFactory;
     private final ArchiveMetaData metaData;
-    private final int loggerCacheCapacity;
     private final StreamIdentifier streamId;
     private final LogDirectoryDescriptor directoryDescriptor;
+    private final int cacheNumSets;
+    private final int cacheSetSize;
 
     public ArchiveReader(
         final ArchiveMetaData metaData,
-        final int loggerCacheCapacity,
+        final int cacheNumSets,
+        final int cacheSetSize,
         final StreamIdentifier streamId)
     {
+        this.cacheNumSets = cacheNumSets;
+        this.cacheSetSize = cacheSetSize;
         archiveBufferFactory = LoggerUtil::mapExistingFile;
         this.metaData = metaData;
-        this.loggerCacheCapacity = loggerCacheCapacity;
         this.streamId = streamId;
         directoryDescriptor = metaData.directoryDescriptor();
         aeronSessionIdToReader = new Int2ObjectHashMap<>();
@@ -156,9 +159,10 @@ public class ArchiveReader implements AutoCloseable
 
     private final class SessionReader implements AutoCloseable
     {
+        private final IntFunction<ByteBuffer> newBuffer = this::newBuffer;
         private final int sessionId;
-        private final IntLruCache<ByteBuffer> termIdToBuffer =
-            new IntLruCache<>(loggerCacheCapacity, this::newBuffer, this::closeBuffer);
+        private final Int2ObjectCache<ByteBuffer> termIdToBuffer =
+            new Int2ObjectCache<>(cacheNumSets, cacheSetSize, this::closeBuffer);
         private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
         private final DataHeaderFlyweight dataHeader = new DataHeaderFlyweight();
         private final int initialTermId;
@@ -238,7 +242,7 @@ public class ArchiveReader implements AutoCloseable
         private int scan(final long position)
         {
             final int termId = computeTermIdFromPosition(position);
-            final ByteBuffer termBuffer = termIdToBuffer.lookup(termId);
+            final ByteBuffer termBuffer = termIdToBuffer.computeIfAbsent(termId, newBuffer);
             if (termBuffer == null)
             {
                 return UNKNOWN_TERM;
@@ -258,7 +262,7 @@ public class ArchiveReader implements AutoCloseable
         private boolean readBlock(final long position, final int requestedLength, final BlockHandler handler)
         {
             final int termId = computeTermIdFromPosition(position);
-            final ByteBuffer termBuffer = termIdToBuffer.lookup(termId);
+            final ByteBuffer termBuffer = termIdToBuffer.computeIfAbsent(termId, newBuffer);
             if (termBuffer == null)
             {
                 return false;
@@ -286,7 +290,7 @@ public class ArchiveReader implements AutoCloseable
 
         public void close()
         {
-            termIdToBuffer.close();
+            termIdToBuffer.clear();
         }
 
         private void closeBuffer(final ByteBuffer buffer)

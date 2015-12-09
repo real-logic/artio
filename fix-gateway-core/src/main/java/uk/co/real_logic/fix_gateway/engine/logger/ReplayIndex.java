@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
-import uk.co.real_logic.agrona.collections.LongLruCache;
+import uk.co.real_logic.agrona.collections.Long2ObjectCache;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -27,17 +27,20 @@ import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
+import java.util.function.LongFunction;
 
 /**
  * Builds an index of a composite key of session id and sequence number
  */
 public class ReplayIndex implements Index
 {
+
     static File logFile(final String logFileDir, final long sessionId)
     {
         return new File(String.format(logFileDir + File.separator + "replay-index-%d", sessionId));
     }
 
+    private final LongFunction<SessionIndex> newSessionIndex = SessionIndex::new;
     private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
@@ -45,7 +48,7 @@ public class ReplayIndex implements Index
     private final ReplayIndexRecordEncoder replayIndexRecord = new ReplayIndexRecordEncoder();
     private final MessageHeaderEncoder indexHeaderEncoder = new MessageHeaderEncoder();
 
-    private final LongLruCache<SessionIndex> sessionToIndex;
+    private final Long2ObjectCache<SessionIndex> sessionToIndex;
 
     private final String logFileDir;
     private final int indexFileSize;
@@ -54,13 +57,14 @@ public class ReplayIndex implements Index
     public ReplayIndex(
         final String logFileDir,
         final int indexFileSize,
-        final int loggerCacheCapacity,
+        final int cacheNumSets,
+        final int cacheSetSize,
         final BufferFactory bufferFactory)
     {
         this.logFileDir = logFileDir;
         this.indexFileSize = indexFileSize;
         this.bufferFactory = bufferFactory;
-        sessionToIndex = new LongLruCache<>(loggerCacheCapacity, SessionIndex::new, SessionIndex::close);
+        sessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
     }
 
     public void indexRecord(final DirectBuffer srcBuffer,
@@ -84,14 +88,14 @@ public class ReplayIndex implements Index
             fixHeader.decode(asciiFlyweight, offset, messageFrame.bodyLength());
 
             sessionToIndex
-                .lookup(messageFrame.session())
+                .computeIfAbsent(messageFrame.session(), newSessionIndex)
                 .onRecord(streamId, aeronSessionId, srcOffset, fixHeader.msgSeqNum());
         }
     }
 
     public void close()
     {
-        sessionToIndex.close();
+        sessionToIndex.clear();
     }
 
     private final class SessionIndex implements AutoCloseable

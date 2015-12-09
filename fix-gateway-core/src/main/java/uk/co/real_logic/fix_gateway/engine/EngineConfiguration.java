@@ -71,7 +71,8 @@ public final class EngineConfiguration extends CommonConfiguration
 
     public static final String DEFAULT_LOG_FILE_DIR = "logs";
     public static final int DEFAULT_INDEX_FILE_SIZE = 2 * 1024 * 1024;
-    public static final int DEFAULT_LOGGER_CACHE_CAPACITY = 10;
+    public static final int DEFAULT_LOGGER_CACHE_NUM_SETS = 8;
+    public static final int DEFAULT_LOGGER_CACHE_SET_SIZE = 4;
 
     public static final int DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT = 100;
     public static final int DEFAULT_REPLAY_FRAGMENT_LIMIT = 5;
@@ -87,7 +88,8 @@ public final class EngineConfiguration extends CommonConfiguration
     private int port;
     private int indexFileSize = getInteger(INDEX_FILE_SIZE_PROP, DEFAULT_INDEX_FILE_SIZE);
     private String logFileDir = getProperty(LOG_FILE_DIR_PROP, DEFAULT_LOG_FILE_DIR);
-    private int loggerCacheCapacity = DEFAULT_LOGGER_CACHE_CAPACITY;
+    private int loggerCacheNumSets = DEFAULT_LOGGER_CACHE_NUM_SETS;
+    private int loggerCacheSetSize = DEFAULT_LOGGER_CACHE_SET_SIZE;
     private boolean logInboundMessages = true;
     private boolean logOutboundMessages = true;
     private boolean printErrorMessages = true;
@@ -156,9 +158,15 @@ public final class EngineConfiguration extends CommonConfiguration
         return this;
     }
 
-    public EngineConfiguration loggerCacheCapacity(int loggerCacheCapacity)
+    public EngineConfiguration loggerCacheSetSize(final int loggerCacheCapacity)
     {
-        this.loggerCacheCapacity = loggerCacheCapacity;
+        this.loggerCacheSetSize = loggerCacheCapacity;
+        return this;
+    }
+
+    public EngineConfiguration loggerCacheNumSets(final int loggerCacheNumSets)
+    {
+        this.loggerCacheNumSets = loggerCacheNumSets;
         return this;
     }
 
@@ -251,9 +259,14 @@ public final class EngineConfiguration extends CommonConfiguration
         return indexFileSize;
     }
 
-    public int loggerCacheCapacity()
+    public int loggerCacheSetSize()
     {
-        return loggerCacheCapacity;
+        return loggerCacheSetSize;
+    }
+
+    public int loggerCacheNumSets()
+    {
+        return loggerCacheNumSets;
     }
 
     public boolean logInboundMessages()

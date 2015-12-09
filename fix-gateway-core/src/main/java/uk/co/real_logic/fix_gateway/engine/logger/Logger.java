@@ -78,15 +78,16 @@ public class Logger implements AutoCloseable
     {
         if (configuration.logOutboundMessages())
         {
-            final int loggerCacheCapacity = configuration.loggerCacheCapacity();
+            final int cacheSetSize = configuration.loggerCacheSetSize();
+            final int cacheNumSets = configuration.loggerCacheNumSets();
             final String logFileDir = configuration.logFileDir();
             final List<Index> indices = Arrays.asList(
-                new ReplayIndex(logFileDir, configuration.indexFileSize(), loggerCacheCapacity, LoggerUtil::map),
+                new ReplayIndex(logFileDir, configuration.indexFileSize(), cacheNumSets, cacheSetSize, LoggerUtil::map),
                 sequenceNumbers);
             final Indexer indexer = new Indexer(indices, outboundLibraryStreams.subscription());
 
             final ReplayQuery replayQuery = new ReplayQuery(
-                logFileDir, loggerCacheCapacity, LoggerUtil::mapExistingFile, outboundArchiveReader);
+                logFileDir, cacheNumSets, cacheSetSize, LoggerUtil::mapExistingFile, outboundArchiveReader);
             final Replayer replayer = new Replayer(
                 inboundLibraryStreams.subscription(),
                 replayQuery,
@@ -108,24 +109,25 @@ public class Logger implements AutoCloseable
 
     public void initArchival()
     {
-        final int loggerCacheCapacity = configuration.loggerCacheCapacity();
+        final int cacheNumSets = configuration.loggerCacheNumSets();
+        final int cacheSetSize = configuration.loggerCacheSetSize();
         final String logFileDir = configuration.logFileDir();
 
         directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
 
         if (configuration.logInboundMessages())
         {
-            addArchiver(loggerCacheCapacity, inboundLibraryStreams.subscription());
+            addArchiver(cacheNumSets, cacheSetSize, inboundLibraryStreams.subscription());
         }
 
         if (configuration.logOutboundMessages())
         {
             final Subscription outboundSubscription = outboundLibraryStreams.subscription();
-            addArchiver(loggerCacheCapacity, outboundSubscription);
+            addArchiver(cacheNumSets, cacheSetSize, outboundSubscription);
 
             outboundArchiveReader = new ArchiveReader(
                 LoggerUtil.newArchiveMetaData(logFileDir),
-                loggerCacheCapacity,
+                cacheNumSets, cacheSetSize,
                 new StreamIdentifier(outboundSubscription));
         }
     }
@@ -135,12 +137,15 @@ public class Logger implements AutoCloseable
         return new AgentRunner(configuration.loggerIdleStrategy(), errorHandler, null, loggingAgent);
     }
 
-    private void addArchiver(final int loggerCacheCapacity,
+    private void addArchiver(final int cacheNumSets,
+                             final int cacheSetSize,
                              final Subscription subscription)
     {
         final Archiver archiver = new Archiver(
             LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
-            loggerCacheCapacity, new StreamIdentifier(subscription))
+            cacheNumSets,
+            cacheSetSize,
+            new StreamIdentifier(subscription))
             .subscription(subscription);
         archivers.add(archiver);
     }

@@ -36,7 +36,11 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private LogonEncoder logon = new LogonEncoder();
     private ReplayIndex replayIndex = new ReplayIndex(
-        DEFAULT_LOG_FILE_DIR, DEFAULT_INDEX_FILE_SIZE, DEFAULT_LOGGER_CACHE_CAPACITY, mockBufferFactory);
+        DEFAULT_LOG_FILE_DIR,
+        DEFAULT_INDEX_FILE_SIZE,
+        DEFAULT_LOGGER_CACHE_NUM_SETS,
+        DEFAULT_LOGGER_CACHE_SET_SIZE,
+        mockBufferFactory);
 
     @Before
     public void setUp()

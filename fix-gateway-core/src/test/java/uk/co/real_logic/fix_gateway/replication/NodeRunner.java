@@ -31,6 +31,8 @@ import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
 import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.*;
 
 public class NodeRunner implements AutoCloseable, Role
@@ -76,8 +78,9 @@ public class NodeRunner implements AutoCloseable, Role
         final StreamIdentifier dataStream = new StreamIdentifier(AERON_GROUP, DATA);
         final ArchiveMetaData metaData = AbstractReplicationTest.archiveMetaData((short) nodeId);
         final ArchiveReader archiveReader = new ArchiveReader(
-            metaData, LOGGER_CACHE_CAPACITY, dataStream);
-        final Archiver archiver = new Archiver(metaData, LOGGER_CACHE_CAPACITY, dataStream);
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
+        final Archiver archiver = new Archiver(
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
 
         final RaftNodeConfiguration configuration = new RaftNodeConfiguration()
             .nodeId((short) nodeId)

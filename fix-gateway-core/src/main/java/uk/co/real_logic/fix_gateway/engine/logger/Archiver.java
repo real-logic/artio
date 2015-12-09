@@ -21,7 +21,7 @@ import uk.co.real_logic.aeron.logbuffer.FileBlockHandler;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.LangUtil;
-import uk.co.real_logic.agrona.collections.IntLruCache;
+import uk.co.real_logic.agrona.collections.Int2ObjectCache;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.function.IntFunction;
 
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
 import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
@@ -41,8 +42,9 @@ public class Archiver implements Agent, FileBlockHandler
 
     private static final int POLL_LENGTH = termBufferLength();
 
+    private final IntFunction<SessionArchiver> newSessionArchiver = this::newSessionArchiver;
     private final ArchiveMetaData metaData;
-    private final IntLruCache<SessionArchiver> sessionIdToArchive;
+    private final Int2ObjectCache<SessionArchiver> sessionIdToArchive;
     private final StreamIdentifier streamId;
     private final LogDirectoryDescriptor directoryDescriptor;
 
@@ -50,25 +52,28 @@ public class Archiver implements Agent, FileBlockHandler
 
     public Archiver(
         final ArchiveMetaData metaData,
-        final int loggerCacheCapacity,
+        final int cacheNumSets,
+        final int cacheSetSize,
         final StreamIdentifier streamId)
     {
         this.metaData = metaData;
         this.directoryDescriptor = metaData.directoryDescriptor();
         this.streamId = streamId;
-        sessionIdToArchive = new IntLruCache<>(loggerCacheCapacity, sessionId ->
-        {
-            final Image image = subscription.getImage(sessionId);
-            if (image == null)
-            {
-                return null;
-            }
+        sessionIdToArchive = new Int2ObjectCache<>(cacheNumSets, cacheSetSize, SessionArchiver::close);
+    }
 
-            final int initialTermId = image.initialTermId();
-            final int termBufferLength = image.termBufferLength();
-            metaData.write(streamId, sessionId, initialTermId, termBufferLength);
-            return new SessionArchiver(sessionId, image);
-        }, SessionArchiver::close);
+    private SessionArchiver newSessionArchiver(final int sessionId)
+    {
+        final Image image = subscription.getImage(sessionId);
+        if (image == null)
+        {
+            return null;
+        }
+
+        final int initialTermId = image.initialTermId();
+        final int termBufferLength = image.termBufferLength();
+        metaData.write(streamId, sessionId, initialTermId, termBufferLength);
+        return new SessionArchiver(sessionId, image);
     }
 
     public Archiver subscription(final Subscription subscription)
@@ -120,13 +125,13 @@ public class Archiver implements Agent, FileBlockHandler
 
     public SessionArchiver getSession(final int sessionId)
     {
-        return sessionIdToArchive.lookup(sessionId);
+        return sessionIdToArchive.computeIfAbsent(sessionId, newSessionArchiver);
     }
 
     public void onClose()
     {
         subscription.close();
-        sessionIdToArchive.close();
+        sessionIdToArchive.clear();
         metaData.close();
     }
 

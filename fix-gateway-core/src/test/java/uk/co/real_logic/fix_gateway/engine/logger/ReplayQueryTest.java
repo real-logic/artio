@@ -34,10 +34,18 @@ public class ReplayQueryTest extends AbstractLogTest
     private FragmentHandler mockHandler = mock(FragmentHandler.class);
     private ArchiveReader mockReader = mock(ArchiveReader.class);
     private ReplayIndex replayIndex = new ReplayIndex(
-        DEFAULT_LOG_FILE_DIR, DEFAULT_INDEX_FILE_SIZE, DEFAULT_LOGGER_CACHE_CAPACITY, (name, size) -> indexBuffer);
+        DEFAULT_LOG_FILE_DIR,
+        DEFAULT_INDEX_FILE_SIZE,
+        DEFAULT_LOGGER_CACHE_NUM_SETS,
+        DEFAULT_LOGGER_CACHE_SET_SIZE,
+        (name, size) -> indexBuffer);
 
     private ReplayQuery query = new ReplayQuery(
-        DEFAULT_LOG_FILE_DIR, DEFAULT_LOGGER_CACHE_CAPACITY, mockBufferFactory, mockReader);
+        DEFAULT_LOG_FILE_DIR,
+        DEFAULT_LOGGER_CACHE_NUM_SETS,
+        DEFAULT_LOGGER_CACHE_SET_SIZE,
+        mockBufferFactory,
+        mockReader);
 
     @Before
     public void setUp()
