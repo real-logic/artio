@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.stubbing.OngoingStubbing;
 import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
@@ -72,7 +73,7 @@ public class LeaderTest
             .dataSubscription(dataSubscription)
             .getsElected(TIME);
 
-        when(archiveReader.readBlock(eq(LEADER_SESSION_ID), anyLong(), anyInt(), any())).then(inv ->
+        whenBlockRead().then(inv ->
         {
             final Object[] arguments = inv.getArguments();
             final int length = (int) arguments[2];
@@ -97,7 +98,19 @@ public class LeaderTest
 
         receivesMissingLogEntries(followerPosition);
 
-        resendsMissingLogEntries(followerPosition);
+        resendsMissingLogEntries(followerPosition, (int) POSITION);
+    }
+
+    @Test
+    public void shouldRespondToMissingLogEntriesWhenTheresNoData()
+    {
+        whenBlockRead().thenReturn(false);
+
+        final long followerPosition = 0;
+
+        receivesMissingLogEntries(followerPosition);
+
+        resendsMissingLogEntries(followerPosition, 0);
     }
 
     private void receivesMissingLogEntries(final long followerPosition)
@@ -105,7 +118,7 @@ public class LeaderTest
         leader.onMessageAcknowledgement(followerPosition, FOLLOWER_ID, MISSING_LOG_ENTRIES);
     }
 
-    private void resendsMissingLogEntries(final long followerPosition)
+    private void resendsMissingLogEntries(final long followerPosition, final int length)
     {
         verify(controlPublication).saveResend(
             eq(LEADER_SESSION_ID),
@@ -113,7 +126,11 @@ public class LeaderTest
             eq(followerPosition),
             any(),
             eq(0),
-            eq((int) POSITION));
+            eq(length));
     }
 
+    private OngoingStubbing<Boolean> whenBlockRead()
+    {
+        return when(archiveReader.readBlock(eq(LEADER_SESSION_ID), anyLong(), anyInt(), any()));
+    }
 }

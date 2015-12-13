@@ -37,6 +37,8 @@ import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.WRONG_
 
 public class Leader implements Role, RaftHandler
 {
+    private static final UnsafeBuffer EMPTY_BUFFER = new UnsafeBuffer(new byte[0]);
+
     public static final int NO_SESSION_ID = -1;
 
     private final TermState termState;
@@ -63,6 +65,8 @@ public class Leader implements Role, RaftHandler
     private long nextHeartbeatTimeInMs;
     private int leaderShipTerm;
     private long timeInMs;
+
+    private long position;
 
     public Leader(
         final short nodeId,
@@ -168,10 +172,10 @@ public class Leader implements Role, RaftHandler
         if (status == MISSING_LOG_ENTRIES)
         {
             final int length = (int) (commitAndLastAppliedPosition - position);
-            resendHandler.position(position);
+            this.position = position;
             if (!archiveReader.readBlock(ourSessionId, position, length, resendHandler))
             {
-                // TODO: error
+                saveResend(EMPTY_BUFFER, 0, 0);
             }
         }
     }
@@ -276,18 +280,16 @@ public class Leader implements Role, RaftHandler
 
     private class ResendHandler implements BlockHandler
     {
-        private long position;
-
         public void onBlock(
             final DirectBuffer buffer, final int offset, final int length, final int sessionId, final int termId)
         {
-            controlPublication.saveResend(ourSessionId, leaderShipTerm, position, buffer, offset, length);
+            saveResend(buffer, offset, length);
         }
+    }
 
-        public void position(final long position)
-        {
-            this.position = position;
-        }
+    private void saveResend(final DirectBuffer buffer, final int offset, final int length)
+    {
+        controlPublication.saveResend(ourSessionId, leaderShipTerm, position, buffer, offset, length);
     }
 
     private final class Fragmenter implements BlockHandler
