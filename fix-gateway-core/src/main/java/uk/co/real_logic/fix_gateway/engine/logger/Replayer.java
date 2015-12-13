@@ -25,7 +25,6 @@ import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
@@ -42,6 +41,13 @@ import java.nio.charset.StandardCharsets;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static uk.co.real_logic.fix_gateway.engine.logger.PossDupFinder.NO_ENTRY;
 
+/**
+ * The replayer responds to resend requests with data from the log of sent messages.
+ *
+ * This agent subscribes to the stream of incoming fix data messages. It parses
+ * Resend Request messages and searches the log, using the replay index to find
+ * relevant messages to resend.
+ */
 public class Replayer implements SessionHandler, FragmentHandler, Agent
 {
     public static final int MESSAGE_FRAME_BLOCK_LENGTH =
@@ -70,6 +76,9 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
     private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
     private final DataSubscriber dataSubscriber = new DataSubscriber(this);
 
+    private int currentMessageOffset;
+    private int currentMessageLength;
+
     public Replayer(
         final Subscription subscription,
         final ReplayQuery replayQuery,
@@ -91,7 +100,7 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
     public void onMessage(
         final DirectBuffer srcBuffer,
         final int srcOffset,
-        final int length,
+        int length,
         final int libraryId,
         final long connectionId,
         final long sessionId,
@@ -100,14 +109,20 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
     {
         if (messageType == ResendRequestDecoder.MESSAGE_TYPE)
         {
+            length = Math.min(length, srcBuffer.capacity() - srcOffset);
+
             asciiFlyweight.wrap(srcBuffer);
+            currentMessageOffset = srcOffset;
+            currentMessageLength = length;
             resendRequest.decode(asciiFlyweight, srcOffset, length);
 
             final int beginSeqNo = resendRequest.beginSeqNo();
             final int endSeqNo = resendRequest.endSeqNo();
             if (endSeqNo < beginSeqNo)
             {
-                DebugLogger.log("Error in resend request, endSeqNo (%d) < beginSeqNo (%d)", endSeqNo, beginSeqNo);
+                onIllegalState(
+                    "[%s] Error in resend request, endSeqNo (%d) < beginSeqNo (%d)",
+                    message(), endSeqNo, beginSeqNo);
                 return;
             }
 
@@ -115,7 +130,9 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
             final int count = replayQuery.query(this, sessionId, beginSeqNo, endSeqNo);
             if (count != expectedCount)
             {
-                DebugLogger.log("Error in resend request, count(%d) < expectedCount (%d)", count, expectedCount);
+                onIllegalState(
+                    "[%s] Error in resend request, count(%d) < expectedCount (%d)",
+                    message(), count, expectedCount);
             }
         }
     }
@@ -136,15 +153,21 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
 
             try
             {
-                addPossDupField(
-                    srcBuffer, srcOffset, fullLength, messageOffset, messageLength, claim.buffer(), claim.offset());
-
-                claim.commit();
+                if (addPossDupField(
+                    srcBuffer, srcOffset, fullLength, messageOffset, messageLength, claim.buffer(), claim.offset()))
+                {
+                    claim.commit();
+                }
+                else
+                {
+                    onIllegalState("[%s] Missing sending time field in resend request", message());
+                    claim.abort();
+                }
             }
             catch (Exception e)
             {
                 claim.abort();
-                errorHandler.onError(e);
+                onException(e);
             }
         }
         else
@@ -163,9 +186,25 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
             catch (Exception e)
             {
                 claim.abort();
-                errorHandler.onError(e);
+                onException(e);
             }
         }
+    }
+
+    private void onException(final Exception e)
+    {
+        final String message = String.format("[%s] Error replying to message", message());
+        errorHandler.onError(new IllegalArgumentException(message, e));
+    }
+
+    private void onIllegalState(final String message, final Object... arguments)
+    {
+        errorHandler.onError(new IllegalStateException(String.format(message, arguments)));
+    }
+
+    private String message()
+    {
+        return asciiFlyweight.getAscii(currentMessageOffset, currentMessageLength);
     }
 
     private void claimBuffer(final int newLength)
@@ -176,7 +215,7 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
         }
     }
 
-    private void addPossDupField(
+    private boolean addPossDupField(
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength,
@@ -189,10 +228,7 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
         final int sendingTimeSrcEnd = possDupFinder.sendingTimeEnd();
         if (sendingTimeSrcEnd == NO_ENTRY)
         {
-            DebugLogger.log("Missing sending time field in resend request");
-            // TODO: log error
-            // TODO: probably should requestDisconnect the client
-            return;
+            return false;
         }
         final int lengthToPossDup = sendingTimeSrcEnd - srcOffset;
         final int possDupClaimOffset = claimOffset + lengthToPossDup;
@@ -205,6 +241,8 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
         updateFrameBodyLength(messageLength, claimBuffer, claimOffset);
         final int messageClaimOffset = srcToClaim(messageOffset, srcOffset, claimOffset);
         updateMessage(srcOffset, messageClaimOffset, claimBuffer, claimOffset);
+
+        return true;
     }
 
     private void updateFrameBodyLength(
