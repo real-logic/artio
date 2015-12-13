@@ -53,8 +53,8 @@ public class ScenariosTest
     private static final short NEW_LEADER_ID = 3;
 
     private static final short CANDIDATE_ID = 5;
-    private static final short ID_4 = 4; // TODO: better name
-    private static final short ID_5 = 5;
+    private static final short FOLLOWER_1_ID = 4;
+    private static final short FOLLOWER_2_ID = 5;
 
     private final RaftNode raftNode = mock(RaftNode.class);
     private final RaftPublication controlPublication = mock(RaftPublication.class);
@@ -428,8 +428,8 @@ public class ScenariosTest
     private static Stimulus onMajority =
         namedStimulus(st ->
         {
-            st.raftHandler.onReplyVote(ID_4, ID, LEADERSHIP_TERM, FOR);
-            st.raftHandler.onReplyVote(ID_5, ID, LEADERSHIP_TERM, FOR);
+            st.raftHandler.onReplyVote(FOLLOWER_1_ID, ID, LEADERSHIP_TERM, FOR);
+            st.raftHandler.onReplyVote(FOLLOWER_2_ID, ID, LEADERSHIP_TERM, FOR);
         }, "onMajority");
 
     private static Stimulus lowerPositionRequestVote =
