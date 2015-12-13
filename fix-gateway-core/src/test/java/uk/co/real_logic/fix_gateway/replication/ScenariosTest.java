@@ -195,7 +195,7 @@ public class ScenariosTest
 
     private static State hasNewLeader(final int sessionId)
     {
-        return named(termState ->
+        return namedState(termState ->
         {
             assertThat(termState, hasLeaderSessionId(sessionId));
             assertThat(termState, hasLeadershipTerm(NEW_TERM));
@@ -205,7 +205,7 @@ public class ScenariosTest
 
     private static State isLeader(final int sessionId)
     {
-        return named(termState ->
+        return namedState(termState ->
         {
             assertThat(termState, hasLeaderSessionId(sessionId));
             assertThat(termState, hasLeadershipTerm(LEADERSHIP_TERM));
@@ -214,7 +214,7 @@ public class ScenariosTest
 
     private static State hasNoLeader(final int leadershipTerm)
     {
-        return named(termState ->
+        return namedState(termState ->
         {
             assertThat(termState, noLeaderMatcher());
             assertThat(termState, hasLeadershipTerm(leadershipTerm));
@@ -526,7 +526,7 @@ public class ScenariosTest
         };
     }
 
-    private static State named(final State state, final String name)
+    private static State namedState(final State state, final String name)
     {
         return new State()
         {
@@ -542,7 +542,7 @@ public class ScenariosTest
         };
     }
 
-    private static State ignored = named(st -> {
+    private static State ignored = namedState(st -> {
     }, "");
 
 }
