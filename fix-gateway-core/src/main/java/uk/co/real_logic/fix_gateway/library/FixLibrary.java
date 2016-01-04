@@ -100,14 +100,7 @@ public final class FixLibrary extends GatewayProcess
         outboundPublication.saveLibraryConnect(libraryId, isAcceptor);
 
         final long latestReplyArrivalTime = latestReplyArrivalTime();
-        while (!livenessDetector.isConnected() && errorType == null)
-        {
-            final int workCount = poll(1);
 
-            checkTime(latestReplyArrivalTime);
-
-            idleStrategy.idle(workCount);
-        }
 
         if (errorType != null)
         {

@@ -93,7 +93,7 @@ public class ArchiveReader implements AutoCloseable
      */
     public long read(final int aeronSessionId, final long position, final FragmentHandler handler)
     {
-        final SessionReader sessionReader = sessionReader(aeronSessionId);
+        final SessionReader sessionReader = session(aeronSessionId);
         if (sessionReader == null)
         {
             return UNKNOWN_SESSION;
@@ -114,7 +114,7 @@ public class ArchiveReader implements AutoCloseable
     public long readUpTo(
         final int aeronSessionId, final long beginPosition, final long endPosition, final FragmentHandler handler)
     {
-        final SessionReader sessionReader = sessionReader(aeronSessionId);
+        final SessionReader sessionReader = session(aeronSessionId);
         if (sessionReader == null)
         {
             return UNKNOWN_SESSION;
@@ -137,11 +137,11 @@ public class ArchiveReader implements AutoCloseable
     public boolean readBlock(
         final int aeronSessionId, final long position, final int length, final BlockHandler handler)
     {
-        final SessionReader sessionReader = sessionReader(aeronSessionId);
+        final SessionReader sessionReader = session(aeronSessionId);
         return sessionReader != null && sessionReader.readBlock(position, length, handler);
     }
 
-    private SessionReader sessionReader(final int aeronSessionId)
+    public SessionReader session(final int aeronSessionId)
     {
         return aeronSessionIdToReader.computeIfAbsent(aeronSessionId, newSessionReader);
     }
@@ -157,7 +157,7 @@ public class ArchiveReader implements AutoCloseable
         return new SessionReader(sessionId, streamMetaData.initialTermId(), streamMetaData.termBufferLength());
     }
 
-    private final class SessionReader implements AutoCloseable
+    public final class SessionReader implements AutoCloseable
     {
         private final IntFunction<ByteBuffer> newBuffer = this::newBuffer;
         private final int sessionId;
@@ -177,18 +177,7 @@ public class ArchiveReader implements AutoCloseable
             header = new Header(this.initialTermId, termBufferLength);
         }
 
-        private ByteBuffer newBuffer(final int termId)
-        {
-            final File logFile = directoryDescriptor.logFile(streamId, sessionId, termId);
-            if (!logFile.exists())
-            {
-                return null;
-            }
-
-            return archiveBufferFactory.map(logFile);
-        }
-
-        private long read(final long position, final FragmentHandler handler)
+        public long read(final long position, final FragmentHandler handler)
         {
             final int termOffset = scan(position);
             if (termOffset == UNKNOWN_TERM)
@@ -207,7 +196,7 @@ public class ArchiveReader implements AutoCloseable
             return position + frameLength;
         }
 
-        private long readUpTo(final long beginPosition, final long endPosition, final FragmentHandler handler)
+        public long readUpTo(final long beginPosition, final long endPosition, final FragmentHandler handler)
         {
             long position = beginPosition;
             while (position > 0)
@@ -239,6 +228,36 @@ public class ArchiveReader implements AutoCloseable
             return position;
         }
 
+        public boolean readBlock(final long position, final int requestedLength, final BlockHandler handler)
+        {
+            final int termId = computeTermIdFromPosition(position);
+            final ByteBuffer termBuffer = termIdToBuffer.computeIfAbsent(termId, newBuffer);
+            if (termBuffer == null)
+            {
+                return false;
+            }
+
+            buffer.wrap(termBuffer);
+            final int offset = computeTermOffsetFromPosition(position);
+            final int remainder = termBuffer.capacity() - offset;
+            final int length = Math.min(requestedLength, remainder);
+
+            handler.onBlock(buffer, offset, length, sessionId, termId);
+
+            return true;
+        }
+
+        private ByteBuffer newBuffer(final int termId)
+        {
+            final File logFile = directoryDescriptor.logFile(streamId, sessionId, termId);
+            if (!logFile.exists())
+            {
+                return null;
+            }
+
+            return archiveBufferFactory.map(logFile);
+        }
+
         private int scan(final long position)
         {
             final int termId = computeTermIdFromPosition(position);
@@ -257,25 +276,6 @@ public class ArchiveReader implements AutoCloseable
             header.offset(headerOffset);
 
             return termOffset;
-        }
-
-        private boolean readBlock(final long position, final int requestedLength, final BlockHandler handler)
-        {
-            final int termId = computeTermIdFromPosition(position);
-            final ByteBuffer termBuffer = termIdToBuffer.computeIfAbsent(termId, newBuffer);
-            if (termBuffer == null)
-            {
-                return false;
-            }
-
-            buffer.wrap(termBuffer);
-            final int offset = computeTermOffsetFromPosition(position);
-            final int remainder = termBuffer.capacity() - offset;
-            final int length = Math.min(requestedLength, remainder);
-
-            handler.onBlock(buffer, offset, length, sessionId, termId);
-
-            return true;
         }
 
         private int computeTermOffsetFromPosition(final long position)
