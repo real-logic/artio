@@ -99,12 +99,12 @@ public class Archiver implements Agent, FileBlockHandler
         final int aeronSessionId,
         final int termId)
     {
-        getSession(aeronSessionId).onBlock(fileChannel, offset, length, aeronSessionId, termId);
+        session(aeronSessionId).onBlock(fileChannel, offset, length, aeronSessionId, termId);
     }
 
     public long positionOf(final int aeronSessionId)
     {
-        final SessionArchiver archive = getSession(aeronSessionId);
+        final SessionArchiver archive = session(aeronSessionId);
 
         if (archive == null)
         {
@@ -114,16 +114,16 @@ public class Archiver implements Agent, FileBlockHandler
         return archive.position();
     }
 
-    public void patch(final int aeronSessionId,
-                      final long position,
-                      final DirectBuffer bodyBuffer,
-                      final int bodyOffset,
-                      final int bodyLength)
+    public boolean patch(final int aeronSessionId,
+                         final long position,
+                         final DirectBuffer bodyBuffer,
+                         final int bodyOffset,
+                         final int bodyLength)
     {
-        getSession(aeronSessionId).patch(position, bodyBuffer, bodyOffset, bodyLength);
+        return session(aeronSessionId).patch(position, bodyBuffer, bodyOffset, bodyLength);
     }
 
-    public SessionArchiver getSession(final int sessionId)
+    public SessionArchiver session(final int sessionId)
     {
         return sessionIdToArchive.computeIfAbsent(sessionId, newSessionArchiver);
     }
@@ -200,10 +200,15 @@ public class Archiver implements Agent, FileBlockHandler
         // TODO: validate the body buffer genuinely starts with a fragment and validate the position against the header,
         // Look at rebuilder
         // TODO: remove position
-        // TODO: ban patching the future
-        public void patch(
+        public boolean patch(
             final long position, final DirectBuffer bodyBuffer, final int bodyOffset, final int bodyLength)
         {
+            if (position + bodyLength >= position())
+            {
+                // Can only patch historic files
+                return false;
+            }
+
             try
             {
                 final int patchTermId = computeTermIdFromPosition(position, positionBitsToShift, image.initialTermId());
@@ -231,10 +236,13 @@ public class Archiver implements Agent, FileBlockHandler
                     bodyBuffer, bodyOffset, bodyLength, termOffset, patchTermLogChannel, patchTermLogFile);
 
                 close(patchTermLogChannel);
+
+                return true;
             }
             catch (IOException e)
             {
                 LangUtil.rethrowUnchecked(e);
+                return false;
             }
         }
 

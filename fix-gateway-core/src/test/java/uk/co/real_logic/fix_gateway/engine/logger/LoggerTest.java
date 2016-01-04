@@ -308,6 +308,14 @@ public class LoggerTest
         assertCanReadValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
 
+    @Test
+    public void shouldNotBeAbleToPatchTheFuture()
+    {
+        writeAndArchiveBuffer();
+
+        assertFalse("Patched the future", patchBuffer(TERM_LENGTH + HEADER_LENGTH + OFFSET));
+    }
+
     private long readTo(final long position)
     {
         return archiveReader.read(publication.sessionId(), position, fragmentHandler);
@@ -338,13 +346,13 @@ public class LoggerTest
         verify(blockHandler, never()).onBlock(any(), anyInt(), anyInt(), anyInt(), anyInt());
     }
 
-    private void patchBuffer(final long position)
+    private boolean patchBuffer(final long position)
     {
         final int offset = 1;
 
         buffer.putInt(offset, PATCH_VALUE);
 
-        archiver.patch(publication.sessionId(), position, buffer, offset, SIZE_OF_INT);
+        return archiver.patch(publication.sessionId(), position, buffer, offset, SIZE_OF_INT);
     }
 
     private void assertPosition(final long endPosition)

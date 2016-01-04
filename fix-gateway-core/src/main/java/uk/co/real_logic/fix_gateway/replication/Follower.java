@@ -230,7 +230,7 @@ public class Follower implements Role, RaftHandler
 
             if (leaderSessionId != termState.leaderSessionId())
             {
-                leaderArchiver = archiver.getSession(leaderSessionId);
+                leaderArchiver = archiver.session(leaderSessionId);
             }
 
             follow(this.timeInMs);
@@ -281,7 +281,7 @@ public class Follower implements Role, RaftHandler
         lastAppliedPosition = termState.lastAppliedPosition();
         commitPosition = termState.commitPosition();
         leaderArchiver = termState.hasLeader()
-                       ? archiver.getSession(termState.leaderSessionId())
+                       ? archiver.session(termState.leaderSessionId())
                        : null;
     }
 

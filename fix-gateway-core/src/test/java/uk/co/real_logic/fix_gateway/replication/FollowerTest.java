@@ -83,8 +83,8 @@ public class FollowerTest
             .acknowledgementPublication(acknowledgementPublication)
             .controlSubscription(controlSubscription);
 
-        when(archiver.getSession(LEADER_SESSION_ID)).thenReturn(leaderArchiver);
-        //when(archiver.getSession(OTHER_SESSION_ID)).thenReturn(leaderArchiver);
+        when(archiver.session(LEADER_SESSION_ID)).thenReturn(leaderArchiver);
+        //when(archiver.session(OTHER_SESSION_ID)).thenReturn(leaderArchiver);
 
         follower.follow(0);
     }
@@ -112,7 +112,7 @@ public class FollowerTest
 
         onHeartbeat();
 
-        verify(archiver).getSession(LEADER_SESSION_ID);
+        verify(archiver).session(LEADER_SESSION_ID);
     }
 
     @Test
