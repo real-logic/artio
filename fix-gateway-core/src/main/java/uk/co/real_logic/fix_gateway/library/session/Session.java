@@ -47,6 +47,7 @@ import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 public class Session
 {
     public static final long UNKNOWN = -1;
+    public static final long NO_OPERATION = -4;
 
     /**
      * The proportion of the maximum heartbeat interval before you send your heartbeat
@@ -269,13 +270,15 @@ public class Session
      *
      * @see Session#logoutAndDisconnect()
      */
-    public void requestDisconnect()
+    public long requestDisconnect()
     {
+        long position = NO_OPERATION;
         if (state() != DISCONNECTED)
         {
-            proxy.requestDisconnect(connectionId);
+            position = proxy.requestDisconnect(connectionId);
             state(DISCONNECTED);
         }
+        return position;
     }
 
     /**
@@ -285,10 +288,15 @@ public class Session
      *
      * @see Session#startLogout()
      */
-    public void logoutAndDisconnect()
+    public long logoutAndDisconnect()
     {
-        sendLogout();
-        requestDisconnect();
+        long position = NO_OPERATION;
+        if (state() != DISCONNECTED)
+        {
+            sendLogout();
+            position = requestDisconnect();
+        }
+        return position;
     }
 
     /**
@@ -336,11 +344,13 @@ public class Session
      *
      * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
      *                                      sent.
+     * @return the position in the stream that corresponds to the end of this message.
      */
-    public void sequenceReset(final int nextSentMessageSequenceNumber)
+    public long sequenceReset(final int nextSentMessageSequenceNumber)
     {
-        proxy.sequenceReset(lastSentMsgSeqNum, nextSentMessageSequenceNumber);
+        final long position = proxy.sequenceReset(lastSentMsgSeqNum, nextSentMessageSequenceNumber);
         lastSentMsgSeqNum = nextSentMessageSequenceNumber - 1;
+        return position;
     }
 
     // ---------- Event Handlers & Logic ----------
