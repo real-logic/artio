@@ -45,7 +45,7 @@ public class LeaderTest
     private Subscription acknowledgementSubscription = mock(Subscription.class);
     private Subscription dataSubscription = mock(Subscription.class);
     private Image leaderDataImage = mock(Image.class);
-    private ArchiveReader archiveReader = mock(ArchiveReader.class);
+    private ArchiveReader.SessionReader archiveReader = mock(ArchiveReader.SessionReader.class);
     private TermState termState = new TermState()
         .leadershipTerm(LEADERSHIP_TERM)
         .commitPosition(POSITION);
@@ -76,10 +76,13 @@ public class LeaderTest
         whenBlockRead().then(inv ->
         {
             final Object[] arguments = inv.getArguments();
-            final int length = (int) arguments[2];
-            final BlockHandler handler = (BlockHandler) arguments[3];
+            final int length = (int) arguments[1];
+            final BlockHandler handler = (BlockHandler) arguments[2];
 
-            handler.onBlock(null, 0, length, LEADER_SESSION_ID, 1);
+            if (handler != null)
+            {
+                handler.onBlock(null, 0, length, LEADER_SESSION_ID, 1);
+            }
 
             return true;
         });
@@ -131,6 +134,6 @@ public class LeaderTest
 
     private OngoingStubbing<Boolean> whenBlockRead()
     {
-        return when(archiveReader.readBlock(eq(LEADER_SESSION_ID), anyLong(), anyInt(), any()));
+        return when(archiveReader.readBlock(anyLong(), anyInt(), any()));
     }
 }

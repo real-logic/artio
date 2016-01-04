@@ -58,6 +58,7 @@ public class FollowerTest
     private Subscription controlSubscription = mock(Subscription.class);
     private RaftNode raftNode = mock(RaftNode.class);
     private ArchiveReader archiveReader = mock(ArchiveReader.class);
+    private ArchiveReader.SessionReader sessionReader = mock(ArchiveReader.SessionReader.class);
     private Archiver archiver = mock(Archiver.class);
 
     private final TermState termState = new TermState()
@@ -83,8 +84,8 @@ public class FollowerTest
             .acknowledgementPublication(acknowledgementPublication)
             .controlSubscription(controlSubscription);
 
+        when(archiveReader.session(LEADER_SESSION_ID)).thenReturn(sessionReader);
         when(archiver.session(LEADER_SESSION_ID)).thenReturn(leaderArchiver);
-        //when(archiver.session(OTHER_SESSION_ID)).thenReturn(leaderArchiver);
 
         follower.follow(0);
     }
@@ -331,11 +332,11 @@ public class FollowerTest
     private void dataInArchive(final long position)
     {
         System.out.println();
-        when(archiveReader.readUpTo(
-            eq(LEADER_SESSION_ID), eq(position + HEADER_LENGTH), eq((long) LENGTH), any())).then(inv ->
+        when(sessionReader.readUpTo(
+            eq(position + HEADER_LENGTH), eq((long) LENGTH), any())).then(inv ->
         {
             final Object[] arguments = inv.getArguments();
-            final FragmentHandler handler = (FragmentHandler) arguments[3];
+            final FragmentHandler handler = (FragmentHandler) arguments[2];
             handler.onFragment(buffer, 0, LENGTH, mock(Header.class));
 
             return LENGTH + HEADER_LENGTH;

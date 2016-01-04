@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
 /**
  * .
@@ -124,6 +125,8 @@ public class RaftNode implements Role
         final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
         final long heartbeatTimeInMs = timeoutIntervalInMs / HEARTBEAT_TO_TIMEOUT_RATIO;
         final int clusterSize = configuration.otherNodes().size() + 1;
+        final int ourSessionId = configuration.leaderSessionId();
+        final ArchiveReader archiveReader = configuration.archiveReader();
 
         leader = new Leader(
             nodeId,
@@ -134,12 +137,12 @@ public class RaftNode implements Role
             timeInMs,
             heartbeatTimeInMs,
             termState,
-            configuration.leaderSessionId(),
-            configuration.archiveReader());
+            ourSessionId,
+            archiveReader.session(ourSessionId));
 
         candidate = new Candidate(
             nodeId,
-            configuration.leaderSessionId(),
+            ourSessionId,
             this,
             clusterSize,
             timeoutIntervalInMs,
@@ -153,7 +156,7 @@ public class RaftNode implements Role
             timeInMs,
             timeoutIntervalInMs,
             termState,
-            configuration.archiveReader(),
+            archiveReader,
             configuration.archiver());
 
         transport.initialiseRoles(leader, candidate, follower);

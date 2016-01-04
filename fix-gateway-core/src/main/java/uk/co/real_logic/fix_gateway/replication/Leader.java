@@ -43,7 +43,7 @@ public class Leader implements Role, RaftHandler
 
     private final TermState termState;
     private final int ourSessionId;
-    private final ArchiveReader archiveReader;
+    private final ArchiveReader.SessionReader ourArchiveReader;
     private final short nodeId;
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final RaftSubscriber raftSubscriber = new RaftSubscriber(this);
@@ -78,7 +78,7 @@ public class Leader implements Role, RaftHandler
         final long heartbeatIntervalInMs,
         final TermState termState,
         final int ourSessionId,
-        final ArchiveReader archiveReader)
+        final ArchiveReader.SessionReader archiveReader)
     {
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
@@ -86,7 +86,7 @@ public class Leader implements Role, RaftHandler
         this.handler = handler;
         this.termState = termState;
         this.ourSessionId = ourSessionId;
-        this.archiveReader = archiveReader;
+        this.ourArchiveReader = archiveReader;
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
         updateHeartbeatInterval(timeInMs);
@@ -173,7 +173,7 @@ public class Leader implements Role, RaftHandler
         {
             final int length = (int) (commitAndLastAppliedPosition - position);
             this.position = position;
-            if (!archiveReader.readBlock(ourSessionId, position, length, resendHandler))
+            if (!ourArchiveReader.readBlock(position, length, resendHandler))
             {
                 saveResend(EMPTY_BUFFER, 0, 0);
             }

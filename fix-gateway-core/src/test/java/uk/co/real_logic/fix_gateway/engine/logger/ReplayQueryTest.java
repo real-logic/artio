@@ -33,6 +33,7 @@ public class ReplayQueryTest extends AbstractLogTest
     private ExistingBufferFactory mockBufferFactory = mock(ExistingBufferFactory.class);
     private FragmentHandler mockHandler = mock(FragmentHandler.class);
     private ArchiveReader mockReader = mock(ArchiveReader.class);
+    private ArchiveReader.SessionReader mockSessionReader = mock(ArchiveReader.SessionReader.class);
     private ReplayIndex replayIndex = new ReplayIndex(
         DEFAULT_LOG_FILE_DIR,
         DEFAULT_INDEX_FILE_SIZE,
@@ -52,7 +53,9 @@ public class ReplayQueryTest extends AbstractLogTest
     {
         returnBuffer(indexBuffer, SESSION_ID);
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
-        when(mockReader.read(anyInt(), anyLong(), any(FragmentHandler.class))).thenReturn((long) UNKNOWN_SESSION);
+
+        when(mockReader.session(anyInt())).thenReturn(mockSessionReader);
+        when(mockSessionReader.read(anyLong(), any(FragmentHandler.class))).thenReturn((long) UNKNOWN_SESSION);
 
         bufferContainsMessage(true);
         indexRecord();
@@ -100,12 +103,12 @@ public class ReplayQueryTest extends AbstractLogTest
 
     private void verifyNoMessageRead()
     {
-        verifyNoMoreInteractions(mockReader);
+        verifyNoMoreInteractions(mockSessionReader);
     }
 
     private void verifyOneMessageRead()
     {
-        verify(mockReader, times(1)).read(AERON_STREAM_ID, START, mockHandler);
+        verify(mockSessionReader, times(1)).read(START, mockHandler);
     }
 
     private void returnBuffer(final ByteBuffer buffer, final long sessionId)

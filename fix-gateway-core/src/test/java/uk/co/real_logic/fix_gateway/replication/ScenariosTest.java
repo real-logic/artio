@@ -64,6 +64,7 @@ public class ScenariosTest
     private final Subscription dataSubscription = mock(Subscription.class);
     private final Image leaderDataImage = mock(Image.class);
     private final ArchiveReader archiveReader = mock(ArchiveReader.class);
+    private ArchiveReader.SessionReader sessionReader = mock(ArchiveReader.SessionReader.class);
     private final TermState termState = new TermState();
     private final FragmentHandler fragmentHandler = mock(FragmentHandler.class);
     private final Archiver.SessionArchiver leaderArchiver = mock(Archiver.SessionArchiver.class);
@@ -244,7 +245,7 @@ public class ScenariosTest
             HEARTBEAT_INTERVAL_IN_MS,
             termState,
             SESSION_ID,
-            archiveReader);
+            sessionReader);
 
         leader
             .controlPublication(controlPublication)

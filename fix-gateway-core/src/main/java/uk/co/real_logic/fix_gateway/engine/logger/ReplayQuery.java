@@ -89,24 +89,33 @@ public class ReplayQuery implements AutoCloseable
             int index = messageFrameHeader.encodedLength();
             final int actingBlockLength = messageFrameHeader.blockLength();
             final int actingVersion = messageFrameHeader.version();
+
             int count = 0;
+            int lastAeronSessionId = 0;
+            ArchiveReader.SessionReader sessionReader = null;
 
             while (true)
             {
                 indexRecord.wrap(buffer, index, actingBlockLength, actingVersion);
                 final int streamId = indexRecord.streamId();
-                final int aeronSessionId = indexRecord.aeronSessionId();
                 final long position = indexRecord.position();
                 if (position == 0)
                 {
                     return count;
                 }
 
+                final int aeronSessionId = indexRecord.aeronSessionId();
+                if (sessionReader == null || aeronSessionId != lastAeronSessionId)
+                {
+                    lastAeronSessionId = aeronSessionId;
+                    sessionReader = outboundArchiveReader.session(aeronSessionId);
+                }
+
                 final int sequenceNumber = indexRecord.sequenceNumber();
                 if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo && streamId == OUTBOUND_LIBRARY_STREAM)
                 {
                     count++;
-                    if (outboundArchiveReader.read(aeronSessionId, position, handler) < 0)
+                    if (sessionReader.read(position, handler) < 0)
                     {
                         return count;
                     }

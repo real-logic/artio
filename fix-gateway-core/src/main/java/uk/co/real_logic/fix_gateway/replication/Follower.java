@@ -48,6 +48,7 @@ public class Follower implements Role, RaftHandler
     private RaftPublication acknowledgementPublication;
     private RaftPublication controlPublication;
     private SessionArchiver leaderArchiver;
+    private ArchiveReader.SessionReader leaderArchiveReader;
     private Subscription controlSubscription;
     private long receivedPosition;
     private long commitPosition;
@@ -153,8 +154,8 @@ public class Follower implements Role, RaftHandler
         final int committableBytes = (int) (canCommitUpToPosition - lastAppliedPosition);
         if (committableBytes > 0)
         {
-            final long readBytes = archiveReader.readUpTo(
-                termState.leaderSessionId(), lastAppliedPosition + HEADER_LENGTH, committableBytes, handler);
+            final long readBytes = leaderArchiveReader.readUpTo(
+                lastAppliedPosition + HEADER_LENGTH, committableBytes, handler);
 
             if (readBytes < committableBytes)
             {
@@ -230,7 +231,7 @@ public class Follower implements Role, RaftHandler
 
             if (leaderSessionId != termState.leaderSessionId())
             {
-                leaderArchiver = archiver.session(leaderSessionId);
+                checkLeaderChange();
             }
 
             follow(this.timeInMs);
@@ -280,9 +281,22 @@ public class Follower implements Role, RaftHandler
         receivedPosition = termState.receivedPosition();
         lastAppliedPosition = termState.lastAppliedPosition();
         commitPosition = termState.commitPosition();
-        leaderArchiver = termState.hasLeader()
-                       ? archiver.session(termState.leaderSessionId())
-                       : null;
+        checkLeaderChange();
+    }
+
+    private void checkLeaderChange()
+    {
+        if (termState.hasLeader())
+        {
+            final int sessionId = termState.leaderSessionId();
+            leaderArchiver = archiver.session(sessionId);
+            leaderArchiveReader = archiveReader.session(sessionId);
+        }
+        else
+        {
+            leaderArchiver = null;
+            leaderArchiveReader = null;
+        }
     }
 
     public Follower acknowledgementPublication(final RaftPublication acknowledgementPublication)
