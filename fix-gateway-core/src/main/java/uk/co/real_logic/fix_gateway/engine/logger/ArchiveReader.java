@@ -177,6 +177,13 @@ public class ArchiveReader implements AutoCloseable
             header = new Header(this.initialTermId, termBufferLength);
         }
 
+        /**
+         * Reads a message out of this session's log archive.
+         *
+         * @param position the log position to start reading at
+         * @param handler the handler to pass the data into
+         * @return the position after the end of this message. If there's another message, then this is its start.
+         */
         public long read(final long position, final FragmentHandler handler)
         {
             final int termOffset = scan(position);
@@ -196,6 +203,14 @@ public class ArchiveReader implements AutoCloseable
             return position + frameLength;
         }
 
+        /**
+         * Reads a message out of this session's log archive.
+         *
+         * @param beginPosition the log position to start reading at
+         * @param endPosition the last start position of a message to stop reading at (NB: can read up to a fragment beyond)
+         * @param handler the handler to pass the data into
+         * @return the position after the end of this message. If there's another message, then this is its start.
+         */
         public long readUpTo(final long beginPosition, final long endPosition, final FragmentHandler handler)
         {
             long position = beginPosition;
@@ -228,6 +243,15 @@ public class ArchiveReader implements AutoCloseable
             return position;
         }
 
+        /**
+         * Reads a block of bytes out of this session's log archive.
+         *
+         * A block will only be read if the archive contains the whole block.
+         *
+         * @param position the log position to start reading at
+         * @param handler the handler to pass the data into
+         * @return true if the message has been read, false otherwise
+         */
         public boolean readBlock(final long position, final int requestedLength, final BlockHandler handler)
         {
             final int termId = computeTermIdFromPosition(position);
