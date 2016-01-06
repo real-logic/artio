@@ -331,7 +331,6 @@ public class FollowerTest
 
     private void dataInArchive(final long position)
     {
-        System.out.println();
         when(sessionReader.readUpTo(
             eq(position + HEADER_LENGTH), eq((long) LENGTH), any())).then(inv ->
         {

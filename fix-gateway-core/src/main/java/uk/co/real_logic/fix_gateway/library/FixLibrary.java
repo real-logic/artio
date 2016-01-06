@@ -18,7 +18,10 @@ package uk.co.real_logic.fix_gateway.library;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
-import uk.co.real_logic.agrona.concurrent.*;
+import uk.co.real_logic.agrona.concurrent.EpochClock;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.agrona.concurrent.SystemEpochClock;
+import uk.co.real_logic.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumbers;
 import uk.co.real_logic.fix_gateway.library.session.*;
@@ -42,7 +45,7 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNE
 /**
  * FIX Library instances represent a process where session management,
  * message parsing and API users configure the gateway.
- *
+ * <p>
  * Libraries can be run in the same process as the engine, or in a
  * different process.
  *
@@ -100,7 +103,14 @@ public final class FixLibrary extends GatewayProcess
         outboundPublication.saveLibraryConnect(libraryId, isAcceptor);
 
         final long latestReplyArrivalTime = latestReplyArrivalTime();
+        while (!livenessDetector.isConnected() && errorType == null)
+        {
+            final int workCount = poll(1);
 
+            checkTime(latestReplyArrivalTime);
+
+            idleStrategy.idle(workCount);
+        }
 
         if (errorType != null)
         {
@@ -130,27 +140,25 @@ public final class FixLibrary extends GatewayProcess
      * and events that have received from or should be sent to the engine.
      *
      * @param fragmentLimit the maximum number of events to read from the engine.
-     *
      * @return 0 if no work was performed, > 0 otherwise.
      */
     public int poll(final int fragmentLimit)
     {
         final long timeInMs = clock.time();
         return inboundSubscription.poll(dataSubscriber, fragmentLimit) +
-               pollSessions(timeInMs) +
-               livenessDetector.poll(timeInMs);
+            pollSessions(timeInMs) +
+            livenessDetector.poll(timeInMs);
     }
 
     /**
      * Check if the library is connected to an engine.
-     *
+     * <p>
      * Note that this refers to whether a library is connected to a FIX Engine,
      * not whether of its sessions are connected.
      *
+     * @return true if the library is connected to an engine, false otherwise.
      * @see Session#isConnected()
      * @see uk.co.real_logic.fix_gateway.engine.FixEngine
-     *
-     * @return true if the library is connected to an engine, false otherwise.
      */
     public boolean isConnected()
     {
@@ -169,7 +177,7 @@ public final class FixLibrary extends GatewayProcess
 
     /**
      * Get a list of the currently active sessions.
-     *
+     * <p>
      * Note: the list is unmodifiable.
      *
      * @return a list of the currently active sessions.
@@ -475,7 +483,7 @@ public final class FixLibrary extends GatewayProcess
             libraryId,
             configuration.acceptorSessionBufferSize(),
             acceptorInitialSequenceNumber(lastSequenceNumber))
-           .address(host, port);
+            .address(host, port);
     }
 
     private int acceptorInitialSequenceNumber(int lastSequenceNumber)
