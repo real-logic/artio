@@ -17,17 +17,49 @@ package uk.co.real_logic.fix_gateway.library.validation;
 
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
+/**
+ * A strategy that, if message validation is switched on, validates each FIX message in turn before
+ * the message is handed off the domain logic. Validation might including checking that the sender
+ * or target comp id is on an approved list.
+ *
+ * @see SenderCompIdValidationStrategy
+ * @see TargetCompIdValidationStrategy
+ * @see NoMessageValidationStrategy
+ */
 public interface MessageValidationStrategy
 {
+    /**
+     * Validate the header in question.
+     *
+     * @param header the header to validate.
+     * @return true if valid, false otherwise.
+     */
     boolean validate(final HeaderDecoder header);
 
+    /**
+     * Returns the id of the tag that was invalid if the header didn't validate, undefined otherwise.
+     *
+     * @return the id of the tag that was invalid.
+     */
     int invalidTagId();
 
+    /**
+     * Returns the session reject reason if the header didn't validate, undefined otherwise.
+     *
+     * @return the session reject reason.
+     */
     int rejectReason();
 
-    default MessageValidationStrategy and(MessageValidationStrategy other)
+    /**
+     * Compose two message validation strategies together to form a new message validation strategy where you
+     * need to pass both strategies for a message to be valid.
+     *
+     * @param right the other validation strategy to compose with.
+     * @return the new message validation strategy.
+     */
+    default MessageValidationStrategy and(MessageValidationStrategy right)
     {
-        final MessageValidationStrategy self = this;
+        final MessageValidationStrategy left = this;
         return new MessageValidationStrategy()
         {
             private int invalidTagId;
@@ -35,25 +67,25 @@ public interface MessageValidationStrategy
 
             public boolean validate(final HeaderDecoder header)
             {
-                final boolean selfValid = self.validate(header);
+                final boolean leftValid = left.validate(header);
 
-                if (selfValid)
+                if (leftValid)
                 {
-                    final boolean otherValid = other.validate(header);
-                    if (otherValid)
+                    final boolean rightValid = right.validate(header);
+                    if (rightValid)
                     {
                         return true;
                     }
                     else
                     {
-                        invalidTagId = other.invalidTagId();
-                        rejectReason = other.rejectReason();
+                        invalidTagId = right.invalidTagId();
+                        rejectReason = right.rejectReason();
                     }
                 }
                 else
                 {
-                    invalidTagId = self.invalidTagId();
-                    rejectReason = self.rejectReason();
+                    invalidTagId = left.invalidTagId();
+                    rejectReason = left.rejectReason();
                 }
 
                 return false;

@@ -20,7 +20,10 @@ import uk.co.real_logic.fix_gateway.builder.LogoutEncoder;
 
 /**
  * Implement this interface if you want to alter logon or logoff messages with additional
- * logic in a way that's specific to your venue.
+ * logic in a way that's specific to your venue. Since the FIX Engine itself creates the
+ * logon and logout messages this is the only way to modify them.
+ *
+ * @see uk.co.real_logic.fix_gateway.library.LibraryConfiguration
  */
 public interface SessionCustomisationStrategy
 {

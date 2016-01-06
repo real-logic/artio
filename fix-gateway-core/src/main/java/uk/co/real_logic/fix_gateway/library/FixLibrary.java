@@ -45,9 +45,13 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNE
 /**
  * FIX Library instances represent a process where session management,
  * message parsing and API users configure the gateway.
+ *
  * <p>
- * Libraries can be run in the same process as the engine, or in a
- * different process.
+ *     Libraries can be run in the same process as the engine, or in a
+ *     different process.
+ * <p>
+ *     FixLibrary instances are not thread safe and should be run on
+ *     their own thread.
  *
  * @see uk.co.real_logic.fix_gateway.engine.FixEngine
  */
@@ -196,8 +200,21 @@ public final class FixLibrary extends GatewayProcess
         super.close();
     }
 
-    // ------------- End Public API -------------
-
+    /**
+     * Initiate a FIX session with a FIX acceptor. This method blocks and returns only once the Session
+     * object has connected to the acceptor.
+     *
+     * @param configuration the configuration to use for the session.
+     * @param idleStrategy an idle strategy to use for backoffs whilst awaiting the session's acceptance.
+     * @return the session object for the session that you've initiated.
+     * @throws IllegalStateException
+     *         if you're trying to initiate two sessions at the same time or if there's a timeout talking to
+     *         the FixEngine.
+     *         This probably indicates that there's a problem in your code or that your engine isn't running.
+     * @throws FixGatewayException
+     *         if you're unable to connect to the accepting gateway.
+     *         This probably indicates a configuration problem related to the external gateway.
+     */
     public Session initiate(final SessionConfiguration configuration, final IdleStrategy idleStrategy)
     {
         if (sessionConfiguration != null || incomingSession != null || errorType != null)
@@ -274,6 +291,8 @@ public final class FixLibrary extends GatewayProcess
                 this.configuration.replyTimeoutInMs()));
         }
     }
+
+    // ------------- End Public API -------------
 
     private int pollSessions(final long timeInMs)
     {
@@ -433,7 +452,7 @@ public final class FixLibrary extends GatewayProcess
             publication,
             sessionIdStrategy,
             configuration.beginString(),
-            configuration.sendingTimeWindow(),
+            configuration.sendingTimeWindowInMs(),
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId),
             sessionConfiguration.username(),
@@ -477,7 +496,7 @@ public final class FixLibrary extends GatewayProcess
             publication,
             sessionIdStrategy,
             configuration.beginString(),
-            configuration.sendingTimeWindow(),
+            configuration.sendingTimeWindowInMs(),
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId),
             libraryId,

@@ -23,6 +23,9 @@ import java.util.Collection;
 
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.COMPID_PROBLEM;
 
+/**
+ * A message validation strategy that checks the sender comp id of each message.
+ */
 public class SenderCompIdValidationStrategy implements MessageValidationStrategy
 {
     private final CharArraySet validSenderIds;

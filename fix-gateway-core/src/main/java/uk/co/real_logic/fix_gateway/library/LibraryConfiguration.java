@@ -29,6 +29,13 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 
+
+/**
+ * Provides configuration for initiating an instance of Fix Library. Individual configuration options are
+ * documented on their setters.
+ *
+ * @see FixLibrary
+ */
 public final class LibraryConfiguration extends CommonConfiguration
 {
 
@@ -42,7 +49,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
     private NewSessionHandler newSessionHandler;
     private char[] beginString;
-    private long sendingTimeWindow = DEFAULT_SENDING_TIME_WINDOW;
+    private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
     private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
     private MessageValidationStrategy messageValidationStrategy = new NoMessageValidationStrategy();
     private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
@@ -68,67 +75,153 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    /**
+     * When a new session connects to the gateway you register a callback handler to find
+     * out about the event. This method sets the handler for this library instance.
+     * <p>
+     * Only needed if this is the accepting library instance.
+     *
+     * @param newSessionHandler the new session handler
+     * @return this
+     */
     public LibraryConfiguration newSessionHandler(final NewSessionHandler newSessionHandler)
     {
         this.newSessionHandler = newSessionHandler;
         return this;
     }
 
+    /**
+     * The begin string to use for messages in the FIX protocol. This is used for validating
+     * messages received by the gateway.
+     *
+     * @param beginString the beginString to use.
+     * @return this
+     */
     public LibraryConfiguration beginString(final String beginString)
     {
         this.beginString = beginString.toCharArray();
         return this;
     }
 
-    public LibraryConfiguration sendingTimeWindow(long sendingTimeWindow)
+    /**
+     * Sets the sending time window. The sending time window is the period of acceptance
+     * delta between the current time on the Fix Library thread and the sending time
+     * received in messages. Sessions are disconnected if the sending time diverges by
+     * more than this window and if validation is enabled.
+     *
+     * @param sendingTimeWindowInMs the current sending time in milliseconds
+     * @return this
+     */
+    public LibraryConfiguration sendingTimeWindowInMs(long sendingTimeWindowInMs)
     {
-        this.sendingTimeWindow = sendingTimeWindow;
+        this.sendingTimeWindowInMs = sendingTimeWindowInMs;
         return this;
     }
 
+    /**
+     * Sets size of the encoder buffer. The encoder buffer is a buffer used by each session to encode
+     * FIX messages onto before they're sent over a FIX connection.
+     *
+     * @param encoderBufferSize size of the encoder buffer in bytes.
+     * @return this
+     */
     public LibraryConfiguration encoderBufferSize(final int encoderBufferSize)
     {
         this.encoderBufferSize = encoderBufferSize;
         return this;
     }
 
-
+    /**
+     * Sets the authentication strategy of the FIX Library, see {@link AuthenticationStrategy} for details.
+     * <p>
+     * This only needs to be set if this FIX Library is the acceptor library.
+     *
+     * @param authenticationStrategy the authentication strategy to use.
+     * @return this
+     */
     public LibraryConfiguration authenticationStrategy(final AuthenticationStrategy authenticationStrategy)
     {
         this.authenticationStrategy = authenticationStrategy;
         return this;
     }
 
-    public LibraryConfiguration sessionCustomisationStrategy(final SessionCustomisationStrategy value)
+    /**
+     * Sets the session customisation strategy of the FIX Library,
+     * see {@link SessionCustomisationStrategy} for details.
+     * <p>
+     * This only needs to be set if this FIX Library is the acceptor library.
+     *
+     * @param sessionCustomisationStrategy the session customisation strategy to use.
+     * @return this
+     */
+    public LibraryConfiguration sessionCustomisationStrategy(
+        final SessionCustomisationStrategy sessionCustomisationStrategy)
     {
-        this.sessionCustomisationStrategy = value;
+        this.sessionCustomisationStrategy = sessionCustomisationStrategy;
         return this;
     }
 
+    /**
+     * Sets the message validation strategy of the FIX Library,
+     * see {@link MessageValidationStrategy} for details.
+     *
+     * @param messageValidationStrategy the message validation strategy to use.
+     * @return this
+     */
     public LibraryConfiguration messageValidationStrategy(final MessageValidationStrategy messageValidationStrategy)
     {
         this.messageValidationStrategy = messageValidationStrategy;
         return this;
     }
 
+    /**
+     * Sets the identifier for this library instance. The identifier should be unique amongst the libraries that
+     * are connected to this gateway.
+     *
+     * @param libraryId the identifier for this library instance
+     * @return this
+     */
     public LibraryConfiguration libraryId(final int libraryId)
     {
         this.libraryId = libraryId;
         return this;
     }
 
+    /**
+     * Sets the size of an acceptor's session buffer. The session buffer is a buffer used by each
+     * Session to encode messages via {@link uk.co.real_logic.fix_gateway.library.session.Session#send(uk.co.real_logic.fix_gateway.builder.MessageEncoder)}.
+     * <p>
+     * This only needs to be set if this FIX Library is the acceptor library.
+     *
+     * @param acceptorSessionBufferSize the size of an acceptor's session buffer
+     * @return this
+     */
     public LibraryConfiguration acceptorSessionBufferSize(final int acceptorSessionBufferSize)
     {
         this.acceptorSessionBufferSize = acceptorSessionBufferSize;
         return this;
     }
 
+    /**
+     * Sets the idle strategy for the FIX library instance.
+     *
+     * @param libraryIdleStrategy the idle strategy for the FIX library instance.
+     * @return this
+     */
     public LibraryConfiguration libraryIdleStrategy(final IdleStrategy libraryIdleStrategy)
     {
         this.libraryIdleStrategy = libraryIdleStrategy;
         return this;
     }
 
+    /**
+     * Sets whether this FIX library instance is the acceptor instance. When new connections arrive at a FIX
+     * gateway they need to be forwarded to an instance called the the acceptor library. Only one library instance
+     * per gateway can be the acceptor.
+     *
+     * @param isAcceptor whether this FIX library instance is the acceptor instance.
+     * @return this
+     */
     public LibraryConfiguration isAcceptor(final boolean isAcceptor)
     {
         this.isAcceptor = isAcceptor;
@@ -177,9 +270,9 @@ public final class LibraryConfiguration extends CommonConfiguration
         return beginString;
     }
 
-    public long sendingTimeWindow()
+    public long sendingTimeWindowInMs()
     {
-        return sendingTimeWindow;
+        return sendingTimeWindowInMs;
     }
 
     public SessionCustomisationStrategy sessionCustomisationStrategy()
@@ -217,30 +310,45 @@ public final class LibraryConfiguration extends CommonConfiguration
         return acceptorSequenceNumbersResetUponReconnect;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public LibraryConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
     {
         super.sessionIdStrategy(sessionIdStrategy);
         return this;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public LibraryConfiguration counterBuffersLength(final Integer counterBuffersLength)
     {
         super.counterBuffersLength(counterBuffersLength);
         return this;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public LibraryConfiguration monitoringFile(String monitoringFile)
     {
         super.monitoringFile(monitoringFile);
         return this;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public LibraryConfiguration aeronChannel(final String aeronChannel)
     {
         super.aeronChannel(aeronChannel);
         return this;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public LibraryConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
     {
         super.replyTimeoutInMs(replyTimeoutInMs);

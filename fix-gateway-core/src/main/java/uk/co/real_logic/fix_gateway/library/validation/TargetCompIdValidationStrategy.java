@@ -21,6 +21,9 @@ import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.COMPID_PROBLEM;
 
+/**
+ * A message validation strategy that checks the target comp id of each message.
+ */
 public final class TargetCompIdValidationStrategy implements MessageValidationStrategy
 {
     private final char[] gatewayCompId;
