@@ -69,35 +69,25 @@ public class FramerTest
         .replyTimeoutInMs(REPLY_TIMEOUT_IN_MS);
 
     @SuppressWarnings("unchecked")
-    private Framer framer = new Framer(
-        mockClock,
-        engineConfiguration,
-        mockConnectionHandler,
-        mock(Subscription.class),
-        mock(Subscription.class),
-        mockGatewayPublication,
-        mockSessionIdStrategy,
-        new SessionIds(),
-        mock(QueuedPipe.class),
-        mock(SequenceNumbers.class)
-    );
+    private Framer framer;
 
     private ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);
 
     @Before
     public void setUp() throws IOException
     {
+        when(mockConnectionHandler.inboundPublication(any())).thenReturn(mockGatewayPublication);
+
         server = ServerSocketChannel.open().bind(TEST_ADDRESS);
         server.configureBlocking(false);
 
         clientBuffer.putInt(10, 5);
 
         when(mockConnectionHandler
-            .receiverEndPoint(any(SocketChannel.class), connectionId.capture(), anyLong(), anyInt(), eq(framer),
-                any()))
+            .receiverEndPoint(any(), connectionId.capture(), anyLong(), anyInt(), any(), any()))
             .thenReturn(mockReceiverEndPoint);
 
-        when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong(), anyInt(), eq(framer)))
+        when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong(), anyInt(), any()))
             .thenReturn(mockSenderEndPoint);
 
         when(mockReceiverEndPoint.connectionId()).then(inv -> connectionId.getValue());
@@ -107,6 +97,18 @@ public class FramerTest
         when(mockReceiverEndPoint.libraryId()).thenReturn(LIBRARY_ID);
 
         when(mockSenderEndPoint.libraryId()).thenReturn(LIBRARY_ID);
+
+        framer = new Framer(
+            mockClock,
+            engineConfiguration,
+            mockConnectionHandler,
+            mock(Subscription.class),
+            mock(Subscription.class),
+            mockSessionIdStrategy,
+            new SessionIds(),
+            mock(QueuedPipe.class),
+            mock(SequenceNumbers.class)
+        );
     }
 
     @After

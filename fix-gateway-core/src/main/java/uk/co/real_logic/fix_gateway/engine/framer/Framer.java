@@ -98,7 +98,6 @@ public class Framer implements Agent, SessionHandler
         final ConnectionHandler connectionHandler,
         final Subscription outboundLibrarySubscription,
         final Subscription replaySubscription,
-        final GatewayPublication inboundPublication,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
         final QueuedPipe<AdminCommand> adminCommands,
@@ -109,7 +108,7 @@ public class Framer implements Agent, SessionHandler
         this.connectionHandler = connectionHandler;
         this.outboundDataSubscription = outboundLibrarySubscription;
         this.replaySubscription = replaySubscription;
-        this.inboundPublication = inboundPublication;
+        this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
         this.adminCommands = adminCommands;

@@ -20,6 +20,7 @@ import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.framer.*;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.streams.Streams;
 
 import java.io.IOException;
@@ -68,7 +69,7 @@ public class ConnectionHandler
         return new ReceiverEndPoint(
             channel,
             configuration.receiverBufferSize(),
-            inboundStreams.gatewayPublication(idleStrategy, reliefValve),
+            inboundPublication(reliefValve),
             connectionId,
             sessionId,
             sessionIdStrategy,
@@ -78,6 +79,11 @@ public class ConnectionHandler
             errorHandler,
             libraryId
         );
+    }
+
+    public GatewayPublication inboundPublication(final ReliefValve reliefValve)
+    {
+        return inboundStreams.gatewayPublication(idleStrategy, reliefValve);
     }
 
     public SenderEndPoint senderEndPoint(
