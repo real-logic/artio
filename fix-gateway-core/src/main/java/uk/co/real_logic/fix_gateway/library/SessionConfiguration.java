@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Immutable Configuration class.
+ * Immutable Configuration class for a single initiated session.
  */
 public final class SessionConfiguration
 {
@@ -167,6 +167,15 @@ public final class SessionConfiguration
         {
         }
 
+        /**
+         * Sets the authentication credentials to use the FIX session's logon.
+         * <p>
+         * Optional
+         *
+         * @param username the username to use in logon messages.
+         * @param password the password to use in logon messages.
+         * @return this
+         */
         public Builder credentials(final String username, final String password)
         {
             this.username = username;
@@ -174,6 +183,14 @@ public final class SessionConfiguration
             return this;
         }
 
+        /**
+         * Sets the remote address to connect to. This can be called multiple times and each will be tried
+         * and round-robin'd.
+         *
+         * @param host the hostname to conenct to.
+         * @param port the port to conenct to.
+         * @return this
+         */
         public Builder address(final String host, final int port)
         {
             hosts.add(host);
@@ -181,30 +198,65 @@ public final class SessionConfiguration
             return this;
         }
 
+        /**
+         * Sets the sender company id used by messages in this session.
+         *
+         * @param senderCompId the sender company id.
+         * @return this
+         */
         public Builder senderCompId(final String senderCompId)
         {
             this.senderCompId = senderCompId;
             return this;
         }
 
+        /**
+         * Sets the sender sub company id used by messages in this session.
+         * <p>
+         * Optional
+         *
+         * @param senderSubId the sender sub company id.
+         * @return this
+         */
         public Builder senderSubId(final String senderSubId)
         {
             this.senderSubId = senderSubId;
             return this;
         }
 
+        /**
+         * Sets the sender location company id used by messages in this session.
+         * <p>
+         * Optional
+         *
+         * @param senderLocationId the sender location company id.
+         * @return this
+         */
         public Builder senderLocationId(final String senderLocationId)
         {
             this.senderLocationId = senderLocationId;
             return this;
         }
 
+        /**
+         * Sets the target company id used by messages in this session.
+         *
+         * @param targetCompId the target company id.
+         * @return this
+         */
         public Builder targetCompId(final String targetCompId)
         {
             this.targetCompId = targetCompId;
             return this;
         }
 
+        /**
+         * Sets the session's encoding buffer size. The session buffer is a buffer used by each Session to encode
+         * messages via {@link uk.co.real_logic.fix_gateway.library.session.Session#send(uk.co.real_logic.fix_gateway.builder.MessageEncoder)}.
+         *
+         * @param bufferSize the session's encoding buffer size
+         * @return this
+         */
         public Builder bufferSize(final int bufferSize)
         {
             this.bufferSize = bufferSize;

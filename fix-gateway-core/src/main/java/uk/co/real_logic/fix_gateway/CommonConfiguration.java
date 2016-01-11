@@ -27,6 +27,15 @@ import java.io.File;
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
 
+/**
+ * Common configuration for both the Fix Engine and Library. Some options are configurable via
+ * commandline properties. Setters override commandline properties, not the other way around.
+ * <p>
+ * See setters or properties for documentation of what specific configuration options do.
+ *
+ * @see uk.co.real_logic.fix_gateway.engine.EngineConfiguration
+ * @see uk.co.real_logic.fix_gateway.library.LibraryConfiguration
+ */
 public class CommonConfiguration
 {
 
@@ -84,7 +93,7 @@ public class CommonConfiguration
     private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
 
     private SessionIdStrategy sessionIdStrategy = new SenderAndTargetSessionIdStrategy();
-    private int counterBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROPERTY, DEFAULT_MONITORING_BUFFER_LENGTH);
+    private int monitoringBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROPERTY, DEFAULT_MONITORING_BUFFER_LENGTH);
     private String monitoringFile = null;
     private String aeronChannel = null;
     private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
@@ -96,48 +105,109 @@ public class CommonConfiguration
     private int outboundMaxClaimAttempts =
         getInteger(OUTBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_OUTBOUND_MAX_CLAIM_ATTEMPTS);
 
+    /**
+     * Sets the session id strategy.
+     *
+     * @param sessionIdStrategy the session id strategy.
+     * @return this
+     *
+     * @see SessionIdStrategy
+     */
     public CommonConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
     {
         this.sessionIdStrategy = sessionIdStrategy;
         return this;
     }
 
-    public CommonConfiguration counterBuffersLength(final Integer counterBuffersLength)
+    /**
+     * Sets the length of the buffer used for monitoring counters.
+     *
+     * @param monitoringBuffersLength the length of the buffer used for monitoring counters.
+     * @return this
+     *
+     * @see CommonConfiguration#MONITORING_BUFFERS_LENGTH_PROPERTY
+     */
+    public CommonConfiguration monitoringBuffersLength(final Integer monitoringBuffersLength)
     {
-        this.counterBuffersLength = counterBuffersLength;
+        this.monitoringBuffersLength = monitoringBuffersLength;
         return this;
     }
 
+    /**
+     * Sets the location for the monitoring file.
+     *
+     * @param monitoringFile the location for the monitoring file.
+     * @return this
+     *
+     * @see CommonConfiguration#MONITORING_FILE_PROPERTY
+     */
     public CommonConfiguration monitoringFile(String monitoringFile)
     {
         this.monitoringFile = monitoringFile;
         return this;
     }
 
+    /**
+     * Sets the channel used by aeron connections.
+     *
+     * @param aeronChannel the channel used by aeron connections.
+     * @return this
+     */
     public CommonConfiguration aeronChannel(final String aeronChannel)
     {
         this.aeronChannel = aeronChannel;
         return this;
     }
 
+    /**
+     * Sets the reply timeout in milliseconds.
+     * <p>
+     * This is the timeout for control protocol messages between the FIX Gateway and FIX Library instances.
+     *
+     * @param replyTimeoutInMs the reply timeout in milliseconds.
+     * @return this
+     */
     public CommonConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
     {
         this.replyTimeoutInMs = replyTimeoutInMs;
         return this;
     }
 
+    /**
+     * Sets the error slot size. The error slot size is the number of different types of errors that are
+     * simultaneously held in the error buffer.
+     *
+     * @param errorSlotSize the error slot size
+     * @return this
+     */
     public CommonConfiguration errorSlotSize(final int errorSlotSize)
     {
         this.errorSlotSize = errorSlotSize;
         return this;
     }
 
+    /**
+     * Sets the inbound max claim attempts.
+     *
+     * @param inboundMaxClaimAttempts the inbound max claim attempts
+     * @return this
+     *
+     * @see CommonConfiguration#INBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY
+     */
     public CommonConfiguration inboundMaxClaimAttempts(final int inboundMaxClaimAttempts)
     {
         this.inboundMaxClaimAttempts = inboundMaxClaimAttempts;
         return this;
     }
 
+    /**
+     * Sets the outbound max claim attempts.
+     *
+     * @param outboundMaxClaimAttempts the outbound max claim attempts
+     * @return this
+     *
+     * @see CommonConfiguration#OUTBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY
+     */
     public CommonConfiguration outboundMaxClaimAttempts(final int outboundMaxClaimAttempts)
     {
         this.outboundMaxClaimAttempts = outboundMaxClaimAttempts;
@@ -154,9 +224,9 @@ public class CommonConfiguration
         return sessionIdStrategy;
     }
 
-    public int counterBuffersLength()
+    public int monitoringBuffersLength()
     {
-        return counterBuffersLength;
+        return monitoringBuffersLength;
     }
 
     public String monitoringFile()

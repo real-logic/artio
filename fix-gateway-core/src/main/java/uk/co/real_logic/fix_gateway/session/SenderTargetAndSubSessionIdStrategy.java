@@ -42,12 +42,12 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
         return new CompositeKey(senderCompId.toCharArray(), senderSubId.toCharArray(), targetCompId.toCharArray());
     }
 
-    public void setupSession(final Object compositeKey, final HeaderEncoder encoder)
+    public void setupSession(final Object compositeKey, final HeaderEncoder headerEncoder)
     {
         final CompositeKey composite = (CompositeKey) compositeKey;
-        encoder.senderCompID(composite.senderCompID);
-        encoder.senderSubID(composite.senderSubID);
-        encoder.targetCompID(composite.targetCompID);
+        headerEncoder.senderCompID(composite.senderCompID);
+        headerEncoder.senderSubID(composite.senderSubID);
+        headerEncoder.targetCompID(composite.targetCompID);
     }
 
     private static final class CompositeKey

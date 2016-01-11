@@ -184,7 +184,7 @@ public final class SystemTestUtil
         final String countersSuffix)
     {
         return new EngineConfiguration()
-            .bind("localhost", unusedPort())
+            .bindTo("localhost", unusedPort())
             .aeronChannel("udp://localhost:" + initAeronPort)
             .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + countersSuffix)
             .logFileDir(CLIENT_LOGS);
@@ -211,7 +211,7 @@ public final class SystemTestUtil
         final String countersSuffix)
     {
         return new EngineConfiguration()
-            .bind("localhost", port)
+            .bindTo("localhost", port)
             .aeronChannel("aeron:ipc")
             .monitoringFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + countersSuffix)
             .logFileDir(ACCEPTOR_LOGS);

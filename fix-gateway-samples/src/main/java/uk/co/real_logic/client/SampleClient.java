@@ -39,7 +39,7 @@ public final class SampleClient
         // Static configuration lasts the duration of a FIX-Gateway instance
         final EngineConfiguration configuration = new EngineConfiguration()
             .aeronChannel("udp://localhost:10002")
-            .bind("localhost", 10001);
+            .bindTo("localhost", 10001);
 
         try (final FixEngine gateway = FixEngine.launch(configuration))
         {

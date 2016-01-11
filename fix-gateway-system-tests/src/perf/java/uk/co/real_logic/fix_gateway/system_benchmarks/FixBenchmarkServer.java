@@ -71,7 +71,7 @@ public final class FixBenchmarkServer
         }
 
         return new EngineConfiguration()
-            .bind("localhost", Configuration.PORT)
+            .bindTo("localhost", Configuration.PORT)
             .aeronChannel(AERON_CHANNEL)
             .logFileDir(acceptorLogs)
             .logInboundMessages(false)

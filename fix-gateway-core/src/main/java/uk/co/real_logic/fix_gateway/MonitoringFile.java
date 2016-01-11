@@ -52,7 +52,7 @@ public final class MonitoringFile implements AutoCloseable
         {
             IoUtil.deleteIfExists(file);
 
-            length = configuration.counterBuffersLength();
+            length = configuration.monitoringBuffersLength();
             mappedByteBuffer = IoUtil.mapNewFile(file, length * NUMBER_OF_BUFFERS);
         }
         else

@@ -43,15 +43,14 @@ import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
 
 /**
- * FIX Library instances represent a process where session management,
+ * FIX Library instances represent a process in the gateway where session management,
  * message parsing and API users configure the gateway.
- *
  * <p>
- *     Libraries can be run in the same process as the engine, or in a
- *     different process.
+ * Libraries can be run in the same process as the engine, or in a
+ * different process.
  * <p>
- *     FixLibrary instances are not thread safe and should be run on
- *     their own thread.
+ * FixLibrary instances are not thread safe and should be run on
+ * their own thread.
  *
  * @see uk.co.real_logic.fix_gateway.engine.FixEngine
  */
@@ -129,10 +128,13 @@ public final class FixLibrary extends GatewayProcess
     // ------------- Public API -------------
 
     /**
-     * Connect to an engine.
+     * Connect to an engine. This method blocks until the connection is complete and then returns.
      *
      * @param configuration the configuration for this library instance.
      * @return the library instance once it has connected.
+     * @throws IllegalStateException
+     *         if there's an error connecting to the FIX Gateway or if there's a timeout talking to
+     *         the FixEngine.
      */
     public static FixLibrary connect(final LibraryConfiguration configuration)
     {

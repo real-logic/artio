@@ -32,7 +32,12 @@ import static java.lang.System.getProperty;
 import static uk.co.real_logic.agrona.IoUtil.mapNewFile;
 
 /**
- * Configuration that exists for the entire duration of a fix gateway
+ * Configuration that exists for the entire duration of a fix gateway. Some options are configurable via
+ * commandline properties. Setters override commandline properties, not the other way around.
+ * <p>
+ * See setters or properties for documentation of what specific configuration options do.
+ *
+ * @see FixEngine
  */
 public final class EngineConfiguration extends CommonConfiguration
 {
@@ -50,7 +55,7 @@ public final class EngineConfiguration extends CommonConfiguration
     // that fragments will be read off of the TCP connections slower
     // that they can be written onto them.
 
-    /** Property name for the max number of messages to read from libraries. */
+    /** Property name for the max number of messages to read from libraries.*/
     public static final String OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP = "fix.core.outbound_fragment_limit";
     /** Property name for the max number of messages to read from replayer. */
     public static final String REPLAY_FRAGMENT_LIMIT_PROP = "fix.core.replay_fragment_limit";
@@ -113,6 +118,7 @@ public final class EngineConfiguration extends CommonConfiguration
     private int sequenceNumberCacheBufferSize =
         getInteger(SEQUENCE_NUMBER_CACHE_BUFFER_SIZE_PROP, DEFAULT_SEQUENCE_NUMBER_CACHE_BUFFER_SIZE);
 
+    // TODO: remove method
     public EngineConfiguration registerAcceptor(
         final OtfMessageAcceptor messageAcceptor, int firstTag, final int... tags)
     {
@@ -121,108 +127,247 @@ public final class EngineConfiguration extends CommonConfiguration
         return this;
     }
 
-    public EngineConfiguration bind(final String host, final int port)
+    /**
+     * Sets the local address to bind to when the Gateway is used to accept connections.
+     * <p>
+     * Optional.
+     *
+     * @param host the hostname to bind to.
+     * @param port the port to bind to.
+     * @return this
+     */
+    public EngineConfiguration bindTo(final String host, final int port)
     {
         this.host = host;
         this.port = port;
         return this;
     }
 
-    public EngineConfiguration receiverBufferSize(final int value)
+    /**
+     * Sets the receiver buffer size.
+     *
+     * @param receiverBufferSize the receiver buffer size.
+     * @return this
+     *
+     * @see EngineConfiguration#RECEIVER_BUFFER_SIZE_PROP
+     */
+    public EngineConfiguration receiverBufferSize(final int receiverBufferSize)
     {
-        receiverBufferSize = value;
+        this.receiverBufferSize = receiverBufferSize;
         return this;
     }
 
-    public EngineConfiguration receiverSocketBufferSize(final int value)
+    /**
+     * Sets the receiver socket buffer size.
+     *
+     * @param receiverSocketBufferSize the receiver socket buffer size.
+     * @return this
+     *
+     * @see EngineConfiguration#RECEIVER_SOCKET_BUFFER_SIZE_PROP
+     */
+    public EngineConfiguration receiverSocketBufferSize(final int receiverSocketBufferSize)
     {
-        receiverSocketBufferSize = value;
+        this.receiverSocketBufferSize = receiverSocketBufferSize;
         return this;
     }
 
-    public EngineConfiguration senderSocketBufferSize(final int value)
+    /**
+     * Sets the sender socket buffer size.
+     *
+     * @param senderSocketBufferSize the receiver socket buffer size.
+     * @return this
+     *
+     * @see EngineConfiguration#SENDER_SOCKET_BUFFER_SIZE_PROP
+     */
+    public EngineConfiguration senderSocketBufferSize(final int senderSocketBufferSize)
     {
-        senderSocketBufferSize = value;
+        this.senderSocketBufferSize = senderSocketBufferSize;
         return this;
     }
 
+    /**
+     * Sets the directory to store log files in.
+     *
+     * @param logFileDir the directory to store log files in.
+     * @return this
+     *
+     * @see EngineConfiguration#LOG_FILE_DIR_PROP
+     */
     public EngineConfiguration logFileDir(final String logFileDir)
     {
         this.logFileDir = logFileDir;
         return this;
     }
 
+    /**
+     * Sets the size of index files.
+     *
+     * @param indexFileSize the size of index files.
+     * @return this
+     *
+     * @see EngineConfiguration#INDEX_FILE_SIZE_PROP
+     */
     public EngineConfiguration indexFileSize(final int indexFileSize)
     {
         this.indexFileSize = indexFileSize;
         return this;
     }
 
-    public EngineConfiguration loggerCacheSetSize(final int loggerCacheCapacity)
+    /**
+     * Sets the set size of the logger's caches.
+     * <p>
+     * The logging and archival mechanism
+     * has several caches of open memory mapped files which it stores streams of messages
+     * into. This and {@link this#loggerCacheNumSets} controls the size of those caches.
+     * Should be increased if you see files being opened/closed in that area too frequently.
+     * <p>
+     * {@link uk.co.real_logic.agrona.collections.Int2ObjectCache} explains the difference between set size
+     * and num sets.
+     *
+     * @param loggerCacheSetSize the set size of the logger's caches.
+     * @return this
+     */
+    public EngineConfiguration loggerCacheSetSize(final int loggerCacheSetSize)
     {
-        this.loggerCacheSetSize = loggerCacheCapacity;
+        this.loggerCacheSetSize = loggerCacheSetSize;
         return this;
     }
 
+    /**
+     * Sets the number of sets of in the logger's caches.
+     *
+     * @param loggerCacheNumSets the number of sets of in the logger's caches.
+     * @return this
+     *
+     * @see this#loggerCacheSetSize(int)
+     */
     public EngineConfiguration loggerCacheNumSets(final int loggerCacheNumSets)
     {
         this.loggerCacheNumSets = loggerCacheNumSets;
         return this;
     }
 
-    public EngineConfiguration connectionTimeout(final long connectionTimeout)
+    /**
+     * Sets logging of inbound messages.
+     * <p>
+     * Switch off if you don't want the logging system to store all inbound messages in the archival system.
+     * <p>
+     * Default: true.
+     *
+     * @param logInboundMessages logging of inbound messages.
+     * @return this
+     */
+    public EngineConfiguration logInboundMessages(final boolean logInboundMessages)
     {
+        this.logInboundMessages = logInboundMessages;
         return this;
     }
 
-    public EngineConfiguration logInboundMessages(final boolean value)
+    /**
+     * Sets logging of outbound messages.
+     * <p>
+     * Switch off if you don't want the logging system to store all outbound messages.
+     * <b>NB:</b> take care if you switch this off as message replay won't work.
+     * <p>
+     * Default: true.
+     *
+     * @param logOutboundMessages logging of outbound messages.
+     * @return this
+     */
+    public EngineConfiguration logOutboundMessages(final boolean logOutboundMessages)
     {
-        this.logInboundMessages = value;
+        this.logOutboundMessages = logOutboundMessages;
         return this;
     }
 
-    public EngineConfiguration logOutboundMessages(final boolean value)
-    {
-        this.logOutboundMessages = value;
-        return this;
-    }
-
+    /**
+     * Sets the printing of error messages on or off. Error messages are always logged in an error buffer that
+     * can be scanned by another diagnostic process, this simply switches on or off the printing these errors on
+     * standard out.
+     * <p>
+     * Default: true
+     *
+     * @param printErrorMessages the printing of error messages.
+     * @return this
+     */
     public EngineConfiguration printErrorMessages(final boolean printErrorMessages)
     {
         this.printErrorMessages = printErrorMessages;
         return this;
     }
 
+    /**
+     * Sets the idle strategy for the Framer thread.
+     *
+     * @param framerIdleStrategy the idle strategy for the Framer thread.
+     * @return this
+     */
     public EngineConfiguration framerIdleStrategy(final IdleStrategy framerIdleStrategy)
     {
         this.framerIdleStrategy = framerIdleStrategy;
         return this;
     }
 
+    /**
+     * Sets the idle strategy for the Logger thread.
+     *
+     * @param loggerIdleStrategy the idle strategy for the Logger thread.
+     * @return this
+     */
     public EngineConfiguration loggerIdleStrategy(final IdleStrategy loggerIdleStrategy)
     {
         this.loggerIdleStrategy = loggerIdleStrategy;
         return this;
     }
 
+    /**
+     * Sets the idle strategy for the Error Printer thread.
+     *
+     * @param errorPrinterIdleStrategy the idle strategy for the Error Printer thread.
+     * @return this
+     */
     public EngineConfiguration errorPrinterIdleStrategy(final IdleStrategy errorPrinterIdleStrategy)
     {
         this.errorPrinterIdleStrategy = errorPrinterIdleStrategy;
         return this;
     }
 
+    /**
+     * Sets the fragment limit for the subscription to outbound messages from libraries.
+     *
+     * @param outboundLibraryFragmentLimit the fragment limit for the subscription to outbound messages from libraries.
+     * @return this
+     *
+     * @see EngineConfiguration#OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP
+     */
     public EngineConfiguration outboundLibraryFragmentLimit(final int outboundLibraryFragmentLimit)
     {
         this.outboundLibraryFragmentLimit = outboundLibraryFragmentLimit;
         return this;
     }
 
+    /**
+     * Sets the fragment limit for the subscription to messages from the replayer.
+     *
+     * @param outboundReplayFragmentLimit the fragment limit for the subscription to messages from the replayer.
+     * @return this
+     *
+     * @see EngineConfiguration#REPLAY_FRAGMENT_LIMIT_PROP
+     */
     public EngineConfiguration replayFragmentLimit(final int outboundReplayFragmentLimit)
     {
         this.replayFragmentLimit = outboundReplayFragmentLimit;
         return this;
     }
 
+    /**
+     * Sets the bytes limit for receiving inbound messages.
+     *
+     * @param inboundBytesReceivedLimit the bytes limit for receiving inbound messages.
+     * @return this
+     *
+     * @see EngineConfiguration#INBOUND_BYTES_RECEIVED_LIMIT_PROP
+     */
     public EngineConfiguration inboundBytesReceivedLimit(final int inboundBytesReceivedLimit)
     {
         this.inboundBytesReceivedLimit = inboundBytesReceivedLimit;
@@ -319,24 +464,36 @@ public final class EngineConfiguration extends CommonConfiguration
         return sequenceNumberCacheBuffer;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public EngineConfiguration aeronChannel(final String aeronChannel)
     {
         super.aeronChannel(aeronChannel);
         return this;
     }
 
-    public EngineConfiguration counterBuffersLength(final Integer counterBuffersLength)
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration monitoringBuffersLength(final Integer monitoringBuffersLength)
     {
-        super.counterBuffersLength(counterBuffersLength);
+        super.monitoringBuffersLength(monitoringBuffersLength);
         return this;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public EngineConfiguration monitoringFile(String monitoringFile)
     {
         super.monitoringFile(monitoringFile);
         return this;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public EngineConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
     {
         super.replyTimeoutInMs(replyTimeoutInMs);

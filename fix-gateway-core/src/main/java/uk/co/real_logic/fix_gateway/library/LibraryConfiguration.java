@@ -193,6 +193,8 @@ public final class LibraryConfiguration extends CommonConfiguration
      * <p>
      * This only needs to be set if this FIX Library is the acceptor library.
      *
+     * @see uk.co.real_logic.fix_gateway.library.SessionConfiguration.Builder#bufferSize(int)
+     *
      * @param acceptorSessionBufferSize the size of an acceptor's session buffer
      * @return this
      */
@@ -322,9 +324,9 @@ public final class LibraryConfiguration extends CommonConfiguration
     /**
      * {@inheritDoc}
      */
-    public LibraryConfiguration counterBuffersLength(final Integer counterBuffersLength)
+    public LibraryConfiguration monitoringBuffersLength(final Integer monitoringBuffersLength)
     {
-        super.counterBuffersLength(counterBuffersLength);
+        super.monitoringBuffersLength(monitoringBuffersLength);
         return this;
     }
 

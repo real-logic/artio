@@ -32,6 +32,16 @@ import java.util.concurrent.locks.LockSupport;
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
 
+/**
+ * A FIX Engine is a process in the gateway that accepts or initiates FIX connections and
+ * hands them off to different FixLibrary instances. The engine can replicate and/or durably
+ * store streams of FIX messages for replay, archival, administrative or analytics purposes.
+ * <p>
+ * Each engine can have one or more associated libraries that manage sessions and perform business
+ * logic. These may run in the same JVM process or a different JVM process.
+ *
+ * @see uk.co.real_logic.fix_gateway.library.FixLibrary
+ */
 public final class FixEngine extends GatewayProcess
 {
     public static final long COMMAND_QUEUE_IDLE_NS = 1;
@@ -44,11 +54,17 @@ public final class FixEngine extends GatewayProcess
     private AgentRunner framerRunner;
     private Logger logger;
 
+    /**
+     * Launch the engine. This method starts up the engine threads and then returns.
+     *
+     * @param configuration the configuration to use for this engine.
+     * @return the new FIX engine instance.
+     */
     public static FixEngine launch(final EngineConfiguration configuration)
     {
         configuration.conclude();
 
-        return new FixEngine(configuration).start();
+        return new FixEngine(configuration).launch();
     }
 
     /**
@@ -130,7 +146,7 @@ public final class FixEngine extends GatewayProcess
         return aeron.addSubscription(configuration.aeronChannel(), OUTBOUND_REPLAY_STREAM);
     }
 
-    private FixEngine start()
+    private FixEngine launch()
     {
         startOnThread(framerRunner);
         logger.start();
@@ -141,6 +157,9 @@ public final class FixEngine extends GatewayProcess
         return this;
     }
 
+    /**
+     * Close the engine down, including stopping other running threads.
+     */
     public synchronized void close()
     {
         quietClose(errorPrinterRunner);

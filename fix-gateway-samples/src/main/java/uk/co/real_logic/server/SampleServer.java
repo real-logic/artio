@@ -50,7 +50,7 @@ public final class SampleServer
 
         // Static configuration lasts the duration of a FIX-Gateway instance
         final EngineConfiguration configuration = new EngineConfiguration()
-            .bind("localhost", 9999)
+            .bindTo("localhost", 9999)
             .aeronChannel("udp://localhost:10000");
 
         try (final MediaDriver driver = MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));

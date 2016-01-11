@@ -65,7 +65,7 @@ public class FramerTest
     private FakeEpochClock mockClock = new FakeEpochClock();
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
-        .bind(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
+        .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
         .replyTimeoutInMs(REPLY_TIMEOUT_IN_MS);
 
     @SuppressWarnings("unchecked")

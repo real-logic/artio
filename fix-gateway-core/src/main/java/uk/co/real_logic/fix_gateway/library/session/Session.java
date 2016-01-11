@@ -353,13 +353,14 @@ public class Session
         return position;
     }
 
-    // ---------- Event Handlers & Logic ----------
-
-    protected void onDisconnect()
-    {
-        state(DISCONNECTED);
-    }
-
+    /**
+     * Runs a single iteration of the session's main logic loop. Users of the API don't need to call this method.
+     *
+     * @see uk.co.real_logic.fix_gateway.library.FixLibrary#poll(int)
+     *
+     * @param time the current time in milliseconds
+     * @return the number of actions performed.
+     */
     public int poll(final long time)
     {
         int actions = 0;
@@ -387,6 +388,14 @@ public class Session
 
         return actions;
     }
+
+    // ---------- Event Handlers & Logic ----------
+
+    protected void onDisconnect()
+    {
+        state(DISCONNECTED);
+    }
+
 
     void onMessage(final int msgSeqNo,
                    final byte[] msgType,
