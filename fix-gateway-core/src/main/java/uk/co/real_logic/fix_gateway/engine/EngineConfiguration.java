@@ -23,6 +23,7 @@ import uk.co.real_logic.fix_gateway.CommonConfiguration;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.Objects;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
@@ -84,7 +85,7 @@ public final class EngineConfiguration extends CommonConfiguration
     public static final int DEFAULT_SENDER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SEQUENCE_NUMBER_CACHE_BUFFER_SIZE = 8 * 1024 * 1024;
 
-    private String host;
+    private String host = null;
     private int port;
     private int indexFileSize = getInteger(INDEX_FILE_SIZE_PROP, DEFAULT_INDEX_FILE_SIZE);
     private String logFileDir = getProperty(LOG_FILE_DIR_PROP, DEFAULT_LOG_FILE_DIR);
@@ -124,6 +125,7 @@ public final class EngineConfiguration extends CommonConfiguration
      */
     public EngineConfiguration bindTo(final String host, final int port)
     {
+        Objects.requireNonNull(host, "host");
         this.host = host;
         this.port = port;
         return this;
@@ -373,6 +375,11 @@ public final class EngineConfiguration extends CommonConfiguration
     public int senderSocketBufferSize()
     {
         return senderSocketBufferSize;
+    }
+
+    public boolean hasBindAddress()
+    {
+        return host != null;
     }
 
     public InetSocketAddress bindAddress()

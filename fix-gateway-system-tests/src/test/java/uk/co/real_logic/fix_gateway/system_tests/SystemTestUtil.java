@@ -38,7 +38,6 @@ import java.util.concurrent.locks.LockSupport;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
@@ -184,7 +183,7 @@ public final class SystemTestUtil
         final String countersSuffix)
     {
         return new EngineConfiguration()
-            .bindTo("localhost", unusedPort())
+            //.bindTo("localhost", unusedPort())
             .aeronChannel("udp://localhost:" + initAeronPort)
             .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + countersSuffix)
             .logFileDir(CLIENT_LOGS);

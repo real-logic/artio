@@ -70,6 +70,7 @@ public class Framer implements Agent, SessionHandler
     private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
     private final DataSubscriber dataSubscriber = new DataSubscriber(this);
 
+    private final boolean hasBindAddress;
     private final Selector selector;
     private final ServerSocketChannel listeningChannel;
     private final ReceiverEndPoints receiverEndPoints = new ReceiverEndPoints();
@@ -117,18 +118,27 @@ public class Framer implements Agent, SessionHandler
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
         this.inboundBytesReceivedLimit = configuration.inboundBytesReceivedLimit();
+        this.hasBindAddress = configuration.hasBindAddress();
 
-        try
+        if (hasBindAddress)
         {
-            listeningChannel = ServerSocketChannel.open();
-            listeningChannel.bind(configuration.bindAddress()).configureBlocking(false);
+            try
+            {
+                listeningChannel = ServerSocketChannel.open();
+                listeningChannel.bind(configuration.bindAddress()).configureBlocking(false);
 
-            selector = Selector.open();
-            listeningChannel.register(selector, SelectionKey.OP_ACCEPT);
+                selector = Selector.open();
+                listeningChannel.register(selector, SelectionKey.OP_ACCEPT);
+            }
+            catch (final IOException ex)
+            {
+                throw new IllegalArgumentException(ex);
+            }
         }
-        catch (final IOException ex)
+        else
         {
-            throw new IllegalArgumentException(ex);
+            listeningChannel = null;
+            selector = null;
         }
     }
 
@@ -196,6 +206,11 @@ public class Framer implements Agent, SessionHandler
 
     private int pollNewConnections() throws IOException
     {
+        if (!hasBindAddress)
+        {
+            return 0;
+        }
+
         final int newConnections = selector.selectNow();
         if (newConnections > 0)
         {
