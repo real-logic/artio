@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.EpochClock;
@@ -66,6 +67,19 @@ public class Framer implements Agent, SessionHandler
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final ReliefValve sendOutboundMessagesFunc = this::sendOutboundMessages;
+    private final ReliefValve pollEndpointsFunc = () ->
+    {
+        try
+        {
+            return pollEndPoints();
+        }
+        catch (IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            return 0;
+        }
+    };
+
     private final EpochClock clock;
     private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
     private final DataSubscriber dataSubscriber = new DataSubscriber(this);
@@ -345,7 +359,7 @@ public class Framer implements Agent, SessionHandler
         receiverEndPoints.add(receiverEndPoint);
 
         final SenderEndPoint senderEndPoint =
-            connectionHandler.senderEndPoint(channel, connectionId, libraryId, this);
+            connectionHandler.senderEndPoint(channel, connectionId, libraryId, this, pollEndpointsFunc);
         senderEndPoints.add(senderEndPoint);
 
         idToLibrary.get(libraryId).onSessionConnected(new SessionInfo(

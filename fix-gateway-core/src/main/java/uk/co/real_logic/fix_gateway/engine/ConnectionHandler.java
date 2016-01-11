@@ -90,7 +90,8 @@ public class ConnectionHandler
         final SocketChannel channel,
         final long connectionId,
         final int libraryId,
-        final Framer framer) throws IOException
+        final Framer framer,
+        final ReliefValve reliefValue) throws IOException
     {
         return new SenderEndPoint(
             connectionId,
@@ -99,7 +100,8 @@ public class ConnectionHandler
             idleStrategy,
             fixCounters.messagesWritten(channel.getRemoteAddress()),
             errorHandler,
-            framer);
+            framer,
+            reliefValue);
     }
 
 }

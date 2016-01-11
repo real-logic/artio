@@ -31,26 +31,29 @@ public class SenderEndPoint implements AutoCloseable
     private final int libraryId;
     private final SocketChannel channel;
     private final IdleStrategy idleStrategy;
-    private final AtomicCounter messagesWritten;
+    private final AtomicCounter messagesWrites;
     private final ErrorHandler errorHandler;
     private final Framer framer;
+    private final ReliefValve reliefValve;
 
     public SenderEndPoint(
         final long connectionId,
         final int libraryId,
         final SocketChannel channel,
         final IdleStrategy idleStrategy,
-        final AtomicCounter messagesWritten,
+        final AtomicCounter messagesWrites,
         final ErrorHandler errorHandler,
-        final Framer framer)
+        final Framer framer,
+        final ReliefValve reliefValve)
     {
         this.connectionId = connectionId;
         this.libraryId = libraryId;
         this.channel = channel;
         this.idleStrategy = idleStrategy;
-        this.messagesWritten = messagesWritten;
+        this.messagesWrites = messagesWrites;
         this.errorHandler = errorHandler;
         this.framer = framer;
+        this.reliefValve = reliefValve;
     }
 
     public void onFramedMessage(final DirectBuffer directBuffer, final int offset, final int length)
@@ -66,9 +69,12 @@ public class SenderEndPoint implements AutoCloseable
             {
                 final int written = channel.write(buffer);
                 DebugLogger.log("Written  %s\n", buffer, written);
-                messagesWritten.orderedIncrement();
+                messagesWrites.orderedIncrement();
                 bytesWritten += written;
-                idleStrategy.idle(written);
+                if (written == 0)
+                {
+                    idleStrategy.idle(reliefValve.vent());
+                }
             }
         }
         catch (final IOException ex)
@@ -95,6 +101,6 @@ public class SenderEndPoint implements AutoCloseable
 
     public void close()
     {
-        messagesWritten.close();
+        messagesWrites.close();
     }
 }
