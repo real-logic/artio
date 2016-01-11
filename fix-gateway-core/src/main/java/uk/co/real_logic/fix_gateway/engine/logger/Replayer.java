@@ -211,7 +211,7 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
     {
         for (int i = 0; i < maxClaimAttempts && publication.tryClaim(newLength, claim) < 0; i++)
         {
-            idleStrategy.idle(0);
+            idleStrategy.idle();
         }
     }
 

@@ -152,8 +152,8 @@ public final class FixLibrary extends GatewayProcess
     {
         final long timeInMs = clock.time();
         return inboundSubscription.poll(dataSubscriber, fragmentLimit) +
-            pollSessions(timeInMs) +
-            livenessDetector.poll(timeInMs);
+               pollSessions(timeInMs) +
+               livenessDetector.poll(timeInMs);
     }
 
     /**

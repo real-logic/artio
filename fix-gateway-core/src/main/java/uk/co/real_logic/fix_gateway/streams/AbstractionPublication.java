@@ -74,7 +74,7 @@ public class AbstractionPublication implements AutoCloseable
             }
             else
             {
-                idleStrategy.idle(0);
+                idleStrategy.idle();
             }
 
             fails.increment();
