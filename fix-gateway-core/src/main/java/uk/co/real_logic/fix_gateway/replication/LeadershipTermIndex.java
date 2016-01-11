@@ -32,13 +32,14 @@ import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
  * This acts as an off-heap archive that does a binary search over the underlying
  * intervals.
  */
-public class LeadershipTerms
+public class LeadershipTermIndex
 {
+    public static final int NO_HEADER_WRITTEN = 0;
+
     private static final int CURRENT_ROW_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int HEADER_SIZE = CURRENT_ROW_OFFSET + SIZE_OF_INT;
     private static final int ROW_SIZE = LeadershipTermEncoder.BLOCK_LENGTH;
     private static final int INITIAL_POSITION_OFFSET = SIZE_OF_INT;
-    public static final int NO_HEADER_WRITTEN = 0;
 
     private final MutableDirectBuffer buffer;
     private final MessageHeaderEncoder messageHeaderEncoder = new MessageHeaderEncoder();
@@ -49,7 +50,7 @@ public class LeadershipTerms
     private final int actingBlockLength;
     private final int actingVersion;
 
-    public LeadershipTerms(final MutableDirectBuffer buffer)
+    public LeadershipTermIndex(final MutableDirectBuffer buffer)
     {
         this.buffer = buffer;
         setupHeader();

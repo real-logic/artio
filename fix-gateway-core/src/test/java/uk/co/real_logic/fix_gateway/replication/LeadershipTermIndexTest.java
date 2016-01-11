@@ -17,18 +17,18 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.replication.LeadershipTerms.Cursor;
+import uk.co.real_logic.fix_gateway.replication.LeadershipTermIndex.Cursor;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertFalse;
 
-public class LeadershipTermsTest
+public class LeadershipTermIndexTest
 {
 
     private Cursor cursor = new Cursor();
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
-    private LeadershipTerms leadershipTerms = new LeadershipTerms(buffer);
+    private LeadershipTermIndex leadershipTermIndex = new LeadershipTermIndex(buffer);
 
     @Test
     public void shouldFindNothingWithNoTerms()
@@ -39,7 +39,7 @@ public class LeadershipTermsTest
     @Test
     public void shouldFindSingleTerm()
     {
-        leadershipTerms.onNewLeader(0, 0, 0, 1);
+        leadershipTermIndex.onNewLeader(0, 0, 0, 1);
 
         assertFindsPosition(10);
 
@@ -49,8 +49,8 @@ public class LeadershipTermsTest
     @Test
     public void shouldFindPositionInTwoTerms()
     {
-        leadershipTerms.onNewLeader(0, 0, 0, 1);
-        leadershipTerms.onNewLeader(5, 5, 0, 2);
+        leadershipTermIndex.onNewLeader(0, 0, 0, 1);
+        leadershipTermIndex.onNewLeader(5, 5, 0, 2);
 
         assertFindsPosition(10);
 
@@ -100,25 +100,25 @@ public class LeadershipTermsTest
     {
         storesHistory();
 
-        final LeadershipTerms newLeadershipTerms = new LeadershipTerms(buffer);
+        final LeadershipTermIndex newLeadershipTermIndex = new LeadershipTermIndex(buffer);
 
-        assertTrue("Unable to find term", newLeadershipTerms.find(18, cursor));
+        assertTrue("Unable to find term", newLeadershipTermIndex.find(18, cursor));
 
         assertCursor(2, 11);
     }
 
     private void findsNoTerm(final int position)
     {
-        assertFalse("Found term when there was none", leadershipTerms.find(position, cursor));
+        assertFalse("Found term when there was none", leadershipTermIndex.find(position, cursor));
     }
 
     private void storesHistory()
     {
-        leadershipTerms.onNewLeader(0, 0, 0, 1);
-        leadershipTerms.onNewLeader(5, 5, 0, 2);
-        leadershipTerms.onNewLeader(10, 15, 5, 1);
-        leadershipTerms.onNewLeader(7, 17, 10, 2);
-        leadershipTerms.onNewLeader(12, 19, 7, 1);
+        leadershipTermIndex.onNewLeader(0, 0, 0, 1);
+        leadershipTermIndex.onNewLeader(5, 5, 0, 2);
+        leadershipTermIndex.onNewLeader(10, 15, 5, 1);
+        leadershipTermIndex.onNewLeader(7, 17, 10, 2);
+        leadershipTermIndex.onNewLeader(12, 19, 7, 1);
     }
 
     private void assertCursor(final int expectedSessionId, final int expectedStreamPosition)
@@ -129,6 +129,6 @@ public class LeadershipTermsTest
 
     private void assertFindsPosition(final int position)
     {
-        assertTrue("Unable to find term", leadershipTerms.find(position, cursor));
+        assertTrue("Unable to find term", leadershipTermIndex.find(position, cursor));
     }
 }
