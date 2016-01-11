@@ -15,17 +15,14 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
-import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
-import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 
 import java.io.File;
 import java.net.InetSocketAddress;
-import java.util.stream.IntStream;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
@@ -87,8 +84,6 @@ public final class EngineConfiguration extends CommonConfiguration
     public static final int DEFAULT_SENDER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SEQUENCE_NUMBER_CACHE_BUFFER_SIZE = 8 * 1024 * 1024;
 
-    private final Int2ObjectHashMap<OtfMessageAcceptor> otfAcceptors = new Int2ObjectHashMap<>();
-
     private String host;
     private int port;
     private int indexFileSize = getInteger(INDEX_FILE_SIZE_PROP, DEFAULT_INDEX_FILE_SIZE);
@@ -117,15 +112,6 @@ public final class EngineConfiguration extends CommonConfiguration
         getInteger(SENDER_SOCKET_BUFFER_SIZE_PROP, DEFAULT_SENDER_SOCKET_BUFFER_SIZE);
     private int sequenceNumberCacheBufferSize =
         getInteger(SEQUENCE_NUMBER_CACHE_BUFFER_SIZE_PROP, DEFAULT_SEQUENCE_NUMBER_CACHE_BUFFER_SIZE);
-
-    // TODO: remove method
-    public EngineConfiguration registerAcceptor(
-        final OtfMessageAcceptor messageAcceptor, int firstTag, final int... tags)
-    {
-        otfAcceptors.put(firstTag, messageAcceptor);
-        IntStream.of(tags).forEach(tag -> otfAcceptors.put(tag, messageAcceptor));
-        return this;
-    }
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
