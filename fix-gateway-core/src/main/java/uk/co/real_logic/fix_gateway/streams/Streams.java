@@ -23,9 +23,10 @@ import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
 import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
 
+import static uk.co.real_logic.fix_gateway.engine.framer.ReliefValve.NO_RELIEF_VALVE;
+
 public class Streams
 {
-    private static final ReliefValve NO_RELIEF_VALVE = () -> 0;
 
     private final int streamId;
     private final NanoClock nanoClock;

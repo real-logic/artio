@@ -20,7 +20,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
  */
 public interface ReliefValve
 {
-    ReliefValve NONE = () -> 0;
+    ReliefValve NO_RELIEF_VALVE = () -> 0;
 
     /**
      * depressurize the system.

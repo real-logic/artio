@@ -77,7 +77,7 @@ public class RaftTransport
             configuration.maxClaimAttempts(),
             configuration.idleStrategy(),
             configuration.failCounter(),
-            ReliefValve.NONE,
+            ReliefValve.NO_RELIEF_VALVE,
             publication(id));
     }
 
