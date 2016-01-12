@@ -61,8 +61,6 @@ public class LibraryAndGatewayRandomTimeoutTest
     public void libraryShouldRefuseConnectionWhenEngineNotStarted()
     {
         launchLibrary();
-
-        initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
     }
 
     @Test(expected = IllegalStateException.class)
@@ -95,6 +93,5 @@ public class LibraryAndGatewayRandomTimeoutTest
         closeIfOpen(initiatingLibrary);
         closeIfOpen(initiatingEngine);
         closeIfOpen(mediaDriver);
-
     }
 }

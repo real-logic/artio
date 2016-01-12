@@ -40,7 +40,9 @@ public class TestFixtures
     {
         final MediaDriver.Context context = new MediaDriver.Context()
             .threadingMode(SHARED)
-            .dirsDeleteOnStart(true);
+            .dirsDeleteOnStart(true)
+            .termBufferLength(4 * 1024 * 1024)
+            .ipcTermBufferLength(4 * 1024 * 1024);
 
         return MediaDriver.launch(context);
     }

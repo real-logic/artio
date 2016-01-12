@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.library;
 
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
@@ -103,23 +104,41 @@ public final class FixLibrary extends GatewayProcess
 
     private FixLibrary connect()
     {
-        outboundPublication.saveLibraryConnect(libraryId, isAcceptor);
-
-        final long latestReplyArrivalTime = latestReplyArrivalTime();
-        while (!livenessDetector.isConnected() && errorType == null)
+        try
         {
-            final int workCount = poll(1);
+            outboundPublication.saveLibraryConnect(libraryId, isAcceptor);
 
-            checkTime(latestReplyArrivalTime);
+            final long latestReplyArrivalTime = latestReplyArrivalTime();
+            while (!livenessDetector.isConnected() && errorType == null)
+            {
+                final int workCount = poll(1);
 
-            idleStrategy.idle(workCount);
+                checkTime(latestReplyArrivalTime);
+
+                idleStrategy.idle(workCount);
+            }
+
+            if (errorType != null)
+            {
+                throw new IllegalArgumentException(String.format(
+                        "Unable to connect to engine: %s", errorType
+                ));
+            }
         }
-
-        if (errorType != null)
+        catch (Exception e)
         {
-            throw new IllegalArgumentException(String.format(
-                "Unable to connect to engine: %s", errorType
-            ));
+            // We won't be returning an instance of ourselves to callers in the connect,
+            // so we must clean up after ourselves
+            try
+            {
+                close();
+            }
+            catch (Exception closeException)
+            {
+                e.addSuppressed(closeException);
+            }
+
+            LangUtil.rethrowUnchecked(e);
         }
 
         return this;

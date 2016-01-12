@@ -183,7 +183,6 @@ public final class SystemTestUtil
         final String countersSuffix)
     {
         return new EngineConfiguration()
-            //.bindTo("localhost", unusedPort())
             .aeronChannel("udp://localhost:" + initAeronPort)
             .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + countersSuffix)
             .logFileDir(CLIENT_LOGS);
