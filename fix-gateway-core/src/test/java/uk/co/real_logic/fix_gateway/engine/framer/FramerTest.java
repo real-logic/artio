@@ -116,6 +116,10 @@ public class FramerTest
     {
         framer.onClose();
         server.close();
+        if (client != null)
+        {
+            client.close();
+        }
     }
 
     @Test
