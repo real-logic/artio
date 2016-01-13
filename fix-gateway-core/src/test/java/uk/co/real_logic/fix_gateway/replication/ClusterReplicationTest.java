@@ -69,6 +69,8 @@ public class ClusterReplicationTest
     @Test
     public void shouldReplicateMessage()
     {
+        checkClusterStable();
+
         final NodeRunner leader = leader();
 
         final long position = sendMessageTo(leader);
@@ -215,6 +217,8 @@ public class ClusterReplicationTest
         hasElectedLeader();
 
         assertAllNodesSeeSameLeader();
+
+        DebugLogger.log("Cluster Stable");
     }
 
     private void assertAllNodesSeeSameLeader()

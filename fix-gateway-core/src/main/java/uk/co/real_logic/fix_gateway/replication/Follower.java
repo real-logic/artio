@@ -160,7 +160,7 @@ public class Follower implements Role, RaftHandler
         if (leaderArchiveReader == null)
         {
             leaderArchiveReader = archiveReader.session(termState.leaderSessionId());
-            System.out.println("Follower set!");
+            System.out.println("Follower leaderArchiveReader set!");
             if (leaderArchiveReader == null)
             {
                 return 0;
@@ -241,9 +241,6 @@ public class Follower implements Role, RaftHandler
                                      final long position,
                                      final int leaderSessionId)
     {
-        /*System.out.println("New Leader: " + leaderSessionId + ", "
-            + (leaderNodeId != nodeId) + ", " + (leaderShipTerm > this.leaderShipTerm));*/
-
         if (leaderNodeId != this.nodeId &&
             leaderShipTerm > this.leaderShipTerm)
         {
@@ -322,8 +319,6 @@ public class Follower implements Role, RaftHandler
             leaderArchiver = null;
             leaderArchiveReader = null;
         }
-        /*System.out.printf("%d: %s, %s, %s\n", nodeId, termState.hasLeader(),
-            leaderArchiveReader != null, leaderArchiver != null);*/
     }
 
     public Follower acknowledgementPublication(final RaftPublication acknowledgementPublication)
