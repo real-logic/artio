@@ -24,14 +24,14 @@ public interface RaftHandler
     void onMessageAcknowledgement(
         final long newAckedPosition, final short nodeId, final AcknowledgementStatus status);
 
-    void onRequestVote(final short candidateId, final int leaderShipTerm, final long lastAckedPosition);
+    void onRequestVote(
+        final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long lastAckedPosition);
 
-    void onReplyVote(final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote);
+    void onReplyVote(
+        final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote);
 
-    void onConcensusHeartbeat(final short nodeId,
-                              final int leaderShipTerm,
-                              final long position,
-                              final int leaderSessionId);
+    void onConcensusHeartbeat(
+        final short nodeId, final int leaderShipTerm, final long position, final int leaderSessionId);
 
     void onResend(
         final int leaderSessionId,

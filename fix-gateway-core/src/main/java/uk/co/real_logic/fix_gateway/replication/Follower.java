@@ -112,9 +112,17 @@ public class Follower implements Role, RaftHandler
 
     public int readData()
     {
+        // Leader may not have written anything onto its data stream when it becomes the leader
+        // Most of the time this will be false
         if (leaderArchiver == null)
         {
-            return 0;
+            leaderArchiver = archiver.session(termState.leaderSessionId());
+            termState.leaderSessionId(termState.leaderSessionId());
+            if (leaderArchiver == null)
+            {
+                return 0;
+            }
+            System.out.println("Follower archiver set to " + termState.leaderSessionId());
         }
 
         final long imagePosition = leaderArchiver.position();
@@ -138,9 +146,7 @@ public class Follower implements Role, RaftHandler
             onReplyKeepAlive(timeInMs);
         }
 
-        attemptToCommitData();
-
-        return bytesRead;
+        return bytesRead + attemptToCommitData();
     }
 
     private void saveMessageAcknowledgement(final AcknowledgementStatus status)
@@ -148,20 +154,35 @@ public class Follower implements Role, RaftHandler
         acknowledgementPublication.saveMessageAcknowledgement(receivedPosition, nodeId, status);
     }
 
-    private void attemptToCommitData()
+    private int attemptToCommitData()
     {
+        // see readData()
+        if (leaderArchiveReader == null)
+        {
+            leaderArchiveReader = archiveReader.session(termState.leaderSessionId());
+            System.out.println("Follower set!");
+            if (leaderArchiveReader == null)
+            {
+                return 0;
+            }
+        }
+
         final long canCommitUpToPosition = Math.min(commitPosition, receivedPosition);
         final int committableBytes = (int) (canCommitUpToPosition - lastAppliedPosition);
         if (committableBytes > 0)
         {
-            final long readBytes = leaderArchiveReader.readUpTo(
+            final int readBytes = (int) leaderArchiveReader.readUpTo(
                 lastAppliedPosition + HEADER_LENGTH, committableBytes, handler);
 
             if (readBytes < committableBytes)
             {
                 System.err.printf("Wanted to read %d, but only read %d%n", committableBytes, readBytes);
             }
+
+            return readBytes;
         }
+
+        return 0;
     }
 
     public void closeStreams()
@@ -179,7 +200,8 @@ public class Follower implements Role, RaftHandler
         // not interested in this message
     }
 
-    public void onRequestVote(final short candidateId, final int leaderShipTerm, final long candidatePosition)
+    public void onRequestVote(
+        final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long candidatePosition)
     {
         if (canVoteFor(candidateId) && safeToVote(leaderShipTerm, candidatePosition))
         {
@@ -219,6 +241,9 @@ public class Follower implements Role, RaftHandler
                                      final long position,
                                      final int leaderSessionId)
     {
+        /*System.out.println("New Leader: " + leaderSessionId + ", "
+            + (leaderNodeId != nodeId) + ", " + (leaderShipTerm > this.leaderShipTerm));*/
+
         if (leaderNodeId != this.nodeId &&
             leaderShipTerm > this.leaderShipTerm)
         {
@@ -297,7 +322,8 @@ public class Follower implements Role, RaftHandler
             leaderArchiver = null;
             leaderArchiveReader = null;
         }
-        System.out.printf("%d: %s, %s\n", nodeId, termState.hasLeader(), leaderArchiveReader != null);
+        /*System.out.printf("%d: %s, %s, %s\n", nodeId, termState.hasLeader(),
+            leaderArchiveReader != null, leaderArchiver != null);*/
     }
 
     public Follower acknowledgementPublication(final RaftPublication acknowledgementPublication)

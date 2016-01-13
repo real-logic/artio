@@ -64,7 +64,7 @@ public class ScenariosTest
     private final Subscription dataSubscription = mock(Subscription.class);
     private final Image leaderDataImage = mock(Image.class);
     private final ArchiveReader archiveReader = mock(ArchiveReader.class);
-    private ArchiveReader.SessionReader sessionReader = mock(ArchiveReader.SessionReader.class);
+    private final ArchiveReader.SessionReader sessionReader = mock(ArchiveReader.SessionReader.class);
     private final TermState termState = new TermState();
     private final FragmentHandler fragmentHandler = mock(FragmentHandler.class);
     private final Archiver.SessionArchiver leaderArchiver = mock(Archiver.SessionArchiver.class);
@@ -245,7 +245,7 @@ public class ScenariosTest
             HEARTBEAT_INTERVAL_IN_MS,
             termState,
             SESSION_ID,
-            sessionReader);
+            archiveReader);
 
         leader
             .controlPublication(controlPublication)
@@ -447,19 +447,21 @@ public class ScenariosTest
     {
         return namedStimulus(st ->
         {
-            st.raftHandler.onRequestVote(candidateId, leaderShipTerm, lastAckedPosition);
+            st.raftHandler.onRequestVote(candidateId, SESSION_ID, leaderShipTerm, lastAckedPosition);
         }, name);
     }
 
     private void requestsVote(final int term)
     {
-        verify(controlPublication, times(1)).saveRequestVote(ID, POSITION, term);
+        verify(controlPublication, times(1)).saveRequestVote(
+            eq(ID), anyInt(), eq(POSITION), eq(term));
     }
 
     private void setup()
     {
         when(dataSubscription.getImage(SESSION_ID)).thenReturn(leaderDataImage);
         when(archiver.session(SESSION_ID)).thenReturn(leaderArchiver);
+        when(archiveReader.session(SESSION_ID)).thenReturn(sessionReader);
 
         termState.reset();
     }

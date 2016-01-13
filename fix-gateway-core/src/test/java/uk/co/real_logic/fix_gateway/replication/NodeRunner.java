@@ -147,7 +147,6 @@ public class NodeRunner implements AutoCloseable, Role
         return dataPublication.offer(buffer, offset, length);
     }
 
-
     public void close()
     {
         CloseHelper.close(aeron);

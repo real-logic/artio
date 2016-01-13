@@ -43,12 +43,13 @@ public class FollowerTest
     private static final long VOTE_TIMEOUT = 100;
     private static final int OLD_LEADERSHIP_TERM = 1;
     private static final int NEW_LEADERSHIP_TERM = OLD_LEADERSHIP_TERM + 1;
-    private static final int LEADER_SESSION_ID = 42;
-    private static final int OTHER_SESSION_ID = LEADER_SESSION_ID + 1;
 
     private static final short ID = 3;
+    private static final int SESSION_ID_3 = 41;
     private static final short ID_4 = 4;
+    private static final int SESSION_ID_4 = 42;
     private static final short ID_5 = 5;
+    private static final int SESSION_ID_5 = 43;
 
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
     private RaftPublication acknowledgementPublication = mock(RaftPublication.class);
@@ -64,7 +65,7 @@ public class FollowerTest
     private final TermState termState = new TermState()
         .allPositions(POSITION)
         .leadershipTerm(OLD_LEADERSHIP_TERM)
-        .leaderSessionId(LEADER_SESSION_ID);
+        .leaderSessionId(SESSION_ID_4);
 
     private Follower follower = new Follower(
         ID,
@@ -84,8 +85,8 @@ public class FollowerTest
             .acknowledgementPublication(acknowledgementPublication)
             .controlSubscription(controlSubscription);
 
-        when(archiveReader.session(LEADER_SESSION_ID)).thenReturn(sessionReader);
-        when(archiver.session(LEADER_SESSION_ID)).thenReturn(leaderArchiver);
+        when(archiveReader.session(SESSION_ID_4)).thenReturn(sessionReader);
+        when(archiver.session(SESSION_ID_4)).thenReturn(leaderArchiver);
 
         follower.follow(0);
     }
@@ -93,13 +94,13 @@ public class FollowerTest
     @Test
     public void shouldOnlyVoteForOneCandidateDuringTerm()
     {
-        follower.onRequestVote(ID_4, NEW_LEADERSHIP_TERM, POSITION);
+        follower.onRequestVote(ID_4, SESSION_ID_4, NEW_LEADERSHIP_TERM, POSITION);
 
         verify(controlPublication).saveReplyVote(eq(ID), eq(ID_4), anyInt(), eq(FOR));
 
         onHeartbeat();
 
-        follower.onRequestVote(ID_5, NEW_LEADERSHIP_TERM, POSITION);
+        follower.onRequestVote(ID_5, SESSION_ID_5, NEW_LEADERSHIP_TERM, POSITION);
 
         verify(controlPublication, never()).saveReplyVote(eq(ID), eq(ID_5), anyInt(), eq(FOR));
     }
@@ -113,7 +114,7 @@ public class FollowerTest
 
         onHeartbeat();
 
-        verify(archiver).session(LEADER_SESSION_ID);
+        verify(archiver).session(SESSION_ID_4);
     }
 
     @Test
@@ -205,7 +206,7 @@ public class FollowerTest
 
         poll();
 
-        receivesResendFrom(POSITION + LENGTH, LEADER_SESSION_ID, NEW_LEADERSHIP_TERM);
+        receivesResendFrom(POSITION + LENGTH, SESSION_ID_4, NEW_LEADERSHIP_TERM);
 
         poll();
 
@@ -219,7 +220,7 @@ public class FollowerTest
 
         poll();
 
-        receivesResendFrom(POSITION, OTHER_SESSION_ID, NEW_LEADERSHIP_TERM);
+        receivesResendFrom(POSITION, SESSION_ID_5, NEW_LEADERSHIP_TERM);
 
         poll();
 
@@ -233,7 +234,7 @@ public class FollowerTest
 
         poll();
 
-        receivesResendFrom(POSITION, LEADER_SESSION_ID, OLD_LEADERSHIP_TERM);
+        receivesResendFrom(POSITION, SESSION_ID_4, OLD_LEADERSHIP_TERM);
 
         poll();
 
@@ -258,7 +259,7 @@ public class FollowerTest
 
     private void onHeartbeat()
     {
-        follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION, LEADER_SESSION_ID);
+        follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION, SESSION_ID_4);
     }
 
     private void notifyMissingLogEntries()
@@ -276,7 +277,7 @@ public class FollowerTest
     {
         whenControlPolled().then(inv ->
         {
-            follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, position, LEADER_SESSION_ID);
+            follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, position, SESSION_ID_4);
 
             return 1;
         });
@@ -284,7 +285,7 @@ public class FollowerTest
 
     private void receivesResend()
     {
-        receivesResendFrom(POSITION, LEADER_SESSION_ID, NEW_LEADERSHIP_TERM);
+        receivesResendFrom(POSITION, SESSION_ID_4, NEW_LEADERSHIP_TERM);
     }
 
     private void acknowledgeLogEntries()

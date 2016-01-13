@@ -43,18 +43,19 @@ public class Leader implements Role, RaftHandler
 
     private final TermState termState;
     private final int ourSessionId;
-    private final ArchiveReader.SessionReader ourArchiveReader;
     private final short nodeId;
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final RaftSubscriber raftSubscriber = new RaftSubscriber(this);
     private final RaftNode raftNode;
     private final FragmentHandler handler;
     private final long heartbeatIntervalInMs;
+    private final ArchiveReader archiveReader;
 
     // Counts of how many acknowledgements
     private final Long2LongHashMap nodeToPosition = new Long2LongHashMap(NO_SESSION_ID);
     private final ResendHandler resendHandler = new ResendHandler();
 
+    private ArchiveReader.SessionReader ourArchiveReader;
     private RaftPublication controlPublication;
     private Subscription acknowledgementSubscription;
     private Subscription dataSubscription;
@@ -78,7 +79,7 @@ public class Leader implements Role, RaftHandler
         final long heartbeatIntervalInMs,
         final TermState termState,
         final int ourSessionId,
-        final ArchiveReader.SessionReader archiveReader)
+        final ArchiveReader archiveReader)
     {
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
@@ -86,8 +87,8 @@ public class Leader implements Role, RaftHandler
         this.handler = handler;
         this.termState = termState;
         this.ourSessionId = ourSessionId;
-        this.ourArchiveReader = archiveReader;
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
+        this.archiveReader = archiveReader;
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
         updateHeartbeatInterval(timeInMs);
     }
@@ -173,14 +174,40 @@ public class Leader implements Role, RaftHandler
         {
             final int length = (int) (commitAndLastAppliedPosition - position);
             this.position = position;
-            if (!ourArchiveReader.readBlock(position, length, resendHandler))
+            if (validateReader())
             {
-                saveResend(EMPTY_BUFFER, 0, 0);
+                if (!ourArchiveReader.readBlock(position, length, resendHandler))
+                {
+                    saveResend(EMPTY_BUFFER, 0, 0);
+                }
+            }
+            else
+            {
+                // TODO: decide if this is the right mechanic
+                //saveResend(EMPTY_BUFFER, 0, 0);
+                System.out.println(ourSessionId);
             }
         }
     }
 
-    public void onRequestVote(final short candidateId, final int leaderShipTerm, final long lastAckedPosition)
+    private boolean validateReader()
+    {
+        if (ourArchiveReader == null)
+        {
+            ourArchiveReader = archiveReader.session(ourSessionId);
+            termState.leaderSessionId(ourSessionId);
+            if (ourArchiveReader == null)
+            {
+                return false;
+            }
+            System.out.println("Leader Set as " + ourSessionId);
+        }
+
+        return true;
+    }
+
+    public void onRequestVote(
+        final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long lastAckedPosition)
     {
         if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= commitAndLastAppliedPosition)
         {

@@ -116,7 +116,7 @@ public class CandidateTest
 
     private void requestsVote(final int term)
     {
-        verify(controlPublication, times(1)).saveRequestVote(ID, POSITION, term);
+        verify(controlPublication, times(1)).saveRequestVote(ID, DATA_SESSION_ID, POSITION, term);
     }
 
     private void startElection()

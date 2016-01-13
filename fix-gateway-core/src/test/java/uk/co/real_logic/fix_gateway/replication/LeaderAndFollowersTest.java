@@ -83,7 +83,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             HEARTBEAT_INTERVAL,
             termState1,
             leaderSessionId,
-            mock(ArchiveReader.SessionReader.class))
+            mock(ArchiveReader.class))
             .controlPublication(raftPublication(CONTROL))
             .controlSubscription(controlSubscription())
             .acknowledgementSubscription(acknowledgementSubscription())

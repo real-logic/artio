@@ -95,7 +95,8 @@ public class Candidate implements Role, RaftHandler
 
     }
 
-    public void onRequestVote(final short candidateId, final int leaderShipTerm, long lastAckedPosition)
+    public void onRequestVote(
+        final short candidateId, final int candidateSessionId, final int leaderShipTerm, long lastAckedPosition)
     {
         if (leaderShipTerm > this.leaderShipTerm && lastAckedPosition >= this.position)
         {
@@ -197,7 +198,7 @@ public class Candidate implements Role, RaftHandler
         voteTimeout.onKeepAlive(timeInMs);
         leaderShipTerm++;
         countVote(id); // Vote for yourself
-        controlPublication.saveRequestVote(id, position, leaderShipTerm);
+        controlPublication.saveRequestVote(id, sessionId, position, leaderShipTerm);
     }
 
     public Candidate controlPublication(final RaftPublication controlPublication)

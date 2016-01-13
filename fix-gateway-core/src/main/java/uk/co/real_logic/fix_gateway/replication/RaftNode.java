@@ -138,7 +138,7 @@ public class RaftNode implements Role
             heartbeatTimeInMs,
             termState,
             ourSessionId,
-            archiveReader.session(ourSessionId));
+            archiveReader);
 
         candidate = new Candidate(
             nodeId,
@@ -229,5 +229,10 @@ public class RaftNode implements Role
     public short nodeId()
     {
         return nodeId;
+    }
+
+    public TermState termState()
+    {
+        return termState;
     }
 }

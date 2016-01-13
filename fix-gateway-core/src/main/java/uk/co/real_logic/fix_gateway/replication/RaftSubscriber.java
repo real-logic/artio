@@ -66,6 +66,7 @@ public class RaftSubscriber implements FragmentHandler
                 requestVote.wrap(buffer, offset, blockLength, version);
                 handler.onRequestVote(
                     requestVote.candidateId(),
+                    requestVote.candidateSessionId(),
                     requestVote.leaderShipTerm(),
                     requestVote.lastAckedPosition()
                 );

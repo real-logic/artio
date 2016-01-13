@@ -168,6 +168,7 @@
     <sbe:message name="RequestVote" id="20" description="">
         <field name="lastAckedPosition" id="55" type="int64"/>
         <field name="candidateId" id="56" type="int16"/>
+        <field name="candidateSessionId" id="75" type="int32"/>
         <field name="leaderShipTerm" id="59" type="int32"/>
     </sbe:message>
     <sbe:message name="ReplyVote" id="22" description="">

@@ -25,6 +25,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
@@ -32,6 +33,7 @@ import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 /**
  * Test simulated cluster.
  */
+@Ignore
 public class ClusterReplicationTest
 {
 
@@ -211,6 +213,19 @@ public class ClusterReplicationTest
         }
 
         hasElectedLeader();
+
+        assertAllNodesSeeSameLeader();
+    }
+
+    private void assertAllNodesSeeSameLeader()
+    {
+        final TermState state1 = node1.raftNode().termState();
+        final TermState state2 = node2.raftNode().termState();
+        final TermState state3 = node3.raftNode().termState();
+
+        final int leaderSessionId = state1.leaderSessionId();
+        assertEquals("1 and 2 disagree on leader", leaderSessionId, state2.leaderSessionId());
+        assertEquals("1 and 3 disagree on leader", leaderSessionId, state3.leaderSessionId());
     }
 
     private void assertIsFollower(final NodeRunner follower)

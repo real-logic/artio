@@ -78,7 +78,8 @@ public class RaftPublication extends AbstractionPublication
         return position;
     }
 
-    public long saveRequestVote(final short candidateId, final long lastAckedPosition, final int leaderShipTerm)
+    public long saveRequestVote(
+        final short candidateId, final int candidateSessionId, final long lastAckedPosition, final int leaderShipTerm)
     {
         final long position = claim(REQUEST_VOTE_LENGTH);
 
@@ -97,6 +98,7 @@ public class RaftPublication extends AbstractionPublication
         requestVote
             .wrap(buffer, offset)
             .candidateId(candidateId)
+            .candidateSessionId(candidateSessionId)
             .lastAckedPosition(lastAckedPosition)
             .leaderShipTerm(leaderShipTerm);
 
