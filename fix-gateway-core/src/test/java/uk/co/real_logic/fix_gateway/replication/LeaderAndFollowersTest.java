@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Publication;
@@ -121,16 +120,17 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         verify(follower1Handler).onFragment(any(), eq(HEADER_LENGTH), eq(position - HEADER_LENGTH), any());
     }
 
-    @Ignore
     @Test
     public void shouldProcessSuccessiveChunks()
     {
         final int position1 = roundtripABuffer();
         leaderCommitted(0, position1);
 
-        final int position2 = roundtripABuffer();
+        final int secondValue = VALUE + 1;
+        buffer.putInt(OFFSET, secondValue);
 
-        leaderCommitted(position1, position2 - position1);
+        final int position2 = roundtripABuffer();
+        leaderCommitted(position1, position2 - position1, secondValue);
     }
 
     @Test
@@ -230,7 +230,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         poll(follower1);
         poll(follower2);
 
-        pollLeader(2);
+        pollLeader(3);
         return position;
     }
 
@@ -256,13 +256,18 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
     private void leaderCommitted(int offset, int length)
     {
+        leaderCommitted(offset, length, VALUE);
+    }
+
+    private void leaderCommitted(int offset, int length, final int value)
+    {
         offset += HEADER_LENGTH;
         length -= HEADER_LENGTH;
         final ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
-        verify(leaderHandler)
+        verify(leaderHandler, atLeastOnce())
             .onFragment(bufferCaptor.capture(), eq(offset), eq(length), any());
         final DirectBuffer buffer = bufferCaptor.getValue();
-        assertEquals(VALUE, buffer.getInt(OFFSET + HEADER_LENGTH));
+        assertEquals(value, buffer.getInt(offset + OFFSET));
     }
 
     private void leaderNeverCommitted()
