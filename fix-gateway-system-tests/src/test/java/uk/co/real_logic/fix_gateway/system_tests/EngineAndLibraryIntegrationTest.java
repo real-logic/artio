@@ -22,6 +22,7 @@ import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.IoUtil;
+import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
@@ -229,6 +230,10 @@ public class EngineAndLibraryIntegrationTest
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
+        // Force multiple libraries with the same id to use different monitoring files
+        final String monitoringFile = IoUtil.tmpDirName() + "fix-acceptor-" + libraryId + "-" +
+                TestFixtures.unusedPort() + File.separator + "accLibraryCounters";
+
         final LibraryConfiguration config =
             new LibraryConfiguration()
                 .isAcceptor(isAcceptor)
@@ -236,7 +241,7 @@ public class EngineAndLibraryIntegrationTest
                 .messageValidationStrategy(validationStrategy)
                 .newSessionHandler(sessionHandler)
                 .aeronChannel("aeron:ipc")
-                .monitoringFile(IoUtil.tmpDirName() + "fix-acceptor-" + libraryId + File.separator + "accLibraryCounters")
+                .monitoringFile(monitoringFile)
                 .libraryId(libraryId)
                 .replyTimeoutInMs(TIMEOUT_IN_MS);
 
