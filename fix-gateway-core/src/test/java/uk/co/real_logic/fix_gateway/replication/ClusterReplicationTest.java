@@ -32,7 +32,6 @@ import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 /**
  * Test simulated cluster.
  */
-@Ignore
 public class ClusterReplicationTest
 {
 
@@ -65,13 +64,14 @@ public class ClusterReplicationTest
         checkClusterStable();
     }
 
-    @Ignore
     @Test
     public void shouldReplicateMessage()
     {
         final NodeRunner leader = leader();
 
-        sendMessageTo(leader);
+        final long position = sendMessageTo(leader);
+
+        DebugLogger.log("Leader @ %s\n", position);
 
         assertMessageReceived();
     }
@@ -224,12 +224,15 @@ public class ClusterReplicationTest
         return node.replicatedPosition() < POSITION_AFTER_MESSAGE;
     }
 
-    private void sendMessageTo(final NodeRunner leader)
+    private long sendMessageTo(final NodeRunner leader)
     {
-        while (leader.offer(buffer, 0, BUFFER_SIZE) < 0)
+        long position = 0;
+        while (position <= 0)
         {
+            position = leader.offer(buffer, 0, BUFFER_SIZE);
             pause();
         }
+        return position;
     }
 
     private void pause()

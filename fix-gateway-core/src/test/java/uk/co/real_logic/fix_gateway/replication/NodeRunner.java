@@ -23,6 +23,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.YieldingIdleStrategy;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
@@ -90,8 +91,8 @@ public class NodeRunner implements AutoCloseable, Role
             .acknowledgementStrategy(new EntireClusterAcknowledgementStrategy())
             .fragmentHandler((buffer, offset, length, header) ->
             {
-                System.out.println("Fragment");
                 replicatedPosition = offset + length;
+                DebugLogger.log("%d: position %d\n", nodeId, replicatedPosition);
             })
             .failCounter(mock(AtomicCounter.class))
             .maxClaimAttempts(100_000)

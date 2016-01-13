@@ -297,6 +297,7 @@ public class Follower implements Role, RaftHandler
             leaderArchiver = null;
             leaderArchiveReader = null;
         }
+        System.out.printf("%d: %s, %s\n", nodeId, termState.hasLeader(), leaderArchiveReader != null);
     }
 
     public Follower acknowledgementPublication(final RaftPublication acknowledgementPublication)
