@@ -27,9 +27,7 @@ import java.util.Arrays;
 
 import static java.time.Month.*;
 import static org.hamcrest.Matchers.hasToString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 @RunWith(Theories.class)
 public class MonthYearTest

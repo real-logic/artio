@@ -15,7 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -27,6 +30,7 @@ import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -45,7 +49,6 @@ import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.aeron.driver.Configuration.TERM_BUFFER_LENGTH_PROP_NAME;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
 import static uk.co.real_logic.agrona.BitUtil.findNextPositivePowerOfTwo;
@@ -97,14 +100,19 @@ public class LoggerTest
     @Before
     public void setUp()
     {
-        System.setProperty(TERM_BUFFER_LENGTH_PROP_NAME, String.valueOf(TERM_LENGTH));
-
-        mediaDriver = launchMediaDriver();
+        mediaDriver = launchMediaDriver(TERM_LENGTH);
         aeron = Aeron.connect(new Aeron.Context());
         final Streams outboundStreams = new Streams(
             CHANNEL, aeron, mock(AtomicCounter.class), STREAM_ID, mock(NanoClock.class), 12000);
 
         final EngineConfiguration configuration = new EngineConfiguration().logInboundMessages(false);
+
+        final File dir = new File(configuration.logFileDir());
+        if (dir.exists())
+        {
+            IoUtil.delete(dir, false);
+        }
+
         logger = new Logger(
             configuration, null, outboundStreams, Throwable::printStackTrace, null, mock(SequenceNumbers.class));
 

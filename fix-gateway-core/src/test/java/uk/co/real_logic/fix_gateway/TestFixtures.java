@@ -38,11 +38,16 @@ public class TestFixtures
 
     public static MediaDriver launchMediaDriver()
     {
+        return launchMediaDriver(4 * 1024 * 1024);
+    }
+
+    public static MediaDriver launchMediaDriver(int termBufferLength)
+    {
         final MediaDriver.Context context = new MediaDriver.Context()
             .threadingMode(SHARED)
             .dirsDeleteOnStart(true)
-            .termBufferLength(4 * 1024 * 1024)
-            .ipcTermBufferLength(4 * 1024 * 1024);
+            .termBufferLength(termBufferLength)
+            .ipcTermBufferLength(termBufferLength);
 
         return MediaDriver.launch(context);
     }

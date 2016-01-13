@@ -23,9 +23,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumbers.NONE;
 
 public class SequenceNumbersTest extends AbstractLogTest

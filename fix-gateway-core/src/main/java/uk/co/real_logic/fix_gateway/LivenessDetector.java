@@ -17,9 +17,7 @@ package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
-import static uk.co.real_logic.fix_gateway.LivenessDetector.LivenessState.AWAITING_CONNECT;
-import static uk.co.real_logic.fix_gateway.LivenessDetector.LivenessState.CONNECTED;
-import static uk.co.real_logic.fix_gateway.LivenessDetector.LivenessState.DISCONNECTED;
+import static uk.co.real_logic.fix_gateway.LivenessDetector.LivenessState.*;
 
 /**
  * Bidirection application level liveness detector.
