@@ -33,7 +33,6 @@ import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 /**
  * Test simulated cluster.
  */
-@Ignore
 public class ClusterReplicationTest
 {
 
@@ -66,6 +65,7 @@ public class ClusterReplicationTest
         checkClusterStable();
     }
 
+    @Ignore
     @Test
     public void shouldReplicateMessage()
     {

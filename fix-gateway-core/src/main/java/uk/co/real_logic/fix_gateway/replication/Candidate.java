@@ -102,7 +102,7 @@ public class Candidate implements Role, RaftHandler
         {
             replyVote(candidateId, leaderShipTerm, FOR);
 
-            transitionToFollower(leaderShipTerm, candidateId, this.position);
+            transitionToFollower(leaderShipTerm, candidateId, this.position, candidateSessionId);
         }
         else
         {
@@ -155,18 +155,21 @@ public class Candidate implements Role, RaftHandler
             final boolean hasHigherPosition = position >= this.position;
             if (hasHigherPosition)
             {
-                termState.leaderSessionId(dataSessionId);
-                transitionToFollower(leaderShipTerm, NO_ONE, position);
+                transitionToFollower(leaderShipTerm, NO_ONE, position, dataSessionId);
             }
             DebugLogger.log("%d: New Leader %s%n", id, hasHigherPosition);
         }
     }
 
-    private void transitionToFollower(final int leaderShipTerm, final short votedFor, final long position)
+    private void transitionToFollower(final int leaderShipTerm,
+                                      final short votedFor,
+                                      final long position,
+                                      final int leaderSessionId)
     {
         votesFor.clear();
         termState
             .allPositions(position)
+            .leaderSessionId(leaderSessionId)
             .leadershipTerm(leaderShipTerm);
 
         raftNode.transitionToFollower(this, votedFor, timeInMs);
