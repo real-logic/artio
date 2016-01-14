@@ -214,7 +214,7 @@ public class ArchiveReader implements AutoCloseable
         public long readUpTo(final long beginPosition, final long endPosition, final FragmentHandler handler)
         {
             long position = beginPosition;
-            while (position > 0)
+            while (position >= 0)
             {
                 final int termOffset = scan(position);
                 if (termOffset == UNKNOWN_TERM)

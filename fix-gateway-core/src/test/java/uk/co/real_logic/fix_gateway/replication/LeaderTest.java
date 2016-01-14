@@ -24,6 +24,8 @@ import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
@@ -47,6 +49,8 @@ public class LeaderTest
     private Image leaderDataImage = mock(Image.class);
     private ArchiveReader archiveReader = mock(ArchiveReader.class);
     private ArchiveReader.SessionReader sessionReader = mock(ArchiveReader.SessionReader.class);
+    private Archiver archiver = mock(Archiver.class);
+    private SessionArchiver sessionArchiver = mock(SessionArchiver.class);
     private TermState termState = new TermState()
         .leadershipTerm(LEADERSHIP_TERM)
         .commitPosition(POSITION);
@@ -61,13 +65,14 @@ public class LeaderTest
         HEARTBEAT_INTERVAL_IN_MS,
         termState,
         LEADER_SESSION_ID,
-        archiveReader);
+        archiveReader,
+        archiver);
 
     @Before
     public void setUp()
     {
         when(dataSubscription.getImage(LEADER_SESSION_ID)).thenReturn(leaderDataImage);
-
+        when(archiver.session(LEADER_SESSION_ID)).thenReturn(sessionArchiver);
         when(archiveReader.session(LEADER_SESSION_ID)).thenReturn(sessionReader);
 
         leader

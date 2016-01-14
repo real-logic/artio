@@ -19,12 +19,15 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Publication;
+import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
@@ -33,6 +36,8 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
 import static uk.co.real_logic.fix_gateway.replication.RandomTimeout.MAX_TO_MIN_TIMEOUT;
 
 /**
@@ -73,6 +78,18 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         termState2.leaderSessionId(leaderSessionId);
         termState3.leaderSessionId(leaderSessionId);
 
+        final ArchiveMetaData metaData = archiveMetaData(LEADER_ID);
+        final Subscription subscription = dataSubscription();
+        final StreamIdentifier streamId = new StreamIdentifier(subscription);
+        final ArchiveReader archiveReader = new ArchiveReader(
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, streamId);
+        final Archiver archiver = new Archiver(
+            metaData,
+            DEFAULT_LOGGER_CACHE_NUM_SETS,
+            DEFAULT_LOGGER_CACHE_SET_SIZE,
+            streamId)
+            .subscription(subscription);
+
         leader = new Leader(
             LEADER_ID,
             new EntireClusterAcknowledgementStrategy(),
@@ -83,7 +100,8 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             HEARTBEAT_INTERVAL,
             termState1,
             leaderSessionId,
-            mock(ArchiveReader.class))
+            archiveReader,
+            archiver)
             .controlPublication(raftPublication(CONTROL))
             .controlSubscription(controlSubscription())
             .acknowledgementSubscription(acknowledgementSubscription())

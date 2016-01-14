@@ -138,7 +138,8 @@ public class RaftNode implements Role
             heartbeatTimeInMs,
             termState,
             ourSessionId,
-            archiveReader);
+            archiveReader,
+            configuration.archiver());
 
         candidate = new Candidate(
             nodeId,

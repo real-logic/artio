@@ -19,19 +19,17 @@ import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
-import uk.co.real_logic.aeron.logbuffer.Header;
-import uk.co.real_logic.agrona.BitUtil;
+import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
-import static uk.co.real_logic.aeron.logbuffer.FrameDescriptor.*;
-import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.WRONG_TERM;
 
@@ -50,6 +48,7 @@ public class Leader implements Role, RaftHandler
     private final FragmentHandler handler;
     private final long heartbeatIntervalInMs;
     private final ArchiveReader archiveReader;
+    private final Archiver archiver;
 
     // Counts of how many acknowledgements
     private final Long2LongHashMap nodeToPosition = new Long2LongHashMap(NO_SESSION_ID);
@@ -61,8 +60,13 @@ public class Leader implements Role, RaftHandler
     private Subscription dataSubscription;
     private Subscription controlSubscription;
     private Image leaderDataImage;
-    private Fragmenter fragmenter;
-    private long commitAndLastAppliedPosition = 0;
+    private SessionArchiver leaderArchiver;
+
+    /** Position in the log that has been committed to disk, commitPosition >= lastAppliedPosition */
+    private long commitPosition = 0;
+    /** Position in the log that has been applied to the state machine*/
+    private long lastAppliedPosition = DataHeaderFlyweight.HEADER_LENGTH;
+
     private long nextHeartbeatTimeInMs;
     private int leaderShipTerm;
     private long timeInMs;
@@ -79,7 +83,8 @@ public class Leader implements Role, RaftHandler
         final long heartbeatIntervalInMs,
         final TermState termState,
         final int ourSessionId,
-        final ArchiveReader archiveReader)
+        final ArchiveReader archiveReader,
+        final Archiver archiver)
     {
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
@@ -89,23 +94,24 @@ public class Leader implements Role, RaftHandler
         this.ourSessionId = ourSessionId;
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         this.archiveReader = archiveReader;
+        this.archiver = archiver;
+
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
         updateHeartbeatInterval(timeInMs);
     }
 
     public int readData()
     {
-        checkFragmenter();
+        setupArchival();
 
-        // TODO: archive the data, don't just put into handler
-        // TODO: push archived log into handler
-        // TODO: split commit and last applied positions
         final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
-        final int delta = (int) (newPosition - commitAndLastAppliedPosition);
+        final int delta = (int) (newPosition - commitPosition);
         if (delta > 0)
         {
-            commitAndLastAppliedPosition += leaderDataImage.blockPoll(fragmenter, delta);
+            commitPosition += leaderDataImage.filePoll(leaderArchiver, delta);
             heartbeat();
+
+            applyUnappliedFragments();
 
             return delta;
         }
@@ -113,16 +119,25 @@ public class Leader implements Role, RaftHandler
         return 0;
     }
 
-    private void checkFragmenter()
+    private void applyUnappliedFragments()
+    {
+        lastAppliedPosition = archiveReader.readUpTo(
+            ourSessionId, lastAppliedPosition, commitPosition, handler);
+    }
+
+    private boolean setupArchival()
     {
         if (leaderDataImage == null)
         {
             leaderDataImage = dataSubscription.getImage(ourSessionId);
-            if (fragmenter == null && leaderDataImage != null)
-            {
-                fragmenter = new Fragmenter(leaderDataImage);
-            }
         }
+
+        if (leaderArchiver == null)
+        {
+            leaderArchiver = archiver.session(ourSessionId);
+        }
+
+        return leaderDataImage != null && leaderArchiver != null;
     }
 
     public int checkConditions(final long timeInMs)
@@ -153,7 +168,7 @@ public class Leader implements Role, RaftHandler
 
     private void heartbeat()
     {
-        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitAndLastAppliedPosition, ourSessionId);
+        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition, ourSessionId);
         updateHeartbeatInterval(timeInMs);
     }
 
@@ -172,7 +187,7 @@ public class Leader implements Role, RaftHandler
 
         if (status == MISSING_LOG_ENTRIES)
         {
-            final int length = (int) (commitAndLastAppliedPosition - position);
+            final int length = (int) (commitPosition - position);
             this.position = position;
             if (validateReader())
             {
@@ -185,7 +200,6 @@ public class Leader implements Role, RaftHandler
             {
                 // TODO: decide if this is the right mechanic
                 //saveResend(EMPTY_BUFFER, 0, 0);
-                System.out.println(ourSessionId);
             }
         }
     }
@@ -209,13 +223,13 @@ public class Leader implements Role, RaftHandler
     public void onRequestVote(
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long lastAckedPosition)
     {
-        if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= commitAndLastAppliedPosition)
+        if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= commitPosition)
         {
             controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.FOR);
 
             termState.noLeader();
 
-            transitionToFollower(leaderShipTerm, commitAndLastAppliedPosition, candidateId);
+            transitionToFollower(leaderShipTerm, candidateId);
         }
         else
         {
@@ -248,17 +262,17 @@ public class Leader implements Role, RaftHandler
         {
             termState.leaderSessionId(leaderSessionId);
 
-            transitionToFollower(leaderShipTerm, position, Follower.NO_ONE);
+            transitionToFollower(leaderShipTerm, Follower.NO_ONE);
         }
     }
 
-    private void transitionToFollower(final int leaderShipTerm, final long position, final short votedFor)
+    private void transitionToFollower(final int leaderShipTerm, final short votedFor)
     {
         termState
             .leadershipTerm(leaderShipTerm)
-            .commitPosition(position)
-            .lastAppliedPosition(commitAndLastAppliedPosition)
-            .receivedPosition(commitAndLastAppliedPosition);
+            .commitPosition(commitPosition)
+            .lastAppliedPosition(lastAppliedPosition)
+            .receivedPosition(lastAppliedPosition);
 
         raftNode.transitionToFollower(this, votedFor, timeInMs);
     }
@@ -268,16 +282,16 @@ public class Leader implements Role, RaftHandler
         this.timeInMs = timeInMs;
 
         leaderShipTerm = termState.leadershipTerm();
-        commitAndLastAppliedPosition = termState.commitPosition();
+        commitPosition = termState.commitPosition();
+        lastAppliedPosition = termState.lastAppliedPosition();
         heartbeat();
 
-        final int toBeCommitted = (int) (commitAndLastAppliedPosition - termState.lastAppliedPosition());
-        if (toBeCommitted > 0)
+        if (commitPosition > lastAppliedPosition)
         {
-            checkFragmenter();
-
-            leaderDataImage.blockPoll(fragmenter, toBeCommitted);
+            setupArchival();
+            applyUnappliedFragments();
         }
+
         return this;
     }
 
@@ -290,6 +304,7 @@ public class Leader implements Role, RaftHandler
     public Leader dataSubscription(final Subscription dataSubscription)
     {
         this.dataSubscription = dataSubscription;
+        archiver.subscription(dataSubscription);
         return this;
     }
 
@@ -319,52 +334,4 @@ public class Leader implements Role, RaftHandler
         controlPublication.saveResend(ourSessionId, leaderShipTerm, position, buffer, offset, length);
     }
 
-    private final class Fragmenter implements BlockHandler
-    {
-        private Header header;
-
-        private Fragmenter(final Image image)
-        {
-            header = new Header(image.initialTermId(), image.termBufferLength());
-        }
-
-        public void onBlock(
-            final DirectBuffer buffer,
-            int termOffset,
-            final int length,
-            final int sessionId,
-            final int termId)
-        {
-            final UnsafeBuffer termBuffer = (UnsafeBuffer) buffer;
-            final int limit = Math.min(termOffset + length, termBuffer.capacity());
-
-            try
-            {
-                do
-                {
-                    final int frameLength = frameLengthVolatile(termBuffer, termOffset);
-                    if (frameLength <= 0)
-                    {
-                        break;
-                    }
-
-                    final int fragmentOffset = termOffset;
-                    termOffset += BitUtil.align(frameLength, FRAME_ALIGNMENT);
-
-                    if (!isPaddingFrame(termBuffer, fragmentOffset))
-                    {
-                        header.buffer(termBuffer);
-                        header.offset(fragmentOffset);
-
-                        handler.onFragment(termBuffer, fragmentOffset + HEADER_LENGTH, frameLength - HEADER_LENGTH, header);
-                    }
-                }
-                while (termOffset < limit);
-            }
-            catch (final Exception ex)
-            {
-                LangUtil.rethrowUnchecked(ex);
-            }
-        }
-    }
 }

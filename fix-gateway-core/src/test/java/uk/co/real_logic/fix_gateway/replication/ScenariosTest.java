@@ -200,7 +200,7 @@ public class ScenariosTest
         {
             assertThat(termState, hasLeaderSessionId(sessionId));
             assertThat(termState, hasLeadershipTerm(NEW_TERM));
-            assertThat(termState, hasPositions(POSITION));
+            assertThat(termState, hasCommitPosition(POSITION));
         }, "hasNewLeader");
     }
 
@@ -219,7 +219,7 @@ public class ScenariosTest
         {
             assertThat(termState, noLeaderMatcher());
             assertThat(termState, hasLeadershipTerm(leadershipTerm));
-            assertThat(termState, hasPositions(POSITION));
+            assertThat(termState, hasCommitPosition(POSITION));
         }, "hasNoLeader");
     }
 
@@ -245,7 +245,7 @@ public class ScenariosTest
             HEARTBEAT_INTERVAL_IN_MS,
             termState,
             SESSION_ID,
-            archiveReader);
+            archiveReader, archiver);
 
         leader
             .controlPublication(controlPublication)
