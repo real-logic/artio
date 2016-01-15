@@ -90,8 +90,9 @@ public final class LivenessDetector
                     state = DISCONNECTED;
                     return 1;
                 }
+                // fallthru
 
-            case AWAITING_CONNECT: // Fallthrough
+            case AWAITING_CONNECT:
                 if (timeInMs > nextSendTimeInMs)
                 {
                     heartbeat(timeInMs);
@@ -108,6 +109,7 @@ public final class LivenessDetector
         {
             state = CONNECTED;
         }
+
         latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
     }
 

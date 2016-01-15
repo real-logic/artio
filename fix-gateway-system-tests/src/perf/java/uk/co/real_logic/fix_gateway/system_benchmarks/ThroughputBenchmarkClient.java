@@ -35,7 +35,7 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
     {
         private final SocketChannel socketChannel;
 
-        public ReaderThread(final SocketChannel socketChannel)
+        ReaderThread(final SocketChannel socketChannel)
         {
             this.socketChannel = socketChannel;
         }
