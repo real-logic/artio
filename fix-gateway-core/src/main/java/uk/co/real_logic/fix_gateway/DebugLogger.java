@@ -152,8 +152,25 @@ public final class DebugLogger
         }
     }
 
+    public static void log(final String formatString, final Object first, final long second, final long third)
+    {
+        if (DEBUG_PRINT_MESSAGES)
+        {
+            OUTPUT.printf(formatString, first, second, third);
+        }
+    }
+
     public static void log(
         final String formatString, final long first, final long second, final long third, final long fourth)
+    {
+        if (DEBUG_PRINT_MESSAGES)
+        {
+            OUTPUT.printf(formatString, first, second, third, fourth);
+        }
+    }
+
+    public static void log(
+        final String formatString, final Object first, final long second, final long third, final long fourth)
     {
         if (DEBUG_PRINT_MESSAGES)
         {
@@ -168,4 +185,33 @@ public final class DebugLogger
             OUTPUT.printf(formatString, first, second, third);
         }
     }
+
+    public static void log(
+        final String formatString,
+        final long first,
+        final long second,
+        final long third,
+        final long fourth,
+        final long fifth)
+    {
+        if (DEBUG_PRINT_MESSAGES)
+        {
+            OUTPUT.printf(formatString, first, second, third, fourth, fifth);
+        }
+    }
+
+    public static void log(
+        final String formatString,
+        final Object first,
+        final long second,
+        final long third,
+        final long fourth,
+        final long fifth)
+    {
+        if (DEBUG_PRINT_MESSAGES)
+        {
+            OUTPUT.printf(formatString, first, second, third, fourth, fifth);
+        }
+    }
+
 }
