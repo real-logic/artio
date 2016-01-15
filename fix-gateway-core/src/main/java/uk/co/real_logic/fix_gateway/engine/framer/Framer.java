@@ -73,7 +73,7 @@ public class Framer implements Agent, SessionHandler
         {
             return pollEndPoints();
         }
-        catch (IOException e)
+        catch (final IOException e)
         {
             LangUtil.rethrowUnchecked(e);
             return 0;
@@ -103,7 +103,7 @@ public class Framer implements Agent, SessionHandler
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
 
-    private long nextConnectionId = (long) (Math.random() * Long.MAX_VALUE);
+    private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
     private int acceptorLibraryId = NO_ACCEPTOR;
 
     public Framer(
@@ -159,11 +159,11 @@ public class Framer implements Agent, SessionHandler
     public int doWork() throws Exception
     {
         return sendOutboundMessages() +
-               sendReplayMessages() +
-               pollEndPoints() +
-               pollNewConnections() +
-               pollLibraries() +
-               adminCommands.drain(onAdminCommand);
+            sendReplayMessages() +
+            pollEndPoints() +
+            pollNewConnections() +
+            pollLibraries() +
+            adminCommands.drain(onAdminCommand);
     }
 
     private int sendReplayMessages()
@@ -254,13 +254,14 @@ public class Framer implements Agent, SessionHandler
         return newConnections;
     }
 
-    public void onInitiateConnection(final int libraryId,
-                                     final int port,
-                                     final String host,
-                                     final String senderCompId,
-                                     final String senderSubId,
-                                     final String senderLocationId,
-                                     final String targetCompId)
+    public void onInitiateConnection(
+        final int libraryId,
+        final int port,
+        final String host,
+        final String senderCompId,
+        final String senderSubId,
+        final String senderLocationId,
+        final String targetCompId)
     {
         final LibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
@@ -271,8 +272,8 @@ public class Framer implements Agent, SessionHandler
 
         try
         {
-            SocketChannel channel;
-            InetSocketAddress address;
+            final SocketChannel channel;
+            final InetSocketAddress address;
             try
             {
                 address = new InetSocketAddress(host, port);
@@ -337,9 +338,9 @@ public class Framer implements Agent, SessionHandler
     }
 
     private void setupConnection(final SocketChannel channel,
-                                 final long connectionId,
-                                 final long sessionId,
-                                 final int libraryId)
+        final long connectionId,
+        final long sessionId,
+        final int libraryId)
         throws IOException
     {
         channel.setOption(TCP_NODELAY, true);

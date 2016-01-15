@@ -97,7 +97,7 @@ public final class Field implements Element
             '}';
     }
 
-    public static enum Type
+    public enum Type
     {
         // int types
         INT(false, true),
