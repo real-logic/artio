@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Publication;
@@ -43,6 +44,7 @@ import static uk.co.real_logic.fix_gateway.replication.RandomTimeout.MAX_TO_MIN_
 /**
  * Test an isolated set of leaders and followers
  */
+@Ignore
 public class LeaderAndFollowersTest extends AbstractReplicationTest
 {
 
@@ -246,7 +248,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         poll(follower1);
         poll(follower2);
 
-        pollLeader(3);
+        pollLeader(2);
         return position;
     }
 

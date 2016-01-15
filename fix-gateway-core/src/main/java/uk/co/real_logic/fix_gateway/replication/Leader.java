@@ -31,7 +31,7 @@ import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
-import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.WRONG_TERM;
+import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 
 public class Leader implements Role, RaftHandler
 {
@@ -60,10 +60,16 @@ public class Leader implements Role, RaftHandler
     private Subscription dataSubscription;
     private Subscription controlSubscription;
     private Image leaderDataImage;
-    private SessionArchiver leaderArchiver;
+    private SessionArchiver ourArchiver;
 
+    /**
+     * Keeps track of the position of the local archiver, this may be ahead of the commit position to
+     * enable resends on acknowledged initial sequences on the log.
+     */
+    private long archivedPosition = 0;
     /** Position in the log that has been committed to disk, commitPosition >= lastAppliedPosition */
     private long commitPosition = 0;
+    // TODO: re-think invariants given initial state of lastAppliedPosition
     /** Position in the log that has been applied to the state machine*/
     private long lastAppliedPosition = DataHeaderFlyweight.HEADER_LENGTH;
 
@@ -102,13 +108,18 @@ public class Leader implements Role, RaftHandler
 
     public int readData()
     {
-        setupArchival();
+        if (setupArchival())
+        {
+            archivedPosition += leaderDataImage.filePoll(ourArchiver, 1000);
+            nodeToPosition.put(nodeId, archivedPosition);
+        }
 
         final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
         final int delta = (int) (newPosition - commitPosition);
         if (delta > 0)
         {
-            commitPosition += leaderDataImage.filePoll(leaderArchiver, delta);
+            commitPosition = newPosition;
+
             heartbeat();
 
             applyUnappliedFragments();
@@ -121,8 +132,12 @@ public class Leader implements Role, RaftHandler
 
     private void applyUnappliedFragments()
     {
-        lastAppliedPosition = archiveReader.readUpTo(
+        final long readUpTo = archiveReader.readUpTo(
             ourSessionId, lastAppliedPosition, commitPosition, handler);
+        if (readUpTo != ArchiveReader.UNKNOWN_SESSION)
+        {
+            lastAppliedPosition = readUpTo;
+        }
     }
 
     private boolean setupArchival()
@@ -132,12 +147,12 @@ public class Leader implements Role, RaftHandler
             leaderDataImage = dataSubscription.getImage(ourSessionId);
         }
 
-        if (leaderArchiver == null)
+        if (ourArchiver == null)
         {
-            leaderArchiver = archiver.session(ourSessionId);
+            ourArchiver = archiver.session(ourSessionId);
         }
 
-        return leaderDataImage != null && leaderArchiver != null;
+        return leaderDataImage != null && ourArchiver != null;
     }
 
     public int checkConditions(final long timeInMs)
@@ -180,14 +195,14 @@ public class Leader implements Role, RaftHandler
     public void onMessageAcknowledgement(
         final long position, final short nodeId, final AcknowledgementStatus status)
     {
-        if (status != WRONG_TERM)
+        if (status == OK)
         {
             nodeToPosition.put(nodeId, position);
         }
 
         if (status == MISSING_LOG_ENTRIES)
         {
-            final int length = (int) (commitPosition - position);
+            final int length = (int) (archivedPosition - position);
             this.position = position;
             if (validateReader())
             {
@@ -214,7 +229,6 @@ public class Leader implements Role, RaftHandler
             {
                 return false;
             }
-            System.out.println("Leader Set as " + ourSessionId);
         }
 
         return true;
@@ -283,7 +297,7 @@ public class Leader implements Role, RaftHandler
 
         leaderShipTerm = termState.leadershipTerm();
         commitPosition = termState.commitPosition();
-        lastAppliedPosition = termState.lastAppliedPosition();
+        lastAppliedPosition = Math.max(DataHeaderFlyweight.HEADER_LENGTH, termState.lastAppliedPosition());
         heartbeat();
 
         if (commitPosition > lastAppliedPosition)

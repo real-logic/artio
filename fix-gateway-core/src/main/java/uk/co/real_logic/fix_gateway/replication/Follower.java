@@ -100,8 +100,6 @@ public class Follower implements Role, RaftHandler
                 .leadershipTerm(leaderShipTerm)
                 .noLeader();
 
-            // System.out.printf("Timeout: %d%n", timeInMs);
-
             raftNode.transitionToCandidate(timeInMs);
 
             return 1;
@@ -112,17 +110,9 @@ public class Follower implements Role, RaftHandler
 
     public int readData()
     {
-        // Leader may not have written anything onto its data stream when it becomes the leader
-        // Most of the time this will be false
-        if (leaderArchiver == null)
+        if (checkLeaderArchiver())
         {
-            leaderArchiver = archiver.session(termState.leaderSessionId());
-            termState.leaderSessionId(termState.leaderSessionId());
-            if (leaderArchiver == null)
-            {
-                return 0;
-            }
-            System.out.println("Follower archiver set to " + termState.leaderSessionId());
+            return 0;
         }
 
         final long imagePosition = leaderArchiver.position();
@@ -149,6 +139,22 @@ public class Follower implements Role, RaftHandler
         return bytesRead + attemptToCommitData();
     }
 
+    private boolean checkLeaderArchiver()
+    {
+        // Leader may not have written anything onto its data stream when it becomes the leader
+        // Most of the time this will be false
+        if (leaderArchiver == null)
+        {
+            leaderArchiver = archiver.session(termState.leaderSessionId());
+            termState.leaderSessionId(termState.leaderSessionId());
+            if (leaderArchiver == null)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void saveMessageAcknowledgement(final AcknowledgementStatus status)
     {
         acknowledgementPublication.saveMessageAcknowledgement(receivedPosition, nodeId, status);
@@ -160,7 +166,6 @@ public class Follower implements Role, RaftHandler
         if (leaderArchiveReader == null)
         {
             leaderArchiveReader = archiveReader.session(termState.leaderSessionId());
-            System.out.println("Follower leaderArchiveReader set!");
             if (leaderArchiveReader == null)
             {
                 return 0;
@@ -274,10 +279,13 @@ public class Follower implements Role, RaftHandler
     {
         if (isValidPosition(leaderSessionId, leaderShipTerm, startPosition))
         {
-            leaderArchiver.patch(startPosition, bodyBuffer, bodyOffset, bodyLength);
-            receivedPosition += bodyLength;
-            onReplyKeepAlive(timeInMs);
-            saveMessageAcknowledgement(OK);
+            if (!checkLeaderArchiver())
+            {
+                leaderArchiver.patch(startPosition, bodyBuffer, bodyOffset, bodyLength);
+                receivedPosition += bodyLength;
+                onReplyKeepAlive(timeInMs);
+                saveMessageAcknowledgement(OK);
+            }
         }
     }
 

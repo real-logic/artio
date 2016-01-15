@@ -105,6 +105,9 @@ public class LeaderTest
     @Test
     public void shouldResendDataInResponseToMissingLogEntries()
     {
+        when(leaderDataImage.filePoll(any(), anyInt())).thenReturn((int) POSITION);
+        leader.readData();
+
         final long followerPosition = 0;
 
         receivesMissingLogEntries(followerPosition);

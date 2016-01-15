@@ -283,8 +283,8 @@ public class Archiver implements Agent, FileBlockHandler
             if (byteBuffer != null)
             {
                 byteBuffer
-                    .position(bodyOffset)
-                    .limit(bodyOffset + bodyLength);
+                    .limit(bodyOffset + bodyLength)
+                    .position(bodyOffset);
 
                 while (byteBuffer.remaining() > 0)
                 {
