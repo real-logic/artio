@@ -38,7 +38,8 @@ import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.*
 
 public class NodeRunner implements AutoCloseable, Role
 {
-    public static final long NOT_LEADER = -3;
+    /** May not yet be the leader, or the leader may not yet be ready to send*/
+    public static final long CANT_PUBLISH = -3;
 
     public static final long TIMEOUT_IN_MS = 1000;
     public static final String AERON_GROUP = "aeron:udp?group=224.0.1.1:40456";
@@ -48,7 +49,7 @@ public class NodeRunner implements AutoCloseable, Role
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
     private final RaftNode raftNode;
-    private final Publication dataPublication;
+    private Publication dataPublication;
 
     private long replicatedPosition = -1;
 
@@ -139,9 +140,9 @@ public class NodeRunner implements AutoCloseable, Role
 
     public long offer(final DirectBuffer buffer, final int offset, final int length)
     {
-        if (!raftNode.isLeader())
+        if (!raftNode.isPublishable())
         {
-            return NOT_LEADER;
+            return CANT_PUBLISH;
         }
 
         return dataPublication.offer(buffer, offset, length);

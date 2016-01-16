@@ -43,7 +43,7 @@ public class Leader implements Role, RaftHandler
     private final int ourSessionId;
     private final short nodeId;
     private final AcknowledgementStrategy acknowledgementStrategy;
-    private final RaftSubscriber raftSubscriber = new RaftSubscriber(this);
+    private final RaftSubscriber raftSubscriber;
     private final RaftNode raftNode;
     private final FragmentHandler handler;
     private final long heartbeatIntervalInMs;
@@ -104,11 +104,13 @@ public class Leader implements Role, RaftHandler
 
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
         updateHeartbeatInterval(timeInMs);
+        raftSubscriber = new RaftSubscriber(DebugRaftHandler.wrap(nodeId, this));
     }
 
     public int readData()
     {
-        if (setupArchival())
+        setupArchival();
+        if (canArchive())
         {
             archivedPosition += leaderDataImage.filePoll(ourArchiver, 1000);
             nodeToPosition.put(nodeId, archivedPosition);
@@ -140,18 +142,29 @@ public class Leader implements Role, RaftHandler
         }
     }
 
-    private boolean setupArchival()
+    private void setupArchival()
     {
         if (leaderDataImage == null)
         {
             leaderDataImage = dataSubscription.getImage(ourSessionId);
+            if (leaderDataImage == null)
+            {
+                System.out.println("leaderDataImage");
+            }
         }
 
         if (ourArchiver == null)
         {
             ourArchiver = archiver.session(ourSessionId);
+            if (ourArchiver == null)
+            {
+                System.out.println("ourArchiver");
+            }
         }
+    }
 
+    public boolean canArchive()
+    {
         return leaderDataImage != null && ourArchiver != null;
     }
 

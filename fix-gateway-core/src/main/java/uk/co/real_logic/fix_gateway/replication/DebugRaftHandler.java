@@ -46,7 +46,7 @@ public class DebugRaftHandler implements RaftHandler
         final long newAckedPosition, final short nodeId, final AcknowledgementStatus status)
     {
         DebugLogger.log(
-            "%2$d: MesageAcknowledgement(newAckedPos=%3$d, nodeId=%4$d, %1$s)",
+            "%2$d: MesageAcknowledgement(newAckedPos=%3$d, nodeId=%4$d, %1$s)\n",
             status,
             this.nodeId,
             newAckedPosition,
@@ -62,7 +62,7 @@ public class DebugRaftHandler implements RaftHandler
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long lastAckedPosition)
     {
         DebugLogger.log(
-            "%d: RequestVote(candidateId=%d, candidateSessionId=%d, leadershipTerm=%d, lastAckedPosition=%d)",
+            "%d: RequestVote(candidateId=%d, candidateSessionId=%d, leadershipTerm=%d, lastAckedPosition=%d)\n",
             this.nodeId,
             candidateId,
             candidateSessionId,
@@ -79,7 +79,7 @@ public class DebugRaftHandler implements RaftHandler
         final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
         DebugLogger.log(
-            "%2$d: ReplyVote(senderNodeId=%3$d, candidateId=%4$d, leaderShipTerm=%5$d, %1$s)",
+            "%2$d: ReplyVote(senderNodeId=%3$d, candidateId=%4$d, leaderShipTerm=%5$d, %1$s)\n",
             vote,
             this.nodeId,
             senderNodeId,
@@ -96,7 +96,7 @@ public class DebugRaftHandler implements RaftHandler
         final short nodeId, final int leaderShipTerm, final long position, final int leaderSessionId)
     {
         DebugLogger.log(
-            "%d: ConcensusHeartbeat(nodeId=%d, leaderShipTerm=%d, position=%d, leaderSessionId=%d)",
+            "%d: ConcensusHeartbeat(nodeId=%d, leaderShipTerm=%d, position=%d, leaderSessionId=%d)\n",
             this.nodeId,
             nodeId,
             leaderShipTerm,
@@ -118,7 +118,7 @@ public class DebugRaftHandler implements RaftHandler
         final int bodyLength)
     {
         DebugLogger.log(
-            "%d: Resend(leaderSessionId=%d, leaderShipTerm=%d, startPosition=%d, bodyLength=%d)",
+            "%d: Resend(leaderSessionId=%d, leaderShipTerm=%d, startPosition=%d, bodyLength=%d)\n",
             this.nodeId,
             leaderSessionId,
             leaderShipTerm,

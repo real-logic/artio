@@ -65,13 +65,14 @@ public class ClusterReplicationTest
         checkClusterStable();
     }
 
-    @Ignore
     @Test
     public void shouldReplicateMessage()
     {
         checkClusterStable();
 
         final NodeRunner leader = leader();
+
+        DebugLogger.log("Leader is %s\n", leader.raftNode().nodeId());
 
         final long position = sendMessageTo(leader);
 
@@ -250,6 +251,8 @@ public class ClusterReplicationTest
         {
             position = leader.offer(buffer, 0, BUFFER_SIZE);
             pause();
+            pollAll();
+            System.out.println("backoff");
         }
         return position;
     }

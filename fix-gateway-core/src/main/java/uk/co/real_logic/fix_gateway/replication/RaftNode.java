@@ -217,6 +217,11 @@ public class RaftNode implements Role
         return currentRole == leader;
     }
 
+    public boolean isPublishable()
+    {
+        return isLeader() && leader.canArchive();
+    }
+
     public boolean isCandidate()
     {
         return currentRole == candidate;

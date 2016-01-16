@@ -35,7 +35,7 @@ public class Follower implements Role, RaftHandler
 {
     public static final short NO_ONE = -1;
 
-    private final RaftSubscriber raftSubscriber = new RaftSubscriber(this);
+    private final RaftSubscriber raftSubscriber;
 
     private final short nodeId;
     private final FragmentHandler handler;
@@ -75,6 +75,7 @@ public class Follower implements Role, RaftHandler
         this.archiveReader = archiveReader;
         this.archiver = archiver;
         replyTimeout = new RandomTimeout(replyTimeoutInMs, timeInMs);
+        raftSubscriber = new RaftSubscriber(DebugRaftHandler.wrap(nodeId, this));
     }
 
     public int pollCommands(final int fragmentLimit, final long timeInMs)

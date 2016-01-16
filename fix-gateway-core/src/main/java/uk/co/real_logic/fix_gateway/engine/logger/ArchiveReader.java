@@ -19,7 +19,6 @@ import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor;
-import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectCache;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
@@ -164,7 +163,6 @@ public class ArchiveReader implements AutoCloseable
         private final Int2ObjectCache<ByteBuffer> termIdToBuffer =
             new Int2ObjectCache<>(cacheNumSets, cacheSetSize, this::closeBuffer);
         private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
-        private final DataHeaderFlyweight dataHeader = new DataHeaderFlyweight();
         private final int initialTermId;
         private final int positionBitsToShift;
         private final Header header;
@@ -192,7 +190,7 @@ public class ArchiveReader implements AutoCloseable
                 return UNKNOWN_TERM;
             }
 
-            final int frameLength = dataHeader.frameLength();
+            final int frameLength = header.frameLength();
             if (frameLength == 0)
             {
                 return NO_MESSAGE;
@@ -222,7 +220,7 @@ public class ArchiveReader implements AutoCloseable
                     return position;
                 }
 
-                final int frameLength = dataHeader.frameLength();
+                final int frameLength = header.frameLength();
                 if (frameLength == 0)
                 {
                     return position;
@@ -295,7 +293,6 @@ public class ArchiveReader implements AutoCloseable
             final int headerOffset = termOffset - HEADER_LENGTH;
 
             buffer.wrap(termBuffer);
-            dataHeader.wrap(buffer, headerOffset);
             header.buffer(buffer);
             header.offset(headerOffset);
 
