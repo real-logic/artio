@@ -147,19 +147,11 @@ public class Leader implements Role, RaftHandler
         if (leaderDataImage == null)
         {
             leaderDataImage = dataSubscription.getImage(ourSessionId);
-            if (leaderDataImage == null)
-            {
-                System.out.println("leaderDataImage");
-            }
         }
 
         if (ourArchiver == null)
         {
             ourArchiver = archiver.session(ourSessionId);
-            if (ourArchiver == null)
-            {
-                System.out.println("ourArchiver");
-            }
         }
     }
 
