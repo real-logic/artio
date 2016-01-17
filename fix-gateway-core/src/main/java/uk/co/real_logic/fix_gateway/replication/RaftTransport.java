@@ -81,4 +81,8 @@ public class RaftTransport
             publication(id));
     }
 
+    public Publication leaderPublication()
+    {
+        return publication(configuration.dataStream());
+    }
 }

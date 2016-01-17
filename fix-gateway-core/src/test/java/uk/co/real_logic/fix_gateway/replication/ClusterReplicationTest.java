@@ -247,10 +247,12 @@ public class ClusterReplicationTest
 
     private long sendMessageTo(final NodeRunner leader)
     {
+        final ConsistentPublication publication = leader.raftNode().publication();
+
         long position = 0;
         while (position <= 0)
         {
-            position = leader.offer(buffer, 0, BUFFER_SIZE);
+            position = publication.offer(buffer, 0, BUFFER_SIZE);
             pause();
             pollAll();
         }

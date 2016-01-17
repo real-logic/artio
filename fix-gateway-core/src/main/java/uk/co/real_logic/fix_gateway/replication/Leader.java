@@ -339,6 +339,11 @@ public class Leader implements Role, RaftHandler
         return this;
     }
 
+    public long commitPosition()
+    {
+        return commitPosition;
+    }
+
     private class ResendHandler implements BlockHandler
     {
         public void onBlock(

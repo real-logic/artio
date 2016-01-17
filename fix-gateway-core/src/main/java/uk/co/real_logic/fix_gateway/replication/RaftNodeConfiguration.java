@@ -40,7 +40,6 @@ public class RaftNodeConfiguration
     private FragmentHandler fragmentHandler;
     private int maxClaimAttempts;
     private AtomicCounter failCounter;
-    private int leaderSessionId;
     private ArchiveReader archiveReader;
     private Archiver archiver;
     private RaftTransport raftTransport = new RaftTransport(this);
@@ -114,12 +113,6 @@ public class RaftNodeConfiguration
     public RaftNodeConfiguration failCounter(final AtomicCounter failCounter)
     {
         this.failCounter = failCounter;
-        return this;
-    }
-
-    public RaftNodeConfiguration leaderSessionId(final int dataSessionId)
-    {
-        this.leaderSessionId = dataSessionId;
         return this;
     }
 
@@ -199,11 +192,6 @@ public class RaftNodeConfiguration
     public AtomicCounter failCounter()
     {
         return failCounter;
-    }
-
-    public int leaderSessionId()
-    {
-        return leaderSessionId;
     }
 
     public ArchiveReader archiveReader()

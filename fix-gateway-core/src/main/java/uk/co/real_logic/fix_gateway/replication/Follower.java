@@ -353,4 +353,9 @@ public class Follower implements Role, RaftHandler
         this.votedFor = votedFor;
         return this;
     }
+
+    public long commitPosition()
+    {
+        return commitPosition;
+    }
 }

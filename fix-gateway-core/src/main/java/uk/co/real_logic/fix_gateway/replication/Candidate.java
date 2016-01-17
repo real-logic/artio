@@ -216,4 +216,9 @@ public class Candidate implements Role, RaftHandler
         this.controlSubscription = controlSubscription;
         return this;
     }
+
+    public long commitPosition()
+    {
+        return termState.commitPosition();
+    }
 }

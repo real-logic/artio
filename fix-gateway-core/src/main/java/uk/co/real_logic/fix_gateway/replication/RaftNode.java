@@ -25,6 +25,7 @@ public class RaftNode implements Role
 {
     public static final int HEARTBEAT_TO_TIMEOUT_RATIO = 5;
 
+    private final ConsistentPublication publication;
     private final short nodeId;
     private final RaftNodeConfiguration configuration;
     private final TermState termState = new TermState();
@@ -122,10 +123,12 @@ public class RaftNode implements Role
         this.nodeId = configuration.nodeId();
         this.transport = configuration.raftTransport();
 
+        this.publication = new ConsistentPublication(transport.leaderPublication(), this);
+
+        final int ourSessionId = publication.sessionId();
         final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
         final long heartbeatTimeInMs = timeoutIntervalInMs / HEARTBEAT_TO_TIMEOUT_RATIO;
         final int clusterSize = configuration.otherNodes().size() + 1;
-        final int ourSessionId = configuration.leaderSessionId();
         final ArchiveReader archiveReader = configuration.archiveReader();
 
         leader = new Leader(
@@ -163,6 +166,11 @@ public class RaftNode implements Role
         transport.initialiseRoles(leader, candidate, follower);
 
         startAsFollower(timeInMs);
+    }
+
+    public long commitPosition()
+    {
+        return currentRole.commitPosition();
     }
 
     private void startAsFollower(final long timeInMs)
@@ -240,5 +248,10 @@ public class RaftNode implements Role
     public TermState termState()
     {
         return termState;
+    }
+
+    public ConsistentPublication publication()
+    {
+        return publication;
     }
 }

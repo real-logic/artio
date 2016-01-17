@@ -42,5 +42,7 @@ public interface Role
         return 0;
     }
 
+    long commitPosition();
+
     void closeStreams();
 }

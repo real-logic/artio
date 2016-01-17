@@ -16,10 +16,8 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Aeron;
-import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.CloseHelper;
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.YieldingIdleStrategy;
@@ -38,9 +36,6 @@ import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.*
 
 public class NodeRunner implements AutoCloseable, Role
 {
-    /** May not yet be the leader, or the leader may not yet be ready to send*/
-    public static final long CANT_PUBLISH = -3;
-
     public static final long TIMEOUT_IN_MS = 1000;
     public static final String AERON_GROUP = "aeron:udp?group=224.0.1.1:40456";
 
@@ -51,7 +46,6 @@ public class NodeRunner implements AutoCloseable, Role
     private final RaftNode raftNode;
     private final int nodeId;
 
-    private Publication dataPublication;
     private long replicatedPosition = -1;
 
     public NodeRunner(final int nodeId, final int... otherNodes)
@@ -78,8 +72,6 @@ public class NodeRunner implements AutoCloseable, Role
         clientContext.aeronDirectoryName(context.aeronDirectoryName());
         aeron = Aeron.connect(clientContext);
 
-        dataPublication = aeron.addPublication(AERON_GROUP, DATA);
-
         final StreamIdentifier dataStream = new StreamIdentifier(AERON_GROUP, DATA);
         final ArchiveMetaData metaData = AbstractReplicationTest.archiveMetaData((short) nodeId);
         final ArchiveReader archiveReader = new ArchiveReader(
@@ -104,7 +96,6 @@ public class NodeRunner implements AutoCloseable, Role
             .controlStream(new StreamIdentifier(AERON_GROUP, CONTROL))
             .dataStream(dataStream)
             .idleStrategy(backoffIdleStrategy())
-            .leaderSessionId(dataPublication.sessionId())
             .archiver(archiver)
             .archiveReader(archiveReader);
 
@@ -142,19 +133,14 @@ public class NodeRunner implements AutoCloseable, Role
         return replicatedPosition;
     }
 
-    public long offer(final DirectBuffer buffer, final int offset, final int length)
-    {
-        if (!raftNode.isPublishable())
-        {
-            return CANT_PUBLISH;
-        }
-
-        return dataPublication.offer(buffer, offset, length);
-    }
-
     public void close()
     {
         CloseHelper.close(aeron);
         CloseHelper.close(mediaDriver);
+    }
+
+    public long commitPosition()
+    {
+        return raftNode.commitPosition();
     }
 }
