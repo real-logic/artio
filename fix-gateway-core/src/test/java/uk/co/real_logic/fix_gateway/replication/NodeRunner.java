@@ -49,12 +49,15 @@ public class NodeRunner implements AutoCloseable, Role
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
     private final RaftNode raftNode;
-    private Publication dataPublication;
+    private final int nodeId;
 
+    private Publication dataPublication;
     private long replicatedPosition = -1;
 
     public NodeRunner(final int nodeId, final int... otherNodes)
     {
+        this.nodeId = nodeId;
+
         final MediaDriver.Context context = new MediaDriver.Context();
         context
             .threadingMode(SHARED)
@@ -120,6 +123,7 @@ public class NodeRunner implements AutoCloseable, Role
 
     public void dropFrames(final boolean dropFrames)
     {
+        DebugLogger.log("Dropping frames to %d: %b\n", nodeId, dropFrames);
         lossGenerator.dropFrames(dropFrames);
     }
 

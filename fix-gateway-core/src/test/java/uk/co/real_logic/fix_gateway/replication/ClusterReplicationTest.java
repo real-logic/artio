@@ -81,6 +81,7 @@ public class ClusterReplicationTest
         assertMessageReceived();
     }
 
+    // TODO: unignore once its easy to loss generated both inbound and outbound traffic.
     @Ignore
     @Test
     public void shouldReformClusterAfterLeaderNetsplit()
