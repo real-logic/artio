@@ -44,7 +44,7 @@ import static uk.co.real_logic.fix_gateway.replication.RandomTimeout.MAX_TO_MIN_
 /**
  * Test an isolated set of leaders and followers
  */
-@Ignore
+// TODO: re-evaluate testing at this level
 public class LeaderAndFollowersTest extends AbstractReplicationTest
 {
 
@@ -119,9 +119,11 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         offerBuffer();
 
         pollLeader(0);
+
         leaderNeverCommitted();
     }
 
+    @Ignore
     @Test
     public void shouldProcessDataWhenAcknowledged()
     {
@@ -130,6 +132,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderCommitted(0, position);
     }
 
+    @Ignore
     @Test
     public void shouldCommitOnFollowers()
     {
@@ -140,6 +143,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         verify(follower1Handler).onFragment(any(), eq(HEADER_LENGTH), eq(position - HEADER_LENGTH), any());
     }
 
+    @Ignore
     @Test
     public void shouldProcessSuccessiveChunks()
     {
@@ -153,6 +157,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderCommitted(position1, position2 - position1, secondValue);
     }
 
+    @Ignore
     @Test
     public void shouldRequireContiguousMessages()
     {
@@ -177,6 +182,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderNeverCommitted();
     }
 
+    @Ignore
     @Test
     public void shouldSupportAcknowledgementLagging()
     {
