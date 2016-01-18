@@ -229,12 +229,34 @@ public class EncoderGenerator extends Generator
                 return generateSetter.apply("DecimalFloat");
 
             case DATA:
+                return generateSetter.apply("byte[]");
+
             case UTCTIMESTAMP:
             case LOCALMKTDATE:
             case UTCDATEONLY:
             case UTCTIMEONLY:
             case MONTHYEAR:
-                return generateSetter.apply("byte[]");
+            {
+                return String.format(
+                    "    private byte[] %1$s;\n\n" +
+                    "    private int %1$sLength;\n\n" +
+                    "%2$s" +
+                    "    public %3$s %1$s(final byte[] value, final int length)\n" +
+                    "    {\n" +
+                    "        %1$s = value;\n" +
+                    "        %1$sLength = length;\n" +
+                    "%4$s" +
+                    "        return this;\n" +
+                    "    }\n\n" +
+                    "    public %3$s %1$s(final byte[] value)\n" +
+                    "    {\n" +
+                    "        return %1$s(value, value.length);\n" +
+                    "    }\n\n",
+                    fieldName,
+                    hasField,
+                    className,
+                    hasAssign);
+            }
 
             default: throw new UnsupportedOperationException("Unknown type: " + field.type());
         }
@@ -474,12 +496,16 @@ public class EncoderGenerator extends Generator
                 return generatePut(fieldName, tag, "Boolean", optionalSuffix);
 
             case DATA:
+                return generatePut(fieldName, tag, "Bytes", optionalSuffix);
+
             case LOCALMKTDATE:
             case UTCTIMESTAMP:
             case MONTHYEAR:
             case UTCTIMEONLY:
             case UTCDATEONLY:
-                return generatePut(fieldName, tag, "Bytes", optionalSuffix);
+                return formatEncoder(fieldName, optionalSuffix, tag,
+                    "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
+                    "        position += %2$sLength;\n");
 
             default:
                 throw new UnsupportedOperationException("Unknown type: " + field.type());
