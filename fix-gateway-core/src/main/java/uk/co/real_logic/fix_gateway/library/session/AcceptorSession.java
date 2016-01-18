@@ -56,6 +56,7 @@ public final class AcceptorSession extends Session
             initialSequenceNumber);
     }
 
+    @Override
     public void onLogon(
         final int heartbeatInterval,
         final int msgSeqNo,

@@ -81,6 +81,41 @@ public class AcceptorSessionTest extends AbstractSessionTest
         verify(mockProxy).rejectWhilstNotLoggedOn(1, SENDINGTIME_ACCURACY_PROBLEM);
     }
 
+    @Test
+    public void shouldValidateSendingTimeNotTooLate()
+    {
+        onLogon(1);
+
+        messageWithWeirdTime(sendingTime() + TWO_MINUTES);
+
+        verifySendingTimeProblem();
+        verifyLogout();
+        verifyDisconnect();
+    }
+
+    @Test
+    public void shouldValidateSendingTimeNotTooEarly()
+    {
+        onLogon(1);
+
+        messageWithWeirdTime(sendingTime() - TWO_MINUTES);
+
+        verifySendingTimeProblem();
+        verifyLogout();
+        verifyDisconnect();
+    }
+
+    @Test
+    public void shouldDisconnectIfMissingSequenceNumber()
+    {
+        shouldDisconnectIfMissingSequenceNumber(2);
+    }
+
+    protected void readyForLogon()
+    {
+
+    }
+
     protected Session session()
     {
         return session;

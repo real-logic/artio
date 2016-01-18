@@ -21,6 +21,8 @@ import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
+import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
+
 public class InitiatorSession extends Session
 {
     public InitiatorSession(
@@ -74,16 +76,15 @@ public class InitiatorSession extends Session
         if (msgSeqNo == expectedReceivedSeqNum() && state() == SessionState.SENT_LOGON)
         {
             state(SessionState.ACTIVE);
-            super.onLogon(
-                heartbeatInterval,
-                msgSeqNo,
-                sessionId,
-                sessionKey,
-                sendingTime,
-                origSendingTime,
-                username,
-                password,
-                isPossDupOrResend);
+            this.sessionKey = sessionKey;
+            proxy.setupSession(sessionId, sessionKey);
+            if (CODEC_VALIDATION_DISABLED || (validateHeartbeat(heartbeatInterval) && validateSendingTime(sendingTime)))
+            {
+                id(sessionId);
+                heartbeatIntervalInS(heartbeatInterval);
+                onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+                publication.saveLogon(libraryId, connectionId, sessionId);
+            }
         }
         else
         {

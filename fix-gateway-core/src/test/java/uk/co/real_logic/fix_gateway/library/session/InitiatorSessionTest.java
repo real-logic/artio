@@ -92,6 +92,12 @@ public class InitiatorSessionTest extends AbstractSessionTest
         verifySavesLogonMessage();
     }
 
+    @Test
+    public void shouldDisconnectIfMissingSequenceNumber()
+    {
+        shouldDisconnectIfMissingSequenceNumber(1);
+    }
+
     private void verifySavesLogonMessage()
     {
         verify(mockPublication, times(1)).saveLogon(LIBRARY_ID, CONNECTION_ID, SESSION_ID);
@@ -100,6 +106,11 @@ public class InitiatorSessionTest extends AbstractSessionTest
     private void verifyLogon()
     {
         verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1, null, null);
+    }
+
+    protected void readyForLogon()
+    {
+        session.state(SENT_LOGON);
     }
 
     protected Session session()
