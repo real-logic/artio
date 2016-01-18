@@ -23,11 +23,18 @@ import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
+
 /**
  * .
  */
 public class RaftNodeConfiguration
 {
+    public static final int DEFAULT_MAX_CLAIM_ATTEMPTS = 100_000;
+    public static final int DEFAULT_CONTROL_STREAM_ID = 1;
+    public static final int DEFAULT_DATA_STREAM_ID = 2;
+    public static final int DEFAULT_ACKNOWLEDGEMENT_STREAM_ID = 3;
+
     private Aeron aeron;
     private StreamIdentifier controlStream;
     private StreamIdentifier dataStream;
@@ -38,11 +45,26 @@ public class RaftNodeConfiguration
     private long timeoutIntervalInMs;
     private AcknowledgementStrategy acknowledgementStrategy;
     private FragmentHandler fragmentHandler;
-    private int maxClaimAttempts;
+    private int maxClaimAttempts = DEFAULT_MAX_CLAIM_ATTEMPTS;
     private AtomicCounter failCounter;
     private ArchiveReader archiveReader;
     private Archiver archiver;
     private RaftTransport raftTransport = new RaftTransport(this);
+
+    /**
+     * Sets the control, data and acknowledge streams to all this aeron
+     * channel with their default ids.
+     *
+     * @param channel the aeron channel to use for all the streams
+     * @return this
+     */
+    public RaftNodeConfiguration aeronChannel(final String channel)
+    {
+        controlStream(new StreamIdentifier(channel, DEFAULT_CONTROL_STREAM_ID));
+        dataStream(new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID));
+        acknowledgementStream(new StreamIdentifier(channel, DEFAULT_ACKNOWLEDGEMENT_STREAM_ID));
+        return this;
+    }
 
     public RaftNodeConfiguration controlStream(final StreamIdentifier controlStream)
     {
@@ -207,5 +229,18 @@ public class RaftNodeConfiguration
     public RaftTransport raftTransport()
     {
         return raftTransport;
+    }
+
+    public void conclude()
+    {
+        if (idleStrategy() == null)
+        {
+            idleStrategy(backoffIdleStrategy());
+        }
+
+        if (acknowledgementStrategy() == null)
+        {
+            acknowledgementStrategy(new QuorumAcknowledgementStrategy());
+        }
     }
 }

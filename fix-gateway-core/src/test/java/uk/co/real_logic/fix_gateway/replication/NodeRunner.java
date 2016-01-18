@@ -29,15 +29,14 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
-import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.*;
+import static uk.co.real_logic.fix_gateway.replication.RaftNodeConfiguration.DEFAULT_DATA_STREAM_ID;
 
 public class NodeRunner implements AutoCloseable, Role
 {
     public static final long TIMEOUT_IN_MS = 1000;
-    public static final String AERON_GROUP = "aeron:udp?group=224.0.1.1:40456";
+    public static final String AERON_CHANNEL = "aeron:udp?group=224.0.1.1:40456";
 
     private final SwitchableLossGenerator lossGenerator = new SwitchableLossGenerator();
 
@@ -72,7 +71,7 @@ public class NodeRunner implements AutoCloseable, Role
         clientContext.aeronDirectoryName(context.aeronDirectoryName());
         aeron = Aeron.connect(clientContext);
 
-        final StreamIdentifier dataStream = new StreamIdentifier(AERON_GROUP, DATA);
+        final StreamIdentifier dataStream = new StreamIdentifier(AERON_CHANNEL, DEFAULT_DATA_STREAM_ID);
         final ArchiveMetaData metaData = AbstractReplicationTest.archiveMetaData((short) nodeId);
         final ArchiveReader archiveReader = new ArchiveReader(
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
@@ -84,18 +83,13 @@ public class NodeRunner implements AutoCloseable, Role
             .aeron(aeron)
             .otherNodes(otherNodeIds)
             .timeoutIntervalInMs(TIMEOUT_IN_MS)
-            .acknowledgementStrategy(new QuorumAcknowledgementStrategy())
             .fragmentHandler((buffer, offset, length, header) ->
             {
                 replicatedPosition = offset + length;
                 DebugLogger.log("%d: position %d\n", nodeId, replicatedPosition);
             })
             .failCounter(mock(AtomicCounter.class))
-            .maxClaimAttempts(100_000)
-            .acknowledgementStream(new StreamIdentifier(AERON_GROUP, ACKNOWLEDGEMENT))
-            .controlStream(new StreamIdentifier(AERON_GROUP, CONTROL))
-            .dataStream(dataStream)
-            .idleStrategy(backoffIdleStrategy())
+            .aeronChannel(AERON_CHANNEL)
             .archiver(archiver)
             .archiveReader(archiveReader);
 

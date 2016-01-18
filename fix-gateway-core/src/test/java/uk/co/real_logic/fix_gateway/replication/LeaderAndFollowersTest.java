@@ -104,7 +104,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             leaderSessionId,
             archiveReader,
             archiver)
-            .controlPublication(raftPublication(CONTROL))
+            .controlPublication(raftPublication(RaftNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
             .controlSubscription(controlSubscription())
             .acknowledgementSubscription(acknowledgementSubscription())
             .dataSubscription(dataSubscription());

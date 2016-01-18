@@ -43,9 +43,6 @@ public class AbstractReplicationTest
 {
 
     protected static final String IPC = "aeron:ipc";
-    protected static final int CONTROL = 1;
-    protected static final int DATA = 2;
-    protected static final int ACKNOWLEDGEMENT = 3;
     protected static final int FRAGMENT_LIMIT = 1;
     protected static final long TIMEOUT = 100;
     protected static final long HEARTBEAT_INTERVAL = TIMEOUT / 2;
@@ -66,17 +63,17 @@ public class AbstractReplicationTest
 
     protected Subscription controlSubscription()
     {
-        return aeron.addSubscription(IPC, CONTROL);
+        return aeron.addSubscription(IPC, RaftNodeConfiguration.DEFAULT_CONTROL_STREAM_ID);
     }
 
     protected Subscription acknowledgementSubscription()
     {
-        return aeron.addSubscription(IPC, ACKNOWLEDGEMENT);
+        return aeron.addSubscription(IPC, RaftNodeConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID);
     }
 
     protected Subscription dataSubscription()
     {
-        return aeron.addSubscription(IPC, DATA);
+        return aeron.addSubscription(IPC, RaftNodeConfiguration.DEFAULT_DATA_STREAM_ID);
     }
 
     protected RaftPublication raftPublication(final int streamId)
@@ -91,7 +88,7 @@ public class AbstractReplicationTest
 
     protected Publication dataPublication()
     {
-        return aeron.addPublication(IPC, DATA);
+        return aeron.addPublication(IPC, RaftNodeConfiguration.DEFAULT_DATA_STREAM_ID);
     }
 
     @Before
@@ -158,8 +155,8 @@ public class AbstractReplicationTest
             archiveReader,
             archiver)
             .controlSubscription(controlSubscription())
-            .acknowledgementPublication(raftPublication(ACKNOWLEDGEMENT))
-            .controlPublication(raftPublication(CONTROL))
+            .acknowledgementPublication(raftPublication(RaftNodeConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID))
+            .controlPublication(raftPublication(RaftNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
             .follow(0);
     }
 

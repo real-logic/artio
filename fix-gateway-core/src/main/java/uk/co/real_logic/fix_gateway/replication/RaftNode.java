@@ -118,6 +118,8 @@ public class RaftNode implements Role
 
     public RaftNode(final RaftNodeConfiguration configuration, final long timeInMs)
     {
+        configuration.conclude();
+
         this.nodeId = configuration.nodeId();
         this.transport = configuration.raftTransport();
 

@@ -123,6 +123,6 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
     {
         return new Candidate(id, DATA_SESSION_ID, raftNode, CLUSTER_SIZE, TIMEOUT, termState, new QuorumAcknowledgementStrategy())
                     .controlSubscription(controlSubscription())
-                    .controlPublication(raftPublication(CONTROL));
+                    .controlPublication(raftPublication(RaftNodeConfiguration.DEFAULT_CONTROL_STREAM_ID));
     }
 }
