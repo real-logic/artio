@@ -39,6 +39,11 @@ public final class UtcTimeOnlyDecoder
         return decode(flyweight, 0, length);
     }
 
+    public long decode(final byte[] bytes)
+    {
+        return decode(bytes, bytes.length);
+    }
+
     public static long decode(final AsciiFlyweight time, final int offset, final int length)
     {
         final int startHour = offset + LENGTH + 1;

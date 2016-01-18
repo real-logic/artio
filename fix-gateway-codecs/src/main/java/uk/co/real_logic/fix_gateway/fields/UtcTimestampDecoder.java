@@ -44,6 +44,11 @@ public final class UtcTimestampDecoder
         return decode(flyweight, 0, length);
     }
 
+    public long decode(final byte[] bytes)
+    {
+        return decode(bytes, bytes.length);
+    }
+
     /**
      * @param timestamp
      * @param offset
