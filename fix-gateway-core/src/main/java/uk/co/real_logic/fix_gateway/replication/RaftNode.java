@@ -27,7 +27,6 @@ public class RaftNode implements Role
 
     private final ConsistentPublication publication;
     private final short nodeId;
-    private final RaftNodeConfiguration configuration;
     private final TermState termState = new TermState();
     private final Leader leader;
     private final Candidate candidate;
@@ -119,7 +118,6 @@ public class RaftNode implements Role
 
     public RaftNode(final RaftNodeConfiguration configuration, final long timeInMs)
     {
-        this.configuration = configuration;
         this.nodeId = configuration.nodeId();
         this.transport = configuration.raftTransport();
 

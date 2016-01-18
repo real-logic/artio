@@ -25,9 +25,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 /**
@@ -41,9 +39,10 @@ public class ClusterReplicationTest
 
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
 
-    private NodeRunner node1 = new NodeRunner(1, 2, 3);
-    private NodeRunner node2 = new NodeRunner(2, 1, 3);
-    private NodeRunner node3 = new NodeRunner(3, 1, 2);
+    private final NodeRunner node1 = new NodeRunner(1, 2, 3);
+    private final NodeRunner node2 = new NodeRunner(2, 1, 3);
+    private final NodeRunner node3 = new NodeRunner(3, 1, 2);
+    private final NodeRunner[] allNodes = { node1, node2, node3 };
 
     @Rule
     public Timeout timeout = Timeout.seconds(10);
@@ -68,8 +67,6 @@ public class ClusterReplicationTest
     @Test
     public void shouldReplicateMessage()
     {
-        checkClusterStable();
-
         final NodeRunner leader = leader();
 
         DebugLogger.log("Leader is %s\n", leader.raftNode().nodeId());
@@ -79,6 +76,22 @@ public class ClusterReplicationTest
         DebugLogger.log("Leader @ %s\n", position);
 
         assertMessageReceived();
+    }
+
+    @Test
+    public void shouldReformClusterAfterLeaderPause()
+    {
+        awaitLeadershipConcensus();
+
+        final NodeRunner leader = leader();
+        final NodeRunner[] followers = followers();
+
+        while (!foundLeader(followers))
+        {
+            poll(followers);
+        }
+
+        assertBecomesFollower(leader);
     }
 
     // TODO: unignore once its easy to loss generated both inbound and outbound traffic.
@@ -159,26 +172,29 @@ public class ClusterReplicationTest
 
     private void assertBecomesCandidate(final NodeRunner ... nodes)
     {
-        assertBecomes(RaftNode::isCandidate, nodes);
+        assertBecomes(RaftNode::isCandidate, allNodes, nodes);
     }
 
     private void assertBecomesFollower(final NodeRunner ... nodes)
     {
-        assertBecomes(RaftNode::isFollower, nodes);
+        assertBecomes(RaftNode::isFollower, allNodes, nodes);
     }
 
-    private void assertBecomes(final Predicate<RaftNode> predicate, final NodeRunner... nodes)
+    private void assertBecomes(
+        final Predicate<RaftNode> predicate,
+        final NodeRunner[] toPoll,
+        final NodeRunner... nodes)
     {
-        final RaftNode[] raftNodes = getReplicators(nodes);
+        final RaftNode[] raftNodes = getRaftNodes(nodes);
         assertFalse(allMatch(raftNodes, predicate));
         while (!allMatch(raftNodes, predicate))
         {
-            pollAll();
+            poll(toPoll);
         }
         assertTrue(allMatch(raftNodes, predicate));
     }
 
-    private RaftNode[] getReplicators(final NodeRunner[] nodes)
+    private RaftNode[] getRaftNodes(final NodeRunner[] nodes)
     {
         return Stream.of(nodes).map(NodeRunner::raftNode).toArray(RaftNode[]::new);
     }
@@ -221,6 +237,19 @@ public class ClusterReplicationTest
         assertAllNodesSeeSameLeader();
 
         DebugLogger.log("Cluster Stable");
+    }
+
+    private void awaitLeadershipConcensus()
+    {
+        final TermState state1 = node1.raftNode().termState();
+        final TermState state2 = node2.raftNode().termState();
+        final TermState state3 = node3.raftNode().termState();
+
+        while (!(state1.leaderSessionId() == state2.leaderSessionId() &&
+                 state1.leaderSessionId() == state3.leaderSessionId()))
+        {
+            pollAll();
+        }
     }
 
     private void assertAllNodesSeeSameLeader()
@@ -266,10 +295,16 @@ public class ClusterReplicationTest
 
     private void pollAll()
     {
+        poll(allNodes);
+    }
+
+    private void poll(final NodeRunner ... nodes)
+    {
         final int fragmentLimit = 1;
-        node1.poll(fragmentLimit, System.currentTimeMillis());
-        node2.poll(fragmentLimit, System.currentTimeMillis());
-        node3.poll(fragmentLimit, System.currentTimeMillis());
+        for (final NodeRunner node : nodes)
+        {
+            node.poll(fragmentLimit, System.currentTimeMillis());
+        }
         LockSupport.parkNanos(MILLISECONDS.toNanos(1));
     }
 

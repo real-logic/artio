@@ -84,7 +84,7 @@ public class NodeRunner implements AutoCloseable, Role
             .aeron(aeron)
             .otherNodes(otherNodeIds)
             .timeoutIntervalInMs(TIMEOUT_IN_MS)
-            .acknowledgementStrategy(new EntireClusterAcknowledgementStrategy())
+            .acknowledgementStrategy(new QuorumAcknowledgementStrategy())
             .fragmentHandler((buffer, offset, length, header) ->
             {
                 replicatedPosition = offset + length;
