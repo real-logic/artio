@@ -747,7 +747,7 @@ public class Session
         this.password = password;
     }
 
-    protected void onInvalidMessage(
+    public void onInvalidMessage(
         final int refSeqNum,
         final int refTagId,
         final char[] refMsgType,
