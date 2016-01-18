@@ -34,7 +34,6 @@ import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
-import uk.co.real_logic.sbe.codec.java.CodecUtil;
 
 import java.nio.charset.StandardCharsets;
 
@@ -249,7 +248,8 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
         final int messageLength, final MutableDirectBuffer claimBuffer, final int claimOffset)
     {
         final int frameBodyLengthOffset = claimOffset + MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH;
-        CodecUtil.uint16Put(claimBuffer, frameBodyLengthOffset, messageLength + POSS_DUP_FIELD.length, LITTLE_ENDIAN);
+        final short frameBodyLength = (short) (messageLength + POSS_DUP_FIELD.length);
+        claimBuffer.putShort(frameBodyLengthOffset, frameBodyLength, LITTLE_ENDIAN);
     }
 
     private void updateMessage(
