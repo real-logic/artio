@@ -308,7 +308,9 @@ public class SessionParser
                     sessionKey,
                     sendingTime(header),
                     origSendingTime,
-                    logon.usernameAsString(), logon.passwordAsString(), isPossDup(header)
+                    logon.usernameAsString(),
+                    logon.passwordAsString(),
+                    isPossDup(header)
                 );
             }
             else

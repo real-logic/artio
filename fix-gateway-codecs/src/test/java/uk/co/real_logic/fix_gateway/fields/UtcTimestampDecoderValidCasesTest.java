@@ -31,6 +31,7 @@ import java.util.Arrays;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.time.temporal.ChronoField.MILLI_OF_SECOND;
 import static org.junit.Assert.assertEquals;
+import static uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder.LONG_LENGTH;
 
 @RunWith(Parameterized.class)
 public class UtcTimestampDecoderValidCasesTest
@@ -64,16 +65,27 @@ public class UtcTimestampDecoderValidCasesTest
     }
 
     @Test
-    public void canParseTimestamp()
+    public void canParseTimestampWithCorrectLength()
+    {
+        canParseTimestamp(timestamp.length());
+    }
+
+    @Test
+    public void canParseTimestampWithLongLength()
+    {
+        canParseTimestamp(LONG_LENGTH);
+    }
+
+    private void canParseTimestamp(final int length)
     {
         final long expected = toEpochMillis(timestamp);
 
         final byte[] bytes = timestamp.getBytes(US_ASCII);
-        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[bytes.length + 2]);
+        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LONG_LENGTH + 2]);
         buffer.putBytes(1, bytes);
         final AsciiFlyweight timestampBytes = new AsciiFlyweight(buffer);
 
-        final long epochMillis = UtcTimestampDecoder.decode(timestampBytes, 1, timestamp.length());
+        final long epochMillis = UtcTimestampDecoder.decode(timestampBytes, 1, length);
         assertEquals("Failed testcase for: " + timestamp, expected, epochMillis);
     }
 

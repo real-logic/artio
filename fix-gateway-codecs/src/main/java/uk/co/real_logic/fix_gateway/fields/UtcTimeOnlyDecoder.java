@@ -61,7 +61,15 @@ public final class UtcTimeOnlyDecoder
         final int hour = getValidInt(time, startHour, endHour, 0, 23);
         final int minute = getValidInt(time, startMinute, endMinute, 0, 59);
         final int second = getValidInt(time, startSecond, endSecond, 0, 60);
-        final int millisecond = length > endSecond ? time.getNatural(startMillisecond, endMillisecond) : 0;
+        final int millisecond;
+        if (length > endSecond && time.isDigit(startMillisecond))
+        {
+            millisecond = time.getNatural(startMillisecond, endMillisecond);
+        }
+        else
+        {
+            millisecond = 0;
+        }
 
         final int secondOfDay = hour * SECONDS_IN_HOUR + minute * SECONDS_IN_MINUTE + second;
 

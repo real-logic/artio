@@ -86,6 +86,12 @@ public class AsciiFlyweight
         return getDigit(index, value);
     }
 
+    public boolean isDigit(final int index)
+    {
+        final byte value = buffer.getByte(index);
+        return value >= 0x30 && value <= 0x39;
+    }
+
     private int getDigit(final int index, final byte value)
     {
         if (value < 0x30 || value > 0x39)
