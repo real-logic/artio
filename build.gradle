@@ -34,11 +34,13 @@ ext {
     group = fixGroup
     version = fixVersion
 
-    if (!project.hasProperty('ossrhUsername'))
+    if (!project.hasProperty('ossrhUsername')) {
         ossrhUsername = ''
+    }
 
-    if (!project.hasProperty('ossrhPassword'))
+    if (!project.hasProperty('ossrhPassword')) {
         ossrhPassword = ''
+    }
 }
 
 allprojects {
@@ -104,7 +106,7 @@ subprojects {
     javadoc {
         title = '<h1>Fix Gateway</h1>'
 
-        options.bottom = '<i>Copyright &#169; 2015 Real Logic Ltd. All Rights Reserved.</i>'
+        options.bottom = '<i>Copyright &#169; 2015 - 2016 Real Logic Ltd. All Rights Reserved.</i>'
         options.addStringOption('XDignore.symbol.file', '-quiet')
     }
 
@@ -129,7 +131,9 @@ subprojects {
     }
 
     artifacts {
-        archives sourcesJar, javadocJar, testJar
+        archives sourcesJar
+        archives javadocJar
+        archives testJar
         tests testJar
     }
 }
@@ -155,7 +159,7 @@ project(':fix-gateway-codecs') {
     task (generateCodecs, type: JavaExec) {
         main = 'uk.co.real_logic.fix_gateway.dictionary.CodecGenerationTool'
         classpath = sourceSets.main.runtimeClasspath
-        args generatedDir, 'src/main/resources/session_dictionary.xml'
+        args = [generatedDir, 'src/main/resources/session_dictionary.xml']
         outputs.dir generatedDir
     }
 
@@ -165,7 +169,7 @@ project(':fix-gateway-codecs') {
         systemProperties('sbe.output.dir': generatedDir,
                 'sbe.target.language': 'Java',
                 'sbe.validation.stop.on.error': 'true')
-        args 'src/main/resources/message-schema.xml'
+        args = ['src/main/resources/message-schema.xml']
     }
 
     jar {
