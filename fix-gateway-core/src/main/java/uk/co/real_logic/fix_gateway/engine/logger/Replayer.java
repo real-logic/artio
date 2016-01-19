@@ -125,7 +125,7 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
                 return;
             }
 
-            final int expectedCount = endSeqNo - beginSeqNo;
+            final int expectedCount = endSeqNo - beginSeqNo + 1;
             final int count = replayQuery.query(this, sessionId, beginSeqNo, endSeqNo);
             if (count != expectedCount)
             {
