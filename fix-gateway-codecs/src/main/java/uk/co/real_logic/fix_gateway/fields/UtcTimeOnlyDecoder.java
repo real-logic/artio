@@ -26,7 +26,6 @@ import static uk.co.real_logic.fix_gateway.fields.UtcDateOnlyDecoder.LENGTH;
  */
 public final class UtcTimeOnlyDecoder
 {
-
     public static final int SHORT_LENGTH = 8;
     public static final int LONG_LENGTH = 12;
 

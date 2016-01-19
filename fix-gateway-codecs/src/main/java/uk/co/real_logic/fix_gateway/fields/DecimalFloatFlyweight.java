@@ -20,7 +20,7 @@ package uk.co.real_logic.fix_gateway.fields;
  */
 public class DecimalFloatFlyweight extends AsciiFieldFlyweight
 {
-    public void getFloat(DecimalFloat value)
+    public void getFloat(final DecimalFloat value)
     {
         asciiFlyweight().getFloat(value, offset(), length());
     }

@@ -37,9 +37,10 @@ public final class UtcTimeOnlyEncoder
         return encode(millisecondOfDay, flyweight, 0);
     }
 
-    public static int encode(final long millisecondOfDay,
-                              final MutableAsciiFlyweight string,
-                              final int offset)
+    public static int encode(
+        final long millisecondOfDay,
+        final MutableAsciiFlyweight string,
+        final int offset)
     {
         final long localSecond = Math.floorDiv(millisecondOfDay, MILLIS_IN_SECOND);
         final int fractionOfSecond = (int)(Math.floorMod(millisecondOfDay, MILLIS_IN_SECOND));

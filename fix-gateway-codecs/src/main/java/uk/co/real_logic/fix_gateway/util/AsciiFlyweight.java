@@ -282,5 +282,4 @@ public class AsciiFlyweight
         final byte character = buffer.getByte(index);
         return character == '0' || character == ' ';
     }
-
 }

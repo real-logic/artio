@@ -26,7 +26,6 @@ import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.toEpochDay;
  */
 public final class UtcDateOnlyDecoder
 {
-
     public static final int SIZE_OF_YEAR = 4;
     public static final int SIZE_OF_MONTH = 2;
     public static final int SIZE_OF_DAY = 2;
@@ -52,5 +51,4 @@ public final class UtcDateOnlyDecoder
         final int day = getValidInt(date, endMonth, endDay, 1, 31);
         return toEpochDay(year, month, day);
     }
-
 }

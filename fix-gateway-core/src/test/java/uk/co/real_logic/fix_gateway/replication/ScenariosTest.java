@@ -400,10 +400,7 @@ public class ScenariosTest
     }
 
     private static Stimulus timesOut =
-        namedStimulus(
-            (st) ->
-                st.role.poll(1, TIME + TIMEOUT_IN_MS * 2 + 1),
-            "timesOut");
+        namedStimulus((st) -> st.role.poll(1, TIME + TIMEOUT_IN_MS * 2 + 1), "timesOut");
 
     private static Stimulus heartbeatBeforeTimeout =
         namedStimulus(
@@ -436,8 +433,7 @@ public class ScenariosTest
         st.raftHandler.onConcensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
     }
 
-    private static Stimulus startElection = namedStimulus((st) -> {
-    }, "startElection");
+    private static Stimulus startElection = namedStimulus((st) -> { }, "startElection");
 
     private static Stimulus onMajority =
         namedStimulus(

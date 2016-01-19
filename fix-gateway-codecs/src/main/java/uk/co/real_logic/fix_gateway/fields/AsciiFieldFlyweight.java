@@ -78,7 +78,7 @@ public class AsciiFieldFlyweight
         return bytes;
     }
 
-    public void getBytes(MutableDirectBuffer dstBuffer, int dstOffset)
+    public void getBytes(final MutableDirectBuffer dstBuffer, final int dstOffset)
     {
         dstBuffer.putBytes(dstOffset, buffer, offset, length);
     }

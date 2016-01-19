@@ -21,7 +21,6 @@ import uk.co.real_logic.fix_gateway.MessageAcceptor;
 // TODO: add ability to abort parsing from within the acceptor
 public interface OtfMessageAcceptor extends MessageAcceptor
 {
-
     void onNext();
 
     void onField(int tag, DirectBuffer buffer, int offset, int length);

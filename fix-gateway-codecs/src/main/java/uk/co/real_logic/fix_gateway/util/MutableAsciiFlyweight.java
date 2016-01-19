@@ -27,11 +27,11 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
     public static final int LONGEST_FLOAT_LENGTH = LONGEST_LONG_LENGTH + 3;
 
     private static final byte ZERO = '0';
-    private static final byte SEPARATOR = (byte) '\001';
-    private static final byte DOT = (byte) '.';
+    private static final byte SEPARATOR = (byte)'\001';
+    private static final byte DOT = (byte)'.';
 
-    private static final byte Y = (byte) 'Y';
-    private static final byte N = (byte) 'N';
+    private static final byte Y = (byte)'Y';
+    private static final byte N = (byte)'N';
     public static final int SIZE_OF_DOT = 1;
 
     private MutableDirectBuffer buffer;
@@ -85,7 +85,7 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
 
     public int putChar(final int index, final char value)
     {
-        buffer.putByte(index, (byte) value);
+        buffer.putByte(index, (byte)value);
         return 1;
     }
 
@@ -97,7 +97,7 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
         {
             final int digit = remainder % 10;
             remainder = remainder / 10;
-            buffer.putByte(index, (byte) (ZERO + digit));
+            buffer.putByte(index, (byte)(ZERO + digit));
         }
 
         if (remainder != 0)
@@ -110,7 +110,7 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
      * Puts an int into the buffer
      *
      * @param offset the offset at which to put the int
-     * @param value the int to write
+     * @param value  the int to write
      * @return the number of bytes that the int took up encoded
      */
     public int putInt(final int offset, final int value)
@@ -141,7 +141,7 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
         {
             final int digit = remainder % 10;
             remainder = remainder / 10;
-            buffer.putByte(index, (byte) (ZERO + (-1 * digit)));
+            buffer.putByte(index, (byte)(ZERO + (-1 * digit)));
             index--;
         }
 
@@ -235,10 +235,10 @@ public final class MutableAsciiFlyweight extends AsciiFlyweight
         {
             final long digit = remainder % 10;
             remainder = remainder / 10;
-            buffer.putByte(index, (byte) (ZERO + (-1L * digit)));
+            buffer.putByte(index, (byte)(ZERO + (-1L * digit)));
             index--;
         }
+
         return index;
     }
-
 }
