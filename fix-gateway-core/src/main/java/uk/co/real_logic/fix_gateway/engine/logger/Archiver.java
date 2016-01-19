@@ -178,12 +178,11 @@ public class Archiver implements Agent, FileBlockHandler
                 if (transferred != length)
                 {
                     final File location = logFile(termId);
-                    throw new IllegalStateException(
-                        String.format(
-                            "Failed to transfer %d bytes to %s, only transferred %d bytes",
-                            length,
-                            location,
-                            transferred));
+                    throw new IllegalStateException(String.format(
+                        "Failed to transfer %d bytes to %s, only transferred %d bytes",
+                        length,
+                        location,
+                        transferred));
                 }
             }
             catch (IOException e)
@@ -306,6 +305,5 @@ public class Archiver implements Agent, FileBlockHandler
                 patchTermLogChannel.close();
             }
         }
-
     }
 }

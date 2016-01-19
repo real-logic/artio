@@ -43,8 +43,7 @@ public class PrinterGenerator
     private final String builderPackage;
     private final OutputManager outputManager;
 
-    public PrinterGenerator(
-        final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
+    public PrinterGenerator(final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
     {
         this.dictionary = dictionary;
         this.builderPackage = builderPackage;
@@ -53,21 +52,22 @@ public class PrinterGenerator
 
     public void generate()
     {
-        outputManager.withOutput(CLASS_NAME, out ->
-        {
-            out.append(fileHeader(builderPackage));
-            out.append(CLASS_DECLARATION);
-            out.append(generateDecoderFields());
-            out.append(generateToString());
-            out.append("}\n");
-        });
+        outputManager.withOutput(CLASS_NAME,
+            (out) ->
+            {
+                out.append(fileHeader(builderPackage));
+                out.append(CLASS_DECLARATION);
+                out.append(generateDecoderFields());
+                out.append(generateToString());
+                out.append("}\n");
+            });
     }
 
     private String generateDecoderFields()
     {
         return messages()
-              .map(this::generateDecoderField)
-              .collect(joining()) + "\n";
+            .map(this::generateDecoderField)
+            .collect(joining()) + "\n";
     }
 
     private String generateDecoderField(final Aggregate aggregate)
@@ -88,16 +88,13 @@ public class PrinterGenerator
     {
         final String cases =
             messages()
-           .map(aggregate ->
-           {
-               return String.format(
-                   "            case %s:\n" +
-                   "            %s.decode(input, offset, length);\n" +
-                   "            return %2$s.toString();\n\n",
-                   aggregate.packedType(),
-                   decoderFieldName(aggregate));
-           })
-           .collect(joining());
+                .map((aggregate) -> String.format(
+                    "            case %s:\n" +
+                    "            %s.decode(input, offset, length);\n" +
+                    "            return %2$s.toString();\n\n",
+                    aggregate.packedType(),
+                    decoderFieldName(aggregate)))
+                .collect(joining());
 
         return
             "    public String toString(\n" +
@@ -119,5 +116,4 @@ public class PrinterGenerator
     {
         return dictionary.messages().stream();
     }
-
 }

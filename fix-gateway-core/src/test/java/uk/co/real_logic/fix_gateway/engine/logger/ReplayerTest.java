@@ -117,7 +117,7 @@ public class ReplayerTest extends AbstractLogTest
 
     private void setupPublication(final int srcLength)
     {
-        when(publication.tryClaim(srcLength, claim)).thenReturn((long) srcLength);
+        when(publication.tryClaim(srcLength, claim)).thenReturn((long)srcLength);
     }
 
     private void setupClaim(final int srcLength)
@@ -163,7 +163,7 @@ public class ReplayerTest extends AbstractLogTest
         resendRequest
             .beginSeqNo(BEGIN_SEQ_NO)
             .endSeqNo(endSeqNo)
-        .encode(new MutableAsciiFlyweight(buffer), 1);
+            .encode(new MutableAsciiFlyweight(buffer), 1);
     }
 
     private void onMessage(final int messageType)

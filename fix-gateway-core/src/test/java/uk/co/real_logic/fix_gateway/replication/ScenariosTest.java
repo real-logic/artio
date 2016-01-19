@@ -82,31 +82,31 @@ public class ScenariosTest
     public static Iterable<Object[]> parameters()
     {
         return Arrays.<Object[]>asList(
-            scenario(leader,    newLeaderHeartbeat, transitionsToFollower, hasNewLeader(NEW_LEADER_SESSION_ID)),
+            scenario(leader, newLeaderHeartbeat, transitionsToFollower, hasNewLeader(NEW_LEADER_SESSION_ID)),
 
-            scenario(leader,    oldTermLeaderHeartbeat, neverTransitions, ignored),
+            scenario(leader, oldTermLeaderHeartbeat, neverTransitions, ignored),
 
-            scenario(leader,    selfHeartbeat, neverTransitions, ignored),
+            scenario(leader, selfHeartbeat, neverTransitions, ignored),
 
-            scenario(leader,    newLeaderRequestVote, votesAndFollows(CANDIDATE_ID), hasNoLeader(NEW_TERM)),
+            scenario(leader, newLeaderRequestVote, votesAndFollows(CANDIDATE_ID), hasNoLeader(NEW_TERM)),
 
-            scenario(leader,    lowerTermRequestVote, neverTransitions, ignored),
+            scenario(leader, lowerTermRequestVote, neverTransitions, ignored),
 
-            scenario(leader,    lowerPositionRequestVote, neverTransitions, ignored),
+            scenario(leader, lowerPositionRequestVote, neverTransitions, ignored),
 
-            scenario(follower,  timesOut, transitionsToCandidate, hasNoLeader(LEADERSHIP_TERM)),
+            scenario(follower, timesOut, transitionsToCandidate, hasNoLeader(LEADERSHIP_TERM)),
 
-            scenario(follower,  heartbeatBeforeTimeout, neverTransitions, ignored),
+            scenario(follower, heartbeatBeforeTimeout, neverTransitions, ignored),
 
-            scenario(follower,  newLeaderRequestVote, voteForCandidate, ignored),
+            scenario(follower, newLeaderRequestVote, voteForCandidate, ignored),
 
-            scenario(follower,  lowerTermRequestVote, neverTransitions, ignored),
+            scenario(follower, lowerTermRequestVote, neverTransitions, ignored),
 
-            scenario(follower,  lowerPositionRequestVote, neverTransitions, ignored),
+            scenario(follower, lowerPositionRequestVote, neverTransitions, ignored),
 
-            scenario(follower,  newLeaderHeartbeat, neverTransitions, hasNewLeader(NEW_LEADER_SESSION_ID)),
+            scenario(follower, newLeaderHeartbeat, neverTransitions, hasNewLeader(NEW_LEADER_SESSION_ID)),
 
-            scenario(follower,  oldTermLeaderHeartbeat, neverTransitions, ignored),
+            scenario(follower, oldTermLeaderHeartbeat, neverTransitions, ignored),
 
             scenario(candidate, startElection, requestsVote, ignored),
 
@@ -145,7 +145,7 @@ public class ScenariosTest
         setup();
 
         role = roleFixture.apply(this);
-        raftHandler = (RaftHandler) role;
+        raftHandler = (RaftHandler)role;
 
         when:
         stimulus.accept(this);
@@ -196,31 +196,34 @@ public class ScenariosTest
 
     private static State hasNewLeader(final int sessionId)
     {
-        return namedState(termState ->
-        {
-            assertThat(termState, hasLeaderSessionId(sessionId));
-            assertThat(termState, hasLeadershipTerm(NEW_TERM));
-            assertThat(termState, hasCommitPosition(POSITION));
-        }, "hasNewLeader");
+        return namedState(
+            (termState) ->
+            {
+                assertThat(termState, hasLeaderSessionId(sessionId));
+                assertThat(termState, hasLeadershipTerm(NEW_TERM));
+                assertThat(termState, hasCommitPosition(POSITION));
+            }, "hasNewLeader");
     }
 
     private static State isLeader(final int sessionId)
     {
-        return namedState(termState ->
-        {
-            assertThat(termState, hasLeaderSessionId(sessionId));
-            assertThat(termState, hasLeadershipTerm(LEADERSHIP_TERM));
-        }, "hasNewLeader");
+        return namedState(
+            (termState) ->
+            {
+                assertThat(termState, hasLeaderSessionId(sessionId));
+                assertThat(termState, hasLeadershipTerm(LEADERSHIP_TERM));
+            }, "hasNewLeader");
     }
 
     private static State hasNoLeader(final int leadershipTerm)
     {
-        return namedState(termState ->
-        {
-            assertThat(termState, noLeaderMatcher());
-            assertThat(termState, hasLeadershipTerm(leadershipTerm));
-            assertThat(termState, hasCommitPosition(POSITION));
-        }, "hasNoLeader");
+        return namedState(
+            (termState) ->
+            {
+                assertThat(termState, noLeaderMatcher());
+                assertThat(termState, hasLeadershipTerm(leadershipTerm));
+                assertThat(termState, hasCommitPosition(POSITION));
+            }, "hasNoLeader");
     }
 
     private static RoleFixture leader = named(ScenariosTest::leader, "leader");
@@ -313,27 +316,29 @@ public class ScenariosTest
 
     private static Effect transitionsToFollower(final int votedFor, final String name)
     {
-        return namedEffect(st ->
-        {
-            final RaftNode node = verify(st.raftNode, atLeastOnce());
-            if (st.role instanceof Leader)
+        return namedEffect(
+            (st) ->
             {
-                final Leader leader = (Leader) st.role;
-                node.transitionToFollower(eq(leader), eq((short) votedFor), anyLong());
-            }
-            else
-            {
-                final Candidate candidate = (Candidate) st.role;
-                node.transitionToFollower(eq(candidate), eq((short) votedFor), anyLong());
-            }
+                final RaftNode node = verify(st.raftNode, atLeastOnce());
+                if (st.role instanceof Leader)
+                {
+                    final Leader leader = (Leader)st.role;
+                    node.transitionToFollower(eq(leader), eq((short)votedFor), anyLong());
+                }
+                else
+                {
+                    final Candidate candidate = (Candidate)st.role;
+                    node.transitionToFollower(eq(candidate), eq((short)votedFor), anyLong());
+                }
 
-            ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
-            ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
-        }, name);
+                ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
+                ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
+            }, name);
     }
 
     private static Effect transitionsToCandidate =
-        namedEffect(st ->
+        namedEffect(
+            (st) ->
             {
                 ReplicationAsserts.transitionsToCandidate(st.raftNode);
 
@@ -343,7 +348,8 @@ public class ScenariosTest
             "transitionsToCandidate");
 
     private static Effect transitionsToLeader =
-        namedEffect(st ->
+        namedEffect(
+            (st) ->
             {
                 ReplicationAsserts.transitionsToLeader(st.raftNode);
 
@@ -353,21 +359,23 @@ public class ScenariosTest
             "transitionsToLeader");
 
     private static Effect neverTransitions =
-        namedEffect(st ->
-        {
-            ReplicationAsserts.neverTransitionsToFollower(st.raftNode);
-            ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
-            ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
-        }, "neverTransitions");
+        namedEffect(
+            (st) ->
+            {
+                ReplicationAsserts.neverTransitionsToFollower(st.raftNode);
+                ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
+                ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
+            }, "neverTransitions");
 
     public static Effect requestsVote =
-        namedEffect(st ->
-        {
-            st.requestsVote(LEADERSHIP_TERM);
-            ReplicationAsserts.neverTransitionsToFollower(st.raftNode);
-            ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
-            ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
-        }, "requestsVote");
+        namedEffect(
+            (st) ->
+            {
+                st.requestsVote(LEADERSHIP_TERM);
+                ReplicationAsserts.neverTransitionsToFollower(st.raftNode);
+                ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
+                ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
+            }, "requestsVote");
 
     public static Stimulus oldTermLeaderHeartbeat =
         receivesHeartbeat(NEW_LEADER_ID, OLD_LEADERSHIP_TERM, NEW_LEADER_SESSION_ID, "oldTermLeaderHeartbeat");
@@ -378,31 +386,36 @@ public class ScenariosTest
     public static Stimulus selfHeartbeat =
         receivesHeartbeat(ID, NEW_TERM, SESSION_ID, "selfHeartbeat");
 
-    private static Stimulus receivesHeartbeat(final short leaderId,
-                                              final int leaderShipTerm,
-                                              final int dataSessionId,
-                                              final String name)
+    private static Stimulus receivesHeartbeat(
+        final short leaderId,
+        final int leaderShipTerm,
+        final int dataSessionId,
+        final String name)
     {
-        return namedStimulus(st ->
-        {
-            st.raftHandler.onConcensusHeartbeat(leaderId, leaderShipTerm, POSITION, dataSessionId);
-        }, name);
+        return namedStimulus(
+            (st) ->
+            {
+                st.raftHandler.onConcensusHeartbeat(leaderId, leaderShipTerm, POSITION, dataSessionId);
+            }, name);
     }
 
     private static Stimulus timesOut =
-        namedStimulus(st ->
+        namedStimulus(
+            (st) ->
                 st.role.poll(1, TIME + TIMEOUT_IN_MS * 2 + 1),
             "timesOut");
 
     private static Stimulus heartbeatBeforeTimeout =
-        namedStimulus(st ->
+        namedStimulus(
+            (st) ->
             {
-                when(st.controlSubscription.poll(any(), anyInt())).thenAnswer(inv ->
-                {
-                    st.raftHandler.onConcensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
+                when(st.controlSubscription.poll(any(), anyInt())).thenAnswer(
+                    (inv) ->
+                    {
+                        st.raftHandler.onConcensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
 
-                    return 1;
-                });
+                        return 1;
+                    });
 
                 long time = TIME + BELOW_TIMEOUT;
 
@@ -423,15 +436,16 @@ public class ScenariosTest
         st.raftHandler.onConcensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
     }
 
-    private static Stimulus startElection = namedStimulus(st -> {
+    private static Stimulus startElection = namedStimulus((st) -> {
     }, "startElection");
 
     private static Stimulus onMajority =
-        namedStimulus(st ->
-        {
-            st.raftHandler.onReplyVote(FOLLOWER_1_ID, ID, LEADERSHIP_TERM, FOR);
-            st.raftHandler.onReplyVote(FOLLOWER_2_ID, ID, LEADERSHIP_TERM, FOR);
-        }, "onMajority");
+        namedStimulus(
+            (st) ->
+            {
+                st.raftHandler.onReplyVote(FOLLOWER_1_ID, ID, LEADERSHIP_TERM, FOR);
+                st.raftHandler.onReplyVote(FOLLOWER_2_ID, ID, LEADERSHIP_TERM, FOR);
+            }, "onMajority");
 
     private static Stimulus lowerPositionRequestVote =
         onRequestVote(CANDIDATE_ID, NEW_TERM, 0L, "lowerPositionRequestVote");
@@ -445,10 +459,11 @@ public class ScenariosTest
     private static Stimulus onRequestVote(
         final short candidateId, final int leaderShipTerm, final long lastAckedPosition, final String name)
     {
-        return namedStimulus(st ->
-        {
-            st.raftHandler.onRequestVote(candidateId, SESSION_ID, leaderShipTerm, lastAckedPosition);
-        }, name);
+        return namedStimulus(
+            (st) ->
+            {
+                st.raftHandler.onRequestVote(candidateId, SESSION_ID, leaderShipTerm, lastAckedPosition);
+            }, name);
     }
 
     private void requestsVote(final int term)
@@ -473,12 +488,12 @@ public class ScenariosTest
         final State state)
     {
         return new Object[]
-            {
-                roleFixture,
-                stimulus,
-                effect,
-                state
-            };
+        {
+            roleFixture,
+            stimulus,
+            effect,
+            state
+        };
     }
 
     private static RoleFixture named(final RoleFixture fixture, final String name)
@@ -545,7 +560,5 @@ public class ScenariosTest
         };
     }
 
-    private static State ignored = namedState(st -> {
-    }, "");
-
+    private static State ignored = namedState((st) -> { }, "");
 }

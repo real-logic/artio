@@ -33,11 +33,10 @@ import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 /**
  * Eg: -Dlogging.dir=/home/richard/monotonic/Fix-Engine/fix-gateway-system-tests/client-logs \
- *     ArchivePrinter 'UDP-00000000-0-7f000001-10048' 0
+ * ArchivePrinter 'UDP-00000000-0-7f000001-10048' 0
  */
 public class ArchivePrinter implements SessionHandler
 {
-
     private static final int CHANNEL_ARG = 0;
     private static final int ID_ARG = 1;
 
@@ -49,7 +48,7 @@ public class ArchivePrinter implements SessionHandler
     private final StreamIdentifier streamId;
     private final PrintStream output;
 
-    public static void main(String[] args)
+    public static void main(final String[] args)
     {
         if (args.length < 2)
         {
@@ -57,12 +56,10 @@ public class ArchivePrinter implements SessionHandler
             System.exit(-1);
         }
 
-        final StreamIdentifier streamId =
-            new StreamIdentifier(args[CHANNEL_ARG], Integer.parseInt(args[ID_ARG]));
+        final StreamIdentifier streamId = new StreamIdentifier(args[CHANNEL_ARG], Integer.parseInt(args[ID_ARG]));
         final EngineConfiguration configuration = new EngineConfiguration();
         final String logFileDir = configuration.logFileDir();
-        final ArchivePrinter printer = new ArchivePrinter(
-            LoggerUtil::mapExistingFile, streamId, logFileDir, System.out);
+        final ArchivePrinter printer = new ArchivePrinter(LoggerUtil::mapExistingFile, streamId, logFileDir, System.out);
         printer.print();
     }
 
@@ -98,19 +95,21 @@ public class ArchivePrinter implements SessionHandler
                         break;
                     }
 
-                   offset = subscriber.readFragment(termBuffer, offset);
+                    offset = subscriber.readFragment(termBuffer, offset);
                 }
             }
         }
     }
 
-    public void onMessage(final DirectBuffer buffer,
-                          final int offset,
-                          final int length,
-                          final int libraryId,
-                          final long connectionId,
-                          final long sessionId,
-                          final int messageType, final long timestamp)
+    public void onMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final int libraryId,
+        final long connectionId,
+        final long sessionId,
+        final int messageType,
+        final long timestamp)
     {
         ascii.wrap(buffer);
         output.println(ascii.getAscii(offset, length));
@@ -126,25 +125,27 @@ public class ArchivePrinter implements SessionHandler
         output.printf("connection %d has logged in as session %d\n", connectionId, sessionId);
     }
 
-    public void onConnect(final int libraryId,
-                          final long connectionId,
-                          final ConnectionType type,
-                          final int lastSequenceNumber,
-                          final DirectBuffer buffer,
-                          final int addressOffset,
-                          final int addressLength)
+    public void onConnect(
+        final int libraryId,
+        final long connectionId,
+        final ConnectionType type,
+        final int lastSequenceNumber,
+        final DirectBuffer buffer,
+        final int addressOffset,
+        final int addressLength)
     {
         final String address = buffer.getStringUtf8(addressOffset, addressLength);
         output.printf("Connected to %s as connection %d\n", address, connectionId);
     }
 
-    public void onInitiateConnection(final int libraryId,
-                                     final int port,
-                                     final String host,
-                                     final String senderCompId,
-                                     final String senderSubId,
-                                     final String senderLocationId,
-                                     final String targetCompId)
+    public void onInitiateConnection(
+        final int libraryId,
+        final int port,
+        final String host,
+        final String senderCompId,
+        final String senderSubId,
+        final String senderLocationId,
+        final String targetCompId)
     {
         output.printf("Initiate Connection to %s:%d as %s to %s", host, port, senderCompId, targetCompId);
     }

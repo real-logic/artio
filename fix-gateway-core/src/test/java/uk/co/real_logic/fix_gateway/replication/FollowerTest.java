@@ -275,12 +275,13 @@ public class FollowerTest
 
     private void receivesHeartbeat(final long position)
     {
-        whenControlPolled().then(inv ->
-        {
-            follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, position, SESSION_ID_4);
+        whenControlPolled().then(
+            (inv) ->
+            {
+                follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, position, SESSION_ID_4);
 
-            return 1;
-        });
+                return 1;
+            });
     }
 
     private void receivesResend()
@@ -296,12 +297,13 @@ public class FollowerTest
 
     private void receivesResendFrom(final long position, final int leaderSessionId, final int leaderShipTerm)
     {
-        whenControlPolled().then(inv ->
-        {
-            follower.onResend(leaderSessionId, leaderShipTerm, position, buffer, 0, LENGTH);
+        whenControlPolled().then(
+            (inv) ->
+            {
+                follower.onResend(leaderSessionId, leaderShipTerm, position, buffer, 0, LENGTH);
 
-            return 1;
-        });
+                return 1;
+            });
 
         dataInArchive(position);
     }
@@ -333,14 +335,15 @@ public class FollowerTest
     private void dataInArchive(final long position)
     {
         when(sessionReader.readUpTo(
-            eq(position + HEADER_LENGTH), eq((long) LENGTH), any())).then(inv ->
-        {
-            final Object[] arguments = inv.getArguments();
-            final FragmentHandler handler = (FragmentHandler) arguments[2];
-            handler.onFragment(buffer, 0, LENGTH, mock(Header.class));
+            eq(position + HEADER_LENGTH), eq((long)LENGTH), any())).then(
+                (inv) ->
+                {
+                    final Object[] arguments = inv.getArguments();
+                    final FragmentHandler handler = (FragmentHandler)arguments[2];
+                    handler.onFragment(buffer, 0, LENGTH, mock(Header.class));
 
-            return LENGTH + HEADER_LENGTH;
-        });
+                    return LENGTH + HEADER_LENGTH;
+                });
     }
 
     private void noDataCommitted()
@@ -352,5 +355,4 @@ public class FollowerTest
     {
         follower.poll(10, 0);
     }
-
 }
