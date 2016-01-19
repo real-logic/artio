@@ -136,7 +136,12 @@ public class ReceiverEndPoint
         }
         catch (final Exception ex)
         {
-            errorHandler.onError(ex);
+            // Regular disconnects aren't errors
+            if (!ex.getMessage().contains("Connection reset by peer"))
+            {
+                errorHandler.onError(ex);
+            }
+
             onDisconnectDetected();
             return 1;
         }
