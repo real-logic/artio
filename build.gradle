@@ -139,7 +139,7 @@ project(':fix-gateway-codecs') {
 
     dependencies {
         compile "uk.co.real-logic:Agrona:${agronaVersion}"
-        compile 'uk.co.real-logic:sbe-all:1.3-RC3'
+        compile 'uk.co.real-logic:sbe-all:1.3.1-RC3'
     }
 
     def generatedDir = file("$buildDir/generated-src")
