@@ -488,7 +488,7 @@ public class Session
 
     private void incNextReceivedInboundMessageTime(final long time)
     {
-        nextRequiredMessageTime(time + sendingTimeWindow + heartbeatIntervalInMs());
+        nextRequiredMessageTime(time + heartbeatIntervalInMs());
     }
 
     void onLogon(final int heartbeatInterval,
