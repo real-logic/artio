@@ -16,15 +16,20 @@
 package uk.co.real_logic.admin;
 
 import uk.co.real_logic.agrona.concurrent.Agent;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
+
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 
 /**
  * An example of how to query the FIX Engine for library information
  */
 public class LibraryAndSessionDumper implements Agent
 {
+    private final IdleStrategy idleStrategy = backoffIdleStrategy();
+
     private final FixEngine engine;
 
     public LibraryAndSessionDumper(final FixEngine engine)
@@ -34,7 +39,7 @@ public class LibraryAndSessionDumper implements Agent
 
     public int doWork() throws Exception
     {
-        for (final LibraryInfo library : engine.libraries())
+        for (final LibraryInfo library : engine.libraries(idleStrategy))
         {
             System.out.println("--------------------------------");
             final String note = library.isAcceptor() ? " is Acceptor" : "";

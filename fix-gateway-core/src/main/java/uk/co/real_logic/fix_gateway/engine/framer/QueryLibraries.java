@@ -15,10 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 
 import java.util.List;
-import java.util.concurrent.locks.LockSupport;
 
 public final class QueryLibraries implements AdminCommand
 {
@@ -34,13 +33,14 @@ public final class QueryLibraries implements AdminCommand
         this.response = response;
     }
 
-    public List<LibraryInfo> awaitResponse()
+    public List<LibraryInfo> awaitResponse(final IdleStrategy idleStrategy)
     {
         List<LibraryInfo> response;
         while ((response = this.response) == null)
         {
-            LockSupport.parkNanos(FixEngine.COMMAND_QUEUE_IDLE_NS);
+            idleStrategy.idle();
         }
+        idleStrategy.reset();
         return response;
     }
 }

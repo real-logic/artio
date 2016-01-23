@@ -27,7 +27,6 @@ import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumbers;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.util.List;
-import java.util.concurrent.locks.LockSupport;
 
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
@@ -44,8 +43,6 @@ import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
  */
 public final class FixEngine extends GatewayProcess
 {
-    public static final long COMMAND_QUEUE_IDLE_NS = 1;
-
     private QueuedPipe<AdminCommand> adminCommands = new ManyToOneConcurrentArrayQueue<>(16);
 
     private final EngineConfiguration configuration;
@@ -72,15 +69,16 @@ public final class FixEngine extends GatewayProcess
      *
      * @return a list of currently active libraries.
      */
-    public List<LibraryInfo> libraries()
+    public List<LibraryInfo> libraries(final IdleStrategy idleStrategy)
     {
         final QueryLibraries query = new QueryLibraries();
         while (!adminCommands.offer(query))
         {
-            // TODO: decide whether this and QueryLibraries#awaitResponse() should take an idle strategy
-            LockSupport.parkNanos(COMMAND_QUEUE_IDLE_NS);
+            idleStrategy.idle();
         }
-        return query.awaitResponse();
+        idleStrategy.reset();
+
+        return query.awaitResponse(idleStrategy);
     }
 
     private FixEngine(final EngineConfiguration configuration)

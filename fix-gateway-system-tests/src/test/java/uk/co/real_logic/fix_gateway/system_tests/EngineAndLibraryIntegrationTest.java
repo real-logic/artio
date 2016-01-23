@@ -22,6 +22,7 @@ import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.IoUtil;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -39,6 +40,7 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -48,6 +50,8 @@ import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasFluentProperty
 
 public class EngineAndLibraryIntegrationTest
 {
+    private static final IdleStrategy ADMIN_IDLE_STRATEGY = backoffIdleStrategy();
+
     private MediaDriver mediaDriver;
     private FixEngine engine;
     private FixLibrary library;
@@ -209,13 +213,13 @@ public class EngineAndLibraryIntegrationTest
     @SafeVarargs
     private final void assertHasLibraries(final Matcher<LibraryInfo>... libraryMatchers)
     {
-        final List<LibraryInfo> libraries = engine.libraries();
+        final List<LibraryInfo> libraries = engine.libraries(ADMIN_IDLE_STRATEGY);
         assertThat(libraries, containsInAnyOrder(libraryMatchers));
     }
 
     private void assertNoActiveLibraries(final int count)
     {
-        assertThat("libraries haven't disconnected yet", engine.libraries(), hasSize(count));
+        assertThat("libraries haven't disconnected yet", engine.libraries(ADMIN_IDLE_STRATEGY), hasSize(count));
     }
 
     private FixLibrary connectLibrary()

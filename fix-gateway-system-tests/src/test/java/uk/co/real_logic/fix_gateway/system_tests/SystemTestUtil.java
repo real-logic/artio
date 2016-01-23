@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.hamcrest.Matcher;
 import uk.co.real_logic.agrona.IoUtil;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -38,12 +39,14 @@ import java.util.concurrent.locks.LockSupport;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
 
 public final class SystemTestUtil
 {
+    public static final IdleStrategy ADMIN_IDLE_STRATEGY = backoffIdleStrategy();
     public static final long CONNECTION_ID = 0L;
     public static final String ACCEPTOR_ID = "CCG";
     public static final String INITIATOR_ID = "LEH_LZJ02";
@@ -307,7 +310,7 @@ public final class SystemTestUtil
                 {
                     library.poll(1);
                 }
-                return engine.libraries().size() == count;
+                return engine.libraries(ADMIN_IDLE_STRATEGY).size() == count;
             },
             AWAIT_TIMEOUT,
             1);

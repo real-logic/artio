@@ -135,7 +135,7 @@ public class GatewayToGatewaySystemTest
     @Test
     public void sessionsListedInAdminApi()
     {
-        final List<LibraryInfo> libraries = initiatingEngine.libraries();
+        final List<LibraryInfo> libraries = initiatingEngine.libraries(ADMIN_IDLE_STRATEGY);
         assertThat(libraries, hasSize(1));
 
         final LibraryInfo library = libraries.get(0);
