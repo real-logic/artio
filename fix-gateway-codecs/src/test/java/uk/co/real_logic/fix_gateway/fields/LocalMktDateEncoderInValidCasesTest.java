@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.fields;
 
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 public class LocalMktDateEncoderInValidCasesTest
 {
@@ -37,7 +37,7 @@ public class LocalMktDateEncoderInValidCasesTest
     private void encode(final int timestamp)
     {
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LocalMktDateEncoder.LENGTH]);
-        final MutableAsciiFlyweight timestampBytes = new MutableAsciiFlyweight(buffer);
+        final MutableAsciiBuffer timestampBytes = new MutableAsciiBuffer(buffer);
         LocalMktDateEncoder.encode(timestamp, timestampBytes, 0);
     }
 }

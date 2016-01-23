@@ -28,14 +28,13 @@ import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.POSS_DUP_FIELD;
-import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
+import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
 public class ReplayerTest extends AbstractLogTest
 {
@@ -144,7 +143,7 @@ public class ReplayerTest extends AbstractLogTest
 
     private void assertHasSetPossDupFlag()
     {
-        final int possDupIndex = new AsciiFlyweight(resultBuffer).scan(0, resultBuffer.capacity(), 'Y');
+        final int possDupIndex = new MutableAsciiBuffer(resultBuffer).scan(0, resultBuffer.capacity(), 'Y');
         assertNotEquals("Unable to find poss dup index", UNKNOWN_INDEX, possDupIndex);
     }
 
@@ -163,7 +162,7 @@ public class ReplayerTest extends AbstractLogTest
         resendRequest
             .beginSeqNo(BEGIN_SEQ_NO)
             .endSeqNo(endSeqNo)
-            .encode(new MutableAsciiFlyweight(buffer), 1);
+            .encode(new MutableAsciiBuffer(buffer), 1);
     }
 
     private void onMessage(final int messageType)

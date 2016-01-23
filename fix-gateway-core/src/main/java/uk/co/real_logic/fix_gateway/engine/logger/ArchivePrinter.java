@@ -23,7 +23,8 @@ import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.File;
 import java.io.PrintStream;
@@ -41,7 +42,7 @@ public class ArchivePrinter implements SessionHandler
     private static final int ID_ARG = 1;
 
     private final DataSubscriber subscriber = new DataSubscriber(this);
-    private final AsciiFlyweight ascii = new AsciiFlyweight();
+    private final AsciiBuffer ascii = new MutableAsciiBuffer();
 
     private final LogDirectoryDescriptor directoryDescriptor;
     private final ExistingBufferFactory bufferFactory;

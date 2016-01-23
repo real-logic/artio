@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.getValidInt;
 import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.toEpochDay;
@@ -30,13 +30,12 @@ public final class LocalMktDateDecoder
     public static final int MAX_EPOCH_DAYS = 2932896;
     public static final int LENGTH = 8;
 
-    private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
-    private final AsciiFlyweight flyweight = new AsciiFlyweight(buffer);
+    private final AsciiBuffer buffer = new MutableAsciiBuffer();
 
     public int decode(final byte[] bytes)
     {
         buffer.wrap(bytes);
-        return decode(flyweight, 0, 1);
+        return decode(buffer, 0, 1);
     }
 
     /**
@@ -46,7 +45,7 @@ public final class LocalMktDateDecoder
      * @param length
      * @return an int representing the number of days since the beginning of the epoch in the local timezone.
      */
-    public static int decode(final AsciiFlyweight timestamp, final int offset, final int length)
+    public static int decode(final AsciiBuffer timestamp, final int offset, final int length)
     {
         final int endYear = offset + 4;
         final int endMonth = endYear + 2;

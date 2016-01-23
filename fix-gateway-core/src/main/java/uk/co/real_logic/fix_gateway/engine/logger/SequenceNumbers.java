@@ -23,7 +23,8 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.RecordBuffer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.*;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
 import static uk.co.real_logic.agrona.concurrent.RecordBuffer.DID_NOT_CLAIM_RECORD;
@@ -45,7 +46,7 @@ public class SequenceNumbers implements Index
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
     private final HeaderDecoder fixHeader = new HeaderDecoder();
-    private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
+    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final LastKnownSequenceNumberEncoder lastKnownEncoder = new LastKnownSequenceNumberEncoder();
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
     private final int lastKnownBlockLength = lastKnownEncoder.sbeBlockLength();
@@ -107,8 +108,8 @@ public class SequenceNumbers implements Index
 
             offset += actingBlockLength + 2;
 
-            asciiFlyweight.wrap(buffer);
-            fixHeader.decode(asciiFlyweight, offset, messageFrame.bodyLength());
+            asciiBuffer.wrap(buffer);
+            fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
 
             final int msgSeqNum = fixHeader.msgSeqNum();
             final long sessionId = messageFrame.session();

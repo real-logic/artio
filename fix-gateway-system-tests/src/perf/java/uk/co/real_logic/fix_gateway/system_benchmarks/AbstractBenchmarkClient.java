@@ -7,7 +7,7 @@ import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -19,7 +19,7 @@ import static java.net.StandardSocketOptions.SO_RCVBUF;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.*;
-import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
+import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
 public abstract class AbstractBenchmarkClient
 {
@@ -29,11 +29,11 @@ public abstract class AbstractBenchmarkClient
 
     protected final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
     protected final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
-    protected final MutableAsciiFlyweight writeFlyweight =
-        new MutableAsciiFlyweight(new UnsafeBuffer(writeBuffer));
+    protected final MutableAsciiBuffer writeFlyweight =
+        new MutableAsciiBuffer(new UnsafeBuffer(writeBuffer));
     protected final ByteBuffer readBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
-    protected final MutableAsciiFlyweight readFlyweight =
-        new MutableAsciiFlyweight(new UnsafeBuffer(readBuffer));
+    protected final MutableAsciiBuffer readFlyweight =
+        new MutableAsciiBuffer(new UnsafeBuffer(readBuffer));
 
     protected boolean lastWasSep;
 
@@ -121,7 +121,7 @@ public abstract class AbstractBenchmarkClient
     }
 
     protected int scanForReceivesMessages(
-        final MutableAsciiFlyweight readFlyweight,
+        final MutableAsciiBuffer readFlyweight,
         final int length)
     {
         int messagesReceived = 0;
@@ -160,7 +160,7 @@ public abstract class AbstractBenchmarkClient
         return messagesReceived;
     }
 
-    protected static boolean isSeparator(final MutableAsciiFlyweight readFlyweight, final int index)
+    protected static boolean isSeparator(final MutableAsciiBuffer readFlyweight, final int index)
     {
         return readFlyweight.getChar(index) == '\001';
     }

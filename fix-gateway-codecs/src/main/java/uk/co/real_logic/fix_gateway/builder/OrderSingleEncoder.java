@@ -18,8 +18,8 @@ package uk.co.real_logic.fix_gateway.builder;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.flyweight_api.*;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.util.Currency;
 
@@ -30,27 +30,27 @@ public class OrderSingleEncoder implements MessageEncoder
 {
     private DirectBuffer buffer;
 
-    private AsciiFlyweight clOrdID;
+    private AsciiBuffer clOrdID;
     private char handlInst;
     private Side side;
     private OrdType ordType;
     private long transactTime;
-    private AsciiFlyweight symbol;
+    private AsciiBuffer symbol;
 
     private boolean hasClientID;
-    private AsciiFlyweight clientID;
+    private AsciiBuffer clientID;
 
     private boolean hasExecBroker;
-    private AsciiFlyweight execBroker;
+    private AsciiBuffer execBroker;
 
     private boolean hasAccount;
-    private AsciiFlyweight account;
+    private AsciiBuffer account;
 
     private boolean hasNoAllocs;
     private int noAllocs;
 
     private boolean hasAllocAccount;
-    private AsciiFlyweight allocAccount;
+    private AsciiBuffer allocAccount;
 
     private boolean hasAllocShares;
     private int allocShares;
@@ -77,19 +77,19 @@ public class OrderSingleEncoder implements MessageEncoder
     private int noTradingSessions;
 
     private boolean hasTradingSessionID;
-    private AsciiFlyweight tradingSessionID;
+    private AsciiBuffer tradingSessionID;
 
     private boolean hasProcessCode;
     private char processCode;
 
     private boolean hasSymbolSfx;
-    private AsciiFlyweight symbolSfx;
+    private AsciiBuffer symbolSfx;
 
     private boolean hasSecurityID;
-    private AsciiFlyweight securityID;
+    private AsciiBuffer securityID;
 
     private boolean hasIDSource;
-    private AsciiFlyweight iDSource;
+    private AsciiBuffer iDSource;
 
     private boolean hasMaturityMonthYear;
     private MonthYear maturityMonthYear;
@@ -116,13 +116,13 @@ public class OrderSingleEncoder implements MessageEncoder
     private Exchange securityExchange;
 
     private boolean hasIssuer;
-    private AsciiFlyweight issuer;
+    private AsciiBuffer issuer;
 
     private boolean hasEncodedIssuerLen;
     private int encodedIssuerLen;
 
     private boolean hasSecurityDesc;
-    private AsciiFlyweight securityDesc;
+    private AsciiBuffer securityDesc;
 
     private boolean hasEncodedSecurityDescLen;
     private int encodedSecurityDescLen;
@@ -149,16 +149,16 @@ public class OrderSingleEncoder implements MessageEncoder
     private Currency currency;
 
     private boolean hasComplianceID;
-    private AsciiFlyweight complianceID;
+    private AsciiBuffer complianceID;
 
     private boolean hasSolicitedFlag;
     private boolean solicitedFlag;
 
     private boolean hasIOIid;
-    private AsciiFlyweight iOIid;
+    private AsciiBuffer iOIid;
 
     private boolean hasQuoteID;
-    private AsciiFlyweight quoteID;
+    private AsciiBuffer quoteID;
 
     private boolean hasEffectiveTime;
     private long effectiveTime;
@@ -182,7 +182,7 @@ public class OrderSingleEncoder implements MessageEncoder
     {
     }
 
-    public int encode(final MutableAsciiFlyweight buffer, final int offset)
+    public int encode(final MutableAsciiBuffer buffer, final int offset)
     {
         return 0;
     }
@@ -197,7 +197,7 @@ public class OrderSingleEncoder implements MessageEncoder
         return this;
     }
 
-    public OrderSingleEncoder clOrdID(final AsciiFlyweight clOrdID)
+    public OrderSingleEncoder clOrdID(final AsciiBuffer clOrdID)
     {
         return this;
     }

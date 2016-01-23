@@ -26,12 +26,12 @@ public class MutableAsciiFlyweightTest
 {
 
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
-    private MutableAsciiFlyweight string = new MutableAsciiFlyweight(buffer);
+    private MutableAsciiBuffer string = new MutableAsciiBuffer(buffer);
 
     @Test
     public void shouldWriteIntZero()
     {
-        final int length = string.putInt(0, 0);
+        final int length = string.putAsciiInt(0, 0);
 
         assertEquals(1, length);
         assertThat(string, containsAscii("0", 0, 1));
@@ -40,7 +40,7 @@ public class MutableAsciiFlyweightTest
     @Test
     public void shouldWritePositiveIntValues()
     {
-        final int length = string.putInt(0, 123);
+        final int length = string.putAsciiInt(0, 123);
 
         assertEquals(3, length);
         assertThat(string, containsAscii("123", 0, 3));
@@ -49,7 +49,7 @@ public class MutableAsciiFlyweightTest
     @Test
     public void shouldWriteNegativeIntValues()
     {
-        final int length = string.putInt(0, -123);
+        final int length = string.putAsciiInt(0, -123);
 
         assertEquals(4, length);
         assertThat(string, containsAscii("-123", 0, 4));
@@ -58,7 +58,7 @@ public class MutableAsciiFlyweightTest
     @Test
     public void shouldWriteMaxIntValue()
     {
-        final int length = string.putInt(0, Integer.MAX_VALUE);
+        final int length = string.putAsciiInt(0, Integer.MAX_VALUE);
 
         assertThat(string, containsAscii(String.valueOf(Integer.MAX_VALUE), 0, length));
     }
@@ -66,7 +66,7 @@ public class MutableAsciiFlyweightTest
     @Test
     public void shouldWriteMinIntValue()
     {
-        final int length = string.putInt(0, Integer.MIN_VALUE);
+        final int length = string.putAsciiInt(0, Integer.MIN_VALUE);
 
         assertThat(string, containsAscii(String.valueOf(Integer.MIN_VALUE), 0, length));
     }
@@ -74,7 +74,7 @@ public class MutableAsciiFlyweightTest
     @Test
     public void shouldWriteLongZero()
     {
-        final int length = string.putLong(0, 0L);
+        final int length = string.putAsciiLong(0, 0L);
 
         assertEquals(1, length);
         assertThat(string, containsAscii("0", 0, 1));
@@ -83,7 +83,7 @@ public class MutableAsciiFlyweightTest
     @Test
     public void shouldWritePositiveLongValues()
     {
-        final int length = string.putLong(0, 123L);
+        final int length = string.putAsciiLong(0, 123L);
 
         assertEquals(3, length);
         assertThat(string, containsAscii("123", 0, 3));
@@ -92,7 +92,7 @@ public class MutableAsciiFlyweightTest
     @Test
     public void shouldWriteNegativeLongValues()
     {
-        final int length = string.putLong(0, -123L);
+        final int length = string.putAsciiLong(0, -123L);
 
         assertEquals(4, length);
         assertThat(string, containsAscii("-123", 0, 4));
@@ -101,7 +101,7 @@ public class MutableAsciiFlyweightTest
     @Test
     public void shouldWriteMaxLongValue()
     {
-        final int length = string.putLong(0, Long.MAX_VALUE);
+        final int length = string.putAsciiLong(0, Long.MAX_VALUE);
 
         assertThat(string, containsAscii(String.valueOf(Long.MAX_VALUE), 0, length));
     }
@@ -109,7 +109,7 @@ public class MutableAsciiFlyweightTest
     @Test
     public void shouldWriteMinLongValue()
     {
-        final int length = string.putLong(0, Long.MIN_VALUE);
+        final int length = string.putAsciiLong(0, Long.MIN_VALUE);
 
         assertThat(string, containsAscii(String.valueOf(Long.MIN_VALUE), 0, length));
     }

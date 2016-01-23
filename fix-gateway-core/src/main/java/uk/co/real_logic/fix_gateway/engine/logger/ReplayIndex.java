@@ -22,7 +22,8 @@ import uk.co.real_logic.agrona.collections.Long2ObjectCache;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.*;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -41,7 +42,7 @@ public class ReplayIndex implements Index
     }
 
     private final LongFunction<SessionIndex> newSessionIndex = SessionIndex::new;
-    private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
+    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final HeaderDecoder fixHeader = new HeaderDecoder();
@@ -84,8 +85,8 @@ public class ReplayIndex implements Index
 
             offset += actingBlockLength + 2;
 
-            asciiFlyweight.wrap(srcBuffer);
-            fixHeader.decode(asciiFlyweight, offset, messageFrame.bodyLength());
+            asciiBuffer.wrap(srcBuffer);
+            fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
 
             sessionToIndex
                 .computeIfAbsent(messageFrame.session(), newSessionIndex)

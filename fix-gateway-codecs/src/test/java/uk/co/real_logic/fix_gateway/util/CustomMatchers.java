@@ -40,15 +40,15 @@ public final class CustomMatchers
     /**
      * Assert that a range of an ascii flyweight equals a String.
      */
-    public static Matcher<AsciiFlyweight> containsAscii(final String expectedValue, final int offset, final int length)
+    public static Matcher<AsciiBuffer> containsAscii(final String expectedValue, final int offset, final int length)
     {
         Objects.requireNonNull(expectedValue);
 
-        return new TypeSafeMatcher<AsciiFlyweight>()
+        return new TypeSafeMatcher<AsciiBuffer>()
         {
             private String string;
 
-            protected boolean matchesSafely(final AsciiFlyweight item)
+            protected boolean matchesSafely(final AsciiBuffer item)
             {
                 this.string = item.getAscii(offset, length);
 
@@ -65,7 +65,7 @@ public final class CustomMatchers
         };
     }
 
-    public static Matcher<AsciiFlyweight> startsWithAscii(final String expectedValue)
+    public static Matcher<AsciiBuffer> startsWithAscii(final String expectedValue)
     {
         return containsAscii(expectedValue, 0, expectedValue.length());
     }
@@ -76,11 +76,11 @@ public final class CustomMatchers
 
         return new TypeSafeMatcher<DirectBuffer>()
         {
-            private final Matcher<AsciiFlyweight> flyweightMatcher = containsAscii(expectedValue, offset, length);
+            private final Matcher<AsciiBuffer> flyweightMatcher = containsAscii(expectedValue, offset, length);
 
             protected boolean matchesSafely(final DirectBuffer item)
             {
-                return flyweightMatcher.matches(new AsciiFlyweight(item));
+                return flyweightMatcher.matches(new MutableAsciiBuffer(item));
             }
 
             public void describeTo(final Description description)

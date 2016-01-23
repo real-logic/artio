@@ -27,8 +27,8 @@ import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.fields.LocalMktDateEncoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import javax.annotation.Generated;
 import java.nio.charset.StandardCharsets;
@@ -117,8 +117,8 @@ public abstract class Generator
             importFor(topType) +
             (type == MESSAGE ? COMMON_COMPOUND_IMPORTS : "") +
             importFor(DecimalFloat.class) +
-            importFor(MutableAsciiFlyweight.class) +
-            importFor(AsciiFlyweight.class) +
+            importFor(MutableAsciiBuffer.class) +
+            importFor(AsciiBuffer.class) +
             importFor(LocalMktDateEncoder.class) +
             importFor(UtcTimestampEncoder.class) +
             importFor(StandardCharsets.class) +

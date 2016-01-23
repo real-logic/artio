@@ -21,7 +21,7 @@ import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
 import org.junit.runner.RunWith;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.util.Arrays;
 
@@ -158,7 +158,7 @@ public class MonthYearTest
     private void assertDecodesMonthYear(final String input, final MonthYear expectedMonthYear)
     {
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[input.length()]);
-        final MutableAsciiFlyweight asciiFlyweight = new MutableAsciiFlyweight(buffer);
+        final MutableAsciiBuffer asciiFlyweight = new MutableAsciiBuffer(buffer);
         asciiFlyweight.putAscii(0, input);
 
         final boolean decode = monthYear.decode(asciiFlyweight, 0, input.length());
@@ -171,7 +171,7 @@ public class MonthYearTest
     {
         final int expectedLength = input.length();
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[expectedLength]);
-        final MutableAsciiFlyweight asciiFlyweight = new MutableAsciiFlyweight(buffer);
+        final MutableAsciiBuffer asciiFlyweight = new MutableAsciiBuffer(buffer);
 
         final int length = monthYear.encode(asciiFlyweight, 0);
 

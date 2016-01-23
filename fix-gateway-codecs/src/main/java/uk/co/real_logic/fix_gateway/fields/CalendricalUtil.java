@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static java.lang.String.format;
 import static java.time.Year.isLeap;
@@ -68,7 +68,7 @@ final class CalendricalUtil
     }
 
     static int getValidInt(
-        final AsciiFlyweight timestamp,
+        final AsciiBuffer timestamp,
         final int startInclusive,
         final int endExclusive,
         final int min,
@@ -124,7 +124,7 @@ final class CalendricalUtil
     // Based on:
     // https://github.com/ThreeTen/threetenbp/blob/master/src/main/java/org/threeten/bp/LocalDate.java#L281
     // Simplified to unnecessary remove negative year case.
-    static void encodeDate(final long epochDay, final MutableAsciiFlyweight string, final int offset)
+    static void encodeDate(final long epochDay, final MutableAsciiBuffer string, final int offset)
     {
         // adjust to 0000-03-01 so leap day is at end of four year cycle
         final long zeroDay = epochDay + DAYS_UNTIL_START_OF_UNIX_EPOCH - 60;

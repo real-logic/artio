@@ -22,7 +22,8 @@ import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQ_ID;
 
@@ -30,7 +31,7 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
 {
 
     private final OtfParser parser = new OtfParser(this, new IntDictionary());
-    final AsciiFlyweight string = new AsciiFlyweight();
+    final AsciiBuffer string = new MutableAsciiBuffer();
 
     private String testReqId;
 

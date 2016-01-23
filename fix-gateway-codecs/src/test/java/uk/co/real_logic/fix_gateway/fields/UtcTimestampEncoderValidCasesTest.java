@@ -20,7 +20,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -49,7 +49,7 @@ public class UtcTimestampEncoderValidCasesTest
     {
         final long epochMillis = toEpochMillis(timestamp);
         final int expectedLength = timestamp.length();
-        final MutableAsciiFlyweight string = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[expectedLength + 2]));
+        final MutableAsciiBuffer string = new MutableAsciiBuffer(new UnsafeBuffer(new byte[expectedLength + 2]));
 
         final int length = UtcTimestampEncoder.encode(epochMillis, string, 1);
 

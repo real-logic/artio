@@ -28,7 +28,7 @@ import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.*;
@@ -65,7 +65,7 @@ public class Session
     protected final SessionIdStrategy sessionIdStrategy;
     protected final GatewayPublication publication;
     protected final MutableDirectBuffer buffer;
-    protected final MutableAsciiFlyweight string;
+    protected final MutableAsciiBuffer string;
     private final char[] expectedBeginString;
     private final long sendingTimeWindow;
     private final AtomicCounter receivedMsgSeqNo;
@@ -125,7 +125,7 @@ public class Session
         lastSentMsgSeqNum = initialSequenceNumber - 1;
 
         buffer = new UnsafeBuffer(new byte[sessionBufferSize]);
-        string = new MutableAsciiFlyweight(buffer);
+        string = new MutableAsciiBuffer(buffer);
 
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);

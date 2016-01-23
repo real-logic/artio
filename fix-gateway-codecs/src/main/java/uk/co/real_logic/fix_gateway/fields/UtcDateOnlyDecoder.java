@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.getValidInt;
 import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.toEpochDay;
@@ -31,16 +31,15 @@ public final class UtcDateOnlyDecoder
     public static final int SIZE_OF_DAY = 2;
     public static final int LENGTH = SIZE_OF_YEAR + SIZE_OF_MONTH + SIZE_OF_DAY;
 
-    private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
-    private final AsciiFlyweight flyweight = new AsciiFlyweight(buffer);
+    private final AsciiBuffer flyweight = new MutableAsciiBuffer();
 
     public int decode(final byte[] bytes)
     {
-        buffer.wrap(bytes);
+        flyweight.wrap(bytes);
         return decode(flyweight, 0);
     }
 
-    public static int decode(final AsciiFlyweight date, final int offset)
+    public static int decode(final AsciiBuffer date, final int offset)
     {
         final int endYear = offset + SIZE_OF_YEAR;
         final int endMonth = endYear + SIZE_OF_MONTH;

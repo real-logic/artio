@@ -15,13 +15,13 @@
  */
 package uk.co.real_logic.fix_gateway.builder;
 
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
 public interface Decoder
 {
     int NO_ERROR = -1;
 
-    int decode(final AsciiFlyweight buffer, final int offset, final int length);
+    int decode(final AsciiBuffer buffer, final int offset, final int length);
 
     void reset();
 

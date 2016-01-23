@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.system_benchmarks;
 
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
@@ -43,7 +43,7 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
         public void run()
         {
             final SocketChannel socketChannel = this.socketChannel;
-            final MutableAsciiFlyweight readFlyweight = ThroughputBenchmarkClient.this.readFlyweight;
+            final MutableAsciiBuffer readFlyweight = ThroughputBenchmarkClient.this.readFlyweight;
 
             while (true)
             {

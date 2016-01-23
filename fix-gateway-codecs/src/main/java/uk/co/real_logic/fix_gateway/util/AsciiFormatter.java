@@ -20,7 +20,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight.LONGEST_INT_LENGTH;
+import static uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer.LONGEST_INT_LENGTH;
 
 /**
  * String formatting class with low garbage creation.
@@ -32,7 +32,7 @@ public class AsciiFormatter
 
     private final byte[][] segments;
     private final byte[] numberBuffer = new byte[LONGEST_INT_LENGTH + 1];
-    private final MutableAsciiFlyweight numberFlyweight = new MutableAsciiFlyweight(new UnsafeBuffer(numberBuffer));
+    private final MutableAsciiBuffer numberFlyweight = new MutableAsciiBuffer(new UnsafeBuffer(numberBuffer));
 
     private byte[] value = new byte[DEFAULT_LENGTH];
     private int index = 0;
@@ -68,7 +68,7 @@ public class AsciiFormatter
 
     public AsciiFormatter with(final int number)
     {
-        final int length = numberFlyweight.putInt(0, number);
+        final int length = numberFlyweight.putAsciiInt(0, number);
         return with(numberBuffer, length);
     }
 

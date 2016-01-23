@@ -24,8 +24,8 @@ import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 import uk.co.real_logic.fix_gateway.fields.*;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -314,8 +314,8 @@ public class DecoderGenerator extends Generator
                 importStaticFor(CodecUtil.class) +
                 importStaticFor(StandardFixConstants.class) +
                 importFor(DecimalFloat.class) +
-                importFor(MutableAsciiFlyweight.class) +
-                importFor(AsciiFlyweight.class) +
+                importFor(MutableAsciiBuffer.class) +
+                importFor(AsciiBuffer.class) +
                 importFor(LocalMktDateEncoder.class) +
                 importFor(UtcTimestampEncoder.class) +
                 importFor(StandardCharsets.class) +
@@ -627,7 +627,7 @@ public class DecoderGenerator extends Generator
         final String endGroupCheck = endGroupCheck(aggregate, isGroup);
 
         final String prefix =
-            "    public int decode(final AsciiFlyweight buffer, final int offset, final int length)\n" +
+            "    public int decode(final AsciiBuffer buffer, final int offset, final int length)\n" +
                 "    {\n" +
                 "        int seenFieldCount = 0;\n" +
                 "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +

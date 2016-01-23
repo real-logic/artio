@@ -23,7 +23,8 @@ import uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.fix_gateway.builder.Validation.isValidMsgType;
@@ -36,7 +37,7 @@ import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNE
 public class SessionParser
 {
 
-    private final AsciiFlyweight string = new AsciiFlyweight();
+    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final UtcTimestampDecoder timestampDecoder = new UtcTimestampDecoder();
     private final LogonDecoder logon = new LogonDecoder();
     private final LogoutDecoder logout = new LogoutDecoder();
@@ -73,7 +74,7 @@ public class SessionParser
         final int messageType,
         final long sessionId)
     {
-        string.wrap(buffer);
+        asciiBuffer.wrap(buffer);
 
         switch (messageType)
         {
@@ -124,7 +125,7 @@ public class SessionParser
     private void onHeartbeat(final int offset, final int length)
     {
         heartbeat.reset();
-        heartbeat.decode(string, offset, length);
+        heartbeat.decode(asciiBuffer, offset, length);
         final HeaderDecoder header = heartbeat.header();
         if (CODEC_VALIDATION_ENABLED && (!heartbeat.validate() || !validateHeader(header)))
         {
@@ -163,7 +164,7 @@ public class SessionParser
     {
         final HeaderDecoder header = this.header;
         header.reset();
-        header.decode(string, offset, length);
+        header.decode(asciiBuffer, offset, length);
 
         final char[] msgType = header.msgType();
         final int msgTypeLength = header.msgTypeLength();
@@ -205,7 +206,7 @@ public class SessionParser
     private void onSequenceReset(final int offset, final int length)
     {
         sequenceReset.reset();
-        sequenceReset.decode(string, offset, length);
+        sequenceReset.decode(asciiBuffer, offset, length);
         final HeaderDecoder header = sequenceReset.header();
         if (CODEC_VALIDATION_ENABLED && (!sequenceReset.validate() || !validateHeader(header)))
         {
@@ -225,7 +226,7 @@ public class SessionParser
     private void onTestRequest(final int offset, final int length)
     {
         testRequest.reset();
-        testRequest.decode(string, offset, length);
+        testRequest.decode(asciiBuffer, offset, length);
         final HeaderDecoder header = testRequest.header();
         if (CODEC_VALIDATION_ENABLED && (!testRequest.validate() || !validateHeader(header)))
         {
@@ -249,7 +250,7 @@ public class SessionParser
     private void onReject(final int offset, final int length)
     {
         reject.reset();
-        reject.decode(string, offset, length);
+        reject.decode(asciiBuffer, offset, length);
         final HeaderDecoder header = reject.header();
         if (CODEC_VALIDATION_ENABLED && (!reject.validate() || !validateHeader(header)))
         {
@@ -266,7 +267,7 @@ public class SessionParser
     private void onLogout(final int offset, final int length)
     {
         logout.reset();
-        logout.decode(string, offset, length);
+        logout.decode(asciiBuffer, offset, length);
         final HeaderDecoder header = logout.header();
         if (CODEC_VALIDATION_ENABLED && (!logout.validate() || !validateHeader(header)))
         {
@@ -283,7 +284,7 @@ public class SessionParser
     private void onLogon(final int offset, final int length, final long sessionId)
     {
         logon.reset();
-        logon.decode(string, offset, length);
+        logon.decode(asciiBuffer, offset, length);
         final HeaderDecoder header = logon.header();
         final char[] beginString = header.beginString();
         final int beginStringLength = header.beginStringLength();

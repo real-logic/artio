@@ -34,7 +34,8 @@ import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -331,7 +332,7 @@ public final class FixLibrary extends GatewayProcess
 
     private final DataSubscriber dataSubscriber = new DataSubscriber(new SessionHandler()
     {
-        private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
+        private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
         public void onConnect(
             final int libraryId,
@@ -356,8 +357,8 @@ public final class FixLibrary extends GatewayProcess
                 else
                 {
                     DebugLogger.log("Acct Connect: %d, %d\n", connectionId, libraryId);
-                    asciiFlyweight.wrap(buffer);
-                    final String address = asciiFlyweight.getAscii(addressOffset, addressLength);
+                    asciiBuffer.wrap(buffer);
+                    final String address = asciiBuffer.getAscii(addressOffset, addressLength);
                     if (isAcceptor)
                     {
                         final Session session = acceptSession(connectionId, lastSequenceNumber, address);

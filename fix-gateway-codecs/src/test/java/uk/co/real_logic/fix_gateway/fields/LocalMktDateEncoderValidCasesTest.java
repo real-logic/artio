@@ -20,7 +20,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.fields.LocalMktDateDecoderValidCasesTest.toLocalDay;
@@ -48,7 +48,7 @@ public class LocalMktDateEncoderValidCasesTest
         final int localDays = toLocalDay(timestamp);
 
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LocalMktDateEncoder.LENGTH]);
-        final MutableAsciiFlyweight timestampBytes = new MutableAsciiFlyweight(buffer);
+        final MutableAsciiBuffer timestampBytes = new MutableAsciiBuffer(buffer);
         LocalMktDateEncoder.encode(localDays, timestampBytes, 0);
 
         assertThat(timestampBytes, containsAscii(timestamp, 0, LocalMktDateEncoder.LENGTH));

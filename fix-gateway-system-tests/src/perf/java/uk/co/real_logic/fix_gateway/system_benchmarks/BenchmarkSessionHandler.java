@@ -21,11 +21,12 @@ import uk.co.real_logic.fix_gateway.decoder.PrinterImpl;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 public final class BenchmarkSessionHandler implements SessionHandler
 {
-    private final AsciiFlyweight flyweight = new AsciiFlyweight();
+    private final AsciiBuffer flyweight = new MutableAsciiBuffer();
     private final Printer printer = new PrinterImpl();
 
     public void onMessage(final DirectBuffer buffer,

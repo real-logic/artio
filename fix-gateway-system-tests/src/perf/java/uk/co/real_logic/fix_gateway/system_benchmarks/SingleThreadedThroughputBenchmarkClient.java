@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.system_benchmarks;
 
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
@@ -65,7 +65,7 @@ public final class SingleThreadedThroughputBenchmarkClient extends AbstractBench
 
     private int greedyRead(
         final SocketChannel socketChannel,
-        final MutableAsciiFlyweight readFlyweight)
+        final MutableAsciiBuffer readFlyweight)
     {
         int messagesReceived = 0;
 

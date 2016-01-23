@@ -16,8 +16,8 @@
 package uk.co.real_logic.fix_gateway.fields;
 
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.time.Month;
 
@@ -50,7 +50,7 @@ public final class MonthYear
     public static final int LONG_LENGTH = 8;
 
     private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
-    private final MutableAsciiFlyweight flyweight = new MutableAsciiFlyweight(buffer);
+    private final MutableAsciiBuffer flyweight = new MutableAsciiBuffer(buffer);
 
     private int year;
     private Month month = Month.JANUARY;
@@ -132,7 +132,7 @@ public final class MonthYear
         return decode(flyweight, 0, length);
     }
 
-    public boolean decode(final AsciiFlyweight buffer, final int offset, final int length)
+    public boolean decode(final AsciiBuffer buffer, final int offset, final int length)
     {
         if (length != SHORT_LENGTH && length != LONG_LENGTH)
         {
@@ -191,7 +191,7 @@ public final class MonthYear
         return encode(flyweight, 0);
     }
 
-    public int encode(final MutableAsciiFlyweight buffer, final int offset)
+    public int encode(final MutableAsciiBuffer buffer, final int offset)
     {
         final int endYear = offset + SIZE_OF_YEAR;
         final int endMonth = endYear + SIZE_OF_MONTH;

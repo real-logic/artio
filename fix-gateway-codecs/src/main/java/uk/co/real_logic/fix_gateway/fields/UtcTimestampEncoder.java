@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.fields;
 
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.*;
 
@@ -30,7 +30,7 @@ public final class UtcTimestampEncoder
 
     private final byte[] bytes = new byte[LENGTH_WITH_MILLISECONDS];
     private final UnsafeBuffer buffer = new UnsafeBuffer(bytes);
-    private final MutableAsciiFlyweight flyweight = new MutableAsciiFlyweight(buffer);
+    private final MutableAsciiBuffer flyweight = new MutableAsciiBuffer(buffer);
 
     public int encode(final long epochMillis)
     {
@@ -43,7 +43,7 @@ public final class UtcTimestampEncoder
         return bytes;
     }
 
-    public static int encode(final long epochMillis, final MutableAsciiFlyweight string, final int offset)
+    public static int encode(final long epochMillis, final MutableAsciiBuffer string, final int offset)
     {
         if (epochMillis < MIN_EPOCH_MILLIS || epochMillis > MAX_EPOCH_MILLIS)
         {

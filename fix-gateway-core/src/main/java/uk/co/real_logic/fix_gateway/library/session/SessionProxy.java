@@ -24,7 +24,7 @@ import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiFormatter;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.util.List;
 
@@ -83,7 +83,7 @@ public class SessionProxy
 
     private final AsciiFormatter lowSequenceNumber;
     private final UnsafeBuffer buffer;
-    private final MutableAsciiFlyweight string;
+    private final MutableAsciiBuffer string;
     private final GatewayPublication gatewayPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionCustomisationStrategy customisationStrategy;
@@ -108,7 +108,7 @@ public class SessionProxy
         this.connectionId = connectionId;
         this.libraryId = libraryId;
         buffer = new UnsafeBuffer(new byte[bufferSize]);
-        string = new MutableAsciiFlyweight(buffer);
+        string = new MutableAsciiBuffer(buffer);
         lowSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
     }
 

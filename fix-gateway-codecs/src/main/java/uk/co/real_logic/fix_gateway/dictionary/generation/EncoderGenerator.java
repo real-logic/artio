@@ -21,7 +21,7 @@ import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -33,7 +33,7 @@ import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.GROUP;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
-import static uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight.LONGEST_INT_LENGTH;
+import static uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer.LONGEST_INT_LENGTH;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatClassName;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
@@ -45,11 +45,11 @@ public class EncoderGenerator extends Generator
         "%s";
 
     private static final String TRAILER_PREFIX =
-        "    public int encode(final MutableAsciiFlyweight buffer, final int offset)\n" +
+        "    public int encode(final MutableAsciiBuffer buffer, final int offset)\n" +
         "    {\n" +
         "        throw new UnsupportedOperationException();\n" +
         "    }\n\n" +
-        "    public int encode(final MutableAsciiFlyweight buffer, final int offset, final int bodyStart)\n" +
+        "    public int encode(final MutableAsciiBuffer buffer, final int offset, final int bodyStart)\n" +
         "    {\n" +
         "        int position = offset;\n\n";
 
@@ -60,7 +60,7 @@ public class EncoderGenerator extends Generator
 
     private final byte[] buffer = new byte[LONGEST_INT_LENGTH + 1];
 
-    private final MutableAsciiFlyweight string = new MutableAsciiFlyweight(new UnsafeBuffer(buffer));
+    private final MutableAsciiBuffer string = new MutableAsciiBuffer(new UnsafeBuffer(buffer));
 
     private final int initialArraySize;
 
@@ -376,7 +376,7 @@ public class EncoderGenerator extends Generator
         final String prefix =
             aggregateType == AggregateType.TRAILER ?
                 TRAILER_PREFIX :
-                ("    public int encode(final MutableAsciiFlyweight buffer, final int offset)\n" +
+                ("    public int encode(final MutableAsciiBuffer buffer, final int offset)\n" +
                 "    {\n" +
                 "        int position = offset;\n\n" +
                 (hasCommonCompounds ? "        position += header.encode(buffer, position);\n" : ""));
@@ -423,7 +423,8 @@ public class EncoderGenerator extends Generator
 
     private String encodeBodyLength()
     {
-        return "        position += buffer.putBytes(position, BODY_LENGTH);\n" +
+        return "        buffer.putBytes(position, BODY_LENGTH);\n" +
+               "        position += BODY_LENGTH.length;\n" +
                "        bodyLength(position);\n";
     }
 
@@ -496,7 +497,14 @@ public class EncoderGenerator extends Generator
                 return generatePut(fieldName, tag, "Boolean", optionalSuffix);
 
             case DATA:
-                return generatePut(fieldName, tag, "Bytes", optionalSuffix);
+                return String.format(
+                    "%s" +
+                    "        buffer.putBytes(position, %s);\n" +
+                    "        position += %2$s.length;\n" +
+                    SUFFIX,
+                    tag,
+                    fieldName,
+                    optionalSuffix);
 
             case LOCALMKTDATE:
             case UTCTIMESTAMP:
@@ -558,7 +566,7 @@ public class EncoderGenerator extends Generator
     {
         return String.format(
             "%s" +
-            "        position += buffer.put%s(position, %s);\n" +
+            "        position += buffer.putAscii%s(position, %s);\n" +
             SUFFIX,
             tag,
             type,
@@ -588,7 +596,7 @@ public class EncoderGenerator extends Generator
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
         // TODO: tags aren't always ints
-        final int length = string.putInt(0, field.number());
+        final int length = string.putAsciiInt(0, field.number());
         final String bytes =
             IntStream.range(0, length)
                      .mapToObj(i -> String.valueOf(buffer[i]))

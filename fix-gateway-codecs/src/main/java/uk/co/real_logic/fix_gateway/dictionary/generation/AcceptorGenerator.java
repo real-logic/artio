@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -132,7 +132,7 @@ public class AcceptorGenerator
             "        this.acceptor = acceptor;\n" +
             "    }\n\n" +
             "    public void " + ON_MESSAGE + "(\n" +
-            "        final AsciiFlyweight buffer,\n" +
+            "        final AsciiBuffer buffer,\n" +
             "        final int offset,\n" +
             "        final int length,\n" +
             "        final int messageType)\n" +
@@ -167,7 +167,7 @@ public class AcceptorGenerator
     private void generateDecoderClass(final Writer decoderOutput) throws IOException
     {
         decoderOutput.append(fileHeader(packageName));
-        decoderOutput.append(importFor(AsciiFlyweight.class));
+        decoderOutput.append(importFor(AsciiBuffer.class));
         decoderOutput.append(
             "\n" +
             "public final class " + DICTIONARY_DECODER + "\n" +

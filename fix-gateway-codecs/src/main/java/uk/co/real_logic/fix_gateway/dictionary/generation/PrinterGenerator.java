@@ -20,7 +20,7 @@ import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Aggregate;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
 import java.util.stream.Stream;
@@ -35,7 +35,7 @@ public class PrinterGenerator
     private static final String CLASS_NAME = "PrinterImpl";
     private static final String CLASS_DECLARATION =
         importFor(Printer.class) +
-        importFor(AsciiFlyweight.class) +
+        importFor(AsciiBuffer.class) +
         "\npublic class PrinterImpl implements Printer\n" +
         "{\n\n";
 
@@ -98,7 +98,7 @@ public class PrinterGenerator
 
         return
             "    public String toString(\n" +
-            "        final AsciiFlyweight input,\n" +
+            "        final AsciiBuffer input,\n" +
             "        final int offset,\n" +
             "        final int length,\n" +
             "        final int messageType)\n" +

@@ -27,7 +27,7 @@ import java.util.Arrays;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
-import static uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight.LONGEST_FLOAT_LENGTH;
+import static uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer.LONGEST_FLOAT_LENGTH;
 
 @RunWith(Parameterized.class)
 public class DecimalFloatEncodingTest
@@ -63,10 +63,10 @@ public class DecimalFloatEncodingTest
     {
         final int length = input.length();
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LONGEST_FLOAT_LENGTH]);
-        final MutableAsciiFlyweight string = new MutableAsciiFlyweight(buffer);
+        final MutableAsciiBuffer string = new MutableAsciiBuffer(buffer);
         final DecimalFloat price = new DecimalFloat(value, scale);
 
-        final int encodedLength = string.putFloat(1, price);
+        final int encodedLength = string.putAsciiFloat(1, price);
 
         assertThat(string, containsAscii(input, 1, length));
         assertEquals(length, encodedLength);

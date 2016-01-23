@@ -17,22 +17,18 @@ package uk.co.real_logic.fix_gateway.util;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
+import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
-public class AsciiFlyweightTest
+public class AsciiBufferTest
 {
     private static final int OFFSET = 3;
     private static final byte[] BYTES = "8=FIX.4.2A 9=145A ".getBytes(US_ASCII);
 
-    private final AtomicBuffer buffer = new UnsafeBuffer(new byte[1024 * 16]);
-
-    private final AsciiFlyweight string = new AsciiFlyweight(buffer);
+    private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[1024 * 16]);
 
     private int value;
     private int second;
@@ -47,7 +43,7 @@ public class AsciiFlyweightTest
     @Test
     public void shouldReadDigits()
     {
-        value = string.getDigit(OFFSET);
+        value = buffer.getDigit(OFFSET);
 
         assertEquals(value, 8);
     }
@@ -55,13 +51,13 @@ public class AsciiFlyweightTest
     @Test(expected = IllegalArgumentException.class)
     public void shouldValidateDigits()
     {
-        string.getDigit(OFFSET + 1);
+        buffer.getDigit(OFFSET + 1);
     }
 
     @Test
     public void shouldFindCharactersWhenScanningBackwards()
     {
-        value = string.scanBack(BYTES.length, 0, '=');
+        value = buffer.scanBack(BYTES.length, 0, '=');
 
         assertEquals(15, value);
     }
@@ -69,7 +65,7 @@ public class AsciiFlyweightTest
     @Test
     public void shouldNotFindCharactersIfTheyDontExist()
     {
-        value = string.scanBack(BYTES.length, 0, 'Z');
+        value = buffer.scanBack(BYTES.length, 0, 'Z');
 
         assertEquals(UNKNOWN_INDEX, value);
     }
@@ -77,7 +73,7 @@ public class AsciiFlyweightTest
     @Test
     public void shouldGetIntegerValuesAtSpecifiedOffset()
     {
-        value = string.getNatural(16, 19);
+        value = buffer.getNatural(16, 19);
 
         assertEquals(145, value);
     }
@@ -87,7 +83,7 @@ public class AsciiFlyweightTest
     {
         putAscii("0");
 
-        value = string.getMessageType(0, 1);
+        value = buffer.getMessageType(0, 1);
 
         assertEquals('0', value);
     }
@@ -97,7 +93,7 @@ public class AsciiFlyweightTest
     {
         putAscii("D");
 
-        value = string.getMessageType(0, 1);
+        value = buffer.getMessageType(0, 1);
 
         assertEquals('D', value);
     }
@@ -107,7 +103,7 @@ public class AsciiFlyweightTest
     {
         putAscii("AO");
 
-        value = string.getMessageType(0, 2);
+        value = buffer.getMessageType(0, 2);
 
         assertEquals(20289, value);
     }
@@ -116,13 +112,13 @@ public class AsciiFlyweightTest
     public void shouldGenerateTwoCharMessageTypes()
     {
         putAscii("AM");
-        value = string.getMessageType(0, 2);
+        value = buffer.getMessageType(0, 2);
 
         putAscii("AL");
-        second = string.getMessageType(0, 2);
+        second = buffer.getMessageType(0, 2);
 
         putAscii("AQ");
-        third = string.getMessageType(0, 2);
+        third = buffer.getMessageType(0, 2);
 
         assertNotEquals(value, second);
         assertNotEquals(second, third);
@@ -133,7 +129,7 @@ public class AsciiFlyweightTest
     {
         putAscii("-1");
 
-        value = string.getInt(0, 2);
+        value = buffer.getInt(0, 2);
 
         assertEquals(-1, value);
     }

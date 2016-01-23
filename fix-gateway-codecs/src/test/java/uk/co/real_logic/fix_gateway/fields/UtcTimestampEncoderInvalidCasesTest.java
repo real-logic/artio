@@ -20,7 +20,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.util.Arrays;
 
@@ -47,7 +47,7 @@ public class UtcTimestampEncoderInvalidCasesTest
     public void cannotParseTimestamp()
     {
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[UtcTimestampEncoder.LENGTH_WITH_MILLISECONDS]);
-        final MutableAsciiFlyweight timestampBytes = new MutableAsciiFlyweight(buffer);
+        final MutableAsciiBuffer timestampBytes = new MutableAsciiBuffer(buffer);
         UtcTimestampEncoder.encode(timestamp, timestampBytes, 0);
     }
 }

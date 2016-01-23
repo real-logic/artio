@@ -21,7 +21,7 @@ import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.SIZE_OF_LENGTH_FIELD;
@@ -55,7 +55,7 @@ public class AbstractLogTest
         final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
         timestampEncoder.encode(System.currentTimeMillis());
         final UnsafeBuffer msgBuffer = new UnsafeBuffer(new byte[8 * 1024]);
-        final MutableAsciiFlyweight asciiFlyweight = new MutableAsciiFlyweight(msgBuffer);
+        final MutableAsciiBuffer asciiFlyweight = new MutableAsciiBuffer(msgBuffer);
         final TestRequestEncoder testRequest = new TestRequestEncoder();
         testRequest.testReqID("abc").header().sendingTime(timestampEncoder.buffer());
         if (hasPossDupFlag)

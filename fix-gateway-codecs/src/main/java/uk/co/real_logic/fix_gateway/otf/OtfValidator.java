@@ -20,7 +20,8 @@ import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.ValidationError.*;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.MESSAGE_TYPE;
@@ -33,7 +34,7 @@ public final class OtfValidator implements OtfMessageAcceptor
     private static final int UNKNOWN = -1;
 
     private final IntHashSet fieldsForMessage = new IntHashSet(1024, UNKNOWN);
-    private final AsciiFlyweight string = new AsciiFlyweight(null);
+    private final AsciiBuffer string = new MutableAsciiBuffer();
     private final AsciiFieldFlyweight stringField = new AsciiFieldFlyweight();
 
     private final OtfMessageAcceptor delegate;

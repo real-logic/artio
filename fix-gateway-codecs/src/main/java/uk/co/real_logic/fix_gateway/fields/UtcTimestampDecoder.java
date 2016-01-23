@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.MILLIS_IN_DAY;
 
@@ -35,13 +35,12 @@ public final class UtcTimestampDecoder
     public static final int SHORT_LENGTH = 17;
     public static final int LONG_LENGTH = 21;
 
-    private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
-    private final AsciiFlyweight flyweight = new AsciiFlyweight(buffer);
+    private final AsciiBuffer buffer = new MutableAsciiBuffer();
 
     public long decode(final byte[] bytes, final int length)
     {
         buffer.wrap(bytes);
-        return decode(flyweight, 0, length);
+        return decode(buffer, 0, length);
     }
 
     public long decode(final byte[] bytes)
@@ -55,7 +54,7 @@ public final class UtcTimestampDecoder
      * @param length
      * @return the number of milliseconds since the Unix Epoch that represents this timestamp
      */
-    public static long decode(final AsciiFlyweight timestamp, final int offset, final int length)
+    public static long decode(final AsciiBuffer timestamp, final int offset, final int length)
     {
         final long epochDay = UtcDateOnlyDecoder.decode(timestamp, offset);
         final long millisecondOfDay = UtcTimeOnlyDecoder.decode(timestamp, offset, length);

@@ -16,16 +16,14 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.agrona.ErrorHandler;
-import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -41,7 +39,7 @@ import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
-import static uk.co.real_logic.fix_gateway.util.AsciiFlyweight.UNKNOWN_INDEX;
+import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
 /**
  * Handles incoming data from sockets
@@ -73,8 +71,7 @@ public class ReceiverEndPoint
     private final Framer framer;
     private final ErrorHandler errorHandler;
     private final int libraryId;
-    private final AtomicBuffer buffer;
-    private final AsciiFlyweight string;
+    private final MutableAsciiBuffer buffer;
     private final ByteBuffer byteBuffer;
 
     private long sessionId;
@@ -107,8 +104,7 @@ public class ReceiverEndPoint
         this.libraryId = libraryId;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
-        buffer = new UnsafeBuffer(byteBuffer);
-        string = new AsciiFlyweight(buffer);
+        buffer = new MutableAsciiBuffer(byteBuffer);
     }
 
     public long connectionId()
@@ -250,19 +246,19 @@ public class ReceiverEndPoint
                                     final int offset,
                                     final int startOfChecksumTag)
     {
-        final int expectedChecksum = string.getInt(startOfChecksumValue - 1, endOfMessage);
-        final int computedChecksum = string.computeChecksum(offset, startOfChecksumTag + 1);
+        final int expectedChecksum = buffer.getInt(startOfChecksumValue - 1, endOfMessage);
+        final int computedChecksum = buffer.computeChecksum(offset, startOfChecksumTag + 1);
         return expectedChecksum != computedChecksum;
     }
 
     private int scanEndOfMessage(final int startOfChecksumValue)
     {
-        return string.scan(startOfChecksumValue, usedBufferData - 1, START_OF_HEADER);
+        return buffer.scan(startOfChecksumValue, usedBufferData - 1, START_OF_HEADER);
     }
 
     private int scanEndOfBodyLength(final int startOfBodyLength)
     {
-        return string.scan(startOfBodyLength + 1, usedBufferData - 1, START_OF_HEADER);
+        return buffer.scan(startOfBodyLength + 1, usedBufferData - 1, START_OF_HEADER);
     }
 
     private void saveInvalidMessage(final int offset)
@@ -290,7 +286,7 @@ public class ReceiverEndPoint
     {
         if (sessionId == UNKNOWN)
         {
-            logon.decode(string, offset, length);
+            logon.decode(buffer, offset, length);
             final Object compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
             sessionId = sessionIds.onLogon(compositeKey);
             if (sessionId == DUPLICATE_SESSION)
@@ -329,25 +325,25 @@ public class ReceiverEndPoint
 
     private int getMessageType(final int endOfBodyLength, final int indexOfLastByteOfMessage)
     {
-        final int start = string.scan(endOfBodyLength, indexOfLastByteOfMessage, '=');
-        if (string.getByte(start + 2) == START_OF_HEADER)
+        final int start = buffer.scan(endOfBodyLength, indexOfLastByteOfMessage, '=');
+        if (buffer.getByte(start + 2) == START_OF_HEADER)
         {
-            return string.getByte(start + 1);
+            return buffer.getByte(start + 1);
         }
-        return string.getMessageType(start + 1, 2);
+        return buffer.getMessageType(start + 1, 2);
     }
 
     private int getBodyLength(final int offset, final int endOfBodyLength)
     {
-        return string.getNatural(offset + START_OF_BODY_LENGTH, endOfBodyLength);
+        return buffer.getNatural(offset + START_OF_BODY_LENGTH, endOfBodyLength);
     }
 
     private boolean invalidBodyLengthTag(final int offset)
     {
         try
         {
-            return string.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD ||
-                   string.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
+            return buffer.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD ||
+                   buffer.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
         }
         catch (IllegalArgumentException e)
         {

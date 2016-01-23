@@ -19,7 +19,7 @@ import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.ValidationError.*;
@@ -32,7 +32,7 @@ public class OtfValidatorTest
     private IntDictionary requiredFields = new IntDictionary();
     private IntDictionary allFields = new IntDictionary();
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[16 * 1024]);
-    private MutableAsciiFlyweight string = new MutableAsciiFlyweight(buffer);
+    private MutableAsciiBuffer string = new MutableAsciiBuffer(buffer);
 
     private OtfValidator validator = new OtfValidator(acceptor, allFields, requiredFields);
 

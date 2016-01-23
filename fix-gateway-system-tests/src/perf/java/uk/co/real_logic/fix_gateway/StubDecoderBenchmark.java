@@ -17,10 +17,10 @@ package uk.co.real_logic.fix_gateway;
 
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.util.concurrent.TimeUnit;
 
@@ -33,13 +33,12 @@ import java.util.concurrent.TimeUnit;
 public class StubDecoderBenchmark
 {
     private LogonDecoder logonDecoder = new LogonDecoder();
-    private UnsafeBuffer buffer = TestData.LOGON;
-    private AsciiFlyweight asciiFlyweight = new AsciiFlyweight(buffer);
+    private AsciiBuffer buffer = new MutableAsciiBuffer(TestData.LOGON);
 
     @Benchmark
     public void decodeLogon(final Blackhole bh)
     {
-        bh.consume(logonDecoder.decode(asciiFlyweight, 0, buffer.capacity()));
+        bh.consume(logonDecoder.decode(buffer, 0, buffer.capacity()));
 
         final HeaderDecoder header = logonDecoder.header();
         bh.consume(header.msgSeqNum());

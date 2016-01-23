@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.*;
 import static uk.co.real_logic.fix_gateway.fields.UtcDateOnlyDecoder.LENGTH;
@@ -29,13 +29,12 @@ public final class UtcTimeOnlyDecoder
     public static final int SHORT_LENGTH = 8;
     public static final int LONG_LENGTH = 12;
 
-    private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
-    private final AsciiFlyweight flyweight = new AsciiFlyweight(buffer);
+    private final AsciiBuffer buffer = new MutableAsciiBuffer();
 
     public long decode(final byte[] bytes, final int length)
     {
         buffer.wrap(bytes);
-        return decode(flyweight, 0, length);
+        return decode(buffer, 0, length);
     }
 
     public long decode(final byte[] bytes)
@@ -43,7 +42,7 @@ public final class UtcTimeOnlyDecoder
         return decode(bytes, bytes.length);
     }
 
-    public static long decode(final AsciiFlyweight time, final int offset, final int length)
+    public static long decode(final AsciiBuffer time, final int offset, final int length)
     {
         final int startHour = offset + LENGTH + 1;
         final int endHour = startHour + 2;

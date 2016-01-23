@@ -19,8 +19,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -81,11 +80,10 @@ public class UtcTimestampDecoderValidCasesTest
         final long expected = toEpochMillis(timestamp);
 
         final byte[] bytes = timestamp.getBytes(US_ASCII);
-        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LONG_LENGTH + 2]);
+        final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[LONG_LENGTH + 2]);
         buffer.putBytes(1, bytes);
-        final AsciiFlyweight timestampBytes = new AsciiFlyweight(buffer);
 
-        final long epochMillis = UtcTimestampDecoder.decode(timestampBytes, 1, length);
+        final long epochMillis = UtcTimestampDecoder.decode(buffer, 1, length);
         assertEquals("Failed testcase for: " + timestamp, expected, epochMillis);
     }
 

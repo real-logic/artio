@@ -20,7 +20,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 
 import java.util.Arrays;
@@ -70,9 +69,8 @@ public class DecimalFloatDecodingTest
     public void canDecodeDecimalFloat()
     {
         final byte[] bytes = input.getBytes(US_ASCII);
-        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[bytes.length + 2]);
-        buffer.putBytes(1, bytes);
-        final AsciiFlyweight string = new AsciiFlyweight(buffer);
+        final MutableAsciiBuffer string = new MutableAsciiBuffer(new byte[bytes.length + 2]);
+        string.putBytes(1, bytes);
         final DecimalFloat price = new DecimalFloat();
 
         string.getFloat(price, 1, bytes.length);

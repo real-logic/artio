@@ -17,10 +17,9 @@ package uk.co.real_logic.fix_gateway;
 
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.util.concurrent.TimeUnit;
 
@@ -34,8 +33,7 @@ public class StubEncoderBenchmark
 {
     private UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
     private LogonEncoder logonEncoder = new LogonEncoder();
-    private UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
-    private MutableAsciiFlyweight asciiFlyweight = new MutableAsciiFlyweight(buffer);
+    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
     // deliberately not static/final
     private int sequenceNumber = 10;
@@ -67,7 +65,7 @@ public class StubEncoderBenchmark
 
         timestampEncoder.encode(System.currentTimeMillis());
 
-        bh.consume(logonEncoder.encode(asciiFlyweight, 0));
+        bh.consume(logonEncoder.encode(buffer, 0));
     }
 
 }

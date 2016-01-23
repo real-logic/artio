@@ -19,8 +19,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.lang.reflect.Proxy;
 import java.util.Map;
@@ -42,7 +42,7 @@ public class AcceptorGeneratorTest
     private static Class<?> acceptor;
     private static Class<?> decoder;
 
-    private MutableAsciiFlyweight buffer = new MutableAsciiFlyweight(new UnsafeBuffer(new byte[8 * 1024]));
+    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new UnsafeBuffer(new byte[8 * 1024]));
 
     @BeforeClass
     public static void generate() throws Exception
@@ -109,7 +109,7 @@ public class AcceptorGeneratorTest
     private void onMessage(final Object inst) throws Exception
     {
         buffer.putAscii(1, ENCODED_MESSAGE);
-        decoder.getMethod(ON_MESSAGE, AsciiFlyweight.class, int.class, int.class, int.class)
+        decoder.getMethod(ON_MESSAGE, AsciiBuffer.class, int.class, int.class, int.class)
                .invoke(inst, buffer, 1, ENCODED_MESSAGE.length(), '0');
     }
 

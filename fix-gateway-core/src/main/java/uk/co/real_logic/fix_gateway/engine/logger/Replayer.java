@@ -32,8 +32,8 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.nio.charset.StandardCharsets;
 
@@ -59,9 +59,9 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
 
     // Used in onMessage
-    private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
+    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     // Used in when updating the poss dup field
-    private final MutableAsciiFlyweight mutableAsciiFlyweight = new MutableAsciiFlyweight();
+    private final MutableAsciiBuffer mutableAsciiFlyweight = new MutableAsciiBuffer();
 
     private final Subscription subscription;
     private final ReplayQuery replayQuery;
@@ -110,10 +110,10 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
         {
             length = Math.min(length, srcBuffer.capacity() - srcOffset);
 
-            asciiFlyweight.wrap(srcBuffer);
+            asciiBuffer.wrap(srcBuffer);
             currentMessageOffset = srcOffset;
             currentMessageLength = length;
-            resendRequest.decode(asciiFlyweight, srcOffset, length);
+            resendRequest.decode(asciiBuffer, srcOffset, length);
 
             final int beginSeqNo = resendRequest.beginSeqNo();
             final int endSeqNo = resendRequest.endSeqNo();
@@ -203,7 +203,7 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
 
     private String message()
     {
-        return asciiFlyweight.getAscii(currentMessageOffset, currentMessageLength);
+        return asciiBuffer.getAscii(currentMessageOffset, currentMessageLength);
     }
 
     private void claimBuffer(final int newLength)

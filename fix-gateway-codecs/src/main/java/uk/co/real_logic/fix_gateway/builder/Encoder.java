@@ -15,11 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.builder;
 
-import uk.co.real_logic.fix_gateway.util.MutableAsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 public interface Encoder
 {
-    int encode(final MutableAsciiFlyweight buffer, final int offset);
+    int encode(final MutableAsciiBuffer buffer, final int offset);
 
     void reset();
 }

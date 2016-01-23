@@ -17,7 +17,8 @@ package uk.co.real_logic.fix_gateway.fields;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.MutableDirectBuffer;
-import uk.co.real_logic.fix_gateway.util.AsciiFlyweight;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
@@ -26,15 +27,13 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
  */
 public class AsciiFieldFlyweight
 {
-    private final AsciiFlyweight asciiFlyweight = new AsciiFlyweight();
-    private DirectBuffer buffer;
+    private final AsciiBuffer buffer = new MutableAsciiBuffer();
     private int offset;
     private int length;
 
     public void wrap(final DirectBuffer buffer, final int offset, final int length)
     {
-        asciiFlyweight.wrap(buffer);
-        this.buffer = buffer;
+        this.buffer.wrap(buffer);
         this.offset = offset;
         this.length = length;
     }
@@ -49,9 +48,9 @@ public class AsciiFieldFlyweight
         return length;
     }
 
-    protected final AsciiFlyweight asciiFlyweight()
+    protected final AsciiBuffer asciiFlyweight()
     {
-        return asciiFlyweight;
+        return buffer;
     }
 
     public String toString()
@@ -64,7 +63,7 @@ public class AsciiFieldFlyweight
         final char[] characters = new char[length];
         for (int i = 0; i < length; i++)
         {
-            characters[i] = asciiFlyweight.getChar(i + offset);
+            characters[i] = buffer.getChar(i + offset);
         }
 
         return characters;
