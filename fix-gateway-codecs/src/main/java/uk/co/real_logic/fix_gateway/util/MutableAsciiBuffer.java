@@ -20,7 +20,6 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.fields.*;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
@@ -37,6 +36,12 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     private static final byte Y = (byte)'Y';
     private static final byte N = (byte)'N';
     public static final int SIZE_OF_DOT = 1;
+
+    private static final int[] ROUNDS =
+    {
+        9, 99, 999, 9999, 99999, 999999, 9999999, 99999999, 999999999, Integer.MAX_VALUE
+    };
+    private static final byte[] MIN_INTEGER_VALUE = String.valueOf(Integer.MIN_VALUE).getBytes(US_ASCII);
 
     public MutableAsciiBuffer()
     {
@@ -311,7 +316,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
     public int putAscii(final int index, final String string)
     {
-        final byte[] bytes = string.getBytes(StandardCharsets.US_ASCII);
+        final byte[] bytes = string.getBytes(US_ASCII);
         putBytes(index, bytes);
 
         return bytes.length;
@@ -359,34 +364,46 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             return 1;
         }
 
+        if (value == Integer.MIN_VALUE)
+        {
+            putBytes(offset, MIN_INTEGER_VALUE);
+            return MIN_INTEGER_VALUE.length;
+        }
+
         int start = offset;
-        int remainder = value;
-        int length = 0;
+        int quotient = value;
+        int length = 1;
         if (value < 0)
         {
             putChar(offset, '-');
             start++;
             length++;
-        }
-        else
-        {
-            // Deal with negatives to avoid overflow for Integer.MAX_VALUE
-            remainder = -1 * remainder;
+            quotient = -quotient;
         }
 
-        final int end = start + LONGEST_INT_LENGTH;
-        int index = end;
-        while (remainder < 0)
+        int i = endOffset(quotient);
+        length += i;
+
+        while (i >= 0)
         {
-            final int digit = remainder % 10;
-            remainder = remainder / 10;
-            putByte(index, (byte)(ZERO + (-1 * digit)));
-            index--;
+            final int remainder = quotient % 10;
+            quotient = quotient / 10;
+            putByte(i + start, (byte)(ZERO + remainder));
+            i--;
         }
 
-        length += end - index;
-        putBytes(start, this, index + 1, length);
         return length;
+    }
+
+    private static int endOffset(final int value)
+    {
+        for (int i = 0; true; i++)
+        {
+            if (value <= ROUNDS[i])
+            {
+                return i;
+            }
+        }
     }
 
     public int putAsciiLong(final int offset, final long value)

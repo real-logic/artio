@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
 
-public class MutableAsciiFlyweightTest
+public class MutableAsciiBufferTest
 {
 
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
@@ -31,44 +31,44 @@ public class MutableAsciiFlyweightTest
     @Test
     public void shouldWriteIntZero()
     {
-        final int length = string.putAsciiInt(0, 0);
+        final int length = string.putAsciiInt(1, 0);
 
         assertEquals(1, length);
-        assertThat(string, containsAscii("0", 0, 1));
+        assertThat(string, containsAscii("0", 1, 1));
     }
 
     @Test
     public void shouldWritePositiveIntValues()
     {
-        final int length = string.putAsciiInt(0, 123);
+        final int length = string.putAsciiInt(1, 123);
 
         assertEquals(3, length);
-        assertThat(string, containsAscii("123", 0, 3));
+        assertThat(string, containsAscii("123", 1, 3));
     }
 
     @Test
     public void shouldWriteNegativeIntValues()
     {
-        final int length = string.putAsciiInt(0, -123);
+        final int length = string.putAsciiInt(1, -123);
 
         assertEquals(4, length);
-        assertThat(string, containsAscii("-123", 0, 4));
+        assertThat(string, containsAscii("-123", 1, 4));
     }
 
     @Test
     public void shouldWriteMaxIntValue()
     {
-        final int length = string.putAsciiInt(0, Integer.MAX_VALUE);
+        final int length = string.putAsciiInt(1, Integer.MAX_VALUE);
 
-        assertThat(string, containsAscii(String.valueOf(Integer.MAX_VALUE), 0, length));
+        assertThat(string, containsAscii(String.valueOf(Integer.MAX_VALUE), 1, length));
     }
 
     @Test
     public void shouldWriteMinIntValue()
     {
-        final int length = string.putAsciiInt(0, Integer.MIN_VALUE);
+        final int length = string.putAsciiInt(1, Integer.MIN_VALUE);
 
-        assertThat(string, containsAscii(String.valueOf(Integer.MIN_VALUE), 0, length));
+        assertThat(string, containsAscii(String.valueOf(Integer.MIN_VALUE), 1, length));
     }
 
     @Test
