@@ -37,11 +37,21 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     private static final byte N = (byte)'N';
     public static final int SIZE_OF_DOT = 1;
 
-    private static final int[] ROUNDS =
+    private static final int[] INT_ROUNDS =
     {
         9, 99, 999, 9999, 99999, 999999, 9999999, 99999999, 999999999, Integer.MAX_VALUE
     };
+
+    private static final long[] LONG_ROUNDS =
+    {
+        9L, 99L, 999L, 9999L, 99999L, 999999L, 9999999L, 99999999L, 999999999L,
+        9_999999999L, 99_999999999L, 999_999999999L, 9999_999999999L,
+        99999_999999999L, 999999_999999999L, 9999999_999999999L, 99999999_999999999L,
+        999999999_999999999L, Long.MAX_VALUE
+    };
+
     private static final byte[] MIN_INTEGER_VALUE = String.valueOf(Integer.MIN_VALUE).getBytes(US_ASCII);
+    private static final byte[] MIN_LONG_VALUE = String.valueOf(Long.MIN_VALUE).getBytes(US_ASCII);
 
     public MutableAsciiBuffer()
     {
@@ -399,7 +409,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     {
         for (int i = 0; true; i++)
         {
-            if (value <= ROUNDS[i])
+            if (value <= INT_ROUNDS[i])
             {
                 return i;
             }
@@ -413,15 +423,46 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             return 1;
         }
 
-        final long remainder = calculateRemainderAndPutMinus(offset, value);
-        final int minusAdj = value < 0 ? 1 : 0;
-        final int start = offset + minusAdj;
+        if (value == Long.MIN_VALUE)
+        {
+            putBytes(offset, MIN_LONG_VALUE);
+            return MIN_LONG_VALUE.length;
+        }
 
-        final int end = start + LONGEST_LONG_LENGTH;
-        final int index = putLong(remainder, end);
-        final int length = minusAdj + end - index;
-        putBytes(start, this, index + 1, length);
+        int start = offset;
+        long quotient = value;
+        int length = 1;
+        if (value < 0)
+        {
+            putChar(offset, '-');
+            start++;
+            length++;
+            quotient = -quotient;
+        }
+
+        int i = endOffset(quotient);
+        length += i;
+
+        while (i >= 0)
+        {
+            final long remainder = quotient % 10;
+            quotient = quotient / 10;
+            putByte(i + start, (byte)(ZERO + remainder));
+            i--;
+        }
+
         return length;
+    }
+
+    private static int endOffset(final long value)
+    {
+        for (int i = 0; true; i++)
+        {
+            if (value <= LONG_ROUNDS[i])
+            {
+                return i;
+            }
+        }
     }
 
     public int putAsciiFloat(final int offset, final DecimalFloat price)

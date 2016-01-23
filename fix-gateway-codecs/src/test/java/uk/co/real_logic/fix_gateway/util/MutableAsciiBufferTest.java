@@ -74,44 +74,44 @@ public class MutableAsciiBufferTest
     @Test
     public void shouldWriteLongZero()
     {
-        final int length = string.putAsciiLong(0, 0L);
+        final int length = string.putAsciiLong(1, 0L);
 
         assertEquals(1, length);
-        assertThat(string, containsAscii("0", 0, 1));
+        assertThat(string, containsAscii("0", 1, 1));
     }
 
     @Test
     public void shouldWritePositiveLongValues()
     {
-        final int length = string.putAsciiLong(0, 123L);
+        final int length = string.putAsciiLong(1, 123L);
 
         assertEquals(3, length);
-        assertThat(string, containsAscii("123", 0, 3));
+        assertThat(string, containsAscii("123", 1, 3));
     }
 
     @Test
     public void shouldWriteNegativeLongValues()
     {
-        final int length = string.putAsciiLong(0, -123L);
+        final int length = string.putAsciiLong(1, -123L);
 
         assertEquals(4, length);
-        assertThat(string, containsAscii("-123", 0, 4));
+        assertThat(string, containsAscii("-123", 1, 4));
     }
 
     @Test
     public void shouldWriteMaxLongValue()
     {
-        final int length = string.putAsciiLong(0, Long.MAX_VALUE);
+        final int length = string.putAsciiLong(1, Long.MAX_VALUE);
 
-        assertThat(string, containsAscii(String.valueOf(Long.MAX_VALUE), 0, length));
+        assertThat(string, containsAscii(String.valueOf(Long.MAX_VALUE), 1, length));
     }
 
     @Test
     public void shouldWriteMinLongValue()
     {
-        final int length = string.putAsciiLong(0, Long.MIN_VALUE);
+        final int length = string.putAsciiLong(1, Long.MIN_VALUE);
 
-        assertThat(string, containsAscii(String.valueOf(Long.MIN_VALUE), 0, length));
+        assertThat(string, containsAscii(String.valueOf(Long.MIN_VALUE), 1, length));
     }
 
 }
