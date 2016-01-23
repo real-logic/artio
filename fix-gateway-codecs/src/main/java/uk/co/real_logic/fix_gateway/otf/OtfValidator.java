@@ -15,13 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.otf;
 
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.ValidationError.*;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.MESSAGE_TYPE;
@@ -34,7 +32,6 @@ public final class OtfValidator implements OtfMessageAcceptor
     private static final int UNKNOWN = -1;
 
     private final IntHashSet fieldsForMessage = new IntHashSet(1024, UNKNOWN);
-    private final AsciiBuffer string = new MutableAsciiBuffer();
     private final AsciiFieldFlyweight stringField = new AsciiFieldFlyweight();
 
     private final OtfMessageAcceptor delegate;
@@ -81,14 +78,13 @@ public final class OtfValidator implements OtfMessageAcceptor
         }
     }
 
-    public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
+    public void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
         if (groupLevel == 0)
         {
             if (tag == MESSAGE_TYPE)
             {
-                string.wrap(buffer);
-                messageType = string.getMessageType(offset, length);
+                messageType = buffer.getMessageType(offset, length);
                 allFieldsForMessageType = allFields.values(messageType);
                 if (allFieldsForMessageType == null)
                 {

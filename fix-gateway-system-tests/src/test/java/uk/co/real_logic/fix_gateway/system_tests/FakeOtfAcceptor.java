@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
@@ -23,7 +22,6 @@ import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +33,6 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
 {
 
     private final List<FixMessage> messages = new ArrayList<>();
-    private final AsciiBuffer string = new MutableAsciiBuffer();
 
     private ValidationError error;
     private boolean isCompleted;
@@ -59,16 +56,15 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         message = null;
     }
 
-    public synchronized void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
+    public synchronized void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
         DebugLogger.log("Field: %s=%s\n", tag, buffer, offset, length);
-        string.wrap(buffer);
         if (tag == Constants.SENDER_COMP_ID)
         {
-            senderCompId = string.getAscii(offset, length);
+            senderCompId = buffer.getAscii(offset, length);
         }
 
-        message.put(tag, string.getAscii(offset, length));
+        message.put(tag, buffer.getAscii(offset, length));
     }
 
     public void onGroupHeader(final int tag, final int numInGroup)

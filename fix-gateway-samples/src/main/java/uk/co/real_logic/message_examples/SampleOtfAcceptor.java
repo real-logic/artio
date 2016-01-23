@@ -15,10 +15,10 @@
  */
 package uk.co.real_logic.message_examples;
 
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
 // You register the acceptor - which is your custom application hook
 // Your generic acceptor then gets callbacks for each field of the tag or tags that it
@@ -28,14 +28,12 @@ public class SampleOtfAcceptor implements OtfMessageAcceptor
     private boolean wantsToSell;
     private String symbol;
 
-    @Override
     public void onNext()
     {
         System.out.println("a NewOrderSingle has arrived");
     }
 
-    @Override
-    public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
+    public void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
         switch (tag)
         {
@@ -54,24 +52,20 @@ public class SampleOtfAcceptor implements OtfMessageAcceptor
         }
     }
 
-    @Override
     public void onGroupHeader(final int tag, final int numInGroup)
     {
         // Some FIX fields consist of repeating groups, you get callbacks
         // when these start and end.
     }
 
-    @Override
     public void onGroupBegin(final int tag, final int numInGroup, final int index)
     {
     }
 
-    @Override
     public void onGroupEnd(final int tag, final int numInGroup, final int index)
     {
     }
 
-    @Override
     public void onComplete()
     {
         // Message has been parsed and passed its checksum check.
@@ -83,7 +77,6 @@ public class SampleOtfAcceptor implements OtfMessageAcceptor
         }
     }
 
-    @Override
     public boolean onError(
         final ValidationError error, final int messageType, final int tagNumber, final AsciiFieldFlyweight value)
     {

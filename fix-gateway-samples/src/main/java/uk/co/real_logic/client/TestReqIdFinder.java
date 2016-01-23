@@ -23,7 +23,6 @@ import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQ_ID;
 
@@ -31,7 +30,6 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
 {
 
     private final OtfParser parser = new OtfParser(this, new IntDictionary());
-    final AsciiBuffer string = new MutableAsciiBuffer();
 
     private String testReqId;
 
@@ -57,12 +55,11 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
     {
     }
 
-    public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
+    public void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
-        string.wrap(buffer);
         if (tag == TEST_REQ_ID)
         {
-            this.testReqId = string.getAscii(offset, length);
+            this.testReqId = buffer.getAscii(offset, length);
         }
     }
 

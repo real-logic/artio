@@ -15,15 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.otf;
 
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.MessageAcceptor;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
 // TODO: add ability to abort parsing from within the acceptor
 public interface OtfMessageAcceptor extends MessageAcceptor
 {
     void onNext();
 
-    void onField(int tag, DirectBuffer buffer, int offset, int length);
+    void onField(int tag, AsciiBuffer buffer, int offset, int length);
 
     /**
      * Called at the beginning of a repeating group.

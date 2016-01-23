@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
 public final class OtfInlineableAcceptor implements OtfMessageAcceptor
 {
@@ -26,7 +26,7 @@ public final class OtfInlineableAcceptor implements OtfMessageAcceptor
 
     }
 
-    public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
+    public void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
     }
 

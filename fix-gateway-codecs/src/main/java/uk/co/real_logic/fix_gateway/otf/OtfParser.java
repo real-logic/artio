@@ -70,7 +70,7 @@ public final class OtfParser
 
         try
         {
-            parseFields(buffer, offset, offset + length, UNKNOWN, null, 0);
+            parseFields(offset, offset + length, UNKNOWN, null, 0);
 
             if (validChecksum(offset, checksum))
             {
@@ -88,7 +88,6 @@ public final class OtfParser
     }
 
     private int parseFields(
-        final DirectBuffer buffer,
         final int offset,
         final int end,
         final int groupTag,
@@ -145,7 +144,7 @@ public final class OtfParser
                     }
                 }
 
-                acceptor.onField(tag, buffer, valueOffset, valueLength);
+                acceptor.onField(tag, string, valueOffset, valueLength);
 
                 collectImportantFields(equalsPosition, valueOffset, endOfField, valueLength);
 
@@ -153,7 +152,7 @@ public final class OtfParser
             }
             else
             {
-                position = parseGroup(buffer, tag, valueOffset, endOfField, end, newGroupFields);
+                position = parseGroup(tag, valueOffset, endOfField, end, newGroupFields);
             }
         }
 
@@ -161,7 +160,6 @@ public final class OtfParser
     }
 
     private int parseGroup(
-        final DirectBuffer buffer,
         final int tag,
         final int valueOffset,
         final int endOfField,
@@ -175,7 +173,7 @@ public final class OtfParser
         if (numberOfElements > 0)
         {
             groupBegin(tag, numberOfElements, 0);
-            final int position = parseFields(buffer, endOfField + 1, end, tag, groupFields, numberOfElements);
+            final int position = parseFields(endOfField + 1, end, tag, groupFields, numberOfElements);
             if (position == end)
             {
                 groupEnd(tag, numberOfElements, numberOfElements - 1);

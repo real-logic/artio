@@ -20,9 +20,9 @@ import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
 import org.junit.runner.RunWith;
 import org.mockito.InOrder;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.ValidationError.INVALID_CHECKSUM;
@@ -41,7 +41,7 @@ public class OtfParserTest
 
     public static final int LENGTH = 16 * 1024;
 
-    private UnsafeBuffer buffer = new UnsafeBuffer(new byte[LENGTH]);
+    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[LENGTH]);
     private OtfMessageAcceptor mockAcceptor = mock(OtfMessageAcceptor.class);
     private IntDictionary groupToField = new IntDictionary();
     private OtfParser parser = new OtfParser(mockAcceptor, groupToField);
@@ -66,15 +66,15 @@ public class OtfParserTest
         parser.onMessage(buffer, offset, MSG_LEN);
 
         //8=FIX.4.2
-        inOrder.verify(mockAcceptor).onField(8, buffer, offset + 2, 7);
+        inOrder.verify(mockAcceptor).onField(eq(8), any(), eq(offset + 2), eq(7));
         //9=145
-        inOrder.verify(mockAcceptor).onField(9, buffer, offset + 12, 3);
+        inOrder.verify(mockAcceptor).onField(eq(9), any(), eq(offset + 12), eq(3));
         //35=D
-        inOrder.verify(mockAcceptor).onField(35, buffer, offset + 19, 1);
+        inOrder.verify(mockAcceptor).onField(eq(35), any(), eq(offset + 19), eq(1));
         //34=4
-        inOrder.verify(mockAcceptor).onField(34, buffer, offset + 24, 1);
+        inOrder.verify(mockAcceptor).onField(eq(34), any(), eq(offset + 24), eq(1));
 
-        inOrder.verify(mockAcceptor, times(15)).onField(anyInt(), eq(buffer), anyInt(), anyInt());
+        inOrder.verify(mockAcceptor, times(15)).onField(anyInt(), any(), anyInt(), anyInt());
     }
 
     @Theory
@@ -241,6 +241,6 @@ public class OtfParserTest
 
     private void verifyInOrderField(final int tag)
     {
-        inOrder.verify(mockAcceptor, times(1)).onField(eq(tag), eq(buffer), anyInt(), anyInt());
+        inOrder.verify(mockAcceptor, times(1)).onField(eq(tag), any(), anyInt(), anyInt());
     }
 }

@@ -15,19 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 class PossDupFinder implements OtfMessageAcceptor
 {
     public static final int NO_ENTRY = -1;
-
-    private final AsciiBuffer ascii = new MutableAsciiBuffer();
 
     private int possDupOffset;
     private int sendingTimeEnd;
@@ -44,7 +40,7 @@ class PossDupFinder implements OtfMessageAcceptor
         lengthOfBodyLength = NO_ENTRY;
     }
 
-    public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
+    public void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
         switch (tag)
         {
@@ -57,10 +53,9 @@ class PossDupFinder implements OtfMessageAcceptor
                 break;
 
             case Constants.BODY_LENGTH:
-                ascii.wrap(buffer);
                 bodyLengthOffset = offset;
                 lengthOfBodyLength = length;
-                bodyLength = ascii.getInt(offset, offset + length);
+                bodyLength = buffer.getInt(offset, offset + length);
                 break;
         }
     }

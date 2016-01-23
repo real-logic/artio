@@ -16,9 +16,9 @@
 package uk.co.real_logic.fix_gateway;
 
 import org.openjdk.jmh.annotations.CompilerControl;
-import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
 import static org.openjdk.jmh.annotations.CompilerControl.Mode.DONT_INLINE;
 
@@ -30,7 +30,7 @@ public final class OtfNoBlackHoleAcceptor implements OtfMessageAcceptor
     }
 
     @CompilerControl(DONT_INLINE)
-    public void onField(final int tag, final DirectBuffer buffer, final int offset, final int length)
+    public void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
     }
 

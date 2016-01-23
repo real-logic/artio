@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.otf;
 
 import org.junit.Test;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -31,8 +30,7 @@ public class OtfValidatorTest
 
     private IntDictionary requiredFields = new IntDictionary();
     private IntDictionary allFields = new IntDictionary();
-    private UnsafeBuffer buffer = new UnsafeBuffer(new byte[16 * 1024]);
-    private MutableAsciiBuffer string = new MutableAsciiBuffer(buffer);
+    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[16 * 1024]);
 
     private OtfValidator validator = new OtfValidator(acceptor, allFields, requiredFields);
 
@@ -155,7 +153,7 @@ public class OtfValidatorTest
 
     private void messageIsAHeartBeat()
     {
-        string.putAscii(0, "0");
+        buffer.putAscii(0, "0");
     }
 
     private void validateMessageType()
