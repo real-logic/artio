@@ -61,8 +61,7 @@ public class QuorumAcknowledgementStrategy implements AcknowledgementStrategy
             this.positions = positions = new long[size];
         }
 
-        // TODO: remove cast on next agrona release:
-        final Long2LongHashMap.Values values = (Long2LongHashMap.Values) sessionIdToPosition.values();
+        final Long2LongHashMap.Values values = sessionIdToPosition.values();
         final Long2LongHashMap.LongIterator it = values.iterator();
         for (int i = 0; i < size; i++)
         {
