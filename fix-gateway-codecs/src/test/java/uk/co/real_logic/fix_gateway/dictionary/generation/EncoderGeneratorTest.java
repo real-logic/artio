@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.Reflection;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -309,6 +310,16 @@ public class EncoderGeneratorTest
     }
 
     @Test
+    public void shouldEncodeShortTimestamp() throws Exception
+    {
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+
+        setRequiredFields(encoder, 0);
+
+        assertEncodesTo(encoder, SHORT_TIMESTAMP_MESSAGE);
+    }
+
+    @Test
     public void shouldDelegateToStringCallsForGroups() throws Exception
     {
         final Encoder encoder = (Encoder) heartbeat.newInstance();
@@ -406,12 +417,25 @@ public class EncoderGeneratorTest
 
     private void setRequiredFields(Encoder encoder) throws Exception
     {
+        setRequiredFields(encoder, 1);
+    }
+
+    private void setRequiredFields(final Encoder encoder, final int someTime) throws Exception
+    {
         setCharSequence(encoder, "onBehalfOfCompID", "abc");
         setInt(encoder, INT_FIELD, 2);
         setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+        setSomeTimeField(encoder, someTime);
+    }
+
+    private void setSomeTimeField(final Encoder encoder,
+                                  final int someTime) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException
+    {
         final UtcTimestampEncoder utcTimestampEncoder = new UtcTimestampEncoder();
-        utcTimestampEncoder.encode(1);
-        setByteArray(encoder, SOME_TIME_FIELD, utcTimestampEncoder.buffer());
+        final int length = utcTimestampEncoder.encode(someTime);
+        encoder.getClass()
+               .getMethod(SOME_TIME_FIELD, byte[].class, int.class)
+               .invoke(encoder, utcTimestampEncoder.buffer(), length);
     }
 
     private void setOptionalFields(Encoder encoder) throws Exception

@@ -199,6 +199,10 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=0059\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
             "\001124=2\00110=152\001";
 
+    public static final String SHORT_TIMESTAMP_MESSAGE =
+        "8=FIX.4.4\0019=0049\00135=0\001115=abc\001116=2\001117=1.1" +
+            "\001127=19700101-00:00:00\00110=209\001";
+
     public static final int TEST_REQ_ID_TAG = 112;
 
     public static final String OTHER_MESSAGE_TYPE = "AB";

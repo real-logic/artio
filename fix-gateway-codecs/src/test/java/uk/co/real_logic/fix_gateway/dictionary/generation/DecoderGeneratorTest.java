@@ -22,6 +22,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.Reflection;
 
@@ -416,6 +417,17 @@ public class DecoderGeneratorTest
         assertArrayEquals(OTHER_MESSAGE_TYPE_BYTES, messageTypeBytes);
     }
 
+    @Test
+    public void shouldDecodeShortTimestampMessageCorrectly() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(SHORT_TIMESTAMP_MESSAGE);
+
+        final byte[] someTime = getSomeTimeField(decoder);
+        final UtcTimestampDecoder someTimeDecoder = new UtcTimestampDecoder();
+        final long someTimeValue = someTimeDecoder.decode(someTime, someTime.length);
+        assertEquals(0, someTimeValue);
+    }
+
     private Object getStatic(Class<?> cls, String field) throws IllegalAccessException, NoSuchFieldException
     {
         return cls.getField(field).get(null);
@@ -473,42 +485,52 @@ public class DecoderGeneratorTest
         return (boolean) getField(encoder, HAS_TEST_REQ_ID);
     }
 
-    private boolean hasDataField(Decoder decoder) throws Exception
+    private boolean hasDataField(final Decoder decoder) throws Exception
     {
         return (boolean) getField(decoder, HAS_DATA_FIELD);
     }
 
-    private boolean hasBooleanField(Decoder decoder) throws Exception
+    private boolean hasBooleanField(final Decoder decoder) throws Exception
     {
         return (boolean) getField(decoder, HAS_BOOLEAN_FIELD);
     }
 
-    private Object getFloatField(Decoder decoder) throws Exception
+    private Object getFloatField(final Decoder decoder) throws Exception
     {
         return get(decoder, FLOAT_FIELD);
     }
 
-    private Object getIntField(Object decoder) throws Exception
+    private Object getIntField(final Object decoder) throws Exception
     {
         return get(decoder, INT_FIELD);
     }
 
-    private char[] getOnBehalfOfCompId(Decoder decoder) throws Exception
+    private char[] getOnBehalfOfCompId(final Decoder decoder) throws Exception
     {
         return getCharArray(decoder, ON_BEHALF_OF_COMP_ID);
     }
 
-    private byte[] getDataField(Decoder decoder) throws Exception
+    private byte[] getDataField(final Decoder decoder) throws Exception
     {
         return (byte[]) get(decoder, DATA_FIELD);
     }
 
-    private Object getBooleanField(Decoder decoder) throws Exception
+    private byte[] getSomeTimeField(final Decoder decoder) throws Exception
+    {
+        return (byte[]) get(decoder, SOME_TIME_FIELD);
+    }
+
+    private int getSomeTimeFieldLength(final Decoder decoder) throws Exception
+    {
+        return (int) get(decoder, SOME_TIME_FIELD + "Length");
+    }
+
+    private Object getBooleanField(final Decoder decoder) throws Exception
     {
         return get(decoder, BOOLEAN_FIELD);
     }
 
-    private char[] getTestReqId(Decoder decoder) throws Exception
+    private char[] getTestReqId(final Decoder decoder) throws Exception
     {
         return getCharArray(decoder, TEST_REQ_ID);
     }
