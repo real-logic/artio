@@ -88,7 +88,6 @@ public class AbstractionPublication implements AutoCloseable
         }
         else
         {
-            // TODO: remove this exception, once you've made the framer else backpressure-aware.
             throw new RuntimeException("Backpressured");
         }
     }

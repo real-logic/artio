@@ -17,12 +17,14 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.Reflection;
 
@@ -39,10 +41,7 @@ import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class EncoderGeneratorTest
 {
-    private static final StringWriterOutputManager OUTPUT_MANAGER = new StringWriterOutputManager();
-    private static final EncoderGenerator ENCODER_GENERATOR =
-        new EncoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, OUTPUT_MANAGER);
-
+    private static Map<String, CharSequence> sources;
     private static Class<?> heartbeat;
     private static Class<?> headerClass;
     private static Class<?> otherMessage;
@@ -52,12 +51,20 @@ public class EncoderGeneratorTest
     @BeforeClass
     public static void generate() throws Exception
     {
-        ENCODER_GENERATOR.generate();
-        final Map<String, CharSequence> sources = OUTPUT_MANAGER.getSources();
-        // System.out.println(sources);
+        sources = generateSources(true);
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
         headerClass = compileInMemory(HEADER_ENCODER, sources);
         otherMessage = compileInMemory(OTHER_MESSAGE_ENCODER, sources);
+    }
+
+    private static Map<String, CharSequence> generateSources(final boolean validation)
+    {
+        final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
+        final StringWriterOutputManager outputManager = new StringWriterOutputManager();
+        final EncoderGenerator encoderGenerator =
+            new EncoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager, validationClass);
+        encoderGenerator.generate();
+        return outputManager.getSources();
     }
 
     @Test
@@ -286,6 +293,21 @@ public class EncoderGeneratorTest
         assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE);
     }
 
+    // TODO: determine correct semantics for encoding required fields
+    @Ignore
+    @Test
+    public void shouldResetRequiredFields() throws Exception
+    {
+        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        setOptionalFields(encoder);
+
+        reset(encoder);
+
+        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+
+        assertEncodesTo(encoder, MISSING_EVERYTHING);
+    }
+
     @Test
     public void shouldDelegateToStringCallsForGroups() throws Exception
     {
@@ -299,7 +321,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldGenerateComponentClass() throws Exception
     {
-        final Class<?> component = compileInMemory(COMPONENT_ENCODER, OUTPUT_MANAGER.getSources());
+        final Class<?> component = compileInMemory(COMPONENT_ENCODER, sources);
 
         assertNotNull(component);
     }
@@ -387,6 +409,9 @@ public class EncoderGeneratorTest
         setCharSequence(encoder, "onBehalfOfCompID", "abc");
         setInt(encoder, INT_FIELD, 2);
         setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+        final UtcTimestampEncoder utcTimestampEncoder = new UtcTimestampEncoder();
+        utcTimestampEncoder.encode(1);
+        setByteArray(encoder, SOME_TIME_FIELD, utcTimestampEncoder.buffer());
     }
 
     private void setOptionalFields(Encoder encoder) throws Exception

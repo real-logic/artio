@@ -19,7 +19,6 @@ import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.IntIterator;
 import uk.co.real_logic.agrona.generation.OutputManager;
-import uk.co.real_logic.fix_gateway.builder.Validation;
 import uk.co.real_logic.fix_gateway.dictionary.CharArraySet;
 import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
@@ -72,14 +71,19 @@ public abstract class Generator
     protected final Dictionary dictionary;
     protected final String builderPackage;
     protected final OutputManager outputManager;
+    protected final Class<?> validationClass;
 
     private final Set<String> groupNames = new HashSet<>();
 
-    protected Generator(final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
+    protected Generator(final Dictionary dictionary,
+                        final String builderPackage,
+                        final OutputManager outputManager,
+                        final Class<?> validationClass)
     {
         this.dictionary = dictionary;
         this.builderPackage = builderPackage;
         this.outputManager = outputManager;
+        this.validationClass = validationClass;
     }
 
     public void generate()
@@ -128,7 +132,7 @@ public abstract class Generator
             importFor(IntIterator.class) +
             importFor(Generated.class) +
             importStaticFor(StandardCharsets.class, "US_ASCII") +
-            importStaticFor(Validation.class, CODEC_VALIDATION_ENABLED) +
+            importStaticFor(validationClass, CODEC_VALIDATION_ENABLED) +
             String.format("\n@Generated(\"%s\")\n", getClass().getName()) +
             "public class %2$s implements %5$s%3$s\n" +
             "{\n\n",
@@ -181,6 +185,11 @@ public abstract class Generator
 
     private String resetCall(final Entry entry)
     {
+        if (isNotResettableField(entry.name()))
+        {
+            return "";
+        }
+
         return String.format(
             "        %1$s();\n",
             resetMethodName(entry.name())
@@ -199,16 +208,14 @@ public abstract class Generator
     {
         final String name = field.name();
 
+        if (isNotResettableField(name))
+        {
+            return "";
+        }
+
         if (!isRequired)
         {
-            return String.format(
-                "    public void %2$s()\n" +
-                "    {\n" +
-                "        has%1$s = false;\n" +
-                "    }\n\n",
-                name,
-                resetMethodName(name)
-            );
+            return resetByFlag(name);
         }
 
         switch (field.type())
@@ -226,34 +233,88 @@ public abstract class Generator
             case QTY:
             case PERCENTAGE:
             case AMT:
-                return resetFieldValue(name, "null");
+                return resetFloat(name);
 
             case CHAR:
                 return resetFieldValue(name, "MISSING_CHAR");
 
-            // TODO
+            case DATA:
+                return resetFieldValue(name, "null");
+
             case STRING:
             case MULTIPLEVALUESTRING:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
+            case BOOLEAN:
+                return resetLength(name);
+
             case UTCTIMESTAMP:
             case LOCALMKTDATE:
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case MONTHYEAR:
-            case BOOLEAN:
-            case DATA:
                 return String.format(
                     "    public void %1$s()\n" +
-                    "    {\n" +
-                    "    }\n\n",
-                    resetMethodName(name)
-                );
+                        "    {\n" +
+                        "    }\n\n",
+                    resetMethodName(name));
 
             default:
                 throw new IllegalArgumentException("Unknown type: " + field.type());
         }
+    }
+
+    private boolean isNotResettableField(final String name)
+    {
+        return isDerivedField(name) || isPrecalculatedField(name);
+    }
+
+    private boolean isPrecalculatedField(final String name)
+    {
+        return "MessageName".equals(name) || "BeginString".equals(name) || "MsgType".equals(name);
+    }
+
+    private boolean isDerivedField(final String name)
+    {
+        return isBodyLength(name) || isCheckSum(name);
+    }
+
+    protected abstract String resetFloat(final String name);
+
+    private String resetLength(final String name)
+    {
+        return String.format(
+            "    public void %1$s()\n" +
+            "    {\n" +
+            "        %2$sLength = 0;\n" +
+            "    }\n\n",
+            resetMethodName(name),
+            formatPropertyName(name));
+    }
+
+    protected String resetByFlag(final String name)
+    {
+        return String.format(
+            "    public void %2$s()\n" +
+            "    {\n" +
+            "        has%1$s = false;\n" +
+            "    }\n\n",
+            name,
+            resetMethodName(name)
+        );
+    }
+
+    protected String resetByMethod(final String name)
+    {
+        return String.format(
+            "    public void %2$s()\n" +
+                "    {\n" +
+                "        %1$s.reset();\n" +
+                "    }\n\n",
+            formatPropertyName(name),
+            resetMethodName(name)
+        );
     }
 
     private String resetFieldValue(final String name, final String resetValue)
@@ -365,6 +426,9 @@ public abstract class Generator
             case COUNTRY:
             case UTCTIMEONLY:
             case UTCDATEONLY:
+            case UTCTIMESTAMP:
+            case LOCALMKTDATE:
+            case DAYOFMONTH:
             case MONTHYEAR:
                 return generateStringToString(fieldName);
 
@@ -374,6 +438,26 @@ public abstract class Generator
             default:
                 return fieldName;
         }
+    }
+
+    protected boolean isCheckSum(final Entry entry)
+    {
+        return entry != null && isCheckSum(entry.name());
+    }
+
+    private boolean isCheckSum(final String name)
+    {
+        return "CheckSum".equals(name);
+    }
+
+    protected boolean isBodyLength(final Entry entry)
+    {
+        return entry != null && isBodyLength(entry.name());
+    }
+
+    protected boolean isBodyLength(final String name)
+    {
+        return "BodyLength".equals(name);
     }
 
     protected abstract String generateStringToString(String fieldName);

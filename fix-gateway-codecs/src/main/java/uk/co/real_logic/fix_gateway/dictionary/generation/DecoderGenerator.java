@@ -79,9 +79,10 @@ public class DecoderGenerator extends Generator
         final Dictionary dictionary,
         final int initialBufferSize,
         final String builderPackage,
-        final OutputManager outputManager)
+        final OutputManager outputManager,
+        final Class<?> validationClass)
     {
-        super(dictionary, builderPackage, outputManager);
+        super(dictionary, builderPackage, outputManager, validationClass);
         this.initialBufferSize = initialBufferSize;
     }
 
@@ -120,6 +121,11 @@ public class DecoderGenerator extends Generator
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         });
+    }
+
+    protected String resetFloat(final String name)
+    {
+        return resetByMethod(name);
     }
 
     private String resetValidation()

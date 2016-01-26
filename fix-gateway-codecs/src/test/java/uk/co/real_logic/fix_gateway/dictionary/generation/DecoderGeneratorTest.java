@@ -40,6 +40,7 @@ import static uk.co.real_logic.fix_gateway.builder.Decoder.NO_ERROR;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.DecoderGenerator.*;
+import static uk.co.real_logic.fix_gateway.fields.DecimalFloat.MISSING_FLOAT;
 import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class DecoderGeneratorTest
@@ -49,8 +50,10 @@ public class DecoderGeneratorTest
     public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
 
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
-    private static ConstantGenerator constantGenerator = new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
-    private static DecoderGenerator decoderGenerator = new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager);
+    private static ConstantGenerator constantGenerator = new ConstantGenerator(
+        MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
+    private static DecoderGenerator decoderGenerator = new DecoderGenerator(
+        MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager, ValidationOn.class);
     private static Class<?> heartbeat;
     private static Class<?> component;
     private static Class<?> otherMessage;
@@ -172,7 +175,7 @@ public class DecoderGeneratorTest
 
         final Decoder header = getHeader(decoder);
 
-        assertEquals(49, getBodyLength(header));
+        assertEquals(75, getBodyLength(header));
     }
 
     @Test
@@ -186,6 +189,7 @@ public class DecoderGeneratorTest
         assertFalse(hasBooleanField(decoder));
         assertFalse(hasDataField(decoder));
 
+        assertEquals(MISSING_FLOAT, getFloatField(decoder));
         assertEquals(MISSING_INT, getIntField(decoder));
     }
 

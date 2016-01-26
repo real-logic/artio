@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -35,12 +34,12 @@ public class PrinterGeneratorTest
     private static ConstantGenerator constantGenerator =
         new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static DecoderGenerator decoderGenerator =
-        new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager);
+        new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager, ValidationOn.class);
     private static PrinterGenerator printerGenerator =
         new PrinterGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static Class<?> printer;
 
-    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new UnsafeBuffer(new byte[8 * 1024]));
+    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
     @BeforeClass
     public static void generate() throws Exception

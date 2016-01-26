@@ -43,6 +43,8 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 {
     public static final DecimalFloat MIN_VALUE = new DecimalFloat(Long.MIN_VALUE, 0);
     public static final DecimalFloat MAX_VALUE = new DecimalFloat(Long.MAX_VALUE, 0);
+    public static final DecimalFloat ZERO = new DecimalFloat();
+    public static final DecimalFloat MISSING_FLOAT = ZERO;
 
     private long value;
     private int scale;
@@ -56,6 +58,12 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
     {
         this.value = value;
         this.scale = scale;
+    }
+
+    public void reset()
+    {
+        value(0);
+        scale(0);
     }
 
     public long value()

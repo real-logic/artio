@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.dictionary;
 
 import uk.co.real_logic.agrona.generation.PackageOutputManager;
+import uk.co.real_logic.fix_gateway.builder.Validation;
 import uk.co.real_logic.fix_gateway.dictionary.generation.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 
@@ -48,9 +49,10 @@ public final class CodecGenerationTool
             final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, DECODER_PACKAGE, parent);
 
             final EncoderGenerator encoderGenerator = new EncoderGenerator(dictionary, 1, ENCODER_PACKAGE,
-                new PackageOutputManager(outputPath, ENCODER_PACKAGE));
+                new PackageOutputManager(outputPath, ENCODER_PACKAGE), Validation.class);
 
-            final DecoderGenerator decoderGenerator = new DecoderGenerator(dictionary, 1, DECODER_PACKAGE, decoder);
+            final DecoderGenerator decoderGenerator = new DecoderGenerator(dictionary, 1, DECODER_PACKAGE, decoder,
+                Validation.class);
             final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE, decoder);
             final AcceptorGenerator acceptorGenerator = new AcceptorGenerator(dictionary, DECODER_PACKAGE, decoder);
 

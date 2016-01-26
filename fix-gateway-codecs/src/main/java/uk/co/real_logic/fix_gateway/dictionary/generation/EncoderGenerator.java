@@ -68,9 +68,10 @@ public class EncoderGenerator extends Generator
         final Dictionary dictionary,
         final int initialArraySize,
         final String builderPackage,
-        final OutputManager outputManager)
+        final OutputManager outputManager,
+        final Class<?> validationClass)
     {
-        super(dictionary, builderPackage, outputManager);
+        super(dictionary, builderPackage, outputManager, validationClass);
         this.initialArraySize = initialArraySize;
     }
 
@@ -293,11 +294,6 @@ public class EncoderGenerator extends Generator
             formatPropertyName(numberField.name()));
     }
 
-    private boolean isBodyLength(final String name)
-    {
-        return "BodyLength".equals(name);
-    }
-
     private String generateStringSetter(
         final String className,
         final String fieldName,
@@ -442,16 +438,6 @@ public class EncoderGenerator extends Generator
                "        position++;\n";
     }
 
-    private boolean isCheckSum(final Entry entry)
-    {
-        return "CheckSum".equals(entry.name());
-    }
-
-    private boolean isBodyLength(final Entry entry)
-    {
-        return entry != null && isBodyLength(entry.name());
-    }
-
     private String encodeField(final Entry entry)
     {
         final Element element = entry.element();
@@ -484,6 +470,9 @@ public class EncoderGenerator extends Generator
             case CHAR:
                 return generatePut(fieldName, tag, "Char", optionalSuffix);
 
+            case BOOLEAN:
+                return generatePut(fieldName, tag, "Boolean", optionalSuffix);
+
             case STRING:
             case MULTIPLEVALUESTRING:
             case CURRENCY:
@@ -492,9 +481,6 @@ public class EncoderGenerator extends Generator
                 return formatEncoder(fieldName, optionalSuffix, tag,
                     "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
                     "        position += %2$sLength;\n");
-
-            case BOOLEAN:
-                return generatePut(fieldName, tag, "Boolean", optionalSuffix);
 
             case DATA:
                 return String.format(
@@ -636,5 +622,10 @@ public class EncoderGenerator extends Generator
             className,
             formatPropertyName(element.name())
         );
+    }
+
+    protected String resetFloat(final String name)
+    {
+        return resetByFlag(name);
     }
 }
