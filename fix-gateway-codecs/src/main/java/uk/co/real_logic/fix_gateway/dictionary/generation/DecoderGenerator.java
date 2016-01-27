@@ -138,7 +138,8 @@ public class DecoderGenerator extends Generator
             "        alreadyVisitedFields.clear();\n";
     }
 
-    private void generateValidation(final Writer out, final Aggregate aggregate, final AggregateType type) throws IOException
+    private void generateValidation(final Writer out, final Aggregate aggregate, final AggregateType type)
+        throws IOException
     {
         final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
         out.append(generateFieldDictionary(requiredFields, REQUIRED_FIELDS));
@@ -264,16 +265,15 @@ public class DecoderGenerator extends Generator
 
                 out.append(String.format(
                     "    public static final CharArraySet %1$s = new CharArraySet(%2$s);\n", valuesField, addValues));
-
             }
             else
             {
                 return "";
             }
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
-            LangUtil.rethrowUnchecked(e);
+            LangUtil.rethrowUnchecked(ex);
         }
 
         return String.format(
@@ -347,10 +347,11 @@ public class DecoderGenerator extends Generator
 
     private String generateComponentInterfaceGetter(Component component)
     {
-        return component.entries()
-                        .stream()
-                        .map(this::generateInterfaceGetter)
-                        .collect(joining("\n", "", "\n"));
+        return component
+            .entries()
+            .stream()
+            .map(this::generateInterfaceGetter)
+            .collect(joining("\n", "", "\n"));
     }
 
     private String generateGroupInterfaceGetter(Group group)
@@ -362,22 +363,22 @@ public class DecoderGenerator extends Generator
         );
     }
 
-    private String generateFieldInterfaceGetter(Entry entry, Field field)
+    private String generateFieldInterfaceGetter(final Entry entry, final Field field)
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
         final Type type = field.type();
 
         final String length = type.isStringBased()
-                            ? String.format("    public int %1$sLength();\n", fieldName) : "";
+            ? String.format("    public int %1$sLength();\n", fieldName) : "";
 
         final String optional = !entry.required()
-                              ? String.format("    public boolean has%1$s();\n", name) : "";
+            ? String.format("    public boolean has%1$s();\n", name) : "";
 
         return String.format(
-                "    public %1$s %2$s();\n" +
-                "%3$s" +
-                "%4$s",
+            "    public %1$s %2$s();\n" +
+            "%3$s" +
+            "%4$s",
             javaTypeOf(type),
             fieldName,
             optional,
@@ -429,10 +430,11 @@ public class DecoderGenerator extends Generator
 
     private String generateComponentField(final Component component)
     {
-        return component.entries()
-                        .stream()
-                        .map(this::generateGetter)
-                        .collect(joining("\n", "", "\n"));
+        return component
+            .entries()
+            .stream()
+            .map(this::generateGetter)
+            .collect(joining("\n", "", "\n"));
     }
 
     private String generateGroupGetter(final Group group)
@@ -490,14 +492,14 @@ public class DecoderGenerator extends Generator
 
         return String.format(
             "    private %s %s%s;\n\n" +
-                "%s" +
-                "    public %1$s %2$s()\n" +
-                "    {\n" +
-                "%s" +
-                "        return %2$s;\n" +
-                "    }\n\n" +
-                "%s\n" +
-                "%s",
+            "%s" +
+            "    public %1$s %2$s()\n" +
+            "    {\n" +
+            "%s" +
+            "        return %2$s;\n" +
+            "    }\n\n" +
+            "%s\n" +
+            "%s",
             javaTypeOf(type),
             fieldName,
             fieldInitialisation(type),
@@ -624,8 +626,7 @@ public class DecoderGenerator extends Generator
         }
     }
 
-    private String generateDecodeMethod(
-        final List<Entry> entries, final Aggregate aggregate, final AggregateType type)
+    private String generateDecodeMethod(final List<Entry> entries, final Aggregate aggregate, final AggregateType type)
     {
         final boolean hasCommonCompounds = type == MESSAGE;
         final boolean isGroup = type == GROUP;
@@ -761,10 +762,11 @@ public class DecoderGenerator extends Generator
     private String decodeComponent(final Entry entry)
     {
         final Component component = (Component) entry.element();
-        return component.entries()
-                        .stream()
-                        .map(this::decodeEntry)
-                        .collect(joining("\n", "", "\n"));
+        return component
+            .entries()
+            .stream()
+            .map(this::decodeEntry)
+            .collect(joining("\n", "", "\n"));
     }
 
     protected String generateComponentToString(final Component component)
