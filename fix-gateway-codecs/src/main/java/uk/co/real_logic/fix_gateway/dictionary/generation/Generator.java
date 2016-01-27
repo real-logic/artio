@@ -75,10 +75,11 @@ public abstract class Generator
 
     private final Set<String> groupNames = new HashSet<>();
 
-    protected Generator(final Dictionary dictionary,
-                        final String builderPackage,
-                        final OutputManager outputManager,
-                        final Class<?> validationClass)
+    protected Generator(
+        final Dictionary dictionary,
+        final String builderPackage,
+        final OutputManager outputManager,
+        final Class<?> validationClass)
     {
         this.dictionary = dictionary;
         this.builderPackage = builderPackage;
@@ -135,7 +136,7 @@ public abstract class Generator
             importStaticFor(validationClass, CODEC_VALIDATION_ENABLED) +
             String.format("\n@Generated(\"%s\")\n", getClass().getName()) +
             "public class %2$s implements %5$s%3$s\n" +
-            "{\n\n",
+            "{\n",
             builderPackage,
             className,
             interfaceList,
@@ -143,9 +144,10 @@ public abstract class Generator
             topType.getSimpleName());
     }
 
-    protected String generateResetMethods(final boolean isMessage,
-                                          final List<Entry> entries,
-                                          final String additionalReset)
+    protected String generateResetMethods(
+        final boolean isMessage,
+        final List<Entry> entries,
+        final String additionalReset)
     {
         final String resetCalls = entries
             .stream()
@@ -330,7 +332,7 @@ public abstract class Generator
         );
     }
 
-    protected String generateToString(Aggregate aggregate, final boolean hasCommonCompounds)
+    protected String generateToString(final Aggregate aggregate, final boolean hasCommonCompounds)
     {
         final String entriesToString =
                 aggregate.entries()
@@ -461,5 +463,4 @@ public abstract class Generator
     }
 
     protected abstract String generateStringToString(String fieldName);
-
 }
