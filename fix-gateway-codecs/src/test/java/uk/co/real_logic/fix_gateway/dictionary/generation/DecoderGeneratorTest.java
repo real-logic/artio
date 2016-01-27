@@ -188,6 +188,7 @@ public class DecoderGeneratorTest
         assertFalse(hasTestReqId(decoder));
         assertFalse(hasBooleanField(decoder));
         assertFalse(hasDataField(decoder));
+        assertFalse(hasComponentField(decoder));
 
         assertEquals(MISSING_FLOAT, getFloatField(decoder));
         assertEquals(MISSING_INT, getIntField(decoder));
@@ -486,6 +487,11 @@ public class DecoderGeneratorTest
     private boolean hasDataField(final Decoder decoder) throws Exception
     {
         return (boolean) getField(decoder, HAS_DATA_FIELD);
+    }
+
+    private boolean hasComponentField(final Decoder decoder) throws Exception
+    {
+        return (boolean) getField(decoder, HAS_COMPONENT_FIELD);
     }
 
     private boolean hasBooleanField(final Decoder decoder) throws Exception

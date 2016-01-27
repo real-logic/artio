@@ -307,6 +307,20 @@ public class EncoderGeneratorTest
         assertThat(encoder.toString(), containsString(STRING_RESET_SUFFIX));
     }
 
+    @Test
+    public void shouldResetComponents() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        setupComponent(encoder);
+
+        reset(encoder);
+
+        setRequiredFields(encoder);
+
+        assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE);
+    }
+
     @Test(expected = EncodingException.class)
     public void shouldValidateMissingRequiredStringFields() throws Exception
     {

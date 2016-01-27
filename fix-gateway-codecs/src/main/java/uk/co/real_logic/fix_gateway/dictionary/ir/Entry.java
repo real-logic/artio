@@ -98,6 +98,11 @@ public final class Entry
         return element() instanceof Field;
     }
 
+    public boolean isComponent()
+    {
+        return element() instanceof Component;
+    }
+
     @Override
     public String toString()
     {

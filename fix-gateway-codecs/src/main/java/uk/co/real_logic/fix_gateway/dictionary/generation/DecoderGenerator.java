@@ -117,7 +117,7 @@ public class DecoderGenerator extends Generator
             generateGroupMethods(out, aggregate);
             generateGetters(out, className, aggregate.entries());
             out.append(generateDecodeMethod(aggregate.entries(), aggregate, type));
-            out.append(generateResetMethods(isMessage, aggregate.entries(), resetValidation()));
+            out.append(generateCompleteResetMethod(isMessage, aggregate.entries(), resetValidation()));
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         });
@@ -892,5 +892,18 @@ public class DecoderGenerator extends Generator
     protected String resetTemporalValue(final String name)
     {
         return noReset(name);
+    }
+
+    protected String resetComponents(final List<Entry> entries, final StringBuilder methods)
+    {
+        return entries
+            .stream()
+            .filter(Entry::isComponent)
+            .map(entry ->
+            {
+                final Component component = (Component) entry.element();
+                return resetEntries(component.entries(), methods);
+            })
+            .collect(joining());
     }
 }

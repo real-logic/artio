@@ -146,22 +146,14 @@ public abstract class Generator
             topType.getSimpleName());
     }
 
-    protected String generateResetMethods(
+    protected String generateCompleteResetMethod(
         final boolean isMessage,
         final List<Entry> entries,
         final String additionalReset)
     {
-        final String resetCalls = entries
-            .stream()
-            .filter(Entry::isField)
-            .map(this::resetCall)
-            .collect(joining());
+        final StringBuilder methods = new StringBuilder();
 
-        final String resetMethods = entries
-            .stream()
-            .filter(Entry::isField)
-            .map(entry -> generateFieldReset(entry.required(), (Field) entry.element()))
-            .collect(joining());
+        final String resetEntries = resetEntries(entries, methods);
 
         final String resetHeaderAndTrailer = isMessage
             ? "        header.reset();\n" +
@@ -176,18 +168,37 @@ public abstract class Generator
             "    }\n\n" +
             "%s",
             resetHeaderAndTrailer,
-            resetCalls,
+            resetEntries,
             additionalReset,
-            resetMethods
+            methods
         );
     }
+
+    protected String resetEntries(final List<Entry> entries, final StringBuilder methods)
+    {
+        final String resetEntries = entries
+            .stream()
+            .filter(Entry::isField)
+            .map(this::callFieldReset)
+            .collect(joining()) +
+            resetComponents(entries, methods);
+
+        methods.append(entries
+            .stream()
+            .filter(Entry::isField)
+            .map(entry -> generateFieldReset(entry.required(), (Field) entry.element()))
+            .collect(joining()));
+        return resetEntries;
+    }
+
+    protected abstract String resetComponents(final List<Entry> entries, final StringBuilder methods);
 
     protected String resetMethodName(final String name)
     {
         return "reset" + name;
     }
 
-    private String resetCall(final Entry entry)
+    private String callFieldReset(final Entry entry)
     {
         if (isNotResettableField(entry.name()))
         {
@@ -197,6 +208,14 @@ public abstract class Generator
         return String.format(
             "        %1$s();\n",
             resetMethodName(entry.name())
+        );
+    }
+
+    protected String callComponentReset(final Entry entry)
+    {
+        return String.format(
+            "        %1$s.reset();\n",
+            formatPropertyName(entry.name())
         );
     }
 

@@ -66,10 +66,12 @@ public final class ExampleDictionary
     public static final String DATA_FIELD = "dataField";
     public static final String TEST_REQ_ID_LENGTH = "testReqIDLength";
     public static final String SOME_TIME_FIELD = "someTimeField";
+    public static final String COMPONENT_FIELD = "componentField";
 
     public static final String HAS_TEST_REQ_ID = "hasTestReqID";
     public static final String HAS_BOOLEAN_FIELD = "hasBooleanField";
     public static final String HAS_DATA_FIELD = "hasDataField";
+    public static final String HAS_COMPONENT_FIELD = "hasComponentField";
 
     public static final String MSG_TYPE = "msgType";
     public static final String BODY_LENGTH = "bodyLength";

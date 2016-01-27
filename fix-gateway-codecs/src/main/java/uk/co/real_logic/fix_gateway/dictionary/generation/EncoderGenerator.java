@@ -97,7 +97,7 @@ public class EncoderGenerator extends Generator
             generatePrecomputedHeaders(out, aggregate.entries());
             generateSetters(out, className, aggregate.entries());
             out.append(generateEncodeMethod(aggregate.entries(), aggregateType));
-            out.append(generateResetMethods(isMessage, aggregate.entries(), ""));
+            out.append(generateCompleteResetMethod(isMessage, aggregate.entries(), ""));
             out.append(generateToString(aggregate, isMessage));
             out.append("}\n");
         });
@@ -661,5 +661,14 @@ public class EncoderGenerator extends Generator
     protected String resetTemporalValue(final String name)
     {
         return resetLength(name);
+    }
+
+    protected String resetComponents(final List<Entry> entries, final StringBuilder methods)
+    {
+        return entries
+            .stream()
+            .filter(Entry::isComponent)
+            .map(this::callComponentReset)
+            .collect(joining());
     }
 }
