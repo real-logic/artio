@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
@@ -60,7 +59,7 @@ public class EncoderGenerator extends Generator
 
     private final byte[] buffer = new byte[LONGEST_INT_LENGTH + 1];
 
-    private final MutableAsciiBuffer string = new MutableAsciiBuffer(new UnsafeBuffer(buffer));
+    private final MutableAsciiBuffer string = new MutableAsciiBuffer(buffer);
 
     private final int initialArraySize;
 

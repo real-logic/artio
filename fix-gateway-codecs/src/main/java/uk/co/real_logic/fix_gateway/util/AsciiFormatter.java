@@ -15,8 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.util;
 
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-
 import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -32,7 +30,7 @@ public class AsciiFormatter
 
     private final byte[][] segments;
     private final byte[] numberBuffer = new byte[LONGEST_INT_LENGTH + 1];
-    private final MutableAsciiBuffer numberFlyweight = new MutableAsciiBuffer(new UnsafeBuffer(numberBuffer));
+    private final MutableAsciiBuffer numberFlyweight = new MutableAsciiBuffer(numberBuffer);
 
     private byte[] value = new byte[DEFAULT_LENGTH];
     private int index = 0;

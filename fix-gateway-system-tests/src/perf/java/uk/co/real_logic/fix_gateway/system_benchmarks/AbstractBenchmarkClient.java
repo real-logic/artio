@@ -1,6 +1,5 @@
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
@@ -30,10 +29,10 @@ public abstract class AbstractBenchmarkClient
     protected final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
     protected final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     protected final MutableAsciiBuffer writeFlyweight =
-        new MutableAsciiBuffer(new UnsafeBuffer(writeBuffer));
+        new MutableAsciiBuffer(writeBuffer);
     protected final ByteBuffer readBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     protected final MutableAsciiBuffer readFlyweight =
-        new MutableAsciiBuffer(new UnsafeBuffer(readBuffer));
+        new MutableAsciiBuffer(readBuffer);
 
     protected boolean lastWasSep;
 

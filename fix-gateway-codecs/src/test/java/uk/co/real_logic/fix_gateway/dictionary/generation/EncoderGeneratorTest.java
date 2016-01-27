@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
@@ -45,7 +44,7 @@ public class EncoderGeneratorTest
     private static Class<?> headerClass;
     private static Class<?> otherMessage;
 
-    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new UnsafeBuffer(new byte[8 * 1024]));
+    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
     @BeforeClass
     public static void generate() throws Exception
