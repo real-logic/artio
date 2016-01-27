@@ -66,6 +66,7 @@ public class DecoderGeneratorTest
         constantGenerator.generate();
         decoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
+        //System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sources);
         if (heartbeat == null)
         {

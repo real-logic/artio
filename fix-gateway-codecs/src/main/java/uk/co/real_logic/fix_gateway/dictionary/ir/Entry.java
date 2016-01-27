@@ -103,6 +103,11 @@ public final class Entry
         return element() instanceof Component;
     }
 
+    public boolean isGroup()
+    {
+        return element() instanceof Group;
+    }
+
     @Override
     public String toString()
     {

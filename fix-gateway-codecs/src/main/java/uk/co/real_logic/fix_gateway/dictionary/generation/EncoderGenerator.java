@@ -668,7 +668,7 @@ public class EncoderGenerator extends Generator
         return entries
             .stream()
             .filter(Entry::isComponent)
-            .map(this::callComponentReset)
+            .map(this::callResetMethod)
             .collect(joining());
     }
 }

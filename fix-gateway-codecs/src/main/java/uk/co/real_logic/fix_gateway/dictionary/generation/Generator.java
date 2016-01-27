@@ -161,7 +161,8 @@ public abstract class Generator
             : "";
 
         return String.format(
-            "    public void reset() {\n" +
+            "    public void reset()\n" +
+            "    {\n" +
             "%s" +
             "%s" +
             "%s" +
@@ -181,14 +182,53 @@ public abstract class Generator
             .filter(Entry::isField)
             .map(this::callFieldReset)
             .collect(joining()) +
-            resetComponents(entries, methods);
+            resetComponents(entries, methods) +
+            resetGroups(entries, methods);
 
         methods.append(entries
             .stream()
             .filter(Entry::isField)
             .map(entry -> generateFieldReset(entry.required(), (Field) entry.element()))
             .collect(joining()));
+
         return resetEntries;
+    }
+
+    private String resetGroups(final List<Entry> entries, final StringBuilder methods)
+    {
+        methods.append(entries
+            .stream()
+            .filter(Entry::isGroup)
+            .map(this::generateGroupMethod)
+            .collect(joining()));
+
+        return entries
+            .stream()
+            .filter(Entry::isGroup)
+            .map(this::callFieldReset)
+            .collect(joining());
+    }
+
+    private String generateGroupMethod(final Entry entry)
+    {
+        final Group group = (Group) entry.element();
+        final String name = group.name();
+        final Entry numberField = group.numberField();
+        return String.format(
+            "    public void %1$s()\n" +
+                "    {\n" +
+                "        if (%2$s != null)\n" +
+                "        {\n" +
+                "            %2$s.reset();\n" +
+                "        }\n" +
+                "        %3$s = 0;\n" +
+                "        has%4$s = false;\n" +
+                "    }\n\n",
+            resetMethodName(name),
+            formatPropertyName(name),
+            formatPropertyName(numberField.name()),
+            numberField.name()
+        );
     }
 
     protected abstract String resetComponents(final List<Entry> entries, final StringBuilder methods);
@@ -211,7 +251,7 @@ public abstract class Generator
         );
     }
 
-    protected String callComponentReset(final Entry entry)
+    protected String callResetMethod(final Entry entry)
     {
         return String.format(
             "        %1$s.reset();\n",

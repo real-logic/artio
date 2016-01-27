@@ -259,7 +259,7 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void shouldEncodeRepeatingGroups() throws Exception
+    public void shouldEncodeGroups() throws Exception
     {
         final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
@@ -269,7 +269,7 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void shouldEncodeNestedRepeatingGroups() throws Exception
+    public void shouldEncodeNestedGroups() throws Exception
     {
         final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
@@ -277,8 +277,7 @@ public class EncoderGeneratorTest
         final Object group = getEgGroup(encoder);
         setGroupField(group, 1);
 
-        final Object nestedGroup = getNestedGroup(group);
-        setInt(nestedGroup, "nestedField", 1);
+        setNestedField(group);
 
         assertEncodesTo(encoder, NESTED_GROUP_MESSAGE);
     }
@@ -313,6 +312,23 @@ public class EncoderGeneratorTest
         final Encoder encoder = (Encoder)heartbeat.newInstance();
 
         setupComponent(encoder);
+
+        reset(encoder);
+
+        setRequiredFields(encoder);
+
+        assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE);
+    }
+
+    @Test
+    public void shouldResetGroups() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        final Object group = getEgGroup(encoder);
+        setGroupField(group, 1);
+
+        setNestedField(group);
 
         reset(encoder);
 
@@ -456,6 +472,12 @@ public class EncoderGeneratorTest
         assertEncodesTo(encoder, "8=FIX.4.4\0019=0011\00135=AB\00199=0\00110=099\001");
     }
 
+    private void setNestedField(final Object group) throws Exception
+    {
+        final Object nestedGroup = getNestedGroup(group);
+        setInt(nestedGroup, "nestedField", 1);
+    }
+
     private boolean hasOnBehalfOfCompID(final Encoder encoder) throws Exception
     {
         return (boolean)get(encoder, "hasOnBehalfOfCompID");
@@ -547,6 +569,7 @@ public class EncoderGeneratorTest
     private void assertEncodesTo(final Encoder encoder, final String value)
     {
         final int length = encoder.encode(buffer, 1);
+        System.out.println(buffer.getAscii(1, length));
         assertThat(buffer, containsAscii(value, 1, value.length()));
         assertEquals(value.length(), length);
     }
