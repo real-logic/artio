@@ -443,20 +443,44 @@ public class EncoderGenerator extends Generator
         final Field field = (Field) element;
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
+        final Field.Type type = field.type();
+        final boolean mustCheckFlag = hasFlag(entry, field);
+        final boolean mustCheckLength = type.isStringBased();
+        final boolean needsMissingThrow = (type.isFloatBased() || mustCheckLength) && entry.required();
 
-        final String optionalPrefix = entry.required() ? "" : String.format("        if (has%s) {\n", name);
-        final String optionalSuffix = entry.required() ? "" : "        }\n";
+        final String enablingPrefix;
+        if (mustCheckFlag)
+        {
+            enablingPrefix = String.format("        if (has%s) {\n", name);
+        }
+        else if (mustCheckLength)
+        {
+            enablingPrefix = String.format("        if (%sLength > 0) {\n", fieldName);
+        }
+        else
+        {
+            enablingPrefix = "";
+        }
+        String enablingSuffix = mustCheckFlag || mustCheckLength ? "        }\n" : "";
+        if (needsMissingThrow)
+        {
+            enablingSuffix = enablingSuffix +
+                "        else if (" + CODEC_VALIDATION_ENABLED + ")\n" +
+                "        {\n" +
+                "            throw new EncodingException(\"Missing Field: " + name + "\");\n" +
+                "        }\n";
+        }
 
-        final String tag = formatTag(fieldName, optionalPrefix);
+        final String tag = formatTag(fieldName, enablingPrefix);
 
-        switch (field.type())
+        switch (type)
         {
             case INT:
             case LENGTH:
             case SEQNUM:
             case NUMINGROUP:
             case DAYOFMONTH:
-                return generatePut(fieldName, tag, "Int", optionalSuffix);
+                return generatePut(fieldName, tag, "Int", enablingSuffix);
 
             case FLOAT:
             case PRICE:
@@ -464,22 +488,25 @@ public class EncoderGenerator extends Generator
             case QTY:
             case PERCENTAGE:
             case AMT:
-                return generatePut(fieldName, tag, "Float", optionalSuffix);
+                return generatePut(fieldName, tag, "Float", enablingSuffix);
 
             case CHAR:
-                return generatePut(fieldName, tag, "Char", optionalSuffix);
+                return generatePut(fieldName, tag, "Char", enablingSuffix);
 
             case BOOLEAN:
-                return generatePut(fieldName, tag, "Boolean", optionalSuffix);
+                return generatePut(fieldName, tag, "Boolean", enablingSuffix);
 
             case STRING:
             case MULTIPLEVALUESTRING:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-                return formatEncoder(fieldName, optionalSuffix, tag,
-                    "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
-                    "        position += %2$sLength;\n");
+            case LOCALMKTDATE:
+            case UTCTIMESTAMP:
+            case MONTHYEAR:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+                return generateStringPut(fieldName, enablingSuffix, tag);
 
             case DATA:
                 return String.format(
@@ -489,20 +516,18 @@ public class EncoderGenerator extends Generator
                     SUFFIX,
                     tag,
                     fieldName,
-                    optionalSuffix);
-
-            case LOCALMKTDATE:
-            case UTCTIMESTAMP:
-            case MONTHYEAR:
-            case UTCTIMEONLY:
-            case UTCDATEONLY:
-                return formatEncoder(fieldName, optionalSuffix, tag,
-                    "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
-                    "        position += %2$sLength;\n");
+                    enablingSuffix);
 
             default:
-                throw new UnsupportedOperationException("Unknown type: " + field.type());
+                throw new UnsupportedOperationException("Unknown type: " + type);
         }
+    }
+
+    private String generateStringPut(final String fieldName, final String optionalSuffix, final String tag)
+    {
+        return formatEncoder(fieldName, optionalSuffix, tag,
+            "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
+            "        position += %2$sLength;\n");
     }
 
     private String formatEncoder(

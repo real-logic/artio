@@ -15,13 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
-
-/**
- * .
- */
-@FunctionalInterface
-public interface ErrorAcceptor
+public class EncodingException extends RuntimeException
 {
-    boolean onError(ValidationError error, int messageType, int tagNumber, AsciiFieldFlyweight value);
+    public EncodingException(final String message)
+    {
+        super(message);
+    }
 }

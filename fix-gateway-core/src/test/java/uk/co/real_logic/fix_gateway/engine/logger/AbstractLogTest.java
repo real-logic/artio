@@ -57,7 +57,14 @@ public class AbstractLogTest
         final UnsafeBuffer msgBuffer = new UnsafeBuffer(new byte[8 * 1024]);
         final MutableAsciiBuffer asciiFlyweight = new MutableAsciiBuffer(msgBuffer);
         final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest.testReqID("abc").header().sendingTime(timestampEncoder.buffer());
+
+        testRequest
+            .testReqID("abc")
+            .header()
+                .sendingTime(timestampEncoder.buffer())
+                .senderCompID("sender")
+                .targetCompID("target");
+
         if (hasPossDupFlag)
         {
             testRequest
@@ -65,6 +72,7 @@ public class AbstractLogTest
                 .possDupFlag(false)
                 .msgSeqNum(sequenceNumber);
         }
+
         logEntryLength = testRequest.encode(asciiFlyweight, 0);
 
         offset = START;

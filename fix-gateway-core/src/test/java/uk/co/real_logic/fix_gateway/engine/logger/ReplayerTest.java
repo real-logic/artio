@@ -157,7 +157,9 @@ public class ReplayerTest extends AbstractLogTest
         resendRequest
             .header()
             .sendingTime(timestampEncoder.buffer())
-            .msgSeqNum(1);
+            .msgSeqNum(1)
+            .senderCompID("sender")
+            .targetCompID("target");
 
         resendRequest
             .beginSeqNo(BEGIN_SEQ_NO)

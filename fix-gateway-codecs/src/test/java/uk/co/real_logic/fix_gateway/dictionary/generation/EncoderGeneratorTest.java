@@ -19,6 +19,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
+import uk.co.real_logic.fix_gateway.EncodingException;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
@@ -302,6 +303,39 @@ public class EncoderGeneratorTest
         assertThat(encoder.toString(), containsString(STRING_RESET_SUFFIX));
     }
 
+    @Test(expected = EncodingException.class)
+    public void shouldValidateMissingRequiredStringFields() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        setFloatField(encoder);
+        setSomeTimeField(encoder, 0);
+
+        encoder.encode(buffer, 1);
+    }
+
+    @Test(expected = EncodingException.class)
+    public void shouldValidateMissingRequiredFloatFields() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        setOnBehalfOfCompID(encoder);
+        setSomeTimeField(encoder, 0);
+
+        encoder.encode(buffer, 1);
+    }
+
+    @Test(expected = EncodingException.class)
+    public void shouldValidateMissingRequiredTemporalFields() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        setOnBehalfOfCompID(encoder);
+        setFloatField(encoder);
+
+        encoder.encode(buffer, 1);
+    }
+
     @Test
     public void shouldEncodeShortTimestamp() throws Exception
     {
@@ -415,10 +449,25 @@ public class EncoderGeneratorTest
 
     private void setRequiredFields(final Encoder encoder, final int someTime) throws Exception
     {
-        setCharSequence(encoder, "onBehalfOfCompID", "abc");
-        setInt(encoder, INT_FIELD, 2);
-        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+        setOnBehalfOfCompID(encoder);
+        setIntField(encoder);
+        setFloatField(encoder);
         setSomeTimeField(encoder, someTime);
+    }
+
+    private void setOnBehalfOfCompID(final Encoder encoder) throws Exception
+    {
+        setCharSequence(encoder, "onBehalfOfCompID", "abc");
+    }
+
+    private void setFloatField(final Encoder encoder) throws Exception
+    {
+        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+    }
+
+    private void setIntField(final Encoder encoder) throws Exception
+    {
+        setInt(encoder, INT_FIELD, 2);
     }
 
     private void setSomeTimeField(final Encoder encoder,

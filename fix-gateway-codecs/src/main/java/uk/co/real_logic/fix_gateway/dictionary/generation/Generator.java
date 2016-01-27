@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.collections.IntIterator;
 import uk.co.real_logic.agrona.generation.OutputManager;
+import uk.co.real_logic.fix_gateway.EncodingException;
 import uk.co.real_logic.fix_gateway.dictionary.CharArraySet;
 import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
@@ -132,6 +133,7 @@ public abstract class Generator
             importFor(IntHashSet.class) +
             importFor(IntIterator.class) +
             importFor(Generated.class) +
+            importFor(EncodingException.class) +
             importStaticFor(StandardCharsets.class, "US_ASCII") +
             importStaticFor(validationClass, CODEC_VALIDATION_ENABLED) +
             String.format("\n@Generated(\"%s\")\n", getClass().getName()) +

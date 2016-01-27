@@ -128,10 +128,10 @@ public final class Field implements Element
         // Boolean types
         BOOLEAN(false, false, false),
 
-        UTCTIMESTAMP(false, false, false), // YYYYMMDD-HH:MM:SS or YYYYMMDD-HH:MM:SS.sss
+        UTCTIMESTAMP(true, false, false), // YYYYMMDD-HH:MM:SS or YYYYMMDD-HH:MM:SS.sss
         UTCTIMEONLY(true, false, false), // HH:MM:SS or HH:MM:SS.sss
         UTCDATEONLY(true, false, false), // YYYYMMDD
-        LOCALMKTDATE(false, false, false), // YYYYMMDD
+        LOCALMKTDATE(true, false, false), // YYYYMMDD
         MONTHYEAR(true, false, false); // YYYYMM or YYYYMMDD or YYYYMMWW
 
         private final boolean isStringBased;
