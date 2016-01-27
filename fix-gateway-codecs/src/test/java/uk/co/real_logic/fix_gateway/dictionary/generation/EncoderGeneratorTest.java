@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
@@ -28,7 +27,6 @@ import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.Reflection;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -294,19 +292,15 @@ public class EncoderGeneratorTest
         assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE);
     }
 
-    // TODO: determine correct semantics for encoding required fields
-    @Ignore
     @Test
     public void shouldResetRequiredFields() throws Exception
     {
         final Encoder encoder = (Encoder) heartbeat.newInstance();
-        setOptionalFields(encoder);
+        setRequiredFields(encoder);
 
         reset(encoder);
 
-        setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
-
-        assertEncodesTo(encoder, MISSING_EVERYTHING);
+        assertThat(encoder.toString(), containsString(STRING_RESET_SUFFIX));
     }
 
     @Test
@@ -429,7 +423,7 @@ public class EncoderGeneratorTest
     }
 
     private void setSomeTimeField(final Encoder encoder,
-                                  final int someTime) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException
+                                  final int someTime) throws Exception
     {
         final UtcTimestampEncoder utcTimestampEncoder = new UtcTimestampEncoder();
         final int length = utcTimestampEncoder.encode(someTime);

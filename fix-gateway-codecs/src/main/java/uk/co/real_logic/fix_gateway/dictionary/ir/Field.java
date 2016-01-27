@@ -100,47 +100,49 @@ public final class Field implements Element
     public enum Type
     {
         // int types
-        INT(false, true),
-        LENGTH(false, true),
-        SEQNUM(false, true),
-        NUMINGROUP(false, true),
-        DAYOFMONTH(false, true),
+        INT(false, true, false),
+        LENGTH(false, true, false),
+        SEQNUM(false, true, false),
+        NUMINGROUP(false, true, false),
+        DAYOFMONTH(false, true, false),
 
         // float types
-        FLOAT(false, false),
-        PRICE(false, false),
-        PRICEOFFSET(false, false),
-        QTY(false, false),
-        PERCENTAGE(false, false), // Percentage represented as a float
-        AMT(false, false), // Float amount, not to be confused with boolean Y/N AMT
+        FLOAT(false, false, true),
+        PRICE(false, false, true),
+        PRICEOFFSET(false, false, true),
+        QTY(false, false, true),
+        PERCENTAGE(false, false, true), // Percentage represented as a float
+        AMT(false, false, true), // Float amount, not to be confused with boolean Y/N AMT
 
-        CHAR(false, false),
+        CHAR(false, false, false),
 
-        STRING(true, false),
-        MULTIPLEVALUESTRING(true, false),
+        STRING(true, false, false),
+        MULTIPLEVALUESTRING(true, false, false),
 
-        CURRENCY(true, false), // String using ISO 4217 (3 chars)
-        EXCHANGE(true, false), // String using ISO 10383 (2 chars)
-        COUNTRY(true, false), // String using ISO 3166
+        CURRENCY(true, false, false), // String using ISO 4217 (3 chars)
+        EXCHANGE(true, false, false), // String using ISO 10383 (2 chars)
+        COUNTRY(true, false, false), // String using ISO 3166
 
-        DATA(false, false),
+        DATA(false, false, false),
 
         // Boolean types
-        BOOLEAN(false, false),
+        BOOLEAN(false, false, false),
 
-        UTCTIMESTAMP(false, false), // YYYYMMDD-HH:MM:SS or YYYYMMDD-HH:MM:SS.sss
-        UTCTIMEONLY(true, false), // HH:MM:SS or HH:MM:SS.sss
-        UTCDATEONLY(true, false), // YYYYMMDD
-        LOCALMKTDATE(false, false), // YYYYMMDD
-        MONTHYEAR(true, false); // YYYYMM or YYYYMMDD or YYYYMMWW
+        UTCTIMESTAMP(false, false, false), // YYYYMMDD-HH:MM:SS or YYYYMMDD-HH:MM:SS.sss
+        UTCTIMEONLY(true, false, false), // HH:MM:SS or HH:MM:SS.sss
+        UTCDATEONLY(true, false, false), // YYYYMMDD
+        LOCALMKTDATE(false, false, false), // YYYYMMDD
+        MONTHYEAR(true, false, false); // YYYYMM or YYYYMMDD or YYYYMMWW
 
         private final boolean isStringBased;
         private final boolean isIntBased;
+        private final boolean isFloatBased;
 
-        Type(final boolean isStringBased, final boolean isIntBased)
+        Type(final boolean isStringBased, final boolean isIntBased, final boolean isFloatBased)
         {
             this.isStringBased = isStringBased;
             this.isIntBased = isIntBased;
+            this.isFloatBased = isFloatBased;
         }
 
         public boolean isStringBased()
@@ -151,6 +153,11 @@ public final class Field implements Element
         public boolean isIntBased()
         {
             return isIntBased;
+        }
+
+        public boolean isFloatBased()
+        {
+            return isFloatBased;
         }
 
         public static Type lookup(final String name)
@@ -164,9 +171,6 @@ public final class Field implements Element
             return valueOf(name);
         }
     }
-
-    // TODO: properly provide parsing support for:
-    // MONTHYEAR
 
     // TODO: provide lookup table support for:
     // CURRENCY

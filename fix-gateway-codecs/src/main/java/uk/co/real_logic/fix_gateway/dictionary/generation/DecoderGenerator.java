@@ -881,4 +881,14 @@ public class DecoderGenerator extends Generator
     {
         return String.format("new String(%s)", fieldName);
     }
+
+    protected boolean hasFlag(final Entry entry, final Field field)
+    {
+        return !entry.required();
+    }
+
+    protected String resetTemporalValue(final String name)
+    {
+        return noReset(name);
+    }
 }

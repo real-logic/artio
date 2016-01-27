@@ -628,4 +628,14 @@ public class EncoderGenerator extends Generator
     {
         return resetByFlag(name);
     }
+
+    protected boolean hasFlag(final Entry entry, final Field field)
+    {
+        return !entry.required() || field.type().isFloatBased();
+    }
+
+    protected String resetTemporalValue(final String name)
+    {
+        return resetLength(name);
+    }
 }

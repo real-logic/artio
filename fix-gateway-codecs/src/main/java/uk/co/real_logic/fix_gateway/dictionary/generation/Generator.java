@@ -254,15 +254,22 @@ public abstract class Generator
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case MONTHYEAR:
-                return String.format(
-                    "    public void %1$s()\n" +
-                        "    {\n" +
-                        "    }\n\n",
-                    resetMethodName(name));
+                return resetTemporalValue(name);
 
             default:
                 throw new IllegalArgumentException("Unknown type: " + field.type());
         }
+    }
+
+    protected abstract String resetTemporalValue(final String name);
+
+    protected String noReset(final String name)
+    {
+        return String.format(
+            "    public void %1$s()\n" +
+                "    {\n" +
+                "    }\n\n",
+            resetMethodName(name));
     }
 
     private boolean isNotResettableField(final String name)
@@ -282,7 +289,7 @@ public abstract class Generator
 
     protected abstract String resetFloat(final String name);
 
-    private String resetLength(final String name)
+    protected String resetLength(final String name)
     {
         return String.format(
             "    public void %1$s()\n" +
@@ -381,7 +388,8 @@ public abstract class Generator
                 value
             );
 
-            return "             " + (entry.required() ? formatter : String.format("(has%s ? %s : \"\")", name, formatter));
+            final boolean hasFlag = hasFlag(entry, field);
+            return "             " + (hasFlag ? String.format("(has%s ? %s : \"\")", name, formatter) : formatter);
         }
         else if (element instanceof Group)
         {
@@ -401,6 +409,8 @@ public abstract class Generator
 
         return "\"\"";
     }
+
+    protected abstract boolean hasFlag(final Entry entry, final Field field);
 
     protected String hasGetter(final String name)
     {

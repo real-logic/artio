@@ -433,7 +433,6 @@ public class DecoderGeneratorTest
         return cls.getField(field).get(null);
     }
 
-    // TODO: validation for data fields
     // TODO: validation for groups
 
     private void assertHasComponentFieldGetter() throws NoSuchMethodException
