@@ -44,6 +44,7 @@ public class EncoderGeneratorTest
     private static Class<?> heartbeat;
     private static Class<?> headerClass;
     private static Class<?> otherMessage;
+    private static Class<?> heartbeatWithoutValidation;
 
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
@@ -54,6 +55,9 @@ public class EncoderGeneratorTest
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
         headerClass = compileInMemory(HEADER_ENCODER, sources);
         otherMessage = compileInMemory(OTHER_MESSAGE_ENCODER, sources);
+
+        final Map<String, CharSequence> sourcesWithoutValidation = generateSources(false);
+        heartbeatWithoutValidation = compileInMemory(HEARTBEAT_ENCODER, sourcesWithoutValidation);
     }
 
     private static Map<String, CharSequence> generateSources(final boolean validation)
@@ -329,6 +333,39 @@ public class EncoderGeneratorTest
     public void shouldValidateMissingRequiredTemporalFields() throws Exception
     {
         final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        setOnBehalfOfCompID(encoder);
+        setFloatField(encoder);
+
+        encoder.encode(buffer, 1);
+    }
+
+    @Test
+    public void canDisableRequiredStringFieldValidation() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeatWithoutValidation.newInstance();
+
+        setFloatField(encoder);
+        setSomeTimeField(encoder, 0);
+
+        encoder.encode(buffer, 1);
+    }
+
+    @Test
+    public void canDisableRequiredFloatFieldValidation() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeatWithoutValidation.newInstance();
+
+        setOnBehalfOfCompID(encoder);
+        setSomeTimeField(encoder, 0);
+
+        encoder.encode(buffer, 1);
+    }
+
+    @Test
+    public void canDisableRequiredTemporalFieldValidation() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeatWithoutValidation.newInstance();
 
         setOnBehalfOfCompID(encoder);
         setFloatField(encoder);
