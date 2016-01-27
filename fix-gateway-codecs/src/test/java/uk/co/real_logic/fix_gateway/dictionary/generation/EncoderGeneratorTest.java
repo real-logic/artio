@@ -103,7 +103,7 @@ public class EncoderGeneratorTest
 
         setTestReqIdTo(encoder, "abcd");
 
-        assertArrayEquals(new byte[]{97, 98, 99, 100}, (byte[]) getField(encoder, TEST_REQ_ID));
+        assertArrayEquals(new byte[]{97, 98, 99, 100}, (byte[])getField(encoder, TEST_REQ_ID));
         assertEquals(4, getField(encoder, TEST_REQ_ID_LENGTH));
     }
 
@@ -112,9 +112,9 @@ public class EncoderGeneratorTest
     {
         final Object encoder = heartbeat.newInstance();
 
-        final Object value = new char[] {'a', 'b', 'c'};
+        final Object value = new char[]{'a', 'b', 'c'};
         heartbeat.getMethod(TEST_REQ_ID, char[].class)
-                 .invoke(encoder, value);
+            .invoke(encoder, value);
 
         assertTestReqIsValue(encoder);
     }
@@ -164,7 +164,7 @@ public class EncoderGeneratorTest
         assertNotNull(headerClass);
         assertTrue(Encoder.class.isAssignableFrom(headerClass));
 
-        final Encoder header = (Encoder) headerClass.newInstance();
+        final Encoder header = (Encoder)headerClass.newInstance();
 
         setCharSequence(header, "beginString", "abc");
         setCharSequence(header, "msgType", "abc");
@@ -175,7 +175,7 @@ public class EncoderGeneratorTest
     @Test
     public void encodesValues() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
 
         setRequiredFields(encoder);
 
@@ -189,7 +189,7 @@ public class EncoderGeneratorTest
     @Test
     public void ignoresMissingOptionalValues() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
 
         setRequiredFields(encoder);
         setupHeader(encoder);
@@ -201,7 +201,7 @@ public class EncoderGeneratorTest
     @Test
     public void automaticallyComputesDerivedHeaderAndTrailerFields() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
 
         setRequiredFields(encoder);
 
@@ -211,7 +211,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldGenerateHumanReadableToString() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
 
         setRequiredFields(encoder);
 
@@ -221,7 +221,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldIncludeOptionalFieldsInToString() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
 
         setRequiredFields(encoder);
         setOptionalFields(encoder);
@@ -232,7 +232,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeShorterStringsAfterLongerStrings() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
 
         setRequiredFields(encoder);
 
@@ -246,7 +246,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldToStringShorterStringsAfterLongerStrings() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
 
         setRequiredFields(encoder);
 
@@ -259,7 +259,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeRepeatingGroups() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
         setGroup(encoder);
 
@@ -269,7 +269,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeNestedRepeatingGroups() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
 
         final Object group = getEgGroup(encoder);
@@ -284,7 +284,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldResetOptionalFields() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
         setOptionalFields(encoder);
 
         reset(encoder);
@@ -299,7 +299,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldResetRequiredFields() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
         setOptionalFields(encoder);
 
         reset(encoder);
@@ -312,7 +312,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeShortTimestamp() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
 
         setRequiredFields(encoder, 0);
 
@@ -322,7 +322,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldDelegateToStringCallsForGroups() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
         setGroup(encoder);
 
@@ -340,7 +340,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeComponents() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
 
         setupComponent(encoder);
@@ -351,7 +351,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldBeAbleToToStringComponentValues() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
 
         setupComponent(encoder);
@@ -362,7 +362,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldGenerateHasMethodsForFields() throws Exception
     {
-        final Encoder encoder = (Encoder) heartbeat.newInstance();
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
 
         assertTrue(hasOnBehalfOfCompID(encoder));
@@ -372,7 +372,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldGenerateTwoCharacterMessageTypes() throws Exception
     {
-        final Encoder encoder = (Encoder) otherMessage.newInstance();
+        final Encoder encoder = (Encoder)otherMessage.newInstance();
 
         assertThat(encoder.toString(), containsString("\"MsgType\": \"" + OTHER_MESSAGE_TYPE + "\""));
         assertEncodesTo(encoder, "8=FIX.4.4\0019=0011\00135=AB\00199=0\00110=099\001");
@@ -380,12 +380,12 @@ public class EncoderGeneratorTest
 
     private boolean hasOnBehalfOfCompID(final Encoder encoder) throws Exception
     {
-        return (boolean) get(encoder, "hasOnBehalfOfCompID");
+        return (boolean)get(encoder, "hasOnBehalfOfCompID");
     }
 
     private boolean hasTestReqID(final Encoder encoder) throws Exception
     {
-        return (boolean) get(encoder, "hasTestReqID");
+        return (boolean)get(encoder, "hasTestReqID");
     }
 
     private void setupComponent(final Encoder encoder) throws Exception
@@ -428,14 +428,14 @@ public class EncoderGeneratorTest
         setSomeTimeField(encoder, someTime);
     }
 
-    private void setSomeTimeField(final Encoder encoder,
-                                  final int someTime) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException
+    private void setSomeTimeField(final Encoder encoder, final int someTime)
+        throws IllegalAccessException, InvocationTargetException, NoSuchMethodException
     {
         final UtcTimestampEncoder utcTimestampEncoder = new UtcTimestampEncoder();
         final int length = utcTimestampEncoder.encode(someTime);
         encoder.getClass()
-               .getMethod(SOME_TIME_FIELD, byte[].class, int.class)
-               .invoke(encoder, utcTimestampEncoder.buffer(), length);
+            .getMethod(SOME_TIME_FIELD, byte[].class, int.class)
+            .invoke(encoder, utcTimestampEncoder.buffer(), length);
     }
 
     private void setOptionalFields(Encoder encoder) throws Exception
@@ -460,13 +460,13 @@ public class EncoderGeneratorTest
 
     private void assertTestReqIsValue(final Object encoder) throws Exception
     {
-        assertArrayEquals(VALUE_IN_BYTES, (byte[]) getField(encoder, TEST_REQ_ID));
+        assertArrayEquals(VALUE_IN_BYTES, (byte[])getField(encoder, TEST_REQ_ID));
         assertEquals(3, getField(encoder, TEST_REQ_ID_LENGTH));
     }
 
     private boolean hasTestReqId(final Object encoder) throws Exception
     {
-        return (boolean) getField(encoder, HAS_TEST_REQ_ID);
+        return (boolean)getField(encoder, HAS_TEST_REQ_ID);
     }
 
     private void setTestReqId(final Object encoder) throws Exception
@@ -478,5 +478,4 @@ public class EncoderGeneratorTest
     {
         setCharSequence(encoder, TEST_REQ_ID, value);
     }
-
 }
