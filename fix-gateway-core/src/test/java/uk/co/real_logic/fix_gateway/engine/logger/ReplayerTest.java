@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
@@ -55,6 +56,12 @@ public class ReplayerTest extends AbstractLogTest
         subscription, replayQuery, publication, claim, idleStrategy, errorHandler, MAX_CLAIM_ATTEMPTS);
 
     private UnsafeBuffer resultBuffer = new UnsafeBuffer(new byte[16 * 1024]);
+
+    @Before
+    public void setUp()
+    {
+        when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
+    }
 
     @Test
     public void shouldParseResendRequest()

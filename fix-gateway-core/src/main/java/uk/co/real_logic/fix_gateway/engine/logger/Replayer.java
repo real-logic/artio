@@ -218,7 +218,7 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
     {
         for (int i = 0; i < maxClaimAttempts; i++)
         {
-            if (publication.tryClaim(newLength, claim) < 0)
+            if (publication.tryClaim(newLength, claim) > 0)
             {
                 return true;
             }

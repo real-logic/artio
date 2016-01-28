@@ -36,6 +36,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.*;
@@ -177,39 +179,51 @@ public abstract class Generator
 
     protected String resetEntries(final List<Entry> entries, final StringBuilder methods)
     {
-        final String resetEntries = entries
-            .stream()
-            .filter(Entry::isField)
-            .map(this::callFieldReset)
-            .collect(joining()) +
-            resetComponents(entries, methods) +
-            resetGroups(entries, methods);
-
-        methods.append(entries
-            .stream()
-            .filter(Entry::isField)
-            .map(entry -> fieldReset(entry.required(), (Field) entry.element()))
-            .collect(joining()));
-
-        return resetEntries;
+        return resetFields(entries, methods) +
+               resetComponents(entries, methods) +
+               resetGroups(entries, methods);
     }
 
-    private String resetGroups(final List<Entry> entries, final StringBuilder methods)
+    private String resetFields(final List<Entry> entries, final StringBuilder methods)
+    {
+        return resetAllBy(
+            entries,
+            methods,
+            Entry::isField,
+            entry -> resetField(entry.required(), (Field) entry.element()),
+            this::callResetMethod);
+    }
+
+    protected String resetAllBy(final List<Entry> entries,
+                              final StringBuilder methods,
+                              final Predicate<Entry> predicate,
+                              final Function<Entry, String> methodFactory,
+                              final Function<Entry, String> callFactory)
     {
         methods.append(entries
             .stream()
-            .filter(Entry::isGroup)
-            .map(this::groupMethod)
+            .filter(predicate)
+            .map(methodFactory)
             .collect(joining()));
 
         return entries
             .stream()
-            .filter(Entry::isGroup)
-            .map(this::callFieldReset)
+            .filter(predicate)
+            .map(callFactory)
             .collect(joining());
     }
 
-    private String groupMethod(final Entry entry)
+    private String resetGroups(final List<Entry> entries, final StringBuilder methods)
+    {
+        return resetAllBy(
+            entries,
+            methods,
+            Entry::isGroup,
+            this::resetGroup,
+            this::callResetMethod);
+    }
+
+    private String resetGroup(final Entry entry)
     {
         final Group group = (Group) entry.element();
         final String name = group.name();
@@ -224,50 +238,14 @@ public abstract class Generator
                 "        %3$s = 0;\n" +
                 "        has%4$s = false;\n" +
                 "    }\n\n",
-            resetMethodName(name),
+            nameOfResetMethod(name),
             formatPropertyName(name),
             formatPropertyName(numberField.name()),
             numberField.name()
         );
     }
 
-    protected abstract String resetComponents(final List<Entry> entries, final StringBuilder methods);
-
-    protected String resetMethodName(final String name)
-    {
-        return "reset" + name;
-    }
-
-    private String callFieldReset(final Entry entry)
-    {
-        if (isNotResettableField(entry.name()))
-        {
-            return "";
-        }
-
-        return String.format(
-            "        %1$s();\n",
-            resetMethodName(entry.name())
-        );
-    }
-
-    protected String callResetMethod(final Entry entry)
-    {
-        return String.format(
-            "        %1$s.reset();\n",
-            formatPropertyName(entry.name())
-        );
-    }
-
-    protected String optionalField(final Entry entry)
-    {
-        final String name = entry.name();
-        return entry.required()
-             ? ""
-             : String.format("    private boolean has%1$s;\n\n", name);
-    }
-
-    private String fieldReset(final boolean isRequired, final Field field)
+    private String resetField(final boolean isRequired, final Field field)
     {
         final String name = field.name();
 
@@ -326,13 +304,49 @@ public abstract class Generator
 
     protected abstract String resetTemporalValue(final String name);
 
-    protected String noReset(final String name)
+    protected abstract String resetComponents(final List<Entry> entries, final StringBuilder methods);
+
+    protected String nameOfResetMethod(final String name)
+    {
+        return "reset" + name;
+    }
+
+    private String callResetMethod(final Entry entry)
+    {
+        if (isNotResettableField(entry.name()))
+        {
+            return "";
+        }
+
+        return String.format(
+            "        %1$s();\n",
+            nameOfResetMethod(entry.name())
+        );
+    }
+
+    protected String callComponentReset(final Entry entry)
+    {
+        return String.format(
+            "        %1$s.reset();\n",
+            formatPropertyName(entry.name())
+        );
+    }
+
+    protected String hasField(final Entry entry)
+    {
+        final String name = entry.name();
+        return entry.required()
+             ? ""
+             : String.format("    private boolean has%1$s;\n\n", name);
+    }
+
+    protected String resetNothing(final String name)
     {
         return String.format(
             "    public void %1$s()\n" +
                 "    {\n" +
                 "    }\n\n",
-            resetMethodName(name));
+            nameOfResetMethod(name));
     }
 
     private boolean isNotResettableField(final String name)
@@ -359,7 +373,7 @@ public abstract class Generator
             "    {\n" +
             "        %2$sLength = 0;\n" +
             "    }\n\n",
-            resetMethodName(name),
+            nameOfResetMethod(name),
             formatPropertyName(name));
     }
 
@@ -371,7 +385,7 @@ public abstract class Generator
             "        has%1$s = false;\n" +
             "    }\n\n",
             name,
-            resetMethodName(name)
+            nameOfResetMethod(name)
         );
     }
 
@@ -383,7 +397,7 @@ public abstract class Generator
                 "        %1$s.reset();\n" +
                 "    }\n\n",
             formatPropertyName(name),
-            resetMethodName(name)
+            nameOfResetMethod(name)
         );
     }
 
@@ -394,7 +408,7 @@ public abstract class Generator
             "    {\n" +
             "        %2$s = %3$s;\n" +
             "    }\n\n",
-            resetMethodName(name),
+            nameOfResetMethod(name),
             formatPropertyName(name),
             resetValue
         );

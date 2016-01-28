@@ -503,7 +503,7 @@ public class DecoderGenerator extends Generator
             javaTypeOf(type),
             fieldName,
             fieldInitialisation(type),
-            optionalField(entry),
+            hasField(entry),
             optionalCheck,
             optionalGetter(entry),
             suffix
@@ -891,7 +891,7 @@ public class DecoderGenerator extends Generator
 
     protected String resetTemporalValue(final String name)
     {
-        return noReset(name);
+        return resetNothing(name);
     }
 
     protected String resetComponents(final List<Entry> entries, final StringBuilder methods)
