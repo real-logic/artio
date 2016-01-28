@@ -148,7 +148,11 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
         {
             final int fullLength = (messageOffset - srcOffset) + messageLength;
             final int newLength = fullLength + POSS_DUP_FIELD.length;
-            claimBuffer(newLength);
+            if (!claimBuffer(newLength))
+            {
+                onIllegalState("[%s] unable to resend", message());
+                return;
+            }
 
             try
             {
@@ -171,7 +175,11 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
         }
         else
         {
-            claimBuffer(messageLength);
+            if (!claimBuffer(messageLength))
+            {
+                onIllegalState("[%s] unable to resend", message());
+                return;
+            }
 
             try
             {
@@ -206,12 +214,19 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
         return asciiBuffer.getAscii(currentMessageOffset, currentMessageLength);
     }
 
-    private void claimBuffer(final int newLength)
+    private boolean claimBuffer(final int newLength)
     {
-        for (int i = 0; i < maxClaimAttempts && publication.tryClaim(newLength, claim) < 0; i++)
+        for (int i = 0; i < maxClaimAttempts; i++)
         {
+            if (publication.tryClaim(newLength, claim) < 0)
+            {
+                return true;
+            }
+
             idleStrategy.idle();
         }
+
+        return false;
     }
 
     private boolean addPossDupField(

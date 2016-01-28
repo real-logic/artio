@@ -230,7 +230,7 @@ public class GatewayToGatewaySystemTest
             initiatingLibrary.poll(1);
 
             final String messageType = acceptingOtfAcceptor.lastMessage().getMessageType();
-            assertEquals("1", messageType);
+            assertEquals("0", messageType);
             assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
             assertNull("Detected Error", acceptingOtfAcceptor.lastError());
             assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
