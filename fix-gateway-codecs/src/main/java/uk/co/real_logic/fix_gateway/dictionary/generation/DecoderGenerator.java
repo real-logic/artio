@@ -86,11 +86,11 @@ public class DecoderGenerator extends Generator
         this.initialBufferSize = initialBufferSize;
     }
 
-    protected void generateAggregate(final Aggregate aggregate, final AggregateType type)
+    protected void aggregate(final Aggregate aggregate, final AggregateType type)
     {
         if (type == COMPONENT)
         {
-            generateComponentInterface((Component) aggregate);
+            componentInterface((Component) aggregate);
             return;
         }
 
@@ -106,19 +106,19 @@ public class DecoderGenerator extends Generator
                          .map(comp -> decoderClassName((Aggregate) comp.element()))
                          .collect(toList());
 
-            out.append(generateClassDeclaration(className, type, interfaces, "Decoder", Decoder.class));
-            generateValidation(out, aggregate, type);
+            out.append(classDeclaration(className, type, interfaces, "Decoder", Decoder.class));
+            validation(out, aggregate, type);
             if (isMessage)
             {
                 final Message message = (Message)aggregate;
-                out.append(generateMessageType(message.fullType(), message.packedType()));
+                out.append(messageType(message.fullType(), message.packedType()));
                 out.append(commonCompoundImports("Decoder"));
             }
-            generateGroupMethods(out, aggregate);
-            generateGetters(out, className, aggregate.entries());
-            out.append(generateDecodeMethod(aggregate.entries(), aggregate, type));
-            out.append(generateCompleteResetMethod(isMessage, aggregate.entries(), resetValidation()));
-            out.append(generateToString(aggregate, isMessage));
+            groupMethods(out, aggregate);
+            getters(out, className, aggregate.entries());
+            out.append(decodeMethod(aggregate.entries(), aggregate, type));
+            out.append(completeResetMethod(isMessage, aggregate.entries(), resetValidation()));
+            out.append(toString(aggregate, isMessage));
             out.append("}\n");
         });
     }
@@ -138,7 +138,7 @@ public class DecoderGenerator extends Generator
             "        alreadyVisitedFields.clear();\n";
     }
 
-    private void generateValidation(final Writer out, final Aggregate aggregate, final AggregateType type)
+    private void validation(final Writer out, final Aggregate aggregate, final AggregateType type)
         throws IOException
     {
         final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
@@ -308,7 +308,7 @@ public class DecoderGenerator extends Generator
         );
     }
 
-    private void generateComponentInterface(final Component component)
+    private void componentInterface(final Component component)
     {
         final String className = decoderClassName(component);
         outputManager.withOutput(className, out ->
@@ -331,30 +331,30 @@ public class DecoderGenerator extends Generator
 
             for (final Entry entry : component.entries())
             {
-                out.append(generateInterfaceGetter(entry));
+                out.append(interfaceGetter(entry));
             }
             out.append("\n}\n");
         });
     }
 
-    private String generateInterfaceGetter(final Entry entry)
+    private String interfaceGetter(final Entry entry)
     {
         return entry.match(
-            this::generateFieldInterfaceGetter,
-            (e, group) -> generateGroupInterfaceGetter(group),
-            (e, component) -> generateComponentInterfaceGetter(component));
+            this::fieldInterfaceGetter,
+            (e, group) -> groupInterfaceGetter(group),
+            (e, component) -> componentInterfaceGetter(component));
     }
 
-    private String generateComponentInterfaceGetter(Component component)
+    private String componentInterfaceGetter(Component component)
     {
         return component
             .entries()
             .stream()
-            .map(this::generateInterfaceGetter)
+            .map(this::interfaceGetter)
             .collect(joining("\n", "", "\n"));
     }
 
-    private String generateGroupInterfaceGetter(Group group)
+    private String groupInterfaceGetter(Group group)
     {
         return String.format(
             "    public %1$s %2$s();\n",
@@ -363,7 +363,7 @@ public class DecoderGenerator extends Generator
         );
     }
 
-    private String generateFieldInterfaceGetter(final Entry entry, final Field field)
+    private String fieldInterfaceGetter(final Entry entry, final Field field)
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
@@ -386,15 +386,15 @@ public class DecoderGenerator extends Generator
         );
     }
 
-    private String generateGetter(final Entry entry)
+    private String getter(final Entry entry)
     {
         return entry.match(
-            this::generateFieldGetter,
-            (e, group) -> generateGroupGetter(group),
-            (e, component) -> generateComponentField(component));
+            this::fieldGetter,
+            (e, group) -> groupGetter(group),
+            (e, component) -> componentField(component));
     }
 
-    private void generateGroupMethods(final Writer out, final Aggregate aggregate) throws IOException
+    private void groupMethods(final Writer out, final Aggregate aggregate) throws IOException
     {
         if (aggregate instanceof Group)
         {
@@ -411,7 +411,7 @@ public class DecoderGenerator extends Generator
         }
     }
 
-    private String generateMessageType(final String fullType, final int packedType)
+    private String messageType(final String fullType, final int packedType)
     {
         return String.format(
             "    public static final int MESSAGE_TYPE = %1$d;\n\n" +
@@ -420,29 +420,29 @@ public class DecoderGenerator extends Generator
             fullType);
     }
 
-    private void generateGetters(final Writer out, final String className, final List<Entry> entries) throws IOException
+    private void getters(final Writer out, final String className, final List<Entry> entries) throws IOException
     {
         for (final Entry entry : entries)
         {
-            out.append(generateGetter(entry));
+            out.append(getter(entry));
         }
     }
 
-    private String generateComponentField(final Component component)
+    private String componentField(final Component component)
     {
         return component
             .entries()
             .stream()
-            .map(this::generateGetter)
+            .map(this::getter)
             .collect(joining("\n", "", "\n"));
     }
 
-    private String generateGroupGetter(final Group group)
+    private String groupGetter(final Group group)
     {
-        generateGroup(group);
+        group(group);
 
         final Entry numberField = group.numberField();
-        final String prefix = generateFieldGetter(numberField, (Field) numberField.element());
+        final String prefix = fieldGetter(numberField, (Field) numberField.element());
 
         return String.format(
             "    private %1$s %2$s = null;\n" +
@@ -457,7 +457,7 @@ public class DecoderGenerator extends Generator
         );
     }
 
-    private String generateFieldGetter(final Entry entry, final Field field)
+    private String fieldGetter(final Entry entry, final Field field)
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
@@ -626,7 +626,7 @@ public class DecoderGenerator extends Generator
         }
     }
 
-    private String generateDecodeMethod(final List<Entry> entries, final Aggregate aggregate, final AggregateType type)
+    private String decodeMethod(final List<Entry> entries, final Aggregate aggregate, final AggregateType type)
     {
         final boolean hasCommonCompounds = type == MESSAGE;
         final boolean isGroup = type == GROUP;
@@ -769,11 +769,11 @@ public class DecoderGenerator extends Generator
             .collect(joining("\n", "", "\n"));
     }
 
-    protected String generateComponentToString(final Component component)
+    protected String componentToString(final Component component)
     {
         return component.entries()
                         .stream()
-                        .map(this::generateEntryToString)
+                        .map(this::entryToString)
                         .collect(joining(" + \n"));
     }
 
@@ -879,7 +879,7 @@ public class DecoderGenerator extends Generator
         }
     }
 
-    protected String generateStringToString(final String fieldName)
+    protected String stringToString(final String fieldName)
     {
         return String.format("new String(%s)", fieldName);
     }

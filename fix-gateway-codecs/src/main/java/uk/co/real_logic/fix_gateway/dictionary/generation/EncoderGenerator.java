@@ -74,7 +74,7 @@ public class EncoderGenerator extends Generator
         this.initialArraySize = initialArraySize;
     }
 
-    protected void generateAggregate(final Aggregate aggregate, final AggregateType aggregateType)
+    protected void aggregate(final Aggregate aggregate, final AggregateType aggregateType)
     {
         final String className = encoderClassName(aggregate.name());
         final boolean isMessage = aggregateType == AggregateType.MESSAGE;
@@ -83,8 +83,8 @@ public class EncoderGenerator extends Generator
         {
             out.append(fileHeader(builderPackage));
             final Class<?> type = isMessage ? MessageEncoder.class : Encoder.class;
-            out.append(generateClassDeclaration(className, aggregateType, emptyList(), "Encoder", type));
-            out.append(generateConstructor(aggregate, dictionary));
+            out.append(classDeclaration(className, aggregateType, emptyList(), "Encoder", type));
+            out.append(constructor(aggregate, dictionary));
             if (isMessage)
             {
                 out.append(commonCompoundImports("Encoder"));
@@ -92,18 +92,18 @@ public class EncoderGenerator extends Generator
             else if (aggregateType == GROUP)
             {
                 final Group group = (Group) aggregate;
-                out.append(generateNextMethod(group));
+                out.append(nextMethod(group));
             }
-            generatePrecomputedHeaders(out, aggregate.entries());
-            generateSetters(out, className, aggregate.entries());
-            out.append(generateEncodeMethod(aggregate.entries(), aggregateType));
-            out.append(generateCompleteResetMethod(isMessage, aggregate.entries(), ""));
-            out.append(generateToString(aggregate, isMessage));
+            precomputedHeaders(out, aggregate.entries());
+            setters(out, className, aggregate.entries());
+            out.append(encodeMethod(aggregate.entries(), aggregateType));
+            out.append(completeResetMethod(isMessage, aggregate.entries(), ""));
+            out.append(toString(aggregate, isMessage));
             out.append("}\n");
         });
     }
 
-    private String generateNextMethod(final Group group)
+    private String nextMethod(final Group group)
     {
         return String.format(
             "    private %1$s next = null;\n\n" +
@@ -120,7 +120,7 @@ public class EncoderGenerator extends Generator
         );
     }
 
-    private String generateConstructor(final Aggregate aggregate, final Dictionary dictionary)
+    private String constructor(final Aggregate aggregate, final Dictionary dictionary)
     {
         if (aggregate instanceof Message)
         {
@@ -169,23 +169,23 @@ public class EncoderGenerator extends Generator
         return "";
     }
 
-    private void generateSetters(final Writer out, final String className, final List<Entry> entries) throws IOException
+    private void setters(final Writer out, final String className, final List<Entry> entries) throws IOException
     {
         for (final Entry entry : entries)
         {
-            out.append(generateSetter(className, entry));
+            out.append(setter(className, entry));
         }
     }
 
-    private String generateSetter(final String className, final Entry entry)
+    private String setter(final String className, final Entry entry)
     {
         return entry.match(
-            (e, field) -> generateFieldSetter(className, field),
-            (e, group) -> generateGroupSetter(className, group),
-            (e, component) -> generateComponentField(encoderClassName(e.name()), component));
+            (e, field) -> fieldSetter(className, field),
+            (e, group) -> groupSetter(className, group),
+            (e, component) -> componentField(encoderClassName(e.name()), component));
     }
 
-    private String generateFieldSetter(final String className, final Field field)
+    private String fieldSetter(final String className, final Field field)
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
@@ -196,7 +196,7 @@ public class EncoderGenerator extends Generator
 
         // TODO: make encoding generation more regular and delegate to library calls more
         final Function<String, String> generateSetter =
-            (type) -> generateSetter(name, type, fieldName, hasField, className, hasAssign);
+            (type) -> setter(name, type, fieldName, hasField, className, hasAssign);
 
         switch (field.type())
         {
@@ -205,7 +205,7 @@ public class EncoderGenerator extends Generator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-                return generateStringSetter(className, fieldName, hasField, hasAssign);
+                return stringSetter(className, fieldName, hasField, hasAssign);
 
             case BOOLEAN:
                 return generateSetter.apply("boolean");
@@ -262,12 +262,12 @@ public class EncoderGenerator extends Generator
         }
     }
 
-    private String generateGroupSetter(final String className, final Group group)
+    private String groupSetter(final String className, final Group group)
     {
-        generateGroup(group);
+        group(group);
 
         final Entry numberField = group.numberField();
-        final String setter = generateSetter(className, numberField);
+        final String setter = setter(className, numberField);
 
         return String.format(
             "%1$s\n" +
@@ -293,7 +293,7 @@ public class EncoderGenerator extends Generator
             formatPropertyName(numberField.name()));
     }
 
-    private String generateStringSetter(
+    private String stringSetter(
         final String className,
         final String fieldName,
         final String optionalField,
@@ -339,7 +339,7 @@ public class EncoderGenerator extends Generator
             optionalAssign);
     }
 
-    private String generateSetter(
+    private String setter(
         final String name,
         final String type,
         final String fieldName,
@@ -364,7 +364,7 @@ public class EncoderGenerator extends Generator
             optionalAssign);
     }
 
-    private String generateEncodeMethod(final List<Entry> entries, final AggregateType aggregateType)
+    private String encodeMethod(final List<Entry> entries, final AggregateType aggregateType)
     {
         final boolean hasCommonCompounds = aggregateType == AggregateType.MESSAGE;
 
@@ -480,7 +480,7 @@ public class EncoderGenerator extends Generator
             case SEQNUM:
             case NUMINGROUP:
             case DAYOFMONTH:
-                return generatePut(fieldName, tag, "Int", enablingSuffix);
+                return putValue(fieldName, tag, "Int", enablingSuffix);
 
             case FLOAT:
             case PRICE:
@@ -488,13 +488,13 @@ public class EncoderGenerator extends Generator
             case QTY:
             case PERCENTAGE:
             case AMT:
-                return generatePut(fieldName, tag, "Float", enablingSuffix);
+                return putValue(fieldName, tag, "Float", enablingSuffix);
 
             case CHAR:
-                return generatePut(fieldName, tag, "Char", enablingSuffix);
+                return putValue(fieldName, tag, "Char", enablingSuffix);
 
             case BOOLEAN:
-                return generatePut(fieldName, tag, "Boolean", enablingSuffix);
+                return putValue(fieldName, tag, "Boolean", enablingSuffix);
 
             case STRING:
             case MULTIPLEVALUESTRING:
@@ -506,7 +506,7 @@ public class EncoderGenerator extends Generator
             case MONTHYEAR:
             case UTCTIMEONLY:
             case UTCDATEONLY:
-                return generateStringPut(fieldName, enablingSuffix, tag);
+                return stringPut(fieldName, enablingSuffix, tag);
 
             case DATA:
                 return String.format(
@@ -523,7 +523,7 @@ public class EncoderGenerator extends Generator
         }
     }
 
-    private String generateStringPut(final String fieldName, final String optionalSuffix, final String tag)
+    private String stringPut(final String fieldName, final String optionalSuffix, final String tag)
     {
         return formatEncoder(fieldName, optionalSuffix, tag,
             "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
@@ -572,7 +572,7 @@ public class EncoderGenerator extends Generator
             fieldName);
     }
 
-    private String generatePut(final String fieldName, final String tag, final String type, String optionalSuffix)
+    private String putValue(final String fieldName, final String tag, final String type, String optionalSuffix)
     {
         return String.format(
             "%s" +
@@ -584,24 +584,24 @@ public class EncoderGenerator extends Generator
             optionalSuffix);
     }
 
-    private void generatePrecomputedHeaders(final Writer out, final List<Entry> entries) throws IOException
+    private void precomputedHeaders(final Writer out, final List<Entry> entries) throws IOException
     {
         for (final Entry entry : entries)
         {
             final Element element = entry.element();
             if (element instanceof Field)
             {
-                generatePrecomputedFieldHeader(out, (Field) element);
+                precomputedFieldHeader(out, (Field) element);
             }
             else if (element instanceof Group)
             {
                 final Group group = (Group) element;
-                generatePrecomputedFieldHeader(out, (Field) group.numberField().element());
+                precomputedFieldHeader(out, (Field) group.numberField().element());
             }
         }
     }
 
-    private void generatePrecomputedFieldHeader(final Writer out, final Field field) throws IOException
+    private void precomputedFieldHeader(final Writer out, final Field field) throws IOException
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
@@ -620,12 +620,12 @@ public class EncoderGenerator extends Generator
             bytes));
     }
 
-    protected String generateStringToString(String fieldName)
+    protected String stringToString(String fieldName)
     {
         return String.format("new String(%s, 0, %1$sLength, StandardCharsets.US_ASCII)", fieldName);
     }
 
-    protected String generateComponentToString(final Component component)
+    protected String componentToString(final Component component)
     {
         final String name = component.name();
         return String.format(
@@ -635,7 +635,7 @@ public class EncoderGenerator extends Generator
         );
     }
 
-    protected String generateComponentField(final String className, final Component element)
+    protected String componentField(final String className, final Component element)
     {
         return String.format(
             "    private final %1$s %2$s = new %1$s();\n" +

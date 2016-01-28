@@ -90,24 +90,24 @@ public abstract class Generator
 
     public void generate()
     {
-        generateAggregate(dictionary.header(), AggregateType.HEADER);
-        generateAggregate(dictionary.trailer(), AggregateType.TRAILER);
-        dictionary.components().forEach((name, component) -> generateAggregate(component, COMPONENT));
-        dictionary.messages().forEach(msg -> generateAggregate(msg, MESSAGE));
+        aggregate(dictionary.header(), AggregateType.HEADER);
+        aggregate(dictionary.trailer(), AggregateType.TRAILER);
+        dictionary.components().forEach((name, component) -> aggregate(component, COMPONENT));
+        dictionary.messages().forEach(msg -> aggregate(msg, MESSAGE));
     }
 
-    protected abstract void generateAggregate(final Aggregate aggregate, final AggregateType type);
+    protected abstract void aggregate(final Aggregate aggregate, final AggregateType type);
 
-    protected void generateGroup(final Group group)
+    protected void group(final Group group)
     {
         final String name = group.name();
         if (groupNames.add(name))
         {
-            generateAggregate(group, GROUP);
+            aggregate(group, GROUP);
         }
     }
 
-    protected String generateClassDeclaration(
+    protected String classDeclaration(
         final String className,
         final AggregateType type,
         final List<String> interfaces,
@@ -146,7 +146,7 @@ public abstract class Generator
             topType.getSimpleName());
     }
 
-    protected String generateCompleteResetMethod(
+    protected String completeResetMethod(
         final boolean isMessage,
         final List<Entry> entries,
         final String additionalReset)
@@ -188,7 +188,7 @@ public abstract class Generator
         methods.append(entries
             .stream()
             .filter(Entry::isField)
-            .map(entry -> generateFieldReset(entry.required(), (Field) entry.element()))
+            .map(entry -> fieldReset(entry.required(), (Field) entry.element()))
             .collect(joining()));
 
         return resetEntries;
@@ -199,7 +199,7 @@ public abstract class Generator
         methods.append(entries
             .stream()
             .filter(Entry::isGroup)
-            .map(this::generateGroupMethod)
+            .map(this::groupMethod)
             .collect(joining()));
 
         return entries
@@ -209,7 +209,7 @@ public abstract class Generator
             .collect(joining());
     }
 
-    private String generateGroupMethod(final Entry entry)
+    private String groupMethod(final Entry entry)
     {
         final Group group = (Group) entry.element();
         final String name = group.name();
@@ -267,7 +267,7 @@ public abstract class Generator
              : String.format("    private boolean has%1$s;\n\n", name);
     }
 
-    private String generateFieldReset(final boolean isRequired, final Field field)
+    private String fieldReset(final boolean isRequired, final Field field)
     {
         final String name = field.name();
 
@@ -400,12 +400,12 @@ public abstract class Generator
         );
     }
 
-    protected String generateToString(final Aggregate aggregate, final boolean hasCommonCompounds)
+    protected String toString(final Aggregate aggregate, final boolean hasCommonCompounds)
     {
         final String entriesToString =
                 aggregate.entries()
                         .stream()
-                        .map(this::generateEntryToString)
+                        .map(this::entryToString)
                         .collect(joining(" + \n"));
 
         final String prefix =
@@ -434,7 +434,7 @@ public abstract class Generator
             aggregate.name());
     }
 
-    protected String generateEntryToString(final Entry entry)
+    protected String entryToString(final Entry entry)
     {
         //"  \"OnBehalfOfCompID\": \"abc\",\n" +
 
@@ -443,7 +443,7 @@ public abstract class Generator
         if (element instanceof Field)
         {
             final Field field = (Field) element;
-            final String value = generateValueToString(field);
+            final String value = valueToString(field);
 
             final String formatter = String.format(
                 "String.format(\"  \\\"%s\\\": \\\"%%s\\\",\\n\", %s)",
@@ -467,7 +467,7 @@ public abstract class Generator
         }
         else if (element instanceof Component)
         {
-            return generateComponentToString((Component)element);
+            return componentToString((Component)element);
         }
 
         return "\"\"";
@@ -485,9 +485,9 @@ public abstract class Generator
             name);
     }
 
-    protected abstract String generateComponentToString(final Component component);
+    protected abstract String componentToString(final Component component);
 
-    protected String generateValueToString(final Field field)
+    protected String valueToString(final Field field)
     {
         final String fieldName = formatPropertyName(field.name());
         switch (field.type())
@@ -503,7 +503,7 @@ public abstract class Generator
             case LOCALMKTDATE:
             case DAYOFMONTH:
             case MONTHYEAR:
-                return generateStringToString(fieldName);
+                return stringToString(fieldName);
 
             case DATA:
                 return String.format("Arrays.toString(%s)", fieldName);
@@ -533,5 +533,5 @@ public abstract class Generator
         return "BodyLength".equals(name);
     }
 
-    protected abstract String generateStringToString(String fieldName);
+    protected abstract String stringToString(String fieldName);
 }
