@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Publication;
@@ -44,7 +43,6 @@ import static uk.co.real_logic.fix_gateway.replication.RandomTimeout.MAX_TO_MIN_
 /**
  * Test an isolated set of leaders and followers
  */
-// TODO: re-evaluate testing at this level
 public class LeaderAndFollowersTest extends AbstractReplicationTest
 {
 
@@ -123,7 +121,6 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderNeverCommitted();
     }
 
-    @Ignore
     @Test
     public void shouldProcessDataWhenAcknowledged()
     {
@@ -132,7 +129,6 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderCommitted(0, position);
     }
 
-    @Ignore
     @Test
     public void shouldCommitOnFollowers()
     {
@@ -143,7 +139,6 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         verify(follower1Handler).onFragment(any(), eq(HEADER_LENGTH), eq(position - HEADER_LENGTH), any());
     }
 
-    @Ignore
     @Test
     public void shouldProcessSuccessiveChunks()
     {
@@ -154,10 +149,10 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         buffer.putInt(OFFSET, secondValue);
 
         final int position2 = roundtripABuffer();
+        pollLeader(1);
         leaderCommitted(position1, position2 - position1, secondValue);
     }
 
-    @Ignore
     @Test
     public void shouldRequireContiguousMessages()
     {
@@ -182,7 +177,6 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderNeverCommitted();
     }
 
-    @Ignore
     @Test
     public void shouldSupportAcknowledgementLagging()
     {

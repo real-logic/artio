@@ -112,7 +112,7 @@ public class Leader implements Role, RaftHandler
         setupArchival();
         if (canArchive())
         {
-            archivedPosition += leaderDataImage.filePoll(ourArchiver, 1000);
+            archivedPosition += leaderDataImage.filePoll(ourArchiver, leaderDataImage.termBufferLength());
             nodeToPosition.put(nodeId, archivedPosition);
         }
 
