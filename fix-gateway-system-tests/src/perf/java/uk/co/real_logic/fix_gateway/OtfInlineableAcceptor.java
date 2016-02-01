@@ -16,34 +16,40 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.otf.MessageControl;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
 public final class OtfInlineableAcceptor implements OtfMessageAcceptor
 {
-    public void onNext()
+    public MessageControl onNext()
     {
-
+        return MessageControl.CONTINUE;
     }
 
-    public void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
+    public MessageControl onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupHeader(final int tag, final int numInGroup)
+    public MessageControl onGroupHeader(final int tag, final int numInGroup)
     {
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupBegin(final int tag, final int numInGroup, final int index)
+    public MessageControl onGroupBegin(final int tag, final int numInGroup, final int index)
     {
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupEnd(final int tag, final int numInGroup, final int index)
+    public MessageControl onGroupEnd(final int tag, final int numInGroup, final int index)
     {
+        return MessageControl.CONTINUE;
     }
 
-    public void onComplete()
+    public MessageControl onComplete()
     {
+        return MessageControl.CONTINUE;
     }
 
     public boolean onError(final ValidationError error,

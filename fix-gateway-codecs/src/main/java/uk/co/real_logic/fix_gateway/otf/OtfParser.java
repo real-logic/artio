@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import static uk.co.real_logic.fix_gateway.ValidationError.INVALID_CHECKSUM;
 import static uk.co.real_logic.fix_gateway.ValidationError.PARSE_ERROR;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.*;
+import static uk.co.real_logic.fix_gateway.otf.MessageControl.STOP;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
 /**
@@ -60,7 +61,10 @@ public final class OtfParser
     public void onMessage(final DirectBuffer buffer, final int offset, final int length)
     {
         string.wrap(buffer);
-        acceptor.onNext();
+        if (acceptor.onNext() == STOP)
+        {
+            return;
+        }
 
         tag = UNKNOWN;
         this.messageType = UNKNOWN;
@@ -70,7 +74,10 @@ public final class OtfParser
 
         try
         {
-            parseFields(offset, offset + length, UNKNOWN, null, 0);
+            if (parseFields(offset, offset + length, UNKNOWN, null, 0) < 0)
+            {
+                return;
+            }
 
             if (validChecksum(offset, checksum))
             {
@@ -120,6 +127,7 @@ public final class OtfParser
             final IntHashSet newGroupFields = groupToField.values(tag);
             if (newGroupFields == null)
             {
+
                 if (insideAGroup(groupTag))
                 {
                     if (isEndOfGroup(groupFields))
@@ -137,22 +145,37 @@ public final class OtfParser
                         // We've seen the first field again - its a new group iteration
                         else if (tag == firstFieldInGroup)
                         {
-                            groupEnd(groupTag, numberOfElementsInGroup, indexOfGroupElement);
+                            if (groupEnd(groupTag, numberOfElementsInGroup, indexOfGroupElement) == STOP)
+                            {
+                                return position;
+                            }
                             indexOfGroupElement++;
-                            groupBegin(groupTag, numberOfElementsInGroup, indexOfGroupElement);
+                            if (groupBegin(groupTag, numberOfElementsInGroup, indexOfGroupElement) == STOP)
+                            {
+                                return position;
+                            }
                         }
                     }
                 }
-
-                acceptor.onField(tag, string, valueOffset, valueLength);
+                final MessageControl control = acceptor.onField(tag, string, valueOffset, valueLength);
 
                 collectImportantFields(equalsPosition, valueOffset, endOfField, valueLength);
 
                 position = endOfField + 1;
+
+                if (control == STOP)
+                {
+                    return ~position;
+                }
             }
             else
             {
                 position = parseGroup(tag, valueOffset, endOfField, end, newGroupFields);
+
+                if (position < 0)
+                {
+                    return position;
+                }
             }
         }
 
@@ -172,11 +195,18 @@ public final class OtfParser
 
         if (numberOfElements > 0)
         {
-            groupBegin(tag, numberOfElements, 0);
+            if (groupBegin(tag, numberOfElements, 0) == STOP)
+            {
+                return ~endOfField;
+            }
+
             final int position = parseFields(endOfField + 1, end, tag, groupFields, numberOfElements);
             if (position == end)
             {
-                groupEnd(tag, numberOfElements, numberOfElements - 1);
+                if (groupEnd(tag, numberOfElements, numberOfElements - 1) == STOP)
+                {
+                    return ~position;
+                }
             }
             return position;
         }
@@ -211,24 +241,24 @@ public final class OtfParser
         return tag != UNKNOWN;
     }
 
-    private void groupBegin(final int tag, final int numberOfElements, final int index)
+    private MessageControl groupBegin(final int tag, final int numberOfElements, final int index)
     {
-        acceptor.onGroupBegin(tag, numberOfElements, index);
+        return acceptor.onGroupBegin(tag, numberOfElements, index);
     }
 
-    private void groupEnd(final int tag, final int numberOfElements, final int index)
+    private MessageControl groupEnd(final int tag, final int numberOfElements, final int index)
     {
-        acceptor.onGroupEnd(tag, numberOfElements, index);
+        return acceptor.onGroupEnd(tag, numberOfElements, index);
     }
 
-    private void parseError(final int messageType, final int tag)
+    private boolean parseError(final int messageType, final int tag)
     {
-        acceptor.onError(PARSE_ERROR, messageType, tag, stringField);
+        return acceptor.onError(PARSE_ERROR, messageType, tag, stringField);
     }
 
-    private void invalidChecksum(final int messageType)
+    private boolean invalidChecksum(final int messageType)
     {
-        acceptor.onError(INVALID_CHECKSUM, messageType, CHECKSUM, stringField);
+        return acceptor.onError(INVALID_CHECKSUM, messageType, CHECKSUM, stringField);
     }
 
     private boolean validatePosition(final int position, final OtfMessageAcceptor acceptor)

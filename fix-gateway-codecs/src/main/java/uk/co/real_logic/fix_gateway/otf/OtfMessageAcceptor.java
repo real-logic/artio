@@ -15,15 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway.otf;
 
-import uk.co.real_logic.fix_gateway.MessageAcceptor;
+import uk.co.real_logic.fix_gateway.ErrorAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
 // TODO: add ability to abort parsing from within the acceptor
-public interface OtfMessageAcceptor extends MessageAcceptor
+public interface OtfMessageAcceptor extends ErrorAcceptor
 {
-    void onNext();
+    MessageControl onNext();
 
-    void onField(int tag, AsciiBuffer buffer, int offset, int length);
+    MessageControl onComplete();
+
+    MessageControl onField(int tag, AsciiBuffer buffer, int offset, int length);
 
     /**
      * Called at the beginning of a repeating group.
@@ -31,7 +33,7 @@ public interface OtfMessageAcceptor extends MessageAcceptor
      * @param tag the tag number of the field representing the number of elements, eg NoAllocs
      * @param numInGroup the number of group elements repeated
      */
-    void onGroupHeader(int tag, int numInGroup);
+    MessageControl onGroupHeader(int tag, int numInGroup);
 
     /**
      * Called at the beginning of each group entry.
@@ -40,7 +42,7 @@ public interface OtfMessageAcceptor extends MessageAcceptor
      * @param numInGroup
      * @param index
      */
-    void onGroupBegin(int tag, int numInGroup, int index);
+    MessageControl onGroupBegin(int tag, int numInGroup, int index);
 
     /**
      * Called at the end of each group entry
@@ -49,5 +51,5 @@ public interface OtfMessageAcceptor extends MessageAcceptor
      * @param numInGroup
      * @param index
      */
-    void onGroupEnd(int tag, int numInGroup, int index);
+    MessageControl onGroupEnd(int tag, int numInGroup, int index);
 }

@@ -20,6 +20,7 @@ import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.library.session.Session;
+import uk.co.real_logic.fix_gateway.otf.MessageControl;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
@@ -39,24 +40,26 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
     private String senderCompId;
     private FixMessage message;
 
-    public void onNext()
+    public MessageControl onNext()
     {
         DebugLogger.log("Next Message");
         senderCompId = null;
         error = null;
         isCompleted = false;
         ensureMessage();
+        return MessageControl.CONTINUE;
     }
 
-    public void onComplete()
+    public MessageControl onComplete()
     {
         DebugLogger.log("Message Complete");
         isCompleted = true;
         messages.add(message);
         message = null;
+        return MessageControl.CONTINUE;
     }
 
-    public synchronized void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
+    public synchronized MessageControl onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
         DebugLogger.log("Field: %s=%s\n", tag, buffer, offset, length);
         if (tag == Constants.SENDER_COMP_ID)
@@ -65,21 +68,22 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         }
 
         message.put(tag, buffer.getAscii(offset, length));
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupHeader(final int tag, final int numInGroup)
+    public MessageControl onGroupHeader(final int tag, final int numInGroup)
     {
-
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupBegin(final int tag, final int numInGroup, final int index)
+    public MessageControl onGroupBegin(final int tag, final int numInGroup, final int index)
     {
-
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupEnd(final int tag, final int numInGroup, final int index)
+    public MessageControl onGroupEnd(final int tag, final int numInGroup, final int index)
     {
-
+        return MessageControl.CONTINUE;
     }
 
     public boolean onError(

@@ -78,6 +78,27 @@ public class OtfParserTest
     }
 
     @Theory
+    public void stopsParsingWhenToldTo(final int offset)
+    {
+        putMessage(offset);
+
+        when(mockAcceptor.onField(eq(34), any(), eq(offset + 24), eq(1))).thenReturn(MessageControl.STOP);
+
+        parser.onMessage(buffer, offset, MSG_LEN);
+
+        //8=FIX.4.2
+        inOrder.verify(mockAcceptor).onField(eq(8), any(), eq(offset + 2), eq(7));
+        //9=145
+        inOrder.verify(mockAcceptor).onField(eq(9), any(), eq(offset + 12), eq(3));
+        //35=D
+        inOrder.verify(mockAcceptor).onField(eq(35), any(), eq(offset + 19), eq(1));
+        //34=4
+        inOrder.verify(mockAcceptor).onField(eq(34), any(), eq(offset + 24), eq(1));
+
+        inOrder.verifyNoMoreInteractions();
+    }
+
+    @Theory
     public void notifiesAcceptorOfValidMessageEnd(final int offset)
     {
         putMessage(offset);

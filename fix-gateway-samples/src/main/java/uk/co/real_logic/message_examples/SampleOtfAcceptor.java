@@ -17,6 +17,7 @@ package uk.co.real_logic.message_examples;
 
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.otf.MessageControl;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
@@ -28,12 +29,13 @@ public class SampleOtfAcceptor implements OtfMessageAcceptor
     private boolean wantsToSell;
     private String symbol;
 
-    public void onNext()
+    public MessageControl onNext()
     {
         System.out.println("a NewOrderSingle has arrived");
+        return MessageControl.CONTINUE;
     }
 
-    public void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
+    public MessageControl onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
         switch (tag)
         {
@@ -50,23 +52,27 @@ public class SampleOtfAcceptor implements OtfMessageAcceptor
             // Optional fields will either generate callbacks or not depending upon whether they
             // are present in the message.
         }
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupHeader(final int tag, final int numInGroup)
+    public MessageControl onGroupHeader(final int tag, final int numInGroup)
     {
         // Some FIX fields consist of repeating groups, you get callbacks
         // when these start and end.
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupBegin(final int tag, final int numInGroup, final int index)
+    public MessageControl onGroupBegin(final int tag, final int numInGroup, final int index)
     {
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupEnd(final int tag, final int numInGroup, final int index)
+    public MessageControl onGroupEnd(final int tag, final int numInGroup, final int index)
     {
+        return MessageControl.CONTINUE;
     }
 
-    public void onComplete()
+    public MessageControl onComplete()
     {
         // Message has been parsed and passed its checksum check.
         // Now we can make a decision about what to do with the message.
@@ -75,6 +81,7 @@ public class SampleOtfAcceptor implements OtfMessageAcceptor
         {
             System.out.println("Our client wants to sell dollars");
         }
+        return MessageControl.CONTINUE;
     }
 
     public boolean onError(

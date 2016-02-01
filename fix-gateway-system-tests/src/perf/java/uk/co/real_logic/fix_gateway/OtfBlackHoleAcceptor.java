@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway;
 import org.openjdk.jmh.annotations.CompilerControl;
 import org.openjdk.jmh.infra.Blackhole;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.otf.MessageControl;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
@@ -33,47 +34,51 @@ public final class OtfBlackHoleAcceptor implements OtfMessageAcceptor
     }
 
     @CompilerControl(DONT_INLINE)
-    public void onNext()
+    public MessageControl onNext()
     {
-
+        return MessageControl.CONTINUE;
     }
 
     @CompilerControl(DONT_INLINE)
-    public void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
+    public MessageControl onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
         bh.consume(tag);
         bh.consume(buffer);
         bh.consume(offset);
         bh.consume(length);
+        return MessageControl.CONTINUE;
     }
 
     @CompilerControl(DONT_INLINE)
-    public void onGroupHeader(final int tag, final int numInGroup)
+    public MessageControl onGroupHeader(final int tag, final int numInGroup)
     {
         bh.consume(tag);
         bh.consume(numInGroup);
+        return MessageControl.CONTINUE;
     }
 
     @CompilerControl(DONT_INLINE)
-    public void onGroupBegin(final int tag, final int numInGroup, final int index)
-    {
-        bh.consume(tag);
-        bh.consume(numInGroup);
-        bh.consume(index);
-    }
-
-    @CompilerControl(DONT_INLINE)
-    public void onGroupEnd(final int tag, final int numInGroup, final int index)
+    public MessageControl onGroupBegin(final int tag, final int numInGroup, final int index)
     {
         bh.consume(tag);
         bh.consume(numInGroup);
         bh.consume(index);
+        return MessageControl.CONTINUE;
     }
 
     @CompilerControl(DONT_INLINE)
-    public void onComplete()
+    public MessageControl onGroupEnd(final int tag, final int numInGroup, final int index)
     {
+        bh.consume(tag);
+        bh.consume(numInGroup);
+        bh.consume(index);
+        return MessageControl.CONTINUE;
+    }
 
+    @CompilerControl(DONT_INLINE)
+    public MessageControl onComplete()
+    {
+        return MessageControl.CONTINUE;
     }
 
     @CompilerControl(DONT_INLINE)

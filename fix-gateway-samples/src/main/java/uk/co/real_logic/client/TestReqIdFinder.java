@@ -20,6 +20,7 @@ import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.otf.MessageControl;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
@@ -47,35 +48,39 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
         parser.onMessage(buffer, offset, length);
     }
 
-    public void onNext()
+    public MessageControl onNext()
     {
+        return MessageControl.CONTINUE;
     }
 
-    public void onComplete()
+    public MessageControl onComplete()
     {
+        return MessageControl.CONTINUE;
     }
 
-    public void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
+    public MessageControl onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
         if (tag == TEST_REQ_ID)
         {
             this.testReqId = buffer.getAscii(offset, length);
         }
+
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupHeader(final int tag, final int numInGroup)
+    public MessageControl onGroupHeader(final int tag, final int numInGroup)
     {
-
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupBegin(final int tag, final int numInGroup, final int index)
+    public MessageControl onGroupBegin(final int tag, final int numInGroup, final int index)
     {
-
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupEnd(final int tag, final int numInGroup, final int index)
+    public MessageControl onGroupEnd(final int tag, final int numInGroup, final int index)
     {
-
+        return MessageControl.CONTINUE;
     }
 
     public boolean onError(final ValidationError error,

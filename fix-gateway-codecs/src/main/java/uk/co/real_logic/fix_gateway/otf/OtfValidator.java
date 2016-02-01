@@ -53,21 +53,22 @@ public final class OtfValidator implements OtfMessageAcceptor
         this.requiredFields = requiredFields;
     }
 
-    public void onNext()
+    public MessageControl onNext()
     {
         delegate.onNext();
         fieldsForMessage.clear();
         messageType = UNKNOWN;
         allFieldsForMessageType = null;
+        return MessageControl.CONTINUE;
     }
 
     @Override
-    public void onComplete()
+    public MessageControl onComplete()
     {
         final IntHashSet missingFields = requiredFields.values(messageType).difference(fieldsForMessage);
         if (missingFields == null)
         {
-            delegate.onComplete();
+            return delegate.onComplete();
         }
         else
         {
@@ -76,9 +77,10 @@ public final class OtfValidator implements OtfMessageAcceptor
                 delegate.onError(MISSING_REQUIRED_FIELD, messageType, value, stringField);
             }
         }
+        return MessageControl.CONTINUE;
     }
 
-    public void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
+    public MessageControl onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
         if (groupLevel == 0)
         {
@@ -89,46 +91,47 @@ public final class OtfValidator implements OtfMessageAcceptor
                 if (allFieldsForMessageType == null)
                 {
                     delegate.onError(UNKNOWN_MESSAGE_TYPE, messageType, UNKNOWN, stringField);
-                    return;
+                    return MessageControl.STOP;
                 }
             }
             else if (!allFieldsForMessageType.contains(tag))
             {
                 delegate.onError(UNKNOWN_FIELD, messageType, tag, stringField);
-                return;
+                return MessageControl.STOP;
             }
         }
 
         fieldsForMessage.add(tag);
-        delegate.onField(tag, buffer, offset, length);
+        return delegate.onField(tag, buffer, offset, length);
     }
 
     @Override
-    public void onGroupHeader(int tag, int numInGroup)
+    public MessageControl onGroupHeader(int tag, int numInGroup)
     {
         groupLevel++;
+        return delegate.onGroupHeader(tag, numInGroup);
     }
 
     @Override
-    public void onGroupBegin(int tag, int numInGroup, int index)
+    public MessageControl onGroupBegin(int tag, int numInGroup, int index)
     {
-
-        delegate.onGroupBegin(tag, numInGroup, index);
+        return delegate.onGroupBegin(tag, numInGroup, index);
     }
 
     @Override
-    public void onGroupEnd(int tag, int numInGroup, int index)
+    public MessageControl onGroupEnd(int tag, int numInGroup, int index)
     {
-        delegate.onGroupEnd(tag, numInGroup, index);
+        final MessageControl control = delegate.onGroupEnd(tag, numInGroup, index);
         if (numInGroup == index + 1)
         {
             groupLevel--;
         }
+        return control;
     }
 
     @Override
     public boolean onError(ValidationError error, int messageType, int tagNumber, AsciiFieldFlyweight value)
     {
-        return false;
+        return delegate.onError(error, messageType, tagNumber, value);
     }
 }

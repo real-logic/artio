@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.otf.MessageControl;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
@@ -31,16 +32,17 @@ class PossDupFinder implements OtfMessageAcceptor
     private int bodyLengthOffset;
     private int lengthOfBodyLength;
 
-    public void onNext()
+    public MessageControl onNext()
     {
         possDupOffset = NO_ENTRY;
         sendingTimeEnd = NO_ENTRY;
         bodyLength = NO_ENTRY;
         bodyLengthOffset = NO_ENTRY;
         lengthOfBodyLength = NO_ENTRY;
+        return MessageControl.CONTINUE;
     }
 
-    public void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
+    public MessageControl onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
         switch (tag)
         {
@@ -58,26 +60,27 @@ class PossDupFinder implements OtfMessageAcceptor
                 bodyLength = buffer.getInt(offset, offset + length);
                 break;
         }
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupHeader(final int tag, final int numInGroup)
+    public MessageControl onGroupHeader(final int tag, final int numInGroup)
     {
-
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupBegin(final int tag, final int numInGroup, final int index)
+    public MessageControl onGroupBegin(final int tag, final int numInGroup, final int index)
     {
-
+        return MessageControl.CONTINUE;
     }
 
-    public void onGroupEnd(final int tag, final int numInGroup, final int index)
+    public MessageControl onGroupEnd(final int tag, final int numInGroup, final int index)
     {
-
+        return MessageControl.CONTINUE;
     }
 
-    public void onComplete()
+    public MessageControl onComplete()
     {
-
+        return MessageControl.CONTINUE;
     }
 
     public boolean onError(final ValidationError error,

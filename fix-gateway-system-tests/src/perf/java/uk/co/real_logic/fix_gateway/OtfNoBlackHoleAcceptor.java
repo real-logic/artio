@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway;
 
 import org.openjdk.jmh.annotations.CompilerControl;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
+import uk.co.real_logic.fix_gateway.otf.MessageControl;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
@@ -24,34 +25,39 @@ import static org.openjdk.jmh.annotations.CompilerControl.Mode.DONT_INLINE;
 
 public final class OtfNoBlackHoleAcceptor implements OtfMessageAcceptor
 {
-    public void onNext()
+    public MessageControl onNext()
     {
-
+        return MessageControl.CONTINUE;
     }
 
     @CompilerControl(DONT_INLINE)
-    public void onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
+    public MessageControl onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
+        return MessageControl.CONTINUE;
     }
 
     @CompilerControl(DONT_INLINE)
-    public void onGroupHeader(final int tag, final int numInGroup)
+    public MessageControl onGroupHeader(final int tag, final int numInGroup)
     {
+        return MessageControl.CONTINUE;
     }
 
     @CompilerControl(DONT_INLINE)
-    public void onGroupBegin(final int tag, final int numInGroup, final int index)
+    public MessageControl onGroupBegin(final int tag, final int numInGroup, final int index)
     {
+        return MessageControl.CONTINUE;
     }
 
     @CompilerControl(DONT_INLINE)
-    public void onGroupEnd(final int tag, final int numInGroup, final int index)
+    public MessageControl onGroupEnd(final int tag, final int numInGroup, final int index)
     {
+        return MessageControl.CONTINUE;
     }
 
     @CompilerControl(DONT_INLINE)
-    public void onComplete()
+    public MessageControl onComplete()
     {
+        return MessageControl.CONTINUE;
     }
 
     @CompilerControl(DONT_INLINE)
