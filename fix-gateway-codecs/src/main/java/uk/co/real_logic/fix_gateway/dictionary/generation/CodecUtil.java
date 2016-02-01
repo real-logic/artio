@@ -64,6 +64,16 @@ public final class CodecUtil
         return buffer;
     }
 
+    public static byte[] toBytes(final char[] value, final int length)
+    {
+        final byte[] buffer = new byte[length];
+        for (int i = 0; i < length; i++)
+        {
+            buffer[i] = (byte) value[i];
+        }
+        return buffer;
+    }
+
     public static boolean equals(final char[] value, final char[] expected, final int length)
     {
         if (value.length < length || expected.length < length)
