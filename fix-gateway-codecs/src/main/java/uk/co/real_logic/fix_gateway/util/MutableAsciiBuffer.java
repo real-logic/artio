@@ -454,6 +454,12 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         return length;
     }
 
+    public int putAsciiChar(final int index, final char value)
+    {
+        putByte(index, (byte) value);
+        return 1;
+    }
+
     private static int endOffset(final long value)
     {
         for (int i = 0; true; i++)

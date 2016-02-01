@@ -245,6 +245,7 @@ public final class ExampleDictionary
         final Field booleanField = registerField(messageEgFields, 118, "BooleanField", Type.BOOLEAN);
         final Field dataField = registerField(messageEgFields, 119, "DataField", Type.DATA);
         final Field someTime = registerField(messageEgFields, 127,  "SomeTimeField", Type.UTCTIMESTAMP);
+        final Field charField = registerField(messageEgFields, 128,  "CharField", Type.CHAR);
 
         final Group nestedGroup = Group.of(registerField(messageEgFields, 122, "NoNestedGroup", INT));
         nestedGroup.optionalEntry(registerField(messageEgFields, 123, "NestedField", INT));
@@ -263,6 +264,7 @@ public final class ExampleDictionary
         heartbeat.requiredEntry(floatField);
         heartbeat.optionalEntry(booleanField);
         heartbeat.optionalEntry(dataField);
+        heartbeat.optionalEntry(charField);
         heartbeat.requiredEntry(someTime);
         heartbeat.optionalEntry(egGroup);
         heartbeat.requiredEntry(egComponent);
