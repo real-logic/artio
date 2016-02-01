@@ -194,7 +194,6 @@ public class EncoderGenerator extends Generator
 
         final String hasAssign = String.format("        has%s = true;\n", name);
 
-        // TODO: make encoding generation more regular and delegate to library calls more
         final Function<String, String> generateSetter =
             (type) -> setter(name, type, fieldName, hasField, className, hasAssign);
 
@@ -605,7 +604,6 @@ public class EncoderGenerator extends Generator
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
-        // TODO: tags aren't always ints
         final int length = string.putAsciiInt(0, field.number());
         final String bytes =
             IntStream.range(0, length)
