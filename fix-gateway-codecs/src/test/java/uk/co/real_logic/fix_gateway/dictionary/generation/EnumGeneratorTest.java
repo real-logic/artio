@@ -26,7 +26,6 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 
-// TODO: support enums whose values has multiple characters
 public class EnumGeneratorTest
 {
     private StringWriterOutputManager outputManager = new StringWriterOutputManager();
@@ -67,10 +66,15 @@ public class EnumGeneratorTest
         final Class<?> clazz = compileEgEnum();
         final Enum[] values = (Enum[])clazz.getEnumConstants();
 
-        final Method valueOf = clazz.getMethod("valueOf", int.class);
+        final Method decode = decode(clazz);
 
-        assertEquals(values[0], valueOf.invoke(null, 'a'));
-        assertEquals(values[1], valueOf.invoke(null, 'b'));
+        assertEquals(values[0], decode.invoke(null, 'a'));
+        assertEquals(values[1], decode.invoke(null, 'b'));
+    }
+
+    private Method decode(final Class<?> clazz) throws NoSuchMethodException
+    {
+        return clazz.getMethod("decode", int.class);
     }
 
     @Test
@@ -85,10 +89,10 @@ public class EnumGeneratorTest
         final Class<?> clazz = compile(OTHER_ENUM);
         final Enum[] values = (Enum[])clazz.getEnumConstants();
 
-        final Method valueOf = clazz.getMethod("valueOf", int.class);
+        final Method decode = decode(clazz);
 
-        assertEquals(values[0], valueOf.invoke(null, 1));
-        assertEquals(values[1], valueOf.invoke(null, 12));
+        assertEquals(values[0], decode.invoke(null, 1));
+        assertEquals(values[1], decode.invoke(null, 12));
     }
 
     @Test
@@ -97,11 +101,16 @@ public class EnumGeneratorTest
         final Class<?> clazz = compile(STRING_ENUM);
         final Enum[] values = (Enum[])clazz.getEnumConstants();
 
-        final Method valueOf = clazz.getMethod("valueOf", String.class);
+        final Method decode = stringDecode(clazz);
 
-        assertEquals(values[0], valueOf.invoke(null, "_0"));
-        assertEquals(values[1], valueOf.invoke(null, "_A"));
-        assertEquals(values[2], valueOf.invoke(null, "_AAA"));
+        assertEquals(values[0], decode.invoke(null, "0"));
+        assertEquals(values[1], decode.invoke(null, "A"));
+        assertEquals(values[2], decode.invoke(null, "AA"));
+    }
+
+    private Method stringDecode(final Class<?> clazz) throws NoSuchMethodException
+    {
+        return clazz.getMethod("decode", String.class);
     }
 
     private Class<?> compileEgEnum() throws Exception

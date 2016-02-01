@@ -121,7 +121,7 @@ public final class EnumGenerator
             .map((value) -> format("        case %s: return %s;\n", literal(value, type), value.description()))
             .collect(joining());
 
-        return method("valueOf", name, representation) +
+        return method("decode", name, representation) +
             "        switch(representation)\n" +
             "        {\n" +
             cases +
@@ -134,8 +134,6 @@ public final class EnumGenerator
     {
         switch (type)
         {
-            case STRING:
-            case MULTIPLEVALUESTRING:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
