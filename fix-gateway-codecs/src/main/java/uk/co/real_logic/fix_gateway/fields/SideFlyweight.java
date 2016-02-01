@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
-import uk.co.real_logic.fix_gateway.flyweight_api.Side;
+import uk.co.real_logic.fix_gateway.builder.Side;
 
 /**
  * .

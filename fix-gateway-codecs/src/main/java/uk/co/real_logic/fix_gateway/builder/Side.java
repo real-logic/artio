@@ -13,8 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.flyweight_api;
+package uk.co.real_logic.fix_gateway.builder;
 
-public class StandardHeader
+/**
+ * .
+ */
+public enum Side
 {
+    Buy(1),
+    Sell(2);
+
+    private final int value;
+
+    Side(int value)
+    {
+        this.value = value;
+    }
+
+    public int value()
+    {
+        return value;
+    }
+
+    public static Side valueOf(int value)
+    {
+        switch (value)
+        {
+            case 1:
+                return Buy;
+            case 2:
+                return Sell;
+            default:
+                throw new IllegalArgumentException(value + " isn't a valid value");
+        }
+    }
 }

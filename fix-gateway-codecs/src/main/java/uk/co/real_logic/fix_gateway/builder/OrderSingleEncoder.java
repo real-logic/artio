@@ -17,166 +17,25 @@ package uk.co.real_logic.fix_gateway.builder;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
-import uk.co.real_logic.fix_gateway.flyweight_api.*;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
-
-import java.util.Currency;
 
 /**
  * .
  */
 public class OrderSingleEncoder implements MessageEncoder
 {
-    private DirectBuffer buffer;
-
     private AsciiBuffer clOrdID;
     private char handlInst;
     private Side side;
     private OrdType ordType;
     private long transactTime;
-    private AsciiBuffer symbol;
-
-    private boolean hasClientID;
-    private AsciiBuffer clientID;
-
-    private boolean hasExecBroker;
-    private AsciiBuffer execBroker;
-
-    private boolean hasAccount;
-    private AsciiBuffer account;
-
-    private boolean hasNoAllocs;
-    private int noAllocs;
-
-    private boolean hasAllocAccount;
-    private AsciiBuffer allocAccount;
-
-    private boolean hasAllocShares;
-    private int allocShares;
-
-    private boolean hasSettlmntTyp;
-    private char settlmntTyp;
-
-    private boolean hasFutSettDate;
-    private long futSettDate;
-
-    private boolean hasExecInst;
-    private ExecInst execInst;
-
-    private boolean hasMinQty;
-    private Qty minQty;
-
-    private boolean hasMaxFloor;
-    private Qty maxFloor;
-
-    private boolean hasExDestination;
-    private Exchange exDestination;
-
-    private boolean hasNoTradingSessions;
-    private int noTradingSessions;
-
-    private boolean hasTradingSessionID;
-    private AsciiBuffer tradingSessionID;
-
-    private boolean hasProcessCode;
-    private char processCode;
-
-    private boolean hasSymbolSfx;
-    private AsciiBuffer symbolSfx;
-
-    private boolean hasSecurityID;
-    private AsciiBuffer securityID;
-
-    private boolean hasIDSource;
-    private AsciiBuffer iDSource;
-
-    private boolean hasMaturityMonthYear;
-    private MonthYear maturityMonthYear;
-
-    private boolean hasMaturityDay;
-    private int maturityDay;
-
-    private boolean hasPutOrCall;
-    private int putOrCall;
-
-    private boolean hasStrikePrice;
-    private int strikePrice;
-
-    private boolean hasOptAttribute;
-    private char optAttribute;
-
-    private boolean hasContractMultiplier;
-    private float contractMultiplier;
-
-    private boolean hasCouponRate;
-    private float couponRate;
-
-    private boolean hasSecurityExchange;
-    private Exchange securityExchange;
-
-    private boolean hasIssuer;
-    private AsciiBuffer issuer;
-
-    private boolean hasEncodedIssuerLen;
-    private int encodedIssuerLen;
-
-    private boolean hasSecurityDesc;
-    private AsciiBuffer securityDesc;
-
-    private boolean hasEncodedSecurityDescLen;
-    private int encodedSecurityDescLen;
-
-    private boolean hasPrevClosePx;
-    private int prevClosePx;
-
-    private boolean hasLocateReqd;
-    private boolean locateReqd;
 
     private boolean orderQtyIsPresent;
     private DecimalFloat orderQty;
 
-    private boolean hasCashOrderQty;
-    private DecimalFloat cashOrderQty;
-
     private boolean priceIsPresent;
     private DecimalFloat price;
-
-    private boolean hasStopPx;
-    private long stopPx;
-
-    private boolean hasCurrency;
-    private Currency currency;
-
-    private boolean hasComplianceID;
-    private AsciiBuffer complianceID;
-
-    private boolean hasSolicitedFlag;
-    private boolean solicitedFlag;
-
-    private boolean hasIOIid;
-    private AsciiBuffer iOIid;
-
-    private boolean hasQuoteID;
-    private AsciiBuffer quoteID;
-
-    private boolean hasEffectiveTime;
-    private long effectiveTime;
-
-    private boolean hasExpireDate;
-    private long expireDate;
-
-    private boolean hasExpireTime;
-    private long expireTime;
-
-    private boolean hasGTBookingInst;
-    private int gTBookingInst;
-
-    private boolean hasCommission;
-    private Amt commission;
-
-    private boolean hasCommType;
-    private CommType commType;
 
     public OrderSingleEncoder()
     {
@@ -240,13 +99,6 @@ public class OrderSingleEncoder implements MessageEncoder
     {
         this.priceIsPresent = true;
         this.price = price;
-        return this;
-    }
-
-    public OrderSingleEncoder resetPrice()
-    {
-        this.priceIsPresent = false;
-        this.price = null;
         return this;
     }
 

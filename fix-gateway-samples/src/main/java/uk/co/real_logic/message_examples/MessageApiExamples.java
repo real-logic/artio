@@ -30,8 +30,8 @@ import uk.co.real_logic.fix_gateway.library.validation.TargetCompIdValidationStr
 
 import static java.util.Arrays.asList;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
-import static uk.co.real_logic.fix_gateway.flyweight_api.OrdType.Market;
-import static uk.co.real_logic.fix_gateway.flyweight_api.Side.Sell;
+import static uk.co.real_logic.fix_gateway.builder.OrdType.Market;
+import static uk.co.real_logic.fix_gateway.builder.Side.Sell;
 
 /**
  * Example of what sending an OrderSingle message would be like using the API.
