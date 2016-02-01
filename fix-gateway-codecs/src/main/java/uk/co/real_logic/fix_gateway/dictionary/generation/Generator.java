@@ -282,12 +282,14 @@ public abstract class Generator
             case DATA:
                 return resetFieldValue(name, "null");
 
+            case BOOLEAN:
+                return resetFieldValue(name, "false");
+
             case STRING:
             case MULTIPLEVALUESTRING:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-            case BOOLEAN:
                 return resetLength(name);
 
             case UTCTIMESTAMP:
