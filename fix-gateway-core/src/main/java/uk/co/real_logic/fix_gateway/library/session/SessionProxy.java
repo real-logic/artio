@@ -91,6 +91,7 @@ public class SessionProxy
     private final long connectionId;
     private final int libraryId;
     private long sessionId;
+    private Object sessionKey;
 
     public SessionProxy(
         final int bufferSize,
@@ -115,10 +116,7 @@ public class SessionProxy
     public SessionProxy setupSession(final long sessionId, final Object sessionKey)
     {
         this.sessionId = sessionId;
-        for (final HeaderEncoder header : headers)
-        {
-            sessionIdStrategy.setupSession(sessionKey, header);
-        }
+        this.sessionKey = sessionKey;
         return this;
     }
 
@@ -324,8 +322,8 @@ public class SessionProxy
 
     private void setupHeader(final HeaderEncoder header, final int msgSeqNo)
     {
-        timestampEncoder.encode(clock.time());
-        header.sendingTime(timestampEncoder.buffer());
+        sessionIdStrategy.setupSession(sessionKey, header);
+        header.sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(clock.time()));
         header.msgSeqNum(msgSeqNo);
     }
 
