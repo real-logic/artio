@@ -457,7 +457,7 @@ public abstract class Generator
         if (element instanceof Field)
         {
             final Field field = (Field) element;
-            final String value = valueToString(field);
+            final String value = fieldToString(field);
 
             final String formatter = String.format(
                 "String.format(\"  \\\"%s\\\": \\\"%%s\\\",\\n\", %s)",
@@ -501,7 +501,7 @@ public abstract class Generator
 
     protected abstract String componentToString(final Component component);
 
-    protected String valueToString(final Field field)
+    protected String fieldToString(final Field field)
     {
         final String fieldName = formatPropertyName(field.name());
         switch (field.type())
@@ -515,7 +515,6 @@ public abstract class Generator
             case UTCDATEONLY:
             case UTCTIMESTAMP:
             case LOCALMKTDATE:
-            case DAYOFMONTH:
             case MONTHYEAR:
                 return stringToString(fieldName);
 
