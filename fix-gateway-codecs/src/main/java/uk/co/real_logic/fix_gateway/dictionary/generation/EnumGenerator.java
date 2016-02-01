@@ -121,13 +121,18 @@ public final class EnumGenerator
             .map((value) -> format("        case %s: return %s;\n", literal(value, type), value.description()))
             .collect(joining());
 
-        return method("decode", name, representation) +
+        return format(
+            "    public static %s decode(%s)\n" +
+            "    {\n" +
             "        switch(representation)\n" +
             "        {\n" +
-            cases +
+            "%s" +
             "        default: throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
             "        }\n" +
-            "    }\n";
+            "    }\n",
+            name,
+            representation.declaration(),
+            cases);
     }
 
     private boolean hasGeneratedValueOf(final Type type)

@@ -95,13 +95,7 @@ public final class GenerationUtil
         return String.format("%s%s(%s)\n%1$s{\n%s\n%1$s}\n\n", INDENT, name, paramDeclaration(parameters), binding);
     }
 
-    public static String method(final String name, final String returnType, final Var ... parameters)
-    {
-        return String.format("%spublic static %s %s(%s)\n%1$s{\n",
-                             INDENT, returnType, name, paramDeclaration(parameters));
-    }
-
-    private static String paramDeclaration(final Var[] parameters)
+    public static String paramDeclaration(final Var[] parameters)
     {
         return Stream.of(parameters)
                 .map(Var::declaration)

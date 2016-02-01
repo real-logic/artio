@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.generation.CompilerUtil;
 import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
@@ -106,6 +107,21 @@ public class EnumGeneratorTest
         assertEquals(values[0], decode.invoke(null, "0"));
         assertEquals(values[1], decode.invoke(null, "A"));
         assertEquals(values[2], decode.invoke(null, "AA"));
+    }
+
+    // Low priority
+    @Ignore
+    @Test
+    public void generatesCharArrayBasedDecode() throws Exception
+    {
+        final Class<?> clazz = compile(STRING_ENUM);
+        final Enum[] values = (Enum[])clazz.getEnumConstants();
+
+        final Method decode = clazz.getMethod("decode", char[].class, int.class);
+
+        assertEquals(values[0], decode.invoke(null, "0".toCharArray(), 1));
+        assertEquals(values[1], decode.invoke(null, "A".toCharArray(), 1));
+        assertEquals(values[2], decode.invoke(null, "AA ".toCharArray(), 2));
     }
 
     private Method stringDecode(final Class<?> clazz) throws NoSuchMethodException
