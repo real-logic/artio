@@ -490,7 +490,7 @@ public final class FixLibrary extends GatewayProcess
             return sessionConfiguration.initialSequenceNumber();
         }
 
-        if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != SequenceNumberIndex.NONE)
+        if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != SequenceNumberIndex.UNKNOWN_SESSION)
         {
             return lastSequenceNumber;
         }
@@ -528,7 +528,7 @@ public final class FixLibrary extends GatewayProcess
     private int acceptorInitialSequenceNumber(int lastSequenceNumber)
     {
         if (!configuration.acceptorSequenceNumbersResetUponReconnect() &&
-            lastSequenceNumber != SequenceNumberIndex.NONE)
+            lastSequenceNumber != SequenceNumberIndex.UNKNOWN_SESSION)
         {
             return lastSequenceNumber;
         }

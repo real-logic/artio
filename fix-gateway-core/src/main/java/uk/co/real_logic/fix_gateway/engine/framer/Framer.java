@@ -51,7 +51,7 @@ import java.util.function.Consumer;
 import static java.net.StandardSocketOptions.*;
 import static uk.co.real_logic.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex.NONE;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
@@ -244,7 +244,7 @@ public class Framer implements Agent, SessionHandler
                     setupConnection(channel, connectionId, UNKNOWN, acceptorLibraryId);
 
                     final String address = channel.getRemoteAddress().toString();
-                    inboundPublication.saveConnect(connectionId, address, acceptorLibraryId, ACCEPTOR, NONE);
+                    inboundPublication.saveConnect(connectionId, address, acceptorLibraryId, ACCEPTOR, UNKNOWN_SESSION);
                 }
 
                 it.remove();

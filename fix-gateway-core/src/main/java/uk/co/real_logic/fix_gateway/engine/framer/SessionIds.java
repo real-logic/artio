@@ -28,7 +28,7 @@ public class SessionIds
     public static final long MISSING = -2;
     public static final long DUPLICATE_SESSION = -1;
 
-    private static long counter = 0L;
+    private static long counter = 1L;
 
     private final LongHashSet currentlyAuthenticated = new LongHashSet(40, MISSING);
     private final Map<Object, Long> compositeToSurrogate = new HashMap<>();

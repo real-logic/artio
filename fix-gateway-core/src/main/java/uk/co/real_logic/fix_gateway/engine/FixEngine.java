@@ -86,16 +86,18 @@ public final class FixEngine extends GatewayProcess
         init(configuration);
         this.configuration = configuration;
 
+        final SequenceNumberIndex writerIndex = SequenceNumberIndex.forWriting(
+            configuration.sequenceNumberCacheBuffer(), errorBuffer);
         initFramer(configuration, fixCounters);
-        initLogger(configuration);
+        initLogger(configuration, writerIndex);
         initErrorPrinter(configuration);
     }
 
-    private void initLogger(final EngineConfiguration configuration)
+    private void initLogger(final EngineConfiguration configuration, final SequenceNumberIndex writerIndex)
     {
         logger = new Logger(
             configuration, inboundLibraryStreams, outboundLibraryStreams, errorBuffer, replayPublication(),
-            SequenceNumberIndex.forWriting(configuration.sequenceNumberCacheBuffer(), errorBuffer));
+            writerIndex);
         logger.init();
     }
 

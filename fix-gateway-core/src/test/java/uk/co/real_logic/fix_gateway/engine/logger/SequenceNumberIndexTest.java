@@ -24,7 +24,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex.NONE;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex.UNKNOWN_SESSION;
 
 public class SequenceNumberIndexTest extends AbstractLogTest
 {
@@ -37,7 +37,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test
     public void shouldNotInitiallyKnowASequenceNumber()
     {
-        assertLastKnownSequenceNumberIs(NONE, SESSION_ID);
+        assertLastKnownSequenceNumberIs(UNKNOWN_SESSION, SESSION_ID);
     }
 
     @Test
@@ -57,7 +57,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         indexRecord();
 
-        assertLastKnownSequenceNumberIs(NONE, SESSION_ID_2);
+        assertLastKnownSequenceNumberIs(UNKNOWN_SESSION, SESSION_ID_2);
     }
 
     @Test

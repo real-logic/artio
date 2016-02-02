@@ -153,6 +153,7 @@
     <sbe:message name="LastKnownSequenceNumber" id="19" description="">
         <field name="sessionId" id="51" type="FixSessionId"/>
         <field name="sequenceNumber" id="52" type="int32"/>
+        <field name="lock" id="76" type="int32"/>
     </sbe:message>
 
     <!-- Clustering/Replication Protocol -->
