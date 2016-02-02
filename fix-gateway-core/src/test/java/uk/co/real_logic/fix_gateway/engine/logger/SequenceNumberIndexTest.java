@@ -96,6 +96,14 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         assertLastKnownSequenceNumberIs(updatedSequenceNumber, SESSION_ID, requiredStreamPosition);
     }
 
+    @Test(expected = IllegalStateException.class)
+    public void shouldValidateBufferItReadsFrom()
+    {
+        final AtomicBuffer tableBuffer = new UnsafeBuffer(new byte[16 * 1024]);
+
+        SequenceNumberIndex.forReading(tableBuffer, errorHandler);
+    }
+
     @After
     public void verifyNoErrors()
     {
