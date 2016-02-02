@@ -371,4 +371,9 @@ public class GatewayPublication extends AbstractionPublication
         return dataPublication.sessionId();
     }
 
+    public long position()
+    {
+        return dataPublication.position();
+    }
+
 }
