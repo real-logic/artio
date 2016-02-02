@@ -64,11 +64,9 @@
             <validValue name="FOR">0</validValue>
             <validValue name="AGAINST">1</validValue>
         </enum>
-
     </types>
 
     <!-- MESSAGING PROTOCOL -->
-
     <sbe:message name="FixMessage" id="1" description="A framed FIX message">
         <field name="libraryId" id="41" type="LibraryId"/>
         <field name="messageType" id="1" type="MessageType"/>
@@ -124,7 +122,6 @@
     </sbe:message>
 
     <!-- EXCEPTION STORAGE DATA STRUCTURES -->
-
     <sbe:message name="ExceptionEntry" id="14" description="">
         <field name="status" id="37" type="int32"/>
         <field name="hash" id="35" type="int32"/>

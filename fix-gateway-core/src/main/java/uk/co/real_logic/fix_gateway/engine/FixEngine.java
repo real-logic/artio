@@ -23,7 +23,7 @@ import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.engine.framer.*;
 import uk.co.real_logic.fix_gateway.engine.logger.Logger;
-import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumbers;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.util.List;
@@ -95,7 +95,7 @@ public final class FixEngine extends GatewayProcess
     {
         logger = new Logger(
             configuration, inboundLibraryStreams, outboundLibraryStreams, errorBuffer, replayPublication(),
-            SequenceNumbers.forWriting(configuration.sequenceNumberCacheBuffer(), errorBuffer));
+            SequenceNumberIndex.forWriting(configuration.sequenceNumberCacheBuffer(), errorBuffer));
         logger.init();
     }
 
@@ -134,7 +134,7 @@ public final class FixEngine extends GatewayProcess
         final Framer framer = new Framer(
             new SystemEpochClock(), configuration, handler, librarySubscription, replaySubscription(),
             sessionIdStrategy, sessionIds, adminCommands,
-            SequenceNumbers.forReading(configuration.sequenceNumberCacheBuffer(), errorBuffer)
+            SequenceNumberIndex.forReading(configuration.sequenceNumberCacheBuffer(), errorBuffer)
         );
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }

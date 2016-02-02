@@ -24,15 +24,15 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumbers.NONE;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex.NONE;
 
-public class SequenceNumbersTest extends AbstractLogTest
+public class SequenceNumberIndexTest extends AbstractLogTest
 {
 
     private AtomicBuffer tableBuffer = new UnsafeBuffer(new byte[16 * 1024]);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private SequenceNumbers writer = SequenceNumbers.forWriting(tableBuffer, errorHandler);
-    private SequenceNumbers reader = SequenceNumbers.forReading(tableBuffer, errorHandler);
+    private SequenceNumberIndex writer = SequenceNumberIndex.forWriting(tableBuffer, errorHandler);
+    private SequenceNumberIndex reader = SequenceNumberIndex.forReading(tableBuffer, errorHandler);
 
     @Test
     public void shouldNotInitiallyKnowASequenceNumber()

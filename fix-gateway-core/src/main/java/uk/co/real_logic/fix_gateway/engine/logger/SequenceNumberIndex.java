@@ -35,7 +35,7 @@ import static uk.co.real_logic.agrona.concurrent.RecordBuffer.DID_NOT_CLAIM_RECO
  * Each instance is not thread-safe, however, they can share a common
  * off-heap in a threadsafe manner.
  */
-public class SequenceNumbers implements Index
+public class SequenceNumberIndex implements Index
 {
     public static final int NONE = -1;
 
@@ -57,41 +57,14 @@ public class SequenceNumbers implements Index
     private final ErrorHandler errorHandler;
     private final boolean isWriter;
 
-    public static SequenceNumbers forWriting(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
+    public static SequenceNumberIndex forWriting(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
     {
-        return new SequenceNumbers(outputBuffer, errorHandler, true).initialise();
+        return new SequenceNumberIndex(outputBuffer, errorHandler, true).initialise();
     }
 
-    public static SequenceNumbers forReading(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
+    public static SequenceNumberIndex forReading(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
     {
-        return new SequenceNumbers(outputBuffer, errorHandler, false);
-    }
-
-    SequenceNumbers(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler, final boolean isWriter)
-    {
-        this.outputBuffer = outputBuffer;
-        this.errorHandler = errorHandler;
-        this.isWriter = isWriter;
-        recordBuffer = new RecordBuffer(outputBuffer, HEADER_SIZE, LastKnownSequenceNumberEncoder.BLOCK_LENGTH);
-    }
-
-    public SequenceNumbers initialise()
-    {
-        if (knownStreamPosition() == 0)
-        {
-            recordBuffer.initialise();
-        }
-        return this;
-    }
-
-    private void knownStreamPosition(final int position)
-    {
-        outputBuffer.putIntOrdered(KNOWN_STREAM_POSITION_INDEX, position);
-    }
-
-    private int knownStreamPosition()
-    {
-        return outputBuffer.getIntVolatile(KNOWN_STREAM_POSITION_INDEX);
+        return new SequenceNumberIndex(outputBuffer, errorHandler, false);
     }
 
     @Override
@@ -149,11 +122,6 @@ public class SequenceNumbers implements Index
         return NONE;
     }
 
-    private int hash(long sessionId)
-    {
-        return Hashing.hash(sessionId, MASK);
-    }
-
     @Override
     public void close()
     {
@@ -161,6 +129,38 @@ public class SequenceNumbers implements Index
         {
             IoUtil.unmap(outputBuffer.byteBuffer());
         }
+    }
+
+    SequenceNumberIndex(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler, final boolean isWriter)
+    {
+        this.outputBuffer = outputBuffer;
+        this.errorHandler = errorHandler;
+        this.isWriter = isWriter;
+        recordBuffer = new RecordBuffer(outputBuffer, HEADER_SIZE, LastKnownSequenceNumberEncoder.BLOCK_LENGTH);
+    }
+
+    private SequenceNumberIndex initialise()
+    {
+        if (knownStreamPosition() == 0)
+        {
+            recordBuffer.initialise();
+        }
+        return this;
+    }
+
+    private void knownStreamPosition(final int position)
+    {
+        outputBuffer.putIntOrdered(KNOWN_STREAM_POSITION_INDEX, position);
+    }
+
+    private int knownStreamPosition()
+    {
+        return outputBuffer.getIntVolatile(KNOWN_STREAM_POSITION_INDEX);
+    }
+
+    private int hash(long sessionId)
+    {
+        return Hashing.hash(sessionId, MASK);
     }
 
 }

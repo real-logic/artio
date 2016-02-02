@@ -24,7 +24,7 @@ import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.SystemEpochClock;
 import uk.co.real_logic.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.*;
-import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumbers;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
 import uk.co.real_logic.fix_gateway.library.session.*;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
@@ -345,8 +345,6 @@ public final class FixLibrary extends GatewayProcess
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
-                // TODO; wire up saved sequence number
-
                 if (type == INITIATOR)
                 {
                     DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
@@ -492,7 +490,7 @@ public final class FixLibrary extends GatewayProcess
             return sessionConfiguration.initialSequenceNumber();
         }
 
-        if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != SequenceNumbers.NONE)
+        if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != SequenceNumberIndex.NONE)
         {
             return lastSequenceNumber;
         }
@@ -530,7 +528,7 @@ public final class FixLibrary extends GatewayProcess
     private int acceptorInitialSequenceNumber(int lastSequenceNumber)
     {
         if (!configuration.acceptorSequenceNumbersResetUponReconnect() &&
-            lastSequenceNumber != SequenceNumbers.NONE)
+            lastSequenceNumber != SequenceNumberIndex.NONE)
         {
             return lastSequenceNumber;
         }

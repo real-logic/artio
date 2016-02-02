@@ -23,7 +23,7 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumbers;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -107,7 +107,7 @@ public class FramerTest
             mockSessionIdStrategy,
             new SessionIds(),
             mock(QueuedPipe.class),
-            mock(SequenceNumbers.class)
+            mock(SequenceNumberIndex.class)
         );
     }
 
