@@ -27,7 +27,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.util.concurrent.locks.LockSupport;
 
-import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
+import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_LONG;
 
 /**
  * Stores a cache of the last sent sequence number.
@@ -49,7 +49,7 @@ public class SequenceNumberIndex implements Index
     public static final int STREAM_POSITION_BEHIND = -2;
 
     private static final int KNOWN_STREAM_POSITION_INDEX = MessageHeaderDecoder.ENCODED_LENGTH;
-    private static final int HEADER_SIZE = KNOWN_STREAM_POSITION_INDEX + SIZE_OF_INT;
+    private static final int HEADER_SIZE = KNOWN_STREAM_POSITION_INDEX + SIZE_OF_LONG;
     private static final int RECORD_SIZE = LastKnownSequenceNumberDecoder.BLOCK_LENGTH;
 
     private static final int LOCK_OFFSET = 12;
@@ -100,7 +100,12 @@ public class SequenceNumberIndex implements Index
 
     @Override
     public void indexRecord(
-        final DirectBuffer buffer, final int srcOffset, final int length, final int streamId, final int aeronSessionId)
+        final DirectBuffer buffer,
+        final int srcOffset,
+        final int length,
+        final int streamId,
+        final int aeronSessionId,
+        final long position)
     {
         int offset = srcOffset;
         frameHeaderDecoder.wrap(buffer, offset);
@@ -123,12 +128,17 @@ public class SequenceNumberIndex implements Index
                 return;
             }
 
-            knownStreamPosition(srcOffset + length);
+            knownStreamPosition(position + length);
         }
     }
 
-    public int lastKnownSequenceNumber(final long sessionId)
+    public int lastKnownSequenceNumber(final long sessionId, final long requiredStreamPosition)
     {
+        if (knownStreamPosition() < requiredStreamPosition)
+        {
+            return STREAM_POSITION_BEHIND;
+        }
+
         final int lastRecordOffset = outputBuffer.capacity() - RECORD_SIZE;
         int position = HEADER_SIZE;
         while (position <= lastRecordOffset)
@@ -220,7 +230,7 @@ public class SequenceNumberIndex implements Index
 
     private void initialise()
     {
-        if (knownStreamPosition() == 0)
+        if (knownStreamPosition() == 0L)
         {
             fileHeaderEncoder
                 .wrap(outputBuffer, 0)
@@ -252,14 +262,14 @@ public class SequenceNumberIndex implements Index
         }
     }
 
-    private void knownStreamPosition(final int position)
+    private void knownStreamPosition(final long position)
     {
-        outputBuffer.putIntOrdered(KNOWN_STREAM_POSITION_INDEX, position);
+        outputBuffer.putLongVolatile(KNOWN_STREAM_POSITION_INDEX, position);
     }
 
-    private int knownStreamPosition()
+    private long knownStreamPosition()
     {
-        return outputBuffer.getIntVolatile(KNOWN_STREAM_POSITION_INDEX);
+        return outputBuffer.getLongVolatile(KNOWN_STREAM_POSITION_INDEX);
     }
 
     private int lockVolatile(final int recordOffset)

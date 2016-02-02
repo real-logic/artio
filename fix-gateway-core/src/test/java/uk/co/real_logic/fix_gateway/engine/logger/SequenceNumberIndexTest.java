@@ -24,6 +24,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex.STREAM_POSITION_BEHIND;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex.UNKNOWN_SESSION;
 
 public class SequenceNumberIndexTest extends AbstractLogTest
@@ -45,7 +46,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         bufferContainsMessage(true);
 
-        indexRecord();
+        indexRecord(START);
 
         assertLastKnownSequenceNumberIs(SEQUENCE_NUMBER, SESSION_ID);
     }
@@ -55,7 +56,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         bufferContainsMessage(true);
 
-        indexRecord();
+        indexRecord(START);
 
         assertLastKnownSequenceNumberIs(UNKNOWN_SESSION, SESSION_ID_2);
     }
@@ -67,13 +68,32 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         bufferContainsMessage(true);
 
-        indexRecord();
+        indexRecord(START);
 
         bufferContainsMessage(true, SESSION_ID, updatedSequenceNumber);
 
-        indexRecord();
+        indexRecord(START + fragmentLength());
 
         assertLastKnownSequenceNumberIs(updatedSequenceNumber, SESSION_ID);
+    }
+
+    @Test
+    public void shouldWaitForSequenceNumberToBeIndexed()
+    {
+        final int updatedSequenceNumber = 8;
+        final int requiredStreamPosition = 150;
+
+        bufferContainsMessage(true);
+
+        indexRecord(START);
+
+        assertLastKnownSequenceNumberIs(STREAM_POSITION_BEHIND, SESSION_ID, requiredStreamPosition);
+
+        bufferContainsMessage(true, SESSION_ID, updatedSequenceNumber);
+
+        indexRecord(START + fragmentLength());
+
+        assertLastKnownSequenceNumberIs(updatedSequenceNumber, SESSION_ID, requiredStreamPosition);
     }
 
     @After
@@ -82,14 +102,23 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         verify(errorHandler, never()).onError(any());
     }
 
-    private void indexRecord()
+    private void indexRecord(final int position)
     {
-        writer.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_STREAM_ID);
+        writer.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_STREAM_ID, position);
     }
 
-    private void assertLastKnownSequenceNumberIs(final int expectedSequenceNumber, final long sessionId)
+    private void assertLastKnownSequenceNumberIs(
+        final int expectedSequenceNumber, final long sessionId)
     {
-        final int number = reader.lastKnownSequenceNumber(sessionId);
+        assertLastKnownSequenceNumberIs(expectedSequenceNumber, sessionId, 0);
+    }
+
+    private void assertLastKnownSequenceNumberIs(
+        final int expectedSequenceNumber,
+        final long sessionId,
+        final int requiredStreamPosition)
+    {
+        final int number = reader.lastKnownSequenceNumber(sessionId, requiredStreamPosition);
         assertEquals(expectedSequenceNumber, number);
     }
 

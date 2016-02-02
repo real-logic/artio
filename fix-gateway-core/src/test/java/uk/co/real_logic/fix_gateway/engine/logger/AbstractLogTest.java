@@ -63,14 +63,14 @@ public class AbstractLogTest
             .header()
                 .sendingTime(timestampEncoder.buffer())
                 .senderCompID("sender")
-                .targetCompID("target");
+                .targetCompID("target")
+                .msgSeqNum(sequenceNumber);
 
         if (hasPossDupFlag)
         {
             testRequest
                 .header()
-                .possDupFlag(false)
-                .msgSeqNum(sequenceNumber);
+                .possDupFlag(false);
         }
 
         logEntryLength = testRequest.encode(asciiFlyweight, 0);

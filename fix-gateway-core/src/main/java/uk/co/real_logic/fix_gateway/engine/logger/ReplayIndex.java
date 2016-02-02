@@ -72,7 +72,7 @@ public class ReplayIndex implements Index
                             final int srcOffset,
                             final int srcLength,
                             final int streamId,
-                            final int aeronSessionId)
+                            final int aeronSessionId, final long position)
     {
         int offset = srcOffset;
         frameHeaderDecoder.wrap(srcBuffer, offset);

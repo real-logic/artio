@@ -128,6 +128,6 @@ public class ReplayQueryTest extends AbstractLogTest
 
     private void indexRecord()
     {
-        replayIndex.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_STREAM_ID);
+        replayIndex.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_STREAM_ID, START);
     }
 }

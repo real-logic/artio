@@ -45,9 +45,12 @@ public class Indexer implements Agent, FragmentHandler
     @Override
     public void onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
+        final int streamId = header.streamId();
+        final int aeronSessionId = header.sessionId();
+        final long position = header.position();
         for (final Index index : indices)
         {
-            index.indexRecord(buffer, offset, length, header.streamId(), header.sessionId());
+            index.indexRecord(buffer, offset, length, streamId, aeronSessionId, position);
         }
     }
 
