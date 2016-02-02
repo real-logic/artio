@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.session;
 
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
+import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 
 import java.util.Arrays;
 
@@ -30,16 +31,25 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
 {
     public Object onAcceptorLogon(final HeaderDecoder header)
     {
-        final char[] senderCompID = Arrays.copyOf(header.targetCompID(), header.targetCompIDLength());
-        final char[] senderSubID = Arrays.copyOf(header.targetSubID(), header.targetSubIDLength());
-        final char[] targetCompId = Arrays.copyOf(header.senderCompID(), header.senderCompIDLength());
-        return new CompositeKey(senderCompID, senderSubID, targetCompId);
+        return new CompositeKey(
+            header.targetCompID(), header.targetCompIDLength(),
+            header.targetSubID(), header.targetSubIDLength(),
+            header.senderCompID(), header.senderCompIDLength());
     }
 
     public Object onInitiatorLogon(
         final String senderCompId, final String senderSubId, final String senderLocationId, final String targetCompId)
     {
-        return new CompositeKey(senderCompId.toCharArray(), senderSubId.toCharArray(), targetCompId.toCharArray());
+        final char[] senderCompIdChars = senderCompId.toCharArray();
+        final char[] senderSubIdChars = senderSubId.toCharArray();
+        final char[] targetCompIdChars = targetCompId.toCharArray();
+        return new CompositeKey(
+            senderCompIdChars,
+            senderCompIdChars.length,
+            senderSubIdChars,
+            senderSubIdChars.length,
+            targetCompIdChars,
+            targetCompIdChars.length);
     }
 
     public void setupSession(final Object compositeKey, final HeaderEncoder headerEncoder)
@@ -52,21 +62,27 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
 
     private static final class CompositeKey
     {
-        private final char[] senderCompID;
-        private final char[] senderSubID;
-        private final char[] targetCompID;
+        private final byte[] senderCompID;
+        private final byte[] senderSubID;
+        private final byte[] targetCompID;
         private final int hashCode;
 
-        private CompositeKey(final char[] senderCompID, final char[] senderSubID, final char[] targetCompID)
+        private CompositeKey(
+            final char[] senderCompID,
+            final int senderCompIDLength,
+            final char[] senderSubID,
+            final int senderSubIDLength,
+            final char[] targetCompID,
+            final int targetCompIDLength)
         {
-            this.senderCompID = senderCompID;
-            this.senderSubID = senderSubID;
-            this.targetCompID = targetCompID;
+            this.senderCompID = CodecUtil.toBytes(senderCompID, senderCompIDLength);
+            this.senderSubID = CodecUtil.toBytes(senderSubID, senderSubIDLength);
+            this.targetCompID = CodecUtil.toBytes(targetCompID, targetCompIDLength);
 
-            hashCode = hash(senderCompID, senderSubID, targetCompID);
+            hashCode = hash(this.senderCompID, this.senderSubID, this.targetCompID);
         }
 
-        private int hash(final char[] senderCompID, final char[] senderSubID, final char[] targetCompID)
+        private int hash(final byte[] senderCompID, final byte[] senderSubID, final byte[] targetCompID)
         {
             int result  = Arrays.hashCode(senderCompID);
             result = 31 * result + Arrays.hashCode(senderSubID);
