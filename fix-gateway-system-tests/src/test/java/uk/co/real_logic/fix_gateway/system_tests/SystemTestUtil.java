@@ -112,13 +112,22 @@ public final class SystemTestUtil
     public static void assertReceivedTestRequest(
         final FixLibrary library1, final FixLibrary library2, final FakeOtfAcceptor acceptor)
     {
-        assertEventuallyTrue("Failed to receive 2 messages", () ->
+        assertReceivedTestRequest(library1, library2, acceptor, 2);
+    }
+
+    public static void assertReceivedTestRequest(
+        final FixLibrary library1,
+        final FixLibrary library2,
+        final FakeOtfAcceptor acceptor,
+        final int messageCount)
+    {
+        assertEventuallyTrue("Failed to receive " + messageCount + " messages", () ->
         {
             poll(library1, library2);
-            assertEquals(2, acceptor.messages().size());
+            assertEquals(messageCount, acceptor.messages().size());
         });
 
-        final FixMessage message = acceptor.messages().get(1);
+        final FixMessage message = acceptor.messages().get(messageCount - 1);
         assertEquals("Not a test request message", "1", message.getMessageType());
     }
 

@@ -15,13 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.agrona.CloseHelper;
-import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
-import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -29,32 +24,14 @@ import uk.co.real_logic.fix_gateway.library.session.Session;
 
 import java.util.List;
 
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
-import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-public class GatewayToGatewaySystemTest
+public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    private int port = unusedPort();
-    private int initAeronPort = unusedPort();
-
-    private MediaDriver mediaDriver;
-    private FixEngine acceptingEngine;
-    private FixEngine initiatingEngine;
-    private FixLibrary acceptingLibrary;
-    private FixLibrary initiatingLibrary;
-    private Session initiatedSession;
-    private Session acceptingSession;
-
-    private FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
-    private FakeSessionHandler acceptingSessionHandler = new FakeSessionHandler(acceptingOtfAcceptor);
-
-    private FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
-    private FakeSessionHandler initiatingSessionHandler = new FakeSessionHandler(initiatingOtfAcceptor);
-
     @Before
     public void launch()
     {
@@ -179,85 +156,29 @@ public class GatewayToGatewaySystemTest
     }
 
     @Test
+    public void sequenceNumbersShouldResetOverDisconnects()
+    {
+        sendTestRequest(initiatedSession);
+        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+        assertSequenceFromInitToAcceptAt(2);
+
+        initiatedSession.startLogout();
+
+        assertSessionsDisconnected();
+
+        connectSessions();
+
+        sendTestRequest(initiatedSession);
+        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, 4);
+        assertSequenceFromInitToAcceptAt(2);
+    }
+
+    @Test
     public void acceptorsShouldHandleInitiatorDisconnectsGracefully()
     {
         //initiatingLibrary.close();
         initiatingEngine.close();
 
         //LockSupport.parkNanos(10_000_000_000L);
-    }
-
-    private void assertOriginalLibraryDoesntReceiveMessages(final int initiator1MessageCount)
-    {
-        initiatingLibrary.poll(5);
-        assertThat("Messages received by wrong initiator",
-            initiatingOtfAcceptor.messages(), hasSize(initiator1MessageCount));
-    }
-
-    private void assertSessionsDisconnected()
-    {
-        assertSessionDisconnected(initiatingLibrary, acceptingLibrary, initiatedSession);
-        assertSessionDisconnected(acceptingLibrary, initiatingLibrary, acceptingSession);
-
-        assertEventuallyTrue("libraries receive disconnect messages", () ->
-        {
-            poll(initiatingLibrary, acceptingLibrary);
-            assertNotSession(acceptingSessionHandler, acceptingSession);
-            assertNotSession(initiatingSessionHandler, initiatedSession);
-        });
-    }
-
-    private void assertNotSession(final FakeSessionHandler sessionHandler, final Session session)
-    {
-        assertThat(sessionHandler.sessions(), not(hasItem(session)));
-    }
-
-    private void connectSessions()
-    {
-        initiatedSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
-
-        assertConnected(initiatedSession);
-        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatedSession);
-        acceptingSession = acceptSession(acceptingSessionHandler, acceptingLibrary);
-    }
-
-    private void assertMessageResent()
-    {
-        assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
-        assertEventuallyTrue("Failed to receive the reply", () ->
-        {
-            acceptingLibrary.poll(1);
-            initiatingLibrary.poll(1);
-
-            final String messageType = acceptingOtfAcceptor.lastMessage().getMessageType();
-            assertEquals("0", messageType);
-            assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
-            assertNull("Detected Error", acceptingOtfAcceptor.lastError());
-            assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
-        });
-    }
-
-    private void sendResendRequest()
-    {
-        final int seqNum = acceptingSession.lastReceivedMsgSeqNum();
-        final ResendRequestEncoder resendRequest = new ResendRequestEncoder()
-            .beginSeqNo(seqNum)
-            .endSeqNo(seqNum);
-
-        acceptingOtfAcceptor.messages().clear();
-
-        acceptingSession.send(resendRequest);
-    }
-
-    @After
-    public void close() throws Exception
-    {
-        CloseHelper.close(initiatingLibrary);
-        CloseHelper.close(acceptingLibrary);
-
-        CloseHelper.close(initiatingEngine);
-        CloseHelper.close(acceptingEngine);
-
-        CloseHelper.close(mediaDriver);
     }
 }

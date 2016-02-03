@@ -16,50 +16,59 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.library.session.Session;
 
-import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTest
+public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    private static final int NONSENSE_PORT = 1000;
-
     @Before
     public void launch()
     {
-        final int initAeronPort = unusedPort();
-
         mediaDriver = launchMediaDriver();
-        initiatingEngine = launchInitiatingGateway(initAeronPort);
+
         acceptingEngine = launchAcceptingGateway(port);
+        initiatingEngine = launchInitiatingGateway(initAeronPort);
 
-        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
         acceptingLibrary = newAcceptingLibrary(acceptingSessionHandler);
-    }
+        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
 
-    @Test
-    public void shouldConnectToValidAddressIfMultipleGiven()
-    {
         final SessionConfiguration config = SessionConfiguration.builder()
-            .address("localhost", NONSENSE_PORT)
             .address("localhost", port)
-            .address("localhost", NONSENSE_PORT)
             .credentials("bob", "Uv1aegoh")
             .senderCompId(INITIATOR_ID)
             .targetCompId(ACCEPTOR_ID)
+            .sequenceNumbersPersistent(true)
             .build();
 
-        final Session initiatedSession = initiatingLibrary.initiate(config, new SleepingIdleStrategy(10));
+        initiatedSession = initiatingLibrary.initiate(config, new SleepingIdleStrategy(10));
 
         assertConnected(initiatedSession);
-        assertEquals("localhost", initiatedSession.connectedHost());
-        assertEquals(port, initiatedSession.connectedPort());
+        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatedSession);
+        acceptingSession = acceptSession(acceptingSessionHandler, acceptingLibrary);
     }
 
+    // TODO:
+    @Ignore
+    @Test
+    public void sequenceNumbersCanPersistOverRestarts()
+    {
+        sendTestRequest(initiatedSession);
+        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+        assertSequenceFromInitToAcceptAt(2);
+
+        initiatedSession.startLogout();
+
+        assertSessionsDisconnected();
+
+        connectSessions();
+
+        sendTestRequest(initiatedSession);
+        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, 4);
+        assertSequenceFromInitToAcceptAt(4);
+    }
 }
