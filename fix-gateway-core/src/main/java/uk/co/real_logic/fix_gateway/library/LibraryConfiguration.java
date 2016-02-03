@@ -38,6 +38,7 @@ import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.DEFAULT_
  */
 public final class LibraryConfiguration extends CommonConfiguration
 {
+    private static final boolean ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT = true;
 
     public static final String DEFAULT_BEGIN_STRING = "FIX.4.4";
     public static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
@@ -57,7 +58,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private int acceptorSessionBufferSize = DEFAULT_SESSION_BUFFER_SIZE;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
     private boolean isAcceptor = false;
-    private boolean acceptorSequenceNumbersResetUponReconnect;
+    private boolean acceptorSequenceNumbersResetUponReconnect = ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT;
 
     public LibraryConfiguration()
     {

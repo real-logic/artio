@@ -20,6 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -62,6 +63,7 @@ public class FramerTest
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
     private GatewayPublication mockGatewayPublication = mock(GatewayPublication.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
+    private Header header = mock(Header.class);
     private FakeEpochClock mockClock = new FakeEpochClock();
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
@@ -197,7 +199,7 @@ public class FramerTest
     public void shouldNotConnectIfLibraryUnknown() throws Exception
     {
         framer.onInitiateConnection(
-            LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG");
+            LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG", header);
 
         framer.doWork();
 
@@ -279,7 +281,7 @@ public class FramerTest
         connectLibrary();
 
         framer.onInitiateConnection(
-            LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG");
+            LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG", header);
 
         framer.doWork();
     }

@@ -34,7 +34,7 @@ public class AbstractLogTest
     protected static final int CONNECTION_ID = 1;
     protected static final int START = 1;
     protected static final int SEQUENCE_NUMBER = 5;
-    protected static final int AERON_STREAM_ID = -10;
+    protected static final int AERON_SESSION_ID = -10;
     protected static final int LIBRARY_ID = 7;
 
     protected MessageHeaderEncoder header = new MessageHeaderEncoder();

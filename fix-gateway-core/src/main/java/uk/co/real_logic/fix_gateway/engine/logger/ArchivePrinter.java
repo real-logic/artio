@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -96,7 +97,8 @@ public class ArchivePrinter implements SessionHandler
                         break;
                     }
 
-                    offset = subscriber.readFragment(termBuffer, offset);
+                    // TODO: add header to archive printer
+                    offset = subscriber.readFragment(termBuffer, offset, null);
                 }
             }
         }
@@ -146,7 +148,7 @@ public class ArchivePrinter implements SessionHandler
         final String senderCompId,
         final String senderSubId,
         final String senderLocationId,
-        final String targetCompId)
+        final String targetCompId, final Header header)
     {
         output.printf("Initiate Connection to %s:%d as %s to %s", host, port, senderCompId, targetCompId);
     }

@@ -61,7 +61,7 @@ public class ReplayIndexTest extends AbstractLogTest
             .wrap(new UnsafeBuffer(indexBuffer), 8, 16, 0);
 
         assertEquals(STREAM_ID, replayIndexRecord.streamId());
-        assertEquals(AERON_STREAM_ID, replayIndexRecord.aeronSessionId());
+        assertEquals(AERON_SESSION_ID, replayIndexRecord.aeronSessionId());
         assertEquals(START, replayIndexRecord.position());
         assertEquals(SEQUENCE_NUMBER, replayIndexRecord.sequenceNumber());
     }
@@ -127,6 +127,6 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private void indexRecord()
     {
-        replayIndex.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_STREAM_ID, START);
+        replayIndex.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, START);
     }
 }

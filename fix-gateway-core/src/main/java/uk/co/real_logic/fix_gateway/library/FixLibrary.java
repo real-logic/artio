@@ -420,7 +420,6 @@ public final class FixLibrary extends GatewayProcess
                     subscriber.onDisconnect(libraryId, connectionId, reason);
                     final Session session = subscriber.session();
                     sessions.remove(session);
-
                 }
             }
         }

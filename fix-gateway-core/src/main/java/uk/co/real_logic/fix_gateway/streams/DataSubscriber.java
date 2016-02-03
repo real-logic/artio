@@ -50,10 +50,10 @@ public class DataSubscriber implements FragmentHandler
 
     public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
-        readFragment(buffer, offset);
+        readFragment(buffer, offset, header);
     }
 
-    public int readFragment(final DirectBuffer buffer, int offset)
+    public int readFragment(final DirectBuffer buffer, int offset, final Header header)
     {
         messageHeader.wrap(buffer, offset);
 
@@ -90,7 +90,7 @@ public class DataSubscriber implements FragmentHandler
 
             case InitiateConnectionDecoder.TEMPLATE_ID:
             {
-                return onInitiateConnection(buffer, offset, blockLength, version);
+                return onInitiateConnection(buffer, offset, blockLength, version, header);
             }
 
             case ErrorDecoder.TEMPLATE_ID:
@@ -144,10 +144,12 @@ public class DataSubscriber implements FragmentHandler
         return error.limit();
     }
 
-    private int onInitiateConnection(final DirectBuffer buffer,
-                                     final int offset,
-                                     final int blockLength,
-                                     final int version)
+    private int onInitiateConnection(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
     {
         initiateConnection.wrap(buffer, offset, blockLength, version);
         sessionHandler.onInitiateConnection(
@@ -157,7 +159,8 @@ public class DataSubscriber implements FragmentHandler
             initiateConnection.senderCompId(),
             initiateConnection.senderSubId(),
             initiateConnection.senderLocationId(),
-            initiateConnection.targetCompId()
+            initiateConnection.targetCompId(),
+            header
         );
         return initiateConnection.limit();
     }

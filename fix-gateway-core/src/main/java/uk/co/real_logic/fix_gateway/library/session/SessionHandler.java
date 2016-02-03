@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library.session;
 
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
@@ -63,7 +64,8 @@ public interface SessionHandler
         final String senderCompId,
         final String senderSubId,
         final String senderLocationId,
-        final String targetCompId)
+        final String targetCompId,
+        final Header header)
     {
         // Optional method, implement if you care about this type of message.
     }

@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
@@ -261,7 +262,8 @@ public class Framer implements Agent, SessionHandler
         final String senderCompId,
         final String senderSubId,
         final String senderLocationId,
-        final String targetCompId)
+        final String targetCompId,
+        final Header header)
     {
         final LibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
@@ -298,8 +300,14 @@ public class Framer implements Agent, SessionHandler
             }
 
             setupConnection(channel, connectionId, sessionId, libraryId);
-            inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR,
-                sequenceNumberIndex.lastKnownSequenceNumber(sessionId, inboundPublication.position()));
+
+            /*while (!sequenceNumberIndex.hasIndexedUpTo(header))
+            {
+                LockSupport.parkNanos(1000);
+            }*/
+
+            final int lastSequenceNumber = sequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+            inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR, lastSequenceNumber);
             inboundPublication.saveLogon(libraryId, connectionId, sessionId);
         }
         catch (final Exception e)

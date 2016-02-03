@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.IoUtil;
@@ -45,8 +46,6 @@ public class SequenceNumberIndex implements Index
 {
     /** We are up to date with the record, but we don't know about this session */
     public static final int UNKNOWN_SESSION = -1;
-    /** The index behind the required position when indexing, please backoff and try again */
-    public static final int STREAM_POSITION_BEHIND = -2;
 
     private static final int KNOWN_STREAM_POSITION_INDEX = MessageHeaderDecoder.ENCODED_LENGTH;
     private static final int HEADER_SIZE = KNOWN_STREAM_POSITION_INDEX + SIZE_OF_LONG;
@@ -123,22 +122,25 @@ public class SequenceNumberIndex implements Index
             final int msgSeqNum = fixHeader.msgSeqNum();
             final long sessionId = messageFrame.session();
 
-            if (!saveRecord(msgSeqNum, sessionId))
-            {
-                return;
-            }
-
-            knownStreamPosition(position + length);
+            saveRecord(msgSeqNum, sessionId);
         }
+
+        knownStreamPosition(position + length);
+        //System.out.println("PUtting: "+ (position + length) + " for " + streamId +" , " + aeronSessionId);
     }
 
-    public int lastKnownSequenceNumber(final long sessionId, final long requiredStreamPosition)
+    public boolean hasIndexedUpTo(final Header header)
     {
-        if (knownStreamPosition() < requiredStreamPosition)
-        {
-            return STREAM_POSITION_BEHIND;
-        }
+        return hasIndexedUpTo(header.sessionId(), header.position());
+    }
 
+    public boolean hasIndexedUpTo(final int aeronSessionId, final long requiredStreamPosition)
+    {
+        return requiredStreamPosition < knownStreamPosition();
+    }
+
+    public int lastKnownSequenceNumber(final long sessionId)
+    {
         final int lastRecordOffset = outputBuffer.capacity() - RECORD_SIZE;
         int position = HEADER_SIZE;
         while (position <= lastRecordOffset)
@@ -168,7 +170,7 @@ public class SequenceNumberIndex implements Index
         }
     }
 
-    private boolean saveRecord(final int msgSeqNum, final long sessionId)
+    private void saveRecord(final int msgSeqNum, final long sessionId)
     {
         int position = (int) recordOffsets.get(sessionId);
         if (position == MISSING_RECORD)
@@ -181,7 +183,7 @@ public class SequenceNumberIndex implements Index
                 if (lock == UNUSED)
                 {
                     createNewRecord(msgSeqNum, sessionId, position);
-                    return true;
+                    return;
                 }
                 else
                 {
@@ -189,7 +191,7 @@ public class SequenceNumberIndex implements Index
                     if (lastKnownDecoder.sessionId() == sessionId)
                     {
                         updateRecord(msgSeqNum, position);
-                        return true;
+                        return;
                     }
                 }
 
@@ -199,11 +201,10 @@ public class SequenceNumberIndex implements Index
         else
         {
             updateRecord(msgSeqNum, position);
-            return true;
+            return;
         }
 
         errorHandler.onError(new IllegalStateException("Unable to claim an position"));
-        return false;
     }
 
     private void createNewRecord(final int msgSeqNum, final long sessionId, final int position)

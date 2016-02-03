@@ -19,6 +19,8 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
+import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
@@ -34,22 +36,13 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         acceptingEngine = launchAcceptingGateway(port);
         initiatingEngine = launchInitiatingGateway(initAeronPort);
 
-        acceptingLibrary = newAcceptingLibrary(acceptingSessionHandler);
+        final LibraryConfiguration acceptingLibraryConfig =
+            acceptingLibraryConfig(acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor");
+        acceptingLibraryConfig.acceptorSequenceNumbersResetUponReconnect(false);
+        acceptingLibrary = FixLibrary.connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
 
-        final SessionConfiguration config = SessionConfiguration.builder()
-            .address("localhost", port)
-            .credentials("bob", "Uv1aegoh")
-            .senderCompId(INITIATOR_ID)
-            .targetCompId(ACCEPTOR_ID)
-            .sequenceNumbersPersistent(true)
-            .build();
-
-        initiatedSession = initiatingLibrary.initiate(config, new SleepingIdleStrategy(10));
-
-        assertConnected(initiatedSession);
-        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatedSession);
-        acceptingSession = acceptSession(acceptingSessionHandler, acceptingLibrary);
+        connectPersistingSessions();
     }
 
     // TODO:
@@ -65,10 +58,27 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertSessionsDisconnected();
 
-        connectSessions();
+        connectPersistingSessions();
 
         sendTestRequest(initiatedSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, 4);
         assertSequenceFromInitToAcceptAt(4);
+    }
+
+    private void connectPersistingSessions()
+    {
+        final SessionConfiguration config = SessionConfiguration.builder()
+            .address("localhost", port)
+            .credentials("bob", "Uv1aegoh")
+            .senderCompId(INITIATOR_ID)
+            .targetCompId(ACCEPTOR_ID)
+            .sequenceNumbersPersistent(true)
+            .build();
+
+        initiatedSession = initiatingLibrary.initiate(config, new SleepingIdleStrategy(10));
+
+        assertConnected(initiatedSession);
+        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatedSession);
+        acceptingSession = acceptSession(acceptingSessionHandler, acceptingLibrary);
     }
 }

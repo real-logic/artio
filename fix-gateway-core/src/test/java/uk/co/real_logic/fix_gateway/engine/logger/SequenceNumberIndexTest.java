@@ -22,9 +22,10 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex.STREAM_POSITION_BEHIND;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex.UNKNOWN_SESSION;
 
 public class SequenceNumberIndexTest extends AbstractLogTest
@@ -87,13 +88,14 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         indexRecord(START);
 
-        assertLastKnownSequenceNumberIs(STREAM_POSITION_BEHIND, SESSION_ID, requiredStreamPosition);
+        assertFalse(reader.hasIndexedUpTo(0, requiredStreamPosition));
 
         bufferContainsMessage(true, SESSION_ID, updatedSequenceNumber);
 
         indexRecord(START + fragmentLength());
 
-        assertLastKnownSequenceNumberIs(updatedSequenceNumber, SESSION_ID, requiredStreamPosition);
+        assertTrue(reader.hasIndexedUpTo(0, requiredStreamPosition));
+        assertLastKnownSequenceNumberIs(updatedSequenceNumber, SESSION_ID);
     }
 
     @Test(expected = IllegalStateException.class)
@@ -112,21 +114,12 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private void indexRecord(final int position)
     {
-        writer.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_STREAM_ID, position);
+        writer.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, position);
     }
 
-    private void assertLastKnownSequenceNumberIs(
-        final int expectedSequenceNumber, final long sessionId)
+    private void assertLastKnownSequenceNumberIs(final int expectedSequenceNumber, final long sessionId)
     {
-        assertLastKnownSequenceNumberIs(expectedSequenceNumber, sessionId, 0);
-    }
-
-    private void assertLastKnownSequenceNumberIs(
-        final int expectedSequenceNumber,
-        final long sessionId,
-        final int requiredStreamPosition)
-    {
-        final int number = reader.lastKnownSequenceNumber(sessionId, requiredStreamPosition);
+        final int number = reader.lastKnownSequenceNumber(sessionId);
         assertEquals(expectedSequenceNumber, number);
     }
 
