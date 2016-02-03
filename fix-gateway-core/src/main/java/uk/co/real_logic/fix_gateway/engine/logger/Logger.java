@@ -42,7 +42,8 @@ public class Logger implements AutoCloseable
     private final Streams outboundLibraryStreams;
     private final Publication replayPublication;
     private final ErrorHandler errorHandler;
-    private final SequenceNumberIndex sequenceNumberIndex;
+    private final SequenceNumberIndex sentSequenceNumberIndex;
+    private final SequenceNumberIndex receivedSequenceNumberIndex;
     private final List<Archiver> archivers = new ArrayList<>();
 
     private LogDirectoryDescriptor directoryDescriptor;
@@ -55,14 +56,16 @@ public class Logger implements AutoCloseable
         final Streams outboundLibraryStreams,
         final ErrorHandler errorHandler,
         final Publication replayPublication,
-        final SequenceNumberIndex sequenceNumberIndex)
+        final SequenceNumberIndex sentSequenceNumberIndex,
+        final SequenceNumberIndex receivedSequenceNumberIndex)
     {
         this.configuration = configuration;
         this.inboundLibraryStreams = inboundLibraryStreams;
         this.outboundLibraryStreams = outboundLibraryStreams;
         this.replayPublication = replayPublication;
         this.errorHandler = errorHandler;
-        this.sequenceNumberIndex = sequenceNumberIndex;
+        this.sentSequenceNumberIndex = sentSequenceNumberIndex;
+        this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
     }
 
     public void init()
@@ -70,11 +73,11 @@ public class Logger implements AutoCloseable
         if (isLoggingMessages())
         {
             initArchival();
-            initReplay();
+            initIndexers();
         }
     }
 
-    public void initReplay()
+    public void initIndexers()
     {
         if (configuration.logOutboundMessages())
         {
@@ -83,8 +86,10 @@ public class Logger implements AutoCloseable
             final String logFileDir = configuration.logFileDir();
             final List<Index> indices = Arrays.asList(
                 new ReplayIndex(logFileDir, configuration.indexFileSize(), cacheNumSets, cacheSetSize, LoggerUtil::map),
-                sequenceNumberIndex);
-            final Indexer indexer = new Indexer(indices, outboundLibraryStreams.subscription());
+                sentSequenceNumberIndex);
+            final Indexer outboundIndexer = new Indexer(indices, outboundLibraryStreams.subscription());
+            final Indexer inboundIndexer = new Indexer(
+                Arrays.asList(receivedSequenceNumberIndex), inboundLibraryStreams.subscription());
 
             final ReplayQuery replayQuery = new ReplayQuery(
                 logFileDir, cacheNumSets, cacheSetSize, LoggerUtil::mapExistingFile, outboundArchiveReader);
@@ -98,7 +103,8 @@ public class Logger implements AutoCloseable
                 configuration.outboundMaxClaimAttempts());
 
             final List<Agent> agents = new ArrayList<>(archivers);
-            agents.add(indexer);
+            agents.add(outboundIndexer);
+            agents.add(inboundIndexer);
             agents.add(replayer);
 
             final Agent loggingAgent = new CompositeAgent(agents);

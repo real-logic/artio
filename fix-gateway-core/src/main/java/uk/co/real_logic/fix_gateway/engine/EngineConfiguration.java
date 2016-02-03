@@ -97,7 +97,8 @@ public final class EngineConfiguration extends CommonConfiguration
     private IdleStrategy framerIdleStrategy = backoffIdleStrategy();
     private IdleStrategy loggerIdleStrategy = backoffIdleStrategy();
     private IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
-    private AtomicBuffer sequenceNumberCacheBuffer;
+    private AtomicBuffer sentSequenceNumberCacheBuffer;
+    private AtomicBuffer receivedSequenceNumberCacheBuffer;
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
@@ -452,9 +453,14 @@ public final class EngineConfiguration extends CommonConfiguration
         return inboundBytesReceivedLimit;
     }
 
-    public AtomicBuffer sequenceNumberCacheBuffer()
+    public AtomicBuffer sentSequenceNumberCacheBuffer()
     {
-        return sequenceNumberCacheBuffer;
+        return sentSequenceNumberCacheBuffer;
+    }
+
+    public AtomicBuffer receivedSequenceNumberCacheBuffer()
+    {
+        return receivedSequenceNumberCacheBuffer;
     }
 
     /**
@@ -497,12 +503,21 @@ public final class EngineConfiguration extends CommonConfiguration
     {
         super.conclude("engine");
 
-        if (sequenceNumberCacheBuffer() == null)
+        if (sentSequenceNumberCacheBuffer() == null)
         {
-            final File sequenceNumberCacheBufferFile = new File(logFileDir() + File.separator + "sequence_numbers");
-            sequenceNumberCacheBuffer = new UnsafeBuffer(
-                mapNewFile(sequenceNumberCacheBufferFile, sequenceNumberCacheBufferSize));
+            sentSequenceNumberCacheBuffer = makeSequenceNumberCacheBuffer("sent");
         }
+
+        if (receivedSequenceNumberCacheBuffer() == null)
+        {
+            receivedSequenceNumberCacheBuffer = makeSequenceNumberCacheBuffer("received");
+        }
+    }
+
+    private UnsafeBuffer makeSequenceNumberCacheBuffer(final String suf)
+    {
+        final File sequenceNumberCacheBufferFile = new File(logFileDir() + File.separator +  "sequence_numbers_" + suf);
+        return new UnsafeBuffer(mapNewFile(sequenceNumberCacheBufferFile, sequenceNumberCacheBufferSize));
     }
 
 }

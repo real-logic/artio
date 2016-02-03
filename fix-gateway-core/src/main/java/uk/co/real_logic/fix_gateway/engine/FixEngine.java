@@ -86,18 +86,23 @@ public final class FixEngine extends GatewayProcess
         init(configuration);
         this.configuration = configuration;
 
-        final SequenceNumberIndex writerIndex = SequenceNumberIndex.forWriting(
-            configuration.sequenceNumberCacheBuffer(), errorBuffer);
+        final SequenceNumberIndex sentSequenceNumberIndex = SequenceNumberIndex.forWriting(
+            configuration.sentSequenceNumberCacheBuffer(), errorBuffer);
+        final SequenceNumberIndex receivedSequenceNumberIndex = SequenceNumberIndex.forWriting(
+            configuration.receivedSequenceNumberCacheBuffer(), errorBuffer);
         initFramer(configuration, fixCounters);
-        initLogger(configuration, writerIndex);
+        initLogger(configuration, sentSequenceNumberIndex, receivedSequenceNumberIndex);
         initErrorPrinter(configuration);
     }
 
-    private void initLogger(final EngineConfiguration configuration, final SequenceNumberIndex writerIndex)
+    private void initLogger(
+        final EngineConfiguration configuration,
+        final SequenceNumberIndex sentSequenceNumberIndex,
+        final SequenceNumberIndex receivedSequenceNumberIndex)
     {
         logger = new Logger(
             configuration, inboundLibraryStreams, outboundLibraryStreams, errorBuffer, replayPublication(),
-            writerIndex);
+            sentSequenceNumberIndex, receivedSequenceNumberIndex);
         logger.init();
     }
 
@@ -136,8 +141,8 @@ public final class FixEngine extends GatewayProcess
         final Framer framer = new Framer(
             new SystemEpochClock(), configuration, handler, librarySubscription, replaySubscription(),
             sessionIdStrategy, sessionIds, adminCommands,
-            SequenceNumberIndex.forReading(configuration.sequenceNumberCacheBuffer(), errorBuffer),
-            SequenceNumberIndex.forReading(configuration.sequenceNumberCacheBuffer(), errorBuffer));
+            SequenceNumberIndex.forReading(configuration.sentSequenceNumberCacheBuffer(), errorBuffer),
+            SequenceNumberIndex.forReading(configuration.receivedSequenceNumberCacheBuffer(), errorBuffer));
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }
 
