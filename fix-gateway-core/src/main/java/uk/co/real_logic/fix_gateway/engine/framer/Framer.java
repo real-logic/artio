@@ -96,11 +96,12 @@ public class Framer implements Agent, SessionHandler
     private final ConnectionHandler connectionHandler;
     private final Subscription outboundDataSubscription;
     private final Subscription replaySubscription;
+    private final SequenceNumberIndex receivedSequenceNumberIndex;
     private final GatewayPublication inboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
     private final QueuedPipe<AdminCommand> adminCommands;
-    private final SequenceNumberIndex sequenceNumberIndex;
+    private final SequenceNumberIndex sentSequenceNumberIndex;
     private final int inboundBytesReceivedLimit;
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
@@ -117,7 +118,8 @@ public class Framer implements Agent, SessionHandler
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
         final QueuedPipe<AdminCommand> adminCommands,
-        final SequenceNumberIndex sequenceNumberIndex)
+        final SequenceNumberIndex sentSequenceNumberIndex,
+        final SequenceNumberIndex receivedSequenceNumberIndex)
     {
         this.clock = clock;
         this.configuration = configuration;
@@ -128,7 +130,8 @@ public class Framer implements Agent, SessionHandler
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
         this.adminCommands = adminCommands;
-        this.sequenceNumberIndex = sequenceNumberIndex;
+        this.sentSequenceNumberIndex = sentSequenceNumberIndex;
+        this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
 
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
@@ -246,7 +249,8 @@ public class Framer implements Agent, SessionHandler
                     setupConnection(channel, connectionId, UNKNOWN, acceptorLibraryId);
 
                     final String address = channel.getRemoteAddress().toString();
-                    inboundPublication.saveConnect(connectionId, address, acceptorLibraryId, ACCEPTOR, UNKNOWN_SESSION);
+                    inboundPublication.saveConnect(connectionId, address, acceptorLibraryId, ACCEPTOR,
+                        UNKNOWN_SESSION, UNKNOWN_SESSION);
                 }
 
                 it.remove();
@@ -302,13 +306,15 @@ public class Framer implements Agent, SessionHandler
 
             setupConnection(channel, connectionId, sessionId, libraryId);
 
-            while (!sequenceNumberIndex.hasIndexedUpTo(header))
+            while (!sentSequenceNumberIndex.hasIndexedUpTo(header))
             {
                 LockSupport.parkNanos(1000);
             }
 
-            final int lastSequenceNumber = sequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-            inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR, lastSequenceNumber);
+            final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+            final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+            inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR,
+                lastSentSequenceNumber, lastReceivedSequenceNumber);
             inboundPublication.saveLogon(libraryId, connectionId, sessionId);
         }
         catch (final Exception e)
@@ -365,7 +371,7 @@ public class Framer implements Agent, SessionHandler
 
         final ReceiverEndPoint receiverEndPoint =
             connectionHandler.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
-                sendOutboundMessagesFunc, sequenceNumberIndex);
+                sendOutboundMessagesFunc, sentSequenceNumberIndex, receivedSequenceNumberIndex);
         receiverEndPoints.add(receiverEndPoint);
 
         final SenderEndPoint senderEndPoint =

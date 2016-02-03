@@ -695,7 +695,7 @@ public class Session
         return clock.time();
     }
 
-    protected Session lastReceivedMsgSeqNum(final int value)
+    public Session lastReceivedMsgSeqNum(final int value)
     {
         this.lastReceivedMsgSeqNum = value;
         receivedMsgSeqNo.setOrdered(value);
@@ -709,7 +709,12 @@ public class Session
 
     protected int newSentSeqNum()
     {
-        final int lastSentMsgSeqNum = ++this.lastSentMsgSeqNum;
+        return lastSentMsgSeqNum(this.lastSentMsgSeqNum + 1);
+    }
+
+    protected int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
+    {
+        this.lastSentMsgSeqNum = lastSentMsgSeqNum;
         sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
         incNextHeartbeatTime();
         return lastSentMsgSeqNum;

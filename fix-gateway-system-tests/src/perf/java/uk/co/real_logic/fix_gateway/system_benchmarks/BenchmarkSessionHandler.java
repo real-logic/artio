@@ -43,7 +43,11 @@ public final class BenchmarkSessionHandler implements SessionHandler
     }
 
     public void onLogon(
-        final int libraryId, final long connectionId, final long sessionId, final int knownSequenceNumber)
+        final int libraryId,
+        final long connectionId,
+        final long sessionId,
+        final int lastSentSequenceNumber,
+        final int lastReceivedSequenceNumber)
     {
         System.out.printf("%d logged on with sessionId=%d\n", connectionId, sessionId);
     }

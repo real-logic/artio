@@ -45,14 +45,18 @@ public interface SessionHandler
         final int libraryId,
         final long connectionId,
         final ConnectionType type,
-        int lastSequenceNumber, final DirectBuffer buffer,
+        int lastSequenceNumber, final int lastReceivedSequenceNumber, final DirectBuffer buffer,
         final int addressOffset,
         final int addressLength)
     {
         // Optional method, implement if you care about this type of message.
     }
 
-    default void onLogon(final int libraryId, final long connectionId, final long sessionId, final int i)
+    default void onLogon(final int libraryId,
+                         final long connectionId,
+                         final long sessionId,
+                         final int lastSentSequenceNumber,
+                         final int lastReceivedSequenceNumber)
     {
         // Optional method, implement if you care about this type of message.
     }

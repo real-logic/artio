@@ -63,6 +63,14 @@ public class AbstractGatewayToGatewaySystemTest
     {
         assertEquals(expectedSeqNum, initiatedSession.lastSentMsgSeqNum());
         assertEquals(expectedSeqNum, acceptingSession.lastReceivedMsgSeqNum());
+
+        while (initiatedSession.lastReceivedMsgSeqNum() < expectedSeqNum)
+        {
+            initiatingLibrary.poll(1);
+        }
+
+        assertEquals(expectedSeqNum, initiatedSession.lastReceivedMsgSeqNum());
+        assertEquals(expectedSeqNum, acceptingSession.lastSentMsgSeqNum());
     }
 
     protected void assertSessionsDisconnected()

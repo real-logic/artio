@@ -116,13 +116,14 @@ public class GatewayPublication extends AbstractionPublication
                           final long connectionId,
                           final long sessionId)
     {
-        return saveLogon(libraryId, connectionId, sessionId, UNKNOWN_SESSION);
+        return saveLogon(libraryId, connectionId, sessionId, UNKNOWN_SESSION, UNKNOWN_SESSION);
     }
 
     public long saveLogon(final int libraryId,
                           final long connectionId,
                           final long sessionId,
-                          final int lastSequenceNumber)
+                          final int lastSentSequenceNumber,
+                          final int lastReceivedSequenceNumber)
     {
         final long position = claim(header.encodedLength() + LogonEncoder.BLOCK_LENGTH);
 
@@ -143,7 +144,8 @@ public class GatewayPublication extends AbstractionPublication
             .libraryId(libraryId)
             .connection(connectionId)
             .session(sessionId)
-            .lastSequenceNumber(lastSequenceNumber);
+            .lastSentSequenceNumber(lastSentSequenceNumber)
+            .lastReceivedSequenceNumber(lastReceivedSequenceNumber);
 
         bufferClaim.commit();
 
@@ -154,7 +156,8 @@ public class GatewayPublication extends AbstractionPublication
                             final String address,
                             final int libraryId,
                             final ConnectionType type,
-                            final int lastSequenceNumber)
+                            final int lastSentSequenceNumber,
+                            final int lastReceivedSequenceNumber)
     {
         final byte[] addressString = address.getBytes(UTF_8);
 
@@ -178,7 +181,8 @@ public class GatewayPublication extends AbstractionPublication
             .connection(connectionId)
             .libraryId(libraryId)
             .type(type)
-            .lastSequenceNumber(lastSequenceNumber)
+            .lastSentSequenceNumber(lastSentSequenceNumber)
+            .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .putAddress(addressString, 0, addressString.length);
 
         bufferClaim.commit();

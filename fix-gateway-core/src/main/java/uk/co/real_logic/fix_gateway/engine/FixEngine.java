@@ -136,8 +136,8 @@ public final class FixEngine extends GatewayProcess
         final Framer framer = new Framer(
             new SystemEpochClock(), configuration, handler, librarySubscription, replaySubscription(),
             sessionIdStrategy, sessionIds, adminCommands,
-            SequenceNumberIndex.forReading(configuration.sequenceNumberCacheBuffer(), errorBuffer)
-        );
+            SequenceNumberIndex.forReading(configuration.sequenceNumberCacheBuffer(), errorBuffer),
+            SequenceNumberIndex.forReading(configuration.sequenceNumberCacheBuffer(), errorBuffer));
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }
 

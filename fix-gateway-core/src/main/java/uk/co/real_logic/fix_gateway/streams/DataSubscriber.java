@@ -184,7 +184,8 @@ public class DataSubscriber implements FragmentHandler
             connect.libraryId(),
             connect.connection(),
             connect.type(),
-            connect.lastSequenceNumber(),
+            connect.lastSentSequenceNumber(),
+            connect.lastReceivedSequenceNumber(),
             buffer,
             addressOffset,
             connect.addressLength());
@@ -199,7 +200,8 @@ public class DataSubscriber implements FragmentHandler
             logon.libraryId(),
             logon.connection(),
             logon.session(),
-            logon.lastSequenceNumber());
+            logon.lastSentSequenceNumber(),
+            logon.lastReceivedSequenceNumber());
         return logon.limit();
     }
 

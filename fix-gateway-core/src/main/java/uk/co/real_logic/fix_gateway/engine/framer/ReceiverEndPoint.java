@@ -68,7 +68,8 @@ public class ReceiverEndPoint
     private final long connectionId;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
-    private final SequenceNumberIndex sequenceNumberIndex;
+    private final SequenceNumberIndex sentSequenceNumberIndex;
+    private final SequenceNumberIndex receivedSequenceNumberIndex;
     private final AtomicCounter messagesRead;
     private final Framer framer;
     private final ErrorHandler errorHandler;
@@ -89,7 +90,8 @@ public class ReceiverEndPoint
         final long sessionId,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
-        final SequenceNumberIndex sequenceNumberIndex,
+        final SequenceNumberIndex sentSequenceNumberIndex,
+        final SequenceNumberIndex receivedSequenceNumberIndex,
         final AtomicCounter messagesRead,
         final Framer framer,
         final ErrorHandler errorHandler,
@@ -101,7 +103,8 @@ public class ReceiverEndPoint
         this.sessionId = sessionId;
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
-        this.sequenceNumberIndex = sequenceNumberIndex;
+        this.sentSequenceNumberIndex = sentSequenceNumberIndex;
+        this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.messagesRead = messagesRead;
         this.framer = framer;
         this.errorHandler = errorHandler;
@@ -301,8 +304,9 @@ public class ReceiverEndPoint
             }
             else
             {
-                final int sequenceNumber = sequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-                publication.saveLogon(libraryId, connectionId, sessionId, sequenceNumber);
+                final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+                final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+                publication.saveLogon(libraryId, connectionId, sessionId, sentSequenceNumber, receivedSequenceNumber);
             }
         }
     }

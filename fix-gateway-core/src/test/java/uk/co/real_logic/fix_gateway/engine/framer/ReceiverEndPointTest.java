@@ -56,12 +56,13 @@ public class ReceiverEndPointTest
     private SessionIds mockSessionIds = mock(SessionIds.class);
     private AtomicCounter messagesRead = mock(AtomicCounter.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private SequenceNumberIndex sequenceNumbers = mock(SequenceNumberIndex.class);
+    private SequenceNumberIndex sentSequenceNumbers = mock(SequenceNumberIndex.class);
+    private SequenceNumberIndex receivedSequenceNumbers = mock(SequenceNumberIndex.class);
 
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
             mockChannel, 16 * 1024, mockPublication, CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
-            sequenceNumbers, messagesRead, mock(Framer.class), errorHandler, LIBRARY_ID);
+            sentSequenceNumbers, receivedSequenceNumbers, messagesRead, mock(Framer.class), errorHandler, LIBRARY_ID);
 
     @Before
     public void setUp()

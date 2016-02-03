@@ -65,7 +65,8 @@ public class FramerTest
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private Header header = mock(Header.class);
     private FakeEpochClock mockClock = new FakeEpochClock();
-    private SequenceNumberIndex sequenceNumberIndex = mock(SequenceNumberIndex.class);
+    private SequenceNumberIndex sentSequenceNumberIndex = mock(SequenceNumberIndex.class);
+    private SequenceNumberIndex receivedSequenceNumberIndex = mock(SequenceNumberIndex.class);
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
@@ -86,11 +87,13 @@ public class FramerTest
 
         clientBuffer.putInt(10, 5);
 
-        when(sequenceNumberIndex.hasIndexedUpTo(any())).thenReturn(true);
+        when(sentSequenceNumberIndex.hasIndexedUpTo(any())).thenReturn(true);
+
+        when(receivedSequenceNumberIndex.hasIndexedUpTo(any())).thenReturn(true);
 
         when(mockConnectionHandler
             .receiverEndPoint(any(), connectionId.capture(), anyLong(), anyInt(), any(), any(),
-                eq(sequenceNumberIndex)))
+                eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex)))
             .thenReturn(mockReceiverEndPoint);
 
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong(), anyInt(), any(), any()))
@@ -113,7 +116,8 @@ public class FramerTest
             mockSessionIdStrategy,
             new SessionIds(),
             mock(QueuedPipe.class),
-            sequenceNumberIndex);
+            sentSequenceNumberIndex,
+            receivedSequenceNumberIndex);
     }
 
     @After
@@ -144,7 +148,7 @@ public class FramerTest
 
         verify(mockConnectionHandler).receiverEndPoint(
             notNull(SocketChannel.class), anyLong(), anyLong(), eq(LIBRARY_ID), eq(framer),
-            any(), eq(sequenceNumberIndex));
+            any(), eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex));
 
         verify(mockConnectionHandler).senderEndPoint(
             notNull(SocketChannel.class), anyLong(), eq(LIBRARY_ID), eq(framer), any());
@@ -298,7 +302,8 @@ public class FramerTest
 
     private void notifyLibraryOfConnection()
     {
-        verify(mockGatewayPublication).saveConnect(anyLong(), anyString(), eq(LIBRARY_ID), eq(INITIATOR), anyInt());
+        verify(mockGatewayPublication).saveConnect(anyLong(), anyString(), eq(LIBRARY_ID), eq(INITIATOR),
+            anyInt(), anyInt());
         verify(mockGatewayPublication).saveLogon(eq(LIBRARY_ID), anyLong(), anyLong());
     }
 

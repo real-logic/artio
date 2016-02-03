@@ -44,7 +44,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         connectPersistingSessions();
     }
 
-    @Test
+    @Test(timeout = 5000L)
     public void sequenceNumbersCanPersistOverRestarts()
     {
         sendTestRequest(initiatedSession);
@@ -52,7 +52,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertSequenceFromInitToAcceptAt(2);
 
         initiatedSession.startLogout();
-
         assertSessionsDisconnected();
 
         connectPersistingSessions();

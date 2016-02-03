@@ -85,13 +85,15 @@
         <field name="libraryId" id="43" type="LibraryId"/>
         <field name="connection" id="10" type="ConnectionId"/>
         <field name="session" id="11" type="FixSessionId"/>
-        <field name="lastSequenceNumber" id="77" type="int32"/>
+        <field name="lastSentSequenceNumber" id="77" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="78" type="int32"/>
     </sbe:message>
     <sbe:message name="Connect" id="10" description="A TCP Connection has connected">
         <field name="libraryId" id="19" type="LibraryId"/>
         <field name="connection" id="17" type="ConnectionId"/>
         <field name="type" id="24" type="ConnectionType"/>
-        <field name="lastSequenceNumber" id="49" type="int32"/>
+        <field name="lastSentSequenceNumber" id="79" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="80" type="int32"/>
         <data name="address" id="18" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="InitiateConnection" id="11" description="Try to make an outbound connection">

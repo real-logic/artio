@@ -338,7 +338,8 @@ public final class FixLibrary extends GatewayProcess
             final int libraryId,
             final long connectionId,
             final ConnectionType type,
-            final int lastSequenceNumber,
+            final int lastSentSequenceNumber,
+            final int lastReceivedSequenceNumber,
             final DirectBuffer buffer,
             final int addressOffset,
             final int addressLength)
@@ -348,7 +349,8 @@ public final class FixLibrary extends GatewayProcess
                 if (type == INITIATOR)
                 {
                     DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
-                    final Session session = initiateSession(connectionId, lastSequenceNumber);
+                    final Session session = initiateSession(
+                        connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber);
                     newSession(connectionId, session);
                     incomingSession = session;
                 }
@@ -359,7 +361,7 @@ public final class FixLibrary extends GatewayProcess
                     final String address = asciiBuffer.getAscii(addressOffset, addressLength);
                     if (isAcceptor)
                     {
-                        final Session session = acceptSession(connectionId, lastSequenceNumber, address);
+                        final Session session = acceptSession(connectionId, lastSentSequenceNumber, address);
                         newSession(connectionId, session);
                     }
                     else
@@ -375,7 +377,11 @@ public final class FixLibrary extends GatewayProcess
         }
 
         public void onLogon(
-            final int libraryId, final long connectionId, final long sessionId, int lastSequenceNumber)
+            final int libraryId,
+            final long connectionId,
+            final long sessionId,
+            int lastSentSequenceNumber,
+            int lastReceivedSequenceNumber)
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
@@ -383,8 +389,9 @@ public final class FixLibrary extends GatewayProcess
                 final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
                 if (subscriber != null)
                 {
-                    lastSequenceNumber = acceptorSequenceNumber(lastSequenceNumber);
-                    subscriber.onLogon(connectionId, sessionId, lastSequenceNumber);
+                    lastSentSequenceNumber = acceptorSequenceNumber(lastSentSequenceNumber);
+                    lastReceivedSequenceNumber = acceptorSequenceNumber(lastReceivedSequenceNumber);
+                    subscriber.onLogon(connectionId, sessionId, lastSentSequenceNumber, lastReceivedSequenceNumber);
                 }
             }
         }
@@ -468,7 +475,9 @@ public final class FixLibrary extends GatewayProcess
         sessions.add(session);
     }
 
-    private Session initiateSession(final long connectionId, final int lastSequenceNumber)
+    private Session initiateSession(final long connectionId,
+                                    final int lastSequenceNumber,
+                                    final int lastReceivedSequenceNumber)
     {
         final Object key = sessionIdStrategy.onInitiatorLogon(
             sessionConfiguration.senderCompId(), sessionConfiguration.senderSubId(),
@@ -491,7 +500,8 @@ public final class FixLibrary extends GatewayProcess
             sessionConfiguration.password(),
             libraryId,
             sessionConfiguration.bufferSize(),
-            initiatorInitialSequenceNumber(lastSequenceNumber));
+            initiatorInitialSequenceNumber(lastSequenceNumber))
+            .lastReceivedMsgSeqNum(initiatorInitialSequenceNumber(lastReceivedSequenceNumber) - 1);
     }
 
     private int initiatorInitialSequenceNumber(

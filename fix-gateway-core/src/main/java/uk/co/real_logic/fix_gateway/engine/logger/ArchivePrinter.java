@@ -124,9 +124,14 @@ public class ArchivePrinter implements SessionHandler
     }
 
     public void onLogon(
-        final int libraryId, final long connectionId, final long sessionId, final int knownSequenceNumber)
+        final int libraryId,
+        final long connectionId,
+        final long sessionId,
+        final int lastSentSequenceNumber,
+        final int lastReceivedSequenceNumber)
     {
-        output.printf("connection %d has logged in as session %d @ %d\n", connectionId, sessionId, knownSequenceNumber);
+        output.printf("connection %d has logged in as session %d @ (%d, %d)\n", connectionId, sessionId,
+            lastSentSequenceNumber, lastReceivedSequenceNumber);
     }
 
     public void onConnect(
@@ -134,6 +139,7 @@ public class ArchivePrinter implements SessionHandler
         final long connectionId,
         final ConnectionType type,
         final int lastSequenceNumber,
+        final int lastReceivedSequenceNumber,
         final DirectBuffer buffer,
         final int addressOffset,
         final int addressLength)
