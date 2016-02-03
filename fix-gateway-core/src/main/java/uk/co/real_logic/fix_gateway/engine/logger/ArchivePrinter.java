@@ -123,9 +123,10 @@ public class ArchivePrinter implements SessionHandler
         output.printf("%d Disconnected: %s\n", connectionId, reason);
     }
 
-    public void onLogon(final int libraryId, final long connectionId, final long sessionId)
+    public void onLogon(
+        final int libraryId, final long connectionId, final long sessionId, final int knownSequenceNumber)
     {
-        output.printf("connection %d has logged in as session %d\n", connectionId, sessionId);
+        output.printf("connection %d has logged in as session %d @ %d\n", connectionId, sessionId, knownSequenceNumber);
     }
 
     public void onConnect(

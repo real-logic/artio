@@ -195,7 +195,11 @@ public class DataSubscriber implements FragmentHandler
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         logon.wrap(buffer, offset, blockLength, version);
-        sessionHandler.onLogon(logon.libraryId(), logon.connection(), logon.session());
+        sessionHandler.onLogon(
+            logon.libraryId(),
+            logon.connection(),
+            logon.session(),
+            logon.lastSequenceNumber());
         return logon.limit();
     }
 

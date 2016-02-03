@@ -23,6 +23,7 @@ import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
 import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
@@ -55,11 +56,12 @@ public class ReceiverEndPointTest
     private SessionIds mockSessionIds = mock(SessionIds.class);
     private AtomicCounter messagesRead = mock(AtomicCounter.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private SequenceNumberIndex sequenceNumbers = mock(SequenceNumberIndex.class);
 
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
             mockChannel, 16 * 1024, mockPublication, CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
-            messagesRead, mock(Framer.class), errorHandler, LIBRARY_ID);
+            sequenceNumbers, messagesRead, mock(Framer.class), errorHandler, LIBRARY_ID);
 
     @Before
     public void setUp()

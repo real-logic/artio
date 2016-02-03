@@ -52,7 +52,7 @@ public interface SessionHandler
         // Optional method, implement if you care about this type of message.
     }
 
-    default void onLogon(final int libraryId, final long connectionId, final long sessionId)
+    default void onLogon(final int libraryId, final long connectionId, final long sessionId, final int i)
     {
         // Optional method, implement if you care about this type of message.
     }

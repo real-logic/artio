@@ -47,6 +47,7 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 
 import static java.net.StandardSocketOptions.*;
@@ -301,10 +302,10 @@ public class Framer implements Agent, SessionHandler
 
             setupConnection(channel, connectionId, sessionId, libraryId);
 
-            /*while (!sequenceNumberIndex.hasIndexedUpTo(header))
+            while (!sequenceNumberIndex.hasIndexedUpTo(header))
             {
                 LockSupport.parkNanos(1000);
-            }*/
+            }
 
             final int lastSequenceNumber = sequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR, lastSequenceNumber);
@@ -364,7 +365,7 @@ public class Framer implements Agent, SessionHandler
 
         final ReceiverEndPoint receiverEndPoint =
             connectionHandler.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
-                sendOutboundMessagesFunc);
+                sendOutboundMessagesFunc, sequenceNumberIndex);
         receiverEndPoints.add(receiverEndPoint);
 
         final SenderEndPoint senderEndPoint =

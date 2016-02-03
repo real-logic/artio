@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.messages.*;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 
@@ -111,7 +112,17 @@ public class GatewayPublication extends AbstractionPublication
         return position;
     }
 
-    public long saveLogon(final int libraryId, final long connectionId, final long sessionId)
+    public long saveLogon(final int libraryId,
+                          final long connectionId,
+                          final long sessionId)
+    {
+        return saveLogon(libraryId, connectionId, sessionId, UNKNOWN_SESSION);
+    }
+
+    public long saveLogon(final int libraryId,
+                          final long connectionId,
+                          final long sessionId,
+                          final int lastSequenceNumber)
     {
         final long position = claim(header.encodedLength() + LogonEncoder.BLOCK_LENGTH);
 
@@ -131,7 +142,8 @@ public class GatewayPublication extends AbstractionPublication
             .wrap(buffer, offset)
             .libraryId(libraryId)
             .connection(connectionId)
-            .session(sessionId);
+            .session(sessionId)
+            .lastSequenceNumber(lastSequenceNumber);
 
         bufferClaim.commit();
 
@@ -369,11 +381,6 @@ public class GatewayPublication extends AbstractionPublication
     public int sessionId()
     {
         return dataPublication.sessionId();
-    }
-
-    public long position()
-    {
-        return dataPublication.position();
     }
 
 }

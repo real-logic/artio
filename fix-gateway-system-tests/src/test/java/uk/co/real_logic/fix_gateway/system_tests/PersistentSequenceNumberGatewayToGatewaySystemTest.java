@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -45,8 +44,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         connectPersistingSessions();
     }
 
-    // TODO:
-    @Ignore
     @Test
     public void sequenceNumbersCanPersistOverRestarts()
     {

@@ -65,6 +65,7 @@ public class FramerTest
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private Header header = mock(Header.class);
     private FakeEpochClock mockClock = new FakeEpochClock();
+    private SequenceNumberIndex sequenceNumberIndex = mock(SequenceNumberIndex.class);
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
@@ -85,8 +86,11 @@ public class FramerTest
 
         clientBuffer.putInt(10, 5);
 
+        when(sequenceNumberIndex.hasIndexedUpTo(any())).thenReturn(true);
+
         when(mockConnectionHandler
-            .receiverEndPoint(any(), connectionId.capture(), anyLong(), anyInt(), any(), any()))
+            .receiverEndPoint(any(), connectionId.capture(), anyLong(), anyInt(), any(), any(),
+                eq(sequenceNumberIndex)))
             .thenReturn(mockReceiverEndPoint);
 
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong(), anyInt(), any(), any()))
@@ -109,8 +113,7 @@ public class FramerTest
             mockSessionIdStrategy,
             new SessionIds(),
             mock(QueuedPipe.class),
-            mock(SequenceNumberIndex.class)
-        );
+            sequenceNumberIndex);
     }
 
     @After
@@ -141,7 +144,7 @@ public class FramerTest
 
         verify(mockConnectionHandler).receiverEndPoint(
             notNull(SocketChannel.class), anyLong(), anyLong(), eq(LIBRARY_ID), eq(framer),
-            any());
+            any(), eq(sequenceNumberIndex));
 
         verify(mockConnectionHandler).senderEndPoint(
             notNull(SocketChannel.class), anyLong(), eq(LIBRARY_ID), eq(framer), any());

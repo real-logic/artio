@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.framer.*;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.streams.Streams;
@@ -63,8 +64,10 @@ public class ConnectionHandler
         final SocketChannel channel,
         final long connectionId,
         final long sessionId,
-        final int libraryId, final Framer framer,
-        final ReliefValve reliefValve) throws IOException
+        final int libraryId,
+        final Framer framer,
+        final ReliefValve reliefValve,
+        final SequenceNumberIndex sequenceNumberIndex) throws IOException
     {
         return new ReceiverEndPoint(
             channel,
@@ -74,6 +77,7 @@ public class ConnectionHandler
             sessionId,
             sessionIdStrategy,
             sessionIds,
+            sequenceNumberIndex,
             fixCounters.messagesRead(channel.getRemoteAddress()),
             framer,
             errorHandler,

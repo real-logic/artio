@@ -75,9 +75,10 @@ public class SessionSubscriber implements AutoCloseable
         handler.onDisconnect(libraryId, connectionId, reason);
     }
 
-    public void onLogon(final long connectionId, final long sessionId)
+    public void onLogon(final long connectionId, final long sessionId, final int knownSequenceNumber)
     {
         session.id(sessionId);
+        session.lastReceivedMsgSeqNum(knownSequenceNumber - 1);
     }
 
     public int poll(final long time)

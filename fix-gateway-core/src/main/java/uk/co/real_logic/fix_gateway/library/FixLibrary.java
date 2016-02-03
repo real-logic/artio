@@ -374,7 +374,8 @@ public final class FixLibrary extends GatewayProcess
             }
         }
 
-        public void onLogon(final int libraryId, final long connectionId, final long sessionId)
+        public void onLogon(
+            final int libraryId, final long connectionId, final long sessionId, int lastSequenceNumber)
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
@@ -382,9 +383,21 @@ public final class FixLibrary extends GatewayProcess
                 final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
                 if (subscriber != null)
                 {
-                    subscriber.onLogon(connectionId, sessionId);
+                    lastSequenceNumber = acceptorSequenceNumber(lastSequenceNumber);
+                    subscriber.onLogon(connectionId, sessionId, lastSequenceNumber);
                 }
             }
+        }
+
+        private int acceptorSequenceNumber(int lastSequenceNumber)
+        {
+            if (!configuration.acceptorSequenceNumbersResetUponReconnect() &&
+                lastSequenceNumber != SequenceNumberIndex.UNKNOWN_SESSION)
+            {
+                return lastSequenceNumber;
+            }
+
+            return 1;
         }
 
         public void onMessage(
@@ -520,19 +533,8 @@ public final class FixLibrary extends GatewayProcess
             fixCounters.sentMsgSeqNo(connectionId),
             libraryId,
             configuration.acceptorSessionBufferSize(),
-            acceptorInitialSequenceNumber(lastSequenceNumber))
+            1)
             .address(host, port);
-    }
-
-    private int acceptorInitialSequenceNumber(int lastSequenceNumber)
-    {
-        if (!configuration.acceptorSequenceNumbersResetUponReconnect() &&
-            lastSequenceNumber != SequenceNumberIndex.UNKNOWN_SESSION)
-        {
-            return lastSequenceNumber;
-        }
-
-        return 1;
     }
 
     private SessionProxy sessionProxy(final long connectionId)
