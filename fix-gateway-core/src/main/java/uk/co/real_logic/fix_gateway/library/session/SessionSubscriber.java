@@ -82,7 +82,7 @@ public class SessionSubscriber implements AutoCloseable
     {
         session.id(sessionId);
         // Acceptors need to wait for Logon message to identify
-        if(session instanceof AcceptorSession)
+        if (session instanceof AcceptorSession)
         {
             session.lastSentMsgSeqNum(lastSentSequenceNumber - 1);
             session.lastReceivedMsgSeqNum(lastReceivedSequenceNumber - 1);
