@@ -44,6 +44,7 @@ public class Logger implements AutoCloseable
     private final ErrorHandler errorHandler;
     private final SequenceNumberIndex sentSequenceNumberIndex;
     private final SequenceNumberIndex receivedSequenceNumberIndex;
+    private final IndexedPositionWriter indexedPositionWriter;
     private final List<Archiver> archivers = new ArrayList<>();
 
     private LogDirectoryDescriptor directoryDescriptor;
@@ -57,7 +58,8 @@ public class Logger implements AutoCloseable
         final ErrorHandler errorHandler,
         final Publication replayPublication,
         final SequenceNumberIndex sentSequenceNumberIndex,
-        final SequenceNumberIndex receivedSequenceNumberIndex)
+        final SequenceNumberIndex receivedSequenceNumberIndex,
+        final IndexedPositionWriter indexedPositionWriter)
     {
         this.configuration = configuration;
         this.inboundLibraryStreams = inboundLibraryStreams;
@@ -66,6 +68,7 @@ public class Logger implements AutoCloseable
         this.errorHandler = errorHandler;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
+        this.indexedPositionWriter = indexedPositionWriter;
     }
 
     public void init()
@@ -87,9 +90,10 @@ public class Logger implements AutoCloseable
             final List<Index> indices = Arrays.asList(
                 new ReplayIndex(logFileDir, configuration.indexFileSize(), cacheNumSets, cacheSetSize, LoggerUtil::map),
                 sentSequenceNumberIndex);
-            final Indexer outboundIndexer = new Indexer(indices, outboundLibraryStreams.subscription());
+            final Indexer outboundIndexer = new Indexer(
+                indices, outboundLibraryStreams.subscription(), indexedPositionWriter);
             final Indexer inboundIndexer = new Indexer(
-                Arrays.asList(receivedSequenceNumberIndex), inboundLibraryStreams.subscription());
+                Arrays.asList(receivedSequenceNumberIndex), inboundLibraryStreams.subscription(), indexedPositionWriter);
 
             final ReplayQuery replayQuery = new ReplayQuery(
                 logFileDir, cacheNumSets, cacheSetSize, LoggerUtil::mapExistingFile, outboundArchiveReader);

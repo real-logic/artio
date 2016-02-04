@@ -22,8 +22,6 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex.UNKNOWN_SESSION;
@@ -75,26 +73,6 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         indexRecord(START + fragmentLength());
 
-        assertLastKnownSequenceNumberIs(updatedSequenceNumber, SESSION_ID);
-    }
-
-    @Test
-    public void shouldWaitForSequenceNumberToBeIndexed()
-    {
-        final int updatedSequenceNumber = 8;
-        final int requiredStreamPosition = 150;
-
-        bufferContainsMessage(true);
-
-        indexRecord(START);
-
-        assertFalse(reader.hasIndexedUpTo(0, requiredStreamPosition));
-
-        bufferContainsMessage(true, SESSION_ID, updatedSequenceNumber);
-
-        indexRecord(START + fragmentLength());
-
-        assertTrue(reader.hasIndexedUpTo(0, requiredStreamPosition));
         assertLastKnownSequenceNumberIs(updatedSequenceNumber, SESSION_ID);
     }
 

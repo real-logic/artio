@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.IoUtil;
@@ -27,8 +26,6 @@ import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.util.concurrent.locks.LockSupport;
-
-import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_LONG;
 
 /**
  * Stores a cache of the last sent sequence number.
@@ -47,8 +44,7 @@ public class SequenceNumberIndex implements Index
     /** We are up to date with the record, but we don't know about this session */
     public static final int UNKNOWN_SESSION = -1;
 
-    private static final int KNOWN_STREAM_POSITION_INDEX = MessageHeaderDecoder.ENCODED_LENGTH;
-    private static final int HEADER_SIZE = KNOWN_STREAM_POSITION_INDEX + SIZE_OF_LONG;
+    private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
     private static final int RECORD_SIZE = LastKnownSequenceNumberDecoder.BLOCK_LENGTH;
 
     private static final int LOCK_OFFSET = 12;
@@ -124,19 +120,6 @@ public class SequenceNumberIndex implements Index
 
             saveRecord(msgSeqNum, sessionId);
         }
-
-        knownStreamPosition(position + length);
-        //System.out.println("PUtting: "+ (position + length) + " for " + streamId +" , " + aeronSessionId);
-    }
-
-    public boolean hasIndexedUpTo(final Header header)
-    {
-        return hasIndexedUpTo(header.sessionId(), header.position());
-    }
-
-    public boolean hasIndexedUpTo(final int aeronSessionId, final long requiredStreamPosition)
-    {
-        return requiredStreamPosition < knownStreamPosition();
     }
 
     public int lastKnownSequenceNumber(final long sessionId)
@@ -231,7 +214,8 @@ public class SequenceNumberIndex implements Index
 
     private void initialise()
     {
-        if (knownStreamPosition() == 0L)
+        fileHeaderDecoder.wrap(outputBuffer, 0);
+        if (fileHeaderDecoder.blockLength() == 0)
         {
             fileHeaderEncoder
                 .wrap(outputBuffer, 0)
@@ -261,16 +245,6 @@ public class SequenceNumberIndex implements Index
             throw new IllegalStateException(
                 String.format("Wrong %s: expected %d and got %d", name, expected, read));
         }
-    }
-
-    private void knownStreamPosition(final long position)
-    {
-        outputBuffer.putLongVolatile(KNOWN_STREAM_POSITION_INDEX, position);
-    }
-
-    private long knownStreamPosition()
-    {
-        return outputBuffer.getLongVolatile(KNOWN_STREAM_POSITION_INDEX);
     }
 
     private int lockVolatile(final int recordOffset)

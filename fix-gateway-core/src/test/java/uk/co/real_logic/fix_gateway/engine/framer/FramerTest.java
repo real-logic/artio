@@ -24,6 +24,7 @@ import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionReader;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
@@ -67,6 +68,7 @@ public class FramerTest
     private FakeEpochClock mockClock = new FakeEpochClock();
     private SequenceNumberIndex sentSequenceNumberIndex = mock(SequenceNumberIndex.class);
     private SequenceNumberIndex receivedSequenceNumberIndex = mock(SequenceNumberIndex.class);
+    private IndexedPositionReader indexedPositionReader = mock(IndexedPositionReader.class);
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
@@ -87,9 +89,7 @@ public class FramerTest
 
         clientBuffer.putInt(10, 5);
 
-        when(sentSequenceNumberIndex.hasIndexedUpTo(any())).thenReturn(true);
-
-        when(receivedSequenceNumberIndex.hasIndexedUpTo(any())).thenReturn(true);
+        when(indexedPositionReader.hasIndexedUpTo(any())).thenReturn(true);
 
         when(mockConnectionHandler
             .receiverEndPoint(any(), connectionId.capture(), anyLong(), anyInt(), any(), any(),
@@ -113,11 +113,11 @@ public class FramerTest
             mockConnectionHandler,
             mock(Subscription.class),
             mock(Subscription.class),
-            mockSessionIdStrategy,
+            mock(QueuedPipe.class), mockSessionIdStrategy,
             new SessionIds(),
-            mock(QueuedPipe.class),
             sentSequenceNumberIndex,
-            receivedSequenceNumberIndex);
+            receivedSequenceNumberIndex,
+            indexedPositionReader);
     }
 
     @After

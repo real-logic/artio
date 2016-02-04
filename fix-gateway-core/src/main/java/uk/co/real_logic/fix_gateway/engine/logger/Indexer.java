@@ -30,11 +30,14 @@ public class Indexer implements Agent, FragmentHandler
 
     private final List<Index> indices;
     private final Subscription subscription;
+    private final IndexedPositionWriter indexedPositionWriter;
 
-    public Indexer(final List<Index> indices, final Subscription subscription)
+    public Indexer(
+        final List<Index> indices, final Subscription subscription, final IndexedPositionWriter indexedPositionWriter)
     {
         this.indices = indices;
         this.subscription = subscription;
+        this.indexedPositionWriter = indexedPositionWriter;
     }
 
     public int doWork() throws Exception
@@ -52,6 +55,7 @@ public class Indexer implements Agent, FragmentHandler
         {
             index.indexRecord(buffer, offset, length, streamId, aeronSessionId, position);
         }
+        indexedPositionWriter.indexedUpTo(streamId, aeronSessionId, position);
     }
 
     public void onClose()

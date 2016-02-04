@@ -44,7 +44,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         connectPersistingSessions();
     }
 
-    @Test(timeout = 5000L)
+    @Test(timeout = 10_000L)
     public void sequenceNumbersCanPersistOverRestarts()
     {
         sendTestRequest(initiatedSession);

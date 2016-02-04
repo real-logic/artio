@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionReader;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
@@ -96,6 +97,7 @@ public class Framer implements Agent, SessionHandler
     private final ConnectionHandler connectionHandler;
     private final Subscription outboundDataSubscription;
     private final Subscription replaySubscription;
+    private final IndexedPositionReader indexedPositionReader;
     private final SequenceNumberIndex receivedSequenceNumberIndex;
     private final GatewayPublication inboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
@@ -115,11 +117,12 @@ public class Framer implements Agent, SessionHandler
         final ConnectionHandler connectionHandler,
         final Subscription outboundLibrarySubscription,
         final Subscription replaySubscription,
+        final QueuedPipe<AdminCommand> adminCommands,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
-        final QueuedPipe<AdminCommand> adminCommands,
         final SequenceNumberIndex sentSequenceNumberIndex,
-        final SequenceNumberIndex receivedSequenceNumberIndex)
+        final SequenceNumberIndex receivedSequenceNumberIndex,
+        final IndexedPositionReader indexedPositionReader)
     {
         this.clock = clock;
         this.configuration = configuration;
@@ -132,6 +135,7 @@ public class Framer implements Agent, SessionHandler
         this.adminCommands = adminCommands;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
+        this.indexedPositionReader = indexedPositionReader;
 
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
@@ -306,9 +310,9 @@ public class Framer implements Agent, SessionHandler
 
             setupConnection(channel, connectionId, sessionId, libraryId);
 
-            while (!sentSequenceNumberIndex.hasIndexedUpTo(header))
+            while (!indexedPositionReader.hasIndexedUpTo(header))
             {
-                LockSupport.parkNanos(1000);
+                LockSupport.parkNanos(10_000);
             }
 
             final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);

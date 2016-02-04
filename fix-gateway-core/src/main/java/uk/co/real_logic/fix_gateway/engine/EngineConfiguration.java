@@ -67,6 +67,8 @@ public final class EngineConfiguration extends CommonConfiguration
     public static final String SENDER_SOCKET_BUFFER_SIZE_PROP = "fix.core.sender_socket_buffer_size";
     /** Property name for the size in bytes of the sequence number cache file*/
     public static final String SEQUENCE_NUMBER_CACHE_BUFFER_SIZE_PROP = "fix.core.sequence_number_cache_size";
+    /** Property name for the size in bytes of the indexed positions file*/
+    public static final String INDEXED_POSITIONS_BUFFER_SIZE_PROP = "fix.core.indexed_positions_size";
 
     // ------------------------------------------------
     //          Configuration Defaults
@@ -84,6 +86,7 @@ public final class EngineConfiguration extends CommonConfiguration
     public static final int DEFAULT_RECEIVER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SENDER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SEQUENCE_NUMBER_CACHE_BUFFER_SIZE = 8 * 1024 * 1024;
+    public static final int DEFAULT_INDEXED_POSITIONS_BUFFER_SIZE = 1024 * 1024;
 
     private String host = null;
     private int port;
@@ -99,6 +102,7 @@ public final class EngineConfiguration extends CommonConfiguration
     private IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
     private AtomicBuffer sentSequenceNumberCacheBuffer;
     private AtomicBuffer receivedSequenceNumberCacheBuffer;
+    private AtomicBuffer indexedPositionBuffer;
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
@@ -114,6 +118,8 @@ public final class EngineConfiguration extends CommonConfiguration
         getInteger(SENDER_SOCKET_BUFFER_SIZE_PROP, DEFAULT_SENDER_SOCKET_BUFFER_SIZE);
     private int sequenceNumberCacheBufferSize =
         getInteger(SEQUENCE_NUMBER_CACHE_BUFFER_SIZE_PROP, DEFAULT_SEQUENCE_NUMBER_CACHE_BUFFER_SIZE);
+    private int indexedPositionBufferSize =
+        getInteger(INDEXED_POSITIONS_BUFFER_SIZE_PROP, DEFAULT_INDEXED_POSITIONS_BUFFER_SIZE);
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -463,6 +469,11 @@ public final class EngineConfiguration extends CommonConfiguration
         return receivedSequenceNumberCacheBuffer;
     }
 
+    public AtomicBuffer indexedPositionBuffer()
+    {
+        return indexedPositionBuffer;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -505,19 +516,24 @@ public final class EngineConfiguration extends CommonConfiguration
 
         if (sentSequenceNumberCacheBuffer() == null)
         {
-            sentSequenceNumberCacheBuffer = makeSequenceNumberCacheBuffer("sent");
+            sentSequenceNumberCacheBuffer = makeFile("sequence_numbers_sent", sequenceNumberCacheBufferSize);
         }
 
         if (receivedSequenceNumberCacheBuffer() == null)
         {
-            receivedSequenceNumberCacheBuffer = makeSequenceNumberCacheBuffer("received");
+            receivedSequenceNumberCacheBuffer = makeFile("sequence_numbers_received", sequenceNumberCacheBufferSize);
+        }
+
+        if (indexedPositionBuffer() == null)
+        {
+            indexedPositionBuffer = makeFile("index_positions", indexedPositionBufferSize);
         }
     }
 
-    private UnsafeBuffer makeSequenceNumberCacheBuffer(final String suf)
+    private UnsafeBuffer makeFile(final String file, final int size)
     {
-        final File sequenceNumberCacheBufferFile = new File(logFileDir() + File.separator +  "sequence_numbers_" + suf);
-        return new UnsafeBuffer(mapNewFile(sequenceNumberCacheBufferFile, sequenceNumberCacheBufferSize));
+        final File sequenceNumberCacheBufferFile = new File(logFileDir() + File.separator + file);
+        return new UnsafeBuffer(mapNewFile(sequenceNumberCacheBufferFile, size));
     }
 
 }
