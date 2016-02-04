@@ -55,7 +55,7 @@ public class Indexer implements Agent, FragmentHandler
         {
             index.indexRecord(buffer, offset, length, streamId, aeronSessionId, position);
         }
-        indexedPositionWriter.indexedUpTo(streamId, aeronSessionId, position);
+        indexedPositionWriter.indexedUpTo(streamId, aeronSessionId, position + length);
     }
 
     public void onClose()
