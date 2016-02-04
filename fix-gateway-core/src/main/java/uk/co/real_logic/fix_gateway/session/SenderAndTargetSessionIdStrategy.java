@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
+import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
@@ -50,6 +51,16 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         final CompositeKey composite = (CompositeKey)compositeKey;
         headerEncoder.senderCompID(composite.senderCompID);
         headerEncoder.targetCompID(composite.targetCompID);
+    }
+
+    public int save(final Object compositeKey, final AtomicBuffer buffer, final int offset)
+    {
+        return INSUFFICIENT_SPACE;
+    }
+
+    public Object load(final AtomicBuffer buffer, final int offset, final int length)
+    {
+        return null;
     }
 
     private static final class CompositeKey

@@ -30,7 +30,7 @@ public class SessionIds
 
     private long counter = 1L;
 
-    private final LongHashSet currentlyAuthenticated = new LongHashSet(40, MISSING);
+    private final LongHashSet currentlyAuthenticated = new LongHashSet(MISSING);
     private final Map<Object, Long> compositeToSurrogate = new HashMap<>();
 
     public SessionIds()

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -45,6 +46,19 @@ public class SessionIdsTest
         sessionIds.onDisconnect(sessionId);
 
         assertEquals(sessionId, sessionIds.onLogon("a"));
+    }
+
+    // TODO:
+    @Ignore
+    @Test
+    public void persistsSessionIdsOverARestart()
+    {
+        final long bId = sessionIds.onLogon("b");
+        final long aId = sessionIds.onLogon("a");
+
+        final SessionIds sessionIdsAfterRestart = new SessionIds();
+        assertEquals(aId, sessionIdsAfterRestart.onLogon("a"));
+        assertEquals(bId, sessionIdsAfterRestart.onLogon("b"));
     }
 
 }

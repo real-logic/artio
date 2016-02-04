@@ -57,4 +57,16 @@ public class SenderAndTargetSessionIdStrategyTest
             }));
     }
 
+    @Test
+    public void savesAndLoadsACompositeKey()
+    {
+        // TODO
+    }
+
+    @Test
+    public void validatesSpaceInBufferOnSave()
+    {
+        // TODO
+    }
+
 }

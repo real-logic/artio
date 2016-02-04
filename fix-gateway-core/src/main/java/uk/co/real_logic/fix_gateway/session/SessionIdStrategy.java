@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
+import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
@@ -37,6 +38,8 @@ import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
  */
 public interface SessionIdStrategy
 {
+    int INSUFFICIENT_SPACE = -1;
+
     /**
      * Creates the composite session key when you accept a logon.
      *
@@ -63,4 +66,24 @@ public interface SessionIdStrategy
      * @param headerEncoder the outbound message header.
      */
     void setupSession(final Object compositeKey, final HeaderEncoder headerEncoder);
+
+    /**
+     * Saves the given composite key to a buffer.
+     *
+     * @param compositeKey the key to save
+     * @param buffer the buffer to save it to
+     * @param offset the offset withint the buffer to start saving at
+     * @return the length used to save the key, or {@link SessionIdStrategy#INSUFFICIENT_SPACE} otherwise
+     */
+    int save(final Object compositeKey, final AtomicBuffer buffer, final int offset);
+
+    /**
+     * Loads a composite key from a buffer.
+     *
+     * @param buffer the buffer to save it to
+     * @param offset the offset withint the buffer to start saving at
+     * @param length the length within the buffer to read from
+     * @return the loaded key or null if there was a failure.
+     */
+    Object load(final AtomicBuffer buffer, final int offset, final int length);
 }
