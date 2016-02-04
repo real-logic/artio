@@ -27,6 +27,7 @@ import java.util.Objects;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
+import static uk.co.real_logic.agrona.IoUtil.mapExistingFile;
 import static uk.co.real_logic.agrona.IoUtil.mapNewFile;
 
 /**
@@ -516,24 +517,31 @@ public final class EngineConfiguration extends CommonConfiguration
 
         if (sentSequenceNumberCacheBuffer() == null)
         {
-            sentSequenceNumberCacheBuffer = makeFile("sequence_numbers_sent", sequenceNumberCacheBufferSize);
+            sentSequenceNumberCacheBuffer = mapFile("sequence_numbers_sent", sequenceNumberCacheBufferSize);
         }
 
         if (receivedSequenceNumberCacheBuffer() == null)
         {
-            receivedSequenceNumberCacheBuffer = makeFile("sequence_numbers_received", sequenceNumberCacheBufferSize);
+            receivedSequenceNumberCacheBuffer = mapFile("sequence_numbers_received", sequenceNumberCacheBufferSize);
         }
 
         if (indexedPositionBuffer() == null)
         {
-            indexedPositionBuffer = makeFile("index_positions", indexedPositionBufferSize);
+            indexedPositionBuffer = mapFile("index_positions", indexedPositionBufferSize);
         }
     }
 
-    private UnsafeBuffer makeFile(final String file, final int size)
+    private UnsafeBuffer mapFile(final String file, final int size)
     {
         final File sequenceNumberCacheBufferFile = new File(logFileDir() + File.separator + file);
-        return new UnsafeBuffer(mapNewFile(sequenceNumberCacheBufferFile, size));
+        if (sequenceNumberCacheBufferFile.exists())
+        {
+            return new UnsafeBuffer(mapExistingFile(sequenceNumberCacheBufferFile, file));
+        }
+        else
+        {
+            return new UnsafeBuffer(mapNewFile(sequenceNumberCacheBufferFile, size));
+        }
     }
 
 }

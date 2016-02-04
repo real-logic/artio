@@ -186,6 +186,11 @@ public final class SystemTestUtil
     public static FixEngine launchInitiatingGateway(final int initAeronPort)
     {
         delete(CLIENT_LOGS);
+        return launchInitiatingGatewayWithSameLogs(initAeronPort);
+    }
+
+    public static FixEngine launchInitiatingGatewayWithSameLogs(final int initAeronPort)
+    {
         final EngineConfiguration initiatingConfig = initiatingConfig(initAeronPort, "engineCounters");
         return FixEngine.launch(initiatingConfig);
     }
@@ -212,6 +217,11 @@ public final class SystemTestUtil
     public static FixEngine launchAcceptingGateway(final int port)
     {
         delete(ACCEPTOR_LOGS);
+        return launchAcceptingGatewayWithSameLogs(port);
+    }
+
+    public static FixEngine launchAcceptingGatewayWithSameLogs(final int port)
+    {
         final EngineConfiguration config = acceptingConfig(port, "engineCounters");
         return FixEngine.launch(config);
     }

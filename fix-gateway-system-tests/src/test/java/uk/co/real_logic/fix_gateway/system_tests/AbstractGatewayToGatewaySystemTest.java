@@ -129,7 +129,7 @@ public class AbstractGatewayToGatewaySystemTest
     }
 
     @After
-    public void close() throws Exception
+    public void close()
     {
         CloseHelper.close(initiatingLibrary);
         CloseHelper.close(acceptingLibrary);

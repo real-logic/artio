@@ -22,18 +22,27 @@ import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 
+import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
     @Before
-    public void launch()
+    public void setUp()
+    {
+        delete(ACCEPTOR_LOGS);
+        delete(CLIENT_LOGS);
+
+        launch();
+    }
+
+    private void launch()
     {
         mediaDriver = launchMediaDriver();
 
-        acceptingEngine = launchAcceptingGateway(port);
-        initiatingEngine = launchInitiatingGateway(initAeronPort);
+        acceptingEngine = launchAcceptingGatewayWithSameLogs(port);
+        initiatingEngine = launchInitiatingGatewayWithSameLogs(initAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig =
             acceptingLibraryConfig(acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor");
@@ -42,23 +51,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
 
         connectPersistingSessions();
-    }
-
-    @Test(timeout = 10_000L)
-    public void sequenceNumbersCanPersistOverRestarts()
-    {
-        sendTestRequest(initiatedSession);
-        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
-        assertSequenceFromInitToAcceptAt(2);
-
-        initiatedSession.startLogout();
-        assertSessionsDisconnected();
-
-        connectPersistingSessions();
-
-        sendTestRequest(initiatedSession);
-        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, 4);
-        assertSequenceFromInitToAcceptAt(4);
     }
 
     private void connectPersistingSessions()
@@ -76,5 +68,30 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertConnected(initiatedSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatedSession);
         acceptingSession = acceptSession(acceptingSessionHandler, acceptingLibrary);
+    }
+
+    @Test(timeout = 10_000L)
+    public void sequenceNumbersCanPersistOverRestarts()
+    {
+        sendTestRequest(initiatedSession);
+        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+        assertSequenceFromInitToAcceptAt(2);
+
+        final long initiatedSessionId = initiatedSession.id();
+        final long acceptingSessionId = acceptingSession.id();
+
+        initiatedSession.startLogout();
+        assertSessionsDisconnected();
+
+        close();
+
+        launch();
+
+        assertEquals("initiatedSessionId not stable over restarts", initiatedSessionId, initiatedSession.id());
+        assertEquals("acceptingSessionId not stable over restarts", acceptingSessionId, acceptingSession.id());
+
+        sendTestRequest(initiatedSession);
+        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, 4);
+        assertSequenceFromInitToAcceptAt(4);
     }
 }
