@@ -78,6 +78,7 @@ public class FramerTest
     private Framer framer;
 
     private ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);
+    private SessionIds sessionIds = mock(SessionIds.class);
 
     @Before
     public void setUp() throws IOException
@@ -113,8 +114,9 @@ public class FramerTest
             mockConnectionHandler,
             mock(Subscription.class),
             mock(Subscription.class),
-            mock(QueuedPipe.class), mockSessionIdStrategy,
-            new SessionIds(),
+            mock(QueuedPipe.class),
+            mockSessionIdStrategy,
+            sessionIds,
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex,
             indexedPositionReader);
@@ -243,6 +245,8 @@ public class FramerTest
         intiateConnection();
 
         notifyLibraryOfConnection();
+
+        when(sessionIds.onLogon(any())).thenReturn(SessionIds.DUPLICATE_SESSION);
 
         intiateConnection();
 

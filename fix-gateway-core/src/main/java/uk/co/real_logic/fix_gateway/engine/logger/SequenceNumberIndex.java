@@ -214,37 +214,24 @@ public class SequenceNumberIndex implements Index
 
     private void initialise()
     {
-        fileHeaderDecoder.wrap(outputBuffer, 0);
-        if (fileHeaderDecoder.blockLength() == 0)
-        {
-            fileHeaderEncoder
-                .wrap(outputBuffer, 0)
-                .blockLength(lastKnownEncoder.sbeBlockLength())
-                .templateId(lastKnownEncoder.sbeTemplateId())
-                .schemaId(lastKnownEncoder.sbeSchemaId())
-                .version(lastKnownEncoder.sbeSchemaVersion());
-        }
-        else
-        {
-            validateBuffer();
-        }
+        LoggerUtil.initialiseBuffer(
+            outputBuffer,
+            fileHeaderEncoder,
+            fileHeaderDecoder,
+            lastKnownEncoder.sbeSchemaId(),
+            lastKnownEncoder.sbeTemplateId(),
+            lastKnownEncoder.sbeSchemaVersion(),
+            lastKnownEncoder.sbeBlockLength());
     }
 
     private void validateBuffer()
     {
-        fileHeaderDecoder.wrap(outputBuffer, 0);
-        validateField(lastKnownEncoder.sbeSchemaId(), fileHeaderDecoder.schemaId(), "Schema Id");
-        validateField(actingVersion, fileHeaderDecoder.version(), "Schema Version");
-        validateField(actingBlockLength, fileHeaderDecoder.blockLength(), "Block Length");
-    }
-
-    private void validateField(final int expected, final int read, final String name)
-    {
-        if (read != expected)
-        {
-            throw new IllegalStateException(
-                String.format("Wrong %s: expected %d and got %d", name, expected, read));
-        }
+        LoggerUtil.validateBuffer(
+            outputBuffer,
+            fileHeaderDecoder,
+            lastKnownEncoder.sbeSchemaId(),
+            actingVersion,
+            actingBlockLength);
     }
 
     private int lockVolatile(final int recordOffset)

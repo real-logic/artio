@@ -128,11 +128,10 @@ public final class FixEngine extends GatewayProcess
 
     private void initFramer(final EngineConfiguration configuration, final FixCounters fixCounters)
     {
-        final SessionIds sessionIds = new SessionIds();
-
+        final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
+        final SessionIds sessionIds = new SessionIds(configuration.sessionIdBuffer(), sessionIdStrategy);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Subscription librarySubscription = outboundLibraryStreams.subscription();
-        final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
 
         final ConnectionHandler handler = new ConnectionHandler(
             configuration,

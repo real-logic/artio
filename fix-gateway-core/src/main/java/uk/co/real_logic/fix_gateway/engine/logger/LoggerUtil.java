@@ -16,6 +16,9 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.agrona.IoUtil;
+import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -44,5 +47,57 @@ public final class LoggerUtil
     {
         final LogDirectoryDescriptor directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
         return new ArchiveMetaData(directoryDescriptor, LoggerUtil::mapExistingFile, IoUtil::mapNewFile);
+    }
+
+    public static void initialiseBuffer(
+        final AtomicBuffer buffer,
+        final MessageHeaderEncoder headerEncoder,
+        final MessageHeaderDecoder headerDecoder,
+        final int sbeSchemaId,
+        final int sbeTemplateId,
+        final int actingVersion,
+        final int actingBlockLength)
+    {
+        headerDecoder.wrap(buffer, 0);
+        if (headerDecoder.blockLength() == 0)
+        {
+            headerEncoder
+                .wrap(buffer, 0)
+                .blockLength(actingBlockLength)
+                .templateId(sbeTemplateId)
+                .schemaId(sbeSchemaId)
+                .version(actingVersion);
+        }
+        else
+        {
+            validateBuffer(
+                buffer,
+                headerDecoder,
+                sbeSchemaId,
+                actingVersion,
+                actingBlockLength);
+        }
+    }
+
+    public static void validateBuffer(
+        final AtomicBuffer buffer,
+        final MessageHeaderDecoder headerDecoder,
+        final int sbeSchemaId,
+        final int actingVersion,
+        final int actingBlockLength)
+    {
+        headerDecoder.wrap(buffer, 0);
+        validateField(sbeSchemaId, headerDecoder.schemaId(), "Schema Id");
+        validateField(actingVersion, headerDecoder.version(), "Schema Version");
+        validateField(actingBlockLength, headerDecoder.blockLength(), "Block Length");
+    }
+
+    private static void validateField(final int expected, final int read, final String name)
+    {
+        if (read != expected)
+        {
+            throw new IllegalStateException(
+                String.format("Wrong %s: expected %d and got %d", name, expected, read));
+        }
     }
 }

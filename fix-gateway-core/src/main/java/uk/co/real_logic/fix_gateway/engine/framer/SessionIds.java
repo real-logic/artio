@@ -16,9 +16,17 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.agrona.collections.LongHashSet;
+import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil;
+import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
+
+import static uk.co.real_logic.fix_gateway.messages.SessionIdEncoder.BLOCK_LENGTH;
+import static uk.co.real_logic.fix_gateway.session.SessionIdStrategy.INSUFFICIENT_SPACE;
 
 /**
  * Identifies which sessions are currently authenticated.
@@ -28,23 +36,107 @@ public class SessionIds
     public static final long MISSING = -2;
     public static final long DUPLICATE_SESSION = -1;
 
-    private long counter = 1L;
+    private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
 
+    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
+    private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
+    private final SessionIdEncoder sessionIdEncoder = new SessionIdEncoder();
+    private final int actingBlockLength = sessionIdEncoder.sbeBlockLength();
+    private final int actingVersion = sessionIdEncoder.sbeSchemaVersion();
+
+    private final Function<Object, Long> onLogonFunc = this::onNewLogon;
     private final LongHashSet currentlyAuthenticated = new LongHashSet(MISSING);
     private final Map<Object, Long> compositeToSurrogate = new HashMap<>();
 
+    private final AtomicBuffer buffer;
+    private final SessionIdStrategy idStrategy;
+
+    private static long counter = 1L;
+
+    private int bufferPosition;
+
     public SessionIds()
     {
+        this(null, null);
+    }
 
+    public SessionIds(final AtomicBuffer buffer, final SessionIdStrategy idStrategy)
+    {
+        this.buffer = buffer;
+        this.idStrategy = idStrategy;
+        loadBuffer();
+    }
+
+    private void loadBuffer()
+    {
+        LoggerUtil.initialiseBuffer(
+            buffer,
+            headerEncoder,
+            headerDecoder,
+            sessionIdEncoder.sbeSchemaId(),
+            sessionIdEncoder.sbeTemplateId(),
+            actingVersion,
+            actingBlockLength);
+
+        final SessionIdDecoder sessionIdDecoder = new SessionIdDecoder();
+
+        bufferPosition = HEADER_SIZE;
+        final int lastRecordStart = buffer.capacity() - BLOCK_LENGTH;
+        while (bufferPosition < lastRecordStart)
+        {
+            sessionIdDecoder.wrap(buffer, bufferPosition, actingBlockLength, actingVersion);
+
+            final long sessionId = sessionIdDecoder.sessionId();
+            if (sessionId == 0)
+            {
+                return;
+            }
+
+            final int compositeKeyLength = sessionIdDecoder.compositeKeyLength();
+            final Object compositeKey = idStrategy.load(
+                buffer, bufferPosition + BLOCK_LENGTH, compositeKeyLength);
+            if (compositeKey == null)
+            {
+                return;
+            }
+
+            compositeToSurrogate.put(compositeKey, sessionId);
+
+            bufferPosition += BLOCK_LENGTH + compositeKeyLength;
+        }
     }
 
     public long onLogon(final Object compositeKey)
     {
-        final Long sessionId = compositeToSurrogate.computeIfAbsent(compositeKey, key -> counter++);
+        final Long sessionId = compositeToSurrogate.computeIfAbsent(compositeKey, onLogonFunc);
 
         if (!currentlyAuthenticated.add(sessionId))
         {
             return DUPLICATE_SESSION;
+        }
+
+        return sessionId;
+    }
+
+    private long onNewLogon(final Object compositeKey)
+    {
+        final long sessionId = counter++;
+
+        final int compositeKeyLength = idStrategy.save(
+            compositeKey, buffer, bufferPosition + BLOCK_LENGTH);
+
+        if (compositeKeyLength == INSUFFICIENT_SPACE)
+        {
+            // TODO: log error
+        }
+        else
+        {
+            sessionIdEncoder
+                .wrap(buffer, bufferPosition)
+                .sessionId(sessionId)
+                .compositeKeyLength(compositeKeyLength);
+
+            bufferPosition += BLOCK_LENGTH + compositeKeyLength;
         }
 
         return sessionId;

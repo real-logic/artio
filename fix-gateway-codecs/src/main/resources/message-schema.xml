@@ -166,11 +166,14 @@
     </sbe:message>
 
     <!-- Session Id Store -->
+    <sbe:message name="SessionId" id="28" description="">
+        <field name="sessionId" id="89" type="int64"/>
+        <field name="compositeKeyLength" id="90" type="int32"/>
+    </sbe:message>
     <sbe:message name="SenderAndTargetCompositeKey" id="26" description="">
         <data name="senderCompId" id="84" type="varDataEncoding"/>
         <data name="targetCompId" id="85" type="varDataEncoding"/>
     </sbe:message>
-
     <sbe:message name="SenderTargetAndSubCompositeKey" id="27" description="">
         <data name="senderCompId" id="86" type="varDataEncoding"/>
         <data name="senderSubId" id="87" type="varDataEncoding"/>

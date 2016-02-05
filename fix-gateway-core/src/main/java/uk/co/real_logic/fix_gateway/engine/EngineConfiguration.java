@@ -70,6 +70,8 @@ public final class EngineConfiguration extends CommonConfiguration
     public static final String SEQUENCE_NUMBER_CACHE_BUFFER_SIZE_PROP = "fix.core.sequence_number_cache_size";
     /** Property name for the size in bytes of the indexed positions file*/
     public static final String INDEXED_POSITIONS_BUFFER_SIZE_PROP = "fix.core.indexed_positions_size";
+    /** Property name for the size in bytes of the session id file */
+    public static final String SESSION_ID_BUFFER_SIZE_PROP = "fix.core.session_id_file_size";
 
     // ------------------------------------------------
     //          Configuration Defaults
@@ -88,6 +90,7 @@ public final class EngineConfiguration extends CommonConfiguration
     public static final int DEFAULT_SENDER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SEQUENCE_NUMBER_CACHE_BUFFER_SIZE = 8 * 1024 * 1024;
     public static final int DEFAULT_INDEXED_POSITIONS_BUFFER_SIZE = 1024 * 1024;
+    public static final int DEFAULT_SESSION_ID_BUFFER_SIZE = 4 * 1024 * 1024;
 
     private String host = null;
     private int port;
@@ -104,6 +107,7 @@ public final class EngineConfiguration extends CommonConfiguration
     private AtomicBuffer sentSequenceNumberCacheBuffer;
     private AtomicBuffer receivedSequenceNumberCacheBuffer;
     private AtomicBuffer indexedPositionBuffer;
+    private AtomicBuffer sessionIdBuffer;
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
@@ -121,7 +125,8 @@ public final class EngineConfiguration extends CommonConfiguration
         getInteger(SEQUENCE_NUMBER_CACHE_BUFFER_SIZE_PROP, DEFAULT_SEQUENCE_NUMBER_CACHE_BUFFER_SIZE);
     private int indexedPositionBufferSize =
         getInteger(INDEXED_POSITIONS_BUFFER_SIZE_PROP, DEFAULT_INDEXED_POSITIONS_BUFFER_SIZE);
-
+    private int sessionIdBufferSize =
+        getInteger(SESSION_ID_BUFFER_SIZE_PROP, DEFAULT_SESSION_ID_BUFFER_SIZE);
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
      * <p>
@@ -475,6 +480,11 @@ public final class EngineConfiguration extends CommonConfiguration
         return indexedPositionBuffer;
     }
 
+    public AtomicBuffer sessionIdBuffer()
+    {
+        return sessionIdBuffer;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -528,6 +538,11 @@ public final class EngineConfiguration extends CommonConfiguration
         if (indexedPositionBuffer() == null)
         {
             indexedPositionBuffer = mapFile("index_positions", indexedPositionBufferSize);
+        }
+
+        if (sessionIdBuffer() == null)
+        {
+            sessionIdBuffer = mapFile("session_id_buffer", sessionIdBufferSize);
         }
     }
 

@@ -15,50 +15,56 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import org.junit.Ignore;
 import org.junit.Test;
+import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
 public class SessionIdsTest
 {
-    private SessionIds sessionIds = new SessionIds();
+    private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
+    private SessionIdStrategy idStrategy = new SenderAndTargetSessionIdStrategy();
+    private SessionIds sessionIds = new SessionIds(buffer, idStrategy);
+
+    private Object aSession = idStrategy.onInitiatorLogon("a", null, null, "b");
+    private Object bSession = idStrategy.onInitiatorLogon("b", null, null, "a");
 
     @Test
     public void sessionIdsAreUnique()
     {
-        assertNotEquals(sessionIds.onLogon("a"), sessionIds.onLogon("b"));
+        assertNotEquals(sessionIds.onLogon(aSession), sessionIds.onLogon(bSession));
     }
 
     @Test
     public void findsDuplicateSessions()
     {
-        sessionIds.onLogon("a");
+        sessionIds.onLogon(aSession);
 
-        assertEquals(SessionIds.DUPLICATE_SESSION, sessionIds.onLogon("a"));
+        assertEquals(SessionIds.DUPLICATE_SESSION, sessionIds.onLogon(aSession));
     }
 
     @Test
     public void handsOutSameSessionIdAfterDisconnect()
     {
-        final long sessionId = sessionIds.onLogon("a");
+        final long sessionId = sessionIds.onLogon(aSession);
         sessionIds.onDisconnect(sessionId);
 
-        assertEquals(sessionId, sessionIds.onLogon("a"));
+        assertEquals(sessionId, sessionIds.onLogon(aSession));
     }
 
-    // TODO:
-    @Ignore
     @Test
     public void persistsSessionIdsOverARestart()
     {
-        final long bId = sessionIds.onLogon("b");
-        final long aId = sessionIds.onLogon("a");
+        final long bId = sessionIds.onLogon(bSession);
+        final long aId = sessionIds.onLogon(aSession);
 
-        final SessionIds sessionIdsAfterRestart = new SessionIds();
-        assertEquals(aId, sessionIdsAfterRestart.onLogon("a"));
-        assertEquals(bId, sessionIdsAfterRestart.onLogon("b"));
+        final SessionIds sessionIdsAfterRestart = new SessionIds(buffer, idStrategy);
+        assertEquals(aId, sessionIdsAfterRestart.onLogon(aSession));
+        assertEquals(bId, sessionIdsAfterRestart.onLogon(bSession));
     }
 
 }
