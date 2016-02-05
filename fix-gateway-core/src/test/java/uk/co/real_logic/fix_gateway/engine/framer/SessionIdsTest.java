@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.junit.Test;
+import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
@@ -23,12 +24,17 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class SessionIdsTest
 {
+    private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
     private SessionIdStrategy idStrategy = new SenderAndTargetSessionIdStrategy();
-    private SessionIds sessionIds = new SessionIds(buffer, idStrategy);
+    private SessionIds sessionIds = new SessionIds(buffer, idStrategy, errorHandler);
 
     private Object aSession = idStrategy.onInitiatorLogon("a", null, null, "b");
     private Object bSession = idStrategy.onInitiatorLogon("b", null, null, "a");
@@ -62,9 +68,19 @@ public class SessionIdsTest
         final long bId = sessionIds.onLogon(bSession);
         final long aId = sessionIds.onLogon(aSession);
 
-        final SessionIds sessionIdsAfterRestart = new SessionIds(buffer, idStrategy);
+        final SessionIds sessionIdsAfterRestart = new SessionIds(buffer, idStrategy, errorHandler);
         assertEquals(aId, sessionIdsAfterRestart.onLogon(aSession));
         assertEquals(bId, sessionIdsAfterRestart.onLogon(bSession));
+    }
+
+    @Test
+    public void logsErrorWhenBufferInsufficientlySized()
+    {
+        final AtomicBuffer buffer = new UnsafeBuffer(new byte[20]);
+        final SessionIds sessionIds = new SessionIds(buffer, idStrategy, errorHandler);
+        sessionIds.onLogon(bSession);
+
+        verify(errorHandler, times(1)).onError(any());
     }
 
 }

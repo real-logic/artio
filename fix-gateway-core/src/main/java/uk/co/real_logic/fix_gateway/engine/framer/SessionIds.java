@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.collections.LongHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil;
@@ -50,20 +51,18 @@ public class SessionIds
 
     private final AtomicBuffer buffer;
     private final SessionIdStrategy idStrategy;
+    private final ErrorHandler errorHandler;
 
     private static long counter = 1L;
 
     private int bufferPosition;
 
-    public SessionIds()
-    {
-        this(null, null);
-    }
-
-    public SessionIds(final AtomicBuffer buffer, final SessionIdStrategy idStrategy)
+    public SessionIds(
+        final AtomicBuffer buffer, final SessionIdStrategy idStrategy, final ErrorHandler errorHandler)
     {
         this.buffer = buffer;
         this.idStrategy = idStrategy;
+        this.errorHandler = errorHandler;
         loadBuffer();
     }
 
@@ -121,13 +120,15 @@ public class SessionIds
     private long onNewLogon(final Object compositeKey)
     {
         final long sessionId = counter++;
-
         final int compositeKeyLength = idStrategy.save(
             compositeKey, buffer, bufferPosition + BLOCK_LENGTH);
 
         if (compositeKeyLength == INSUFFICIENT_SPACE)
         {
-            // TODO: log error
+            errorHandler.onError(new IllegalStateException(String.format(
+                "Unable to save record session id %d for %s due to insufficient space",
+                sessionId,
+                compositeKey)));
         }
         else
         {
