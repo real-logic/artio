@@ -16,15 +16,19 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.Test;
+import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 import static java.util.stream.Collectors.toSet;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static uk.co.real_logic.fix_gateway.session.SessionIdStrategy.INSUFFICIENT_SPACE;
 
 public class SenderAndTargetSessionIdStrategyTest
 {
@@ -60,13 +64,27 @@ public class SenderAndTargetSessionIdStrategyTest
     @Test
     public void savesAndLoadsACompositeKey()
     {
-        // TODO
+        final AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
+        final Object key = strategy.onInitiatorLogon("SIGMAX", null, null, "ABC_DEFG04");
+
+        final int length = strategy.save(key, buffer, 1);
+
+        assertThat(length, greaterThan(0));
+
+        final Object loadedKey = strategy.load(buffer, 1, length);
+
+        assertEquals(key, loadedKey);
     }
 
     @Test
     public void validatesSpaceInBufferOnSave()
     {
-        // TODO
+        final AtomicBuffer buffer = new UnsafeBuffer(new byte[5]);
+        final Object key = strategy.onInitiatorLogon("SIGMAX", null, null, "ABC_DEFG04");
+
+        final int length = strategy.save(key, buffer, 1);
+
+        assertEquals(INSUFFICIENT_SPACE, length);
     }
 
 }

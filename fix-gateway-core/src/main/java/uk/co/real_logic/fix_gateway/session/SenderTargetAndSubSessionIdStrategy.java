@@ -19,6 +19,8 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
+import uk.co.real_logic.fix_gateway.messages.SenderTargetAndSubCompositeKeyDecoder;
+import uk.co.real_logic.fix_gateway.messages.SenderTargetAndSubCompositeKeyEncoder;
 
 import java.util.Arrays;
 
@@ -30,6 +32,13 @@ import java.util.Arrays;
  */
 public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
 {
+    private static final int BLOCK_AND_LENGTH_FIELDS_LENGTH = SenderTargetAndSubCompositeKeyEncoder.BLOCK_LENGTH + 6;
+
+    private final SenderTargetAndSubCompositeKeyEncoder keyEncoder = new SenderTargetAndSubCompositeKeyEncoder();
+    private final SenderTargetAndSubCompositeKeyDecoder keyDecoder = new SenderTargetAndSubCompositeKeyDecoder();
+    private final int actingBlockLength = keyDecoder.sbeBlockLength();
+    private final int actingVersion = keyDecoder.sbeSchemaVersion();
+
     public Object onAcceptorLogon(final HeaderDecoder header)
     {
         return new CompositeKey(
@@ -63,12 +72,44 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
 
     public int save(final Object compositeKey, final AtomicBuffer buffer, final int offset)
     {
-        return INSUFFICIENT_SPACE;
+        final CompositeKey key = (CompositeKey) compositeKey;
+        final byte[] senderCompID = key.senderCompID;
+        final byte[] senderSubID = key.senderSubID;
+        final byte[] targetCompID = key.targetCompID;
+
+        final int length =
+            senderCompID.length + senderSubID.length + targetCompID.length + BLOCK_AND_LENGTH_FIELDS_LENGTH;
+
+        if (buffer.capacity() < offset + length)
+        {
+            return INSUFFICIENT_SPACE;
+        }
+
+        keyEncoder.wrap(buffer, offset);
+        keyEncoder.putSenderCompId(senderCompID, 0, senderCompID.length);
+        keyEncoder.putSenderSubId(senderSubID, 0, senderSubID.length);
+        keyEncoder.putTargetCompId(targetCompID, 0, targetCompID.length);
+
+        return length;
     }
 
     public Object load(final AtomicBuffer buffer, final int offset, final int length)
     {
-        return null;
+        keyDecoder.wrap(buffer, offset, actingBlockLength, actingVersion);
+
+        final int senderCompIdLength = keyDecoder.senderCompIdLength();
+        final byte[] senderCompId = new byte[senderCompIdLength];
+        keyDecoder.getSenderCompId(senderCompId, 0, senderCompIdLength);
+
+        final int senderSubIdLength = keyDecoder.senderSubIdLength();
+        final byte[] senderSubId = new byte[senderSubIdLength];
+        keyDecoder.getSenderSubId(senderSubId, 0, senderSubIdLength);
+
+        final int targetCompIdLength = keyDecoder.targetCompIdLength();
+        final byte[] targetCompId = new byte[targetCompIdLength];
+        keyDecoder.getTargetCompId(targetCompId, 0, targetCompIdLength);
+
+        return new CompositeKey(senderCompId, senderSubId, targetCompId);
     }
 
     private static final class CompositeKey
@@ -86,10 +127,20 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
             final char[] targetCompID,
             final int targetCompIDLength)
         {
-            this.senderCompID = CodecUtil.toBytes(senderCompID, senderCompIDLength);
-            this.senderSubID = CodecUtil.toBytes(senderSubID, senderSubIDLength);
-            this.targetCompID = CodecUtil.toBytes(targetCompID, targetCompIDLength);
+            this(
+                CodecUtil.toBytes(senderCompID, senderCompIDLength),
+                CodecUtil.toBytes(senderSubID, senderSubIDLength),
+                CodecUtil.toBytes(targetCompID, targetCompIDLength));
+        }
 
+        private CompositeKey(
+            final byte[] senderCompID,
+            final byte[] senderSubID,
+            final byte[] targetCompID)
+        {
+            this.senderCompID = senderCompID;
+            this.senderSubID = senderSubID;
+            this.targetCompID = targetCompID;
             hashCode = hash(this.senderCompID, this.senderSubID, this.targetCompID);
         }
 

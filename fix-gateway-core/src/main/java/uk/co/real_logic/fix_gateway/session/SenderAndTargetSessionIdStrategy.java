@@ -19,6 +19,8 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
+import uk.co.real_logic.fix_gateway.messages.SenderAndTargetCompositeKeyDecoder;
+import uk.co.real_logic.fix_gateway.messages.SenderAndTargetCompositeKeyEncoder;
 
 import java.util.Arrays;
 
@@ -30,6 +32,13 @@ import java.util.Arrays;
  */
 public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 {
+    private static final int BLOCK_AND_LENGTH_FIELDS_LENGTH = SenderAndTargetCompositeKeyEncoder.BLOCK_LENGTH + 4;
+
+    private final SenderAndTargetCompositeKeyEncoder keyEncoder = new SenderAndTargetCompositeKeyEncoder();
+    private final SenderAndTargetCompositeKeyDecoder keyDecoder = new SenderAndTargetCompositeKeyDecoder();
+    private final int actingBlockLength = keyDecoder.sbeBlockLength();
+    private final int actingVersion = keyDecoder.sbeSchemaVersion();
+
     public Object onAcceptorLogon(final HeaderDecoder header)
     {
         return new CompositeKey(
@@ -55,12 +64,36 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 
     public int save(final Object compositeKey, final AtomicBuffer buffer, final int offset)
     {
-        return INSUFFICIENT_SPACE;
+        final CompositeKey key = (CompositeKey) compositeKey;
+        final byte[] senderCompID = key.senderCompID;
+        final byte[] targetCompID = key.targetCompID;
+
+        final int length = senderCompID.length + targetCompID.length + BLOCK_AND_LENGTH_FIELDS_LENGTH;
+        if (buffer.capacity() < offset + length)
+        {
+            return INSUFFICIENT_SPACE;
+        }
+
+        keyEncoder.wrap(buffer, offset);
+        keyEncoder.putSenderCompId(senderCompID, 0, senderCompID.length);
+        keyEncoder.putTargetCompId(targetCompID, 0, targetCompID.length);
+
+        return length;
     }
 
     public Object load(final AtomicBuffer buffer, final int offset, final int length)
     {
-        return null;
+        keyDecoder.wrap(buffer, offset, actingBlockLength, actingVersion);
+
+        final int senderCompIdLength = keyDecoder.senderCompIdLength();
+        final byte[] senderCompId = new byte[senderCompIdLength];
+        keyDecoder.getSenderCompId(senderCompId, 0, senderCompIdLength);
+
+        final int targetCompIdLength = keyDecoder.targetCompIdLength();
+        final byte[] targetCompId = new byte[targetCompIdLength];
+        keyDecoder.getTargetCompId(targetCompId, 0, targetCompIdLength);
+
+        return new CompositeKey(senderCompId, targetCompId);
     }
 
     private static final class CompositeKey
@@ -74,10 +107,16 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
                              final char[] targetCompID,
                              final int targetCompIDLength)
         {
-            this.senderCompID = CodecUtil.toBytes(senderCompID, senderCompIDLength);
-            this.targetCompID = CodecUtil.toBytes(targetCompID, targetCompIDLength);
+            this(
+                CodecUtil.toBytes(senderCompID, senderCompIDLength),
+                CodecUtil.toBytes(targetCompID, targetCompIDLength));
+        }
 
-            hashCode = hash(this.senderCompID, this.targetCompID);
+        private CompositeKey(final byte[] senderCompID, final byte[] targetCompID)
+        {
+            this.senderCompID = senderCompID;
+            this.targetCompID = targetCompID;
+            hashCode = hash(senderCompID, targetCompID);
         }
 
         private int hash(final byte[] senderCompID, final byte[] targetCompID)
