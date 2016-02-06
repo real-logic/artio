@@ -115,6 +115,13 @@ public class Logger implements AutoCloseable
 
             loggingRunner = newRunner(loggingAgent);
         }
+        else
+        {
+            final GapFiller gapFiller = new GapFiller(
+                inboundLibraryStreams.subscription(),
+                outboundLibraryStreams.gatewayPublication(configuration.loggerIdleStrategy()));
+            loggingRunner = newRunner(gapFiller);
+        }
     }
 
     public void initArchival()
@@ -177,15 +184,12 @@ public class Logger implements AutoCloseable
 
     public void start()
     {
-        if (isLoggingMessages())
+        if (loggingRunner == null)
         {
-            if (loggingRunner == null)
-            {
-                loggingRunner = newRunner(new CompositeAgent(archivers));
-            }
-
-            startOnThread(loggingRunner);
+            loggingRunner = newRunner(new CompositeAgent(archivers));
         }
+
+        startOnThread(loggingRunner);
     }
 
     private boolean isLoggingMessages()

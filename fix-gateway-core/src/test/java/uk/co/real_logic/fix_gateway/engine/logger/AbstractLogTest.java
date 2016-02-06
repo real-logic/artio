@@ -15,7 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import uk.co.real_logic.aeron.Publication;
+import uk.co.real_logic.aeron.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
@@ -23,22 +26,32 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.SIZE_OF_LENGTH_FIELD;
 
 public class AbstractLogTest
 {
     protected static final long SESSION_ID = 1;
     protected static final long SESSION_ID_2 = 2;
+    protected static final long CONNECTION_ID = 1;
     protected static final int STREAM_ID = OUTBOUND_LIBRARY_STREAM;
-    protected static final int CONNECTION_ID = 1;
     protected static final int START = 1;
     protected static final int SEQUENCE_NUMBER = 5;
     protected static final int AERON_SESSION_ID = -10;
     protected static final int LIBRARY_ID = 7;
+    protected static final int BEGIN_SEQ_NO = 2;
+    protected static final int END_SEQ_NO = 2;
 
     protected MessageHeaderEncoder header = new MessageHeaderEncoder();
     protected FixMessageEncoder messageFrame = new FixMessageEncoder();
+
+    protected Publication publication = mock(Publication.class);
+    protected BufferClaim claim = mock(BufferClaim.class);
+    protected UnsafeBuffer resultBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
     protected UnsafeBuffer buffer = new UnsafeBuffer(new byte[16 * 1024]);
 
@@ -98,5 +111,47 @@ public class AbstractLogTest
     protected int fragmentLength()
     {
         return offset + logEntryLength - START;
+    }
+
+    protected void bufferHasResendRequest(final int endSeqNo)
+    {
+        final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
+        timestampEncoder.encode(System.currentTimeMillis());
+
+        final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
+
+        resendRequest
+            .header()
+            .sendingTime(timestampEncoder.buffer())
+            .msgSeqNum(1)
+            .senderCompID("sender")
+            .targetCompID("target");
+
+        resendRequest
+            .beginSeqNo(BEGIN_SEQ_NO)
+            .endSeqNo(endSeqNo)
+            .encode(new MutableAsciiBuffer(buffer), 1);
+    }
+
+    protected void setupPublication(final int srcLength)
+    {
+        when(publication.tryClaim(srcLength, claim)).thenReturn((long)srcLength);
+    }
+
+    protected void setupClaim(final int srcLength)
+    {
+        when(claim.buffer()).thenReturn(resultBuffer);
+        when(claim.offset()).thenReturn(START + 1);
+        when(claim.length()).thenReturn(srcLength);
+    }
+
+    protected void verifyClaim(final int srcLength)
+    {
+        verify(publication).tryClaim(srcLength - MESSAGE_FRAME_BLOCK_LENGTH, claim);
+    }
+
+    protected void verifyCommit()
+    {
+        verify(claim).commit();
     }
 }

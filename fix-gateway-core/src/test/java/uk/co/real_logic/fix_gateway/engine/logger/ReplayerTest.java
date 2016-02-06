@@ -17,45 +17,33 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.logbuffer.BufferClaim;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
-import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.POSS_DUP_FIELD;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
 public class ReplayerTest extends AbstractLogTest
 {
-    private static final int BEGIN_SEQ_NO = 2;
-    private static final int END_SEQ_NO = 2;
     public static final int SIZE_OF_FRAME =
         FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength() + MessageHeaderDecoder.ENCODED_LENGTH;
     public static final int MAX_CLAIM_ATTEMPTS = 100;
 
     private ReplayQuery replayQuery = mock(ReplayQuery.class);
-    private Publication publication = mock(Publication.class);
     private Subscription subscription = mock(Subscription.class);
-    private BufferClaim claim = mock(BufferClaim.class);
     private IdleStrategy idleStrategy = mock(IdleStrategy.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     private Replayer replayer = new Replayer(
         subscription, replayQuery, publication, claim, idleStrategy, errorHandler, MAX_CLAIM_ATTEMPTS);
-
-    private UnsafeBuffer resultBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
     @Before
     public void setUp()
@@ -67,7 +55,6 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldParseResendRequest()
     {
         bufferHasResendRequest(END_SEQ_NO);
-
         onMessage(ResendRequestDecoder.MESSAGE_TYPE);
 
         verifyQueriedService();
@@ -121,28 +108,6 @@ public class ReplayerTest extends AbstractLogTest
         verifyNoMoreInteractions(replayQuery, publication);
     }
 
-    private void setupPublication(final int srcLength)
-    {
-        when(publication.tryClaim(srcLength, claim)).thenReturn((long)srcLength);
-    }
-
-    private void setupClaim(final int srcLength)
-    {
-        when(claim.buffer()).thenReturn(resultBuffer);
-        when(claim.offset()).thenReturn(START + 1);
-        when(claim.length()).thenReturn(srcLength);
-    }
-
-    private void verifyClaim(final int srcLength)
-    {
-        verify(publication).tryClaim(srcLength - MESSAGE_FRAME_BLOCK_LENGTH, claim);
-    }
-
-    private void verifyCommit()
-    {
-        verify(claim).commit();
-    }
-
     private void verifyQueriedService()
     {
         verify(replayQuery).query(replayer, SESSION_ID, BEGIN_SEQ_NO, END_SEQ_NO);
@@ -152,26 +117,6 @@ public class ReplayerTest extends AbstractLogTest
     {
         final int possDupIndex = new MutableAsciiBuffer(resultBuffer).scan(0, resultBuffer.capacity(), 'Y');
         assertNotEquals("Unable to find poss dup index", UNKNOWN_INDEX, possDupIndex);
-    }
-
-    private void bufferHasResendRequest(final int endSeqNo)
-    {
-        final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
-        timestampEncoder.encode(System.currentTimeMillis());
-
-        final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
-
-        resendRequest
-            .header()
-            .sendingTime(timestampEncoder.buffer())
-            .msgSeqNum(1)
-            .senderCompID("sender")
-            .targetCompID("target");
-
-        resendRequest
-            .beginSeqNo(BEGIN_SEQ_NO)
-            .endSeqNo(endSeqNo)
-            .encode(new MutableAsciiBuffer(buffer), 1);
     }
 
     private void onMessage(final int messageType)
