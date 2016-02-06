@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.otf;
 import uk.co.real_logic.fix_gateway.ErrorAcceptor;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
-// TODO: add ability to abort parsing from within the acceptor
 public interface OtfMessageAcceptor extends ErrorAcceptor
 {
     MessageControl onNext();
