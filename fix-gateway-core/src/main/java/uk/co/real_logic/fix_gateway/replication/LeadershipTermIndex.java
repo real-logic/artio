@@ -200,5 +200,4 @@ public class LeadershipTermIndex
             return sessionId;
         }
     }
-
 }

@@ -81,6 +81,7 @@ public class FramerTest
     private SessionIds sessionIds = mock(SessionIds.class);
 
     @Before
+    @SuppressWarnings("unchecked")
     public void setUp() throws IOException
     {
         when(mockConnectionHandler.inboundPublication(any())).thenReturn(mockGatewayPublication);
@@ -199,7 +200,7 @@ public class FramerTest
     @Test
     public void shouldConnectToAddress() throws Exception
     {
-        intiateConnection();
+        initiateConnection();
 
         assertNotNull("Sender hasn't connected to server", server.accept());
     }
@@ -219,7 +220,7 @@ public class FramerTest
     @Test
     public void shouldNotifyLibraryOfInitiatedConnection() throws Exception
     {
-        intiateConnection();
+        initiateConnection();
 
         notifyLibraryOfConnection();
     }
@@ -229,7 +230,7 @@ public class FramerTest
     {
         server.close();
 
-        intiateConnection();
+        initiateConnection();
 
         verifyErrorPublished(UNABLE_TO_CONNECT);
     }
@@ -242,13 +243,13 @@ public class FramerTest
     @Test
     public void shouldIdentifyDuplicateInitiatedSessions() throws Exception
     {
-        intiateConnection();
+        initiateConnection();
 
         notifyLibraryOfConnection();
 
         when(sessionIds.onLogon(any())).thenReturn(SessionIds.DUPLICATE_SESSION);
 
-        intiateConnection();
+        initiateConnection();
 
         verifyErrorPublished(DUPLICATE_SESSION);
     }
@@ -256,7 +257,7 @@ public class FramerTest
     @Test
     public void shouldDisconnectInitiatedClientsWhenLibraryDisconnects() throws Exception
     {
-        intiateConnection();
+        initiateConnection();
 
         timeoutLibrary();
 
@@ -287,7 +288,7 @@ public class FramerTest
         framer.onLibraryConnect(LIBRARY_ID, ACCEPTOR);
     }
 
-    private void intiateConnection() throws Exception
+    private void initiateConnection() throws Exception
     {
         connectLibrary();
 

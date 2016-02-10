@@ -19,16 +19,15 @@ import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.replication.LeadershipTermIndex.Cursor;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class LeadershipTermIndexTest
 {
-
-    private Cursor cursor = new Cursor();
-    private UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
-    private LeadershipTermIndex leadershipTermIndex = new LeadershipTermIndex(buffer);
+    private final Cursor cursor = new Cursor();
+    private final UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
+    private final LeadershipTermIndex leadershipTermIndex = new LeadershipTermIndex(buffer);
 
     @Test
     public void shouldFindNothingWithNoTerms()
