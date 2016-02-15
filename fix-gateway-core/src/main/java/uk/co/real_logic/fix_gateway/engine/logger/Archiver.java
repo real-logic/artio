@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import uk.co.real_logic.aeron.Image;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.aeron.logbuffer.FileBlockHandler;
+import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.LangUtil;
@@ -33,8 +34,7 @@ import java.nio.channels.FileChannel;
 import java.util.function.IntFunction;
 
 import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
-import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
-import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
+import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computePosition;
 
 public class Archiver implements Agent, FileBlockHandler
 {
@@ -48,6 +48,7 @@ public class Archiver implements Agent, FileBlockHandler
     private final StreamIdentifier streamId;
     private final LogDirectoryDescriptor directoryDescriptor;
 
+    private DataHeaderFlyweight header = new DataHeaderFlyweight();
     private Subscription subscription;
 
     public Archiver(
@@ -115,12 +116,11 @@ public class Archiver implements Agent, FileBlockHandler
     }
 
     public boolean patch(final int aeronSessionId,
-                         final long position,
                          final DirectBuffer bodyBuffer,
                          final int bodyOffset,
                          final int bodyLength)
     {
-        return session(aeronSessionId).patch(position, bodyBuffer, bodyOffset, bodyLength);
+        return session(aeronSessionId).patch(bodyBuffer, bodyOffset, bodyLength);
     }
 
     public SessionArchiver session(final int sessionId)
@@ -196,12 +196,14 @@ public class Archiver implements Agent, FileBlockHandler
             return image.position();
         }
 
-        // TODO: validate the body buffer genuinely starts with a fragment and validate the position against the header,
-        // Look at rebuilder
-        // TODO: remove position
         public boolean patch(
-            final long position, final DirectBuffer bodyBuffer, final int bodyOffset, final int bodyLength)
+            final DirectBuffer bodyBuffer, final int bodyOffset, final int bodyLength)
         {
+            header.wrap(bodyBuffer, bodyOffset, bodyLength);
+            final int termId = header.termId();
+            final int termOffset = header.termOffset();
+            final long position = computePosition(termId, termOffset, positionBitsToShift, image.initialTermId());
+
             if (position + bodyLength >= position())
             {
                 // Can only patch historic files
@@ -210,9 +212,6 @@ public class Archiver implements Agent, FileBlockHandler
 
             try
             {
-                final int termId = computeTermIdFromPosition(position, positionBitsToShift, image.initialTermId());
-                final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
-
                 checkOverflow(bodyLength, termOffset);
 
                 // Find the files to patch

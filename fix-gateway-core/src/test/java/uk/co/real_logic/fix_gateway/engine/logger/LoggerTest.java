@@ -300,7 +300,7 @@ public class LoggerTest
     {
         writeAndArchiveBuffer();
 
-        patchBuffer(HEADER_LENGTH + OFFSET);
+        patchBuffer(OFFSET);
 
         assertCanReadValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
@@ -310,12 +310,12 @@ public class LoggerTest
     {
         archiveBeyondEndOfTerm();
 
-        patchBuffer(HEADER_LENGTH + OFFSET);
+        patchBuffer(OFFSET);
 
         assertCanReadValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
 
-    @Ignore // TODO: add writing of header to test
+    @Ignore
     @Test
     public void shouldPatchMissingTerm()
     {
@@ -323,9 +323,9 @@ public class LoggerTest
 
         removeLogFiles();
 
-        patchBuffer(HEADER_LENGTH + OFFSET);
+        patchBuffer(OFFSET);
 
-        assertCanReadValueAt(PATCH_VALUE, HEADER_LENGTH);
+        assertCanReadValueAt(PATCH_VALUE, OFFSET);
     }
 
     @Test
@@ -333,7 +333,7 @@ public class LoggerTest
     {
         writeAndArchiveBuffer();
 
-        assertFalse("Patched the future", patchBuffer(TERM_LENGTH + HEADER_LENGTH + OFFSET));
+        assertFalse("Patched the future", patchBuffer(TERM_LENGTH + OFFSET));
     }
 
     private long readTo(final long position)
@@ -369,8 +369,7 @@ public class LoggerTest
     private boolean patchBuffer(final long position)
     {
         final int offset = 1;
-        final int frameLength = SIZE_OF_INT;
-        final int lengthOfPatch = HEADER_LENGTH + frameLength;
+        final int frameLength = HEADER_LENGTH + SIZE_OF_INT;
         final int dataOffset = offset + HEADER_LENGTH;
 
         final int sessionId = publication.sessionId();
@@ -381,7 +380,7 @@ public class LoggerTest
         final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
 
         final DataHeaderFlyweight flyweight = new DataHeaderFlyweight();
-        flyweight.wrap(buffer, offset, lengthOfPatch);
+        flyweight.wrap(buffer, offset, frameLength);
         flyweight
             .version(HeaderFlyweight.CURRENT_VERSION)
             .flags(DataHeaderFlyweight.BEGIN_AND_END_FLAGS)
@@ -395,9 +394,10 @@ public class LoggerTest
 
         buffer.putInt(dataOffset, PATCH_VALUE);
 
-        return archiver.patch(sessionId, position - HEADER_LENGTH, this.buffer, offset, lengthOfPatch);
+        return archiver.patch(sessionId, this.buffer, offset, frameLength);
     }
 
+    // TODO: replace with method call upon next aeron release
     private int getInitialTermId()
     {
         try
@@ -442,14 +442,14 @@ public class LoggerTest
         return endPosition;
     }
 
-    private void assertDataPublished(final long endPosition)
-    {
-        assertThat("Publication has failed an offer", endPosition, greaterThan((long) SIZE));
-    }
-
     private void assertCanReadValueAt(final int position)
     {
         assertCanReadValueAt(VALUE, position);
+    }
+
+    private void assertDataPublished(final long endPosition)
+    {
+        assertThat("Publication has failed an offer", endPosition, greaterThan((long) SIZE));
     }
 
     private void assertCanReadValueAt(final int value, final long position)

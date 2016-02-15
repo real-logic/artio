@@ -282,7 +282,7 @@ public class Follower implements Role, RaftHandler
         {
             if (!checkLeaderArchiver())
             {
-                leaderArchiver.patch(startPosition, bodyBuffer, bodyOffset, bodyLength);
+                leaderArchiver.patch(bodyBuffer, bodyOffset, bodyLength);
                 receivedPosition += bodyLength;
                 onReplyKeepAlive(timeInMs);
                 saveMessageAcknowledgement(OK);
