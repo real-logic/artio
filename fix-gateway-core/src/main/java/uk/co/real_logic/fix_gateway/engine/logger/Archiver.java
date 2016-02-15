@@ -210,7 +210,7 @@ public class Archiver implements Agent, FileBlockHandler
 
             try
             {
-                final int patchTermId = computeTermIdFromPosition(position, positionBitsToShift, image.initialTermId());
+                final int termId = computeTermIdFromPosition(position, positionBitsToShift, image.initialTermId());
                 final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
 
                 checkOverflow(bodyLength, termOffset);
@@ -218,14 +218,14 @@ public class Archiver implements Agent, FileBlockHandler
                 // Find the files to patch
                 final RandomAccessFile patchTermLogFile;
                 final FileChannel patchTermLogChannel;
-                if (patchTermId == currentTermId)
+                if (termId == currentTermId)
                 {
                     patchTermLogChannel = currentLogChannel;
                     patchTermLogFile = currentLogFile;
                 }
                 else
                 {
-                    final File file = logFile(patchTermId);
+                    final File file = logFile(termId);
                     // if file doesn't exist it gets created here
                     patchTermLogFile = openFile(file);
                     patchTermLogChannel = patchTermLogFile.getChannel();
