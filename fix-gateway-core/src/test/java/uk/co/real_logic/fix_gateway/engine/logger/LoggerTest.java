@@ -28,9 +28,12 @@ import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.aeron.logbuffer.BlockHandler;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
+import uk.co.real_logic.aeron.protocol.HeaderFlyweight;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.IoUtil;
+import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -39,16 +42,20 @@ import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import uk.co.real_logic.fix_gateway.streams.Streams;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.locks.LockSupport;
 
+import static java.lang.Integer.numberOfTrailingZeros;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
+import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
 import static uk.co.real_logic.agrona.BitUtil.findNextPositivePowerOfTwo;
@@ -139,7 +146,9 @@ public class LoggerTest
         try
         {
             archiveReader.read(publication.sessionId(), (long) HEADER_LENGTH,
-                (buffer, offset, length, header) -> { throw new RuntimeException(); });
+                (buffer, offset, length, header) -> {
+                    throw new RuntimeException();
+                });
 
             fail("continued despite exception");
         }
@@ -230,7 +239,9 @@ public class LoggerTest
         try
         {
             archiveReader.readBlock(publication.sessionId(), (long) HEADER_LENGTH, SIZE,
-                (buffer, offset, length, sessionId, termId) -> { throw new RuntimeException(); });
+                (buffer, offset, length, sessionId, termId) -> {
+                    throw new RuntimeException();
+                });
 
             fail("continued despite exception");
         }
@@ -358,10 +369,48 @@ public class LoggerTest
     private boolean patchBuffer(final long position)
     {
         final int offset = 1;
+        final int frameLength = SIZE_OF_INT;
+        final int lengthOfPatch = HEADER_LENGTH + frameLength;
+        final int dataOffset = offset + HEADER_LENGTH;
 
-        buffer.putInt(offset, PATCH_VALUE);
+        final int sessionId = publication.sessionId();
+        final int streamId = publication.streamId();
+        final int positionBitsToShift = numberOfTrailingZeros(publication.termBufferLength());
+        final int initialTermId = getInitialTermId();
+        final int termId = computeTermIdFromPosition(position, positionBitsToShift, initialTermId);
+        final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
 
-        return archiver.patch(publication.sessionId(), position, buffer, offset, SIZE_OF_INT);
+        final DataHeaderFlyweight flyweight = new DataHeaderFlyweight();
+        flyweight.wrap(buffer, offset, lengthOfPatch);
+        flyweight
+            .version(HeaderFlyweight.CURRENT_VERSION)
+            .flags(DataHeaderFlyweight.BEGIN_AND_END_FLAGS)
+            .headerType(HeaderFlyweight.HDR_TYPE_DATA);
+        flyweight
+            .sessionId(sessionId)
+            .streamId(streamId)
+            .termId(termId)
+            .termOffset(termOffset)
+            .frameLength(frameLength);
+
+        buffer.putInt(dataOffset, PATCH_VALUE);
+
+        return archiver.patch(sessionId, position - HEADER_LENGTH, this.buffer, offset, lengthOfPatch);
+    }
+
+    private int getInitialTermId()
+    {
+        try
+        {
+            final Field initialTermIdField = publication.getClass().getDeclaredField("initialTermId");
+            initialTermIdField.setAccessible(true);
+            return (int) initialTermIdField.get(publication);
+        }
+        catch (Exception e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            return 0;
+        }
     }
 
     private void assertPosition(final long endPosition)
@@ -409,7 +458,7 @@ public class LoggerTest
 
         verify(fragmentHandler).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
 
-        assertReadValue(value, position, hasRead);
+        assertReadValue(value, position + HEADER_LENGTH, hasRead);
     }
 
     private void assertCanBlockReadValueAt(final int position)
