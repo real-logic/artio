@@ -135,7 +135,7 @@ public class LoggerTest
     {
         writeAndArchiveBuffer();
 
-        assertCanReadValueAt(HEADER_LENGTH);
+        assertReadsInitialValue(HEADER_LENGTH);
     }
 
     @Test
@@ -157,7 +157,7 @@ public class LoggerTest
             // Deliberately Blank
         }
 
-        assertCanReadValueAt(HEADER_LENGTH);
+        assertReadsInitialValue(HEADER_LENGTH);
     }
 
     @Test
@@ -165,7 +165,7 @@ public class LoggerTest
     {
         archiveBeyondEndOfTerm();
 
-        assertCanReadValueAt(TERM_LENGTH + HEADER_LENGTH);
+        assertReadsInitialValue(TERM_LENGTH + HEADER_LENGTH);
     }
 
     @Test
@@ -302,7 +302,7 @@ public class LoggerTest
 
         patchBuffer(OFFSET_WITHIN_MESSAGE);
 
-        assertCanReadValueAt(PATCH_VALUE, OFFSET_WITHIN_MESSAGE);
+        assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
 
     @Test
@@ -312,7 +312,7 @@ public class LoggerTest
 
         patchBuffer(OFFSET_WITHIN_MESSAGE);
 
-        assertCanReadValueAt(PATCH_VALUE, HEADER_LENGTH);
+        assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
 
     @Ignore
@@ -325,7 +325,7 @@ public class LoggerTest
 
         patchBuffer(OFFSET_WITHIN_MESSAGE);
 
-        assertCanReadValueAt(PATCH_VALUE, OFFSET_WITHIN_MESSAGE);
+        assertReadsValueAt(PATCH_VALUE, OFFSET_WITHIN_MESSAGE);
     }
 
     @Test
@@ -441,9 +441,9 @@ public class LoggerTest
         return endPosition;
     }
 
-    private void assertCanReadValueAt(final int position)
+    private void assertReadsInitialValue(final int position)
     {
-        assertCanReadValueAt(INITIAL_VALUE, position);
+        assertReadsValueAt(INITIAL_VALUE, position);
     }
 
     private void assertDataPublished(final long endPosition)
@@ -451,7 +451,7 @@ public class LoggerTest
         assertThat("Publication has failed an offer", endPosition, greaterThan((long) SIZE));
     }
 
-    private void assertCanReadValueAt(final int value, final long position)
+    private void assertReadsValueAt(final int value, final long position)
     {
         final boolean hasRead = readTo(position) > 0;
 
