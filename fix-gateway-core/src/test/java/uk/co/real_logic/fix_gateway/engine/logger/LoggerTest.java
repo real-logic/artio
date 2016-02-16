@@ -70,7 +70,7 @@ public class LoggerTest
     public static final int TERM_LENGTH = findNextPositivePowerOfTwo(SIZE * 32);
     public static final int STREAM_ID = 1;
     public static final int OFFSET_WITHIN_MESSAGE = 42;
-    public static final int VALUE = 43;
+    public static final int INITIAL_VALUE = 43;
     public static final int PATCH_VALUE = 44;
     public static final String CHANNEL = "udp://localhost:9999";
 
@@ -432,7 +432,7 @@ public class LoggerTest
 
     private long writeAndArchiveBuffer()
     {
-        final long endPosition = writeBuffer(VALUE);
+        final long endPosition = writeBuffer(INITIAL_VALUE);
 
         assertDataPublished(endPosition);
 
@@ -443,7 +443,7 @@ public class LoggerTest
 
     private void assertCanReadValueAt(final int position)
     {
-        assertCanReadValueAt(VALUE, position);
+        assertCanReadValueAt(INITIAL_VALUE, position);
     }
 
     private void assertDataPublished(final long endPosition)
@@ -462,7 +462,7 @@ public class LoggerTest
 
     private void assertCanBlockReadValueAt(final int position)
     {
-        assertCanBlockReadValueAt(VALUE, position);
+        assertCanBlockReadValueAt(INITIAL_VALUE, position);
     }
 
     private void assertCanBlockReadValueAt(final int value, final long position)
