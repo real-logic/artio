@@ -69,7 +69,7 @@ public class LoggerTest
     public static final int SIZE = 2 * 1024;
     public static final int TERM_LENGTH = findNextPositivePowerOfTwo(SIZE * 32);
     public static final int STREAM_ID = 1;
-    public static final int OFFSET = 42;
+    public static final int OFFSET_WITHIN_MESSAGE = 42;
     public static final int VALUE = 43;
     public static final int PATCH_VALUE = 44;
     public static final String CHANNEL = "udp://localhost:9999";
@@ -300,9 +300,9 @@ public class LoggerTest
     {
         writeAndArchiveBuffer();
 
-        patchBuffer(OFFSET);
+        patchBuffer(OFFSET_WITHIN_MESSAGE);
 
-        assertCanReadValueAt(PATCH_VALUE, HEADER_LENGTH);
+        assertCanReadValueAt(PATCH_VALUE, OFFSET_WITHIN_MESSAGE);
     }
 
     @Test
@@ -310,7 +310,7 @@ public class LoggerTest
     {
         archiveBeyondEndOfTerm();
 
-        patchBuffer(OFFSET);
+        patchBuffer(OFFSET_WITHIN_MESSAGE);
 
         assertCanReadValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
@@ -323,9 +323,9 @@ public class LoggerTest
 
         removeLogFiles();
 
-        patchBuffer(OFFSET);
+        patchBuffer(OFFSET_WITHIN_MESSAGE);
 
-        assertCanReadValueAt(PATCH_VALUE, OFFSET);
+        assertCanReadValueAt(PATCH_VALUE, OFFSET_WITHIN_MESSAGE);
     }
 
     @Test
@@ -333,7 +333,7 @@ public class LoggerTest
     {
         writeAndArchiveBuffer();
 
-        assertFalse("Patched the future", patchBuffer(TERM_LENGTH + OFFSET));
+        assertFalse("Patched the future", patchBuffer(TERM_LENGTH + OFFSET_WITHIN_MESSAGE));
     }
 
     private long readTo(final long position)
@@ -382,15 +382,14 @@ public class LoggerTest
         final DataHeaderFlyweight flyweight = new DataHeaderFlyweight();
         flyweight.wrap(buffer, offset, frameLength);
         flyweight
-            .version(HeaderFlyweight.CURRENT_VERSION)
-            .flags(DataHeaderFlyweight.BEGIN_AND_END_FLAGS)
-            .headerType(HeaderFlyweight.HDR_TYPE_DATA);
-        flyweight
             .sessionId(sessionId)
             .streamId(streamId)
             .termId(termId)
             .termOffset(termOffset)
-            .frameLength(frameLength);
+            .frameLength(frameLength)
+            .version(HeaderFlyweight.CURRENT_VERSION)
+            .flags(DataHeaderFlyweight.BEGIN_AND_END_FLAGS)
+            .headerType(HeaderFlyweight.HDR_TYPE_DATA);
 
         buffer.putInt(dataOffset, PATCH_VALUE);
 
@@ -476,15 +475,15 @@ public class LoggerTest
         assertReadValue(value, position, hasRead);
     }
 
-    private void assertReadValue(final int value, final long position, final boolean hasRead)
+    private void assertReadValue(final int value, final long positionOfMessageStart, final boolean hasRead)
     {
-        assertEquals(value, bufferCaptor.getValue().getInt(offsetCaptor.getValue() + OFFSET));
-        assertTrue("Failed to read value at " + position, hasRead);
+        assertEquals(value, bufferCaptor.getValue().getInt(offsetCaptor.getValue() + OFFSET_WITHIN_MESSAGE));
+        assertTrue("Failed to read value at " + positionOfMessageStart, hasRead);
     }
 
     private long writeBuffer(final int value)
     {
-        buffer.putInt(OFFSET, value);
+        buffer.putInt(OFFSET_WITHIN_MESSAGE, value);
 
         long endPosition;
         do
