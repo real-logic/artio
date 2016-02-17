@@ -327,7 +327,7 @@ public class FollowerTest
     {
         when(leaderArchiver.poll()).thenReturn(LENGTH);
 
-        when(leaderArchiver.position()).thenReturn(position);
+        when(leaderArchiver.archivedPosition()).thenReturn(position);
 
         dataInArchive(position);
     }

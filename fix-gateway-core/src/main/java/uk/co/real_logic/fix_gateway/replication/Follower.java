@@ -116,7 +116,7 @@ public class Follower implements Role, RaftHandler
             return 0;
         }
 
-        final long imagePosition = leaderArchiver.position();
+        final long imagePosition = leaderArchiver.archivedPosition();
         if (imagePosition < receivedPosition)
         {
             // TODO: theoretically not possible, but maybe have a sanity check?

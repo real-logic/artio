@@ -112,7 +112,7 @@ public class Archiver implements Agent, FileBlockHandler
             return UNKNOWN_POSITION;
         }
 
-        return archive.position();
+        return archive.archivedPosition();
     }
 
     public boolean patch(final int aeronSessionId,
@@ -191,20 +191,20 @@ public class Archiver implements Agent, FileBlockHandler
             }
         }
 
-        public long position()
+        public long archivedPosition()
         {
             return image.position();
         }
 
         public boolean patch(
-            final DirectBuffer bodyBuffer, final int bodyOffset, final int bodyLength)
+            final DirectBuffer bodyBuffer, final int readOffset, final int bodyLength)
         {
-            header.wrap(bodyBuffer, bodyOffset, bodyLength);
+            header.wrap(bodyBuffer, readOffset, bodyLength);
             final int termId = header.termId();
-            final int termOffset = header.termOffset();
-            final long position = computePosition(termId, termOffset, positionBitsToShift, image.initialTermId());
+            final int termWriteOffset = header.termOffset();
+            final long position = computePosition(termId, termWriteOffset, positionBitsToShift, image.initialTermId());
 
-            if (position + bodyLength >= position())
+            if (position + bodyLength >= archivedPosition())
             {
                 // Can only patch historic files
                 return false;
@@ -212,7 +212,7 @@ public class Archiver implements Agent, FileBlockHandler
 
             try
             {
-                checkOverflow(bodyLength, termOffset);
+                checkOverflow(bodyLength, termWriteOffset);
 
                 // Find the files to patch
                 final RandomAccessFile patchTermLogFile;
@@ -224,14 +224,14 @@ public class Archiver implements Agent, FileBlockHandler
                 }
                 else
                 {
-                    final File file = logFile(termId);
                     // if file doesn't exist it gets created here
+                    final File file = logFile(termId);
                     patchTermLogFile = openFile(file);
                     patchTermLogChannel = patchTermLogFile.getChannel();
                 }
 
                 writeToFile(
-                    bodyBuffer, bodyOffset, bodyLength, termOffset, patchTermLogChannel, patchTermLogFile);
+                    bodyBuffer, readOffset, bodyLength, termWriteOffset, patchTermLogChannel, patchTermLogFile);
 
                 close(patchTermLogChannel);
 
@@ -271,9 +271,9 @@ public class Archiver implements Agent, FileBlockHandler
 
         private void writeToFile(
             final DirectBuffer bodyBuffer,
-            final int bodyOffset,
+            final int readOffset,
             final int bodyLength,
-            int termOffset,
+            int termWriteOffset,
             final FileChannel patchTermLogChannel,
             final RandomAccessFile patchTermLogFile) throws IOException
         {
@@ -281,19 +281,19 @@ public class Archiver implements Agent, FileBlockHandler
             if (byteBuffer != null)
             {
                 byteBuffer
-                    .limit(bodyOffset + bodyLength)
-                    .position(bodyOffset);
+                    .limit(readOffset + bodyLength)
+                    .position(readOffset);
 
                 while (byteBuffer.remaining() > 0)
                 {
-                    termOffset += patchTermLogChannel.write(byteBuffer, termOffset);
+                    termWriteOffset += patchTermLogChannel.write(byteBuffer, termWriteOffset);
                 }
             }
             else
             {
                 final byte[] bytes = bodyBuffer.byteArray();
-                patchTermLogFile.seek(termOffset);
-                patchTermLogFile.write(bytes, bodyOffset, bodyLength);
+                patchTermLogFile.seek(termWriteOffset);
+                patchTermLogFile.write(bytes, readOffset, bodyLength);
             }
         }
 

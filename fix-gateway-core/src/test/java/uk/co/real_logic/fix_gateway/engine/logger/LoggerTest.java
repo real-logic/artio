@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -300,7 +299,7 @@ public class LoggerTest
     {
         writeAndArchiveBuffer();
 
-        patchBuffer(OFFSET_WITHIN_MESSAGE);
+        patchBuffer(0);
 
         assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
@@ -310,12 +309,11 @@ public class LoggerTest
     {
         archiveBeyondEndOfTerm();
 
-        patchBuffer(OFFSET_WITHIN_MESSAGE);
+        patchBuffer(0);
 
         assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
 
-    @Ignore
     @Test
     public void shouldPatchMissingTerm()
     {
@@ -323,9 +321,9 @@ public class LoggerTest
 
         removeLogFiles();
 
-        patchBuffer(OFFSET_WITHIN_MESSAGE);
+        patchBuffer(0);
 
-        assertReadsValueAt(PATCH_VALUE, OFFSET_WITHIN_MESSAGE);
+        assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
 
     @Test
@@ -333,7 +331,7 @@ public class LoggerTest
     {
         writeAndArchiveBuffer();
 
-        assertFalse("Patched the future", patchBuffer(TERM_LENGTH + OFFSET_WITHIN_MESSAGE));
+        assertFalse("Patched the future", patchBuffer(TERM_LENGTH));
     }
 
     private long readTo(final long position)
@@ -368,9 +366,8 @@ public class LoggerTest
 
     private boolean patchBuffer(final long position)
     {
-        final int offset = 1;
-        final int frameLength = HEADER_LENGTH + SIZE_OF_INT;
-        final int dataOffset = offset + HEADER_LENGTH;
+        final int frameLength = HEADER_LENGTH + OFFSET_WITHIN_MESSAGE + SIZE_OF_INT;
+        final int dataOffset = HEADER_LENGTH + OFFSET_WITHIN_MESSAGE;
 
         final int sessionId = publication.sessionId();
         final int streamId = publication.streamId();
@@ -379,8 +376,7 @@ public class LoggerTest
         final int termId = computeTermIdFromPosition(position, positionBitsToShift, initialTermId);
         final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
 
-        final DataHeaderFlyweight flyweight = new DataHeaderFlyweight();
-        flyweight.wrap(buffer, offset, frameLength);
+        final DataHeaderFlyweight flyweight = new DataHeaderFlyweight(new UnsafeBuffer(new byte[1024]));
         flyweight
             .sessionId(sessionId)
             .streamId(streamId)
@@ -391,9 +387,9 @@ public class LoggerTest
             .flags(DataHeaderFlyweight.BEGIN_AND_END_FLAGS)
             .headerType(HeaderFlyweight.HDR_TYPE_DATA);
 
-        buffer.putInt(dataOffset, PATCH_VALUE);
+        flyweight.putInt(dataOffset, PATCH_VALUE);
 
-        return archiver.patch(sessionId, this.buffer, offset, frameLength);
+        return archiver.patch(sessionId, flyweight, 0, frameLength);
     }
 
     // TODO: replace with method call upon next aeron release
@@ -446,11 +442,6 @@ public class LoggerTest
         assertReadsValueAt(INITIAL_VALUE, position);
     }
 
-    private void assertDataPublished(final long endPosition)
-    {
-        assertThat("Publication has failed an offer", endPosition, greaterThan((long) SIZE));
-    }
-
     private void assertReadsValueAt(final int value, final long position)
     {
         final boolean hasRead = readTo(position) > 0;
@@ -458,6 +449,11 @@ public class LoggerTest
         verify(fragmentHandler).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
 
         assertReadValue(value, position + HEADER_LENGTH, hasRead);
+    }
+
+    private void assertDataPublished(final long endPosition)
+    {
+        assertThat("Publication has failed an offer", endPosition, greaterThan((long) SIZE));
     }
 
     private void assertCanBlockReadValueAt(final int position)

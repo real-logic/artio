@@ -260,11 +260,11 @@ public class ArchiveReader implements AutoCloseable
             }
 
             buffer.wrap(termBuffer);
-            final int offset = computeTermOffsetFromPosition(position);
-            final int remainder = termBuffer.capacity() - offset;
+            final int termOffset = computeTermOffsetFromPosition(position);
+            final int remainder = termBuffer.capacity() - termOffset;
             final int length = Math.min(requestedLength, remainder);
 
-            handler.onBlock(buffer, offset, length, sessionId, termId);
+            handler.onBlock(buffer, termOffset, length, sessionId, termId);
 
             return true;
         }
@@ -291,7 +291,6 @@ public class ArchiveReader implements AutoCloseable
 
             final int termOffset = computeTermOffsetFromPosition(position);
             final int headerOffset = termOffset - HEADER_LENGTH;
-
             buffer.wrap(termBuffer);
             header.buffer(buffer);
             header.offset(headerOffset);
