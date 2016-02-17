@@ -16,6 +16,8 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.aeron.logbuffer.Header;
+import uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor;
+import uk.co.real_logic.aeron.logbuffer.TermReader;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -30,8 +32,6 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import java.io.File;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
-
-import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 /**
  * Eg: -Dlogging.dir=/home/richard/monotonic/Fix-Engine/fix-gateway-system-tests/client-logs \
@@ -81,25 +81,23 @@ public class ArchivePrinter implements SessionHandler
     public void print()
     {
         final UnsafeBuffer termBuffer = new UnsafeBuffer(0, 0);
-
         for (final File logFile : directoryDescriptor.listLogFiles(streamId))
         {
-            // System.out.printf("Printing %s\n", logFile);
+            System.out.printf("Printing %s\n", logFile);
             final ByteBuffer byteBuffer = bufferFactory.map(logFile);
             if (byteBuffer.capacity() > 0)
             {
                 termBuffer.wrap(byteBuffer);
-
-                for (int offset = HEADER_LENGTH; offset > 0 && offset < termBuffer.capacity(); offset += HEADER_LENGTH)
-                {
-                    if (termBuffer.getByte(offset) == 0)
-                    {
-                        break;
-                    }
-
-                    // TODO: add header to archive printer
-                    offset = subscriber.readFragment(termBuffer, offset, null);
-                }
+                final int initialTermId = LogBufferDescriptor.initialTermId(termBuffer);
+                final Header header = new Header(initialTermId, termBuffer.capacity());
+                final long messagesRead = TermReader.read(
+                    termBuffer,
+                    0,
+                    subscriber,
+                    Integer.MAX_VALUE,
+                    header,
+                    Throwable::printStackTrace);
+                System.out.printf("Read %d messages\n", messagesRead);
             }
         }
     }
