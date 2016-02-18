@@ -39,6 +39,10 @@ import java.util.concurrent.locks.LockSupport;
  * Known Stream Position
  * Series of LastKnownSequenceNumber records
  */
+// TODO: only update the file buffer when you rotate the term buffer, and rescan the last term buffer upon restart
+// TODO: apply the same reliability measures as Sessionids class
+// TODO: remove the lock and write the session id last and ordered when writing the record and put the
+// sequence number ordered, padding to 8 byte alignment, use offset on the SBE schema
 public class SequenceNumberIndex implements Index
 {
     /** We are up to date with the record, but we don't know about this session */
@@ -197,6 +201,7 @@ public class SequenceNumberIndex implements Index
             .sessionId(sessionId)
             .sequenceNumber(msgSeqNum)
             .lock(UNACQUIRED);
+        // TODO: use a put ordered write to go back to unacquired
 
         recordOffsets.put(sessionId, position);
     }

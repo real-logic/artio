@@ -525,6 +525,8 @@ public final class EngineConfiguration extends CommonConfiguration
     {
         super.conclude("engine");
 
+        // TODO: implement the recovery logic
+        // TODO: try to remove the index position buffer and make each index know where its committed up to.
         if (sentSequenceNumberCacheBuffer() == null)
         {
             sentSequenceNumberCacheBuffer = mapFile("sequence_numbers_sent", sequenceNumberCacheBufferSize);

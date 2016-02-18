@@ -57,6 +57,9 @@ public class SessionIds
 
     private int bufferPosition;
 
+    // TODO: allocate a sparse memory mapped file, set a length, do a force
+    // TODO: think about length/remap for growth
+    // TODO: add administrative reset operation that uses a new file
     public SessionIds(
         final AtomicBuffer buffer, final SessionIdStrategy idStrategy, final ErrorHandler errorHandler)
     {
@@ -120,6 +123,10 @@ public class SessionIds
     private long onNewLogon(final Object compositeKey)
     {
         final long sessionId = counter++;
+        // TODO: save to an in memory buffer, then copy the buffer down
+        // TODO: don't allow records to span a block, no padding needed, just scan forward
+        // TODO: assume 4K block size
+        // TODO: add CRC32 per block, per at end, update on every write
         final int compositeKeyLength = idStrategy.save(
             compositeKey, buffer, bufferPosition + BLOCK_LENGTH);
 
