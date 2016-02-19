@@ -227,7 +227,8 @@ public class ClusterReplicationTest
 
     private void checkClusterStable()
     {
-        for (int i = 0; i < 10; i++)
+        // TODO: loop until all nodes agree upon the same leader
+        for (int i = 0; i < 100; i++)
         {
             pollAll();
         }
