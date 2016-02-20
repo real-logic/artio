@@ -85,6 +85,13 @@ public class SessionIdsTest
         new SessionIds(buffer, idStrategy, errorHandler);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void validateSizeOfBuffer()
+    {
+        final AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(1024));
+        new SessionIds(buffer, idStrategy, errorHandler);
+    }
+
     // TODO: check wraps over buffers around
 
 }

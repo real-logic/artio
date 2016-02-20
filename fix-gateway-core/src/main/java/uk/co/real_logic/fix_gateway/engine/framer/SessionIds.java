@@ -95,8 +95,6 @@ public class SessionIds
             throw new IllegalStateException("Must use atomic buffer backed by a byte buffer");
         }
 
-        // TODO: capacity check > SECTOR SIZE
-
         if (LoggerUtil.initialiseBuffer(
             buffer,
             headerEncoder,
