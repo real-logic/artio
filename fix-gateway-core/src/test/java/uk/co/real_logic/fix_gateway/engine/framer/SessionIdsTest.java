@@ -92,8 +92,6 @@ public class SessionIdsTest
         new SessionIds(buffer, idStrategy, errorHandler);
     }
 
-    // TODO: check wraps over buffers around
-
     @Test
     public void wrapsOverSectorBoundaries()
     {
