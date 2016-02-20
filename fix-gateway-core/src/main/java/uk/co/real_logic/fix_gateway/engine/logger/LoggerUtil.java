@@ -49,7 +49,10 @@ public final class LoggerUtil
         return new ArchiveMetaData(directoryDescriptor, LoggerUtil::mapExistingFile, IoUtil::mapNewFile);
     }
 
-    public static void initialiseBuffer(
+    /**
+     * Returns true if the buffer has been initialised this time round, false if it was already initialised.
+     */
+    public static boolean initialiseBuffer(
         final AtomicBuffer buffer,
         final MessageHeaderEncoder headerEncoder,
         final MessageHeaderDecoder headerDecoder,
@@ -67,6 +70,8 @@ public final class LoggerUtil
                 .templateId(sbeTemplateId)
                 .schemaId(sbeSchemaId)
                 .version(actingVersion);
+
+            return true;
         }
         else
         {
@@ -76,6 +81,8 @@ public final class LoggerUtil
                 sbeSchemaId,
                 actingVersion,
                 actingBlockLength);
+
+            return false;
         }
     }
 

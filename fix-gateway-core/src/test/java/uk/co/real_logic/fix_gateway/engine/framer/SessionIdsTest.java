@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Real Logic Ltd.
+ * Copyright 2015-2016 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,20 +19,20 @@ import org.junit.Test;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
+import java.nio.ByteBuffer;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 public class SessionIdsTest
 {
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
+    private AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(8 * 1024));
     private SessionIdStrategy idStrategy = new SenderAndTargetSessionIdStrategy();
     private SessionIds sessionIds = new SessionIds(buffer, idStrategy, errorHandler);
 
@@ -73,14 +73,18 @@ public class SessionIdsTest
         assertEquals(bId, sessionIdsAfterRestart.onLogon(bSession));
     }
 
-    @Test
-    public void logsErrorWhenBufferInsufficientlySized()
+    @Test(expected = FileSystemCorruptionException.class)
+    public void checksFileCorruption()
     {
-        final AtomicBuffer buffer = new UnsafeBuffer(new byte[20]);
-        final SessionIds sessionIds = new SessionIds(buffer, idStrategy, errorHandler);
         sessionIds.onLogon(bSession);
+        sessionIds.onLogon(aSession);
 
-        verify(errorHandler, times(1)).onError(any());
+        // corrupt buffer
+        buffer.putBytes(8, new byte[1024]);
+
+        new SessionIds(buffer, idStrategy, errorHandler);
     }
+
+    // TODO: check wraps over buffers around
 
 }
