@@ -95,18 +95,7 @@ public class SessionIds
             throw new IllegalStateException("Must use atomic buffer backed by a byte buffer");
         }
 
-        if (LoggerUtil.initialiseBuffer(
-            buffer,
-            headerEncoder,
-            headerDecoder,
-            sessionIdEncoder.sbeSchemaId(),
-            sessionIdEncoder.sbeTemplateId(),
-            actingVersion,
-            actingBlockLength))
-        {
-            byteBuffer.position(0).limit(FIRST_CHECKSUM_LOCATION);
-            updateChecksum(FIRST_CHECKSUM_LOCATION);
-        }
+        initialiseBuffer();
 
         final SessionIdDecoder sessionIdDecoder = new SessionIdDecoder();
 
@@ -118,10 +107,26 @@ public class SessionIds
             sectorEnd = validateSectorChecksum(filePosition, sectorEnd);
             sessionIdDecoder.wrap(buffer, filePosition, actingBlockLength, actingVersion);
 
-            final long sessionId = sessionIdDecoder.sessionId();
+            long sessionId = sessionIdDecoder.sessionId();
             if (sessionId == 0)
             {
-                return;
+                final int nextSectorPeekPosition = sectorEnd;
+                if (nextSectorPeekPosition > lastRecordStart)
+                {
+                    return;
+                }
+
+                sessionIdDecoder.wrap(buffer, nextSectorPeekPosition, actingBlockLength, actingVersion);
+                sessionId = sessionIdDecoder.sessionId();
+                if (sessionId == 0)
+                {
+                    return;
+                }
+                else
+                {
+                    filePosition = nextSectorPeekPosition;
+                    // TODO: Validate checksum
+                }
             }
 
             final int compositeKeyLength = sessionIdDecoder.compositeKeyLength();
@@ -138,6 +143,22 @@ public class SessionIds
         }
     }
 
+    private void initialiseBuffer()
+    {
+        if (LoggerUtil.initialiseBuffer(
+            buffer,
+            headerEncoder,
+            headerDecoder,
+            sessionIdEncoder.sbeSchemaId(),
+            sessionIdEncoder.sbeTemplateId(),
+            actingVersion,
+            actingBlockLength))
+        {
+            byteBuffer.position(0).limit(FIRST_CHECKSUM_LOCATION);
+            updateChecksum(FIRST_CHECKSUM_LOCATION);
+        }
+    }
+
     private int validateSectorChecksum(final int position, final int sectorEnd)
     {
         if (position > sectorEnd)
@@ -145,7 +166,7 @@ public class SessionIds
             final int nextSectorEnd = sectorEnd + SECTOR_SIZE;
             final int nextChecksum = nextSectorEnd - CHECKSUM_SIZE;
             crc32.reset();
-            byteBuffer.position(sectorEnd).limit(nextChecksum);
+            byteBuffer.clear().position(sectorEnd).limit(nextChecksum);
             crc32.update(byteBuffer);
             final int calculateChecksum = (int) crc32.getValue();
             final int savedChecksum = buffer.getInt(nextChecksum);

@@ -94,4 +94,21 @@ public class SessionIdsTest
 
     // TODO: check wraps over buffers around
 
+    @Test
+    public void wrapsOverSectorBoundaries()
+    {
+        final int requiredNumberOfWritesToSpanSector = 300;
+
+        Object compositeKey = null;
+        long surrogateKey = 0;
+
+        for (int i = 0; i < requiredNumberOfWritesToSpanSector; i++)
+        {
+            compositeKey = idStrategy.onInitiatorLogon("b" + i, null, null, "a" + i);
+            surrogateKey = sessionIds.onLogon(compositeKey);
+        }
+
+        final SessionIds sessionIdsAfterRestart = new SessionIds(buffer, idStrategy, errorHandler);
+        assertEquals(surrogateKey, sessionIdsAfterRestart.onLogon(compositeKey));
+    }
 }

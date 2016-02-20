@@ -28,6 +28,6 @@ public class StorageDescriptor
 
     public static int nextSectorStart(final int offset)
     {
-        return offset / SECTOR_SIZE + SECTOR_SIZE;
+        return ((offset / SECTOR_SIZE) * SECTOR_SIZE) + SECTOR_SIZE;
     }
 }
