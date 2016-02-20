@@ -215,7 +215,6 @@ public class SessionIds
             buffer.putBytes(filePosition, compositeKeyBuffer, 0, compositeKeyLength);
             filePosition += compositeKeyLength;
 
-            System.out.println(filePosition);
             byteBuffer.position(nextSectorStart - SECTOR_SIZE).limit(checksumOffset);
             updateChecksum(checksumOffset);
         }
