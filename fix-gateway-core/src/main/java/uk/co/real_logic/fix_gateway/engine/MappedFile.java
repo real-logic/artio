@@ -53,7 +53,7 @@ public class MappedFile implements AutoCloseable
             }
 
             final MappedByteBuffer mappedBuffer = fileChannel.map(READ_WRITE, 0, fileChannel.size());
-            return new MappedFile(null, new UnsafeBuffer(mappedBuffer));
+            return new MappedFile(fileChannel, new UnsafeBuffer(mappedBuffer));
         }
         catch (final IOException ex)
         {
