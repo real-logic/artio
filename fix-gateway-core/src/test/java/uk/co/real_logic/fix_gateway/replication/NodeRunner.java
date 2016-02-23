@@ -52,6 +52,7 @@ public class NodeRunner implements AutoCloseable, Role
     {
         this.nodeId = nodeId;
 
+        final int termBufferLength = 1024 * 1024;
         final MediaDriver.Context context = new MediaDriver.Context();
         context
             .threadingMode(SHARED)
@@ -59,7 +60,9 @@ public class NodeRunner implements AutoCloseable, Role
             .controlLossGenerator(lossGenerator)
             .dataLossGenerator(lossGenerator)
             .dirsDeleteOnStart(true)
-            .aeronDirectoryName(AERON_DIR_PROP_DEFAULT + nodeId);
+            .aeronDirectoryName(AERON_DIR_PROP_DEFAULT + nodeId)
+            .publicationTermBufferLength(termBufferLength)
+            .ipcTermBufferLength(termBufferLength);
 
         final IntHashSet otherNodeIds = new IntHashSet(40, -1);
         for (final int node : otherNodes)
