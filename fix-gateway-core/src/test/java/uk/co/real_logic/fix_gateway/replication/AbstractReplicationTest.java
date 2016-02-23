@@ -36,6 +36,7 @@ import java.io.File;
 
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.agrona.CloseHelper.close;
+import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
 
@@ -107,6 +108,7 @@ public class AbstractReplicationTest
 
         close(aeron);
         close(mediaDriver);
+        cleanupDirectory(mediaDriver);
     }
 
     private void deleteLogDir(final int id)

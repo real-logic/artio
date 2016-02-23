@@ -16,6 +16,9 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.agrona.IoUtil;
+
+import java.io.File;
 
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
 
@@ -50,5 +53,10 @@ public class TestFixtures
             .ipcTermBufferLength(termBufferLength);
 
         return MediaDriver.launch(context);
+    }
+
+    public static void cleanupDirectory(final MediaDriver mediaDriver)
+    {
+        IoUtil.delete(new File(mediaDriver.aeronDirectoryName()), false);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Real Logic Ltd.
+ * Copyright 2015-2016 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -569,7 +569,6 @@ public class EncoderGeneratorTest
     private void assertEncodesTo(final Encoder encoder, final String value)
     {
         final int length = encoder.encode(buffer, 1);
-        System.out.println(buffer.getAscii(1, length));
         assertThat(buffer, containsAscii(value, 1, value.length()));
         assertEquals(value.length(), length);
     }

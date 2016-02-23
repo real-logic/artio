@@ -58,6 +58,7 @@ import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computeTermOf
 import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
 import static uk.co.real_logic.agrona.BitUtil.findNextPositivePowerOfTwo;
+import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.*;
 
@@ -506,6 +507,7 @@ public class LoggerTest
         CloseHelper.close(logger);
         CloseHelper.close(aeron);
         CloseHelper.close(mediaDriver);
+        cleanupDirectory(mediaDriver);
 
         System.gc();
     }

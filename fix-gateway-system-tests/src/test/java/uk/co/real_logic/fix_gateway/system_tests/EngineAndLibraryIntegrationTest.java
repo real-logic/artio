@@ -41,6 +41,7 @@ import java.util.List;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
+import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -259,5 +260,6 @@ public class EngineAndLibraryIntegrationTest
         CloseHelper.close(library2);
         CloseHelper.close(engine);
         CloseHelper.close(mediaDriver);
+        cleanupDirectory(mediaDriver);
     }
 }

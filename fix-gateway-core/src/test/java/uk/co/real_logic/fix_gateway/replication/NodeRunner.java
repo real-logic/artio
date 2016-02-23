@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
+import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
 import static uk.co.real_logic.fix_gateway.replication.RaftNodeConfiguration.DEFAULT_DATA_STREAM_ID;
@@ -131,6 +132,7 @@ public class NodeRunner implements AutoCloseable, Role
     {
         CloseHelper.close(aeron);
         CloseHelper.close(mediaDriver);
+        cleanupDirectory(mediaDriver);
     }
 
     public long commitPosition()

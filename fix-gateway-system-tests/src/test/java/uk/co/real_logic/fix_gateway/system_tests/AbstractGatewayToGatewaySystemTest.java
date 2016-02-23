@@ -23,15 +23,12 @@ import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.INITIATOR_ID;
-import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.acceptSession;
 
 public class AbstractGatewayToGatewaySystemTest
 {
@@ -138,6 +135,7 @@ public class AbstractGatewayToGatewaySystemTest
         CloseHelper.close(acceptingEngine);
 
         CloseHelper.close(mediaDriver);
+        cleanupDirectory(mediaDriver);
     }
 
 }
