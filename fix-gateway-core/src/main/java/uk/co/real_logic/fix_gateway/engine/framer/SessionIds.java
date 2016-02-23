@@ -90,11 +90,7 @@ public class SessionIds
 
     private void loadBuffer()
     {
-        if (byteBuffer == null)
-        {
-            throw new IllegalStateException("Must use atomic buffer backed by a byte buffer");
-        }
-
+        checkByteBuffer();
         initialiseBuffer();
 
         final SessionIdDecoder sessionIdDecoder = new SessionIdDecoder();
@@ -105,9 +101,7 @@ public class SessionIds
         while (filePosition < lastRecordStart)
         {
             sectorEnd = validateSectorChecksum(filePosition, sectorEnd);
-            sessionIdDecoder.wrap(buffer, filePosition, actingBlockLength, actingVersion);
-
-            long sessionId = sessionIdDecoder.sessionId();
+            long sessionId = wrap(sessionIdDecoder, filePosition);
             if (sessionId == 0)
             {
                 final int nextSectorPeekPosition = sectorEnd;
@@ -116,8 +110,7 @@ public class SessionIds
                     return;
                 }
 
-                sessionIdDecoder.wrap(buffer, nextSectorPeekPosition, actingBlockLength, actingVersion);
-                sessionId = sessionIdDecoder.sessionId();
+                sessionId = wrap(sessionIdDecoder, nextSectorPeekPosition);
                 if (sessionId == 0)
                 {
                     return;
@@ -125,7 +118,6 @@ public class SessionIds
                 else
                 {
                     filePosition = nextSectorPeekPosition;
-                    // TODO: Validate checksum
                 }
             }
 
@@ -140,6 +132,20 @@ public class SessionIds
             compositeToSurrogate.put(compositeKey, sessionId);
 
             filePosition += BLOCK_LENGTH + compositeKeyLength;
+        }
+    }
+
+    private long wrap(final SessionIdDecoder sessionIdDecoder, final int nextSectorPeekPosition)
+    {
+        sessionIdDecoder.wrap(buffer, nextSectorPeekPosition, actingBlockLength, actingVersion);
+        return sessionIdDecoder.sessionId();
+    }
+
+    private void checkByteBuffer()
+    {
+        if (byteBuffer == null)
+        {
+            throw new IllegalStateException("Must use atomic buffer backed by a byte buffer");
         }
     }
 
