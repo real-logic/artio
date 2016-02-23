@@ -175,6 +175,7 @@ public final class FixEngine extends GatewayProcess
         quietClose(errorPrinterRunner);
         framerRunner.close();
         logger.close();
+        configuration.close();
         super.close();
     }
 
