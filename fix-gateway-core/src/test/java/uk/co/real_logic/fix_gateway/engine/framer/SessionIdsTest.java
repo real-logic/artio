@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.junit.Test;
 import uk.co.real_logic.agrona.ErrorHandler;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
@@ -24,17 +25,23 @@ import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.LOWEST_VALID_SESSION_ID;
 
 public class SessionIdsTest
 {
+    private static final int BUFFER_SIZE = 8 * 1024;
+
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(8 * 1024));
+    private AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));
     private MappedFile mappedFile = mock(MappedFile.class);
     private SessionIdStrategy idStrategy = new SenderAndTargetSessionIdStrategy();
     private SessionIds sessionIds = newSessionIds(buffer);
@@ -86,6 +93,7 @@ public class SessionIdsTest
         final SessionIds sessionIdsAfterRestart = newSessionIds(buffer);
 
         final long cId = sessionIdsAfterRestart.onLogon(cSession);
+        assertValidSessionId(cId);
         assertNotEquals("C is a duplicate of A", aId, cId);
         assertNotEquals("C is a duplicate of B", bId, cId);
     }
@@ -125,6 +133,70 @@ public class SessionIdsTest
 
         final SessionIds sessionIdsAfterRestart = newSessionIds(buffer);
         assertEquals(surrogateKey, sessionIdsAfterRestart.onLogon(compositeKey));
+    }
+
+    @Test
+    public void resetsSessionIds()
+    {
+        final long aId = sessionIds.onLogon(aSession);
+        sessionIds.onDisconnect(aId);
+
+        sessionIds.reset(null);
+
+        assertSessionIdsReset(aId, sessionIds);
+    }
+
+    @Test
+    public void resetsSessionIdsFile()
+    {
+        final long aId = sessionIds.onLogon(aSession);
+        sessionIds.onDisconnect(aId);
+
+        sessionIds.reset(null);
+
+        final SessionIds sessionIdsAfterRestart = newSessionIds(buffer);
+
+        assertSessionIdsReset(aId, sessionIdsAfterRestart);
+    }
+
+    @Test
+    public void copiesOldSessionIdFile() throws IOException
+    {
+        final File backupLocation = File.createTempFile("sessionIds", "tmp");
+        try
+        {
+            final long aId = sessionIds.onLogon(aSession);
+            sessionIds.onDisconnect(aId);
+
+            final byte[] oldData = new byte[BUFFER_SIZE];
+            buffer.getBytes(0, oldData);
+
+            sessionIds.reset(backupLocation);
+
+            verify(mappedFile).transferTo(backupLocation);
+        }
+        finally
+        {
+            IoUtil.deleteIfExists(backupLocation);
+        }
+    }
+
+    private void assertSessionIdsReset(final long aId, final SessionIds sessionIds)
+    {
+        final long bId = sessionIds.onLogon(bSession);
+        final long newAId = sessionIds.onLogon(aSession);
+        assertValidSessionId(bId);
+        assertValidSessionId(newAId);
+        assertEquals("Session Ids haven't been reset", aId, bId);
+        assertNotEquals("Session Ids haven't been reset", aId, newAId);
+    }
+
+    /*final AtomicBuffer backupBuffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));
+    final File backupLocation = new File();*/
+
+    private void assertValidSessionId(final long cId)
+    {
+        assertThat(cId, greaterThanOrEqualTo(LOWEST_VALID_SESSION_ID));
     }
 
     private SessionIds newSessionIds(final AtomicBuffer buffer)

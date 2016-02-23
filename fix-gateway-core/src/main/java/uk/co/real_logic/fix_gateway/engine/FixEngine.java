@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.Logger;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
+import java.io.File;
 import java.util.List;
 
 import static uk.co.real_logic.agrona.CloseHelper.quietClose;
@@ -69,18 +70,39 @@ public final class FixEngine extends GatewayProcess
     /**
      * Query the engine for the list of libraries currently active.
      *
+     * @param idleStrategy the strategy to idle with whilst waiting for a response.
      * @return a list of currently active libraries.
      */
     public List<LibraryInfo> libraries(final IdleStrategy idleStrategy)
     {
         final QueryLibraries query = new QueryLibraries();
+        sendAdminCommand(idleStrategy, query);
+
+        return query.awaitResponse(idleStrategy);
+    }
+
+    /**
+     * Resets the set of session ids.
+     *
+     * @param backupLocation the location to backup the current session ids file to.
+     *                       Can be null to indicate that nobackup is required.
+     * @throws IllegalStateException thrown in the case that there was an error in backing up,
+     *                               or that there were currently connected sessions.
+     */
+    public void resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)
+        throws IllegalStateException
+    {
+        final ResetSessionIds resetSessionIds = new ResetSessionIds(backupLocation);
+        sendAdminCommand(idleStrategy, resetSessionIds);
+    }
+
+    private void sendAdminCommand(final IdleStrategy idleStrategy, final AdminCommand query)
+    {
         while (!adminCommands.offer(query))
         {
             idleStrategy.idle();
         }
         idleStrategy.reset();
-
-        return query.awaitResponse(idleStrategy);
     }
 
     private FixEngine(final EngineConfiguration configuration)

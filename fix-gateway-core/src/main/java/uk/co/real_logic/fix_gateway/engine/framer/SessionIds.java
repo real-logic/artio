@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.messages.SessionIdDecoder;
 import uk.co.real_logic.fix_gateway.messages.SessionIdEncoder;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,6 +50,7 @@ public class SessionIds
 {
     public static final long MISSING = -2;
     public static final long DUPLICATE_SESSION = -1;
+    public static final long LOWEST_VALID_SESSION_ID = 1L;
 
     private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
 
@@ -74,11 +76,10 @@ public class SessionIds
     private final ErrorHandler errorHandler;
     private final MappedFile mappedFile;
 
-    private long counter = 1L;
+    private long counter = LOWEST_VALID_SESSION_ID;
 
     private int filePosition;
 
-    // TODO: add administrative reset operation that uses a new file
     public SessionIds(
         final MappedFile mappedFile, final SessionIdStrategy idStrategy, final ErrorHandler errorHandler)
     {
@@ -263,4 +264,20 @@ public class SessionIds
         currentlyAuthenticated.remove(sessionId);
     }
 
+    public void reset(final File backupLocation)
+    {
+        if (!currentlyAuthenticated.isEmpty())
+        {
+            throw new IllegalStateException("There are currently authenticated sessions: " + currentlyAuthenticated);
+        }
+
+        counter = LOWEST_VALID_SESSION_ID;
+        currentlyAuthenticated.clear();
+        compositeToSurrogate.clear();
+
+        mappedFile.transferTo(backupLocation);
+
+        buffer.setMemory(0, buffer.capacity(), (byte) 0);
+        initialiseBuffer();
+    }
 }

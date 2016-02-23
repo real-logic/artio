@@ -29,6 +29,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
+import static java.nio.file.StandardOpenOption.CREATE_NEW;
 
 public class MappedFile implements AutoCloseable
 {
@@ -74,6 +75,30 @@ public class MappedFile implements AutoCloseable
 
     public void force()
     {
+        force(fileChannel);
+    }
+
+    public void transferTo(final File backupLocation)
+    {
+        try (final FileChannel backupChannel = FileChannel.open(backupLocation.toPath(), CREATE_NEW))
+        {
+            fileChannel.transferTo(0L, fileChannel.size(), backupChannel);
+            force(backupChannel);
+        }
+        catch (IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
+    }
+
+    public void close()
+    {
+        IoUtil.unmap(buffer.byteBuffer());
+        CloseHelper.close(fileChannel);
+    }
+
+    private void force(final FileChannel fileChannel)
+    {
         if (CommonConfiguration.FORCE_WRITES)
         {
             try
@@ -85,11 +110,5 @@ public class MappedFile implements AutoCloseable
                 LangUtil.rethrowUnchecked(e);
             }
         }
-    }
-
-    public void close()
-    {
-        IoUtil.unmap(buffer.byteBuffer());
-        CloseHelper.close(fileChannel);
     }
 }

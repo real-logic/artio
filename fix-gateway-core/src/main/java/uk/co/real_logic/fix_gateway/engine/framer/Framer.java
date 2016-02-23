@@ -39,6 +39,7 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
@@ -443,7 +444,20 @@ public class Framer implements Agent, SessionHandler
     public void onQueryLibraries(final QueryLibraries queryLibraries)
     {
         final List<LibraryInfo> libraries = new ArrayList<>(idToLibrary.values());
-        queryLibraries.respond(libraries);
+        queryLibraries.success(libraries);
+    }
+
+    public void resetSessionIds(final File backupLocation, final ResetSessionIds command)
+    {
+        try
+        {
+            sessionIds.reset(backupLocation);
+            command.success();
+        }
+        catch (Exception e)
+        {
+            command.onError(e);
+        }
     }
 
     public void onClose()
@@ -458,4 +472,5 @@ public class Framer implements Agent, SessionHandler
     {
         return "Framer";
     }
+
 }
