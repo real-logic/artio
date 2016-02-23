@@ -20,6 +20,7 @@ import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
+import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
@@ -28,13 +29,15 @@ import java.nio.ByteBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class SessionIdsTest
 {
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(8 * 1024));
+    private MappedFile mappedFile = mock(MappedFile.class);
     private SessionIdStrategy idStrategy = new SenderAndTargetSessionIdStrategy();
-    private SessionIds sessionIds = new SessionIds(buffer, idStrategy, errorHandler);
+    private SessionIds sessionIds = newSessionIds(buffer);
 
     private Object aSession = idStrategy.onInitiatorLogon("a", null, null, "b");
     private Object bSession = idStrategy.onInitiatorLogon("b", null, null, "a");
@@ -69,7 +72,7 @@ public class SessionIdsTest
         final long bId = sessionIds.onLogon(bSession);
         final long aId = sessionIds.onLogon(aSession);
 
-        final SessionIds sessionIdsAfterRestart = new SessionIds(buffer, idStrategy, errorHandler);
+        final SessionIds sessionIdsAfterRestart = newSessionIds(buffer);
         assertEquals(aId, sessionIdsAfterRestart.onLogon(aSession));
         assertEquals(bId, sessionIdsAfterRestart.onLogon(bSession));
     }
@@ -80,7 +83,7 @@ public class SessionIdsTest
         final long bId = sessionIds.onLogon(bSession);
         final long aId = sessionIds.onLogon(aSession);
 
-        final SessionIds sessionIdsAfterRestart = new SessionIds(buffer, idStrategy, errorHandler);
+        final SessionIds sessionIdsAfterRestart = newSessionIds(buffer);
 
         final long cId = sessionIdsAfterRestart.onLogon(cSession);
         assertNotEquals("C is a duplicate of A", aId, cId);
@@ -96,14 +99,14 @@ public class SessionIdsTest
         // corrupt buffer
         buffer.putBytes(8, new byte[1024]);
 
-        new SessionIds(buffer, idStrategy, errorHandler);
+        newSessionIds(buffer);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void validateSizeOfBuffer()
     {
         final AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(1024));
-        new SessionIds(buffer, idStrategy, errorHandler);
+        newSessionIds(buffer);
     }
 
     @Test
@@ -120,7 +123,14 @@ public class SessionIdsTest
             surrogateKey = sessionIds.onLogon(compositeKey);
         }
 
-        final SessionIds sessionIdsAfterRestart = new SessionIds(buffer, idStrategy, errorHandler);
+        final SessionIds sessionIdsAfterRestart = newSessionIds(buffer);
         assertEquals(surrogateKey, sessionIdsAfterRestart.onLogon(compositeKey));
     }
+
+    private SessionIds newSessionIds(final AtomicBuffer buffer)
+    {
+        when(mappedFile.buffer()).thenReturn(buffer);
+        return new SessionIds(mappedFile, idStrategy, errorHandler);
+    }
+
 }

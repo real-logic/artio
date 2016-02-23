@@ -20,6 +20,7 @@ import uk.co.real_logic.agrona.collections.LongHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
+import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
@@ -71,18 +72,19 @@ public class SessionIds
     private final AtomicBuffer buffer;
     private final SessionIdStrategy idStrategy;
     private final ErrorHandler errorHandler;
+    private final MappedFile mappedFile;
 
     private long counter = 1L;
 
     private int filePosition;
 
-    // TODO: allocate a sparse memory mapped file, set a length, do a force
     // TODO: add administrative reset operation that uses a new file
     public SessionIds(
-        final AtomicBuffer buffer, final SessionIdStrategy idStrategy, final ErrorHandler errorHandler)
+        final MappedFile mappedFile, final SessionIdStrategy idStrategy, final ErrorHandler errorHandler)
     {
-        this.buffer = buffer;
-        this.byteBuffer = buffer.byteBuffer();
+        this.mappedFile = mappedFile;
+        this.buffer = mappedFile.buffer();
+        this.byteBuffer = this.buffer.byteBuffer();
         this.idStrategy = idStrategy;
         this.errorHandler = errorHandler;
         loadBuffer();
@@ -162,6 +164,7 @@ public class SessionIds
             actingBlockLength))
         {
             updateChecksum(0, FIRST_CHECKSUM_LOCATION);
+            mappedFile.force();
         }
     }
 
@@ -207,7 +210,6 @@ public class SessionIds
 
     private long onNewLogon(final Object compositeKey)
     {
-        // TODO: optimisation, more efficient checksumming
         final long sessionId = counter++;
         final int compositeKeyLength = idStrategy.save(compositeKey, compositeKeyBuffer, 0);
         if (compositeKeyLength == INSUFFICIENT_SPACE)
@@ -239,11 +241,13 @@ public class SessionIds
             filePosition += compositeKeyLength;
 
             updateChecksum(nextSectorStart - SECTOR_SIZE, checksumOffset);
+            mappedFile.force();
         }
 
         return sessionId;
     }
 
+    // TODO: optimisation, more efficient checksumming, only checksum new data
     private void updateChecksum(final int start, final int checksumOffset)
     {
         final int endOfData = checksumOffset;

@@ -89,11 +89,11 @@ public final class FixEngine extends GatewayProcess
         this.configuration = configuration;
 
         final SequenceNumberIndex sentSequenceNumberIndex = SequenceNumberIndex.forWriting(
-            configuration.sentSequenceNumberCacheBuffer(), errorBuffer);
+            configuration.sentSequenceNumberCacheBuffer().buffer(), errorBuffer);
         final SequenceNumberIndex receivedSequenceNumberIndex = SequenceNumberIndex.forWriting(
-            configuration.receivedSequenceNumberCacheBuffer(), errorBuffer);
+            configuration.receivedSequenceNumberCacheBuffer().buffer(), errorBuffer);
         final IndexedPositionWriter indexedPositionWriter = new IndexedPositionWriter(
-            configuration.indexedPositionBuffer(), errorBuffer);
+            configuration.indexedPositionBuffer().buffer(), errorBuffer);
         initFramer(configuration, fixCounters);
         initLogger(configuration, sentSequenceNumberIndex, receivedSequenceNumberIndex, indexedPositionWriter);
         initErrorPrinter(configuration);
@@ -145,9 +145,9 @@ public final class FixEngine extends GatewayProcess
         final Framer framer = new Framer(
             new SystemEpochClock(), configuration, handler, librarySubscription, replaySubscription(),
             adminCommands, sessionIdStrategy, sessionIds,
-            SequenceNumberIndex.forReading(configuration.sentSequenceNumberCacheBuffer(), errorBuffer),
-            SequenceNumberIndex.forReading(configuration.receivedSequenceNumberCacheBuffer(), errorBuffer),
-            new IndexedPositionReader(configuration.indexedPositionBuffer()));
+            SequenceNumberIndex.forReading(configuration.sentSequenceNumberCacheBuffer().buffer(), errorBuffer),
+            SequenceNumberIndex.forReading(configuration.receivedSequenceNumberCacheBuffer().buffer(), errorBuffer),
+            new IndexedPositionReader(configuration.indexedPositionBuffer().buffer()));
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }
 

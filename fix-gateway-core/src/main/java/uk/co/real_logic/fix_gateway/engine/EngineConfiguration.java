@@ -15,10 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
-import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 
 import java.io.File;
@@ -27,8 +26,6 @@ import java.util.Objects;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
-import static uk.co.real_logic.agrona.IoUtil.mapExistingFile;
-import static uk.co.real_logic.agrona.IoUtil.mapNewFile;
 
 /**
  * Configuration that exists for the entire duration of a fix gateway. Some options are configurable via
@@ -38,7 +35,7 @@ import static uk.co.real_logic.agrona.IoUtil.mapNewFile;
  *
  * @see FixEngine
  */
-public final class EngineConfiguration extends CommonConfiguration
+public final class EngineConfiguration extends CommonConfiguration implements AutoCloseable
 {
     // ------------------------------------------------
     //          Configuration Properties
@@ -104,10 +101,10 @@ public final class EngineConfiguration extends CommonConfiguration
     private IdleStrategy framerIdleStrategy = backoffIdleStrategy();
     private IdleStrategy loggerIdleStrategy = backoffIdleStrategy();
     private IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
-    private AtomicBuffer sentSequenceNumberCacheBuffer;
-    private AtomicBuffer receivedSequenceNumberCacheBuffer;
-    private AtomicBuffer indexedPositionBuffer;
-    private AtomicBuffer sessionIdBuffer;
+    private MappedFile sentSequenceNumberCacheBuffer;
+    private MappedFile receivedSequenceNumberCacheBuffer;
+    private MappedFile indexedPositionBuffer;
+    private MappedFile sessionIdBuffer;
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
@@ -465,22 +462,22 @@ public final class EngineConfiguration extends CommonConfiguration
         return inboundBytesReceivedLimit;
     }
 
-    public AtomicBuffer sentSequenceNumberCacheBuffer()
+    public MappedFile sentSequenceNumberCacheBuffer()
     {
         return sentSequenceNumberCacheBuffer;
     }
 
-    public AtomicBuffer receivedSequenceNumberCacheBuffer()
+    public MappedFile receivedSequenceNumberCacheBuffer()
     {
         return receivedSequenceNumberCacheBuffer;
     }
 
-    public AtomicBuffer indexedPositionBuffer()
+    public MappedFile indexedPositionBuffer()
     {
         return indexedPositionBuffer;
     }
 
-    public AtomicBuffer sessionIdBuffer()
+    public MappedFile sessionIdBuffer()
     {
         return sessionIdBuffer;
     }
@@ -548,17 +545,16 @@ public final class EngineConfiguration extends CommonConfiguration
         }
     }
 
-    private UnsafeBuffer mapFile(final String file, final int size)
+    private MappedFile mapFile(final String file, final int size)
     {
-        final File sequenceNumberCacheBufferFile = new File(logFileDir() + File.separator + file);
-        if (sequenceNumberCacheBufferFile.exists())
-        {
-            return new UnsafeBuffer(mapExistingFile(sequenceNumberCacheBufferFile, file));
-        }
-        else
-        {
-            return new UnsafeBuffer(mapNewFile(sequenceNumberCacheBufferFile, size));
-        }
+        return MappedFile.map(logFileDir() + File.separator + file, size);
     }
 
+    public void close()
+    {
+        CloseHelper.close(sentSequenceNumberCacheBuffer());
+        CloseHelper.close(receivedSequenceNumberCacheBuffer());
+        CloseHelper.close(indexedPositionBuffer());
+        CloseHelper.close(sessionIdBuffer());
+    }
 }
