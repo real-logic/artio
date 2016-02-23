@@ -38,6 +38,7 @@ public class SessionIdsTest
 
     private Object aSession = idStrategy.onInitiatorLogon("a", null, null, "b");
     private Object bSession = idStrategy.onInitiatorLogon("b", null, null, "a");
+    private Object cSession = idStrategy.onInitiatorLogon("c", null, null, "c");
 
     @Test
     public void sessionIdsAreUnique()
@@ -71,6 +72,19 @@ public class SessionIdsTest
         final SessionIds sessionIdsAfterRestart = new SessionIds(buffer, idStrategy, errorHandler);
         assertEquals(aId, sessionIdsAfterRestart.onLogon(aSession));
         assertEquals(bId, sessionIdsAfterRestart.onLogon(bSession));
+    }
+
+    @Test
+    public void continuesIncrementingSessionIdsAfterRestart()
+    {
+        final long bId = sessionIds.onLogon(bSession);
+        final long aId = sessionIds.onLogon(aSession);
+
+        final SessionIds sessionIdsAfterRestart = new SessionIds(buffer, idStrategy, errorHandler);
+
+        final long cId = sessionIdsAfterRestart.onLogon(cSession);
+        assertNotEquals("C is a duplicate of A", aId, cId);
+        assertNotEquals("C is a duplicate of B", bId, cId);
     }
 
     @Test(expected = FileSystemCorruptionException.class)

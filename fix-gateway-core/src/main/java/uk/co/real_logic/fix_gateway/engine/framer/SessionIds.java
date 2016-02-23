@@ -72,7 +72,7 @@ public class SessionIds
     private final SessionIdStrategy idStrategy;
     private final ErrorHandler errorHandler;
 
-    private static long counter = 1L;
+    private long counter = 1L;
 
     private int filePosition;
 
@@ -130,6 +130,7 @@ public class SessionIds
             }
 
             compositeToSurrogate.put(compositeKey, sessionId);
+            counter = Math.max(counter, sessionId + 1);
 
             filePosition += BLOCK_LENGTH + compositeKeyLength;
         }
@@ -207,7 +208,6 @@ public class SessionIds
 
     private long onNewLogon(final Object compositeKey)
     {
-        // TODO: load up counter from the previous highest seen value
         // TODO: do more efficient checksumming
         final long sessionId = counter++;
         final int compositeKeyLength = idStrategy.save(compositeKey, compositeKeyBuffer, 0);
