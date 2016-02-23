@@ -161,8 +161,7 @@ public class SessionIds
             actingVersion,
             actingBlockLength))
         {
-            byteBuffer.position(0).limit(FIRST_CHECKSUM_LOCATION);
-            updateChecksum(FIRST_CHECKSUM_LOCATION);
+            updateChecksum(0, FIRST_CHECKSUM_LOCATION);
         }
     }
 
@@ -208,7 +207,7 @@ public class SessionIds
 
     private long onNewLogon(final Object compositeKey)
     {
-        // TODO: do more efficient checksumming
+        // TODO: optimisation, more efficient checksumming
         final long sessionId = counter++;
         final int compositeKeyLength = idStrategy.save(compositeKey, compositeKeyBuffer, 0);
         if (compositeKeyLength == INSUFFICIENT_SPACE)
@@ -228,7 +227,6 @@ public class SessionIds
             {
                 filePosition = nextSectorStart;
                 checksumOffset += SECTOR_SIZE;
-                crc32.reset();
             }
 
             sessionIdEncoder
@@ -240,15 +238,16 @@ public class SessionIds
             buffer.putBytes(filePosition, compositeKeyBuffer, 0, compositeKeyLength);
             filePosition += compositeKeyLength;
 
-            byteBuffer.position(nextSectorStart - SECTOR_SIZE).limit(checksumOffset);
-            updateChecksum(checksumOffset);
+            updateChecksum(nextSectorStart - SECTOR_SIZE, checksumOffset);
         }
 
         return sessionId;
     }
 
-    private void updateChecksum(final int checksumOffset)
+    private void updateChecksum(final int start, final int checksumOffset)
     {
+        final int endOfData = checksumOffset;
+        byteBuffer.position(start).limit(endOfData);
         crc32.reset();
         crc32.update(byteBuffer);
         final int checksumValue = (int) crc32.getValue();
