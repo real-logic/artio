@@ -37,8 +37,6 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
  * Known Stream Position
  * Series of LastKnownSequenceNumber records
  */
-// TODO: 1. remove the lock and write the session id last and ordered when writing the record and put the
-// sequence number ordered, padding to 8 byte alignment, use offset on the SBE schema
 // TODO: 2. split out the reader/writer/descriptor
 // TODO: 3. apply the alignment and checksumming rules
 // TODO: 4. only update the file buffer when you rotate the term buffer,
