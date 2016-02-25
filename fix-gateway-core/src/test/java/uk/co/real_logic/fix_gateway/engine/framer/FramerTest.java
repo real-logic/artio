@@ -25,7 +25,7 @@ import uk.co.real_logic.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionReader;
-import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -66,8 +66,8 @@ public class FramerTest
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private Header header = mock(Header.class);
     private FakeEpochClock mockClock = new FakeEpochClock();
-    private SequenceNumberIndex sentSequenceNumberIndex = mock(SequenceNumberIndex.class);
-    private SequenceNumberIndex receivedSequenceNumberIndex = mock(SequenceNumberIndex.class);
+    private SequenceNumberIndexReader sentSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
+    private SequenceNumberIndexReader receivedSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
     private IndexedPositionReader indexedPositionReader = mock(IndexedPositionReader.class);
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()

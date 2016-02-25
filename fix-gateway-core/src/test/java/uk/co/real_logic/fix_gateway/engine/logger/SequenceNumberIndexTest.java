@@ -24,20 +24,19 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex.UNKNOWN_SESSION;
 
 public class SequenceNumberIndexTest extends AbstractLogTest
 {
 
     private AtomicBuffer tableBuffer = new UnsafeBuffer(new byte[16 * 1024]);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private SequenceNumberIndex writer = SequenceNumberIndex.forWriting(tableBuffer, errorHandler);
-    private SequenceNumberIndex reader = SequenceNumberIndex.forReading(tableBuffer, errorHandler);
+    private SequenceNumberIndexWriter writer = new SequenceNumberIndexWriter(tableBuffer, errorHandler);
+    private SequenceNumberIndexReader reader = new SequenceNumberIndexReader(tableBuffer);
 
     @Test
     public void shouldNotInitiallyKnowASequenceNumber()
     {
-        assertLastKnownSequenceNumberIs(UNKNOWN_SESSION, SESSION_ID);
+        assertLastKnownSequenceNumberIs(SequenceNumberIndexReader.UNKNOWN_SESSION, SESSION_ID);
     }
 
     @Test
@@ -57,7 +56,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         indexRecord(START);
 
-        assertLastKnownSequenceNumberIs(UNKNOWN_SESSION, SESSION_ID_2);
+        assertLastKnownSequenceNumberIs(SequenceNumberIndexReader.UNKNOWN_SESSION, SESSION_ID_2);
     }
 
     @Test
@@ -81,7 +80,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         final AtomicBuffer tableBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
-        SequenceNumberIndex.forReading(tableBuffer, errorHandler);
+        new SequenceNumberIndexReader(tableBuffer);
     }
 
     @After

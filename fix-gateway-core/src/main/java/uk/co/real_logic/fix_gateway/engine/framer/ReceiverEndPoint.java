@@ -19,7 +19,7 @@ import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
-import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -68,8 +68,8 @@ public class ReceiverEndPoint
     private final long connectionId;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
-    private final SequenceNumberIndex sentSequenceNumberIndex;
-    private final SequenceNumberIndex receivedSequenceNumberIndex;
+    private final SequenceNumberIndexReader sentSequenceNumberIndex;
+    private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final AtomicCounter messagesRead;
     private final Framer framer;
     private final ErrorHandler errorHandler;
@@ -90,8 +90,8 @@ public class ReceiverEndPoint
         final long sessionId,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
-        final SequenceNumberIndex sentSequenceNumberIndex,
-        final SequenceNumberIndex receivedSequenceNumberIndex,
+        final SequenceNumberIndexReader sentSequenceNumberIndex,
+        final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final AtomicCounter messagesRead,
         final Framer framer,
         final ErrorHandler errorHandler,

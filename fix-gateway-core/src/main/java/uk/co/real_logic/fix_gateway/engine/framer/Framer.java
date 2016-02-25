@@ -30,7 +30,7 @@ import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionReader;
-import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
@@ -55,7 +55,6 @@ import java.util.function.Consumer;
 import static java.net.StandardSocketOptions.*;
 import static uk.co.real_logic.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
@@ -99,12 +98,12 @@ public class Framer implements Agent, SessionHandler
     private final Subscription outboundDataSubscription;
     private final Subscription replaySubscription;
     private final IndexedPositionReader indexedPositionReader;
-    private final SequenceNumberIndex receivedSequenceNumberIndex;
     private final GatewayPublication inboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
     private final QueuedPipe<AdminCommand> adminCommands;
-    private final SequenceNumberIndex sentSequenceNumberIndex;
+    private final SequenceNumberIndexReader sentSequenceNumberIndex;
+    private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final int inboundBytesReceivedLimit;
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
@@ -121,8 +120,8 @@ public class Framer implements Agent, SessionHandler
         final QueuedPipe<AdminCommand> adminCommands,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
-        final SequenceNumberIndex sentSequenceNumberIndex,
-        final SequenceNumberIndex receivedSequenceNumberIndex,
+        final SequenceNumberIndexReader sentSequenceNumberIndex,
+        final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final IndexedPositionReader indexedPositionReader)
     {
         this.clock = clock;
@@ -255,7 +254,7 @@ public class Framer implements Agent, SessionHandler
 
                     final String address = channel.getRemoteAddress().toString();
                     inboundPublication.saveConnect(connectionId, address, acceptorLibraryId, ACCEPTOR,
-                        UNKNOWN_SESSION, UNKNOWN_SESSION);
+                        SequenceNumberIndexReader.UNKNOWN_SESSION, SequenceNumberIndexReader.UNKNOWN_SESSION);
                 }
 
                 it.remove();

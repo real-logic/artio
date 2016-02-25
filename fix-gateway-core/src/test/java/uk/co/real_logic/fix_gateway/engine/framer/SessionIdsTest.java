@@ -31,9 +31,7 @@ import java.nio.ByteBuffer;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.LOWEST_VALID_SESSION_ID;
 
 public class SessionIdsTest

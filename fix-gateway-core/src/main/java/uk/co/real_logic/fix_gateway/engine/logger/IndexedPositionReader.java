@@ -20,9 +20,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.messages.IndexedPositionDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
-import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionWriter.HEADER_LENGTH;
-import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionWriter.POSITION_OFFSET;
-import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionWriter.RECORD_LENGTH;
+import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionWriter.*;
 
 /**
  * .

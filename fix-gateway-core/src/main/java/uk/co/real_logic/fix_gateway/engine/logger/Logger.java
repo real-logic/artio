@@ -42,8 +42,8 @@ public class Logger implements AutoCloseable
     private final Streams outboundLibraryStreams;
     private final Publication replayPublication;
     private final ErrorHandler errorHandler;
-    private final SequenceNumberIndex sentSequenceNumberIndex;
-    private final SequenceNumberIndex receivedSequenceNumberIndex;
+    private final SequenceNumberIndexWriter sentSequenceNumberIndex;
+    private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
     private final IndexedPositionWriter indexedPositionWriter;
     private final List<Archiver> archivers = new ArrayList<>();
 
@@ -57,8 +57,8 @@ public class Logger implements AutoCloseable
         final Streams outboundLibraryStreams,
         final ErrorHandler errorHandler,
         final Publication replayPublication,
-        final SequenceNumberIndex sentSequenceNumberIndex,
-        final SequenceNumberIndex receivedSequenceNumberIndex,
+        final SequenceNumberIndexWriter sentSequenceNumberIndex,
+        final SequenceNumberIndexWriter receivedSequenceNumberIndex,
         final IndexedPositionWriter indexedPositionWriter)
     {
         this.configuration = configuration;

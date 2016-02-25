@@ -19,7 +19,7 @@ import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.framer.*;
-import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.streams.Streams;
@@ -67,8 +67,8 @@ public class ConnectionHandler
         final int libraryId,
         final Framer framer,
         final ReliefValve reliefValve,
-        final SequenceNumberIndex sentSequenceNumberIndex,
-        final SequenceNumberIndex receivedSequenceNumberIndex) throws IOException
+        final SequenceNumberIndexReader sentSequenceNumberIndex,
+        final SequenceNumberIndexReader receivedSequenceNumberIndex) throws IOException
     {
         return new ReceiverEndPoint(
             channel,

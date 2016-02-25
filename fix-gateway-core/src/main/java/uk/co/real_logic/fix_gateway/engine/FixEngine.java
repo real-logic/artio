@@ -22,10 +22,7 @@ import uk.co.real_logic.fix_gateway.ErrorPrinter;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.engine.framer.*;
-import uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionReader;
-import uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionWriter;
-import uk.co.real_logic.fix_gateway.engine.logger.Logger;
-import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndex;
+import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.File;
@@ -110,9 +107,9 @@ public final class FixEngine extends GatewayProcess
         init(configuration);
         this.configuration = configuration;
 
-        final SequenceNumberIndex sentSequenceNumberIndex = SequenceNumberIndex.forWriting(
+        final SequenceNumberIndexWriter sentSequenceNumberIndex = new SequenceNumberIndexWriter(
             configuration.sentSequenceNumberCacheBuffer().buffer(), errorBuffer);
-        final SequenceNumberIndex receivedSequenceNumberIndex = SequenceNumberIndex.forWriting(
+        final SequenceNumberIndexWriter receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
             configuration.receivedSequenceNumberCacheBuffer().buffer(), errorBuffer);
         final IndexedPositionWriter indexedPositionWriter = new IndexedPositionWriter(
             configuration.indexedPositionBuffer().buffer(), errorBuffer);
@@ -123,8 +120,8 @@ public final class FixEngine extends GatewayProcess
 
     private void initLogger(
         final EngineConfiguration configuration,
-        final SequenceNumberIndex sentSequenceNumberIndex,
-        final SequenceNumberIndex receivedSequenceNumberIndex,
+        final SequenceNumberIndexWriter sentSequenceNumberIndex,
+        final SequenceNumberIndexWriter receivedSequenceNumberIndex,
         final IndexedPositionWriter indexedPositionWriter)
     {
         logger = new Logger(
@@ -167,8 +164,8 @@ public final class FixEngine extends GatewayProcess
         final Framer framer = new Framer(
             new SystemEpochClock(), configuration, handler, librarySubscription, replaySubscription(),
             adminCommands, sessionIdStrategy, sessionIds,
-            SequenceNumberIndex.forReading(configuration.sentSequenceNumberCacheBuffer().buffer(), errorBuffer),
-            SequenceNumberIndex.forReading(configuration.receivedSequenceNumberCacheBuffer().buffer(), errorBuffer),
+            new SequenceNumberIndexReader(configuration.sentSequenceNumberCacheBuffer().buffer()),
+            new SequenceNumberIndexReader(configuration.receivedSequenceNumberCacheBuffer().buffer()),
             new IndexedPositionReader(configuration.indexedPositionBuffer().buffer()));
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }

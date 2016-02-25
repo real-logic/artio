@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Real Logic Ltd.
+ * Copyright 2015=2016 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,32 +25,16 @@ import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-/**
- * Stores a cache of the last sent sequence number.
- * <p>
- * Each instance is not thread-safe, however, they can share a common
- * off-heap in a single-writer threadsafe manner.
- *
- * Layout:
- *
- * Message Header
- * Known Stream Position
- * Series of LastKnownSequenceNumber records
- */
-// TODO: 2. split out the reader/writer/descriptor
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
+import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
+
 // TODO: 3. apply the alignment and checksumming rules
 // TODO: 4. only update the file buffer when you rotate the term buffer,
 // TODO: 5. rescan the last term buffer upon restart
-public class SequenceNumberIndex implements Index
+public class SequenceNumberIndexWriter implements Index
 {
-    /** We are up to date with the record, but we don't know about this session */
-    public static final int UNKNOWN_SESSION = -1;
-
-    private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
-    private static final int RECORD_SIZE = LastKnownSequenceNumberDecoder.BLOCK_LENGTH;
-    private static final int SEQUENCE_NUMBER_OFFSET = 8;
-
     private static final long MISSING_RECORD = -1L;
+    private static final int SEQUENCE_NUMBER_OFFSET = 8;
 
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
@@ -61,33 +45,16 @@ public class SequenceNumberIndex implements Index
     private final MessageHeaderEncoder fileHeaderEncoder = new MessageHeaderEncoder();
     private final LastKnownSequenceNumberEncoder lastKnownEncoder = new LastKnownSequenceNumberEncoder();
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
-    private final int actingBlockLength = lastKnownEncoder.sbeBlockLength();
-    private final int actingVersion = lastKnownEncoder.sbeSchemaVersion();
     private final Long2LongHashMap recordOffsets = new Long2LongHashMap(MISSING_RECORD);
 
     private final AtomicBuffer outputBuffer;
     private final ErrorHandler errorHandler;
-    private final boolean isWriter;
 
-    public static SequenceNumberIndex forWriting(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
-    {
-        final SequenceNumberIndex index = new SequenceNumberIndex(outputBuffer, errorHandler, true);
-        index.initialise();
-        return index;
-    }
-
-    public static SequenceNumberIndex forReading(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
-    {
-        final SequenceNumberIndex index = new SequenceNumberIndex(outputBuffer, errorHandler, false);
-        index.validateBuffer();
-        return index;
-    }
-
-    SequenceNumberIndex(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler, final boolean isWriter)
+    public SequenceNumberIndexWriter(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
     {
         this.outputBuffer = outputBuffer;
         this.errorHandler = errorHandler;
-        this.isWriter = isWriter;
+        initialise();
     }
 
     @Override
@@ -119,32 +86,10 @@ public class SequenceNumberIndex implements Index
         }
     }
 
-    public int lastKnownSequenceNumber(final long sessionId)
-    {
-        final int lastRecordOffset = outputBuffer.capacity() - RECORD_SIZE;
-        int position = HEADER_SIZE;
-        while (position <= lastRecordOffset)
-        {
-            lastKnownDecoder.wrap(outputBuffer, position, actingBlockLength, actingVersion);
-
-            if (lastKnownDecoder.sessionId() == sessionId)
-            {
-                return lastKnownDecoder.sequenceNumber();
-            }
-
-            position += RECORD_SIZE;
-        }
-
-        return UNKNOWN_SESSION;
-    }
-
     @Override
     public void close()
     {
-        if (isWriter)
-        {
-            IoUtil.unmap(outputBuffer.byteBuffer());
-        }
+        IoUtil.unmap(outputBuffer.byteBuffer());
     }
 
     private void saveRecord(final int newSequenceNumber, final long sessionId)
@@ -153,10 +98,10 @@ public class SequenceNumberIndex implements Index
         if (position == MISSING_RECORD)
         {
             final int lastRecordOffset = outputBuffer.capacity() - RECORD_SIZE;
-            position = HEADER_SIZE;
+            position = SequenceNumberIndexDescriptor.HEADER_SIZE;
             while (position <= lastRecordOffset)
             {
-                lastKnownDecoder.wrap(outputBuffer, position, actingBlockLength, actingVersion);
+                lastKnownDecoder.wrap(outputBuffer, position, RECORD_SIZE, SCHEMA_VERSION);
                 if (lastKnownDecoder.sequenceNumber() == 0)
                 {
                     createNewRecord(newSequenceNumber, sessionId, position);
@@ -164,7 +109,7 @@ public class SequenceNumberIndex implements Index
                 }
                 else if (lastKnownDecoder.sessionId() == sessionId)
                 {
-                    updateRecord(position, newSequenceNumber);
+                    sequenceNumberOrdered(position, newSequenceNumber);
                     return;
                 }
 
@@ -173,7 +118,7 @@ public class SequenceNumberIndex implements Index
         }
         else
         {
-            updateRecord(position, newSequenceNumber);
+            sequenceNumberOrdered(position, newSequenceNumber);
             return;
         }
 
@@ -189,11 +134,6 @@ public class SequenceNumberIndex implements Index
         sequenceNumberOrdered(position, sequenceNumber);
     }
 
-    private void updateRecord(final int position, final int sequenceNumber)
-    {
-        sequenceNumberOrdered(position, sequenceNumber);
-    }
-
     private void initialise()
     {
         LoggerUtil.initialiseBuffer(
@@ -204,16 +144,6 @@ public class SequenceNumberIndex implements Index
             lastKnownEncoder.sbeTemplateId(),
             lastKnownEncoder.sbeSchemaVersion(),
             lastKnownEncoder.sbeBlockLength());
-    }
-
-    private void validateBuffer()
-    {
-        LoggerUtil.validateBuffer(
-            outputBuffer,
-            fileHeaderDecoder,
-            lastKnownEncoder.sbeSchemaId(),
-            actingVersion,
-            actingBlockLength);
     }
 
     public void sequenceNumberOrdered(final int recordOffset, final int value)

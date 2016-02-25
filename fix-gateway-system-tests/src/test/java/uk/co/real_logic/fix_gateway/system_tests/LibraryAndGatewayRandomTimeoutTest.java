@@ -27,9 +27,7 @@ import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 
 import java.io.File;
 
-import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
-import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
+import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class LibraryAndGatewayRandomTimeoutTest
