@@ -30,21 +30,21 @@ public class SequenceNumberIndexReader
 
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
-    private final AtomicBuffer outputBuffer;
+    private final AtomicBuffer inMemoryBuffer;
 
-    public SequenceNumberIndexReader(final AtomicBuffer outputBuffer)
+    public SequenceNumberIndexReader(final AtomicBuffer inMemoryBuffer)
     {
-        this.outputBuffer = outputBuffer;
+        this.inMemoryBuffer = inMemoryBuffer;
         validateBuffer();
     }
 
     public int lastKnownSequenceNumber(final long sessionId)
     {
-        final int lastRecordOffset = outputBuffer.capacity() - SequenceNumberIndexDescriptor.RECORD_SIZE;
+        final int lastRecordOffset = inMemoryBuffer.capacity() - SequenceNumberIndexDescriptor.RECORD_SIZE;
         int position = SequenceNumberIndexDescriptor.HEADER_SIZE;
         while (position <= lastRecordOffset)
         {
-            lastKnownDecoder.wrap(outputBuffer, position, BLOCK_LENGTH, SCHEMA_VERSION);
+            lastKnownDecoder.wrap(inMemoryBuffer, position, BLOCK_LENGTH, SCHEMA_VERSION);
 
             if (lastKnownDecoder.sessionId() == sessionId)
             {
@@ -60,7 +60,7 @@ public class SequenceNumberIndexReader
     private void validateBuffer()
     {
         LoggerUtil.validateBuffer(
-            outputBuffer,
+            inMemoryBuffer,
             fileHeaderDecoder,
             LastKnownSequenceNumberEncoder.SCHEMA_ID,
             SCHEMA_VERSION,

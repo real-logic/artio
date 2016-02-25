@@ -18,8 +18,10 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.agrona.ErrorHandler;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.engine.MappedFile;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
@@ -27,11 +29,13 @@ import static org.mockito.Mockito.*;
 
 public class SequenceNumberIndexTest extends AbstractLogTest
 {
+    private static final int BUFFER_SIZE = 16 * 1024;
 
-    private AtomicBuffer tableBuffer = new UnsafeBuffer(new byte[16 * 1024]);
+    private MappedFile indexFile = MappedFile.map(IoUtil.tmpDirName() + "/SequenceNumberIndex", BUFFER_SIZE);
+    private AtomicBuffer inMemoryBuffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private SequenceNumberIndexWriter writer = new SequenceNumberIndexWriter(tableBuffer, errorHandler);
-    private SequenceNumberIndexReader reader = new SequenceNumberIndexReader(tableBuffer);
+    private SequenceNumberIndexWriter writer = new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler);
+    private SequenceNumberIndexReader reader = new SequenceNumberIndexReader(inMemoryBuffer);
 
     @Test
     public void shouldNotInitiallyKnowASequenceNumber()
@@ -78,7 +82,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test(expected = IllegalStateException.class)
     public void shouldValidateBufferItReadsFrom()
     {
-        final AtomicBuffer tableBuffer = new UnsafeBuffer(new byte[16 * 1024]);
+        final AtomicBuffer tableBuffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
 
         new SequenceNumberIndexReader(tableBuffer);
     }
@@ -86,6 +90,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @After
     public void verifyNoErrors()
     {
+        indexFile.close();
         verify(errorHandler, never()).onError(any());
     }
 

@@ -33,13 +33,13 @@ import static java.nio.file.StandardOpenOption.CREATE_NEW;
 
 public class MappedFile implements AutoCloseable
 {
+    private final File file;
     private final FileChannel fileChannel;
     private final AtomicBuffer buffer;
 
-    public static MappedFile map(final String bufferPath, final int size)
+    public static MappedFile map(final File bufferFile, final int size)
     {
         final FileChannel fileChannel;
-        final File bufferFile = new File(bufferPath);
         try
         {
             if (bufferFile.exists())
@@ -53,7 +53,7 @@ public class MappedFile implements AutoCloseable
             }
 
             final MappedByteBuffer mappedBuffer = fileChannel.map(READ_WRITE, 0, fileChannel.size());
-            return new MappedFile(fileChannel, new UnsafeBuffer(mappedBuffer));
+            return new MappedFile(bufferFile, fileChannel, new UnsafeBuffer(mappedBuffer));
         }
         catch (final IOException ex)
         {
@@ -62,8 +62,14 @@ public class MappedFile implements AutoCloseable
         }
     }
 
-    public MappedFile(final FileChannel fileChannel, final AtomicBuffer buffer)
+    public static MappedFile map(final String bufferPath, final int size)
     {
+        return map(new File(bufferPath), size);
+    }
+
+    public MappedFile(final File file, final FileChannel fileChannel, final AtomicBuffer buffer)
+    {
+        this.file = file;
         this.fileChannel = fileChannel;
         this.buffer = buffer;
     }
@@ -71,6 +77,11 @@ public class MappedFile implements AutoCloseable
     public AtomicBuffer buffer()
     {
         return buffer;
+    }
+
+    public File file()
+    {
+        return file;
     }
 
     public void force()

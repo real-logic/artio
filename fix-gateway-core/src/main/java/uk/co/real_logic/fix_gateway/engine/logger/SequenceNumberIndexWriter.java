@@ -17,23 +17,26 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.ErrorHandler;
-import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
+import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import java.io.File;
+
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
-// TODO: 3. apply the alignment and checksumming rules
-// TODO: 4. only update the file buffer when you rotate the term buffer,
-// TODO: 5. rescan the last term buffer upon restart
+// TODO: 3. Test & Update Configuration: only update the file buffer when you rotate the term buffer
+// TODO: 4. apply the alignment and checksumming rules
+// TODO: 5. rescan the last term buffer upon restart, account for other file location
 public class SequenceNumberIndexWriter implements Index
 {
     private static final long MISSING_RECORD = -1L;
+    private static final long UNINITIALISED = -1;
     private static final int SEQUENCE_NUMBER_OFFSET = 8;
 
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
@@ -47,17 +50,35 @@ public class SequenceNumberIndexWriter implements Index
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
     private final Long2LongHashMap recordOffsets = new Long2LongHashMap(MISSING_RECORD);
 
-    private final AtomicBuffer outputBuffer;
+    private final AtomicBuffer inMemoryBuffer;
     private final ErrorHandler errorHandler;
+    private final File indexPath;
+    private final File writablePath;
+    private final File passingPlacePath;
 
-    public SequenceNumberIndexWriter(final AtomicBuffer outputBuffer, final ErrorHandler errorHandler)
+    private MappedFile writableFile;
+    private MappedFile indexFile;
+    private long nextRollPosition = UNINITIALISED;
+
+    public SequenceNumberIndexWriter(
+        final AtomicBuffer inMemoryBuffer,
+        final MappedFile indexFile,
+        final ErrorHandler errorHandler)
     {
-        this.outputBuffer = outputBuffer;
+        this.inMemoryBuffer = inMemoryBuffer;
+        this.indexFile = indexFile;
+
+        final String indexFilePath = indexFile.file().getAbsolutePath();
+        indexPath = indexFile.file();
+        writablePath = new File(indexFilePath + "-writable");
+        passingPlacePath = new File(indexFilePath + "-passing");
+        writableFile = MappedFile.map(writablePath, indexFile.buffer().capacity());
+
+        // TODO: Fsync parent directory
         this.errorHandler = errorHandler;
-        initialise();
+        initialiseBuffer();
     }
 
-    @Override
     public void indexRecord(
         final DirectBuffer buffer,
         final int srcOffset,
@@ -84,12 +105,67 @@ public class SequenceNumberIndexWriter implements Index
 
             saveRecord(msgSeqNum, sessionId);
         }
+
+        checkTermRoll(buffer, srcOffset, position);
     }
 
-    @Override
+    private void checkTermRoll(final DirectBuffer buffer, final int offset, final long position)
+    {
+        final long termBufferLength = buffer.capacity();
+        if (nextRollPosition == UNINITIALISED)
+        {
+            nextRollPosition = position + termBufferLength - offset;
+        }
+        else if (nextRollPosition > (position + termBufferLength))
+        {
+            nextRollPosition += termBufferLength;
+            updateFile();
+        }
+    }
+
+    private void updateFile()
+    {
+        // updateChecksum();
+        saveFile();
+        flipFiles();
+    }
+
+    private void saveFile()
+    {
+        // TODO: optimise to overwrite only needed bytes
+        writableFile.buffer().putBytes(0, inMemoryBuffer, 0, inMemoryBuffer.capacity());
+        writableFile.force();
+    }
+
+    private boolean flipFiles()
+    {
+        return rename(indexPath, passingPlacePath)
+            && rename(writablePath, indexPath)
+            && rename(passingPlacePath, writablePath);
+    }
+
+    private boolean rename(final File src, final File dest)
+    {
+        if (src.renameTo(dest))
+        {
+            return true;
+        }
+
+        errorHandler.onError(new IllegalStateException("unable to rename " + src + " to " + dest));
+        return false;
+    }
+
     public void close()
     {
-        IoUtil.unmap(outputBuffer.byteBuffer());
+        try
+        {
+            updateFile();
+        }
+        finally
+        {
+            indexFile.close();
+            writableFile.close();
+        }
     }
 
     private void saveRecord(final int newSequenceNumber, final long sessionId)
@@ -97,11 +173,11 @@ public class SequenceNumberIndexWriter implements Index
         int position = (int) recordOffsets.get(sessionId);
         if (position == MISSING_RECORD)
         {
-            final int lastRecordOffset = outputBuffer.capacity() - RECORD_SIZE;
+            final int lastRecordOffset = inMemoryBuffer.capacity() - RECORD_SIZE;
             position = SequenceNumberIndexDescriptor.HEADER_SIZE;
             while (position <= lastRecordOffset)
             {
-                lastKnownDecoder.wrap(outputBuffer, position, RECORD_SIZE, SCHEMA_VERSION);
+                lastKnownDecoder.wrap(inMemoryBuffer, position, RECORD_SIZE, SCHEMA_VERSION);
                 if (lastKnownDecoder.sequenceNumber() == 0)
                 {
                     createNewRecord(newSequenceNumber, sessionId, position);
@@ -129,15 +205,15 @@ public class SequenceNumberIndexWriter implements Index
     {
         recordOffsets.put(sessionId, position);
         lastKnownEncoder
-            .wrap(outputBuffer, position)
+            .wrap(inMemoryBuffer, position)
             .sessionId(sessionId);
         sequenceNumberOrdered(position, sequenceNumber);
     }
 
-    private void initialise()
+    private void initialiseBuffer()
     {
         LoggerUtil.initialiseBuffer(
-            outputBuffer,
+            inMemoryBuffer,
             fileHeaderEncoder,
             fileHeaderDecoder,
             lastKnownEncoder.sbeSchemaId(),
@@ -148,6 +224,6 @@ public class SequenceNumberIndexWriter implements Index
 
     public void sequenceNumberOrdered(final int recordOffset, final int value)
     {
-        outputBuffer.putIntOrdered(recordOffset + SEQUENCE_NUMBER_OFFSET, value);
+        inMemoryBuffer.putIntOrdered(recordOffset + SEQUENCE_NUMBER_OFFSET, value);
     }
 }

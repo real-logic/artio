@@ -108,9 +108,9 @@ public final class FixEngine extends GatewayProcess
         this.configuration = configuration;
 
         final SequenceNumberIndexWriter sentSequenceNumberIndex = new SequenceNumberIndexWriter(
-            configuration.sentSequenceNumberCacheBuffer().buffer(), errorBuffer);
+            configuration.sentSequenceNumberIndex().buffer(), configuration.sentSequenceNumberIndex(), errorBuffer);
         final SequenceNumberIndexWriter receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
-            configuration.receivedSequenceNumberCacheBuffer().buffer(), errorBuffer);
+            configuration.receivedSequenceNumberIndex().buffer(), configuration.receivedSequenceNumberIndex(), errorBuffer);
         final IndexedPositionWriter indexedPositionWriter = new IndexedPositionWriter(
             configuration.indexedPositionBuffer().buffer(), errorBuffer);
         initFramer(configuration, fixCounters);
@@ -164,8 +164,8 @@ public final class FixEngine extends GatewayProcess
         final Framer framer = new Framer(
             new SystemEpochClock(), configuration, handler, librarySubscription, replaySubscription(),
             adminCommands, sessionIdStrategy, sessionIds,
-            new SequenceNumberIndexReader(configuration.sentSequenceNumberCacheBuffer().buffer()),
-            new SequenceNumberIndexReader(configuration.receivedSequenceNumberCacheBuffer().buffer()),
+            new SequenceNumberIndexReader(configuration.sentSequenceNumberIndex().buffer()),
+            new SequenceNumberIndexReader(configuration.receivedSequenceNumberIndex().buffer()),
             new IndexedPositionReader(configuration.indexedPositionBuffer().buffer()));
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }

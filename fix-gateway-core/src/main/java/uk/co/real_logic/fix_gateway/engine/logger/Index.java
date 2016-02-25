@@ -23,7 +23,8 @@ public interface Index extends AutoCloseable
                      final int offset,
                      final int length,
                      final int streamId,
-                     final int aeronSessionId, final long position);
+                     final int aeronSessionId,
+                     final long position);
 
     default String getName()
     {

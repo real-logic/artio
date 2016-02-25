@@ -16,8 +16,10 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import uk.co.real_logic.agrona.CloseHelper;
+import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 
 import java.io.File;
@@ -64,7 +66,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /** Property name for the size in bytes of the TCP socket's send buffer. */
     public static final String SENDER_SOCKET_BUFFER_SIZE_PROP = "fix.core.sender_socket_buffer_size";
     /** Property name for the size in bytes of the sequence number cache file*/
-    public static final String SEQUENCE_NUMBER_CACHE_BUFFER_SIZE_PROP = "fix.core.sequence_number_cache_size";
+    public static final String SEQUENCE_NUMBER_INDEX_SIZE_PROP = "fix.core.sequence_number_cache_size";
     /** Property name for the size in bytes of the indexed positions file*/
     public static final String INDEXED_POSITIONS_BUFFER_SIZE_PROP = "fix.core.indexed_positions_size";
     /** Property name for the size in bytes of the session id file */
@@ -85,7 +87,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
     public static final int DEFAULT_RECEIVER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SENDER_SOCKET_BUFFER_SIZE = 1024 * 1024;
-    public static final int DEFAULT_SEQUENCE_NUMBER_CACHE_BUFFER_SIZE = 8 * 1024 * 1024;
+    public static final int DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE = 8 * 1024 * 1024;
     public static final int DEFAULT_INDEXED_POSITIONS_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SESSION_ID_BUFFER_SIZE = 4 * 1024 * 1024;
 
@@ -101,8 +103,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private IdleStrategy framerIdleStrategy = backoffIdleStrategy();
     private IdleStrategy loggerIdleStrategy = backoffIdleStrategy();
     private IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
-    private MappedFile sentSequenceNumberCacheBuffer;
-    private MappedFile receivedSequenceNumberCacheBuffer;
+    private AtomicBuffer sentSequenceNumberBuffer;
+    private AtomicBuffer receivedSequenceNumberBuffer;
+    private MappedFile sentSequenceNumberIndex;
+    private MappedFile receivedSequenceNumberIndex;
     private MappedFile indexedPositionBuffer;
     private MappedFile sessionIdBuffer;
 
@@ -118,8 +122,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         getInteger(RECEIVER_SOCKET_BUFFER_SIZE_PROP, DEFAULT_RECEIVER_SOCKET_BUFFER_SIZE);
     private int senderSocketBufferSize =
         getInteger(SENDER_SOCKET_BUFFER_SIZE_PROP, DEFAULT_SENDER_SOCKET_BUFFER_SIZE);
-    private int sequenceNumberCacheBufferSize =
-        getInteger(SEQUENCE_NUMBER_CACHE_BUFFER_SIZE_PROP, DEFAULT_SEQUENCE_NUMBER_CACHE_BUFFER_SIZE);
+    private int sequenceNumberIndexSize =
+        getInteger(SEQUENCE_NUMBER_INDEX_SIZE_PROP, DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE);
     private int indexedPositionBufferSize =
         getInteger(INDEXED_POSITIONS_BUFFER_SIZE_PROP, DEFAULT_INDEXED_POSITIONS_BUFFER_SIZE);
     private int sessionIdBufferSize =
@@ -462,14 +466,24 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return inboundBytesReceivedLimit;
     }
 
-    public MappedFile sentSequenceNumberCacheBuffer()
+    public MappedFile sentSequenceNumberIndex()
     {
-        return sentSequenceNumberCacheBuffer;
+        return sentSequenceNumberIndex;
     }
 
-    public MappedFile receivedSequenceNumberCacheBuffer()
+    public AtomicBuffer sentSequenceNumberBuffer()
     {
-        return receivedSequenceNumberCacheBuffer;
+        return sentSequenceNumberBuffer;
+    }
+
+    public MappedFile receivedSequenceNumberIndex()
+    {
+        return receivedSequenceNumberIndex;
+    }
+
+    public AtomicBuffer receivedSequenceNumberBuffer()
+    {
+        return receivedSequenceNumberBuffer;
     }
 
     public MappedFile indexedPositionBuffer()
@@ -524,14 +538,24 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
         // TODO: implement the recovery logic
         // TODO: try to remove the index position buffer and make each index know where its committed up to.
-        if (sentSequenceNumberCacheBuffer() == null)
+        if (sentSequenceNumberIndex() == null)
         {
-            sentSequenceNumberCacheBuffer = mapFile("sequence_numbers_sent", sequenceNumberCacheBufferSize);
+            sentSequenceNumberIndex = mapFile("sequence_numbers_sent", sequenceNumberIndexSize);
         }
 
-        if (receivedSequenceNumberCacheBuffer() == null)
+        if (sentSequenceNumberBuffer() == null)
         {
-            receivedSequenceNumberCacheBuffer = mapFile("sequence_numbers_received", sequenceNumberCacheBufferSize);
+            sentSequenceNumberBuffer = new UnsafeBuffer(new byte[sequenceNumberIndexSize]);
+        }
+
+        if (receivedSequenceNumberIndex() == null)
+        {
+            receivedSequenceNumberIndex = mapFile("sequence_numbers_received", sequenceNumberIndexSize);
+        }
+
+        if (receivedSequenceNumberBuffer() == null)
+        {
+            receivedSequenceNumberBuffer = new UnsafeBuffer(new byte[sequenceNumberIndexSize]);
         }
 
         if (indexedPositionBuffer() == null)
@@ -552,8 +576,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     public void close()
     {
-        CloseHelper.close(sentSequenceNumberCacheBuffer());
-        CloseHelper.close(receivedSequenceNumberCacheBuffer());
+        CloseHelper.close(sentSequenceNumberIndex());
+        CloseHelper.close(receivedSequenceNumberIndex());
         CloseHelper.close(indexedPositionBuffer());
         CloseHelper.close(sessionIdBuffer());
     }
