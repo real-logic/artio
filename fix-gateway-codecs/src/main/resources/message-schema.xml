@@ -156,7 +156,7 @@
     <sbe:message name="LastKnownSequenceNumber" id="19" description="">
         <field name="sessionId" id="51" type="FixSessionId"/>
         <field name="sequenceNumber" id="52" type="int32"/>
-        <field name="lock" id="76" type="int32"/>
+        <field name="padding" id="76" type="int32"/>
     </sbe:message>
 
     <sbe:message name="IndexedPosition" id="25" description="">

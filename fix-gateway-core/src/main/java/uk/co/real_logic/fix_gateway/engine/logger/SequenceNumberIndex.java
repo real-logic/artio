@@ -25,13 +25,11 @@ import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-import java.util.concurrent.locks.LockSupport;
-
 /**
  * Stores a cache of the last sent sequence number.
  * <p>
  * Each instance is not thread-safe, however, they can share a common
- * off-heap in a threadsafe manner.
+ * off-heap in a single-writer threadsafe manner.
  *
  * Layout:
  *
@@ -39,10 +37,12 @@ import java.util.concurrent.locks.LockSupport;
  * Known Stream Position
  * Series of LastKnownSequenceNumber records
  */
-// TODO: only update the file buffer when you rotate the term buffer, and rescan the last term buffer upon restart
-// TODO: apply the same reliability measures as Sessionids class
-// TODO: remove the lock and write the session id last and ordered when writing the record and put the
+// TODO: 1. remove the lock and write the session id last and ordered when writing the record and put the
 // sequence number ordered, padding to 8 byte alignment, use offset on the SBE schema
+// TODO: 2. split out the reader/writer/descriptor
+// TODO: 3. apply the alignment and checksumming rules
+// TODO: 4. only update the file buffer when you rotate the term buffer,
+// TODO: 5. rescan the last term buffer upon restart
 public class SequenceNumberIndex implements Index
 {
     /** We are up to date with the record, but we don't know about this session */
@@ -50,12 +50,7 @@ public class SequenceNumberIndex implements Index
 
     private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
     private static final int RECORD_SIZE = LastKnownSequenceNumberDecoder.BLOCK_LENGTH;
-
-    private static final int LOCK_OFFSET = 12;
-    private static final int UNUSED = 0;
-    private static final int UNACQUIRED = 1;
-    private static final int AS_WRITER = 2;
-    private static final int AS_READER = 3;
+    private static final int SEQUENCE_NUMBER_OFFSET = 8;
 
     private static final long MISSING_RECORD = -1L;
 
@@ -136,10 +131,7 @@ public class SequenceNumberIndex implements Index
 
             if (lastKnownDecoder.sessionId() == sessionId)
             {
-                acquireLock(position, AS_READER);
-                final int sequenceNumber = lastKnownDecoder.sequenceNumber();
-                releaseLock(position);
-                return sequenceNumber;
+                return lastKnownDecoder.sequenceNumber();
             }
 
             position += RECORD_SIZE;
@@ -157,7 +149,7 @@ public class SequenceNumberIndex implements Index
         }
     }
 
-    private void saveRecord(final int msgSeqNum, final long sessionId)
+    private void saveRecord(final int newSequenceNumber, final long sessionId)
     {
         int position = (int) recordOffsets.get(sessionId);
         if (position == MISSING_RECORD)
@@ -166,20 +158,16 @@ public class SequenceNumberIndex implements Index
             position = HEADER_SIZE;
             while (position <= lastRecordOffset)
             {
-                final long lock = lockVolatile(position);
-                if (lock == UNUSED)
+                lastKnownDecoder.wrap(outputBuffer, position, actingBlockLength, actingVersion);
+                if (lastKnownDecoder.sequenceNumber() == 0)
                 {
-                    createNewRecord(msgSeqNum, sessionId, position);
+                    createNewRecord(newSequenceNumber, sessionId, position);
                     return;
                 }
-                else
+                else if (lastKnownDecoder.sessionId() == sessionId)
                 {
-                    lastKnownDecoder.wrap(outputBuffer, position, actingBlockLength, actingVersion);
-                    if (lastKnownDecoder.sessionId() == sessionId)
-                    {
-                        updateRecord(msgSeqNum, position);
-                        return;
-                    }
+                    updateRecord(position, newSequenceNumber);
+                    return;
                 }
 
                 position += RECORD_SIZE;
@@ -187,34 +175,25 @@ public class SequenceNumberIndex implements Index
         }
         else
         {
-            updateRecord(msgSeqNum, position);
+            updateRecord(position, newSequenceNumber);
             return;
         }
 
         errorHandler.onError(new IllegalStateException("Unable to claim an position"));
     }
 
-    private void createNewRecord(final int msgSeqNum, final long sessionId, final int position)
+    private void createNewRecord(final int sequenceNumber, final long sessionId, final int position)
     {
+        recordOffsets.put(sessionId, position);
         lastKnownEncoder
             .wrap(outputBuffer, position)
-            .sessionId(sessionId)
-            .sequenceNumber(msgSeqNum)
-            .lock(UNACQUIRED);
-        // TODO: use a put ordered write to go back to unacquired
-
-        recordOffsets.put(sessionId, position);
+            .sessionId(sessionId);
+        sequenceNumberOrdered(position, sequenceNumber);
     }
 
-    private void updateRecord(final int msgSeqNum, final int position)
+    private void updateRecord(final int position, final int sequenceNumber)
     {
-        acquireLock(position, AS_WRITER);
-
-        lastKnownEncoder
-            .wrap(outputBuffer, position)
-            .sequenceNumber(msgSeqNum);
-
-        releaseLock(position);
+        sequenceNumberOrdered(position, sequenceNumber);
     }
 
     private void initialise()
@@ -239,22 +218,8 @@ public class SequenceNumberIndex implements Index
             actingBlockLength);
     }
 
-    private int lockVolatile(final int recordOffset)
+    public void sequenceNumberOrdered(final int recordOffset, final int value)
     {
-        return outputBuffer.getIntVolatile(recordOffset + LOCK_OFFSET);
-    }
-
-    private void acquireLock(final int recordOffset, final int as)
-    {
-        while (!outputBuffer.compareAndSetInt(recordOffset + LOCK_OFFSET, UNACQUIRED, as))
-        {
-            System.out.println(outputBuffer.getInt(recordOffset + LOCK_OFFSET));
-            LockSupport.parkNanos(1000L);
-        }
-    }
-
-    private void releaseLock(final int recordOffset)
-    {
-        outputBuffer.putIntVolatile(recordOffset + LOCK_OFFSET, UNACQUIRED);
+        outputBuffer.putIntOrdered(recordOffset + SEQUENCE_NUMBER_OFFSET, value);
     }
 }
