@@ -107,27 +107,23 @@ public final class FixEngine extends GatewayProcess
         init(configuration);
         this.configuration = configuration;
 
+        newLogger(configuration);
+        initFramer(configuration, fixCounters);
+        logger.init();
+        initErrorPrinter(configuration);
+    }
+
+    private void newLogger(final EngineConfiguration configuration)
+    {
         final SequenceNumberIndexWriter sentSequenceNumberIndex = new SequenceNumberIndexWriter(
             configuration.sentSequenceNumberBuffer(), configuration.sentSequenceNumberIndex(), errorBuffer);
         final SequenceNumberIndexWriter receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
             configuration.receivedSequenceNumberBuffer(), configuration.receivedSequenceNumberIndex(), errorBuffer);
         final IndexedPositionWriter indexedPositionWriter = new IndexedPositionWriter(
             configuration.indexedPositionBuffer().buffer(), errorBuffer);
-        initFramer(configuration, fixCounters);
-        initLogger(configuration, sentSequenceNumberIndex, receivedSequenceNumberIndex, indexedPositionWriter);
-        initErrorPrinter(configuration);
-    }
-
-    private void initLogger(
-        final EngineConfiguration configuration,
-        final SequenceNumberIndexWriter sentSequenceNumberIndex,
-        final SequenceNumberIndexWriter receivedSequenceNumberIndex,
-        final IndexedPositionWriter indexedPositionWriter)
-    {
         logger = new Logger(
             configuration, inboundLibraryStreams, outboundLibraryStreams, errorBuffer, replayPublication(),
             sentSequenceNumberIndex, receivedSequenceNumberIndex, indexedPositionWriter);
-        logger.init();
     }
 
     private Publication replayPublication()
