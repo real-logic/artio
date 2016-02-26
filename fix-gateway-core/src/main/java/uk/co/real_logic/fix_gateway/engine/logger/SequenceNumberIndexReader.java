@@ -16,10 +16,13 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.fix_gateway.SectorFramer;
 import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
+import static uk.co.real_logic.fix_gateway.SectorFramer.OUT_OF_SPACE;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
@@ -31,27 +34,38 @@ public class SequenceNumberIndexReader
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
     private final AtomicBuffer inMemoryBuffer;
+    private final SectorFramer sectorFramer;
 
     public SequenceNumberIndexReader(final AtomicBuffer inMemoryBuffer)
     {
         this.inMemoryBuffer = inMemoryBuffer;
+        sectorFramer = new SectorFramer(inMemoryBuffer.capacity());
         validateBuffer();
     }
 
     public int lastKnownSequenceNumber(final long sessionId)
     {
-        final int lastRecordOffset = inMemoryBuffer.capacity() - SequenceNumberIndexDescriptor.RECORD_SIZE;
+        //final int lastRecordOffset = inMemoryBuffer.capacity() - RECORD_SIZE;
         int position = SequenceNumberIndexDescriptor.HEADER_SIZE;
-        while (position <= lastRecordOffset)
+        while (true)
         {
             lastKnownDecoder.wrap(inMemoryBuffer, position, BLOCK_LENGTH, SCHEMA_VERSION);
+            position = sectorFramer.claim(position, RECORD_SIZE);
 
+            if (position < 4200)
+            {
+                //System.out.println("Read " + lastKnownDecoder.sessionId() +" @ " + position);
+            }
             if (lastKnownDecoder.sessionId() == sessionId)
             {
                 return lastKnownDecoder.sequenceNumber();
             }
 
-            position += SequenceNumberIndexDescriptor.RECORD_SIZE;
+            if (position == OUT_OF_SPACE)
+            {
+                break;
+            }
+            position += RECORD_SIZE;
         }
 
         return UNKNOWN_SESSION;

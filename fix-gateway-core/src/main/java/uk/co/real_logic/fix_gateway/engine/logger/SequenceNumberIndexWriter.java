@@ -235,13 +235,23 @@ public class SequenceNumberIndexWriter implements Index
         errorHandler.onError(new IllegalStateException("Unable to claim an position"));
     }
 
-    private void createNewRecord(final int sequenceNumber, final long sessionId, final int position)
+    private void createNewRecord(final int sequenceNumber, final long sessionId, int position)
     {
-        recordOffsets.put(sessionId, position);
-        lastKnownEncoder
-            .wrap(inMemoryBuffer, position)
-            .sessionId(sessionId);
-        sequenceNumberOrdered(position, sequenceNumber);
+        position = sectorFramer.claim(position, RECORD_SIZE);
+        if (position == OUT_OF_SPACE)
+        {
+            errorHandler.onError(new IllegalStateException(
+                "Sequence Number Index out of space, can't claim slot for " + sessionId));
+        }
+        else
+        {
+            //System.out.println("Write " + sessionId + " @ " + position);
+            recordOffsets.put(sessionId, position);
+            lastKnownEncoder
+                .wrap(inMemoryBuffer, position)
+                .sessionId(sessionId);
+            sequenceNumberOrdered(position, sequenceNumber);
+        }
     }
 
     private void initialiseBuffer()

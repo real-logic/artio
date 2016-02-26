@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.IoUtil;
@@ -29,6 +30,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.SectorFramer.SECTOR_SIZE;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
 
 public class SequenceNumberIndexTest extends AbstractLogTest
 {
@@ -38,7 +40,6 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private SequenceNumberIndexWriter writer = newWriter(inMemoryBuffer);
-
     private SequenceNumberIndexReader reader = new SequenceNumberIndexReader(inMemoryBuffer);
 
     @Test
@@ -128,6 +129,25 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
         assertLastKnownSequenceNumberIs(SEQUENCE_NUMBER + requiredMessagesToRoll, SESSION_ID, newReader);
+    }
+
+    @Ignore
+    @Test
+    public void shouldAlignMessagesAndNotOverlapChecksums()
+    {
+        final int recordsOverlappingABlock = SECTOR_SIZE / RECORD_SIZE + 1;
+        for (int i = 1; i <= recordsOverlappingABlock; i++)
+        {
+            bufferContainsMessage(true, i, i);
+            indexRecord(START + (i * fragmentLength()));
+        }
+
+        final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
+
+        for (int i = 1; i <= recordsOverlappingABlock; i++)
+        {
+            assertLastKnownSequenceNumberIs(i, i);
+        }
     }
 
     @After
