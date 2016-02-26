@@ -65,8 +65,7 @@ public class AbstractLogTest
     {
         final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
         timestampEncoder.encode(System.currentTimeMillis());
-        final UnsafeBuffer msgBuffer = new UnsafeBuffer(new byte[8 * 1024]);
-        final MutableAsciiBuffer asciiFlyweight = new MutableAsciiBuffer(msgBuffer);
+        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[450]);
         final TestRequestEncoder testRequest = new TestRequestEncoder();
 
         testRequest
@@ -84,7 +83,7 @@ public class AbstractLogTest
                 .possDupFlag(false);
         }
 
-        logEntryLength = testRequest.encode(asciiFlyweight, 0);
+        logEntryLength = testRequest.encode(asciiBuffer, 0);
 
         offset = START;
         header
@@ -101,7 +100,7 @@ public class AbstractLogTest
             .messageType(TestRequestDecoder.MESSAGE_TYPE)
             .session(sessionId)
             .connection(CONNECTION_ID)
-            .putBody(msgBuffer, 0, logEntryLength);
+            .putBody(asciiBuffer, 0, logEntryLength);
 
         offset += messageFrame.sbeBlockLength() + SIZE_OF_LENGTH_FIELD;
     }
