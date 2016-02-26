@@ -107,7 +107,17 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test
     public void shouldSaveIndexUponRotate()
     {
+        final int requiredMessagesToRoll = 3;
+        for (int i = 0; i <= requiredMessagesToRoll; i++)
+        {
+            bufferContainsMessage(true, SESSION_ID, SEQUENCE_NUMBER + i);
+            indexRecord(START + (i * fragmentLength()));
+        }
 
+        final AtomicBuffer inMemoryBuffer = newBuffer();
+        newWriter(inMemoryBuffer);
+        final SequenceNumberIndexReader newReader = new SequenceNumberIndexReader(inMemoryBuffer);
+        assertLastKnownSequenceNumberIs(SEQUENCE_NUMBER + requiredMessagesToRoll, SESSION_ID, newReader);
     }
 
     @After

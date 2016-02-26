@@ -106,17 +106,17 @@ public class SequenceNumberIndexWriter implements Index
             saveRecord(msgSeqNum, sessionId);
         }
 
-        checkTermRoll(buffer, srcOffset, position);
+        checkTermRoll(buffer, srcOffset, position, length);
     }
 
-    private void checkTermRoll(final DirectBuffer buffer, final int offset, final long position)
+    private void checkTermRoll(final DirectBuffer buffer, final int offset, final long position, final int length)
     {
         final long termBufferLength = buffer.capacity();
         if (nextRollPosition == UNINITIALISED)
         {
             nextRollPosition = position + termBufferLength - offset;
         }
-        else if (nextRollPosition > (position + termBufferLength))
+        else if ((position + length) > nextRollPosition)
         {
             nextRollPosition += termBufferLength;
             updateFile();
