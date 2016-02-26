@@ -24,6 +24,7 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
@@ -31,10 +32,11 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 {
     private static final int BUFFER_SIZE = 16 * 1024;
 
-    private MappedFile indexFile = MappedFile.map(IoUtil.tmpDirName() + "/SequenceNumberIndex", BUFFER_SIZE);
-    private AtomicBuffer inMemoryBuffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
+    private AtomicBuffer inMemoryBuffer = newBuffer();
+
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private SequenceNumberIndexWriter writer = new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler);
+    private SequenceNumberIndexWriter writer = newWriter(inMemoryBuffer);
+
     private SequenceNumberIndexReader reader = new SequenceNumberIndexReader(inMemoryBuffer);
 
     @Test
@@ -82,16 +84,49 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test(expected = IllegalStateException.class)
     public void shouldValidateBufferItReadsFrom()
     {
-        final AtomicBuffer tableBuffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
+        final AtomicBuffer tableBuffer = newBuffer();
 
         new SequenceNumberIndexReader(tableBuffer);
+    }
+
+    @Test
+    public void shouldSaveIndexUponClose()
+    {
+        bufferContainsMessage(true);
+
+        indexRecord(START);
+
+        writer.close();
+
+        final AtomicBuffer inMemoryBuffer = newBuffer();
+        newWriter(inMemoryBuffer);
+        final SequenceNumberIndexReader newReader = new SequenceNumberIndexReader(inMemoryBuffer);
+        assertLastKnownSequenceNumberIs(SEQUENCE_NUMBER, SESSION_ID, newReader);
+    }
+
+    @Test
+    public void shouldSaveIndexUponRotate()
+    {
+
     }
 
     @After
     public void verifyNoErrors()
     {
-        indexFile.close();
+        writer.close();
+        assertTrue(writer.clear());
         verify(errorHandler, never()).onError(any());
+    }
+
+    private SequenceNumberIndexWriter newWriter(final AtomicBuffer inMemoryBuffer)
+    {
+        final MappedFile indexFile = MappedFile.map(IoUtil.tmpDirName() + "/SequenceNumberIndex", BUFFER_SIZE);
+        return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler);
+    }
+
+    private UnsafeBuffer newBuffer()
+    {
+        return new UnsafeBuffer(new byte[BUFFER_SIZE]);
     }
 
     private void indexRecord(final int position)
@@ -100,6 +135,14 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     }
 
     private void assertLastKnownSequenceNumberIs(final int expectedSequenceNumber, final long sessionId)
+    {
+        assertLastKnownSequenceNumberIs(expectedSequenceNumber, sessionId, reader);
+    }
+
+    private void assertLastKnownSequenceNumberIs(
+        final long expectedSequenceNumber,
+        final long sessionId,
+        final SequenceNumberIndexReader reader)
     {
         final int number = reader.lastKnownSequenceNumber(sessionId);
         assertEquals(expectedSequenceNumber, number);

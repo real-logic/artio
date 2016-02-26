@@ -51,7 +51,7 @@ public class AbstractLogTest
     protected BufferClaim claim = mock(BufferClaim.class);
     protected UnsafeBuffer resultBuffer = new UnsafeBuffer(new byte[16 * 1024]);
 
-    protected UnsafeBuffer buffer = new UnsafeBuffer(new byte[16 * 1024]);
+    protected UnsafeBuffer buffer = new UnsafeBuffer(new byte[512]);
 
     protected int logEntryLength;
     protected int offset;

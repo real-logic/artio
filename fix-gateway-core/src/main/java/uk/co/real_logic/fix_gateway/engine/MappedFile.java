@@ -108,6 +108,11 @@ public class MappedFile implements AutoCloseable
         CloseHelper.close(fileChannel);
     }
 
+    public boolean isOpen()
+    {
+        return fileChannel.isOpen();
+    }
+
     private void force(final FileChannel fileChannel)
     {
         if (CommonConfiguration.FORCE_WRITES)

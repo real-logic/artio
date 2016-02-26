@@ -137,11 +137,18 @@ public class SequenceNumberIndexWriter implements Index
         writableFile.force();
     }
 
-    private boolean flipFiles()
+    private void flipFiles()
     {
-        return rename(indexPath, passingPlacePath)
-            && rename(writablePath, indexPath)
-            && rename(passingPlacePath, writablePath);
+        final boolean flipsFiles = rename(indexPath, passingPlacePath)
+                                && rename(writablePath, indexPath)
+                                && rename(passingPlacePath, writablePath);
+
+        if (flipsFiles)
+        {
+            final MappedFile file = this.writableFile;
+            writableFile = indexFile;
+            indexFile = file;
+        }
     }
 
     private boolean rename(final File src, final File dest)
@@ -155,17 +162,32 @@ public class SequenceNumberIndexWriter implements Index
         return false;
     }
 
+    public boolean isOpen()
+    {
+        return writableFile.isOpen();
+    }
+
     public void close()
     {
-        try
+        if (isOpen())
         {
-            updateFile();
+            try
+            {
+                updateFile();
+            }
+            finally
+            {
+                indexFile.close();
+                writableFile.close();
+            }
         }
-        finally
-        {
-            indexFile.close();
-            writableFile.close();
-        }
+    }
+
+    public boolean clear()
+    {
+        return indexPath.delete()
+            && writablePath.delete()
+            && (!passingPlacePath.exists() || passingPlacePath.delete());
     }
 
     private void saveRecord(final int newSequenceNumber, final long sessionId)
@@ -212,6 +234,20 @@ public class SequenceNumberIndexWriter implements Index
 
     private void initialiseBuffer()
     {
+        final AtomicBuffer filebuffer = indexFile.buffer();
+        final int fileCapacity = filebuffer.capacity();
+        final int inMemoryCapacity = inMemoryBuffer.capacity();
+        if (fileCapacity != inMemoryCapacity)
+        {
+            throw new IllegalStateException(String.format(
+                "In memory buffer and disk file don't have the same size, disk: %d, memory: %d",
+                fileCapacity,
+                inMemoryCapacity
+            ));
+        }
+
+        inMemoryBuffer.putBytes(0, filebuffer, 0, fileCapacity);
+
         LoggerUtil.initialiseBuffer(
             inMemoryBuffer,
             fileHeaderEncoder,
