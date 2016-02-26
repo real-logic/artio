@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.collections.Long2LongHashMap;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.fix_gateway.SectorFramer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -26,11 +27,13 @@ import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.File;
+import java.util.zip.CRC32;
 
+import static uk.co.real_logic.fix_gateway.SectorFramer.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
-// TODO: 4. apply the alignment and checksumming rules
+// TODO: 4. apply the alignment rules
 // TODO: 5. rescan the last term buffer upon restart, account for other file location
 public class SequenceNumberIndexWriter implements Index
 {
@@ -49,11 +52,14 @@ public class SequenceNumberIndexWriter implements Index
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
     private final Long2LongHashMap recordOffsets = new Long2LongHashMap(MISSING_RECORD);
 
+    private final CRC32 crc32 = new CRC32();
+    private final SectorFramer sectorFramer;
     private final AtomicBuffer inMemoryBuffer;
     private final ErrorHandler errorHandler;
     private final File indexPath;
     private final File writablePath;
     private final File passingPlacePath;
+    private final int fileCapacity;
 
     private MappedFile writableFile;
     private MappedFile indexFile;
@@ -66,6 +72,7 @@ public class SequenceNumberIndexWriter implements Index
     {
         this.inMemoryBuffer = inMemoryBuffer;
         this.indexFile = indexFile;
+        this.errorHandler = errorHandler;
 
         final String indexFilePath = indexFile.file().getAbsolutePath();
         indexPath = indexFile.file();
@@ -74,7 +81,8 @@ public class SequenceNumberIndexWriter implements Index
         writableFile = MappedFile.map(writablePath, indexFile.buffer().capacity());
 
         // TODO: Fsync parent directory
-        this.errorHandler = errorHandler;
+        fileCapacity = indexFile.buffer().capacity();
+        sectorFramer = new SectorFramer(fileCapacity);
         initialiseBuffer();
     }
 
@@ -124,14 +132,19 @@ public class SequenceNumberIndexWriter implements Index
 
     private void updateFile()
     {
-        // updateChecksum();
+        // TODO: write and checksum only needed bytes
+        updateChecksum();
         saveFile();
         flipFiles();
     }
 
+    private void updateChecksum()
+    {
+        withChecksums(inMemoryBuffer::putInt);
+    }
+
     private void saveFile()
     {
-        // TODO: optimise to overwrite only needed bytes
         writableFile.buffer().putBytes(0, inMemoryBuffer, 0, inMemoryBuffer.capacity());
         writableFile.force();
     }
@@ -233,20 +246,11 @@ public class SequenceNumberIndexWriter implements Index
 
     private void initialiseBuffer()
     {
-        final AtomicBuffer filebuffer = indexFile.buffer();
-        final int fileCapacity = filebuffer.capacity();
-        final int inMemoryCapacity = inMemoryBuffer.capacity();
-        if (fileCapacity != inMemoryCapacity)
+        final AtomicBuffer filebuffer = validateBufferSizes();
+        if (fileHasBeenInitialized(filebuffer))
         {
-            throw new IllegalStateException(String.format(
-                "In memory buffer and disk file don't have the same size, disk: %d, memory: %d",
-                fileCapacity,
-                inMemoryCapacity
-            ));
+            readFile(filebuffer);
         }
-
-        inMemoryBuffer.putBytes(0, filebuffer, 0, fileCapacity);
-
         LoggerUtil.initialiseBuffer(
             inMemoryBuffer,
             fileHeaderEncoder,
@@ -257,8 +261,82 @@ public class SequenceNumberIndexWriter implements Index
             lastKnownEncoder.sbeBlockLength());
     }
 
+    private boolean fileHasBeenInitialized(final AtomicBuffer filebuffer)
+    {
+        return filebuffer.getShort(0) != 0 || filebuffer.getInt(FIRST_CHECKSUM_LOCATION) != 0;
+    }
+
+    private AtomicBuffer validateBufferSizes()
+    {
+        final AtomicBuffer filebuffer = indexFile.buffer();
+        final int inMemoryCapacity = inMemoryBuffer.capacity();
+
+        if (fileCapacity != inMemoryCapacity)
+        {
+            throw new IllegalStateException(String.format(
+                "In memory buffer and disk file don't have the same size, disk: %d, memory: %d",
+                fileCapacity,
+                inMemoryCapacity
+            ));
+        }
+
+        if (fileCapacity < SECTOR_SIZE)
+        {
+            throw new IllegalStateException(String.format(
+                "Cannot create sequencen number of size < 1 sector: %d",
+                fileCapacity
+            ));
+        }
+        return filebuffer;
+    }
+
+    private void readFile(final AtomicBuffer filebuffer)
+    {
+        loadBuffer(filebuffer);
+        validateChecksums();
+    }
+
+    private void loadBuffer(final AtomicBuffer filebuffer)
+    {
+        inMemoryBuffer.putBytes(0, filebuffer, 0, fileCapacity);
+    }
+
+    private void validateChecksums()
+    {
+        withChecksums((checksumOffset, calculatedChecksum) ->
+        {
+            final int savedChecksum = inMemoryBuffer.getInt(checksumOffset);
+            if (savedChecksum != calculatedChecksum)
+            {
+                final int start = checksumOffset - SECTOR_DATA_LENGTH;
+                final int end = checksumOffset + CHECKSUM_SIZE;
+                validateCheckSum(start, end, calculatedChecksum, savedChecksum, "sequence numbers");
+            }
+        });
+    }
+
     public void sequenceNumberOrdered(final int recordOffset, final int value)
     {
         inMemoryBuffer.putIntOrdered(recordOffset + SEQUENCE_NUMBER_OFFSET, value);
+    }
+
+    private void withChecksums(final ChecksumConsumer consumer)
+    {
+        final byte[] inMemoryBytes = inMemoryBuffer.byteArray();
+        for (int sectorEnd = SECTOR_SIZE; sectorEnd <= fileCapacity; sectorEnd += SECTOR_SIZE)
+        {
+            final int sectorStart = sectorEnd - SECTOR_SIZE;
+            final int checksumOffset = sectorEnd - CHECKSUM_SIZE;
+
+            crc32.reset();
+            crc32.update(inMemoryBytes, sectorStart, SECTOR_DATA_LENGTH);
+            final int sectorChecksum = (int) crc32.getValue();
+            consumer.accept(checksumOffset, sectorChecksum);
+        }
+    }
+
+    private interface ChecksumConsumer
+    {
+        void accept(int checksumOffset, int sectorChecksum);
     }
 }

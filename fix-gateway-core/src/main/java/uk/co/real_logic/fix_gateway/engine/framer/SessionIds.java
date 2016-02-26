@@ -19,7 +19,6 @@ import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.collections.LongHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 import uk.co.real_logic.fix_gateway.SectorFramer;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil;
@@ -179,19 +178,9 @@ public class SessionIds
             crc32.reset();
             byteBuffer.clear().position(sectorEnd).limit(nextChecksum);
             crc32.update(byteBuffer);
-            final int calculateChecksum = (int) crc32.getValue();
+            final int calculatedChecksum = (int) crc32.getValue();
             final int savedChecksum = buffer.getInt(nextChecksum);
-            if (calculateChecksum != savedChecksum)
-            {
-                throw new FileSystemCorruptionException(
-                    String.format(
-                        "The session ids file is corrupted between bytes %d and %d, " +
-                        "saved checksum is %d, but %d was calculated",
-                        sectorEnd,
-                        nextSectorEnd,
-                        savedChecksum,
-                        calculateChecksum));
-            }
+            validateCheckSum(sectorEnd, nextSectorEnd, calculatedChecksum, savedChecksum, "session ids");
             return nextSectorEnd;
         }
 

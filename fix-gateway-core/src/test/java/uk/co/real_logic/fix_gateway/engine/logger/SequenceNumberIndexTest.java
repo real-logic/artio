@@ -21,12 +21,14 @@ import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.SectorFramer.SECTOR_SIZE;
 
 public class SequenceNumberIndexTest extends AbstractLogTest
 {
@@ -48,9 +50,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test
     public void shouldStashNewSequenceNumber()
     {
-        bufferContainsMessage(true);
-
-        indexRecord(START);
+        indexFixMessage();
 
         assertLastKnownSequenceNumberIs(SEQUENCE_NUMBER, SESSION_ID);
     }
@@ -58,9 +58,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test
     public void shouldStashSequenceNumbersAgainstASessionId()
     {
-        bufferContainsMessage(true);
-
-        indexRecord(START);
+        indexFixMessage();
 
         assertLastKnownSequenceNumberIs(SequenceNumberIndexReader.UNKNOWN_SESSION, SESSION_ID_2);
     }
@@ -70,9 +68,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         final int updatedSequenceNumber = 8;
 
-        bufferContainsMessage(true);
-
-        indexRecord(START);
+        indexFixMessage();
 
         bufferContainsMessage(true, SESSION_ID, updatedSequenceNumber);
 
@@ -92,16 +88,32 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test
     public void shouldSaveIndexUponClose()
     {
-        bufferContainsMessage(true);
-
-        indexRecord(START);
+        indexFixMessage();
 
         writer.close();
 
-        final AtomicBuffer inMemoryBuffer = newBuffer();
-        newWriter(inMemoryBuffer);
-        final SequenceNumberIndexReader newReader = new SequenceNumberIndexReader(inMemoryBuffer);
+        final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
         assertLastKnownSequenceNumberIs(SEQUENCE_NUMBER, SESSION_ID, newReader);
+    }
+
+    @Test(expected = FileSystemCorruptionException.class)
+    public void shouldChecksumFileToDetectCorruption()
+    {
+        indexFixMessage();
+
+        writer.close();
+
+        corruptIndexFile();
+
+        newInstanceAfterRestart();
+    }
+
+    private void corruptIndexFile()
+    {
+        try (final MappedFile mappedFile = newIndexFile())
+        {
+            mappedFile.buffer().putBytes(0, new byte[SECTOR_SIZE / 2]);
+        }
     }
 
     @Test
@@ -114,9 +126,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
             indexRecord(START + (i * fragmentLength()));
         }
 
-        final AtomicBuffer inMemoryBuffer = newBuffer();
-        newWriter(inMemoryBuffer);
-        final SequenceNumberIndexReader newReader = new SequenceNumberIndexReader(inMemoryBuffer);
+        final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
         assertLastKnownSequenceNumberIs(SEQUENCE_NUMBER + requiredMessagesToRoll, SESSION_ID, newReader);
     }
 
@@ -128,15 +138,33 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         verify(errorHandler, never()).onError(any());
     }
 
+    private SequenceNumberIndexReader newInstanceAfterRestart()
+    {
+        final AtomicBuffer inMemoryBuffer = newBuffer();
+        newWriter(inMemoryBuffer);
+        return new SequenceNumberIndexReader(inMemoryBuffer);
+    }
+
     private SequenceNumberIndexWriter newWriter(final AtomicBuffer inMemoryBuffer)
     {
-        final MappedFile indexFile = MappedFile.map(IoUtil.tmpDirName() + "/SequenceNumberIndex", BUFFER_SIZE);
+        final MappedFile indexFile = newIndexFile();
         return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler);
+    }
+
+    private MappedFile newIndexFile()
+    {
+        return MappedFile.map(IoUtil.tmpDirName() + "/SequenceNumberIndex", BUFFER_SIZE);
     }
 
     private UnsafeBuffer newBuffer()
     {
         return new UnsafeBuffer(new byte[BUFFER_SIZE]);
+    }
+
+    private void indexFixMessage()
+    {
+        bufferContainsMessage(true);
+        indexRecord(START);
     }
 
     private void indexRecord(final int position)

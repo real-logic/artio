@@ -26,7 +26,8 @@ public class SectorFramer
 
     public static final int SECTOR_SIZE = 4096;
     public static final int CHECKSUM_SIZE = SIZE_OF_INT;
-    public static final int FIRST_CHECKSUM_LOCATION = SECTOR_SIZE - CHECKSUM_SIZE;
+    public static final int SECTOR_DATA_LENGTH = SECTOR_SIZE - CHECKSUM_SIZE;
+    public static final int FIRST_CHECKSUM_LOCATION = SECTOR_DATA_LENGTH;
 
     private final int capacity;
 
@@ -43,7 +44,7 @@ public class SectorFramer
         final int nextSectorStart = nextSectorStart(filePosition);
         checksumOffset = nextSectorStart - CHECKSUM_SIZE;
         final int proposedRecordEnd = filePosition + length;
-        // If the key would span the end of a sector then
+        // If the data would span the end of a sector then
         if (proposedRecordEnd > checksumOffset)
         {
             filePosition = nextSectorStart;
@@ -68,5 +69,25 @@ public class SectorFramer
     private static int nextSectorStart(final int offset)
     {
         return ((offset / SECTOR_SIZE) * SECTOR_SIZE) + SECTOR_SIZE;
+    }
+
+    public static void validateCheckSum(
+        final int start,
+        final int end,
+        final int calculateChecksum,
+        final int savedChecksum,
+        final String fileName)
+    {
+        if (calculateChecksum != savedChecksum)
+        {
+            throw new FileSystemCorruptionException(
+                String.format(
+                    "The " + fileName + " file is corrupted between bytes %d and %d, " +
+                    "saved checksum is %d, but %d was calculated",
+                    start,
+                    end,
+                    savedChecksum,
+                    calculateChecksum));
+        }
     }
 }
