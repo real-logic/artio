@@ -30,7 +30,6 @@ import java.io.File;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
-// TODO: 3. Test & Update Configuration: only update the file buffer when you rotate the term buffer
 // TODO: 4. apply the alignment and checksumming rules
 // TODO: 5. rescan the last term buffer upon restart, account for other file location
 public class SequenceNumberIndexWriter implements Index
