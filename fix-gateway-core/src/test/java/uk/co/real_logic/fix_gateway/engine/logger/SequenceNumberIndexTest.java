@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.IoUtil;
@@ -45,7 +44,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test
     public void shouldNotInitiallyKnowASequenceNumber()
     {
-        assertLastKnownSequenceNumberIs(SequenceNumberIndexReader.UNKNOWN_SESSION, SESSION_ID);
+        assertLastKnownSequenceNumberIs(SESSION_ID, SequenceNumberIndexReader.UNKNOWN_SESSION);
     }
 
     @Test
@@ -53,7 +52,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         indexFixMessage();
 
-        assertLastKnownSequenceNumberIs(SEQUENCE_NUMBER, SESSION_ID);
+        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
     }
 
     @Test
@@ -61,7 +60,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         indexFixMessage();
 
-        assertLastKnownSequenceNumberIs(SequenceNumberIndexReader.UNKNOWN_SESSION, SESSION_ID_2);
+        assertLastKnownSequenceNumberIs(SESSION_ID_2, SequenceNumberIndexReader.UNKNOWN_SESSION);
     }
 
     @Test
@@ -75,7 +74,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         indexRecord(START + fragmentLength());
 
-        assertLastKnownSequenceNumberIs(updatedSequenceNumber, SESSION_ID);
+        assertLastKnownSequenceNumberIs(SESSION_ID, updatedSequenceNumber);
     }
 
     @Test(expected = IllegalStateException.class)
@@ -131,22 +130,23 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         assertLastKnownSequenceNumberIs(SEQUENCE_NUMBER + requiredMessagesToRoll, SESSION_ID, newReader);
     }
 
-    @Ignore
     @Test
-    public void shouldAlignMessagesAndNotOverlapChecksums()
+    public void shouldAlignMessagesAndNotOverlapCheckSums()
     {
+        final int initialSequenceNumber = 1;
+        final int sequenceNumberDiff = 3;
         final int recordsOverlappingABlock = SECTOR_SIZE / RECORD_SIZE + 1;
-        for (int i = 1; i <= recordsOverlappingABlock; i++)
+        for (int i = initialSequenceNumber; i <= recordsOverlappingABlock; i++)
         {
-            bufferContainsMessage(true, i, i);
+            bufferContainsMessage(true, i, i + sequenceNumberDiff);
             indexRecord(START + (i * fragmentLength()));
         }
 
         final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
 
-        for (int i = 1; i <= recordsOverlappingABlock; i++)
+        for (int i = initialSequenceNumber; i <= recordsOverlappingABlock; i++)
         {
-            assertLastKnownSequenceNumberIs(i, i);
+            assertLastKnownSequenceNumberIs(i, i + sequenceNumberDiff);
         }
     }
 
@@ -192,7 +192,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         writer.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, position);
     }
 
-    private void assertLastKnownSequenceNumberIs(final int expectedSequenceNumber, final long sessionId)
+    private void assertLastKnownSequenceNumberIs(final long sessionId, final int expectedSequenceNumber)
     {
         assertLastKnownSequenceNumberIs(expectedSequenceNumber, sessionId, reader);
     }

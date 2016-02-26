@@ -49,26 +49,21 @@ public class SequenceNumberIndexReader
         int position = SequenceNumberIndexDescriptor.HEADER_SIZE;
         while (true)
         {
-            lastKnownDecoder.wrap(inMemoryBuffer, position, BLOCK_LENGTH, SCHEMA_VERSION);
             position = sectorFramer.claim(position, RECORD_SIZE);
-
-            if (position < 4200)
+            if (position == OUT_OF_SPACE)
             {
-                //System.out.println("Read " + lastKnownDecoder.sessionId() +" @ " + position);
+                return UNKNOWN_SESSION;
             }
+
+            lastKnownDecoder.wrap(inMemoryBuffer, position, BLOCK_LENGTH, SCHEMA_VERSION);
+
             if (lastKnownDecoder.sessionId() == sessionId)
             {
                 return lastKnownDecoder.sequenceNumber();
             }
 
-            if (position == OUT_OF_SPACE)
-            {
-                break;
-            }
             position += RECORD_SIZE;
         }
-
-        return UNKNOWN_SESSION;
     }
 
     private void validateBuffer()

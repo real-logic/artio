@@ -33,7 +33,6 @@ import static uk.co.real_logic.fix_gateway.SectorFramer.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
-// TODO: 4. apply the alignment rules
 // TODO: 5. rescan the last term buffer upon restart, account for other file location
 public class SequenceNumberIndexWriter implements Index
 {
@@ -209,8 +208,16 @@ public class SequenceNumberIndexWriter implements Index
         {
             final int lastRecordOffset = inMemoryBuffer.capacity() - RECORD_SIZE;
             position = SequenceNumberIndexDescriptor.HEADER_SIZE;
-            while (position <= lastRecordOffset)
+            while (true)
             {
+                position = sectorFramer.claim(position, RECORD_SIZE);
+                if (position == OUT_OF_SPACE)
+                {
+                    errorHandler.onError(new IllegalStateException(
+                        "Sequence Number Index out of space, can't claim slot for " + sessionId));
+                    return;
+                }
+
                 lastKnownDecoder.wrap(inMemoryBuffer, position, RECORD_SIZE, SCHEMA_VERSION);
                 if (lastKnownDecoder.sequenceNumber() == 0)
                 {
@@ -229,29 +236,16 @@ public class SequenceNumberIndexWriter implements Index
         else
         {
             sequenceNumberOrdered(position, newSequenceNumber);
-            return;
         }
-
-        errorHandler.onError(new IllegalStateException("Unable to claim an position"));
     }
 
     private void createNewRecord(final int sequenceNumber, final long sessionId, int position)
     {
-        position = sectorFramer.claim(position, RECORD_SIZE);
-        if (position == OUT_OF_SPACE)
-        {
-            errorHandler.onError(new IllegalStateException(
-                "Sequence Number Index out of space, can't claim slot for " + sessionId));
-        }
-        else
-        {
-            //System.out.println("Write " + sessionId + " @ " + position);
-            recordOffsets.put(sessionId, position);
-            lastKnownEncoder
-                .wrap(inMemoryBuffer, position)
-                .sessionId(sessionId);
-            sequenceNumberOrdered(position, sequenceNumber);
-        }
+        recordOffsets.put(sessionId, position);
+        lastKnownEncoder
+            .wrap(inMemoryBuffer, position)
+            .sessionId(sessionId);
+        sequenceNumberOrdered(position, sequenceNumber);
     }
 
     private void initialiseBuffer()
@@ -303,7 +297,7 @@ public class SequenceNumberIndexWriter implements Index
     private void readFile(final AtomicBuffer filebuffer)
     {
         loadBuffer(filebuffer);
-        validateChecksums();
+        validateCheckSums();
     }
 
     private void loadBuffer(final AtomicBuffer filebuffer)
@@ -311,17 +305,14 @@ public class SequenceNumberIndexWriter implements Index
         inMemoryBuffer.putBytes(0, filebuffer, 0, fileCapacity);
     }
 
-    private void validateChecksums()
+    private void validateCheckSums()
     {
         withChecksums((checksumOffset, calculatedChecksum) ->
         {
             final int savedChecksum = inMemoryBuffer.getInt(checksumOffset);
-            if (savedChecksum != calculatedChecksum)
-            {
-                final int start = checksumOffset - SECTOR_DATA_LENGTH;
-                final int end = checksumOffset + CHECKSUM_SIZE;
-                validateCheckSum(start, end, calculatedChecksum, savedChecksum, "sequence numbers");
-            }
+            final int start = checksumOffset - SECTOR_DATA_LENGTH;
+            final int end = checksumOffset + CHECKSUM_SIZE;
+            validateCheckSum(start, end, calculatedChecksum, savedChecksum, "sequence numbers");
         });
     }
 
