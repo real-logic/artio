@@ -20,6 +20,7 @@ import uk.co.real_logic.agrona.collections.LongHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
+import uk.co.real_logic.fix_gateway.SectorFramer;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
@@ -35,7 +36,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.zip.CRC32;
 
-import static uk.co.real_logic.fix_gateway.StorageDescriptor.*;
+import static uk.co.real_logic.fix_gateway.SectorFramer.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionIdEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.session.SessionIdStrategy.INSUFFICIENT_SPACE;
 
@@ -67,8 +68,8 @@ public class SessionIds
     private final LongHashSet currentlyAuthenticated = new LongHashSet(MISSING);
     private final Map<Object, Long> compositeToSurrogate = new HashMap<>();
 
-    private static final int FIRST_CHECKSUM_LOCATION = SECTOR_SIZE - CHECKSUM_SIZE;
     private final CRC32 crc32 = new CRC32();
+    private final SectorFramer sectorFramer;
     private final ByteBuffer byteBuffer;
 
     private final AtomicBuffer buffer;
@@ -76,9 +77,8 @@ public class SessionIds
     private final ErrorHandler errorHandler;
     private final MappedFile mappedFile;
 
-    private long counter = LOWEST_VALID_SESSION_ID;
-
     private int filePosition;
+    private long counter = LOWEST_VALID_SESSION_ID;
 
     public SessionIds(
         final MappedFile mappedFile, final SessionIdStrategy idStrategy, final ErrorHandler errorHandler)
@@ -86,6 +86,7 @@ public class SessionIds
         this.mappedFile = mappedFile;
         this.buffer = mappedFile.buffer();
         this.byteBuffer = this.buffer.byteBuffer();
+        sectorFramer = new SectorFramer(buffer.capacity());
         this.idStrategy = idStrategy;
         this.errorHandler = errorHandler;
         loadBuffer();
@@ -220,16 +221,14 @@ public class SessionIds
                 sessionId,
                 compositeKey)));
         }
-        else
+        else if (filePosition != OUT_OF_SPACE)
         {
-            final int nextSectorStart = nextSectorStart(filePosition);
-            int checksumOffset = nextSectorStart - CHECKSUM_SIZE;
-            final int proposedRecordEnd = filePosition + BLOCK_LENGTH + compositeKeyLength;
-            // If the key would span the end of a sector then
-            if (proposedRecordEnd > checksumOffset)
+            filePosition = sectorFramer.claim(filePosition, BLOCK_LENGTH + compositeKeyLength);
+            if (filePosition == OUT_OF_SPACE)
             {
-                filePosition = nextSectorStart;
-                checksumOffset += SECTOR_SIZE;
+                errorHandler.onError(new IllegalStateException(
+                    "Run out of space when storing: " + compositeKey));
+                return sessionId;
             }
 
             sessionIdEncoder
@@ -241,7 +240,7 @@ public class SessionIds
             buffer.putBytes(filePosition, compositeKeyBuffer, 0, compositeKeyLength);
             filePosition += compositeKeyLength;
 
-            updateChecksum(nextSectorStart - SECTOR_SIZE, checksumOffset);
+            updateChecksum(sectorFramer.sectorStart(), sectorFramer.checksumOffset());
             mappedFile.force();
         }
 
