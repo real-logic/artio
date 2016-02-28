@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.agrona.ErrorHandler;
+import uk.co.real_logic.agrona.collections.Int2IntHashMap;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.messages.IndexedPositionDecoder;
 import uk.co.real_logic.fix_gateway.messages.IndexedPositionEncoder;
@@ -32,12 +33,15 @@ public class PositionsWriter
     static final int RECORD_LENGTH = IndexedPositionEncoder.BLOCK_LENGTH;
     static final int POSITION_OFFSET = 8;
 
+    private static final int MISSING_RECORD = -1;
+
     private final IndexedPositionEncoder encoder = new IndexedPositionEncoder();
     private final int actingBlockLength = encoder.sbeBlockLength();
     private final int actingVersion = encoder.sbeSchemaVersion();
     private final IndexedPositionDecoder decoder = new IndexedPositionDecoder();
     private final AtomicBuffer buffer;
     private final ErrorHandler errorHandler;
+    private final Int2IntHashMap recordOffsets = new Int2IntHashMap(MISSING_RECORD);
 
     public PositionsWriter(final AtomicBuffer buffer, final ErrorHandler errorHandler)
     {
@@ -65,36 +69,42 @@ public class PositionsWriter
 
     public void indexedUpTo(final int aeronSessionId, final long position)
     {
-        final IndexedPositionDecoder decoder = this.decoder;
-        final int actingBlockLength = this.actingBlockLength;
-        final int actingVersion = this.actingVersion;
-        final AtomicBuffer buffer = this.buffer;
-        final int lastIndex = buffer.capacity() - RECORD_LENGTH;
+        final Int2IntHashMap recordOffsets = this.recordOffsets;
 
-        int offset = HEADER_LENGTH;
-        while (offset <= lastIndex)
+        int offset = recordOffsets.get(aeronSessionId);
+        if (offset == MISSING_RECORD)
         {
-            decoder.wrap(buffer, offset, actingBlockLength, actingVersion);
-            if (decoder.position() == 0)
-            {
-                encoder.wrap(buffer, offset)
-                       .sessionId(aeronSessionId);
+            final IndexedPositionDecoder decoder = this.decoder;
+            final int actingBlockLength = this.actingBlockLength;
+            final int actingVersion = this.actingVersion;
+            final AtomicBuffer buffer = this.buffer;
+            final int lastIndex = buffer.capacity() - RECORD_LENGTH;
 
-                putPosition(position, buffer, offset);
-                return;
-            }
-            else if (decoder.sessionId() == aeronSessionId)
+            offset = HEADER_LENGTH;
+            while (offset <= lastIndex)
             {
-                putPosition(position, buffer, offset);
-                return;
+                decoder.wrap(buffer, offset, actingBlockLength, actingVersion);
+                if (decoder.position() == 0)
+                {
+                    encoder.wrap(buffer, offset)
+                        .sessionId(aeronSessionId);
+
+                    putPosition(position, buffer, offset);
+                    recordOffsets.put(aeronSessionId, offset);
+                    return;
+                }
+
+                offset += RECORD_LENGTH;
             }
 
-            offset += RECORD_LENGTH;
+            errorHandler.onError(new IllegalStateException(String.format(
+                "Unable to record new session (%d), indexed position buffer full",
+                aeronSessionId)));
         }
-
-        errorHandler.onError(new IllegalStateException(String.format(
-            "Unable to record new session (%d), indexed position buffer full",
-            aeronSessionId)));
+        else
+        {
+            putPosition(position, buffer, offset);
+        }
     }
 
     private void putPosition(final long position, final AtomicBuffer buffer, final int offset)
