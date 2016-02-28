@@ -28,7 +28,8 @@ import static uk.co.real_logic.fix_gateway.engine.logger.PositionsReader.UNKNOWN
 
 public class PositionsTest
 {
-    private static final int AERON_SESSION_ID = 1;
+    private static final int SESSION_ID = 1;
+    private static final int OTHER_SESSION_ID = 2;
 
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
@@ -40,9 +41,9 @@ public class PositionsTest
     {
         final int position = 10;
 
-        indexed(position);
+        indexed(position, SESSION_ID);
 
-        hasPosition(position);
+        hasPosition(position, SESSION_ID);
     }
 
     @Test
@@ -50,29 +51,51 @@ public class PositionsTest
     {
         int position = 10;
 
-        indexed(position);
+        indexed(position, SESSION_ID);
 
         position += 10;
 
-        indexed(position);
+        indexed(position, SESSION_ID);
 
-        hasPosition(position);
+        hasPosition(position, SESSION_ID);
+    }
+
+    @Test
+    public void shouldUpdateWrittenPositionForGivenSession()
+    {
+        int position = 10;
+        int otherPosition = 5;
+
+        indexed(position, SESSION_ID);
+        indexed(otherPosition, OTHER_SESSION_ID);
+
+        hasPosition(position, SESSION_ID);
+        hasPosition(otherPosition, OTHER_SESSION_ID);
+
+        position += 20;
+        otherPosition += 10;
+
+        indexed(position, SESSION_ID);
+        indexed(otherPosition, OTHER_SESSION_ID);
+
+        hasPosition(position, SESSION_ID);
+        hasPosition(otherPosition, OTHER_SESSION_ID);
     }
 
     @Test
     public void shouldNotReadMissingPosition()
     {
-        assertEquals(UNKNOWN_POSITION, reader.indexedPosition(AERON_SESSION_ID));
+        hasPosition(UNKNOWN_POSITION, SESSION_ID);
     }
 
-    private void indexed(final int position)
+    private void indexed(final int position, final int sessionId)
     {
-        writer.indexedUpTo(AERON_SESSION_ID, position);
+        writer.indexedUpTo(sessionId, position);
     }
 
-    private void hasPosition(final int position)
+    private void hasPosition(final long position, final int sessionId)
     {
-        assertEquals(position, reader.indexedPosition(AERON_SESSION_ID));
+        assertEquals(position, reader.indexedPosition(sessionId));
     }
 
     @After
