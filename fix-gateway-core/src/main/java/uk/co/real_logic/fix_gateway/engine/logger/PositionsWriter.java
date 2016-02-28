@@ -63,7 +63,7 @@ public class PositionsWriter
         }
     }
 
-    public void indexedUpTo(final int streamId, final int aeronSessionId, final long position)
+    public void indexedUpTo(final int aeronSessionId, final long position)
     {
         final IndexedPositionDecoder decoder = this.decoder;
         final int actingBlockLength = this.actingBlockLength;
@@ -78,13 +78,12 @@ public class PositionsWriter
             if (decoder.position() == 0)
             {
                 encoder.wrap(buffer, offset)
-                       .streamId(streamId)
                        .sessionId(aeronSessionId);
 
                 putPosition(position, buffer, offset);
                 return;
             }
-            else if (decoder.streamId() == streamId && decoder.sessionId() == aeronSessionId)
+            else if (decoder.sessionId() == aeronSessionId)
             {
                 putPosition(position, buffer, offset);
                 return;
@@ -94,8 +93,7 @@ public class PositionsWriter
         }
 
         errorHandler.onError(new IllegalStateException(String.format(
-            "Unable to record new session [%d, %d], indexed position buffer full",
-            streamId,
+            "Unable to record new session (%d), indexed position buffer full",
             aeronSessionId)));
     }
 

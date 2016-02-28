@@ -24,16 +24,16 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionReader.UNKNOWN_POSITION;
+import static uk.co.real_logic.fix_gateway.engine.logger.PositionsReader.UNKNOWN_POSITION;
 
 public class PositionsTest
 {
-    public static final int STREAM_ID = 1;
-    public static final int AERON_SESSION_ID = 1;
+    private static final int AERON_SESSION_ID = 1;
+
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
-    private IndexedPositionWriter writer = new IndexedPositionWriter(buffer, errorHandler);
-    private IndexedPositionReader reader = new IndexedPositionReader(buffer);
+    private PositionsWriter writer = new PositionsWriter(buffer, errorHandler);
+    private PositionsReader reader = new PositionsReader(buffer);
 
     @Test
     public void shouldReadWrittenPosition()
@@ -62,17 +62,17 @@ public class PositionsTest
     @Test
     public void shouldNotReadMissingPosition()
     {
-        assertEquals(UNKNOWN_POSITION, reader.indexedPosition(STREAM_ID, AERON_SESSION_ID));
+        assertEquals(UNKNOWN_POSITION, reader.indexedPosition(AERON_SESSION_ID));
     }
 
     private void indexed(final int position)
     {
-        writer.indexedUpTo(STREAM_ID, AERON_SESSION_ID, position);
+        writer.indexedUpTo(AERON_SESSION_ID, position);
     }
 
     private void hasPosition(final int position)
     {
-        assertEquals(position, reader.indexedPosition(STREAM_ID, AERON_SESSION_ID));
+        assertEquals(position, reader.indexedPosition(AERON_SESSION_ID));
     }
 
     @After

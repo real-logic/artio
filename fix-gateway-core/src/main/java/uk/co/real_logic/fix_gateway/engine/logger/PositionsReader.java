@@ -46,10 +46,10 @@ public class PositionsReader
 
     public boolean hasIndexedUpTo(final Header header)
     {
-        return header.position() < indexedPosition(header.streamId(), header.sessionId());
+        return header.position() < indexedPosition(header.sessionId());
     }
 
-    public long indexedPosition(final int streamId, final int aeronSessionId)
+    public long indexedPosition(final int aeronSessionId)
     {
         final IndexedPositionDecoder decoder = this.decoder;
         final int actingBlockLength = this.actingBlockLength;
@@ -61,7 +61,7 @@ public class PositionsReader
         while (offset <= lastIndex)
         {
             decoder.wrap(buffer, offset, actingBlockLength, actingVersion);
-            if (decoder.streamId() == streamId && decoder.sessionId() == aeronSessionId)
+            if (decoder.sessionId() == aeronSessionId)
             {
                 return buffer.getLongVolatile(offset + POSITION_OFFSET);
             }
