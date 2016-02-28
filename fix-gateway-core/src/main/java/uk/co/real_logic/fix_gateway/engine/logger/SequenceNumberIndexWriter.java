@@ -206,7 +206,6 @@ public class SequenceNumberIndexWriter implements Index
         int position = (int) recordOffsets.get(sessionId);
         if (position == MISSING_RECORD)
         {
-            final int lastRecordOffset = inMemoryBuffer.capacity() - RECORD_SIZE;
             position = SequenceNumberIndexDescriptor.HEADER_SIZE;
             while (true)
             {
