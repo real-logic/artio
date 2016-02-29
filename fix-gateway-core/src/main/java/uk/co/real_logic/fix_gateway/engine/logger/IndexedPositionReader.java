@@ -21,14 +21,14 @@ import uk.co.real_logic.fix_gateway.messages.IndexedPositionDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.OUT_OF_SPACE;
-import static uk.co.real_logic.fix_gateway.engine.logger.PositionsWriter.HEADER_LENGTH;
-import static uk.co.real_logic.fix_gateway.engine.logger.PositionsWriter.POSITION_OFFSET;
-import static uk.co.real_logic.fix_gateway.engine.logger.PositionsWriter.RECORD_LENGTH;
+import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionWriter.HEADER_LENGTH;
+import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionWriter.POSITION_OFFSET;
+import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionWriter.RECORD_LENGTH;
 
 /**
  * .
  */
-public class PositionsReader
+public class IndexedPositionReader
 {
     public static final long UNKNOWN_POSITION = -1;
 
@@ -39,7 +39,7 @@ public class PositionsReader
     private final AtomicBuffer buffer;
     private final SectorFramer sectorFramer;
 
-    public PositionsReader(final AtomicBuffer buffer)
+    public IndexedPositionReader(final AtomicBuffer buffer)
     {
         this.buffer = buffer;
         final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();

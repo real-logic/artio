@@ -26,17 +26,17 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.SECTOR_SIZE;
-import static uk.co.real_logic.fix_gateway.engine.logger.PositionsReader.UNKNOWN_POSITION;
+import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionReader.UNKNOWN_POSITION;
 
-public class PositionsTest
+public class IndexedPositionTest
 {
     private static final int SESSION_ID = 1;
     private static final int OTHER_SESSION_ID = 2;
 
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[2 * SECTOR_SIZE]);
-    private PositionsWriter writer = newWriter();
-    private PositionsReader reader = new PositionsReader(buffer);
+    private IndexedPositionWriter writer = newWriter();
+    private IndexedPositionReader reader = new IndexedPositionReader(buffer);
 
     @Test
     public void shouldReadWrittenPosition()
@@ -100,7 +100,7 @@ public class PositionsTest
         writer.updateChecksums();
 
         newWriter();
-        assertEquals(position, new PositionsReader(buffer).indexedPosition(SESSION_ID));
+        assertEquals(position, new IndexedPositionReader(buffer).indexedPosition(SESSION_ID));
     }
 
     @Test(expected = FileSystemCorruptionException.class)
@@ -127,9 +127,9 @@ public class PositionsTest
         assertEquals(position, reader.indexedPosition(sessionId));
     }
 
-    private PositionsWriter newWriter()
+    private IndexedPositionWriter newWriter()
     {
-        return new PositionsWriter(buffer, errorHandler);
+        return new IndexedPositionWriter(buffer, errorHandler);
     }
 
     @After

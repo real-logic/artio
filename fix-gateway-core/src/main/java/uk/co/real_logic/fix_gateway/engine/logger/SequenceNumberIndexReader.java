@@ -38,7 +38,7 @@ public class SequenceNumberIndexReader
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
     private final AtomicBuffer inMemoryBuffer;
     private final SectorFramer sectorFramer;
-    private final PositionsReader positions;
+    private final IndexedPositionReader positions;
 
     public SequenceNumberIndexReader(final AtomicBuffer inMemoryBuffer)
     {
@@ -46,7 +46,7 @@ public class SequenceNumberIndexReader
         final int positionTableOffset = positionTableOffset(inMemoryBuffer.capacity());
         sectorFramer = new SectorFramer(positionTableOffset);
         validateBuffer();
-        positions = new PositionsReader(positionsBuffer(inMemoryBuffer, positionTableOffset));
+        positions = new IndexedPositionReader(positionsBuffer(inMemoryBuffer, positionTableOffset));
     }
 
     public int lastKnownSequenceNumber(final long sessionId)

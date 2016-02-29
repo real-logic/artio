@@ -57,7 +57,7 @@ public class SequenceNumberIndexWriter implements Index
     private final File writablePath;
     private final File passingPlacePath;
     private final int fileCapacity;
-    private final PositionsWriter positions;
+    private final IndexedPositionWriter positions;
 
     private MappedFile writableFile;
     private MappedFile indexFile;
@@ -84,7 +84,7 @@ public class SequenceNumberIndexWriter implements Index
         final int positionTableOffset = positionTableOffset(fileCapacity);
         checksumFramer = new ChecksumFramer(inMemoryBuffer, positionTableOffset);
         initialiseBuffer();
-        positions = new PositionsWriter(
+        positions = new IndexedPositionWriter(
             positionsBuffer(inMemoryBuffer, positionTableOffset),
             errorHandler);
     }
