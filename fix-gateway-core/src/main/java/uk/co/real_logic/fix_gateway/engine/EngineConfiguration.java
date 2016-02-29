@@ -67,8 +67,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final String SENDER_SOCKET_BUFFER_SIZE_PROP = "fix.core.sender_socket_buffer_size";
     /** Property name for the size in bytes of the sequence number cache file*/
     public static final String SEQUENCE_NUMBER_INDEX_SIZE_PROP = "fix.core.sequence_number_cache_size";
-    /** Property name for the size in bytes of the indexed positions file*/
-    public static final String INDEXED_POSITIONS_BUFFER_SIZE_PROP = "fix.core.indexed_positions_size";
     /** Property name for the size in bytes of the session id file */
     public static final String SESSION_ID_BUFFER_SIZE_PROP = "fix.core.session_id_file_size";
 
@@ -88,7 +86,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_RECEIVER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SENDER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE = 8 * 1024 * 1024;
-    public static final int DEFAULT_INDEXED_POSITIONS_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SESSION_ID_BUFFER_SIZE = 4 * 1024 * 1024;
 
     private String host = null;
@@ -107,7 +104,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private AtomicBuffer receivedSequenceNumberBuffer;
     private MappedFile sentSequenceNumberIndex;
     private MappedFile receivedSequenceNumberIndex;
-    private MappedFile indexedPositionBuffer;
     private MappedFile sessionIdBuffer;
 
     private int outboundLibraryFragmentLimit =
@@ -124,8 +120,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         getInteger(SENDER_SOCKET_BUFFER_SIZE_PROP, DEFAULT_SENDER_SOCKET_BUFFER_SIZE);
     private int sequenceNumberIndexSize =
         getInteger(SEQUENCE_NUMBER_INDEX_SIZE_PROP, DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE);
-    private int indexedPositionBufferSize =
-        getInteger(INDEXED_POSITIONS_BUFFER_SIZE_PROP, DEFAULT_INDEXED_POSITIONS_BUFFER_SIZE);
     private int sessionIdBufferSize =
         getInteger(SESSION_ID_BUFFER_SIZE_PROP, DEFAULT_SESSION_ID_BUFFER_SIZE);
 
@@ -487,11 +481,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return receivedSequenceNumberBuffer;
     }
 
-    public MappedFile indexedPositionBuffer()
-    {
-        return indexedPositionBuffer;
-    }
-
     public MappedFile sessionIdBuffer()
     {
         return sessionIdBuffer;
@@ -559,11 +548,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
             receivedSequenceNumberBuffer = new UnsafeBuffer(new byte[sequenceNumberIndexSize]);
         }
 
-        if (indexedPositionBuffer() == null)
-        {
-            indexedPositionBuffer = mapFile("index_positions", indexedPositionBufferSize);
-        }
-
         if (sessionIdBuffer() == null)
         {
             sessionIdBuffer = mapFile("session_id_buffer", sessionIdBufferSize);
@@ -579,7 +563,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     {
         CloseHelper.close(sentSequenceNumberIndex());
         CloseHelper.close(receivedSequenceNumberIndex());
-        CloseHelper.close(indexedPositionBuffer());
         CloseHelper.close(sessionIdBuffer());
     }
 }
