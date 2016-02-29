@@ -137,6 +137,7 @@ public class SequenceNumberIndexWriter implements Index
     private void updateFile()
     {
         checksumFramer.updateChecksums();
+        positions.updateChecksums();
         saveFile();
         flipFiles();
     }

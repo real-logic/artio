@@ -20,10 +20,12 @@ import org.junit.Test;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.fix_gateway.engine.logger.PositionsReader.UNKNOWN_POSITION;
 
 public class PositionsTest
@@ -32,8 +34,8 @@ public class PositionsTest
     private static final int OTHER_SESSION_ID = 2;
 
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
-    private PositionsWriter writer = new PositionsWriter(buffer, errorHandler);
+    private AtomicBuffer buffer = new UnsafeBuffer(new byte[2 * SECTOR_SIZE]);
+    private PositionsWriter writer = newWriter();
     private PositionsReader reader = new PositionsReader(buffer);
 
     @Test
@@ -88,6 +90,33 @@ public class PositionsTest
         hasPosition(UNKNOWN_POSITION, SESSION_ID);
     }
 
+    @Test
+    public void shouldValidateCorrectChecksums()
+    {
+        final int position = 10;
+
+        indexed(position, SESSION_ID);
+
+        writer.updateChecksums();
+
+        newWriter();
+        assertEquals(position, new PositionsReader(buffer).indexedPosition(SESSION_ID));
+    }
+
+    @Test(expected = FileSystemCorruptionException.class)
+    public void shouldDetectFileSystemCorruption()
+    {
+        final int position = 10;
+
+        indexed(position, SESSION_ID);
+
+        writer.updateChecksums();
+
+        buffer.putBytes(5, new byte[300]);
+
+        newWriter();
+    }
+
     private void indexed(final int position, final int sessionId)
     {
         writer.indexedUpTo(sessionId, position);
@@ -96,6 +125,11 @@ public class PositionsTest
     private void hasPosition(final long position, final int sessionId)
     {
         assertEquals(position, reader.indexedPosition(sessionId));
+    }
+
+    private PositionsWriter newWriter()
+    {
+        return new PositionsWriter(buffer, errorHandler);
     }
 
     @After

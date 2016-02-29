@@ -18,13 +18,11 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.collections.Int2IntHashMap;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.fix_gateway.engine.SectorFramer;
+import uk.co.real_logic.fix_gateway.engine.ChecksumFramer;
 import uk.co.real_logic.fix_gateway.messages.IndexedPositionDecoder;
 import uk.co.real_logic.fix_gateway.messages.IndexedPositionEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
-
-import java.util.zip.CRC32;
 
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.OUT_OF_SPACE;
 
@@ -32,7 +30,6 @@ import static uk.co.real_logic.fix_gateway.engine.SectorFramer.OUT_OF_SPACE;
  * Writes out a log of the stream positions that we have indexed up to.
  * Not thread safe, but writes to a thread safe buffer.
  */
-// TODO: checksum
 public class PositionsWriter
 {
     static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
@@ -46,16 +43,15 @@ public class PositionsWriter
     private final int actingVersion = encoder.sbeSchemaVersion();
     private final IndexedPositionDecoder decoder = new IndexedPositionDecoder();
     private final Int2IntHashMap recordOffsets = new Int2IntHashMap(MISSING_RECORD);
-    private final CRC32 crc32 = new CRC32();
     private final AtomicBuffer buffer;
     private final ErrorHandler errorHandler;
-    private final SectorFramer sectorFramer;
+    private final ChecksumFramer checksumFramer;
 
     public PositionsWriter(final AtomicBuffer buffer, final ErrorHandler errorHandler)
     {
         this.buffer = buffer;
         this.errorHandler = errorHandler;
-        sectorFramer = new SectorFramer(buffer.capacity());
+        checksumFramer = new ChecksumFramer(buffer, buffer.capacity());
         setupHeader();
     }
 
@@ -74,6 +70,10 @@ public class PositionsWriter
                 .blockLength(actingBlockLength)
                 .version(actingVersion);
         }
+        else
+        {
+            checksumFramer.validateCheckSums();
+        }
     }
 
     public void indexedUpTo(final int aeronSessionId, final long position)
@@ -91,7 +91,7 @@ public class PositionsWriter
             offset = HEADER_LENGTH;
             while (true)
             {
-                offset = sectorFramer.claim(offset, RECORD_LENGTH);
+                offset = checksumFramer.claim(offset, RECORD_LENGTH);
                 if (position == OUT_OF_SPACE)
                 {
                     errorHandler.onError(new IllegalStateException(String.format(
@@ -118,6 +118,11 @@ public class PositionsWriter
         {
             putPosition(position, buffer, offset);
         }
+    }
+
+    public void updateChecksums()
+    {
+        checksumFramer.updateChecksums();
     }
 
     private void putPosition(final long position, final AtomicBuffer buffer, final int offset)
