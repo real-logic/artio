@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.messages.IndexedPositionDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
@@ -42,11 +41,6 @@ public class PositionsReader
         messageHeader.wrap(buffer, 0);
         actingBlockLength = messageHeader.blockLength();
         actingVersion = messageHeader.version();
-    }
-
-    public boolean hasIndexedUpTo(final Header header)
-    {
-        return header.position() < indexedPosition(header.sessionId());
     }
 
     public long indexedPosition(final int aeronSessionId)

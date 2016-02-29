@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
@@ -34,4 +36,17 @@ public final class SequenceNumberIndexDescriptor
 {
     static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
     static final int RECORD_SIZE = LastKnownSequenceNumberDecoder.BLOCK_LENGTH;
+
+    static final double SEQUENCE_NUMBER_RATIO = 0.9;
+    static final double POSITIONS_RATIO = 1 - SEQUENCE_NUMBER_RATIO;
+
+    static AtomicBuffer positionsBuffer(final AtomicBuffer buffer, final int positionsOffset)
+    {
+        return new UnsafeBuffer(buffer, positionsOffset, buffer.capacity() - positionsOffset);
+    }
+
+    public static int sequenceNumberCapacity(final int fileCapacity)
+    {
+        return (int) (fileCapacity * SEQUENCE_NUMBER_RATIO);
+    }
 }

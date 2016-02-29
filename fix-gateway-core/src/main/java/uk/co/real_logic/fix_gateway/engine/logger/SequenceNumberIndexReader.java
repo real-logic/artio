@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.SectorFramer;
 import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberDecoder;
@@ -23,6 +24,8 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
 import static uk.co.real_logic.fix_gateway.SectorFramer.OUT_OF_SPACE;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.positionsBuffer;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.sequenceNumberCapacity;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
@@ -35,12 +38,15 @@ public class SequenceNumberIndexReader
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
     private final AtomicBuffer inMemoryBuffer;
     private final SectorFramer sectorFramer;
+    private final PositionsReader positions;
 
     public SequenceNumberIndexReader(final AtomicBuffer inMemoryBuffer)
     {
         this.inMemoryBuffer = inMemoryBuffer;
-        sectorFramer = new SectorFramer(inMemoryBuffer.capacity());
+        final int sequenceNumberCapacity = sequenceNumberCapacity(inMemoryBuffer.capacity());
+        sectorFramer = new SectorFramer(sequenceNumberCapacity);
         validateBuffer();
+        positions = new PositionsReader(positionsBuffer(inMemoryBuffer, sequenceNumberCapacity));
     }
 
     public int lastKnownSequenceNumber(final long sessionId)
@@ -64,6 +70,16 @@ public class SequenceNumberIndexReader
 
             position += RECORD_SIZE;
         }
+    }
+
+    public boolean hasIndexedUpTo(final Header header)
+    {
+        return header.position() < indexedPosition(header.sessionId());
+    }
+
+    public long indexedPosition(final int aeronSessionId)
+    {
+        return positions.indexedPosition(aeronSessionId);
     }
 
     private void validateBuffer()

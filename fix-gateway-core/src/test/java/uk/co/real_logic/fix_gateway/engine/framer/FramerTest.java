@@ -93,6 +93,8 @@ public class FramerTest
 
         when(indexedPositionReader.hasIndexedUpTo(any())).thenReturn(true);
 
+        when(sentSequenceNumberIndex.hasIndexedUpTo(any())).thenReturn(true);
+
         when(mockConnectionHandler
             .receiverEndPoint(any(), connectionId.capture(), anyLong(), anyInt(), any(), any(),
                 eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex)))

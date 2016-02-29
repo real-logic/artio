@@ -31,6 +31,8 @@ import java.util.zip.CRC32;
 
 import static uk.co.real_logic.fix_gateway.SectorFramer.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.sequenceNumberCapacity;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.positionsBuffer;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
 // TODO: 5. rescan the last term buffer upon restart, account for other file location
@@ -59,6 +61,7 @@ public class SequenceNumberIndexWriter implements Index
     private final File writablePath;
     private final File passingPlacePath;
     private final int fileCapacity;
+    private final PositionsWriter positions;
 
     private MappedFile writableFile;
     private MappedFile indexFile;
@@ -73,16 +76,21 @@ public class SequenceNumberIndexWriter implements Index
         this.indexFile = indexFile;
         this.errorHandler = errorHandler;
 
+        fileCapacity = indexFile.buffer().capacity();
+
         final String indexFilePath = indexFile.file().getAbsolutePath();
         indexPath = indexFile.file();
         writablePath = new File(indexFilePath + "-writable");
         passingPlacePath = new File(indexFilePath + "-passing");
-        writableFile = MappedFile.map(writablePath, indexFile.buffer().capacity());
+        writableFile = MappedFile.map(writablePath, fileCapacity);
 
         // TODO: Fsync parent directory
-        fileCapacity = indexFile.buffer().capacity();
-        sectorFramer = new SectorFramer(fileCapacity);
+        final int sequenceNumberCapacity = sequenceNumberCapacity(fileCapacity);
+        sectorFramer = new SectorFramer(sequenceNumberCapacity);
         initialiseBuffer();
+        positions = new PositionsWriter(
+            positionsBuffer(inMemoryBuffer, sequenceNumberCapacity),
+            errorHandler);
     }
 
     public void indexRecord(
@@ -108,8 +116,9 @@ public class SequenceNumberIndexWriter implements Index
 
             final int msgSeqNum = fixHeader.msgSeqNum();
             final long sessionId = messageFrame.session();
+            final long fragmentEndPosition = position + length;
 
-            saveRecord(msgSeqNum, sessionId);
+            saveRecord(msgSeqNum, sessionId, aeronSessionId, fragmentEndPosition);
         }
 
         checkTermRoll(buffer, srcOffset, position, length);
@@ -144,7 +153,7 @@ public class SequenceNumberIndexWriter implements Index
 
     private void saveFile()
     {
-        writableFile.buffer().putBytes(0, inMemoryBuffer, 0, inMemoryBuffer.capacity());
+        writableFile.buffer().putBytes(0, inMemoryBuffer, 0, fileCapacity);
         writableFile.force();
     }
 
@@ -201,7 +210,10 @@ public class SequenceNumberIndexWriter implements Index
             && (!passingPlacePath.exists() || passingPlacePath.delete());
     }
 
-    private void saveRecord(final int newSequenceNumber, final long sessionId)
+    private void saveRecord(final int newSequenceNumber,
+                            final long sessionId,
+                            final int aeronSessionId,
+                            final long fragmentEndPosition)
     {
         int position = (int) recordOffsets.get(sessionId);
         if (position == MISSING_RECORD)
@@ -220,12 +232,12 @@ public class SequenceNumberIndexWriter implements Index
                 lastKnownDecoder.wrap(inMemoryBuffer, position, RECORD_SIZE, SCHEMA_VERSION);
                 if (lastKnownDecoder.sequenceNumber() == 0)
                 {
-                    createNewRecord(newSequenceNumber, sessionId, position);
+                    createNewRecord(newSequenceNumber, sessionId, position, aeronSessionId, fragmentEndPosition);
                     return;
                 }
                 else if (lastKnownDecoder.sessionId() == sessionId)
                 {
-                    sequenceNumberOrdered(position, newSequenceNumber);
+                    updateSequenceNumber(position, newSequenceNumber, aeronSessionId, fragmentEndPosition);
                     return;
                 }
 
@@ -234,17 +246,21 @@ public class SequenceNumberIndexWriter implements Index
         }
         else
         {
-            sequenceNumberOrdered(position, newSequenceNumber);
+            updateSequenceNumber(position, newSequenceNumber, aeronSessionId, fragmentEndPosition);
         }
     }
 
-    private void createNewRecord(final int sequenceNumber, final long sessionId, int position)
+    private void createNewRecord(final int sequenceNumber,
+                                 final long sessionId,
+                                 int position,
+                                 final int aeronSessionId,
+                                 final long fragmentEndPosition)
     {
         recordOffsets.put(sessionId, position);
         lastKnownEncoder
             .wrap(inMemoryBuffer, position)
             .sessionId(sessionId);
-        sequenceNumberOrdered(position, sequenceNumber);
+        updateSequenceNumber(position, sequenceNumber, aeronSessionId, fragmentEndPosition);
     }
 
     private void initialiseBuffer()
@@ -315,9 +331,13 @@ public class SequenceNumberIndexWriter implements Index
         });
     }
 
-    public void sequenceNumberOrdered(final int recordOffset, final int value)
+    public void updateSequenceNumber(final int recordOffset,
+                                     final int value,
+                                     final int aeronSessionId,
+                                     final long fragmentEndPosition)
     {
         inMemoryBuffer.putIntOrdered(recordOffset + SEQUENCE_NUMBER_OFFSET, value);
+        positions.indexedUpTo(aeronSessionId, fragmentEndPosition);
     }
 
     private void withChecksums(final ChecksumConsumer consumer)

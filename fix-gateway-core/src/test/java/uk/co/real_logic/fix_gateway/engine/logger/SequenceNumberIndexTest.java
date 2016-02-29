@@ -93,6 +93,17 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         writer.close();
 
         final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
+        assertEquals(START + fragmentLength(), newReader.indexedPosition(AERON_SESSION_ID));
+    }
+
+    @Test
+    public void shouldRecordIndexedPosition()
+    {
+        indexFixMessage();
+
+        writer.close();
+
+        final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
         assertLastKnownSequenceNumberIs(SEQUENCE_NUMBER, SESSION_ID, newReader);
     }
 

@@ -20,10 +20,7 @@ import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
-import uk.co.real_logic.agrona.concurrent.Agent;
-import uk.co.real_logic.agrona.concurrent.EpochClock;
-import uk.co.real_logic.agrona.concurrent.QueuedPipe;
-import uk.co.real_logic.agrona.concurrent.SystemNanoClock;
+import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.engine.ConnectionHandler;
@@ -49,7 +46,6 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 
 import static java.net.StandardSocketOptions.*;
@@ -104,6 +100,7 @@ public class Framer implements Agent, SessionHandler
     private final QueuedPipe<AdminCommand> adminCommands;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
+    private final IdleStrategy idleStrategy;
     private final int inboundBytesReceivedLimit;
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
@@ -136,6 +133,7 @@ public class Framer implements Agent, SessionHandler
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.indexedPositionReader = indexedPositionReader;
+        this.idleStrategy = configuration.framerIdleStrategy();
 
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
@@ -310,10 +308,12 @@ public class Framer implements Agent, SessionHandler
 
             setupConnection(channel, connectionId, sessionId, libraryId);
 
+            // TODO: move to checking the positions from the index
             while (!indexedPositionReader.hasIndexedUpTo(header))
             {
-                LockSupport.parkNanos(10_000);
+                idleStrategy.idle();
             }
+            idleStrategy.reset();
 
             final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
@@ -356,7 +356,8 @@ public class Framer implements Agent, SessionHandler
         senderEndPoints.onMessage(connectionId, buffer, offset, length);
     }
 
-    private void setupConnection(final SocketChannel channel,
+    private void setupConnection(
+        final SocketChannel channel,
         final long connectionId,
         final long sessionId,
         final int libraryId)

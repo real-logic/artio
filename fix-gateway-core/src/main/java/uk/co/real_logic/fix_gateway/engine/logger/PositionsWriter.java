@@ -27,6 +27,7 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
  * Writes out a log of the stream positions that we have indexed up to.
  * Not thread safe, but writes to a thread safe buffer.
  */
+// TODO: checksum + align
 public class PositionsWriter
 {
     static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
@@ -89,8 +90,8 @@ public class PositionsWriter
                     encoder.wrap(buffer, offset)
                         .sessionId(aeronSessionId);
 
-                    putPosition(position, buffer, offset);
                     recordOffsets.put(aeronSessionId, offset);
+                    putPosition(position, buffer, offset);
                     return;
                 }
 
