@@ -20,6 +20,9 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
+import static uk.co.real_logic.fix_gateway.SectorFramer.SECTOR_SIZE;
+import static uk.co.real_logic.fix_gateway.SectorFramer.nextSectorStart;
+
 /**
  * Stores a cache of the last sent sequence number.
  * <p>
@@ -38,15 +41,26 @@ public final class SequenceNumberIndexDescriptor
     static final int RECORD_SIZE = LastKnownSequenceNumberDecoder.BLOCK_LENGTH;
 
     static final double SEQUENCE_NUMBER_RATIO = 0.9;
-    static final double POSITIONS_RATIO = 1 - SEQUENCE_NUMBER_RATIO;
 
     static AtomicBuffer positionsBuffer(final AtomicBuffer buffer, final int positionsOffset)
     {
         return new UnsafeBuffer(buffer, positionsOffset, buffer.capacity() - positionsOffset);
     }
 
-    public static int sequenceNumberCapacity(final int fileCapacity)
+    /**
+     * Calculated an offset in the sequence number index for storing positions.
+     * This is the sector aligned location, closest to SEQUENCE_NUMBER_RATIO * fileCapacity.
+     *
+     * @param fileCapacity the capacity of the overall table
+     * @return an offset in the sequence number index for storing positions.
+     */
+    static int positionTableOffset(final int fileCapacity)
     {
-        return (int) (fileCapacity * SEQUENCE_NUMBER_RATIO);
+        final int proposedCapacity = nextSectorStart((int) (fileCapacity * SEQUENCE_NUMBER_RATIO));
+        if (proposedCapacity == fileCapacity)
+        {
+            return fileCapacity - SECTOR_SIZE;
+        }
+        return proposedCapacity;
     }
 }

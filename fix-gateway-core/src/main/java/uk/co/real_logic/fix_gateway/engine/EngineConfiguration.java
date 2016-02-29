@@ -128,6 +128,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         getInteger(INDEXED_POSITIONS_BUFFER_SIZE_PROP, DEFAULT_INDEXED_POSITIONS_BUFFER_SIZE);
     private int sessionIdBufferSize =
         getInteger(SESSION_ID_BUFFER_SIZE_PROP, DEFAULT_SESSION_ID_BUFFER_SIZE);
+
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
      * <p>

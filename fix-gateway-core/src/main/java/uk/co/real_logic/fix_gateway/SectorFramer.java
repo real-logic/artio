@@ -66,7 +66,7 @@ public class SectorFramer
         return sectorStart;
     }
 
-    private static int nextSectorStart(final int offset)
+    public static int nextSectorStart(final int offset)
     {
         return ((offset / SECTOR_SIZE) * SECTOR_SIZE) + SECTOR_SIZE;
     }

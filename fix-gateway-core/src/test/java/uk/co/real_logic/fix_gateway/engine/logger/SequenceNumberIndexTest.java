@@ -104,7 +104,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         writer.close();
 
         final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
-        assertLastKnownSequenceNumberIs(SEQUENCE_NUMBER, SESSION_ID, newReader);
+        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER, newReader);
     }
 
     @Test(expected = FileSystemCorruptionException.class)
@@ -138,7 +138,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         }
 
         final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
-        assertLastKnownSequenceNumberIs(SEQUENCE_NUMBER + requiredMessagesToRoll, SESSION_ID, newReader);
+        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER + requiredMessagesToRoll, newReader);
     }
 
     @Test
@@ -153,11 +153,12 @@ public class SequenceNumberIndexTest extends AbstractLogTest
             indexRecord(START + (i * fragmentLength()));
         }
 
-        final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
+        writer.close();
 
+        final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
         for (int i = initialSequenceNumber; i <= recordsOverlappingABlock; i++)
         {
-            assertLastKnownSequenceNumberIs(i, i + sequenceNumberDiff);
+            assertLastKnownSequenceNumberIs(i, i + sequenceNumberDiff, newReader);
         }
     }
 
@@ -205,12 +206,12 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private void assertLastKnownSequenceNumberIs(final long sessionId, final int expectedSequenceNumber)
     {
-        assertLastKnownSequenceNumberIs(expectedSequenceNumber, sessionId, reader);
+        assertLastKnownSequenceNumberIs(sessionId, expectedSequenceNumber, reader);
     }
 
     private void assertLastKnownSequenceNumberIs(
-        final long expectedSequenceNumber,
         final long sessionId,
+        final long expectedSequenceNumber,
         final SequenceNumberIndexReader reader)
     {
         final int number = reader.lastKnownSequenceNumber(sessionId);

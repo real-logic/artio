@@ -31,7 +31,7 @@ import java.util.zip.CRC32;
 
 import static uk.co.real_logic.fix_gateway.SectorFramer.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.sequenceNumberCapacity;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.positionTableOffset;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.positionsBuffer;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
@@ -85,7 +85,7 @@ public class SequenceNumberIndexWriter implements Index
         writableFile = MappedFile.map(writablePath, fileCapacity);
 
         // TODO: Fsync parent directory
-        final int sequenceNumberCapacity = sequenceNumberCapacity(fileCapacity);
+        final int sequenceNumberCapacity = positionTableOffset(fileCapacity);
         sectorFramer = new SectorFramer(sequenceNumberCapacity);
         initialiseBuffer();
         positions = new PositionsWriter(

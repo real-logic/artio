@@ -25,7 +25,7 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import static uk.co.real_logic.fix_gateway.SectorFramer.OUT_OF_SPACE;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.positionsBuffer;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.sequenceNumberCapacity;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.positionTableOffset;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
@@ -43,7 +43,7 @@ public class SequenceNumberIndexReader
     public SequenceNumberIndexReader(final AtomicBuffer inMemoryBuffer)
     {
         this.inMemoryBuffer = inMemoryBuffer;
-        final int sequenceNumberCapacity = sequenceNumberCapacity(inMemoryBuffer.capacity());
+        final int sequenceNumberCapacity = positionTableOffset(inMemoryBuffer.capacity());
         sectorFramer = new SectorFramer(sequenceNumberCapacity);
         validateBuffer();
         positions = new PositionsReader(positionsBuffer(inMemoryBuffer, sequenceNumberCapacity));
