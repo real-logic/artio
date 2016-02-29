@@ -32,7 +32,7 @@ import static uk.co.real_logic.fix_gateway.engine.SectorFramer.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
-// TODO: 5. rescan the last term buffer upon restart, account for other file location
+// TODO: 5. account for other passing place file location upon start
 public class SequenceNumberIndexWriter implements Index
 {
     private static final long MISSING_RECORD = -1L;
@@ -192,6 +192,11 @@ public class SequenceNumberIndexWriter implements Index
                 writableFile.close();
             }
         }
+    }
+
+    public void forEachPosition(final IndexedPositionConsumer consumer)
+    {
+        new IndexedPositionReader(positions.buffer()).forEach(consumer);
     }
 
     public boolean clear()

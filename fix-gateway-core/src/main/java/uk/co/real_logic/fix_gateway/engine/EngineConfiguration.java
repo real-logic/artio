@@ -526,8 +526,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     {
         super.conclude("engine");
 
-        // TODO: implement the recovery logic
-        // TODO: try to remove the index position buffer and make each index know where its committed up to.
         if (sentSequenceNumberIndex() == null)
         {
             sentSequenceNumberIndex = mapFile("sequence_numbers_sent", sequenceNumberIndexSize);

@@ -51,7 +51,7 @@ public class ArchiveReader implements AutoCloseable
     /**
      * Cannot read this fragment - your session/term/position combination isn't the beginning of a message.
      */
-    public static final int NO_MESSAGE = -3;
+    public static final long NO_MESSAGE = -3;
 
     private final Int2ObjectHashMap<SessionReader> aeronSessionIdToReader;
     private final ExistingBufferFactory archiveBufferFactory;

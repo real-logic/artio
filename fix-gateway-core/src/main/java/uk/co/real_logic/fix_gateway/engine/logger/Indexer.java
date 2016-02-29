@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Real Logic Ltd.
+ * Copyright 2015-2016 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,19 +23,24 @@ import uk.co.real_logic.agrona.concurrent.Agent;
 
 import java.util.List;
 
-// TODO: add ability to late-join and catchup with indexing
+/**
+ * Incrementally builds indexes by polling a subscription.
+ */
 public class Indexer implements Agent, FragmentHandler
 {
     private static final int LIMIT = 10;
 
     private final List<Index> indices;
     private final Subscription subscription;
+    private final ArchiveReader archiveReader;
 
     public Indexer(
-        final List<Index> indices, final Subscription subscription)
+        final List<Index> indices, final Subscription subscription, final ArchiveReader archiveReader)
     {
         this.indices = indices;
         this.subscription = subscription;
+        this.archiveReader = archiveReader;
+        catchIndexUp();
     }
 
     public int doWork() throws Exception
@@ -43,7 +48,21 @@ public class Indexer implements Agent, FragmentHandler
         return subscription.poll(this, LIMIT);
     }
 
-    @Override
+    private void catchIndexUp()
+    {
+        for (final Index index : indices)
+        {
+            index.forEachPosition((aeronSessionId, position) ->
+            {
+                final ArchiveReader.SessionReader sessionReader = archiveReader.session(aeronSessionId);
+                do
+                {
+                    position = sessionReader.read(position, index);
+                } while (position > 0);
+            });
+        }
+    }
+
     public void onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         final int streamId = header.streamId();

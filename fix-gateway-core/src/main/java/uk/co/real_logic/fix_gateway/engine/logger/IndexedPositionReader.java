@@ -74,4 +74,31 @@ public class IndexedPositionReader
             offset += RECORD_LENGTH;
         }
     }
+
+    public void forEach(final IndexedPositionConsumer consumer)
+    {
+        final IndexedPositionDecoder decoder = this.decoder;
+        final int actingBlockLength = this.actingBlockLength;
+        final int actingVersion = this.actingVersion;
+        final AtomicBuffer buffer = this.buffer;
+
+        int offset = HEADER_LENGTH;
+        while (true)
+        {
+            offset = sectorFramer.claim(offset, RECORD_LENGTH);
+            if (offset == OUT_OF_SPACE)
+            {
+                return;
+            }
+
+            decoder.wrap(buffer, offset, actingBlockLength, actingVersion);
+            final int sessionId = decoder.sessionId();
+            if (sessionId != 0)
+            {
+                consumer.accept(sessionId, decoder.position());
+            }
+
+            offset += RECORD_LENGTH;
+        }
+    }
 }

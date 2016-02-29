@@ -126,7 +126,7 @@ public class LoggerTest
 
         logger.initArchival();
         archiver = logger.archivers().get(0);
-        archiveReader = logger.archiveReader();
+        archiveReader = logger.outboundArchiveReader();
         publication = outboundStreams.dataPublication();
     }
 

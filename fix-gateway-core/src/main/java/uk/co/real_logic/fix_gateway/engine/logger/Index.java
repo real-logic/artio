@@ -15,10 +15,23 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 
-public interface Index extends AutoCloseable
+public interface Index extends FragmentHandler, AutoCloseable
 {
+    default void onFragment(DirectBuffer buffer, int offset, int length, Header header)
+    {
+        indexRecord(
+            buffer,
+            offset,
+            length,
+            header.streamId(),
+            header.sessionId(),
+            header.position());
+    }
+
     void indexRecord(final DirectBuffer buffer,
                      final int offset,
                      final int length,
@@ -32,4 +45,6 @@ public interface Index extends AutoCloseable
     }
 
     void close();
+
+    void forEachPosition(final IndexedPositionConsumer consumer);
 }

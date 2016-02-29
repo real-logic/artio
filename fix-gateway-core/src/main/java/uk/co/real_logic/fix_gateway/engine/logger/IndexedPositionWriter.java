@@ -125,6 +125,11 @@ public class IndexedPositionWriter
         checksumFramer.updateChecksums();
     }
 
+    public AtomicBuffer buffer()
+    {
+        return buffer;
+    }
+
     private void putPosition(final long position, final AtomicBuffer buffer, final int offset)
     {
         buffer.putLongVolatile(offset + POSITION_OFFSET, position);

@@ -99,6 +99,11 @@ public class ReplayIndex implements Index
         sessionToIndex.clear();
     }
 
+    public void forEachPosition(final IndexedPositionConsumer indexedPositionConsumer)
+    {
+        // TODO
+    }
+
     private final class SessionIndex implements AutoCloseable
     {
         private final ByteBuffer wrappedBuffer;
