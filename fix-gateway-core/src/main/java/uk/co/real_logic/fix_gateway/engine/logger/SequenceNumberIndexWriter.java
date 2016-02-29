@@ -112,12 +112,12 @@ public class SequenceNumberIndexWriter implements Index
 
             final int msgSeqNum = fixHeader.msgSeqNum();
             final long sessionId = messageFrame.session();
-            final long fragmentEndPosition = position + length;
 
-            saveRecord(msgSeqNum, sessionId, aeronSessionId, fragmentEndPosition);
+            saveRecord(msgSeqNum, sessionId);
         }
 
         checkTermRoll(buffer, srcOffset, position, length);
+        positions.indexedUpTo(aeronSessionId, position + length);
     }
 
     private void checkTermRoll(final DirectBuffer buffer, final int offset, final long position, final int length)
@@ -202,9 +202,7 @@ public class SequenceNumberIndexWriter implements Index
     }
 
     private void saveRecord(final int newSequenceNumber,
-                            final long sessionId,
-                            final int aeronSessionId,
-                            final long fragmentEndPosition)
+                            final long sessionId)
     {
         int position = (int) recordOffsets.get(sessionId);
         if (position == MISSING_RECORD)
@@ -223,12 +221,12 @@ public class SequenceNumberIndexWriter implements Index
                 lastKnownDecoder.wrap(inMemoryBuffer, position, RECORD_SIZE, SCHEMA_VERSION);
                 if (lastKnownDecoder.sequenceNumber() == 0)
                 {
-                    createNewRecord(newSequenceNumber, sessionId, position, aeronSessionId, fragmentEndPosition);
+                    createNewRecord(newSequenceNumber, sessionId, position);
                     return;
                 }
                 else if (lastKnownDecoder.sessionId() == sessionId)
                 {
-                    updateSequenceNumber(position, newSequenceNumber, aeronSessionId, fragmentEndPosition);
+                    updateSequenceNumber(position, newSequenceNumber);
                     return;
                 }
 
@@ -237,21 +235,19 @@ public class SequenceNumberIndexWriter implements Index
         }
         else
         {
-            updateSequenceNumber(position, newSequenceNumber, aeronSessionId, fragmentEndPosition);
+            updateSequenceNumber(position, newSequenceNumber);
         }
     }
 
     private void createNewRecord(final int sequenceNumber,
                                  final long sessionId,
-                                 int position,
-                                 final int aeronSessionId,
-                                 final long fragmentEndPosition)
+                                 int position)
     {
         recordOffsets.put(sessionId, position);
         lastKnownEncoder
             .wrap(inMemoryBuffer, position)
             .sessionId(sessionId);
-        updateSequenceNumber(position, sequenceNumber, aeronSessionId, fragmentEndPosition);
+        updateSequenceNumber(position, sequenceNumber);
     }
 
     private void initialiseBuffer()
@@ -313,11 +309,8 @@ public class SequenceNumberIndexWriter implements Index
 
 
     public void updateSequenceNumber(final int recordOffset,
-                                     final int value,
-                                     final int aeronSessionId,
-                                     final long fragmentEndPosition)
+                                     final int value)
     {
         inMemoryBuffer.putIntOrdered(recordOffset + SEQUENCE_NUMBER_OFFSET, value);
-        positions.indexedUpTo(aeronSessionId, fragmentEndPosition);
     }
 }

@@ -161,8 +161,8 @@ public final class FixEngine extends GatewayProcess
             new SystemEpochClock(), configuration, handler, librarySubscription, replaySubscription(),
             adminCommands, sessionIdStrategy, sessionIds,
             new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer()),
-            new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer()),
-            new IndexedPositionReader(configuration.indexedPositionBuffer().buffer()));
+            new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer())
+        );
         framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
     }
 
