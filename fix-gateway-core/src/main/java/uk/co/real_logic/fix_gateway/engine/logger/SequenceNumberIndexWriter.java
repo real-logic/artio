@@ -85,11 +85,11 @@ public class SequenceNumberIndexWriter implements Index
         writableFile = MappedFile.map(writablePath, fileCapacity);
 
         // TODO: Fsync parent directory
-        final int sequenceNumberCapacity = positionTableOffset(fileCapacity);
-        sectorFramer = new SectorFramer(sequenceNumberCapacity);
+        final int positionTableOffset = positionTableOffset(fileCapacity);
+        sectorFramer = new SectorFramer(positionTableOffset);
         initialiseBuffer();
         positions = new PositionsWriter(
-            positionsBuffer(inMemoryBuffer, sequenceNumberCapacity),
+            positionsBuffer(inMemoryBuffer, positionTableOffset),
             errorHandler);
     }
 

@@ -16,9 +16,11 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.fix_gateway.SectorFramer;
 import uk.co.real_logic.fix_gateway.messages.IndexedPositionDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
+import static uk.co.real_logic.fix_gateway.SectorFramer.OUT_OF_SPACE;
 import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionWriter.*;
 
 /**
@@ -33,6 +35,7 @@ public class PositionsReader
     private final int actingBlockLength;
     private final int actingVersion;
     private final AtomicBuffer buffer;
+    private final SectorFramer sectorFramer;
 
     public PositionsReader(final AtomicBuffer buffer)
     {
@@ -41,6 +44,7 @@ public class PositionsReader
         messageHeader.wrap(buffer, 0);
         actingBlockLength = messageHeader.blockLength();
         actingVersion = messageHeader.version();
+        sectorFramer = new SectorFramer(buffer.capacity());
     }
 
     public long indexedPosition(final int aeronSessionId)
@@ -49,11 +53,16 @@ public class PositionsReader
         final int actingBlockLength = this.actingBlockLength;
         final int actingVersion = this.actingVersion;
         final AtomicBuffer buffer = this.buffer;
-        final int lastIndex = buffer.capacity() - RECORD_LENGTH;
 
         int offset = HEADER_LENGTH;
-        while (offset <= lastIndex)
+        while (true)
         {
+            offset = sectorFramer.claim(offset, RECORD_LENGTH);
+            if (offset == OUT_OF_SPACE)
+            {
+                return UNKNOWN_POSITION;
+            }
+
             decoder.wrap(buffer, offset, actingBlockLength, actingVersion);
             if (decoder.sessionId() == aeronSessionId)
             {
@@ -62,7 +71,5 @@ public class PositionsReader
 
             offset += RECORD_LENGTH;
         }
-
-        return UNKNOWN_POSITION;
     }
 }

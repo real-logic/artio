@@ -43,15 +43,14 @@ public class SequenceNumberIndexReader
     public SequenceNumberIndexReader(final AtomicBuffer inMemoryBuffer)
     {
         this.inMemoryBuffer = inMemoryBuffer;
-        final int sequenceNumberCapacity = positionTableOffset(inMemoryBuffer.capacity());
-        sectorFramer = new SectorFramer(sequenceNumberCapacity);
+        final int positionTableOffset = positionTableOffset(inMemoryBuffer.capacity());
+        sectorFramer = new SectorFramer(positionTableOffset);
         validateBuffer();
-        positions = new PositionsReader(positionsBuffer(inMemoryBuffer, sequenceNumberCapacity));
+        positions = new PositionsReader(positionsBuffer(inMemoryBuffer, positionTableOffset));
     }
 
     public int lastKnownSequenceNumber(final long sessionId)
     {
-        //final int lastRecordOffset = inMemoryBuffer.capacity() - RECORD_SIZE;
         int position = SequenceNumberIndexDescriptor.HEADER_SIZE;
         while (true)
         {

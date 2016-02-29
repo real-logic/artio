@@ -46,6 +46,7 @@ import static uk.co.real_logic.fix_gateway.session.SessionIdStrategy.INSUFFICIEN
  * and aren't allowed to span sectors. Each sector has a CRC32 checksum and each checksum is updated after writing
  * each session id record.
  */
+// TODO: add in positions
 public class SessionIds
 {
     public static final long MISSING = -2;
