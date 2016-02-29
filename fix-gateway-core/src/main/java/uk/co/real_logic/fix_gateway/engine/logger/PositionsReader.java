@@ -21,7 +21,9 @@ import uk.co.real_logic.fix_gateway.messages.IndexedPositionDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.OUT_OF_SPACE;
-import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionWriter.*;
+import static uk.co.real_logic.fix_gateway.engine.logger.PositionsWriter.HEADER_LENGTH;
+import static uk.co.real_logic.fix_gateway.engine.logger.PositionsWriter.POSITION_OFFSET;
+import static uk.co.real_logic.fix_gateway.engine.logger.PositionsWriter.RECORD_LENGTH;
 
 /**
  * .
