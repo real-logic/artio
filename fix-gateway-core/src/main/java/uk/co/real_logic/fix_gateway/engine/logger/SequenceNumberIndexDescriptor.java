@@ -20,8 +20,8 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
-import static uk.co.real_logic.fix_gateway.SectorFramer.SECTOR_SIZE;
-import static uk.co.real_logic.fix_gateway.SectorFramer.nextSectorStart;
+import static uk.co.real_logic.fix_gateway.engine.SectorFramer.SECTOR_SIZE;
+import static uk.co.real_logic.fix_gateway.engine.SectorFramer.nextSectorStart;
 
 /**
  * Stores a cache of the last sent sequence number.

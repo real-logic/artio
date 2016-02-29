@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway;
+package uk.co.real_logic.fix_gateway.engine;
+
+import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 
 import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
 
@@ -29,7 +31,7 @@ public class SectorFramer
     public static final int SECTOR_DATA_LENGTH = SECTOR_SIZE - CHECKSUM_SIZE;
     public static final int FIRST_CHECKSUM_LOCATION = SECTOR_DATA_LENGTH;
 
-    private final int capacity;
+    protected final int capacity;
 
     private int checksumOffset;
     private int sectorStart;

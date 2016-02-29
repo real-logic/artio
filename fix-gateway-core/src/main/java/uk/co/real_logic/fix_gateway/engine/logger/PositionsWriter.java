@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.collections.Int2IntHashMap;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.fix_gateway.SectorFramer;
+import uk.co.real_logic.fix_gateway.engine.SectorFramer;
 import uk.co.real_logic.fix_gateway.messages.IndexedPositionDecoder;
 import uk.co.real_logic.fix_gateway.messages.IndexedPositionEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
@@ -26,7 +26,7 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 
 import java.util.zip.CRC32;
 
-import static uk.co.real_logic.fix_gateway.SectorFramer.OUT_OF_SPACE;
+import static uk.co.real_logic.fix_gateway.engine.SectorFramer.OUT_OF_SPACE;
 
 /**
  * Writes out a log of the stream positions that we have indexed up to.

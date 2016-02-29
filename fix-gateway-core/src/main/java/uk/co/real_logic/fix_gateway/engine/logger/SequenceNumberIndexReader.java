@@ -17,12 +17,12 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.fix_gateway.SectorFramer;
+import uk.co.real_logic.fix_gateway.engine.SectorFramer;
 import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
-import static uk.co.real_logic.fix_gateway.SectorFramer.OUT_OF_SPACE;
+import static uk.co.real_logic.fix_gateway.engine.SectorFramer.OUT_OF_SPACE;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.positionsBuffer;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.positionTableOffset;

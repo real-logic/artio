@@ -28,7 +28,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.SectorFramer.SECTOR_SIZE;
+import static uk.co.real_logic.fix_gateway.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
 
 public class SequenceNumberIndexTest extends AbstractLogTest

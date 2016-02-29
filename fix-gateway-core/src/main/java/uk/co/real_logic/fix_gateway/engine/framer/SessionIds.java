@@ -19,7 +19,7 @@ import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.collections.LongHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.SectorFramer;
+import uk.co.real_logic.fix_gateway.engine.SectorFramer;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.zip.CRC32;
 
-import static uk.co.real_logic.fix_gateway.SectorFramer.*;
+import static uk.co.real_logic.fix_gateway.engine.SectorFramer.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionIdEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.session.SessionIdStrategy.INSUFFICIENT_SPACE;
 
