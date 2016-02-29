@@ -44,7 +44,6 @@ public class Logger implements AutoCloseable
     private final ErrorHandler errorHandler;
     private final SequenceNumberIndexWriter sentSequenceNumberIndex;
     private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
-    private final IndexedPositionWriter indexedPositionWriter;
     private final List<Archiver> archivers = new ArrayList<>();
 
     private LogDirectoryDescriptor directoryDescriptor;
@@ -58,8 +57,7 @@ public class Logger implements AutoCloseable
         final ErrorHandler errorHandler,
         final Publication replayPublication,
         final SequenceNumberIndexWriter sentSequenceNumberIndex,
-        final SequenceNumberIndexWriter receivedSequenceNumberIndex,
-        final IndexedPositionWriter indexedPositionWriter)
+        final SequenceNumberIndexWriter receivedSequenceNumberIndex)
     {
         this.configuration = configuration;
         this.inboundLibraryStreams = inboundLibraryStreams;
@@ -68,7 +66,6 @@ public class Logger implements AutoCloseable
         this.errorHandler = errorHandler;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
-        this.indexedPositionWriter = indexedPositionWriter;
     }
 
     public void init()
@@ -91,9 +88,9 @@ public class Logger implements AutoCloseable
                 new ReplayIndex(logFileDir, configuration.indexFileSize(), cacheNumSets, cacheSetSize, LoggerUtil::map),
                 sentSequenceNumberIndex);
             final Indexer outboundIndexer = new Indexer(
-                indices, outboundLibraryStreams.subscription(), indexedPositionWriter);
+                indices, outboundLibraryStreams.subscription());
             final Indexer inboundIndexer = new Indexer(
-                Arrays.asList(receivedSequenceNumberIndex), inboundLibraryStreams.subscription(), indexedPositionWriter);
+                Arrays.asList(receivedSequenceNumberIndex), inboundLibraryStreams.subscription());
 
             final ReplayQuery replayQuery = new ReplayQuery(
                 logFileDir, cacheNumSets, cacheSetSize, LoggerUtil::mapExistingFile, outboundArchiveReader);

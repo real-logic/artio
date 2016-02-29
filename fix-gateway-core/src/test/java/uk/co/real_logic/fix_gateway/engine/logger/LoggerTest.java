@@ -122,7 +122,7 @@ public class LoggerTest
 
         logger = new Logger(
             configuration, null, outboundStreams, Throwable::printStackTrace, null,
-            mock(SequenceNumberIndexWriter.class), mock(SequenceNumberIndexWriter.class), mock(IndexedPositionWriter.class));
+            mock(SequenceNumberIndexWriter.class), mock(SequenceNumberIndexWriter.class));
 
         logger.initArchival();
         archiver = logger.archivers().get(0);

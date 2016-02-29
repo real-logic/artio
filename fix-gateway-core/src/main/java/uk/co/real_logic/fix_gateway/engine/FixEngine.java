@@ -119,11 +119,9 @@ public final class FixEngine extends GatewayProcess
             configuration.sentSequenceNumberBuffer(), configuration.sentSequenceNumberIndex(), errorBuffer);
         final SequenceNumberIndexWriter receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
             configuration.receivedSequenceNumberBuffer(), configuration.receivedSequenceNumberIndex(), errorBuffer);
-        final IndexedPositionWriter indexedPositionWriter = new IndexedPositionWriter(
-            configuration.indexedPositionBuffer().buffer(), errorBuffer);
         logger = new Logger(
             configuration, inboundLibraryStreams, outboundLibraryStreams, errorBuffer, replayPublication(),
-            sentSequenceNumberIndex, receivedSequenceNumberIndex, indexedPositionWriter);
+            sentSequenceNumberIndex, receivedSequenceNumberIndex);
     }
 
     private Publication replayPublication()
