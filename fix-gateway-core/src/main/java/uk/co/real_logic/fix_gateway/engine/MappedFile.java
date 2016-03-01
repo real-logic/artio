@@ -34,8 +34,9 @@ import static java.nio.file.StandardOpenOption.CREATE_NEW;
 public class MappedFile implements AutoCloseable
 {
     private final File file;
-    private final FileChannel fileChannel;
-    private final AtomicBuffer buffer;
+
+    private FileChannel fileChannel;
+    private AtomicBuffer buffer;
 
     public static MappedFile map(final File bufferFile, final int size)
     {
@@ -102,6 +103,14 @@ public class MappedFile implements AutoCloseable
         }
     }
 
+    public void remap()
+    {
+        close();
+        final MappedFile remappedFile = map(file, buffer.capacity());
+        this.fileChannel = remappedFile.fileChannel;
+        this.buffer = remappedFile.buffer;
+    }
+
     public void close()
     {
         IoUtil.unmap(buffer.byteBuffer());
@@ -127,4 +136,5 @@ public class MappedFile implements AutoCloseable
             }
         }
     }
+
 }

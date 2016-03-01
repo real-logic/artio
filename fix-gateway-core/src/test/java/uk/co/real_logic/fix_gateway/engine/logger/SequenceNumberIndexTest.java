@@ -24,6 +24,8 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 
+import java.io.File;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
@@ -34,6 +36,7 @@ import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDesc
 public class SequenceNumberIndexTest extends AbstractLogTest
 {
     private static final int BUFFER_SIZE = 16 * 1024;
+    public static final String INDEX_FILE_PATH = IoUtil.tmpDirName() + "/SequenceNumberIndex";
 
     private AtomicBuffer inMemoryBuffer = newBuffer();
 
@@ -102,6 +105,23 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         indexFixMessage();
 
         writer.close();
+
+        final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
+        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER, newReader);
+    }
+
+    /**
+     * Simulate scenario that you've crashed halfway through file flip.
+     */
+    @Test
+    public void shouldAccountForPassingPlaceFile()
+    {
+        indexFixMessage();
+
+        writer.close();
+
+        assertTrue("Failed to recreate crash scenario",
+            new File(INDEX_FILE_PATH).renameTo(writer.passingPlace()));
 
         final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
         assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER, newReader);
@@ -185,7 +205,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private MappedFile newIndexFile()
     {
-        return MappedFile.map(IoUtil.tmpDirName() + "/SequenceNumberIndex", BUFFER_SIZE);
+        return MappedFile.map(INDEX_FILE_PATH, BUFFER_SIZE);
     }
 
     private UnsafeBuffer newBuffer()

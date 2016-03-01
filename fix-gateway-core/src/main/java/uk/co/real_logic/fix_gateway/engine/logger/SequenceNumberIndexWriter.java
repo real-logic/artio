@@ -32,7 +32,6 @@ import static uk.co.real_logic.fix_gateway.engine.SectorFramer.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
-// TODO: 5. account for other passing place file location upon start
 public class SequenceNumberIndexWriter implements Index
 {
     private static final long MISSING_RECORD = -1L;
@@ -173,6 +172,11 @@ public class SequenceNumberIndexWriter implements Index
         return false;
     }
 
+    public File passingPlace()
+    {
+        return passingPlacePath;
+    }
+
     public boolean isOpen()
     {
         return writableFile.isOpen();
@@ -257,19 +261,39 @@ public class SequenceNumberIndexWriter implements Index
 
     private void initialiseBuffer()
     {
-        final AtomicBuffer filebuffer = validateBufferSizes();
+        validateBufferSizes();
+        final AtomicBuffer filebuffer = indexFile.buffer();
         if (fileHasBeenInitialized(filebuffer))
         {
             readFile(filebuffer);
         }
-        LoggerUtil.initialiseBuffer(
-            inMemoryBuffer,
-            fileHeaderEncoder,
-            fileHeaderDecoder,
-            lastKnownEncoder.sbeSchemaId(),
-            lastKnownEncoder.sbeTemplateId(),
-            lastKnownEncoder.sbeSchemaVersion(),
-            lastKnownEncoder.sbeBlockLength());
+        else if (passingPlacePath.exists())
+        {
+            if (passingPlacePath.renameTo(indexPath))
+            {
+                // TODO: fsync parent directory
+                indexFile.remap();
+                initialiseBuffer();
+            }
+            else
+            {
+                errorHandler.onError(new IllegalStateException(String.format(
+                    "Unable to recover index file from %s to %s due to rename failure",
+                    passingPlacePath,
+                    indexPath)));
+            }
+        }
+        else
+        {
+            LoggerUtil.initialiseBuffer(
+                inMemoryBuffer,
+                fileHeaderEncoder,
+                fileHeaderDecoder,
+                lastKnownEncoder.sbeSchemaId(),
+                lastKnownEncoder.sbeTemplateId(),
+                lastKnownEncoder.sbeSchemaVersion(),
+                lastKnownEncoder.sbeBlockLength());
+        }
     }
 
     private boolean fileHasBeenInitialized(final AtomicBuffer filebuffer)
@@ -277,9 +301,8 @@ public class SequenceNumberIndexWriter implements Index
         return filebuffer.getShort(0) != 0 || filebuffer.getInt(FIRST_CHECKSUM_LOCATION) != 0;
     }
 
-    private AtomicBuffer validateBufferSizes()
+    private void validateBufferSizes()
     {
-        final AtomicBuffer filebuffer = indexFile.buffer();
         final int inMemoryCapacity = inMemoryBuffer.capacity();
 
         if (fileCapacity != inMemoryCapacity)
@@ -298,7 +321,6 @@ public class SequenceNumberIndexWriter implements Index
                 fileCapacity
             ));
         }
-        return filebuffer;
     }
 
     private void readFile(final AtomicBuffer filebuffer)
