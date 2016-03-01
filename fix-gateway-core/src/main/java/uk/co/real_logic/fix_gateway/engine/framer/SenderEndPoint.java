@@ -20,12 +20,13 @@ import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.ReliefValve;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-public class SenderEndPoint implements AutoCloseable
+class SenderEndPoint implements AutoCloseable
 {
     private final long connectionId;
     private final int libraryId;
@@ -36,7 +37,7 @@ public class SenderEndPoint implements AutoCloseable
     private final Framer framer;
     private final ReliefValve reliefValve;
 
-    public SenderEndPoint(
+    SenderEndPoint(
         final long connectionId,
         final int libraryId,
         final SocketChannel channel,

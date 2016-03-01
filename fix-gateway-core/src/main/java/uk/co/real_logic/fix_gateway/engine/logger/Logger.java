@@ -56,17 +56,17 @@ public class Logger implements AutoCloseable
         final Streams inboundLibraryStreams,
         final Streams outboundLibraryStreams,
         final ErrorHandler errorHandler,
-        final Publication replayPublication,
-        final SequenceNumberIndexWriter sentSequenceNumberIndex,
-        final SequenceNumberIndexWriter receivedSequenceNumberIndex)
+        final Publication replayPublication)
     {
         this.configuration = configuration;
         this.inboundLibraryStreams = inboundLibraryStreams;
         this.outboundLibraryStreams = outboundLibraryStreams;
         this.replayPublication = replayPublication;
         this.errorHandler = errorHandler;
-        this.sentSequenceNumberIndex = sentSequenceNumberIndex;
-        this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
+        this.sentSequenceNumberIndex = new SequenceNumberIndexWriter(
+            configuration.sentSequenceNumberBuffer(), configuration.sentSequenceNumberIndex(), errorHandler);
+        this.receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
+            configuration.receivedSequenceNumberBuffer(), configuration.receivedSequenceNumberIndex(), errorHandler);
     }
 
     public void init()

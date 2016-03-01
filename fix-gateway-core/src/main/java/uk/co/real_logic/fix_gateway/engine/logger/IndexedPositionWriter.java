@@ -30,7 +30,7 @@ import static uk.co.real_logic.fix_gateway.engine.SectorFramer.OUT_OF_SPACE;
  * Writes out a log of the stream positions that we have indexed up to.
  * Not thread safe, but writes to a thread safe buffer.
  */
-public class IndexedPositionWriter
+class IndexedPositionWriter
 {
     static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
     static final int RECORD_LENGTH = IndexedPositionEncoder.BLOCK_LENGTH;
@@ -47,7 +47,7 @@ public class IndexedPositionWriter
     private final ErrorHandler errorHandler;
     private final ChecksumFramer checksumFramer;
 
-    public IndexedPositionWriter(final AtomicBuffer buffer, final ErrorHandler errorHandler)
+    IndexedPositionWriter(final AtomicBuffer buffer, final ErrorHandler errorHandler)
     {
         this.buffer = buffer;
         this.errorHandler = errorHandler;

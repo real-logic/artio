@@ -112,7 +112,11 @@ public class LoggerTest
         final Streams outboundStreams = new Streams(
             CHANNEL, aeron, mock(AtomicCounter.class), STREAM_ID, mock(NanoClock.class), 12000);
 
-        final EngineConfiguration configuration = new EngineConfiguration().logInboundMessages(false);
+        final EngineConfiguration configuration =
+            new EngineConfiguration()
+                .logInboundMessages(false)
+                .aeronChannel(CHANNEL)
+                .conclude();
 
         final File dir = new File(configuration.logFileDir());
         if (dir.exists())
@@ -121,8 +125,8 @@ public class LoggerTest
         }
 
         logger = new Logger(
-            configuration, null, outboundStreams, Throwable::printStackTrace, null,
-            mock(SequenceNumberIndexWriter.class), mock(SequenceNumberIndexWriter.class));
+            configuration, null, outboundStreams, Throwable::printStackTrace, null
+        );
 
         logger.initArchival();
         archiver = logger.archivers().get(0);

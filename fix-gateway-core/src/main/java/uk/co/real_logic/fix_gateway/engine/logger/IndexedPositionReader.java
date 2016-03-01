@@ -28,7 +28,7 @@ import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionWriter.R
 /**
  * .
  */
-public class IndexedPositionReader
+class IndexedPositionReader
 {
     public static final long UNKNOWN_POSITION = -1;
 
@@ -39,7 +39,7 @@ public class IndexedPositionReader
     private final AtomicBuffer buffer;
     private final SectorFramer sectorFramer;
 
-    public IndexedPositionReader(final AtomicBuffer buffer)
+    IndexedPositionReader(final AtomicBuffer buffer)
     {
         this.buffer = buffer;
         final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();

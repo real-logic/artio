@@ -35,7 +35,7 @@ import static uk.co.real_logic.fix_gateway.engine.SectorFramer.nextSectorStart;
  * Known Stream Position
  * Series of LastKnownSequenceNumber records
  */
-public final class SequenceNumberIndexDescriptor
+final class SequenceNumberIndexDescriptor
 {
     static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
     static final int RECORD_SIZE = LastKnownSequenceNumberDecoder.BLOCK_LENGTH;

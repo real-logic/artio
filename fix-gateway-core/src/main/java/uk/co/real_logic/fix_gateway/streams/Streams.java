@@ -21,9 +21,9 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
-import uk.co.real_logic.fix_gateway.engine.framer.ReliefValve;
+import uk.co.real_logic.fix_gateway.ReliefValve;
 
-import static uk.co.real_logic.fix_gateway.engine.framer.ReliefValve.NO_RELIEF_VALVE;
+import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;
 
 public class Streams
 {

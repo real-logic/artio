@@ -26,7 +26,7 @@ import java.util.stream.Stream;
 import static uk.co.real_logic.agrona.collections.ArrayUtil.UNKNOWN_INDEX;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.*;
 
-public class ReceiverEndPoints extends TransportPoller
+class ReceiverEndPoints extends TransportPoller
 {
     private ReceiverEndPoint[] endPoints = new ReceiverEndPoint[0];
 

@@ -522,7 +522,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    void conclude()
+    public EngineConfiguration conclude()
     {
         super.conclude("engine");
 
@@ -550,6 +550,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         {
             sessionIdBuffer = mapFile("session_id_buffer", sessionIdBufferSize);
         }
+
+        return this;
     }
 
     private MappedFile mapFile(final String file, final int size)

@@ -45,7 +45,7 @@ import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 /**
  * Handles incoming data from sockets
  */
-public class ReceiverEndPoint
+class ReceiverEndPoint
 {
     private static final byte BODY_LENGTH_FIELD = 9;
 
@@ -82,7 +82,7 @@ public class ReceiverEndPoint
     private boolean hasDisconnected = false;
     private SelectionKey selectionKey;
 
-    public ReceiverEndPoint(
+    ReceiverEndPoint(
         final SocketChannel channel,
         final int bufferSize,
         final GatewayPublication publication,

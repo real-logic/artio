@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.engine.framer;
+package uk.co.real_logic.fix_gateway;
 
 /**
  * A valve that can be pulled to reduce back pressure.

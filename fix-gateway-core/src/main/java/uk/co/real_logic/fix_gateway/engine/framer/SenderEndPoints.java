@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 
-public class SenderEndPoints implements AutoCloseable
+class SenderEndPoints implements AutoCloseable
 {
     private final Long2ObjectHashMap<SenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
 

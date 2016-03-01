@@ -32,7 +32,7 @@ import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 /**
  * Queries an index of a composite key of session id and sequence number
  */
-public class ReplayQuery implements AutoCloseable
+class ReplayQuery implements AutoCloseable
 {
     private final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
     private final ReplayIndexRecordDecoder indexRecord = new ReplayIndexRecordDecoder();
@@ -44,7 +44,7 @@ public class ReplayQuery implements AutoCloseable
 
     private final ArchiveReader outboundArchiveReader;
 
-    public ReplayQuery(
+    ReplayQuery(
         final String logFileDir,
         final int cacheNumSets,
         final int cacheSetSize,
