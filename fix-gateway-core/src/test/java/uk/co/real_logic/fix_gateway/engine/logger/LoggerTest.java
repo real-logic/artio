@@ -32,7 +32,6 @@ import uk.co.real_logic.aeron.protocol.HeaderFlyweight;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -41,7 +40,6 @@ import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import uk.co.real_logic.fix_gateway.streams.Streams;
 
 import java.io.File;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
@@ -377,7 +375,7 @@ public class LoggerTest
         final int sessionId = publication.sessionId();
         final int streamId = publication.streamId();
         final int positionBitsToShift = numberOfTrailingZeros(publication.termBufferLength());
-        final int initialTermId = getInitialTermId();
+        final int initialTermId = publication.initialTermId();
         final int termId = computeTermIdFromPosition(position, positionBitsToShift, initialTermId);
         final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
 
@@ -395,22 +393,6 @@ public class LoggerTest
         flyweight.putInt(dataOffset, PATCH_VALUE);
 
         return archiver.patch(sessionId, flyweight, 0, frameLength);
-    }
-
-    // TODO: replace with method call upon next aeron release
-    private int getInitialTermId()
-    {
-        try
-        {
-            final Field initialTermIdField = publication.getClass().getDeclaredField("initialTermId");
-            initialTermIdField.setAccessible(true);
-            return (int) initialTermIdField.get(publication);
-        }
-        catch (Exception e)
-        {
-            LangUtil.rethrowUnchecked(e);
-            return 0;
-        }
     }
 
     private void assertPosition(final long endPosition)

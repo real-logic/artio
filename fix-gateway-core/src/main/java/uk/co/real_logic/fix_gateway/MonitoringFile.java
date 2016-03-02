@@ -37,11 +37,11 @@ import java.nio.MappedByteBuffer;
  */
 public final class MonitoringFile implements AutoCloseable
 {
-    private static final int NUMBER_OF_BUFFERS = 3;
+    private static final int SEGMENT_SIZE_FACTOR = 4;
 
     private final MappedByteBuffer mappedByteBuffer;
-    private final AtomicBuffer labelsBuffer;
-    private final AtomicBuffer countersBuffer;
+    private final AtomicBuffer counterMetaDataBuffer;
+    private final AtomicBuffer counterValuesBuffer;
     private final AtomicBuffer errorBuffer;
 
     public MonitoringFile(final boolean newFile, final CommonConfiguration configuration)
@@ -53,7 +53,7 @@ public final class MonitoringFile implements AutoCloseable
             IoUtil.deleteIfExists(file);
 
             length = configuration.monitoringBuffersLength();
-            mappedByteBuffer = IoUtil.mapNewFile(file, length * NUMBER_OF_BUFFERS);
+            mappedByteBuffer = IoUtil.mapNewFile(file, length);
         }
         else
         {
@@ -63,23 +63,26 @@ public final class MonitoringFile implements AutoCloseable
             }
 
             mappedByteBuffer = IoUtil.mapExistingFile(file, "counters file");
-            length = mappedByteBuffer.capacity() / NUMBER_OF_BUFFERS;
+            length = mappedByteBuffer.capacity();
         }
 
+        final int segmentLength = length / SEGMENT_SIZE_FACTOR;
+
         final AtomicBuffer mappedFile = new UnsafeBuffer(mappedByteBuffer);
-        labelsBuffer = new UnsafeBuffer(mappedFile, 0, length);
-        countersBuffer = new UnsafeBuffer(mappedFile, length, length);
-        errorBuffer = new UnsafeBuffer(mappedFile, 2 * length, length);
+        final int counterMetaDataBufferLength = segmentLength * 2;
+        counterMetaDataBuffer = new UnsafeBuffer(mappedFile, 0, counterMetaDataBufferLength);
+        counterValuesBuffer = new UnsafeBuffer(mappedFile, counterMetaDataBufferLength, segmentLength);
+        errorBuffer = new UnsafeBuffer(mappedFile, counterMetaDataBufferLength + segmentLength, segmentLength);
     }
 
     public CountersManager createCountersManager()
     {
-        return new CountersManager(labelsBuffer, countersBuffer);
+        return new CountersManager(counterMetaDataBuffer, counterValuesBuffer);
     }
 
     public AtomicBuffer countersBuffer()
     {
-        return countersBuffer;
+        return counterValuesBuffer;
     }
 
     public AtomicBuffer errorBuffer()
