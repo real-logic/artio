@@ -157,16 +157,8 @@ project(':fix-gateway-codecs') {
     }
 
     // Code Generation Configuration
-    compileGeneratedJava.dependsOn 'generateCodecs'
     compileGeneratedJava.dependsOn 'generateMessages'
     compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
-
-    task (generateCodecs, type: JavaExec) {
-        main = 'uk.co.real_logic.fix_gateway.dictionary.CodecGenerationTool'
-        classpath = sourceSets.main.runtimeClasspath
-        args = [generatedDir, 'src/main/resources/session_dictionary.xml']
-        outputs.dir generatedDir
-    }
 
     task (generateMessages, type: JavaExec) {
         main = 'uk.co.real_logic.sbe.SbeTool'
@@ -193,6 +185,44 @@ project(':fix-gateway-codecs') {
     checkstyleGenerated { exclude '**/*' }
 }
 
+project(':fix-gateway-session-codecs') {
+
+    dependencies {
+        compile project(path: ':fix-gateway-codecs')
+    }
+
+    def generatedDir = file("$buildDir/generated-src")
+    sourceSets {
+        generated.java.srcDir generatedDir
+    }
+
+    // Code Generation Configuration
+    compileGeneratedJava.dependsOn 'generateCodecs'
+    compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
+
+    task (generateCodecs, type: JavaExec) {
+        main = 'uk.co.real_logic.fix_gateway.dictionary.CodecGenerationTool'
+        classpath = sourceSets.main.runtimeClasspath
+        args = [generatedDir, 'src/main/resources/session_dictionary.xml']
+        outputs.dir generatedDir
+    }
+
+    jar {
+        from("$buildDir/classes/generated") {
+            include '**/*.class'
+        }
+    }
+
+    jar.dependsOn compileGeneratedJava
+
+    idea.module {
+        excludeDirs -= file("$buildDir")
+        sourceDirs += generatedDir
+    }
+
+    checkstyleGenerated { exclude '**/*' }
+}
+
 project(':fix-gateway-core') {
     apply plugin: 'application'
 
@@ -200,6 +230,7 @@ project(':fix-gateway-core') {
 
     dependencies {
         testCompile project(path: ':fix-gateway-codecs', configuration: 'tests')
+        compile project(path: ':fix-gateway-session-codecs')
         compile project(path: ':fix-gateway-codecs')
         compile "uk.co.real-logic:aeron-client:${aeronVersion}"
         compile "uk.co.real-logic:aeron-driver:${aeronVersion}"
@@ -259,7 +290,6 @@ project(':fix-gateway-system-tests') {
             shadowJar.execute()
         }
     }
-
 }
 
 project(':fix-gateway-samples') {
