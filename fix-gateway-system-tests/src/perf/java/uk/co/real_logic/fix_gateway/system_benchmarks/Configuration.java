@@ -15,7 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
+import uk.co.real_logic.agrona.concurrent.YieldingIdleStrategy;
+
 import static uk.co.real_logic.aeron.CommonContext.IPC_CHANNEL;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 
 public final class Configuration
 {
@@ -24,5 +29,26 @@ public final class Configuration
     public static final String ACCEPTOR_ID = "ACC";
     public static final String INITIATOR_ID = "INIT";
     public static final String TYPE = System.getProperty("fix.benchmark.type", "latency");
+    public static final boolean LOG_INBOUND_MESSAGES = Boolean.getBoolean("fix.benchmark.log_in");
+    public static final boolean LOG_OUTBOUND_MESSAGES = Boolean.getBoolean("fix.benchmark.log_out");
+    public static final IdleStrategy IDLE_STRATEGY = idleStrategy("fix.benchmark.engine_idle");
 
+    private static IdleStrategy idleStrategy(final String propertyName)
+    {
+        final String strategyName = System.getProperty(propertyName, "");
+        switch (strategyName)
+        {
+            case "noop":
+                return new NoOpIdleStrategy();
+
+            case "yield":
+                return new YieldingIdleStrategy();
+
+            case "backoff":
+                return backoffIdleStrategy();
+
+            default:
+                return backoffIdleStrategy();
+        }
+    }
 }

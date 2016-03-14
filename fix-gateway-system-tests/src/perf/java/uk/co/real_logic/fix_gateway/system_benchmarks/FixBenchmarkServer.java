@@ -74,9 +74,9 @@ public final class FixBenchmarkServer
             .bindTo("localhost", Configuration.PORT)
             .aeronChannel(AERON_CHANNEL)
             .logFileDir(acceptorLogs)
-            .logInboundMessages(false)
-            .logOutboundMessages(false);
-            //.framerIdleStrategy(new NoOpIdleStrategy());
+            .logInboundMessages(LOG_INBOUND_MESSAGES)
+            .logOutboundMessages(LOG_OUTBOUND_MESSAGES)
+            .framerIdleStrategy(IDLE_STRATEGY);
     }
 
     private static LibraryConfiguration libraryConfiguration()
