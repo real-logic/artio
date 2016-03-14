@@ -39,6 +39,7 @@ import java.util.concurrent.locks.LockSupport;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static uk.co.real_logic.aeron.CommonContext.IPC_CHANNEL;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
@@ -253,7 +254,7 @@ public final class SystemTestUtil
             .authenticationStrategy(authenticationStrategy)
             .messageValidationStrategy(validationStrategy)
             .newSessionHandler(sessionHandler)
-            .aeronChannel("aeron:ipc")
+            .aeronChannel(IPC_CHANNEL)
             .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "accLibraryCounters");
     }
 

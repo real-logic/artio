@@ -71,11 +71,8 @@ public class Logger implements AutoCloseable
 
     public void init()
     {
-        if (isLoggingMessages())
-        {
-            initArchival();
-            initIndexers();
-        }
+        initArchival();
+        initIndexers();
     }
 
     public void initIndexers()
