@@ -19,7 +19,7 @@ import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 
-import static uk.co.real_logic.fix_gateway.SessionRejectReason.COMPID_PROBLEM;
+import static uk.co.real_logic.fix_gateway.fields.RejectReason.COMPID_PROBLEM;
 
 /**
  * A message validation strategy that checks the target comp id of each message.

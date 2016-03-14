@@ -56,11 +56,18 @@ public class DecoderGenerator extends Generator
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
     public static final String GROUP_FIELDS = "GROUP_FIELDS";
 
-    public static final int INVALID_TAG_NUMBER = 0;
-    public static final int REQUIRED_TAG_MISSING = 1;
-    public static final int TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE = 2;
-    public static final int TAG_SPECIFIED_WITHOUT_A_VALUE = 4;
-    public static final int VALUE_IS_INCORRECT = 5;
+    public static final int INVALID_TAG_NUMBER =
+        RejectReason.INVALID_TAG_NUMBER.representation();
+    public static final int REQUIRED_TAG_MISSING =
+        RejectReason.REQUIRED_TAG_MISSING.representation();
+    public static final int TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE =
+        RejectReason.TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE.representation();
+    public static final int TAG_SPECIFIED_WITHOUT_A_VALUE =
+        RejectReason.TAG_SPECIFIED_WITHOUT_A_VALUE.representation();
+    public static final int VALUE_IS_INCORRECT =
+        RejectReason.VALUE_IS_INCORRECT.representation();
+
+    // TODO: ensure that these are only used in the case that we're dealing with FIX 4.4. or later
     public static final int TAG_APPEARS_MORE_THAN_ONCE = 13;
     public static final int TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER = 14;
 

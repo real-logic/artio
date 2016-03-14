@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.library.session;
 
 import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.SessionRejectReason;
+import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.builder.*;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
@@ -31,7 +31,7 @@ import java.util.List;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
-import static uk.co.real_logic.fix_gateway.SessionRejectReason.VALUE_IS_INCORRECT;
+import static uk.co.real_logic.fix_gateway.fields.RejectReason.VALUE_IS_INCORRECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
 /**
@@ -42,16 +42,16 @@ public class SessionProxy
     private static final byte[] INCORRECT_BEGIN_STRING = "Incorrect BeginString".getBytes(US_ASCII);
     private static final byte[] NEGATIVE_HEARTBEAT = "HeartBtInt must not be negative".getBytes(US_ASCII);
     private static final byte[] NO_MSG_SEQ_NO = "Received message without MsgSeqNum".getBytes(US_ASCII);
-    private static final int REJECT_COUNT = SessionRejectReason.values().length;
+    private static final int REJECT_COUNT = RejectReason.values().length;
     private static final byte[][] NOT_LOGGED_ON_SESSION_REJECT_REASONS = new byte[REJECT_COUNT][];
     private static final byte[][] LOGGED_ON_SESSION_REJECT_REASONS = new byte[REJECT_COUNT][];
 
     static
     {
-        final SessionRejectReason[] reasons = SessionRejectReason.values();
+        final RejectReason[] reasons = RejectReason.values();
         for (int i = 0; i < REJECT_COUNT; i++)
         {
-            final SessionRejectReason reason = reasons[i];
+            final RejectReason reason = reasons[i];
             final String formattedReason = reason.name().replace('_', ' ').toLowerCase();
             NOT_LOGGED_ON_SESSION_REJECT_REASONS[i] = String.format(
                 "Tried to send a reject while not logged on: %s (field 0)",
@@ -213,7 +213,7 @@ public class SessionProxy
         return logout(msgSeqNo, NO_MSG_SEQ_NO);
     }
 
-    public long rejectWhilstNotLoggedOn(final int msgSeqNo, final SessionRejectReason reason)
+    public long rejectWhilstNotLoggedOn(final int msgSeqNo, final RejectReason reason)
     {
         return logout(msgSeqNo, NOT_LOGGED_ON_SESSION_REJECT_REASONS[reason.ordinal()]);
     }
@@ -246,7 +246,7 @@ public class SessionProxy
         final int refTagId,
         final byte[] refMsgType,
         final int refMsgTypeLength,
-        final SessionRejectReason reason)
+        final RejectReason reason)
     {
         reject.refTagID(refTagId);
         return reject(msgSeqNo, refSeqNum, refMsgType, refMsgTypeLength, reason);
@@ -257,7 +257,7 @@ public class SessionProxy
         final int refSeqNum,
         final byte[] refMsgType,
         final int refMsgTypeLength,
-        final SessionRejectReason reason)
+        final RejectReason reason)
     {
         final int rejectReason = reason.representation();
 

@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.library.session;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.SessionRejectReason;
+import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
@@ -87,7 +87,7 @@ public class SessionParserTest
             TARGET_COMP_ID,
             "D".toCharArray(),
             "D".length(),
-            SessionRejectReason.COMPID_PROBLEM.representation());
+            RejectReason.COMPID_PROBLEM.representation());
 
         verify(mockSession).startLogout();
         verify(mockSession, never()).onInvalidMessageType(anyInt(), any(), anyInt());

@@ -20,7 +20,7 @@ import uk.co.real_logic.agrona.Verify;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.SessionRejectReason;
+import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
@@ -31,7 +31,7 @@ import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static uk.co.real_logic.fix_gateway.SessionRejectReason.*;
+import static uk.co.real_logic.fix_gateway.fields.RejectReason.*;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
@@ -603,7 +603,7 @@ public class Session
                 NEW_SEQ_NO,
                 SequenceResetDecoder.MESSAGE_TYPE_BYTES,
                 SequenceResetDecoder.MESSAGE_TYPE_BYTES.length,
-                SessionRejectReason.VALUE_IS_INCORRECT);
+                RejectReason.VALUE_IS_INCORRECT);
         }
     }
 

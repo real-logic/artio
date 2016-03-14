@@ -393,7 +393,11 @@ public class Framer implements Agent, SessionHandler
     {
         receiverEndPoints.removeConnection(connectionId);
         senderEndPoints.removeConnection(connectionId);
-        idToLibrary.get(libraryId).onSessionDisconnected(connectionId);
+        final LibraryInfo library = idToLibrary.get(libraryId);
+        if (library != null)
+        {
+            library.onSessionDisconnected(connectionId);
+        }
     }
 
     public void onLibraryConnect(final int libraryId, final ConnectionType connectionType)
