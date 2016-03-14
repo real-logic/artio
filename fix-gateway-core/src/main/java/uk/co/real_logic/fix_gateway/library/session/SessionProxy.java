@@ -30,6 +30,7 @@ import java.util.List;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
+import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.SessionRejectReason.VALUE_IS_INCORRECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
@@ -115,6 +116,8 @@ public class SessionProxy
 
     public SessionProxy setupSession(final long sessionId, final Object sessionKey)
     {
+        requireNonNull(sessionKey, "sessionKey");
+
         this.sessionId = sessionId;
         this.sessionKey = sessionKey;
         return this;

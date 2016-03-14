@@ -24,6 +24,8 @@ import uk.co.real_logic.fix_gateway.messages.SenderAndTargetCompositeKeyEncoder;
 
 import java.util.Arrays;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * A simple, and dumb session id Strategy based upon hashing SenderCompID and TargetCompID. Makes no assumptions
  * about the nature of either identifiers.
@@ -41,6 +43,8 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 
     public Object onAcceptorLogon(final HeaderDecoder header)
     {
+        requireNonNull(header, "header");
+
         return new CompositeKey(
             header.targetCompID(), header.targetCompIDLength(),
             header.senderCompID(), header.senderCompIDLength());
@@ -49,6 +53,9 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
     public Object onInitiatorLogon(
         final String senderCompId, final String senderSubId, final String senderLocationId, final String targetCompId)
     {
+        requireNonNull(senderCompId, "senderCompId");
+        requireNonNull(targetCompId, "targetCompId");
+
         final char[] senderCompID = senderCompId.toCharArray();
         final char[] targetCompID = targetCompId.toCharArray();
         return new CompositeKey(
@@ -57,6 +64,9 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 
     public void setupSession(final Object compositeKey, final HeaderEncoder headerEncoder)
     {
+        requireNonNull(compositeKey, "compositeKey");
+        requireNonNull(headerEncoder, "headerEncoder");
+
         final CompositeKey composite = (CompositeKey)compositeKey;
         headerEncoder.senderCompID(composite.senderCompID);
         headerEncoder.targetCompID(composite.targetCompID);
@@ -64,6 +74,9 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 
     public int save(final Object compositeKey, final AtomicBuffer buffer, final int offset)
     {
+        requireNonNull(compositeKey, "compositeKey");
+        requireNonNull(buffer, "buffer");
+
         final CompositeKey key = (CompositeKey) compositeKey;
         final byte[] senderCompID = key.senderCompID;
         final byte[] targetCompID = key.targetCompID;
@@ -83,6 +96,8 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 
     public Object load(final AtomicBuffer buffer, final int offset, final int length)
     {
+        requireNonNull(buffer, "buffer");
+
         keyDecoder.wrap(buffer, offset, actingBlockLength, actingVersion);
 
         final int senderCompIdLength = keyDecoder.senderCompIdLength();
