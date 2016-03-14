@@ -17,6 +17,10 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.aeron.driver.ReceiveChannelEndpointSupplier;
+import uk.co.real_logic.aeron.driver.SendChannelEndpointSupplier;
+import uk.co.real_logic.aeron.driver.ext.DebugReceiveChannelEndpoint;
+import uk.co.real_logic.aeron.driver.ext.DebugSendChannelEndpoint;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.collections.IntHashSet;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
@@ -57,8 +61,8 @@ public class NodeRunner implements AutoCloseable, Role
         context
             .threadingMode(SHARED)
             .sharedIdleStrategy(new YieldingIdleStrategy())
-            .controlLossGenerator(lossGenerator)
-            .dataLossGenerator(lossGenerator)
+            .receiveChannelEndpointSupplier(newReceiveChannelEndpointSupplier())
+            .sendChannelEndpointSupplier(newSendChannelEndpointSupplier())
             .dirsDeleteOnStart(true)
             .aeronDirectoryName(AERON_DIR_PROP_DEFAULT + nodeId)
             .publicationTermBufferLength(termBufferLength)
@@ -98,6 +102,18 @@ public class NodeRunner implements AutoCloseable, Role
             .archiveReader(archiveReader);
 
         raftNode = new RaftNode(configuration, System.currentTimeMillis());
+    }
+
+    private SendChannelEndpointSupplier newSendChannelEndpointSupplier()
+    {
+        return (udpChannel, context) ->
+            new DebugSendChannelEndpoint(udpChannel, context, lossGenerator, lossGenerator);
+    }
+
+    private ReceiveChannelEndpointSupplier newReceiveChannelEndpointSupplier()
+    {
+        return (udpChannel, dispatcher, context) ->
+            new DebugReceiveChannelEndpoint(udpChannel, dispatcher, context, lossGenerator, lossGenerator);
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)
