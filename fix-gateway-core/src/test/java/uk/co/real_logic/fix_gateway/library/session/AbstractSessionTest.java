@@ -257,11 +257,6 @@ public abstract class AbstractSessionTest
         verifyCanRoundtripTestMessage();
     }
 
-    protected void givenActive()
-    {
-        session().state(ACTIVE);
-    }
-
     @Test
     public void shouldUpdateSequenceNumberOnSequenceReset()
     {
@@ -399,6 +394,11 @@ public abstract class AbstractSessionTest
     {
         verifyLogout();
         awaitingLogout();
+    }
+
+    protected void givenActive()
+    {
+        session().state(ACTIVE);
     }
 
     public void awaitingLogout()

@@ -302,6 +302,21 @@ public class SessionParser
                 final Object sessionKey = sessionIdStrategy.onAcceptorLogon(header);
 
                 final long origSendingTime = origSendingTime(header);
+
+                final String username;
+                final String password;
+
+                if (session.versionHasUserNameAndPassword())
+                {
+                    username = logon.usernameAsString();
+                    password = logon.passwordAsString();
+                }
+                else
+                {
+                    username = null;
+                    password = null;
+                }
+
                 session.onLogon(
                     logon.heartBtInt(),
                     header.msgSeqNum(),
@@ -309,8 +324,8 @@ public class SessionParser
                     sessionKey,
                     sendingTime(header),
                     origSendingTime,
-                    logon.usernameAsString(),
-                    logon.passwordAsString(),
+                    username,
+                    password,
                     isPossDup(header)
                 );
             }

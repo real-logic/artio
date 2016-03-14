@@ -55,6 +55,8 @@ public class Session
 
     public static final String TEST_REQ_ID = "TEST";
     public static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
+    public static final int FIX_VERSION_OFFSET = 4;
+    public static final float FIRST_FIX_VERSION_WITH_USERNAME = 4.4f;
 
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
 
@@ -71,6 +73,8 @@ public class Session
     private final AtomicCounter receivedMsgSeqNo;
     private final AtomicCounter sentMsgSeqNo;
     protected final int libraryId;
+    private final boolean versionHasUserNameAndPassword;
+
     protected Object sessionKey;
 
     private SessionState state;
@@ -129,6 +133,10 @@ public class Session
 
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);
+
+        final float fixVersionNumber = Float.parseFloat(
+            new String(expectedBeginString, FIX_VERSION_OFFSET, expectedBeginString.length - FIX_VERSION_OFFSET));
+        versionHasUserNameAndPassword = fixVersionNumber >= FIRST_FIX_VERSION_WITH_USERNAME;
     }
 
     // ---------- PUBLIC API ----------
@@ -793,5 +801,10 @@ public class Session
             ", sessionId=" + id +
             ", state=" + state +
             '}';
+    }
+
+    public boolean versionHasUserNameAndPassword()
+    {
+        return versionHasUserNameAndPassword;
     }
 }
