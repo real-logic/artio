@@ -42,7 +42,8 @@ public final class FixBenchmarkServer
              final FixEngine engine = FixEngine.launch(configuration);
              final FixLibrary library = FixLibrary.connect(libraryConfiguration()))
         {
-            final IdleStrategy idleStrategy = Configuration.IDLE_STRATEGY;
+            final IdleStrategy idleStrategy = IDLE_STRATEGY;
+            System.out.printf("Using %s idle strategy\n", idleStrategy.getClass().getSimpleName());
             while (true)
             {
                 idleStrategy.idle(library.poll(10));
@@ -56,7 +57,6 @@ public final class FixBenchmarkServer
             .dirsDeleteOnStart(true)
             .publicationTermBufferLength(128 * 1024 * 1024)
             .maxImageTermBufferLength(128 * 1024 * 1024);
-//            .threadingMode(ThreadingMode.SHARED);
 
         return MediaDriver.launch(context);
     }

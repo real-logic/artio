@@ -18,6 +18,8 @@ package uk.co.real_logic.fix_gateway;
 import org.HdrHistogram.Histogram;
 import uk.co.real_logic.agrona.concurrent.NanoClock;
 
+import java.util.concurrent.TimeUnit;
+
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.MESSAGES_EXCHANGED;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.WARMUP_MESSAGES;
 
@@ -56,7 +58,7 @@ public final class Timer
         }
         else if (count == TOTAL_MESSAGES)
         {
-            prettyPrint(prefix, name, histogram, 1000);
+            prettyPrint(prefix, name, histogram, TimeUnit.MICROSECONDS.toNanos(1));
         }
         return time;
     }

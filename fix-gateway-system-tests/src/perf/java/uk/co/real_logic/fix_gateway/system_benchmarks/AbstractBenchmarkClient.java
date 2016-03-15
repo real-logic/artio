@@ -88,9 +88,10 @@ public abstract class AbstractBenchmarkClient
         do
         {
             length = socketChannel.read(readBuffer);
-            LockSupport.parkNanos(1);
+            IDLE_STRATEGY.idle();
         }
         while (length == 0);
+        IDLE_STRATEGY.reset();
         // System.out.printf("Read Data: %d\n", length);
         return length;
     }
