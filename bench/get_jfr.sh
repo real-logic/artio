@@ -1,1 +1,1 @@
-scp -i $PEM ubuntu@$EC2:bench/dump.jfr .
+scp -i $PEM ubuntu@$EC2:fix-gateway/dump.jfr .

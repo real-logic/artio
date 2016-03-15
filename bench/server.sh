@@ -4,6 +4,8 @@ set -eu
 
 java \
   -XX:+UnlockCommercialFeatures \
+  -XX:+UnlockDiagnosticVMOptions \
+  -XX:+DebugNonSafepoints \
   -XX:+FlightRecorder \
   -cp fix-gateway-system-tests-*-benchmarks.jar \
   -XX:StartFlightRecording=delay=10s,duration=40s,name=MyRecording,filename=dump.jfr,settings=./ProfileWithoutSockets.jfc \
