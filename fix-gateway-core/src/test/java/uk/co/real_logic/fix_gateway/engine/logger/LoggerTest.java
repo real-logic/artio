@@ -88,6 +88,7 @@ public class LoggerTest
 
     private final UnsafeBuffer buffer;
 
+    private EngineConfiguration configuration;
     private MediaDriver mediaDriver;
     private Aeron aeron;
     private Logger logger;
@@ -110,11 +111,10 @@ public class LoggerTest
         final Streams outboundStreams = new Streams(
             CHANNEL, aeron, mock(AtomicCounter.class), STREAM_ID, mock(NanoClock.class), 12000);
 
-        final EngineConfiguration configuration =
-            new EngineConfiguration()
-                .logInboundMessages(false)
-                .aeronChannel(CHANNEL)
-                .conclude();
+        configuration = new EngineConfiguration()
+            .logInboundMessages(false)
+            .aeronChannel(CHANNEL)
+            .conclude();
 
         final File dir = new File(configuration.logFileDir());
         if (dir.exists())
@@ -495,6 +495,7 @@ public class LoggerTest
         CloseHelper.close(aeron);
         CloseHelper.close(mediaDriver);
         cleanupDirectory(mediaDriver);
+        CloseHelper.close(configuration);
 
         System.gc();
     }
