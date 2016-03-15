@@ -124,6 +124,8 @@ public class SessionParser
 
     private void onHeartbeat(final int offset, final int length)
     {
+        final HeartbeatDecoder heartbeat = this.heartbeat;
+
         heartbeat.reset();
         heartbeat.decode(asciiBuffer, offset, length);
         final HeaderDecoder header = heartbeat.header();
@@ -205,6 +207,8 @@ public class SessionParser
 
     private void onSequenceReset(final int offset, final int length)
     {
+        final SequenceResetDecoder sequenceReset = this.sequenceReset;
+
         sequenceReset.reset();
         sequenceReset.decode(asciiBuffer, offset, length);
         final HeaderDecoder header = sequenceReset.header();
@@ -225,6 +229,8 @@ public class SessionParser
 
     private void onTestRequest(final int offset, final int length)
     {
+        final TestRequestDecoder testRequest = this.testRequest;
+
         testRequest.reset();
         testRequest.decode(asciiBuffer, offset, length);
         final HeaderDecoder header = testRequest.header();
@@ -249,6 +255,8 @@ public class SessionParser
 
     private void onReject(final int offset, final int length)
     {
+        final RejectDecoder reject = this.reject;
+
         reject.reset();
         reject.decode(asciiBuffer, offset, length);
         final HeaderDecoder header = reject.header();
@@ -266,6 +274,8 @@ public class SessionParser
 
     private void onLogout(final int offset, final int length)
     {
+        final LogoutDecoder logout = this.logout;
+
         logout.reset();
         logout.decode(asciiBuffer, offset, length);
         final HeaderDecoder header = logout.header();
@@ -283,6 +293,9 @@ public class SessionParser
 
     private void onLogon(final int offset, final int length, final long sessionId)
     {
+        final LogonDecoder logon = this.logon;
+        final Session session = this.session;
+
         logon.reset();
         logon.decode(asciiBuffer, offset, length);
         final HeaderDecoder header = logon.header();
