@@ -80,6 +80,7 @@ public class Framer implements Agent, SessionHandler
 
     private final EpochClock clock;
     private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
+    private final Timer sendTimer = new Timer("Send", new SystemNanoClock());
     private final DataSubscriber dataSubscriber = new DataSubscriber(this);
 
     private final boolean hasBindAddress;
@@ -343,12 +344,18 @@ public class Framer implements Agent, SessionHandler
         final int messageType,
         final long timestamp)
     {
+        long now = 0;
         if (TIME_MESSAGES)
         {
-            outboundTimer.recordSince(timestamp);
+            now = outboundTimer.recordSince(timestamp);
         }
 
         senderEndPoints.onMessage(connectionId, buffer, offset, length);
+
+        if (TIME_MESSAGES)
+        {
+            sendTimer.recordSince(now);
+        }
     }
 
     private void setupConnection(
