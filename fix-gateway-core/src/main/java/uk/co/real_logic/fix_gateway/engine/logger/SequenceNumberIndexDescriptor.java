@@ -20,6 +20,8 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
+import java.io.File;
+
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.nextSectorStart;
 
@@ -62,5 +64,15 @@ final class SequenceNumberIndexDescriptor
             return fileCapacity - SECTOR_SIZE;
         }
         return proposedCapacity;
+    }
+
+    public static File passingPath(String indexFilePath)
+    {
+        return new File(indexFilePath + "-passing");
+    }
+
+    public static File writablePath(String indexFilePath)
+    {
+        return new File(indexFilePath + "-writable");
     }
 }

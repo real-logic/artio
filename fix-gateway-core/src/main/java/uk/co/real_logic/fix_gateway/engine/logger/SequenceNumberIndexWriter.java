@@ -34,6 +34,8 @@ import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncod
 
 public class SequenceNumberIndexWriter implements Index
 {
+    private static final boolean RUNNING_ON_WINDOWS = System.getProperty("os.name").startsWith("Windows");
+
     private static final long MISSING_RECORD = -1L;
     private static final long UNINITIALISED = -1;
     private static final int SEQUENCE_NUMBER_OFFSET = 8;
@@ -75,17 +77,26 @@ public class SequenceNumberIndexWriter implements Index
 
         final String indexFilePath = indexFile.file().getAbsolutePath();
         indexPath = indexFile.file();
-        writablePath = new File(indexFilePath + "-writable");
-        passingPlacePath = new File(indexFilePath + "-passing");
+        writablePath = writablePath(indexFilePath);
+        passingPlacePath = passingPath(indexFilePath);
         writableFile = MappedFile.map(writablePath, fileCapacity);
 
         // TODO: Fsync parent directory
         final int positionTableOffset = positionTableOffset(fileCapacity);
         checksumFramer = new ChecksumFramer(inMemoryBuffer, positionTableOffset);
-        initialiseBuffer();
-        positions = new IndexedPositionWriter(
-            positionsBuffer(inMemoryBuffer, positionTableOffset),
-            errorHandler);
+        try
+        {
+            initialiseBuffer();
+            positions = new IndexedPositionWriter(
+                    positionsBuffer(inMemoryBuffer, positionTableOffset),
+                    errorHandler);
+        }
+        catch (final Exception e)
+        {
+            writableFile.close();
+            indexFile.close();
+            throw e;
+        }
     }
 
     public void indexRecord(
@@ -149,11 +160,25 @@ public class SequenceNumberIndexWriter implements Index
 
     private void flipFiles()
     {
+        // TODO: identify a non-special cased way of doing this
+
+        if (RUNNING_ON_WINDOWS)
+        {
+            writableFile.close();
+            indexFile.close();
+        }
+
         final boolean flipsFiles = rename(indexPath, passingPlacePath)
                                 && rename(writablePath, indexPath)
                                 && rename(passingPlacePath, writablePath);
 
-        if (flipsFiles)
+        if (RUNNING_ON_WINDOWS)
+        {
+            // remapping flips the files here due to the rename
+            writableFile.map();
+            indexFile.map();
+        }
+        else if (flipsFiles)
         {
             final MappedFile file = this.writableFile;
             writableFile = indexFile;
@@ -201,13 +226,6 @@ public class SequenceNumberIndexWriter implements Index
     public void forEachPosition(final IndexedPositionConsumer consumer)
     {
         new IndexedPositionReader(positions.buffer()).forEach(consumer);
-    }
-
-    public boolean clear()
-    {
-        return indexPath.delete()
-            && writablePath.delete()
-            && (!passingPlacePath.exists() || passingPlacePath.delete());
     }
 
     private void saveRecord(final int newSequenceNumber,

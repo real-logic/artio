@@ -106,6 +106,11 @@ public class MappedFile implements AutoCloseable
     public void remap()
     {
         close();
+        map();
+    }
+
+    public void map()
+    {
         final MappedFile remappedFile = map(file, buffer.capacity());
         this.fileChannel = remappedFile.fileChannel;
         this.buffer = remappedFile.buffer;
