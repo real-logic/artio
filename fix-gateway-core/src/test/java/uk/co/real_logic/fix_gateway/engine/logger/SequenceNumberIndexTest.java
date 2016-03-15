@@ -36,6 +36,7 @@ import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDesc
 public class SequenceNumberIndexTest extends AbstractLogTest
 {
     private static final int BUFFER_SIZE = 16 * 1024;
+
     public static final String INDEX_FILE_PATH = IoUtil.tmpDirName() + "/SequenceNumberIndex";
 
     private AtomicBuffer inMemoryBuffer = newBuffer();
@@ -193,7 +194,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private SequenceNumberIndexReader newInstanceAfterRestart()
     {
         final AtomicBuffer inMemoryBuffer = newBuffer();
-        newWriter(inMemoryBuffer);
+        newWriter(inMemoryBuffer).close();
         return new SequenceNumberIndexReader(inMemoryBuffer);
     }
 
