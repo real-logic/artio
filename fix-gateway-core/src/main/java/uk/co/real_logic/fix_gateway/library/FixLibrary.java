@@ -67,7 +67,7 @@ public final class FixLibrary extends GatewayProcess
     private final EpochClock clock;
     private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
-    private final Timer sessionTimer = new Timer(" ", "Session", new SystemNanoClock());
+    private final Timer sessionTimer = new Timer("Session", new SystemNanoClock());
     private final Timer receiveTimer = new Timer("Receive", new SystemNanoClock());
     private final LivenessDetector livenessDetector;
     private final int libraryId;
