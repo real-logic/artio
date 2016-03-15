@@ -113,14 +113,15 @@ public class LoggerTest
 
         configuration = new EngineConfiguration()
             .logInboundMessages(false)
-            .aeronChannel(CHANNEL)
-            .conclude();
+            .aeronChannel(CHANNEL);
 
         final File dir = new File(configuration.logFileDir());
         if (dir.exists())
         {
             IoUtil.delete(dir, false);
         }
+
+        configuration.conclude();
 
         logger = new Logger(
             configuration, null, outboundStreams, Throwable::printStackTrace, null,
@@ -492,10 +493,10 @@ public class LoggerTest
     public void tearDown()
     {
         CloseHelper.close(logger);
+        CloseHelper.close(configuration);
         CloseHelper.close(aeron);
         CloseHelper.close(mediaDriver);
         cleanupDirectory(mediaDriver);
-        CloseHelper.close(configuration);
 
         System.gc();
     }
