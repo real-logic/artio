@@ -20,21 +20,23 @@ import uk.co.real_logic.agrona.Verify;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
+import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static uk.co.real_logic.fix_gateway.fields.RejectReason.*;
+import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_LONG;
+import static uk.co.real_logic.fix_gateway.fields.RejectReason.*;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
@@ -514,6 +516,11 @@ public class Session
 
     protected boolean validateSendingTime(final long sendingTime)
     {
+        if (CODEC_VALIDATION_DISABLED && sendingTime == MISSING_LONG)
+        {
+            return true;
+        }
+
         final long time = time();
         final boolean isValid = sendingTime < (time + sendingTimeWindow) && sendingTime > (time - sendingTimeWindow);
 
