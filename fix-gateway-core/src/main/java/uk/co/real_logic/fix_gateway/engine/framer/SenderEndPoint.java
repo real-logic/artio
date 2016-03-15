@@ -32,7 +32,7 @@ class SenderEndPoint implements AutoCloseable
     private final int libraryId;
     private final SocketChannel channel;
     private final IdleStrategy idleStrategy;
-    private final AtomicCounter messagesWrites;
+    private final AtomicCounter messageWrites;
     private final ErrorHandler errorHandler;
     private final Framer framer;
     private final ReliefValve reliefValve;
@@ -42,7 +42,7 @@ class SenderEndPoint implements AutoCloseable
         final int libraryId,
         final SocketChannel channel,
         final IdleStrategy idleStrategy,
-        final AtomicCounter messagesWrites,
+        final AtomicCounter messageWrites,
         final ErrorHandler errorHandler,
         final Framer framer,
         final ReliefValve reliefValve)
@@ -51,7 +51,7 @@ class SenderEndPoint implements AutoCloseable
         this.libraryId = libraryId;
         this.channel = channel;
         this.idleStrategy = idleStrategy;
-        this.messagesWrites = messagesWrites;
+        this.messageWrites = messageWrites;
         this.errorHandler = errorHandler;
         this.framer = framer;
         this.reliefValve = reliefValve;
@@ -59,6 +59,11 @@ class SenderEndPoint implements AutoCloseable
 
     public void onFramedMessage(final DirectBuffer directBuffer, final int offset, final int length)
     {
+        final SocketChannel channel = this.channel;
+        final AtomicCounter messageWrites = this.messageWrites;
+        final IdleStrategy idleStrategy = this.idleStrategy;
+        final ReliefValve reliefValve = this.reliefValve;
+
         final ByteBuffer buffer = directBuffer.byteBuffer();
         buffer.limit(offset + length);
         buffer.position(offset);
@@ -70,7 +75,7 @@ class SenderEndPoint implements AutoCloseable
             {
                 final int written = channel.write(buffer);
                 DebugLogger.log("Written  %s\n", buffer, written);
-                messagesWrites.orderedIncrement();
+                messageWrites.orderedIncrement();
                 bytesWritten += written;
                 if (written == 0)
                 {
@@ -102,6 +107,6 @@ class SenderEndPoint implements AutoCloseable
 
     public void close()
     {
-        messagesWrites.close();
+        messageWrites.close();
     }
 }
