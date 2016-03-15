@@ -115,8 +115,18 @@ public final class FixEngine extends GatewayProcess
 
     private void newLogger(final EngineConfiguration configuration)
     {
+        final SequenceNumberIndexWriter sentSequenceNumberIndexWriter = new SequenceNumberIndexWriter(
+            configuration.sentSequenceNumberBuffer(), configuration.sentSequenceNumberIndex(), errorBuffer);
+        final SequenceNumberIndexWriter receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
+            configuration.receivedSequenceNumberBuffer(), configuration.receivedSequenceNumberIndex(), errorBuffer);
         logger = new Logger(
-            configuration, inboundLibraryStreams, outboundLibraryStreams, errorBuffer, replayPublication()
+            configuration,
+            inboundLibraryStreams,
+            outboundLibraryStreams,
+            errorBuffer,
+            replayPublication(),
+            sentSequenceNumberIndexWriter,
+            receivedSequenceNumberIndex
         );
     }
 
