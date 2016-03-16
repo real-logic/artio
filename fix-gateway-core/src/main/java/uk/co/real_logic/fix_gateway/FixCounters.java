@@ -19,26 +19,18 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.CountersManager;
 
 import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class FixCounters implements AutoCloseable
 {
-    private final Map<String, AtomicCounter> errorCountersByName = new HashMap<>();
-    private final List<AtomicCounter> otherCounters = new ArrayList<>();
     private final CountersManager countersManager;
     private final AtomicCounter failedInboundPublications;
     private final AtomicCounter failedOutboundPublications;
-    private final AtomicCounter exceptions;
 
     public FixCounters(final CountersManager countersManager)
     {
         this.countersManager = countersManager;
         failedInboundPublications = countersManager.newCounter("Failed offer to inbound publication");
         failedOutboundPublications = countersManager.newCounter("Failed offer to outbound publication");
-        exceptions = countersManager.newCounter("Gateway Exceptions");
     }
 
     public AtomicCounter failedInboundPublications()
@@ -49,11 +41,6 @@ public class FixCounters implements AutoCloseable
     public AtomicCounter failedOutboundPublications()
     {
         return failedOutboundPublications;
-    }
-
-    public AtomicCounter exceptions()
-    {
-        return exceptions;
     }
 
     public AtomicCounter messagesRead(final SocketAddress address)
@@ -78,24 +65,13 @@ public class FixCounters implements AutoCloseable
 
     private AtomicCounter newCounter(final String label)
     {
-        final AtomicCounter counter = countersManager.newCounter(label);
-        otherCounters.add(counter);
-        return counter;
-    }
-
-    public AtomicCounter errors(final String className)
-    {
-        final String counterName = className + " errors";
-        return errorCountersByName.computeIfAbsent(counterName, this::newCounter);
+        return countersManager.newCounter(label);
     }
 
     public void close()
     {
         failedInboundPublications.close();
         failedOutboundPublications.close();
-        exceptions.close();
-        otherCounters.forEach(AtomicCounter::close);
-        errorCountersByName.values().forEach(AtomicCounter::close);
     }
 
 }
