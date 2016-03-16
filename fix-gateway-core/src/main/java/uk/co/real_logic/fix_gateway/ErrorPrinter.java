@@ -15,33 +15,36 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.agrona.concurrent.Agent;
-import uk.co.real_logic.agrona.concurrent.AgentRunner;
-import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.agrona.concurrent.*;
+import uk.co.real_logic.agrona.concurrent.errors.ErrorConsumer;
+import uk.co.real_logic.agrona.concurrent.errors.ErrorLogReader;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-
-import java.util.List;
 
 public class ErrorPrinter implements Agent
 {
-    private final ErrorBuffer buffer;
-
-    private long lastSeenErrorTime = 0L;
-
     public static void main(String[] args)
     {
         final EngineConfiguration configuration = new EngineConfiguration();
         final MonitoringFile monitoringFile = new MonitoringFile(false, configuration);
-        final ErrorPrinter printer = new ErrorPrinter(monitoringFile, configuration.errorSlotSize());
+        final ErrorPrinter printer = new ErrorPrinter(monitoringFile.errorBuffer());
         final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
         final AgentRunner runner = new AgentRunner(idleStrategy, Throwable::printStackTrace, null, printer);
         runner.run();
     }
 
-    public ErrorPrinter(final MonitoringFile monitoringFile, final int errorSlotSize)
+    private final ErrorConsumer errorConsumer =
+        (observationCount, firstObservationTimestamp, lastObservationTimestamp, encodedException) ->
+        {
+            System.err.println(encodedException);
+            System.err.println();
+        };
+    private final AtomicBuffer errorBuffer;
+
+    private long lastSeenErrorTime = 0L;
+
+    public ErrorPrinter(final AtomicBuffer errorBuffer)
     {
-        buffer = new ErrorBuffer(monitoringFile.errorBuffer(), errorSlotSize);
+        this.errorBuffer = errorBuffer;
     }
 
     public int doWork() throws Exception
@@ -49,13 +52,12 @@ public class ErrorPrinter implements Agent
         final long time = System.nanoTime();
         if (time > lastSeenErrorTime)
         {
-            final List<String> errors = buffer.errorsSince(lastSeenErrorTime);
-            if (errors.size() > 0)
+            final int errors = ErrorLogReader.read(errorBuffer, errorConsumer, lastSeenErrorTime);
+            if (errors > 0)
             {
-                errors.forEach(System.err::println);
                 lastSeenErrorTime = time;
             }
-            return errors.size();
+            return errors;
         }
 
         return 0;

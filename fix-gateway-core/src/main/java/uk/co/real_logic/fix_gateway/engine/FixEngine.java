@@ -18,17 +18,17 @@ package uk.co.real_logic.fix_gateway.engine;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.concurrent.*;
-import uk.co.real_logic.fix_gateway.ErrorPrinter;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.engine.framer.*;
-import uk.co.real_logic.fix_gateway.engine.logger.*;
+import uk.co.real_logic.fix_gateway.engine.logger.Logger;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexWriter;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.File;
 import java.util.List;
 
-import static uk.co.real_logic.agrona.CloseHelper.quietClose;
 import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
 
 /**
@@ -47,7 +47,6 @@ public final class FixEngine extends GatewayProcess
 
     private final EngineConfiguration configuration;
 
-    private AgentRunner errorPrinterRunner;
     private AgentRunner framerRunner;
     private Logger logger;
 
@@ -110,20 +109,19 @@ public final class FixEngine extends GatewayProcess
         newLogger(configuration);
         initFramer(configuration, fixCounters);
         logger.init();
-        initErrorPrinter(configuration);
     }
 
     private void newLogger(final EngineConfiguration configuration)
     {
         final SequenceNumberIndexWriter sentSequenceNumberIndexWriter = new SequenceNumberIndexWriter(
-            configuration.sentSequenceNumberBuffer(), configuration.sentSequenceNumberIndex(), errorBuffer);
+            configuration.sentSequenceNumberBuffer(), configuration.sentSequenceNumberIndex(), errorHandler);
         final SequenceNumberIndexWriter receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
-            configuration.receivedSequenceNumberBuffer(), configuration.receivedSequenceNumberIndex(), errorBuffer);
+            configuration.receivedSequenceNumberBuffer(), configuration.receivedSequenceNumberIndex(), errorHandler);
         logger = new Logger(
             configuration,
             inboundLibraryStreams,
             outboundLibraryStreams,
-            errorBuffer,
+            errorHandler,
             replayPublication(),
             sentSequenceNumberIndexWriter,
             receivedSequenceNumberIndex
@@ -135,20 +133,10 @@ public final class FixEngine extends GatewayProcess
         return aeron.addPublication(configuration.aeronChannel(), OUTBOUND_REPLAY_STREAM);
     }
 
-    private void initErrorPrinter(final EngineConfiguration configuration)
-    {
-        if (this.configuration.printErrorMessages())
-        {
-            final ErrorPrinter printer = new ErrorPrinter(monitoringFile, configuration.errorSlotSize());
-            errorPrinterRunner = new AgentRunner(
-                configuration.errorPrinterIdleStrategy(), Throwable::printStackTrace, null, printer);
-        }
-    }
-
     private void initFramer(final EngineConfiguration configuration, final FixCounters fixCounters)
     {
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
-        final SessionIds sessionIds = new SessionIds(configuration.sessionIdBuffer(), sessionIdStrategy, errorBuffer);
+        final SessionIds sessionIds = new SessionIds(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Subscription librarySubscription = outboundLibraryStreams.subscription();
 
@@ -159,7 +147,7 @@ public final class FixEngine extends GatewayProcess
             inboundLibraryStreams,
             idleStrategy,
             fixCounters,
-            errorBuffer);
+            errorHandler);
 
         final Framer framer = new Framer(
             new SystemEpochClock(), configuration, handler, librarySubscription, replaySubscription(),
@@ -167,7 +155,7 @@ public final class FixEngine extends GatewayProcess
             new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer()),
             new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer())
         );
-        framerRunner = new AgentRunner(idleStrategy, errorBuffer, null, framer);
+        framerRunner = new AgentRunner(idleStrategy, errorHandler, null, framer);
     }
 
     private Subscription replaySubscription()
@@ -179,10 +167,7 @@ public final class FixEngine extends GatewayProcess
     {
         startOnThread(framerRunner);
         logger.start();
-        if (configuration.printErrorMessages())
-        {
-            startOnThread(errorPrinterRunner);
-        }
+        start();
         return this;
     }
 
@@ -191,7 +176,6 @@ public final class FixEngine extends GatewayProcess
      */
     public synchronized void close()
     {
-        quietClose(errorPrinterRunner);
         framerRunner.close();
         logger.close();
         configuration.close();

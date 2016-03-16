@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
@@ -96,10 +95,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int loggerCacheSetSize = DEFAULT_LOGGER_CACHE_SET_SIZE;
     private boolean logInboundMessages = true;
     private boolean logOutboundMessages = true;
-    private boolean printErrorMessages = true;
     private IdleStrategy framerIdleStrategy = backoffIdleStrategy();
     private IdleStrategy loggerIdleStrategy = backoffIdleStrategy();
-    private IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
     private AtomicBuffer sentSequenceNumberBuffer;
     private AtomicBuffer receivedSequenceNumberBuffer;
     private MappedFile sentSequenceNumberIndex;
@@ -278,22 +275,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Sets the printing of error messages on or off. Error messages are always logged in an error buffer that
-     * can be scanned by another diagnostic process, this simply switches on or off the printing these errors on
-     * standard out.
-     * <p>
-     * Default: true
-     *
-     * @param printErrorMessages the printing of error messages.
-     * @return this
-     */
-    public EngineConfiguration printErrorMessages(final boolean printErrorMessages)
-    {
-        this.printErrorMessages = printErrorMessages;
-        return this;
-    }
-
-    /**
      * Sets the idle strategy for the Framer thread.
      *
      * @param framerIdleStrategy the idle strategy for the Framer thread.
@@ -314,18 +295,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration loggerIdleStrategy(final IdleStrategy loggerIdleStrategy)
     {
         this.loggerIdleStrategy = loggerIdleStrategy;
-        return this;
-    }
-
-    /**
-     * Sets the idle strategy for the Error Printer thread.
-     *
-     * @param errorPrinterIdleStrategy the idle strategy for the Error Printer thread.
-     * @return this
-     */
-    public EngineConfiguration errorPrinterIdleStrategy(final IdleStrategy errorPrinterIdleStrategy)
-    {
-        this.errorPrinterIdleStrategy = errorPrinterIdleStrategy;
         return this;
     }
 
@@ -426,19 +395,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return logOutboundMessages;
     }
 
-    public boolean printErrorMessages()
-    {
-        return printErrorMessages;
-    }
-
     public IdleStrategy framerIdleStrategy()
     {
         return framerIdleStrategy;
-    }
-
-    public IdleStrategy errorPrinterIdleStrategy()
-    {
-        return errorPrinterIdleStrategy;
     }
 
     public IdleStrategy loggerIdleStrategy()

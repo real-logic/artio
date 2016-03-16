@@ -16,13 +16,16 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.aeron.Aeron;
-import uk.co.real_logic.agrona.concurrent.EpochClock;
-import uk.co.real_logic.agrona.concurrent.NanoClock;
-import uk.co.real_logic.agrona.concurrent.SystemEpochClock;
-import uk.co.real_logic.agrona.concurrent.SystemNanoClock;
+import uk.co.real_logic.agrona.ErrorHandler;
+import uk.co.real_logic.agrona.concurrent.*;
+import uk.co.real_logic.agrona.concurrent.errors.DistinctErrorLog;
 import uk.co.real_logic.fix_gateway.streams.Streams;
 
 import java.nio.channels.ClosedByInterruptException;
+
+import static uk.co.real_logic.aeron.driver.Configuration.ERROR_BUFFER_LENGTH_PROP_NAME;
+import static uk.co.real_logic.agrona.CloseHelper.quietClose;
+import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
 
 public class GatewayProcess implements AutoCloseable
 {
@@ -32,7 +35,9 @@ public class GatewayProcess implements AutoCloseable
 
     protected MonitoringFile monitoringFile;
     protected FixCounters fixCounters;
-    protected ErrorBuffer errorBuffer;
+    protected AgentRunner errorPrinterRunner;
+    protected ErrorHandler errorHandler;
+    protected DistinctErrorLog distinctErrorLog;
     protected Aeron aeron;
     protected Streams inboundLibraryStreams;
     protected Streams outboundLibraryStreams;
@@ -40,6 +45,7 @@ public class GatewayProcess implements AutoCloseable
     protected void init(final CommonConfiguration configuration)
     {
         initMonitoring(configuration);
+        initErrorPrinter(configuration);
         initAeron(configuration);
         initStreams(configuration);
     }
@@ -49,8 +55,25 @@ public class GatewayProcess implements AutoCloseable
         monitoringFile = new MonitoringFile(true, configuration);
         fixCounters = new FixCounters(monitoringFile.createCountersManager());
         final EpochClock clock = new SystemEpochClock();
-        errorBuffer = new ErrorBuffer(
-            monitoringFile.errorBuffer(), fixCounters.exceptions(), clock, configuration.errorSlotSize());
+        distinctErrorLog = new DistinctErrorLog(monitoringFile.errorBuffer(), clock);
+        errorHandler = throwable ->
+        {
+            if (!distinctErrorLog.record(throwable))
+            {
+                System.err.println("Error Log is full, consider increasing " + ERROR_BUFFER_LENGTH_PROP_NAME);
+                throwable.printStackTrace();
+            }
+        };
+    }
+
+    private void initErrorPrinter(final CommonConfiguration configuration)
+    {
+        if (configuration.printErrorMessages())
+        {
+            final ErrorPrinter printer = new ErrorPrinter(monitoringFile.errorBuffer());
+            errorPrinterRunner = new AgentRunner(
+                configuration.errorPrinterIdleStrategy(), Throwable::printStackTrace, null, printer);
+        }
     }
 
     private void initStreams(final CommonConfiguration configuration)
@@ -79,14 +102,23 @@ public class GatewayProcess implements AutoCloseable
         {
             if (!(throwable instanceof ClosedByInterruptException))
             {
-                errorBuffer.onError(throwable);
+                errorHandler.onError(throwable);
             }
         });
         return ctx;
     }
 
+    protected void start()
+    {
+        if (errorPrinterRunner != null)
+        {
+            startOnThread(errorPrinterRunner);
+        }
+    }
+
     public void close()
     {
+        quietClose(errorPrinterRunner);
         aeron.close();
         monitoringFile.close();
     }

@@ -94,6 +94,8 @@ public class CommonConfiguration
 
     private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
     private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
+    protected boolean printErrorMessages = true;
+    protected IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
 
     private SessionIdStrategy sessionIdStrategy = new SenderAndTargetSessionIdStrategy();
     private int monitoringBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROPERTY, DEFAULT_MONITORING_BUFFER_LENGTH);
@@ -147,6 +149,44 @@ public class CommonConfiguration
     public CommonConfiguration monitoringFile(String monitoringFile)
     {
         this.monitoringFile = monitoringFile;
+        return this;
+    }
+
+    public boolean printErrorMessages()
+    {
+        return printErrorMessages;
+    }
+
+    public IdleStrategy errorPrinterIdleStrategy()
+    {
+        return errorPrinterIdleStrategy;
+    }
+
+    /**
+     * Sets the printing of error messages on or off. Error messages are always logged in an error buffer that
+     * can be scanned by another diagnostic process, this simply switches on or off the printing these errors on
+     * standard out.
+     * <p>
+     * Default: true
+     *
+     * @param printErrorMessages the printing of error messages.
+     * @return this
+     */
+    public CommonConfiguration printErrorMessages(final boolean printErrorMessages)
+    {
+        this.printErrorMessages = printErrorMessages;
+        return this;
+    }
+
+    /**
+     * Sets the idle strategy for the Error Printer thread.
+     *
+     * @param errorPrinterIdleStrategy the idle strategy for the Error Printer thread.
+     * @return this
+     */
+    public CommonConfiguration errorPrinterIdleStrategy(final IdleStrategy errorPrinterIdleStrategy)
+    {
+        this.errorPrinterIdleStrategy = errorPrinterIdleStrategy;
         return this;
     }
 

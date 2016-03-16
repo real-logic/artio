@@ -122,6 +122,8 @@ public final class FixLibrary extends GatewayProcess
                         "Unable to connect to engine: %s", errorType
                 ));
             }
+
+            start();
         }
         catch (Exception e)
         {
