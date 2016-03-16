@@ -29,6 +29,11 @@ import static uk.co.real_logic.fix_gateway.CommonConfiguration.WARMUP_MESSAGES;
 public final class LatencyBenchmarkClient extends AbstractBenchmarkClient
 {
 
+    public static void main(String[] args) throws IOException
+    {
+        new LatencyBenchmarkClient().runBenchmark();
+    }
+
     public void runBenchmark() throws IOException
     {
         try (final SocketChannel socketChannel = open())
@@ -48,9 +53,9 @@ public final class LatencyBenchmarkClient extends AbstractBenchmarkClient
     }
 
     private void runWarmup(final SocketChannel socketChannel,
-                             final TestRequestEncoder testRequest,
-                             final HeaderEncoder header,
-                             final Histogram histogram) throws IOException
+                           final TestRequestEncoder testRequest,
+                           final HeaderEncoder header,
+                           final Histogram histogram) throws IOException
     {
         for (int i = 0; i < WARMUP_MESSAGES; i++)
         {

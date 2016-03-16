@@ -72,7 +72,6 @@ public class FramerTest
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
         .replyTimeoutInMs(REPLY_TIMEOUT_IN_MS);
 
-    @SuppressWarnings("unchecked")
     private Framer framer;
 
     private ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);

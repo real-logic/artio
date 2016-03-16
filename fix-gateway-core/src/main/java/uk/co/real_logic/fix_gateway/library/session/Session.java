@@ -45,7 +45,7 @@ import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
  *
  * Should only be accessed on a single thread.
  */
-public class Session
+public class Session implements AutoCloseable
 {
     public static final long UNKNOWN = -1;
     public static final long NO_OPERATION = -4;
@@ -404,7 +404,6 @@ public class Session
     {
         state(DISCONNECTED);
     }
-
 
     void onMessage(final int msgSeqNo,
                    final byte[] msgType,
@@ -813,5 +812,11 @@ public class Session
     public boolean versionHasUserNameAndPassword()
     {
         return versionHasUserNameAndPassword;
+    }
+
+    public void close()
+    {
+        sentMsgSeqNo.close();
+        receivedMsgSeqNo.close();
     }
 }

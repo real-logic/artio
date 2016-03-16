@@ -23,15 +23,19 @@ public final class FixBenchmarkClient
     {
         if (TYPE.equalsIgnoreCase("throughput"))
         {
-            new ThroughputBenchmarkClient().runBenchmark();
+            ThroughputBenchmarkClient.main(args);
         }
         else if (TYPE.equalsIgnoreCase("single-throughput"))
         {
-            new SingleThreadedThroughputBenchmarkClient().runBenchmark();
+            SingleThreadedThroughputBenchmarkClient.main(args);
+        }
+        else if (TYPE.equalsIgnoreCase("many-connections"))
+        {
+            ManyConnectionsBenchmarkClient.main(args);
         }
         else
         {
-            new LatencyBenchmarkClient().runBenchmark();
+            LatencyBenchmarkClient.main(args);
         }
     }
 }

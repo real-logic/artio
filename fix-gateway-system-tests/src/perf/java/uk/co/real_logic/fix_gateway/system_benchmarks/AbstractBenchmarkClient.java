@@ -38,11 +38,16 @@ public abstract class AbstractBenchmarkClient
 
     protected TestRequestEncoder setupTestRequest()
     {
+        return setupTestRequest(INITIATOR_ID);
+    }
+
+    protected TestRequestEncoder setupTestRequest(final String initiatorId)
+    {
         final TestRequestEncoder testRequest = new TestRequestEncoder();
         testRequest
             .header()
             .sendingTime(timestampEncoder.buffer())
-            .senderCompID(INITIATOR_ID)
+            .senderCompID(initiatorId)
             .targetCompID(ACCEPTOR_ID);
         testRequest.testReqID("a");
         return testRequest;
@@ -50,12 +55,18 @@ public abstract class AbstractBenchmarkClient
 
     protected void logon(final SocketChannel socketChannel) throws IOException
     {
+        final LogonDecoder logonDecoder = logon(socketChannel, INITIATOR_ID);
+        System.out.println("Authenticated: " + logonDecoder);
+    }
+
+    protected LogonDecoder logon(final SocketChannel socketChannel, final String initiatorId) throws IOException
+    {
         final LogonEncoder logon = new LogonEncoder();
         logon.heartBtInt(10);
         logon
             .header()
             .sendingTime(timestampEncoder.buffer())
-            .senderCompID(INITIATOR_ID)
+            .senderCompID(initiatorId)
             .targetCompID(ACCEPTOR_ID)
             .msgSeqNum(1);
 
@@ -66,7 +77,7 @@ public abstract class AbstractBenchmarkClient
         final int length = read(socketChannel);
         final LogonDecoder logonDecoder = new LogonDecoder();
         logonDecoder.decode(readFlyweight, 0, length);
-        System.out.println("Authenticated: " + logonDecoder);
+        return logonDecoder;
     }
 
     protected void write(final SocketChannel socketChannel, final int amount) throws IOException

@@ -386,6 +386,7 @@ class ReceiverEndPoint
         try
         {
             channel.close();
+            messagesRead.close();
         }
         catch (Exception e)
         {

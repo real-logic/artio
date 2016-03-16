@@ -19,10 +19,7 @@ import uk.co.real_logic.aeron.Subscription;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
-import uk.co.real_logic.agrona.concurrent.EpochClock;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.agrona.concurrent.SystemEpochClock;
-import uk.co.real_logic.agrona.concurrent.SystemNanoClock;
+import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.library.session.*;
@@ -332,6 +329,7 @@ public final class FixLibrary extends GatewayProcess
 
     private final DataSubscriber dataSubscriber = new DataSubscriber(new SessionHandler()
     {
+
         private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
         public void onConnect(
@@ -361,7 +359,7 @@ public final class FixLibrary extends GatewayProcess
                     final String address = asciiBuffer.getAscii(addressOffset, addressLength);
                     if (isAcceptor)
                     {
-                        final Session session = acceptSession(connectionId, lastSentSequenceNumber, address);
+                        final Session session = acceptSession(connectionId, address);
                         newSession(connectionId, session);
                     }
                     else
@@ -439,6 +437,7 @@ public final class FixLibrary extends GatewayProcess
                 {
                     subscriber.onDisconnect(libraryId, connectionId, reason);
                     final Session session = subscriber.session();
+                    session.close();
                     sessions.remove(session);
                 }
             }
@@ -520,15 +519,19 @@ public final class FixLibrary extends GatewayProcess
         return 1;
     }
 
-    private Session acceptSession(final long connectionId, final int lastSequenceNumber, final String address)
+    private Session acceptSession(final long connectionId, final String address)
     {
-        final GatewayPublication publication = outboundLibraryStreams.gatewayPublication(
-            idleStrategy);
+        final GatewayPublication publication = outboundLibraryStreams.gatewayPublication(idleStrategy);
         final int defaultInterval = configuration.defaultHeartbeatInterval();
         final int split = address.lastIndexOf(':');
         final int start = address.startsWith("/") ? 1 : 0;
         final String host = address.substring(start, split);
         final int port = Integer.parseInt(address.substring(split + 1));
+        final char[] beginString = configuration.beginString();
+        final long sendingTimeWindow = configuration.sendingTimeWindowInMs();
+        final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
+        final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
+        final int sessionBufferSize = configuration.acceptorSessionBufferSize();
 
         return new AcceptorSession(
             defaultInterval,
@@ -537,12 +540,12 @@ public final class FixLibrary extends GatewayProcess
             sessionProxy(connectionId),
             publication,
             sessionIdStrategy,
-            configuration.beginString(),
-            configuration.sendingTimeWindowInMs(),
-            fixCounters.receivedMsgSeqNo(connectionId),
-            fixCounters.sentMsgSeqNo(connectionId),
+            beginString,
+            sendingTimeWindow,
+            receivedMsgSeqNo,
+            sentMsgSeqNo,
             libraryId,
-            configuration.acceptorSessionBufferSize(),
+            sessionBufferSize,
             1)
             .address(host, port);
     }
