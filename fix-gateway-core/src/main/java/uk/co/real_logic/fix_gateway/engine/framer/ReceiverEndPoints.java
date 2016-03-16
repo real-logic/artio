@@ -60,6 +60,8 @@ class ReceiverEndPoints extends TransportPoller
         }
 
         this.endPoints = ArrayUtil.remove(endPoints, index);
+
+        selectNowToForceProcessing();
     }
 
     public void removeLibrary(final int libraryId)
@@ -68,9 +70,8 @@ class ReceiverEndPoints extends TransportPoller
         final int length = endPoints.length;
         int removeCount = 0;
 
-        for (int i = 0; i < length; i++)
+        for (final ReceiverEndPoint endPoint : endPoints)
         {
-            final ReceiverEndPoint endPoint = endPoints[i];
             if (endPoint.libraryId() == libraryId)
             {
                 endPoint.close(LIBRARY_DISCONNECT);
@@ -94,6 +95,20 @@ class ReceiverEndPoints extends TransportPoller
             }
 
             this.endPoints = newEndPoints;
+
+            selectNowToForceProcessing();
+        }
+    }
+
+    private void selectNowToForceProcessing()
+    {
+        try
+        {
+            selector.selectNow();
+        }
+        catch (IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
         }
     }
 
