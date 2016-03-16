@@ -33,6 +33,10 @@ public final class FixBenchmarkClient
         {
             ManyConnectionsBenchmarkClient.main(args);
         }
+        else if (TYPE.equalsIgnoreCase("repeat-connections"))
+        {
+            RepeatConnectionBenchmarkClient.main(args);
+        }
         else
         {
             LatencyBenchmarkClient.main(args);
