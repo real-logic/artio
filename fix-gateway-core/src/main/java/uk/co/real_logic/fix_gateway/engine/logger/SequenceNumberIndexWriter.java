@@ -160,8 +160,6 @@ public class SequenceNumberIndexWriter implements Index
 
     private void flipFiles()
     {
-        // TODO: identify a non-special cased way of doing this
-
         if (RUNNING_ON_WINDOWS)
         {
             writableFile.close();
