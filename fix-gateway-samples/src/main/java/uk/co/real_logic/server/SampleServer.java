@@ -16,6 +16,8 @@
 package uk.co.real_logic.server;
 
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.aeron.driver.MediaDriver.Context;
+import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.SigInt;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -28,6 +30,7 @@ import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy
 import uk.co.real_logic.fix_gateway.library.validation.SenderCompIdValidationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.TargetCompIdValidationStrategy;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -54,7 +57,12 @@ public final class SampleServer
             .bindTo("localhost", 9999)
             .aeronChannel(aeronChannel);
 
-        try (final MediaDriver driver = MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
+        cleanupOldLogFileDir(configuration);
+
+        final Context context = new Context()
+            .threadingMode(SHARED)
+            .dirsDeleteOnStart(true);
+        try (final MediaDriver driver = MediaDriver.launch(context);
              final FixEngine gateway = FixEngine.launch(configuration))
         {
 
@@ -63,6 +71,7 @@ public final class SampleServer
                 // that receives messages for new sessions
                 .authenticationStrategy(authenticationStrategy)
                 .newSessionHandler(SampleServer::onConnect)
+                .isAcceptor(true)
                 .aeronChannel(aeronChannel));
 
             final AtomicBoolean running = new AtomicBoolean(true);
@@ -82,6 +91,11 @@ public final class SampleServer
         }
 
         System.exit(0);
+    }
+
+    public static void cleanupOldLogFileDir(final EngineConfiguration configuration)
+    {
+        IoUtil.delete(new File(configuration.logFileDir()), true);
     }
 
     private static SessionHandler onConnect(final Session session)

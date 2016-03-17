@@ -27,8 +27,7 @@ import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
-import static uk.co.real_logic.server.SampleServer.ACCEPTOR_COMP_ID;
-import static uk.co.real_logic.server.SampleServer.INITIATOR_COMP_ID;
+import static uk.co.real_logic.server.SampleServer.*;
 
 public final class SampleClient
 {
@@ -41,6 +40,8 @@ public final class SampleClient
         final EngineConfiguration configuration = new EngineConfiguration()
             .aeronChannel(aeronChannel)
             .bindTo("localhost", 10001);
+
+        cleanupOldLogFileDir(configuration);
 
         try (final FixEngine gateway = FixEngine.launch(configuration))
         {
