@@ -49,9 +49,10 @@ public final class SampleServer
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
         // Static configuration lasts the duration of a FIX-Gateway instance
+        final String aeronChannel = "udp://localhost:10000";
         final EngineConfiguration configuration = new EngineConfiguration()
             .bindTo("localhost", 9999)
-            .aeronChannel("udp://localhost:10000");
+            .aeronChannel(aeronChannel);
 
         try (final MediaDriver driver = MediaDriver.launch(new MediaDriver.Context().threadingMode(SHARED));
              final FixEngine gateway = FixEngine.launch(configuration))
@@ -61,7 +62,8 @@ public final class SampleServer
                 // You register the new session handler - which is your application hook
                 // that receives messages for new sessions
                 .authenticationStrategy(authenticationStrategy)
-                .newSessionHandler(SampleServer::onConnect));
+                .newSessionHandler(SampleServer::onConnect)
+                .aeronChannel(aeronChannel));
 
             final AtomicBoolean running = new AtomicBoolean(true);
             SigInt.register(() -> running.set(false));

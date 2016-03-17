@@ -37,8 +37,9 @@ public final class SampleClient
     public static void main(final String[] args) throws Exception
     {
         // Static configuration lasts the duration of a FIX-Gateway instance
+        final String aeronChannel = "udp://localhost:10002";
         final EngineConfiguration configuration = new EngineConfiguration()
-            .aeronChannel("udp://localhost:10002")
+            .aeronChannel(aeronChannel)
             .bindTo("localhost", 10001);
 
         try (final FixEngine gateway = FixEngine.launch(configuration))
@@ -53,7 +54,8 @@ public final class SampleClient
                 .build();
 
             final FixLibrary library = FixLibrary.connect(new LibraryConfiguration()
-                .newSessionHandler(SampleClient::onConnect));
+                .newSessionHandler(SampleClient::onConnect)
+                .aeronChannel(aeronChannel));
             final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
             final Session session = library.initiate(sessionConfig, idleStrategy);
 
