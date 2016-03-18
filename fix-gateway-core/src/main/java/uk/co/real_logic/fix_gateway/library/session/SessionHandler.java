@@ -15,15 +15,16 @@
  */
 package uk.co.real_logic.fix_gateway.library.session;
 
-import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
-import uk.co.real_logic.fix_gateway.messages.GatewayError;
 
+/**
+ * Interface to implement to accept callbacks for FIX
+ * session messages.
+ */
 public interface SessionHandler
 {
-    default void onMessage(
+    void onMessage(
         final DirectBuffer buffer,
         final int offset,
         final int length,
@@ -31,66 +32,7 @@ public interface SessionHandler
         final long connectionId,
         final long sessionId,
         final int messageType,
-        final long timestamp)
-    {
-        // Optional method, implement if you care about this type of message.
-    }
+        final long timestamp);
 
-    default void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
-    {
-        // Optional method, implement if you care about this type of message.
-    }
-
-    default void onConnect(
-        final int libraryId,
-        final long connectionId,
-        final ConnectionType type,
-        int lastSequenceNumber, final int lastReceivedSequenceNumber, final DirectBuffer buffer,
-        final int addressOffset,
-        final int addressLength)
-    {
-        // Optional method, implement if you care about this type of message.
-    }
-
-    default void onLogon(final int libraryId,
-                         final long connectionId,
-                         final long sessionId,
-                         final int lastSentSequenceNumber,
-                         final int lastReceivedSequenceNumber)
-    {
-        // Optional method, implement if you care about this type of message.
-    }
-
-    default void onInitiateConnection(
-        final int libraryId,
-        final int port,
-        final String host,
-        final String senderCompId,
-        final String senderSubId,
-        final String senderLocationId,
-        final String targetCompId,
-        final Header header)
-    {
-        // Optional method, implement if you care about this type of message.
-    }
-
-    default void onRequestDisconnect(final int libraryId, final long connectionId)
-    {
-        // Optional method, implement if you care about this type of message.
-    }
-
-    default void onError(final GatewayError errorType, final int libraryId, final String message)
-    {
-        // Optional method, implement if you care about this type of message.
-    }
-
-    default void onApplicationHeartbeat(final int libraryId)
-    {
-        // Optional method, implement if you care about this type of message.
-    }
-
-    default void onLibraryConnect(final int libraryId, final ConnectionType connectionType)
-    {
-        // Optional method, implement if you care about this type of message.
-    }
+    void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason);
 }

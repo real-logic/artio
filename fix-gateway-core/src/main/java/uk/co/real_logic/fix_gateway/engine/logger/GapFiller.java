@@ -24,20 +24,21 @@ import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
-import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.library.session.ProcessProtocolHandler;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.MessageStatus;
-import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
+import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscriber;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-public class GapFiller implements SessionHandler, Agent
+public class GapFiller implements ProcessProtocolHandler, Agent
 {
     private static final int FRAGMENT_LIMIT = 10;
     private static final int ENCODE_BUFFER_SIZE = 8 * 1024;
 
     private final AsciiBuffer decoderBuffer = new MutableAsciiBuffer();
-    private final DataSubscriber dataSubscriber = new DataSubscriber(this);
+    private final ProcessProtocolSubscriber processProtocolSubscriber = new ProcessProtocolSubscriber(this);
 
     private final SequenceResetEncoder sequenceResetEncoder = new SequenceResetEncoder();
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
@@ -56,7 +57,7 @@ public class GapFiller implements SessionHandler, Agent
 
     public int doWork() throws Exception
     {
-        return subscription.poll(dataSubscriber, FRAGMENT_LIMIT);
+        return subscription.poll(processProtocolSubscriber, FRAGMENT_LIMIT);
     }
 
     public void onMessage(final DirectBuffer buffer,
@@ -103,6 +104,10 @@ public class GapFiller implements SessionHandler, Agent
                 libraryId, SequenceResetDecoder.MESSAGE_TYPE, sessionId, connectionId,
                 MessageStatus.OK);
         }
+    }
+
+    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    {
     }
 
     public String roleName()

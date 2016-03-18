@@ -19,14 +19,14 @@ import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.library.session.ProcessProtocolHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import static uk.co.real_logic.fix_gateway.messages.ConnectDecoder.addressHeaderLength;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.streams.GatewayPublication.FRAME_SIZE;
 
-public class DataSubscriber implements FragmentHandler
+public class ProcessProtocolSubscriber implements FragmentHandler
 {
     public static final int UNKNOWN_TEMPLATE = -1;
 
@@ -41,11 +41,11 @@ public class DataSubscriber implements FragmentHandler
     private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
     private final LibraryConnectDecoder libraryConnect = new LibraryConnectDecoder();
 
-    private final SessionHandler sessionHandler;
+    private final ProcessProtocolHandler processProtocolHandler;
 
-    public DataSubscriber(final SessionHandler sessionHandler)
+    public ProcessProtocolSubscriber(final ProcessProtocolHandler processProtocolHandler)
     {
-        this.sessionHandler = sessionHandler;
+        this.processProtocolHandler = processProtocolHandler;
     }
 
     public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
@@ -118,7 +118,7 @@ public class DataSubscriber implements FragmentHandler
                                        final int version)
     {
         applicationHeartbeat.wrap(buffer, offset, blockLength, version);
-        sessionHandler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
+        processProtocolHandler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
         return applicationHeartbeat.limit();
     }
 
@@ -127,7 +127,7 @@ public class DataSubscriber implements FragmentHandler
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         libraryConnect.wrap(buffer, offset, blockLength, version);
-        sessionHandler.onLibraryConnect(libraryConnect.libraryId(), libraryConnect.typeHandled());
+        processProtocolHandler.onLibraryConnect(libraryConnect.libraryId(), libraryConnect.typeHandled());
         return libraryConnect.limit();
     }
 
@@ -135,7 +135,7 @@ public class DataSubscriber implements FragmentHandler
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         error.wrap(buffer, offset, blockLength, version);
-        sessionHandler.onError(
+        processProtocolHandler.onError(
             error.type(),
             error.libraryId(),
             error.message()
@@ -152,7 +152,7 @@ public class DataSubscriber implements FragmentHandler
         final Header header)
     {
         initiateConnection.wrap(buffer, offset, blockLength, version);
-        sessionHandler.onInitiateConnection(
+        processProtocolHandler.onInitiateConnection(
             initiateConnection.libraryId(),
             initiateConnection.port(),
             initiateConnection.host(),
@@ -171,7 +171,7 @@ public class DataSubscriber implements FragmentHandler
                                     final int version)
     {
         requestDisconnect.wrap(buffer, offset, blockLength, version);
-        sessionHandler.onRequestDisconnect(requestDisconnect.libraryId(), requestDisconnect.connection());
+        processProtocolHandler.onRequestDisconnect(requestDisconnect.libraryId(), requestDisconnect.connection());
         return requestDisconnect.limit();
     }
 
@@ -180,7 +180,7 @@ public class DataSubscriber implements FragmentHandler
     {
         connect.wrap(buffer, offset, blockLength, version);
         final int addressOffset = offset + ConnectDecoder.BLOCK_LENGTH + addressHeaderLength();
-        sessionHandler.onConnect(
+        processProtocolHandler.onConnect(
             connect.libraryId(),
             connect.connection(),
             connect.type(),
@@ -196,7 +196,7 @@ public class DataSubscriber implements FragmentHandler
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         logon.wrap(buffer, offset, blockLength, version);
-        sessionHandler.onLogon(
+        processProtocolHandler.onLogon(
             logon.libraryId(),
             logon.connection(),
             logon.session(),
@@ -211,7 +211,7 @@ public class DataSubscriber implements FragmentHandler
         disconnect.wrap(buffer, offset, blockLength, version);
         final long connectionId = disconnect.connection();
         DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
-        sessionHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
+        processProtocolHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
         return offset + DisconnectDecoder.BLOCK_LENGTH;
     }
 
@@ -222,7 +222,7 @@ public class DataSubscriber implements FragmentHandler
         final int messageLength = messageFrame.bodyLength();
         if (messageFrame.status() == OK)
         {
-            sessionHandler.onMessage(
+            processProtocolHandler.onMessage(
                 buffer,
                 offset + FRAME_SIZE,
                 messageLength,

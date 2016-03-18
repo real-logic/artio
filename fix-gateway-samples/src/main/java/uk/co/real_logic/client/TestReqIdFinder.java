@@ -20,6 +20,7 @@ import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.otf.MessageControl;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
@@ -46,6 +47,10 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
         // Here's an example using our otf parser
 
         parser.onMessage(buffer, offset, length);
+    }
+
+    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    {
     }
 
     public MessageControl onNext()

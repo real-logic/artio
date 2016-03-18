@@ -21,11 +21,11 @@ import uk.co.real_logic.aeron.logbuffer.TermReader;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.library.session.ProcessProtocolHandler;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
-import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
+import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscriber;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -37,12 +37,12 @@ import java.nio.ByteBuffer;
  * Eg: -Dlogging.dir=/home/richard/monotonic/Fix-Engine/fix-gateway-system-tests/client-logs \
  * ArchivePrinter 'UDP-00000000-0-7f000001-10048' 0
  */
-public class ArchivePrinter implements SessionHandler
+public class ArchivePrinter implements ProcessProtocolHandler
 {
     private static final int CHANNEL_ARG = 0;
     private static final int ID_ARG = 1;
 
-    private final DataSubscriber subscriber = new DataSubscriber(this);
+    private final ProcessProtocolSubscriber subscriber = new ProcessProtocolSubscriber(this);
     private final AsciiBuffer ascii = new MutableAsciiBuffer();
 
     private final LogDirectoryDescriptor directoryDescriptor;

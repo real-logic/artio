@@ -29,7 +29,7 @@ import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.streams.DataSubscriber;
+import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscriber;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -170,7 +170,7 @@ public final class FixLibrary extends GatewayProcess
     public int poll(final int fragmentLimit)
     {
         final long timeInMs = clock.time();
-        return inboundSubscription.poll(dataSubscriber, fragmentLimit) +
+        return inboundSubscription.poll(processProtocolSubscriber, fragmentLimit) +
                pollSessions(timeInMs) +
                livenessDetector.poll(timeInMs);
     }
@@ -329,7 +329,7 @@ public final class FixLibrary extends GatewayProcess
         return total;
     }
 
-    private final DataSubscriber dataSubscriber = new DataSubscriber(new SessionHandler()
+    private final ProcessProtocolSubscriber processProtocolSubscriber = new ProcessProtocolSubscriber(new ProcessProtocolHandler()
     {
 
         private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
