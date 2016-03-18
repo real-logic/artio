@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.library;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.LangUtil;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
@@ -29,8 +30,9 @@ import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscriber;
+import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscription;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
+import uk.co.real_logic.fix_gateway.streams.SessionSubscription;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -40,6 +42,7 @@ import java.util.List;
 import static java.util.Collections.unmodifiableList;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
+import static uk.co.real_logic.fix_gateway.streams.Streams.UNKNOWN_TEMPLATE;
 
 /**
  * FIX Library instances represent a process in the gateway where session management,
@@ -170,7 +173,7 @@ public final class FixLibrary extends GatewayProcess
     public int poll(final int fragmentLimit)
     {
         final long timeInMs = clock.time();
-        return inboundSubscription.poll(processProtocolSubscriber, fragmentLimit) +
+        return inboundSubscription.poll(outboundSubscription, fragmentLimit) +
                pollSessions(timeInMs) +
                livenessDetector.poll(timeInMs);
     }
@@ -330,8 +333,16 @@ public final class FixLibrary extends GatewayProcess
     }
 
     private final FixLibraryProtocolHandler processProtocolHandler = new FixLibraryProtocolHandler();
-    private final ProcessProtocolSubscriber processProtocolSubscriber =
-        new ProcessProtocolSubscriber(processProtocolHandler, processProtocolHandler);
+    private final ProcessProtocolSubscription processProtocolSubscription =
+        new ProcessProtocolSubscription(processProtocolHandler);
+    private final SessionSubscription sessionSubscription = new SessionSubscription(processProtocolHandler);
+    private final FragmentHandler outboundSubscription = (buffer, offset, length, header) ->
+    {
+        if (sessionSubscription.readFragment(buffer, offset, header) == UNKNOWN_TEMPLATE)
+        {
+            processProtocolSubscription.onFragment(buffer, offset, length, header);
+        }
+    };
 
     private class FixLibraryProtocolHandler implements ProcessProtocolHandler, SessionHandler
     {

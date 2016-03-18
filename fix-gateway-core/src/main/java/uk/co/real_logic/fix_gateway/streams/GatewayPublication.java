@@ -35,7 +35,7 @@ import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 /**
  * A proxy for publishing messages fix related messages
  */
-public class GatewayPublication extends AbstractionPublication
+public class GatewayPublication extends AbstractPublication
 {
 
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();

@@ -18,39 +18,28 @@ package uk.co.real_logic.fix_gateway.streams;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.library.session.ProcessProtocolHandler;
-import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import static uk.co.real_logic.fix_gateway.messages.ConnectDecoder.addressHeaderLength;
-import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
-import static uk.co.real_logic.fix_gateway.streams.GatewayPublication.FRAME_SIZE;
+import static uk.co.real_logic.fix_gateway.streams.Streams.UNKNOWN_TEMPLATE;
 
-public class ProcessProtocolSubscriber implements FragmentHandler
+public class ProcessProtocolSubscription implements FragmentHandler
 {
-    public static final int UNKNOWN_TEMPLATE = -1;
-
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final LogonDecoder logon = new LogonDecoder();
     private final ConnectDecoder connect = new ConnectDecoder();
     private final InitiateConnectionDecoder initiateConnection = new InitiateConnectionDecoder();
     private final RequestDisconnectDecoder requestDisconnect = new RequestDisconnectDecoder();
-    private final DisconnectDecoder disconnect = new DisconnectDecoder();
-    private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final ErrorDecoder error = new ErrorDecoder();
     private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
     private final LibraryConnectDecoder libraryConnect = new LibraryConnectDecoder();
 
     private final ProcessProtocolHandler processProtocolHandler;
-    private final SessionHandler sessionHandler;
 
-    public ProcessProtocolSubscriber(
-        final ProcessProtocolHandler processProtocolHandler,
-        final SessionHandler sessionHandler)
+    public ProcessProtocolSubscription(final ProcessProtocolHandler processProtocolHandler)
     {
         this.processProtocolHandler = processProtocolHandler;
-        this.sessionHandler = sessionHandler;
     }
 
     public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
@@ -68,16 +57,6 @@ public class ProcessProtocolSubscriber implements FragmentHandler
 
         switch (messageHeader.templateId())
         {
-            case FixMessageDecoder.TEMPLATE_ID:
-            {
-                return onFixMessage(buffer, offset, blockLength, version);
-            }
-
-            case DisconnectDecoder.TEMPLATE_ID:
-            {
-                return onDisconnect(buffer, offset, blockLength, version);
-            }
-
             case LogonDecoder.TEMPLATE_ID:
             {
                 return onLogon(buffer, offset, blockLength, version);
@@ -208,36 +187,5 @@ public class ProcessProtocolSubscriber implements FragmentHandler
             logon.lastSentSequenceNumber(),
             logon.lastReceivedSequenceNumber());
         return logon.limit();
-    }
-
-    private int onDisconnect(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
-    {
-        disconnect.wrap(buffer, offset, blockLength, version);
-        final long connectionId = disconnect.connection();
-        DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
-        sessionHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
-        return offset + DisconnectDecoder.BLOCK_LENGTH;
-    }
-
-    private int onFixMessage(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
-    {
-        messageFrame.wrap(buffer, offset, blockLength, version);
-        final int messageLength = messageFrame.bodyLength();
-        if (messageFrame.status() == OK)
-        {
-            sessionHandler.onMessage(
-                buffer,
-                offset + FRAME_SIZE,
-                messageLength,
-                messageFrame.libraryId(),
-                messageFrame.connection(),
-                messageFrame.session(),
-                messageFrame.messageType(),
-                messageFrame.timestamp());
-        }
-
-        return offset + FRAME_SIZE + messageLength;
     }
 }

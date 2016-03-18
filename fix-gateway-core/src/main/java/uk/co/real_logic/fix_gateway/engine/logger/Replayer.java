@@ -27,13 +27,12 @@ import uk.co.real_logic.agrona.concurrent.Agent;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
-import uk.co.real_logic.fix_gateway.library.session.ProcessProtocolHandler;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
-import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscriber;
+import uk.co.real_logic.fix_gateway.streams.SessionSubscription;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -49,7 +48,7 @@ import static uk.co.real_logic.fix_gateway.engine.logger.PossDupFinder.NO_ENTRY;
  * Resend Request messages and searches the log, using the replay index to find
  * relevant messages to resend.
  */
-public class Replayer implements ProcessProtocolHandler, SessionHandler, FragmentHandler, Agent
+public class Replayer implements SessionHandler, FragmentHandler, Agent
 {
     public static final int MESSAGE_FRAME_BLOCK_LENGTH =
         MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
@@ -75,7 +74,7 @@ public class Replayer implements ProcessProtocolHandler, SessionHandler, Fragmen
 
     private final PossDupFinder possDupFinder = new PossDupFinder();
     private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
-    private final ProcessProtocolSubscriber processProtocolSubscriber = new ProcessProtocolSubscriber(this, this);
+    private final SessionSubscription sessionSubscription = new SessionSubscription(this);
 
     private int currentMessageOffset;
     private int currentMessageLength;
@@ -319,7 +318,7 @@ public class Replayer implements ProcessProtocolHandler, SessionHandler, Fragmen
 
     public int doWork() throws Exception
     {
-        return subscription.poll(processProtocolSubscriber, POLL_LIMIT);
+        return subscription.poll(sessionSubscription, POLL_LIMIT);
     }
 
     public void onClose()

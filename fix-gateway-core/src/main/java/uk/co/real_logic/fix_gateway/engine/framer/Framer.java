@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.aeron.Subscription;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.LangUtil;
@@ -33,8 +34,9 @@ import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscriber;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
+import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscription;
+import uk.co.real_logic.fix_gateway.streams.SessionSubscription;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,6 +57,7 @@ import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
+import static uk.co.real_logic.fix_gateway.streams.Streams.UNKNOWN_TEMPLATE;
 
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
@@ -82,7 +85,15 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
     private final EpochClock clock;
     private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
     private final Timer sendTimer = new Timer("Send", new SystemNanoClock());
-    private final ProcessProtocolSubscriber processProtocolSubscriber = new ProcessProtocolSubscriber(this, this);
+    private final SessionSubscription sessionSubscription = new SessionSubscription(this);
+    private final ProcessProtocolSubscription processProtocolSubscription = new ProcessProtocolSubscription(this);
+    private final FragmentHandler outboundSubscription = (buffer, offset, length, header) ->
+    {
+        if (sessionSubscription.readFragment(buffer, offset, header) == UNKNOWN_TEMPLATE)
+        {
+            processProtocolSubscription.onFragment(buffer, offset, length, header);
+        }
+    };
 
     private final boolean hasBindAddress;
     private final Selector selector;
@@ -164,21 +175,21 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
     public int doWork() throws Exception
     {
         return sendOutboundMessages() +
-            sendReplayMessages() +
-            pollEndPoints() +
-            pollNewConnections() +
-            pollLibraries() +
-            adminCommands.drain(onAdminCommand);
+               sendReplayMessages() +
+               pollEndPoints() +
+               pollNewConnections() +
+               pollLibraries() +
+               adminCommands.drain(onAdminCommand);
     }
 
     private int sendReplayMessages()
     {
-        return replaySubscription.poll(processProtocolSubscriber, replayFragmentLimit);
+        return replaySubscription.poll(sessionSubscription, replayFragmentLimit);
     }
 
     private int sendOutboundMessages()
     {
-        return outboundDataSubscription.poll(processProtocolSubscriber, outboundLibraryFragmentLimit);
+        return outboundDataSubscription.poll(outboundSubscription, outboundLibraryFragmentLimit);
     }
 
     private int pollLibraries()

@@ -28,7 +28,7 @@ import static uk.co.real_logic.aeron.Publication.NOT_CONNECTED;
 /**
  * .
  */
-public class AbstractionPublication implements AutoCloseable
+public class AbstractPublication implements AutoCloseable
 {
     public static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
 
@@ -41,7 +41,7 @@ public class AbstractionPublication implements AutoCloseable
     protected final IdleStrategy idleStrategy;
     protected final AtomicCounter fails;
 
-    public AbstractionPublication(
+    public AbstractPublication(
         final int maxClaimAttempts,
         final IdleStrategy idleStrategy,
         final AtomicCounter fails,
