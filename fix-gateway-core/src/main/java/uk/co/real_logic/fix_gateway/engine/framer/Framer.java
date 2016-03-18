@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.library.session.ProcessProtocolHandler;
+import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
@@ -58,7 +59,7 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
  */
-public class Framer implements Agent, ProcessProtocolHandler
+public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
 {
     public static final int NO_ACCEPTOR = -1;
 
@@ -81,7 +82,7 @@ public class Framer implements Agent, ProcessProtocolHandler
     private final EpochClock clock;
     private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
     private final Timer sendTimer = new Timer("Send", new SystemNanoClock());
-    private final ProcessProtocolSubscriber processProtocolSubscriber = new ProcessProtocolSubscriber(this);
+    private final ProcessProtocolSubscriber processProtocolSubscriber = new ProcessProtocolSubscriber(this, this);
 
     private final boolean hasBindAddress;
     private final Selector selector;

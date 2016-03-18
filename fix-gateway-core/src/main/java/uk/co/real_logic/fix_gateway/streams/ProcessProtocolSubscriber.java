@@ -20,6 +20,7 @@ import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.library.session.ProcessProtocolHandler;
+import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import static uk.co.real_logic.fix_gateway.messages.ConnectDecoder.addressHeaderLength;
@@ -42,10 +43,14 @@ public class ProcessProtocolSubscriber implements FragmentHandler
     private final LibraryConnectDecoder libraryConnect = new LibraryConnectDecoder();
 
     private final ProcessProtocolHandler processProtocolHandler;
+    private final SessionHandler sessionHandler;
 
-    public ProcessProtocolSubscriber(final ProcessProtocolHandler processProtocolHandler)
+    public ProcessProtocolSubscriber(
+        final ProcessProtocolHandler processProtocolHandler,
+        final SessionHandler sessionHandler)
     {
         this.processProtocolHandler = processProtocolHandler;
+        this.sessionHandler = sessionHandler;
     }
 
     public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
@@ -211,7 +216,7 @@ public class ProcessProtocolSubscriber implements FragmentHandler
         disconnect.wrap(buffer, offset, blockLength, version);
         final long connectionId = disconnect.connection();
         DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
-        processProtocolHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
+        sessionHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
         return offset + DisconnectDecoder.BLOCK_LENGTH;
     }
 
@@ -222,7 +227,7 @@ public class ProcessProtocolSubscriber implements FragmentHandler
         final int messageLength = messageFrame.bodyLength();
         if (messageFrame.status() == OK)
         {
-            processProtocolHandler.onMessage(
+            sessionHandler.onMessage(
                 buffer,
                 offset + FRAME_SIZE,
                 messageLength,

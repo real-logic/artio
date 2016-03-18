@@ -20,7 +20,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 
-public interface ProcessProtocolHandler extends SessionHandler
+public interface ProcessProtocolHandler
 {
     default void onConnect(
         final int libraryId,

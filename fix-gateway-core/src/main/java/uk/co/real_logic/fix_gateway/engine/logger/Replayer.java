@@ -28,6 +28,7 @@ import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.library.session.ProcessProtocolHandler;
+import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
@@ -48,7 +49,7 @@ import static uk.co.real_logic.fix_gateway.engine.logger.PossDupFinder.NO_ENTRY;
  * Resend Request messages and searches the log, using the replay index to find
  * relevant messages to resend.
  */
-public class Replayer implements ProcessProtocolHandler, FragmentHandler, Agent
+public class Replayer implements ProcessProtocolHandler, SessionHandler, FragmentHandler, Agent
 {
     public static final int MESSAGE_FRAME_BLOCK_LENGTH =
         MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
@@ -74,7 +75,7 @@ public class Replayer implements ProcessProtocolHandler, FragmentHandler, Agent
 
     private final PossDupFinder possDupFinder = new PossDupFinder();
     private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
-    private final ProcessProtocolSubscriber processProtocolSubscriber = new ProcessProtocolSubscriber(this);
+    private final ProcessProtocolSubscriber processProtocolSubscriber = new ProcessProtocolSubscriber(this, this);
 
     private int currentMessageOffset;
     private int currentMessageLength;

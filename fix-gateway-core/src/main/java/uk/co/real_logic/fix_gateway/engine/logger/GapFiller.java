@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.library.session.ProcessProtocolHandler;
+import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscriber;
@@ -32,13 +33,13 @@ import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-public class GapFiller implements ProcessProtocolHandler, Agent
+public class GapFiller implements ProcessProtocolHandler, SessionHandler, Agent
 {
     private static final int FRAGMENT_LIMIT = 10;
     private static final int ENCODE_BUFFER_SIZE = 8 * 1024;
 
     private final AsciiBuffer decoderBuffer = new MutableAsciiBuffer();
-    private final ProcessProtocolSubscriber processProtocolSubscriber = new ProcessProtocolSubscriber(this);
+    private final ProcessProtocolSubscriber processProtocolSubscriber = new ProcessProtocolSubscriber(this, this);
 
     private final SequenceResetEncoder sequenceResetEncoder = new SequenceResetEncoder();
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();

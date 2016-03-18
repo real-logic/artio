@@ -329,9 +329,12 @@ public final class FixLibrary extends GatewayProcess
         return total;
     }
 
-    private final ProcessProtocolSubscriber processProtocolSubscriber = new ProcessProtocolSubscriber(new ProcessProtocolHandler()
-    {
+    private final FixLibraryProtocolHandler processProtocolHandler = new FixLibraryProtocolHandler();
+    private final ProcessProtocolSubscriber processProtocolSubscriber =
+        new ProcessProtocolSubscriber(processProtocolHandler, processProtocolHandler);
 
+    private class FixLibraryProtocolHandler implements ProcessProtocolHandler, SessionHandler
+    {
         private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
         public void onConnect(
@@ -461,7 +464,7 @@ public final class FixLibrary extends GatewayProcess
                 livenessDetector.onHeartbeat(clock.time());
             }
         }
-    });
+    }
 
     private void newSession(final long connectionId, final Session session)
     {
