@@ -181,4 +181,28 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         //LockSupport.parkNanos(10_000_000_000L);
     }
+
+    @Test
+    public void librariesShouldBeAbleToReleaseSessionToTheGateway()
+    {
+        // TODO
+    }
+
+    @Test
+    public void librariesShouldBeAbleToAcquireReleasedSessions()
+    {
+        // TODO
+    }
+
+    @Test
+    public void librariesShouldNotBeAbleToAcquireUnreleasedSessions()
+    {
+        // TODO
+    }
+
+    @Test
+    public void librariesShouldNotBeAbleToAcquireSessionsThatDontExist()
+    {
+        // TODO
+    }
 }

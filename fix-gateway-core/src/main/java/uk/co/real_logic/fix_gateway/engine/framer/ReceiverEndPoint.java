@@ -73,10 +73,10 @@ class ReceiverEndPoint
     private final AtomicCounter messagesRead;
     private final Framer framer;
     private final ErrorHandler errorHandler;
-    private final int libraryId;
     private final MutableAsciiBuffer buffer;
     private final ByteBuffer byteBuffer;
 
+    private int libraryId;
     private long sessionId;
     private int usedBufferData = 0;
     private boolean hasDisconnected = false;

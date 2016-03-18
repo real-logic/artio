@@ -31,8 +31,8 @@ public final class LibraryInfo
     private final boolean acceptor;
     private final int libraryId;
     private final LivenessDetector livenessDetector;
-    private final List<SessionInfo> sessions = new CopyOnWriteArrayList<>();
-    private final List<SessionInfo> unmodifiableSessions = unmodifiableList(sessions);
+    private final List<SessionInfo> allSessions = new CopyOnWriteArrayList<>();
+    private final List<SessionInfo> unmodifiableAllSessions = unmodifiableList(allSessions);
 
     LibraryInfo(final boolean acceptor, final int libraryId, final LivenessDetector livenessDetector)
     {
@@ -68,7 +68,7 @@ public final class LibraryInfo
      */
     public List<SessionInfo> sessions()
     {
-        return unmodifiableSessions;
+        return unmodifiableAllSessions;
     }
 
     void onHeartbeat(final long timeInMs)
@@ -88,7 +88,7 @@ public final class LibraryInfo
 
     void onSessionConnected(final SessionInfo session)
     {
-        sessions.add(session);
+        allSessions.add(session);
     }
 
     public String toString()
@@ -101,6 +101,6 @@ public final class LibraryInfo
 
     public void onSessionDisconnected(final long connectionId)
     {
-        sessions.removeIf(info -> info.connectionId() == connectionId);
+        allSessions.removeIf(info -> info.connectionId() == connectionId);
     }
 }

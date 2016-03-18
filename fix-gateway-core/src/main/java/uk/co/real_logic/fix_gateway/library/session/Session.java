@@ -94,7 +94,7 @@ public class Session implements AutoCloseable
     private String connectedHost;
     private int connectedPort;
 
-    protected Session(
+    public Session(
         final int heartbeatIntervalInS,
         final long connectionId,
         final EpochClock clock,

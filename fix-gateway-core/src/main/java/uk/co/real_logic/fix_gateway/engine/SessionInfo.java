@@ -23,6 +23,8 @@ public final class SessionInfo
     private final long connectionId;
     private final String address;
 
+    private long sessionId;
+
     public SessionInfo(final long connectionId,
                        final String address)
     {
@@ -48,5 +50,37 @@ public final class SessionInfo
     public String address()
     {
         return address;
+    }
+
+    // TODO: package scope everything below here
+
+    public long sessionId()
+    {
+        return sessionId;
+    }
+
+    public void sessionId(final long sessionId)
+    {
+        this.sessionId = sessionId;
+    }
+
+    public int sessionBufferSize()
+    {
+        return 0;
+    }
+
+    public int heartbeatIntervalInS()
+    {
+        return 0;
+    }
+
+    public char[] expectedBeginString()
+    {
+        return null;
+    }
+
+    public long sendingTimeWindow()
+    {
+        return 0;
     }
 }
