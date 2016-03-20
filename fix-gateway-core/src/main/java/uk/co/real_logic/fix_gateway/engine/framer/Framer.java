@@ -26,7 +26,6 @@ import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.library.session.ProcessProtocolHandler;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
@@ -397,9 +396,11 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
             connectionHandler.senderEndPoint(channel, connectionId, libraryId, this, pollEndpointsFunc);
         senderEndPoints.add(senderEndPoint);
 
-        idToLibrary.get(libraryId).onSessionConnected(new SessionInfo(
+        idToLibrary.get(libraryId).onSessionConnected(new GatewaySession(
             connectionId,
-            channel.getRemoteAddress().toString()
+            sessionId,
+            channel.getRemoteAddress().toString(),
+            receiverEndPoint
         ));
     }
 

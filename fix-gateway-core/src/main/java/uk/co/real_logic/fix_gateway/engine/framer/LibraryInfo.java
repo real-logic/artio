@@ -31,7 +31,7 @@ public final class LibraryInfo
     private final boolean acceptor;
     private final int libraryId;
     private final LivenessDetector livenessDetector;
-    private final List<SessionInfo> allSessions = new CopyOnWriteArrayList<>();
+    private final List<GatewaySession> allSessions = new CopyOnWriteArrayList<>();
     private final List<SessionInfo> unmodifiableAllSessions = unmodifiableList(allSessions);
 
     LibraryInfo(final boolean acceptor, final int libraryId, final LivenessDetector livenessDetector)
@@ -71,6 +71,11 @@ public final class LibraryInfo
         return unmodifiableAllSessions;
     }
 
+    List<GatewaySession> gatewaySessions()
+    {
+        return allSessions;
+    }
+
     void onHeartbeat(final long timeInMs)
     {
         livenessDetector.onHeartbeat(timeInMs);
@@ -86,7 +91,7 @@ public final class LibraryInfo
         return livenessDetector.isConnected();
     }
 
-    void onSessionConnected(final SessionInfo session)
+    void onSessionConnected(final GatewaySession session)
     {
         allSessions.add(session);
     }

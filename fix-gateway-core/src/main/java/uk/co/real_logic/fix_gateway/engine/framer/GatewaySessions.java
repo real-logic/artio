@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
-import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.library.session.*;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
@@ -32,12 +31,12 @@ import java.util.function.Consumer;
 /**
  * Keeps track of which sessions managed by the gateway
  */
-public class GatewaySessions
+class GatewaySessions
 {
-    public static final int FRAGMENT_LIMIT = 10;
 
+    public static final int GATEWAY_LIBRARY_ID = 0;
     private final List<Session> sessions = new ArrayList<>();
-    private final Consumer<SessionInfo> onSessionReleaseFunc = this::onSessionRelease;
+    private final Consumer<GatewaySession> startManagingFunc = this::startManaging;
     private final EpochClock clock;
     private final GatewayPublication publication;
     private final SessionIdStrategy sessionIdStrategy;
@@ -46,7 +45,7 @@ public class GatewaySessions
     private final AuthenticationStrategy authenticationStrategy;
     private final MessageValidationStrategy validationStrategy;
 
-    public GatewaySessions(
+    GatewaySessions(
         final EpochClock clock,
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
@@ -66,14 +65,13 @@ public class GatewaySessions
 
     public void onLibraryTimeout(final LibraryInfo library)
     {
-        library.sessions().forEach(onSessionReleaseFunc);
+        library.gatewaySessions().forEach(startManagingFunc);
     }
 
-    public void onSessionRelease(final SessionInfo sessionInfo)
+    public void startManaging(final GatewaySession gatewaySession)
     {
-        final int libraryId = 0;
-        final long connectionId = sessionInfo.connectionId();
-        final int sessionBufferSize = sessionInfo.sessionBufferSize();
+        final long connectionId = gatewaySession.connectionId();
+        final int sessionBufferSize = gatewaySession.sessionBufferSize();
 
         final SessionProxy proxy = new SessionProxy(
             sessionBufferSize,
@@ -82,26 +80,26 @@ public class GatewaySessions
             customisationStrategy,
             clock,
             connectionId,
-            libraryId
+            GATEWAY_LIBRARY_ID
         );
 
-        final AtomicCounter receivedMsgSeqNo = null;
-        final AtomicCounter sentMsgSeqNo = null;
-        final int sentSequenceNumber = 0;
+        final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
+        final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
+        final int sentSequenceNumber = 0; // TODO: lookup
 
         final Session session = new Session(
-            sessionInfo.heartbeatIntervalInS(),
+            gatewaySession.heartbeatIntervalInS(),
             connectionId,
             clock,
             SessionState.CONNECTED,
             proxy,
             publication,
             sessionIdStrategy,
-            sessionInfo.expectedBeginString(),
-            sessionInfo.sendingTimeWindow(),
+            gatewaySession.expectedBeginString(),
+            gatewaySession.sendingTimeWindow(),
             receivedMsgSeqNo,
             sentMsgSeqNo,
-            libraryId,
+            GATEWAY_LIBRARY_ID,
             sessionBufferSize,
             sentSequenceNumber
         );
@@ -113,11 +111,14 @@ public class GatewaySessions
             validationStrategy
         );
 
-        // TODO: push into sessionInfo
+        sessions.add(session);
+        gatewaySession.manage(sessionParser);
     }
 
-    public void onSessionAcquire(final SessionInfo session, final int library)
+    public void stopManaging(final GatewaySession gatewaySession)
     {
+        sessions.removeIf(session -> session.connectionId() == gatewaySession.connectionId());
+        gatewaySession.manage(null);
     }
 
     public int pollSessions(final long time)

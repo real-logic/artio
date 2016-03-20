@@ -20,6 +20,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.fix_gateway.library.session.SessionParser;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -81,6 +82,7 @@ class ReceiverEndPoint
     private int usedBufferData = 0;
     private boolean hasDisconnected = false;
     private SelectionKey selectionKey;
+    private SessionParser sessionParser;
 
     ReceiverEndPoint(
         final SocketChannel channel,
@@ -287,6 +289,10 @@ class ReceiverEndPoint
         messagesRead.orderedIncrement();
         publication.saveMessage(
             buffer, offset, length, libraryId, messageType, sessionId, connectionId, OK);
+        if (sessionParser != null)
+        {
+            sessionParser.onMessage(buffer, offset, length, messageType, sessionId);
+        }
     }
 
     private void checkSessionId(final int offset, final int length)
@@ -429,5 +435,10 @@ class ReceiverEndPoint
     public int libraryId()
     {
         return libraryId;
+    }
+
+    public void manage(final SessionParser sessionParser)
+    {
+        this.sessionParser = sessionParser;
     }
 }

@@ -18,69 +18,19 @@ package uk.co.real_logic.fix_gateway.engine;
 /**
  * Class represents information that a gateway is aware of about a session.
  */
-public final class SessionInfo
+public interface SessionInfo
 {
-    private final long connectionId;
-    private final String address;
-
-    private long sessionId;
-
-    public SessionInfo(final long connectionId,
-                       final String address)
-    {
-        this.connectionId = connectionId;
-        this.address = address;
-    }
-
     /**
      * Get the identification number of the connection in question.
      *
      * @return the identification number of the connection in question.
      */
-    public long connectionId()
-    {
-        return connectionId;
-    }
+    long connectionId();
 
     /**
      * Get the remove address to which this session is connected.
      *
      * @return the remove address to which this session is connected.
      */
-    public String address()
-    {
-        return address;
-    }
-
-    // TODO: package scope everything below here
-
-    public long sessionId()
-    {
-        return sessionId;
-    }
-
-    public void sessionId(final long sessionId)
-    {
-        this.sessionId = sessionId;
-    }
-
-    public int sessionBufferSize()
-    {
-        return 0;
-    }
-
-    public int heartbeatIntervalInS()
-    {
-        return 0;
-    }
-
-    public char[] expectedBeginString()
-    {
-        return null;
-    }
-
-    public long sendingTimeWindow()
-    {
-        return 0;
-    }
+    String address();
 }

@@ -184,6 +184,11 @@ public final class LibraryConfiguration extends CommonConfiguration
      */
     public LibraryConfiguration libraryId(final int libraryId)
     {
+        if (libraryId < DEFAULT_LIBRARY_ID)
+        {
+            throw new IllegalArgumentException(
+                String.format("Your Library Id was %d, Ids below %d are reserved.", libraryId, DEFAULT_LIBRARY_ID));
+        }
         this.libraryId = libraryId;
         return this;
     }
