@@ -247,9 +247,12 @@ public final class FixLibrary extends GatewayProcess
      */
     public Session initiate(final SessionConfiguration configuration, final IdleStrategy idleStrategy)
     {
+        requireNonNull(configuration, "configuration");
+        requireNonNull(idleStrategy, "idleStrategy");
+
         if (sessionConfiguration != null || incomingSession != null || errorType != null)
         {
-            throw new IllegalStateException("You can't initiate a session whilst initiating a session");
+            return concurrentError();
         }
 
         sessionConfiguration = configuration;
@@ -310,11 +313,17 @@ public final class FixLibrary extends GatewayProcess
     {
         requireNonNull(session, "session");
         requireIdleStrategy(idleStrategy);
+        if (replyStatus != null)
+        {
+            return concurrentError();
+        }
 
         outboundPublication.saveReleaseSession(libraryId, session.connectionId(), ++correlationId);
 
         awaitReply(idleStrategy, () -> replyStatus == null);
 
+        final SessionReplyStatus replyStatus = this.replyStatus;
+        this.replyStatus = null;
         if (replyStatus == SessionReplyStatus.OK)
         {
             sessions.remove(session);
@@ -327,15 +336,26 @@ public final class FixLibrary extends GatewayProcess
     public SessionReplyStatus acquireSession(final long connectionId, final IdleStrategy idleStrategy)
     {
         requireIdleStrategy(idleStrategy);
+        if (replyStatus != null)
+        {
+            return concurrentError();
+        }
 
         outboundPublication.saveRequestSession(libraryId, connectionId, ++correlationId);
 
         awaitReply(idleStrategy, () -> replyStatus == null);
 
+        final SessionReplyStatus replyStatus = this.replyStatus;
+        this.replyStatus = null;
         return replyStatus;
     }
 
     // ------------- End Public API -------------
+
+    private <T> T concurrentError()
+    {
+        throw new IllegalStateException("You can't perform this operation concurrently");
+    }
 
     private void requireIdleStrategy(final IdleStrategy idleStrategy)
     {
@@ -541,6 +561,7 @@ public final class FixLibrary extends GatewayProcess
 
         public void onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
         {
+
             if (FixLibrary.this.correlationId == correlationId)
             {
                 // TODO: add information required to connect.

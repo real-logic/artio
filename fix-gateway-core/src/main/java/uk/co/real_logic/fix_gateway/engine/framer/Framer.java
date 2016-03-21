@@ -179,11 +179,13 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
     @Override
     public int doWork() throws Exception
     {
+        final long timeInMs = clock.time();
         return sendOutboundMessages() +
                sendReplayMessages() +
                pollEndPoints() +
                pollNewConnections() +
-               pollLibraries() +
+               pollLibraries(timeInMs) +
+               //gatewaySessions.pollSessions(timeInMs) +
                adminCommands.drain(onAdminCommand);
     }
 
@@ -197,9 +199,8 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         return outboundDataSubscription.poll(outboundSubscription, outboundLibraryFragmentLimit);
     }
 
-    private int pollLibraries()
+    private int pollLibraries(final long timeInMs)
     {
-        final long timeInMs = clock.time();
         int total = 0;
         final Iterator<LibraryInfo> iterator = idToLibrary.values().iterator();
         while (iterator.hasNext())
@@ -482,7 +483,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
             return;
         }
 
-        gatewaySessions.startManaging(session);
+        gatewaySessions.acquire(session);
 
         inboundPublication.saveReleaseSessionReply(OK, correlationId);
     }
@@ -496,15 +497,21 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
             return;
         }
 
-        final GatewaySession session = gatewaySessions.stopManaging(connectionId);
+        final GatewaySession session = gatewaySessions.release(connectionId);
         if (session == null)
         {
             inboundPublication.saveReleaseSessionReply(UNKNOWN_SESSION, correlationId);
             return;
         }
 
+        final int lastSentSequenceNumber = session.lastSentMsgSeqNum();
+        final int lastReceivedSequenceNumber = session.lastReceivedMsgSeqNum();
+        session.stopManaging();
         libraryInfo.addSession(session);
 
+        // TODO: combine messages
+        inboundPublication.saveConnect(connectionId, session.address(), libraryId, INITIATOR,
+            lastSentSequenceNumber, lastReceivedSequenceNumber);
         inboundPublication.saveReleaseSessionReply(OK, correlationId);
     }
 

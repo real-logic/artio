@@ -90,6 +90,16 @@ class GatewaySession implements SessionInfo
         return session.poll(time);
     }
 
+    int lastSentMsgSeqNum()
+    {
+        return session.lastSentMsgSeqNum();
+    }
+
+    int lastReceivedMsgSeqNum()
+    {
+        return session.lastReceivedMsgSeqNum();
+    }
+
     public String toString()
     {
         return "GatewaySession{" +

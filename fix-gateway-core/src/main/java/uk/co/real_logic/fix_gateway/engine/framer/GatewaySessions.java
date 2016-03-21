@@ -39,7 +39,7 @@ public class GatewaySessions
 {
     private final List<GatewaySession> sessions = new ArrayList<>();
     private final List<SessionInfo> unmodifiableSessions = unmodifiableList(sessions);
-    private final Consumer<GatewaySession> startManagingFunc = this::startManaging;
+    private final Consumer<GatewaySession> startManagingFunc = this::acquire;
     private final EpochClock clock;
     private final GatewayPublication publication;
     private final SessionIdStrategy sessionIdStrategy;
@@ -71,7 +71,7 @@ public class GatewaySessions
         library.gatewaySessions().forEach(startManagingFunc);
     }
 
-    void startManaging(final GatewaySession gatewaySession)
+    void acquire(final GatewaySession gatewaySession)
     {
         final long connectionId = gatewaySession.connectionId();
         final int sessionBufferSize = gatewaySession.sessionBufferSize();
@@ -118,11 +118,9 @@ public class GatewaySessions
         gatewaySession.manage(sessionParser, session);
     }
 
-    GatewaySession stopManaging(final long connectionId)
+    GatewaySession release(final long connectionId)
     {
-        final GatewaySession session = removeSession(connectionId, sessions);
-        session.stopManaging();
-        return session;
+        return removeSession(connectionId, sessions);
     }
 
     int pollSessions(final long time)
