@@ -828,5 +828,6 @@ public class Session implements AutoCloseable
     public void disable()
     {
         state(SessionState.DISABLED);
+        close();
     }
 }

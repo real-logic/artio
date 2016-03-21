@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
@@ -190,31 +191,47 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final long connectionId = initiatedSession.connectionId();
 
-        final SessionReplyStatus status = initiatingLibrary.releaseToGateway(initiatedSession, ADMIN_IDLE_STRATEGY);
+        final SessionReplyStatus status = releaseInitiatedSession();
 
         assertEquals(SessionReplyStatus.OK, status);
         assertEquals(SessionState.DISABLED, initiatedSession.state());
+        assertThat(initiatingLibrary.sessions(), hasSize(0));
 
         final List<SessionInfo> sessions = initiatingEngine.gatewaySessions(ADMIN_IDLE_STRATEGY);
         assertThat(sessions,
             hasItem(hasConnectionId(connectionId)));
     }
 
+    @Ignore
     @Test
     public void librariesShouldBeAbleToAcquireReleasedSessions()
     {
-        // TODO
-    }
+        final long connectionId = initiatedSession.connectionId();
+        final long id = initiatedSession.id();
 
-    @Test
-    public void librariesShouldNotBeAbleToAcquireUnreleasedSessions()
-    {
-        // TODO
+        releaseInitiatedSession();
+
+        final SessionReplyStatus status = initiatingLibrary.acquireSession(connectionId, ADMIN_IDLE_STRATEGY);
+
+        assertEquals(SessionReplyStatus.OK, status);
+
+        final List<Session> sessions = initiatingLibrary.sessions();
+        assertThat(sessions, hasSize(1));
+
+        initiatedSession = sessions.get(0);
+        assertTrue(initiatedSession.isConnected());
+        assertEquals(connectionId, initiatedSession.connectionId());
+        assertEquals(id, initiatedSession.id());
     }
 
     @Test
     public void librariesShouldNotBeAbleToAcquireSessionsThatDontExist()
     {
         // TODO
+    }
+
+    private SessionReplyStatus releaseInitiatedSession()
+    {
+        return initiatingLibrary.releaseToGateway(initiatedSession, ADMIN_IDLE_STRATEGY);
     }
 }

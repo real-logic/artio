@@ -352,6 +352,11 @@ public final class FixLibrary extends GatewayProcess
         return (SessionReplyStatus) reply;
     }
 
+    public SessionReplyStatus acquireSession(final long connectionId, final IdleStrategy idleStrategy)
+    {
+        return SessionReplyStatus.OK;
+    }
+
     // ------------- End Public API -------------
 
     private long latestReplyArrivalTime()
