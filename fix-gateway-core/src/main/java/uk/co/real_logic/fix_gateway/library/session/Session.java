@@ -398,6 +398,17 @@ public class Session implements AutoCloseable
         return actions;
     }
 
+    /**
+     * Close the session object and release its resources.
+     *
+     * API users should never have to call this method.
+     */
+    public void close()
+    {
+        sentMsgSeqNo.close();
+        receivedMsgSeqNo.close();
+    }
+
     // ---------- Event Handlers & Logic ----------
 
     protected void onDisconnect()
@@ -809,14 +820,13 @@ public class Session implements AutoCloseable
             '}';
     }
 
-    public boolean versionHasUserNameAndPassword()
+    boolean versionHasUserNameAndPassword()
     {
         return versionHasUserNameAndPassword;
     }
 
-    public void close()
+    public void disable()
     {
-        sentMsgSeqNo.close();
-        receivedMsgSeqNo.close();
+        state(SessionState.DISABLED);
     }
 }

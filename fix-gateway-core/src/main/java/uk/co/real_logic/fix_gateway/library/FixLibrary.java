@@ -29,9 +29,10 @@ import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
+import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscription;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
+import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscription;
 import uk.co.real_logic.fix_gateway.streams.SessionSubscription;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -314,6 +315,16 @@ public final class FixLibrary extends GatewayProcess
                 "Failed to receive a reply from the engine within %dms, are you sure its running?",
                 this.configuration.replyTimeoutInMs()));
         }
+    }
+
+    /**
+     * Release this session object to the gateway to manage.
+     */
+    public SessionReplyStatus releaseToGateway(final Session session, final IdleStrategy idleStrategy)
+    {
+        session.disable();
+        // outboundPublication.saveReleaseSession();
+        return SessionReplyStatus.OK;
     }
 
     // ------------- End Public API -------------

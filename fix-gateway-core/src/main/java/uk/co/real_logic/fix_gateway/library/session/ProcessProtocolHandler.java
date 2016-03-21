@@ -78,22 +78,22 @@ public interface ProcessProtocolHandler
         // Optional method, implement if you care about this type of message.
     }
 
-    default void onReleaseSession(final int libraryId, final long connectionId, final int correlationId)
+    default void onReleaseSession(final int libraryId, final long connectionId, final long correlationId)
     {
         // Optional method, implement if you care about this type of message.
     }
 
-    default void onReleaseSessionReply(final int correlationId, final SessionReplyStatus status)
+    default void onReleaseSessionReply(final long correlationId, final SessionReplyStatus status)
     {
         // Optional method, implement if you care about this type of message.
     }
 
-    default void onRequestSession(final int libraryId, final long connectionId, final int correlationId)
+    default void onRequestSession(final int libraryId, final long connectionId, final long correlationId)
     {
         // Optional method, implement if you care about this type of message.
     }
 
-    default void onRequestSessionReply(final int correlationId, final SessionReplyStatus status)
+    default void onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
     {
         // Optional method, implement if you care about this type of message.
     }

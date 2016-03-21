@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.session.*;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
@@ -33,9 +34,6 @@ import java.util.function.Consumer;
  */
 class GatewaySessions
 {
-
-    static final int GATEWAY_LIBRARY_ID = 0;
-
     private final List<Session> sessions = new ArrayList<>();
     private final Consumer<GatewaySession> startManagingFunc = this::startManaging;
     private final EpochClock clock;
@@ -81,7 +79,7 @@ class GatewaySessions
             customisationStrategy,
             clock,
             connectionId,
-            GATEWAY_LIBRARY_ID
+            FixEngine.GATEWAY_LIBRARY_ID
         );
 
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
@@ -100,7 +98,7 @@ class GatewaySessions
             gatewaySession.sendingTimeWindow(),
             receivedMsgSeqNo,
             sentMsgSeqNo,
-            GATEWAY_LIBRARY_ID,
+            FixEngine.GATEWAY_LIBRARY_ID,
             sessionBufferSize,
             sentSequenceNumber
         );

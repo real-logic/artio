@@ -43,6 +43,8 @@ import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
  */
 public final class FixEngine extends GatewayProcess
 {
+    public static final int GATEWAY_LIBRARY_ID = 0;
+
     private QueuedPipe<AdminCommand> adminCommands = new ManyToOneConcurrentArrayQueue<>(16);
 
     private final EngineConfiguration configuration;

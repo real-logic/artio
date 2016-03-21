@@ -385,7 +385,34 @@ public class GatewayPublication extends AbstractPublication
         return position;
     }
 
-    public long saveReleaseSession(final SessionReplyStatus status, final int correlationId)
+    public long saveReleaseSession(final int libraryId, final long connectionId, final long correlationId)
+    {
+        final long position = claim(RELEASE_SESSION_REPLY_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(releaseSession.sbeBlockLength())
+            .templateId(releaseSession.sbeTemplateId())
+            .schemaId(releaseSession.sbeSchemaId())
+            .version(releaseSession.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        releaseSession
+            .wrap(buffer, offset)
+            .libraryId(libraryId)
+            .connection(connectionId)
+            .correlationId(correlationId);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long saveReleaseSessionReply(final SessionReplyStatus status, final long correlationId)
     {
         final long position = claim(RELEASE_SESSION_LENGTH);
 
@@ -411,33 +438,7 @@ public class GatewayPublication extends AbstractPublication
         return position;
     }
 
-    public long saveReleaseSessionReply(final long connectionId, final int correlationId)
-    {
-        final long position = claim(RELEASE_SESSION_REPLY_LENGTH);
-
-        final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(releaseSession.sbeBlockLength())
-            .templateId(releaseSession.sbeTemplateId())
-            .schemaId(releaseSession.sbeSchemaId())
-            .version(releaseSession.sbeSchemaVersion());
-
-        offset += header.encodedLength();
-
-        releaseSession
-            .wrap(buffer, offset)
-            .connection(connectionId)
-            .correlationId(correlationId);
-
-        bufferClaim.commit();
-
-        return position;
-    }
-
-    public long saveRequestSession(final int libraryId, final long connectionId, final int correlationId)
+    public long saveRequestSession(final int libraryId, final long connectionId, final long correlationId)
     {
         final long position = claim(REQUEST_SESSION_LENGTH);
 

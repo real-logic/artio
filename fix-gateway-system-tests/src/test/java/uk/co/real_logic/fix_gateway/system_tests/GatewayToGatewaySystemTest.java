@@ -16,22 +16,31 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.session.Session;
+import uk.co.real_logic.fix_gateway.library.session.SessionState;
+import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 
 import java.util.List;
 
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
+import static uk.co.real_logic.fix_gateway.CommonMatchers.hasConnectionId;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
+
+    private IdleStrategy idleStrategy = backoffIdleStrategy();
+
     @Before
     public void launch()
     {
@@ -182,10 +191,23 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         //LockSupport.parkNanos(10_000_000_000L);
     }
 
+    @Ignore
     @Test
     public void librariesShouldBeAbleToReleaseSessionToTheGateway()
     {
-        // TODO
+        final long connectionId = initiatedSession.connectionId();
+
+        final SessionReplyStatus status = initiatingLibrary.releaseToGateway(initiatedSession, idleStrategy);
+
+        assertEquals(SessionReplyStatus.OK, status);
+        assertEquals(SessionState.DISABLED, initiatedSession.state());
+
+        final List<LibraryInfo> libraries = initiatingEngine.libraries(idleStrategy);
+
+        final LibraryInfo gatewayLibrary = libraries.get(0);
+        assertEquals(GATEWAY_LIBRARY_ID, gatewayLibrary.libraryId());
+        assertThat(gatewayLibrary.sessions(),
+            contains(hasConnectionId(connectionId)));
     }
 
     @Test

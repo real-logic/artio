@@ -98,22 +98,22 @@ public class ProcessProtocolSubscription implements FragmentHandler
 
             case ReleaseSessionDecoder.TEMPLATE_ID:
             {
-                return onLibraryConnect(buffer, offset, blockLength, version);
+                return onReleaseSession(buffer, offset, blockLength, version);
             }
 
             case ReleaseSessionReplyDecoder.TEMPLATE_ID:
             {
-                return onLibraryConnect(buffer, offset, blockLength, version);
+                return onReleaseSessionReply(buffer, offset, blockLength, version);
             }
 
             case RequestSessionDecoder.TEMPLATE_ID:
             {
-                return onLibraryConnect(buffer, offset, blockLength, version);
+                return onRequestSession(buffer, offset, blockLength, version);
             }
 
             case RequestSessionReplyDecoder.TEMPLATE_ID:
             {
-                return onLibraryConnect(buffer, offset, blockLength, version);
+                return onRequestSessionReply(buffer, offset, blockLength, version);
             }
         }
 
@@ -144,7 +144,7 @@ public class ProcessProtocolSubscription implements FragmentHandler
     {
         releaseSession.wrap(buffer, offset, blockLength, version);
         processProtocolHandler.onReleaseSession(
-            0,
+            releaseSession.libraryId(),
             releaseSession.connection(),
             releaseSession.correlationId());
         return releaseSession.limit();
