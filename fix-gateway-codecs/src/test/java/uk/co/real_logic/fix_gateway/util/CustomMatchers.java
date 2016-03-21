@@ -24,6 +24,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Objects;
+import java.util.function.Function;
 
 import static org.junit.Assert.assertEquals;
 
@@ -108,6 +109,7 @@ public final class CustomMatchers
                 }
                 catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e)
                 {
+                    e.printStackTrace();
                     error = e.getMessage();
                     return false;
                 }
@@ -124,6 +126,27 @@ public final class CustomMatchers
                     description.appendText("A method called " + name + " with ");
                     valueMatcher.describeTo(description);
                 }
+            }
+        };
+    }
+
+    public static <T, V> Matcher<T> hasResult(
+        final String name,
+        final Function<T, V> getter,
+        final Matcher<?> valueMatcher)
+    {
+        return new TypeSafeMatcher<T>()
+        {
+            protected boolean matchesSafely(final T item)
+            {
+                final Object value = getter.apply(item);
+                return valueMatcher.matches(value);
+            }
+
+            public void describeTo(final Description description)
+            {
+                description.appendText("A method called " + name + " with ");
+                valueMatcher.describeTo(description);
             }
         };
     }

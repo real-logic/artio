@@ -19,6 +19,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.library.session.*;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
@@ -29,12 +30,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static java.util.Collections.unmodifiableList;
+
 /**
  * Keeps track of which sessions managed by the gateway
  */
-class GatewaySessions
+public class GatewaySessions
 {
-    private final List<Session> sessions = new ArrayList<>();
+    private final List<GatewaySession> sessions = new ArrayList<>();
+    private final List<SessionInfo> unmodifiableSessions = unmodifiableList(sessions);
     private final Consumer<GatewaySession> startManagingFunc = this::startManaging;
     private final EpochClock clock;
     private final GatewayPublication publication;
@@ -44,7 +48,7 @@ class GatewaySessions
     private final AuthenticationStrategy authenticationStrategy;
     private final MessageValidationStrategy validationStrategy;
 
-    GatewaySessions(
+    public GatewaySessions(
         final EpochClock clock,
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
@@ -94,7 +98,7 @@ class GatewaySessions
             proxy,
             publication,
             sessionIdStrategy,
-            gatewaySession.expectedBeginString(),
+            "FIX.4.4".toCharArray(), // TODO
             gatewaySession.sendingTimeWindow(),
             receivedMsgSeqNo,
             sentMsgSeqNo,
@@ -110,23 +114,28 @@ class GatewaySessions
             validationStrategy
         );
 
-        sessions.add(session);
-        gatewaySession.manage(sessionParser);
+        sessions.add(gatewaySession);
+        gatewaySession.manage(sessionParser, session);
     }
 
     void stopManaging(final GatewaySession gatewaySession)
     {
         sessions.removeIf(session -> session.connectionId() == gatewaySession.connectionId());
-        gatewaySession.manage(null);
+        gatewaySession.manage(null, null);
     }
 
     int pollSessions(final long time)
     {
         int eventsProcessed = 0;
-        for (final Session session : sessions)
+        for (final GatewaySession session : sessions)
         {
             eventsProcessed += session.poll(time);
         }
         return eventsProcessed;
+    }
+
+    List<SessionInfo> sessions()
+    {
+        return unmodifiableSessions;
     }
 }

@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.library.session.SessionParser;
 
 class GatewaySession implements SessionInfo
@@ -25,6 +26,7 @@ class GatewaySession implements SessionInfo
     private final ReceiverEndPoint receiverEndPoint;
 
     private long sessionId;
+    private Session session;
 
     GatewaySession(final long connectionId,
                    final long sessionId,
@@ -47,41 +49,49 @@ class GatewaySession implements SessionInfo
         return address;
     }
 
-    // TODO: package scope everything below here
-
-    public long sessionId()
-    {
-        return sessionId;
-    }
-
     public void sessionId(final long sessionId)
     {
         this.sessionId = sessionId;
     }
 
-    public int sessionBufferSize()
+    // TODO: package scope everything below here
+    public long sessionId()
+    {
+        return sessionId;
+    }
+
+    int sessionBufferSize()
     {
         return 0;
     }
 
-    public int heartbeatIntervalInS()
+    int heartbeatIntervalInS()
     {
         return 0;
     }
 
-    public char[] expectedBeginString()
-    {
-        return null;
-    }
-
-    public long sendingTimeWindow()
+    long sendingTimeWindow()
     {
         return 0;
     }
 
-    public void manage(final SessionParser sessionParser)
+    void manage(final SessionParser sessionParser, final Session session)
     {
+        this.session = session;
         receiverEndPoint.manage(sessionParser);
     }
 
+    int poll(final long time)
+    {
+        return session.poll(time);
+    }
+
+    public String toString()
+    {
+        return "GatewaySession{" +
+            "connectionId=" + connectionId +
+            ", address='" + address + '\'' +
+            ", sessionId=" + sessionId +
+            '}';
+    }
 }

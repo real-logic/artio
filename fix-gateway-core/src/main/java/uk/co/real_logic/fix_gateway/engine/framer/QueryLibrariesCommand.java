@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Real Logic Ltd.
+ * Copyright 2014 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,46 +17,30 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 
-import java.io.File;
+import java.util.List;
 
-public final class ResetSessionIds implements AdminCommand
+public final class QueryLibrariesCommand implements AdminCommand
 {
-    private final File backupLocation;
-
-    private volatile Exception error;
-    private volatile boolean done;
-
-    public ResetSessionIds(final File backupLocation)
-    {
-        this.backupLocation = backupLocation;
-    }
+    private volatile List<LibraryInfo> response;
 
     public void execute(final Framer framer)
     {
-        framer.resetSessionIds(backupLocation, this);
+        framer.onQueryLibraries(this);
     }
 
-    public void awaitResponse(final IdleStrategy idleStrategy)
+    void success(final List<LibraryInfo> response)
     {
-        while (!done && error == null)
+        this.response = response;
+    }
+
+    public List<LibraryInfo> awaitResponse(final IdleStrategy idleStrategy)
+    {
+        List<LibraryInfo> response;
+        while ((response = this.response) == null)
         {
             idleStrategy.idle();
         }
         idleStrategy.reset();
-
-        if (!done)
-        {
-            throw new IllegalStateException(error);
-        }
-    }
-
-    void onError(final Exception error)
-    {
-        this.error = error;
-    }
-
-    void success()
-    {
-        done = true;
+        return response;
     }
 }

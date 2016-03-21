@@ -32,6 +32,7 @@ import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
+import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscription;
@@ -56,6 +57,8 @@ import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
+import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
+import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.streams.Streams.UNKNOWN_TEMPLATE;
 
 /**
@@ -114,6 +117,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
     private final int inboundBytesReceivedLimit;
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
+    private final GatewaySessions gatewaySessions;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
     private int acceptorLibraryId = NO_ACCEPTOR;
@@ -128,13 +132,15 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex)
+        final SequenceNumberIndexReader receivedSequenceNumberIndex,
+        final GatewaySessions gatewaySessions)
     {
         this.clock = clock;
         this.configuration = configuration;
         this.connectionHandler = connectionHandler;
         this.outboundDataSubscription = outboundLibrarySubscription;
         this.replaySubscription = replaySubscription;
+        this.gatewaySessions = gatewaySessions;
         this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
@@ -416,7 +422,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         final LibraryInfo library = idToLibrary.get(libraryId);
         if (library != null)
         {
-            library.onSessionDisconnected(connectionId);
+            library.removeSession(connectionId);
         }
     }
 
@@ -460,13 +466,39 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         }
     }
 
-    public void onQueryLibraries(final QueryLibraries queryLibraries)
+    public void onReleaseSession(final int libraryId, final long connectionId, final long correlationId)
     {
-        final List<LibraryInfo> libraries = new ArrayList<>(idToLibrary.values());
-        queryLibraries.success(libraries);
+        final LibraryInfo libraryInfo = idToLibrary.get(libraryId);
+        if (libraryInfo == null)
+        {
+            inboundPublication.saveReleaseSessionReply(SessionReplyStatus.UNKNOWN_LIBRARY, correlationId);
+            return;
+        }
+
+        final GatewaySession session = libraryInfo.removeSession(connectionId);
+        if (session == null)
+        {
+            inboundPublication.saveReleaseSessionReply(UNKNOWN_SESSION, correlationId);
+            return;
+        }
+
+        gatewaySessions.startManaging(session);
+
+        inboundPublication.saveReleaseSessionReply(OK, correlationId);
     }
 
-    public void resetSessionIds(final File backupLocation, final ResetSessionIds command)
+    void onQueryLibraries(final QueryLibrariesCommand queryLibrariesCommand)
+    {
+        final List<LibraryInfo> libraries = new ArrayList<>(idToLibrary.values());
+        queryLibrariesCommand.success(libraries);
+    }
+
+    void onGatewaySessions(final GatewaySessionsCommand gatewaySessionsCommand)
+    {
+        gatewaySessionsCommand.success(new ArrayList<>(gatewaySessions.sessions()));
+    }
+
+    void resetSessionIds(final File backupLocation, final ResetSessionIdsCommand command)
     {
         try
         {

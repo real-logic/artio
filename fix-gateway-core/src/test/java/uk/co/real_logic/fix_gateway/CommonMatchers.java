@@ -18,7 +18,8 @@ package uk.co.real_logic.fix_gateway;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 
-import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasFluentProperty;
+import static org.hamcrest.Matchers.equalTo;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasResult;
 
 public final class CommonMatchers
 {
@@ -28,6 +29,6 @@ public final class CommonMatchers
 
     public static Matcher<SessionInfo> hasConnectionId(final long connectionId)
     {
-        return hasFluentProperty("connectionId", connectionId);
+        return hasResult("connectionId", SessionInfo::connectionId, equalTo(connectionId));
     }
 }

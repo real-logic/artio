@@ -387,7 +387,7 @@ public class GatewayPublication extends AbstractPublication
 
     public long saveReleaseSession(final int libraryId, final long connectionId, final long correlationId)
     {
-        final long position = claim(RELEASE_SESSION_REPLY_LENGTH);
+        final long position = claim(RELEASE_SESSION_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -414,7 +414,7 @@ public class GatewayPublication extends AbstractPublication
 
     public long saveReleaseSessionReply(final SessionReplyStatus status, final long correlationId)
     {
-        final long position = claim(RELEASE_SESSION_LENGTH);
+        final long position = claim(RELEASE_SESSION_REPLY_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();

@@ -69,7 +69,8 @@
         <enum name="SessionReplyStatus" encodingType="uint8">
             <validValue name="OK">0</validValue>
             <validValue name="UNKNOWN_SESSION">1</validValue>
-            <validValue name="OTHER_SESSION_OWNER">2</validValue>
+            <validValue name="UNKNOWN_LIBRARY">2</validValue>
+            <validValue name="OTHER_SESSION_OWNER">3</validValue>
         </enum>
     </types>
 

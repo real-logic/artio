@@ -104,8 +104,24 @@ public final class LibraryInfo
             '}';
     }
 
-    public void onSessionDisconnected(final long connectionId)
+    GatewaySession removeSession(final long connectionId)
     {
-        allSessions.removeIf(info -> info.connectionId() == connectionId);
+        final List<GatewaySession> allSessions = this.allSessions;
+        for (int i = 0, size = allSessions.size(); i < size; i++)
+        {
+            final GatewaySession session = allSessions.get(i);
+            if (session.connectionId() == connectionId)
+            {
+                allSessions.remove(i);
+                return session;
+            }
+        }
+
+        return null;
     }
+
+    /*GatewaySession removeSession(final long connectionId)
+    {
+        return null;
+    }*/
 }

@@ -39,8 +39,10 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static java.util.Collections.unmodifiableList;
+import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
 import static uk.co.real_logic.fix_gateway.streams.Streams.UNKNOWN_TEMPLATE;
@@ -59,6 +61,8 @@ import static uk.co.real_logic.fix_gateway.streams.Streams.UNKNOWN_TEMPLATE;
  */
 public final class FixLibrary extends GatewayProcess
 {
+    private static final Object AWAITING_REPLY = new Object();
+
     private final Subscription inboundSubscription;
     private final GatewayPublication outboundPublication;
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
@@ -74,7 +78,10 @@ public final class FixLibrary extends GatewayProcess
     private final int libraryId;
     private final IdleStrategy idleStrategy;
     private final boolean isAcceptor;
+    private final Long2ObjectHashMap<Object> replies = new Long2ObjectHashMap<>();
 
+    /** Correlation Id is initialised to a random number to reduce the chance of correlation id collision. */
+    private long nextCorrelationId = ThreadLocalRandom.current().nextLong();
     private Session incomingSession;
 
     private SessionConfiguration sessionConfiguration;
@@ -230,7 +237,7 @@ public final class FixLibrary extends GatewayProcess
      * object has connected to the acceptor.
      *
      * @param configuration the configuration to use for the session.
-     * @param idleStrategy an idle strategy to use for backoffs whilst awaiting the session's acceptance.
+     * @param idleStrategy an idle strategy to use for backoffs whilst waiting.
      * @return the session object for the session that you've initiated.
      * @throws IllegalStateException
      *         if you're trying to initiate two sessions at the same time or if there's a timeout talking to
@@ -277,6 +284,7 @@ public final class FixLibrary extends GatewayProcess
 
                     idleStrategy.idle(workCount);
                 }
+                idleStrategy.reset();
 
                 if (incomingSession != null)
                 {
@@ -302,6 +310,50 @@ public final class FixLibrary extends GatewayProcess
         }
     }
 
+    /**
+     * Release this session object to the gateway to manage.
+     *
+     * @param session the session to release
+     * @param idleStrategy an idle strategy to use for backoffs whilst waiting.
+     * @return the result of this operation.
+     */
+    public SessionReplyStatus releaseToGateway(final Session session, final IdleStrategy idleStrategy)
+    {
+        requireNonNull(session, "session");
+        requireNonNull(idleStrategy, "idleStrategy");
+
+        final long correlationId = this.nextCorrelationId++;
+        outboundPublication.saveReleaseSession(libraryId, session.connectionId(), correlationId);
+
+        replies.put(correlationId, AWAITING_REPLY);
+
+        final long latestReplyArrivalTime = latestReplyArrivalTime();
+        Object reply;
+        while ((reply = replies.get(correlationId)) == AWAITING_REPLY)
+        {
+            final int workCount = poll(5);
+
+            checkTime(latestReplyArrivalTime);
+
+            idleStrategy.idle(workCount);
+        }
+        idleStrategy.reset();
+
+        if (reply == SessionReplyStatus.OK)
+        {
+            sessions.remove(session);
+            session.disable();
+        }
+        else
+        {
+            replies.remove(correlationId);
+        }
+
+        return (SessionReplyStatus) reply;
+    }
+
+    // ------------- End Public API -------------
+
     private long latestReplyArrivalTime()
     {
         return clock.time() + configuration.replyTimeoutInMs();
@@ -316,18 +368,6 @@ public final class FixLibrary extends GatewayProcess
                 this.configuration.replyTimeoutInMs()));
         }
     }
-
-    /**
-     * Release this session object to the gateway to manage.
-     */
-    public SessionReplyStatus releaseToGateway(final Session session, final IdleStrategy idleStrategy)
-    {
-        session.disable();
-        // outboundPublication.saveReleaseSession();
-        return SessionReplyStatus.OK;
-    }
-
-    // ------------- End Public API -------------
 
     private int pollSessions(final long timeInMs)
     {
@@ -484,6 +524,14 @@ public final class FixLibrary extends GatewayProcess
             if (libraryId == FixLibrary.this.libraryId)
             {
                 livenessDetector.onHeartbeat(clock.time());
+            }
+        }
+
+        public void onReleaseSessionReply(final long correlationId, final SessionReplyStatus status)
+        {
+            if (AWAITING_REPLY == replies.get(correlationId))
+            {
+                replies.put(correlationId, status);
             }
         }
     }

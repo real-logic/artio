@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.aeron.Subscription;
@@ -116,8 +115,8 @@ public class FramerTest
             mockSessionIdStrategy,
             sessionIds,
             sentSequenceNumberIndex,
-            receivedSequenceNumberIndex
-        );
+            receivedSequenceNumberIndex,
+            mock(GatewaySessions.class));
     }
 
     @After
@@ -263,7 +262,6 @@ public class FramerTest
         verifyEndpointsClosed(LIBRARY_DISCONNECT);
     }
 
-    @Ignore // TODO: understand subtle race condition on windows
     @Test
     public void shouldDisconnectAcceptedClientsWhenLibraryDisconnects() throws Exception
     {

@@ -24,6 +24,9 @@ import uk.co.real_logic.fix_gateway.engine.framer.*;
 import uk.co.real_logic.fix_gateway.engine.logger.Logger;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexWriter;
+import uk.co.real_logic.fix_gateway.library.session.NoSessionCustomisationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.NoAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.NoMessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.File;
@@ -73,10 +76,24 @@ public final class FixEngine extends GatewayProcess
      */
     public List<LibraryInfo> libraries(final IdleStrategy idleStrategy)
     {
-        final QueryLibraries query = new QueryLibraries();
-        sendAdminCommand(idleStrategy, query);
+        final QueryLibrariesCommand command = new QueryLibrariesCommand();
+        sendAdminCommand(idleStrategy, command);
 
-        return query.awaitResponse(idleStrategy);
+        return command.awaitResponse(idleStrategy);
+    }
+
+    /**
+     * Query the engine for the lise of sessions currently managed.
+     *
+     * @param idleStrategy the strategy to idle with whilst waiting for a response.
+     * @return the lise of sessions currently managed.
+     */
+    public List<SessionInfo> gatewaySessions(final IdleStrategy idleStrategy)
+    {
+        final GatewaySessionsCommand command = new GatewaySessionsCommand();
+        sendAdminCommand(idleStrategy, command);
+
+        return command.awaitResponse(idleStrategy);
     }
 
     /**
@@ -90,8 +107,8 @@ public final class FixEngine extends GatewayProcess
     public void resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)
         throws IllegalStateException
     {
-        final ResetSessionIds resetSessionIds = new ResetSessionIds(backupLocation);
-        sendAdminCommand(idleStrategy, resetSessionIds);
+        final ResetSessionIdsCommand command = new ResetSessionIdsCommand(backupLocation);
+        sendAdminCommand(idleStrategy, command);
     }
 
     private void sendAdminCommand(final IdleStrategy idleStrategy, final AdminCommand query)
@@ -151,12 +168,22 @@ public final class FixEngine extends GatewayProcess
             fixCounters,
             errorHandler);
 
+        final SystemEpochClock clock = new SystemEpochClock();
+        final GatewaySessions gatewaySessions = new GatewaySessions(
+            clock,
+            outboundLibraryStreams.gatewayPublication(idleStrategy),
+            sessionIdStrategy,
+            new NoSessionCustomisationStrategy(),
+            fixCounters,
+            new NoAuthenticationStrategy(),
+            new NoMessageValidationStrategy());
+
         final Framer framer = new Framer(
-            new SystemEpochClock(), configuration, handler, librarySubscription, replaySubscription(),
+            clock, configuration, handler, librarySubscription, replaySubscription(),
             adminCommands, sessionIdStrategy, sessionIds,
             new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer()),
-            new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer())
-        );
+            new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer()),
+            gatewaySessions);
         framerRunner = new AgentRunner(idleStrategy, errorHandler, null, framer);
     }
 
@@ -183,5 +210,4 @@ public final class FixEngine extends GatewayProcess
         configuration.close();
         super.close();
     }
-
 }
