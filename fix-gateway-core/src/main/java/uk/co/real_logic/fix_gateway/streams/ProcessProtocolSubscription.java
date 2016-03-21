@@ -34,6 +34,10 @@ public class ProcessProtocolSubscription implements FragmentHandler
     private final ErrorDecoder error = new ErrorDecoder();
     private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
     private final LibraryConnectDecoder libraryConnect = new LibraryConnectDecoder();
+    private final ReleaseSessionDecoder releaseSession = new ReleaseSessionDecoder();
+    private final ReleaseSessionReplyDecoder releaseSessionReply = new ReleaseSessionReplyDecoder();
+    private final RequestSessionDecoder requestSession = new RequestSessionDecoder();
+    private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
 
     private final ProcessProtocolHandler processProtocolHandler;
 
@@ -91,6 +95,26 @@ public class ProcessProtocolSubscription implements FragmentHandler
             {
                 return onLibraryConnect(buffer, offset, blockLength, version);
             }
+
+            case ReleaseSessionDecoder.TEMPLATE_ID:
+            {
+                return onLibraryConnect(buffer, offset, blockLength, version);
+            }
+
+            case ReleaseSessionReplyDecoder.TEMPLATE_ID:
+            {
+                return onLibraryConnect(buffer, offset, blockLength, version);
+            }
+
+            case RequestSessionDecoder.TEMPLATE_ID:
+            {
+                return onLibraryConnect(buffer, offset, blockLength, version);
+            }
+
+            case RequestSessionReplyDecoder.TEMPLATE_ID:
+            {
+                return onLibraryConnect(buffer, offset, blockLength, version);
+            }
         }
 
         return UNKNOWN_TEMPLATE;
@@ -113,6 +137,48 @@ public class ProcessProtocolSubscription implements FragmentHandler
         libraryConnect.wrap(buffer, offset, blockLength, version);
         processProtocolHandler.onLibraryConnect(libraryConnect.libraryId(), libraryConnect.typeHandled());
         return libraryConnect.limit();
+    }
+
+    private int onReleaseSession(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        releaseSession.wrap(buffer, offset, blockLength, version);
+        processProtocolHandler.onReleaseSession(
+            0,
+            releaseSession.connection(),
+            releaseSession.correlationId());
+        return releaseSession.limit();
+    }
+
+    private int onReleaseSessionReply(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        releaseSessionReply.wrap(buffer, offset, blockLength, version);
+        processProtocolHandler.onReleaseSessionReply(
+            releaseSessionReply.correlationId(),
+            releaseSessionReply.status());
+        return releaseSessionReply.limit();
+    }
+
+    private int onRequestSession(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        requestSession.wrap(buffer, offset, blockLength, version);
+        processProtocolHandler.onRequestSession(
+            requestSession.libraryId(),
+            requestSession.connection(),
+            requestSession.correlationId());
+        return requestSession.limit();
+    }
+
+    private int onRequestSessionReply(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        requestSessionReply.wrap(buffer, offset, blockLength, version);
+        processProtocolHandler.onRequestSessionReply(
+            requestSessionReply.correlationId(),
+            requestSessionReply.status());
+        return requestSessionReply.limit();
     }
 
     private int onError(

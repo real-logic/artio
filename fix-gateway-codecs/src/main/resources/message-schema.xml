@@ -64,6 +64,12 @@
             <validValue name="FOR">0</validValue>
             <validValue name="AGAINST">1</validValue>
         </enum>
+
+        <enum name="SessionReplyStatus" encodingType="uint8">
+            <validValue name="OK">0</validValue>
+            <validValue name="UNKNOWN_SESSION">1</validValue>
+            <validValue name="OTHER_SESSION_OWNER">2</validValue>
+        </enum>
     </types>
 
     <!-- MESSAGING PROTOCOL -->
@@ -122,6 +128,28 @@
                  description="Notify an engine that a new library has connected">
         <field name="libraryId" id="47" type="LibraryId"/>
         <field name="typeHandled" id="48" type="ConnectionType"/>
+    </sbe:message>
+    <!--TODO: add library id-->
+    <sbe:message name="ReleaseSession" id="29"
+                 description="releases a session from the library's control to the gateway">
+        <field name="connection" id="91" type="ConnectionId"/>
+        <field name="correlationId" id="92" type="int32"/>
+    </sbe:message>
+    <sbe:message name="ReleaseSessionReply" id="30"
+                 description="response to ReleaseSession">
+        <field name="correlationId" id="93" type="int32"/>
+        <field name="status" id="94" type="SessionReplyStatus"/>
+    </sbe:message>
+    <sbe:message name="RequestSession" id="31"
+                 description="requests control of a session for this library">
+        <field name="libraryId" id="95" type="LibraryId"/>
+        <field name="connection" id="96" type="ConnectionId"/>
+        <field name="correlationId" id="97" type="int32"/>
+    </sbe:message>
+    <sbe:message name="RequestSessionReply" id="32"
+                 description="response to ReleaseSession">
+        <field name="correlationId" id="98" type="int32"/>
+        <field name="status" id="94" type="SessionReplyStatus"/>
     </sbe:message>
 
     <!-- EXCEPTION STORAGE DATA STRUCTURES -->

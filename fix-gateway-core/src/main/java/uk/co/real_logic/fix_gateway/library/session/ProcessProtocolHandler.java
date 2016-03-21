@@ -19,6 +19,7 @@ import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
+import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 
 public interface ProcessProtocolHandler
 {
@@ -73,6 +74,26 @@ public interface ProcessProtocolHandler
     }
 
     default void onLibraryConnect(final int libraryId, final ConnectionType connectionType)
+    {
+        // Optional method, implement if you care about this type of message.
+    }
+
+    default void onReleaseSession(final int libraryId, final long connectionId, final int correlationId)
+    {
+        // Optional method, implement if you care about this type of message.
+    }
+
+    default void onReleaseSessionReply(final int correlationId, final SessionReplyStatus status)
+    {
+        // Optional method, implement if you care about this type of message.
+    }
+
+    default void onRequestSession(final int libraryId, final long connectionId, final int correlationId)
+    {
+        // Optional method, implement if you care about this type of message.
+    }
+
+    default void onRequestSessionReply(final int correlationId, final SessionReplyStatus status)
     {
         // Optional method, implement if you care about this type of message.
     }

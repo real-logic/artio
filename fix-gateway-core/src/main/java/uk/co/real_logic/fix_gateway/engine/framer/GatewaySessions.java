@@ -34,7 +34,8 @@ import java.util.function.Consumer;
 class GatewaySessions
 {
 
-    public static final int GATEWAY_LIBRARY_ID = 0;
+    static final int GATEWAY_LIBRARY_ID = 0;
+
     private final List<Session> sessions = new ArrayList<>();
     private final Consumer<GatewaySession> startManagingFunc = this::startManaging;
     private final EpochClock clock;
@@ -63,12 +64,12 @@ class GatewaySessions
         this.validationStrategy = validationStrategy;
     }
 
-    public void onLibraryTimeout(final LibraryInfo library)
+    void onLibraryTimeout(final LibraryInfo library)
     {
         library.gatewaySessions().forEach(startManagingFunc);
     }
 
-    public void startManaging(final GatewaySession gatewaySession)
+    void startManaging(final GatewaySession gatewaySession)
     {
         final long connectionId = gatewaySession.connectionId();
         final int sessionBufferSize = gatewaySession.sessionBufferSize();
@@ -115,13 +116,13 @@ class GatewaySessions
         gatewaySession.manage(sessionParser);
     }
 
-    public void stopManaging(final GatewaySession gatewaySession)
+    void stopManaging(final GatewaySession gatewaySession)
     {
         sessions.removeIf(session -> session.connectionId() == gatewaySession.connectionId());
         gatewaySession.manage(null);
     }
 
-    public int pollSessions(final long time)
+    int pollSessions(final long time)
     {
         int eventsProcessed = 0;
         for (final Session session : sessions)

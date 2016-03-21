@@ -43,6 +43,10 @@ public class GatewayPublication extends AbstractPublication
     public static final int HEARTBEAT_LENGTH = HEADER_LENGTH + ApplicationHeartbeatEncoder.BLOCK_LENGTH;
     public static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH;
     public static final int DISCONNECT_LENGTH = HEADER_LENGTH + DisconnectEncoder.BLOCK_LENGTH;
+    public static final int RELEASE_SESSION_LENGTH = HEADER_LENGTH + ReleaseSessionEncoder.BLOCK_LENGTH;
+    public static final int RELEASE_SESSION_REPLY_LENGTH = HEADER_LENGTH + ReleaseSessionReplyDecoder.BLOCK_LENGTH;
+    public static final int REQUEST_SESSION_LENGTH = HEADER_LENGTH + RequestSessionEncoder.BLOCK_LENGTH;
+    public static final int REQUEST_SESSION_REPLY_LENGTH = HEADER_LENGTH + RequestSessionReplyEncoder.BLOCK_LENGTH;
 
     private final LogonEncoder logon = new LogonEncoder();
     private final ConnectEncoder connect = new ConnectEncoder();
@@ -53,6 +57,10 @@ public class GatewayPublication extends AbstractPublication
     private final ErrorEncoder error = new ErrorEncoder();
     private final ApplicationHeartbeatEncoder applicationHeartbeat = new ApplicationHeartbeatEncoder();
     private final LibraryConnectEncoder libraryConnect = new LibraryConnectEncoder();
+    private final RequestSessionEncoder requestSession = new RequestSessionEncoder();
+    private final RequestSessionReplyEncoder requestSessionReply = new RequestSessionReplyEncoder();
+    private final ReleaseSessionEncoder releaseSession = new ReleaseSessionEncoder();
+    private final ReleaseSessionReplyEncoder releaseSessionReply = new ReleaseSessionReplyEncoder();
 
     private final NanoClock nanoClock;
 
@@ -371,6 +379,111 @@ public class GatewayPublication extends AbstractPublication
             .wrap(buffer, offset)
             .libraryId(libraryId)
             .typeHandled(isAcceptor ? ACCEPTOR : INITIATOR);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long saveReleaseSession(final SessionReplyStatus status, final int correlationId)
+    {
+        final long position = claim(RELEASE_SESSION_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(releaseSessionReply.sbeBlockLength())
+            .templateId(releaseSessionReply.sbeTemplateId())
+            .schemaId(releaseSessionReply.sbeSchemaId())
+            .version(releaseSessionReply.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        releaseSessionReply
+            .wrap(buffer, offset)
+            .correlationId(correlationId)
+            .status(status);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long saveReleaseSessionReply(final long connectionId, final int correlationId)
+    {
+        final long position = claim(RELEASE_SESSION_REPLY_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(releaseSession.sbeBlockLength())
+            .templateId(releaseSession.sbeTemplateId())
+            .schemaId(releaseSession.sbeSchemaId())
+            .version(releaseSession.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        releaseSession
+            .wrap(buffer, offset)
+            .connection(connectionId)
+            .correlationId(correlationId);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long saveRequestSession(final int libraryId, final long connectionId, final int correlationId)
+    {
+        final long position = claim(REQUEST_SESSION_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(requestSession.sbeBlockLength())
+            .templateId(requestSession.sbeTemplateId())
+            .schemaId(requestSession.sbeSchemaId())
+            .version(requestSession.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        requestSession
+            .wrap(buffer, offset)
+            .libraryId(libraryId)
+            .connection(connectionId)
+            .correlationId(correlationId);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long saveRequestSessionReply(final SessionReplyStatus status, final int correlationId)
+    {
+        final long position = claim(REQUEST_SESSION_REPLY_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(requestSessionReply.sbeBlockLength())
+            .templateId(requestSessionReply.sbeTemplateId())
+            .schemaId(requestSessionReply.sbeSchemaId())
+            .version(requestSessionReply.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        requestSessionReply
+            .wrap(buffer, offset)
+            .correlationId(correlationId)
+            .status(status);
 
         bufferClaim.commit();
 
