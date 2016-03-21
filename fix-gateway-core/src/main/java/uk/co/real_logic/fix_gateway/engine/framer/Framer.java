@@ -402,7 +402,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
             connectionHandler.senderEndPoint(channel, connectionId, libraryId, this, pollEndpointsFunc);
         senderEndPoints.add(senderEndPoint);
 
-        idToLibrary.get(libraryId).onSessionConnected(new GatewaySession(
+        idToLibrary.get(libraryId).addSession(new GatewaySession(
             connectionId,
             sessionId,
             channel.getRemoteAddress().toString(),
@@ -483,6 +483,27 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         }
 
         gatewaySessions.startManaging(session);
+
+        inboundPublication.saveReleaseSessionReply(OK, correlationId);
+    }
+
+    public void onRequestSession(final int libraryId, final long connectionId, final long correlationId)
+    {
+        final LibraryInfo libraryInfo = idToLibrary.get(libraryId);
+        if (libraryInfo == null)
+        {
+            inboundPublication.saveReleaseSessionReply(SessionReplyStatus.UNKNOWN_LIBRARY, correlationId);
+            return;
+        }
+
+        final GatewaySession session = gatewaySessions.stopManaging(connectionId);
+        if (session == null)
+        {
+            inboundPublication.saveReleaseSessionReply(UNKNOWN_SESSION, correlationId);
+            return;
+        }
+
+        libraryInfo.addSession(session);
 
         inboundPublication.saveReleaseSessionReply(OK, correlationId);
     }

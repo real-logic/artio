@@ -91,7 +91,7 @@ public final class LibraryInfo
         return livenessDetector.isConnected();
     }
 
-    void onSessionConnected(final GatewaySession session)
+    void addSession(final GatewaySession session)
     {
         allSessions.add(session);
     }
@@ -99,29 +99,14 @@ public final class LibraryInfo
     public String toString()
     {
         return "LibraryInfo{" +
-            "acceptor=" + acceptor +
-            ", libraryId=" + libraryId +
+            "libraryId=" + libraryId +
+            ", acceptor=" + acceptor +
+            ", allSessions=" + allSessions +
             '}';
     }
 
     GatewaySession removeSession(final long connectionId)
     {
-        final List<GatewaySession> allSessions = this.allSessions;
-        for (int i = 0, size = allSessions.size(); i < size; i++)
-        {
-            final GatewaySession session = allSessions.get(i);
-            if (session.connectionId() == connectionId)
-            {
-                allSessions.remove(i);
-                return session;
-            }
-        }
-
-        return null;
+        return GatewaySessions.removeSession(connectionId, allSessions);
     }
-
-    /*GatewaySession removeSession(final long connectionId)
-    {
-        return null;
-    }*/
 }

@@ -118,10 +118,11 @@ public class GatewaySessions
         gatewaySession.manage(sessionParser, session);
     }
 
-    void stopManaging(final GatewaySession gatewaySession)
+    GatewaySession stopManaging(final long connectionId)
     {
-        sessions.removeIf(session -> session.connectionId() == gatewaySession.connectionId());
-        gatewaySession.manage(null, null);
+        final GatewaySession session = removeSession(connectionId, sessions);
+        session.stopManaging();
+        return session;
     }
 
     int pollSessions(final long time)
@@ -137,5 +138,20 @@ public class GatewaySessions
     List<SessionInfo> sessions()
     {
         return unmodifiableSessions;
+    }
+
+    static GatewaySession removeSession(final long connectionId, final List<GatewaySession> sessions)
+    {
+        for (int i = 0, size = sessions.size(); i < size; i++)
+        {
+            final GatewaySession session = sessions.get(i);
+            if (session.connectionId() == connectionId)
+            {
+                sessions.remove(i);
+                return session;
+            }
+        }
+
+        return null;
     }
 }

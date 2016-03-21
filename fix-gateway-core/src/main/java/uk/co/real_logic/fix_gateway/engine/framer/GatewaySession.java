@@ -49,15 +49,14 @@ class GatewaySession implements SessionInfo
         return address;
     }
 
-    public void sessionId(final long sessionId)
-    {
-        this.sessionId = sessionId;
-    }
-
-    // TODO: package scope everything below here
     public long sessionId()
     {
         return sessionId;
+    }
+
+    void sessionId(final long sessionId)
+    {
+        this.sessionId = sessionId;
     }
 
     int sessionBufferSize()
@@ -79,6 +78,11 @@ class GatewaySession implements SessionInfo
     {
         this.session = session;
         receiverEndPoint.manage(sessionParser);
+    }
+
+    void stopManaging()
+    {
+        manage(null, null);
     }
 
     int poll(final long time)

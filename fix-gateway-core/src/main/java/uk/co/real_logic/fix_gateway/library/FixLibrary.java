@@ -40,6 +40,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BooleanSupplier;
 
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
@@ -61,8 +62,6 @@ import static uk.co.real_logic.fix_gateway.streams.Streams.UNKNOWN_TEMPLATE;
  */
 public final class FixLibrary extends GatewayProcess
 {
-    private static final Object AWAITING_REPLY = new Object();
-
     private final Subscription inboundSubscription;
     private final GatewayPublication outboundPublication;
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
@@ -78,16 +77,15 @@ public final class FixLibrary extends GatewayProcess
     private final int libraryId;
     private final IdleStrategy idleStrategy;
     private final boolean isAcceptor;
-    private final Long2ObjectHashMap<Object> replies = new Long2ObjectHashMap<>();
 
     /** Correlation Id is initialised to a random number to reduce the chance of correlation id collision. */
-    private long nextCorrelationId = ThreadLocalRandom.current().nextLong();
-    private Session incomingSession;
+    private long correlationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
 
+    private Session incomingSession;
     private SessionConfiguration sessionConfiguration;
     private GatewayError errorType;
-
     private String errorMessage;
+    private SessionReplyStatus replyStatus;
 
     private FixLibrary(final LibraryConfiguration configuration)
     {
@@ -275,16 +273,7 @@ public final class FixLibrary extends GatewayProcess
                     configuration.senderLocationId(),
                     configuration.targetCompId());
 
-                final long latestReplyArrivalTime = latestReplyArrivalTime();
-                while (incomingSession == null && errorType == null)
-                {
-                    final int workCount = poll(5);
-
-                    checkTime(latestReplyArrivalTime);
-
-                    idleStrategy.idle(workCount);
-                }
-                idleStrategy.reset();
+                awaitReply(idleStrategy, () -> incomingSession == null && errorType == null);
 
                 if (incomingSession != null)
                 {
@@ -320,16 +309,44 @@ public final class FixLibrary extends GatewayProcess
     public SessionReplyStatus releaseToGateway(final Session session, final IdleStrategy idleStrategy)
     {
         requireNonNull(session, "session");
+        requireIdleStrategy(idleStrategy);
+
+        outboundPublication.saveReleaseSession(libraryId, session.connectionId(), ++correlationId);
+
+        awaitReply(idleStrategy, () -> replyStatus == null);
+
+        if (replyStatus == SessionReplyStatus.OK)
+        {
+            sessions.remove(session);
+            session.disable();
+        }
+
+        return replyStatus;
+    }
+
+    public SessionReplyStatus acquireSession(final long connectionId, final IdleStrategy idleStrategy)
+    {
+        requireIdleStrategy(idleStrategy);
+
+        outboundPublication.saveRequestSession(libraryId, connectionId, ++correlationId);
+
+        awaitReply(idleStrategy, () -> replyStatus == null);
+
+        return replyStatus;
+    }
+
+    // ------------- End Public API -------------
+
+    private void requireIdleStrategy(final IdleStrategy idleStrategy)
+    {
         requireNonNull(idleStrategy, "idleStrategy");
+    }
 
-        final long correlationId = this.nextCorrelationId++;
-        outboundPublication.saveReleaseSession(libraryId, session.connectionId(), correlationId);
-
-        replies.put(correlationId, AWAITING_REPLY);
-
+    private void awaitReply(final IdleStrategy idleStrategy, final BooleanSupplier notReady)
+    {
         final long latestReplyArrivalTime = latestReplyArrivalTime();
-        Object reply;
-        while ((reply = replies.get(correlationId)) == AWAITING_REPLY)
+
+        while (notReady.getAsBoolean())
         {
             final int workCount = poll(5);
 
@@ -337,27 +354,9 @@ public final class FixLibrary extends GatewayProcess
 
             idleStrategy.idle(workCount);
         }
+
         idleStrategy.reset();
-
-        if (reply == SessionReplyStatus.OK)
-        {
-            sessions.remove(session);
-            session.disable();
-        }
-        else
-        {
-            replies.remove(correlationId);
-        }
-
-        return (SessionReplyStatus) reply;
     }
-
-    public SessionReplyStatus acquireSession(final long connectionId, final IdleStrategy idleStrategy)
-    {
-        return SessionReplyStatus.OK;
-    }
-
-    // ------------- End Public API -------------
 
     private long latestReplyArrivalTime()
     {
@@ -534,9 +533,18 @@ public final class FixLibrary extends GatewayProcess
 
         public void onReleaseSessionReply(final long correlationId, final SessionReplyStatus status)
         {
-            if (AWAITING_REPLY == replies.get(correlationId))
+            if (FixLibrary.this.correlationId == correlationId)
             {
-                replies.put(correlationId, status);
+                FixLibrary.this.replyStatus = status;
+            }
+        }
+
+        public void onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
+        {
+            if (FixLibrary.this.correlationId == correlationId)
+            {
+                // TODO: add information required to connect.
+                FixLibrary.this.replyStatus = status;
             }
         }
     }

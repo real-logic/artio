@@ -199,7 +199,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final List<SessionInfo> sessions = initiatingEngine.gatewaySessions(ADMIN_IDLE_STRATEGY);
         assertThat(sessions,
-            hasItem(hasConnectionId(connectionId)));
+            contains(hasConnectionId(connectionId)));
     }
 
     @Ignore
@@ -207,7 +207,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     public void librariesShouldBeAbleToAcquireReleasedSessions()
     {
         final long connectionId = initiatedSession.connectionId();
-        final long id = initiatedSession.id();
+        final long sessionId = initiatedSession.id();
 
         releaseInitiatedSession();
 
@@ -215,13 +215,19 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertEquals(SessionReplyStatus.OK, status);
 
+        assertThat(initiatingEngine.gatewaySessions(ADMIN_IDLE_STRATEGY), hasSize(0));
+
+        final List<LibraryInfo> libraries = initiatingEngine.libraries(ADMIN_IDLE_STRATEGY);
+        assertThat(libraries.get(0).sessions(),
+            contains(hasConnectionId(connectionId)));
+
         final List<Session> sessions = initiatingLibrary.sessions();
         assertThat(sessions, hasSize(1));
 
         initiatedSession = sessions.get(0);
         assertTrue(initiatedSession.isConnected());
         assertEquals(connectionId, initiatedSession.connectionId());
-        assertEquals(id, initiatedSession.id());
+        assertEquals(sessionId, initiatedSession.id());
     }
 
     @Test
