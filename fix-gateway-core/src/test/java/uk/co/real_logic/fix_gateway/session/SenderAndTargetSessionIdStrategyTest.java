@@ -65,7 +65,7 @@ public class SenderAndTargetSessionIdStrategyTest
     public void savesAndLoadsACompositeKey()
     {
         final AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
-        final Object key = strategy.onInitiatorLogon("SIGMAX", null, null, "ABC_DEFG04");
+        final CompositeKey key = strategy.onInitiatorLogon("SIGMAX", null, null, "ABC_DEFG04");
 
         final int length = strategy.save(key, buffer, 1);
 
@@ -80,7 +80,7 @@ public class SenderAndTargetSessionIdStrategyTest
     public void validatesSpaceInBufferOnSave()
     {
         final AtomicBuffer buffer = new UnsafeBuffer(new byte[5]);
-        final Object key = strategy.onInitiatorLogon("SIGMAX", null, null, "ABC_DEFG04");
+        final CompositeKey key = strategy.onInitiatorLogon("SIGMAX", null, null, "ABC_DEFG04");
 
         final int length = strategy.save(key, buffer, 1);
 

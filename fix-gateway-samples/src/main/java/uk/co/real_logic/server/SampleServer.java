@@ -35,7 +35,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
-import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
 public final class SampleServer
 {

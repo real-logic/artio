@@ -22,6 +22,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
@@ -44,9 +45,9 @@ public class SessionIdsTest
     private SessionIdStrategy idStrategy = new SenderAndTargetSessionIdStrategy();
     private SessionIds sessionIds = newSessionIds(buffer);
 
-    private Object aSession = idStrategy.onInitiatorLogon("a", null, null, "b");
-    private Object bSession = idStrategy.onInitiatorLogon("b", null, null, "a");
-    private Object cSession = idStrategy.onInitiatorLogon("c", null, null, "c");
+    private CompositeKey aSession = idStrategy.onInitiatorLogon("a", null, null, "b");
+    private CompositeKey bSession = idStrategy.onInitiatorLogon("b", null, null, "a");
+    private CompositeKey cSession = idStrategy.onInitiatorLogon("c", null, null, "c");
 
     @Test
     public void sessionIdsAreUnique()
@@ -120,7 +121,7 @@ public class SessionIdsTest
     {
         final int requiredNumberOfWritesToSpanSector = 300;
 
-        Object compositeKey = null;
+        CompositeKey compositeKey = null;
         long surrogateKey = 0;
 
         for (int i = 0; i < requiredNumberOfWritesToSpanSector; i++)

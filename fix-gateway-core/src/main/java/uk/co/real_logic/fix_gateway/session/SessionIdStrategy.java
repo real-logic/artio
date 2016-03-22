@@ -15,7 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
@@ -46,7 +47,7 @@ public interface SessionIdStrategy
      * @param header the header of the logon message.
      * @return the composite session key.
      */
-    Object onAcceptorLogon(final HeaderDecoder header);
+    CompositeKey onAcceptorLogon(final HeaderDecoder header);
 
     /**
      * Creates the composite session key when you initiate a logon.
@@ -57,7 +58,7 @@ public interface SessionIdStrategy
      * @param targetCompId the target company id, always present.
      * @return the composite session key.
      */
-    Object onInitiatorLogon(String senderCompId, String senderSubId, String senderLocationId, String targetCompId);
+    CompositeKey onInitiatorLogon(String senderCompId, String senderSubId, String senderLocationId, String targetCompId);
 
     /**
      * Sets up an outbound message header with the composite session key.
@@ -65,7 +66,7 @@ public interface SessionIdStrategy
      * @param compositeKey the composite session key.
      * @param headerEncoder the outbound message header.
      */
-    void setupSession(final Object compositeKey, final HeaderEncoder headerEncoder);
+    void setupSession(final CompositeKey compositeKey, final HeaderEncoder headerEncoder);
 
     /**
      * Saves the given composite key to a buffer.
@@ -75,7 +76,7 @@ public interface SessionIdStrategy
      * @param offset the offset withint the buffer to start saving at
      * @return the length used to save the key, or {@link SessionIdStrategy#INSUFFICIENT_SPACE} otherwise
      */
-    int save(final Object compositeKey, final AtomicBuffer buffer, final int offset);
+    int save(final CompositeKey compositeKey, final MutableDirectBuffer buffer, final int offset);
 
     /**
      * Loads a composite key from a buffer.
@@ -85,5 +86,5 @@ public interface SessionIdStrategy
      * @param length the length within the buffer to read from
      * @return the loaded key or null if there was a failure.
      */
-    Object load(final AtomicBuffer buffer, final int offset, final int length);
+    CompositeKey load(final DirectBuffer buffer, final int offset, final int length);
 }

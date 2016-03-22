@@ -21,8 +21,8 @@ import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.session.Session;
-import uk.co.real_logic.fix_gateway.library.session.SessionState;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
+import uk.co.real_logic.fix_gateway.messages.SessionState;
 
 import java.util.List;
 
@@ -186,7 +186,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void librariesShouldBeAbleToReleaseSessionToTheGateway()
+    public void librariesShouldBeAbleToReleaseInitiatedSessionToTheGateway()
     {
         final long connectionId = initiatedSession.connectionId();
 
@@ -202,7 +202,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void librariesShouldBeAbleToAcquireReleasedSessions()
+    public void librariesShouldBeAbleToAcquireReleasedInitiatedSessions()
     {
         final long connectionId = initiatedSession.connectionId();
         final long sessionId = initiatedSession.id();
@@ -231,7 +231,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldNotBeAbleToAcquireSessionsThatDontExist()
     {
-        // TODO
+        final SessionReplyStatus status = initiatingLibrary.acquireSession(42, ADMIN_IDLE_STRATEGY);
+
+        assertEquals(SessionReplyStatus.UNKNOWN_SESSION, status);
     }
 
     private SessionReplyStatus releaseInitiatedSession()

@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.library.session;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 
@@ -75,12 +76,16 @@ public class SessionSubscriber implements AutoCloseable
         handler.onDisconnect(libraryId, connectionId, reason);
     }
 
-    public void onLogon(final long connectionId,
-                        final long sessionId,
+    public void onLogon(final long sessionId,
                         final int lastSentSequenceNumber,
-                        final int lastReceivedSequenceNumber)
+                        final int lastReceivedSequenceNumber,
+                        final CompositeKey compositeKey)
     {
         session.id(sessionId);
+        if (compositeKey != null)
+        {
+            session.sessionKey(compositeKey);
+        }
         // Acceptors need to wait for Logon message to identify
         if (session instanceof AcceptorSession)
         {

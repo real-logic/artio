@@ -23,6 +23,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.library.session.SessionParser;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -300,7 +301,7 @@ class ReceiverEndPoint
         if (sessionId == UNKNOWN)
         {
             logon.decode(buffer, offset, length);
-            final Object compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
+            final CompositeKey compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
             sessionId = sessionIds.onLogon(compositeKey);
             if (sessionId == DUPLICATE_SESSION)
             {

@@ -25,8 +25,7 @@ import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 
-import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
-import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 import static uk.co.real_logic.server.SampleServer.*;
 
 public final class SampleClient

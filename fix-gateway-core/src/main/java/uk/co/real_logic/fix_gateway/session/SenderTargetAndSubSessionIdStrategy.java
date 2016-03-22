@@ -15,7 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.agrona.DirectBuffer;
+import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
@@ -23,6 +24,8 @@ import uk.co.real_logic.fix_gateway.messages.SenderTargetAndSubCompositeKeyDecod
 import uk.co.real_logic.fix_gateway.messages.SenderTargetAndSubCompositeKeyEncoder;
 
 import java.util.Arrays;
+
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**
  * A simple, and dumb session id Strategy based upon hashing SenderCompID and TargetCompID. Makes no assumptions
@@ -39,21 +42,21 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
     private final int actingBlockLength = keyDecoder.sbeBlockLength();
     private final int actingVersion = keyDecoder.sbeSchemaVersion();
 
-    public Object onAcceptorLogon(final HeaderDecoder header)
+    public CompositeKey onAcceptorLogon(final HeaderDecoder header)
     {
-        return new CompositeKey(
+        return new CompositeKeyImpl(
             header.targetCompID(), header.targetCompIDLength(),
             header.targetSubID(), header.targetSubIDLength(),
             header.senderCompID(), header.senderCompIDLength());
     }
 
-    public Object onInitiatorLogon(
+    public CompositeKey onInitiatorLogon(
         final String senderCompId, final String senderSubId, final String senderLocationId, final String targetCompId)
     {
         final char[] senderCompIdChars = senderCompId.toCharArray();
         final char[] senderSubIdChars = senderSubId.toCharArray();
         final char[] targetCompIdChars = targetCompId.toCharArray();
-        return new CompositeKey(
+        return new CompositeKeyImpl(
             senderCompIdChars,
             senderCompIdChars.length,
             senderSubIdChars,
@@ -62,17 +65,17 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
             targetCompIdChars.length);
     }
 
-    public void setupSession(final Object compositeKey, final HeaderEncoder headerEncoder)
+    public void setupSession(final CompositeKey compositeKey, final HeaderEncoder headerEncoder)
     {
-        final CompositeKey composite = (CompositeKey) compositeKey;
+        final CompositeKeyImpl composite = (CompositeKeyImpl) compositeKey;
         headerEncoder.senderCompID(composite.senderCompID);
         headerEncoder.senderSubID(composite.senderSubID);
         headerEncoder.targetCompID(composite.targetCompID);
     }
 
-    public int save(final Object compositeKey, final AtomicBuffer buffer, final int offset)
+    public int save(final CompositeKey compositeKey, final MutableDirectBuffer buffer, final int offset)
     {
-        final CompositeKey key = (CompositeKey) compositeKey;
+        final CompositeKeyImpl key = (CompositeKeyImpl) compositeKey;
         final byte[] senderCompID = key.senderCompID;
         final byte[] senderSubID = key.senderSubID;
         final byte[] targetCompID = key.targetCompID;
@@ -93,7 +96,7 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
         return length;
     }
 
-    public Object load(final AtomicBuffer buffer, final int offset, final int length)
+    public CompositeKey load(final DirectBuffer buffer, final int offset, final int length)
     {
         keyDecoder.wrap(buffer, offset, actingBlockLength, actingVersion);
 
@@ -109,17 +112,17 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
         final byte[] targetCompId = new byte[targetCompIdLength];
         keyDecoder.getTargetCompId(targetCompId, 0, targetCompIdLength);
 
-        return new CompositeKey(senderCompId, senderSubId, targetCompId);
+        return new CompositeKeyImpl(senderCompId, senderSubId, targetCompId);
     }
 
-    private static final class CompositeKey
+    private static final class CompositeKeyImpl implements CompositeKey
     {
         private final byte[] senderCompID;
         private final byte[] senderSubID;
         private final byte[] targetCompID;
         private final int hashCode;
 
-        private CompositeKey(
+        private CompositeKeyImpl(
             final char[] senderCompID,
             final int senderCompIDLength,
             final char[] senderSubID,
@@ -133,7 +136,7 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
                 CodecUtil.toBytes(targetCompID, targetCompIDLength));
         }
 
-        private CompositeKey(
+        private CompositeKeyImpl(
             final byte[] senderCompID,
             final byte[] senderSubID,
             final byte[] targetCompID)
@@ -159,9 +162,9 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
 
         public boolean equals(final Object obj)
         {
-            if (obj instanceof CompositeKey)
+            if (obj instanceof CompositeKeyImpl)
             {
-                final CompositeKey compositeKey = (CompositeKey)obj;
+                final CompositeKeyImpl compositeKey = (CompositeKeyImpl)obj;
                 return Arrays.equals(compositeKey.senderCompID, senderCompID)
                     && Arrays.equals(compositeKey.senderSubID, senderSubID)
                     && Arrays.equals(compositeKey.targetCompID, targetCompID);
@@ -177,6 +180,26 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
                 "senderSubID=" + Arrays.toString(senderSubID) +
                 ", targetCompID=" + Arrays.toString(targetCompID) +
                 '}';
+        }
+
+        public String senderCompId()
+        {
+            return new String(senderCompID, US_ASCII);
+        }
+
+        public String senderSubId()
+        {
+            return new String(senderSubID, US_ASCII);
+        }
+
+        public String senderLocationId()
+        {
+            return "";
+        }
+
+        public String targetCompId()
+        {
+            return new String(targetCompID, US_ASCII);
         }
     }
 }

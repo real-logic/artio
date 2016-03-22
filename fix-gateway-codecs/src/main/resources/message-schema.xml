@@ -54,6 +54,24 @@
             <validValue name="ENGINE_SHUTDOWN"
                 description="We are disconnecting the connection due to the engine shutting down">3</validValue>
         </enum>
+        <enum name="SessionState" encodingType="uint8">
+            <validValue name="CONNECTING"
+                        description="The session is connecting or reconnecting.">0</validValue>
+            <validValue name="CONNECTED"
+                        description="A machine has connected to the gateway, but hasn't logged in yet. Initial state of a session.">1</validValue>
+            <validValue name="SENT_LOGON"
+                        description="Initiator only state - sent logon message but it hasn't received the reply yet.">2</validValue>
+            <validValue name="ACTIVE"
+                        description="Session is fully authenticated and ready to execute.">3</validValue>
+            <validValue name="AWAITING_RESEND"
+                        description="Login had too high a sequence number and a resend or gap fill is required.">4</validValue>
+            <validValue name="AWAITING_LOGOUT"
+                        description="Linger between logout request and a logout acknowledgement. You can do resend processing at this point, but no other messages.">5</validValue>
+            <validValue name="DISCONNECTED"
+                        description="Session has been disconnected and can't send messages.">6</validValue>
+            <validValue name="DISABLED"
+                        description="DISCONNECTED and unable to reconnect.">7</validValue>
+        </enum>
 
         <enum name="AcknowledgementStatus" encodingType="uint8">
             <validValue name="OK">0</validValue>
@@ -95,13 +113,18 @@
         <field name="session" id="11" type="FixSessionId"/>
         <field name="lastSentSequenceNumber" id="77" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="78" type="int32"/>
+        <data name="senderCompId" id="100" type="varDataEncoding"/>
+        <data name="senderSubId" id="101" type="varDataEncoding"/>
+        <data name="senderLocationId" id="102" type="varDataEncoding"/>
+        <data name="targetCompId" id="103" type="varDataEncoding"/>
     </sbe:message>
-    <sbe:message name="Connect" id="10" description="A TCP Connection has connected">
+    <sbe:message name="Connect" id="10" description="Here's a connection to manage">
         <field name="libraryId" id="19" type="LibraryId"/>
         <field name="connection" id="17" type="ConnectionId"/>
         <field name="type" id="24" type="ConnectionType"/>
         <field name="lastSentSequenceNumber" id="79" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="80" type="int32"/>
+        <field name="sessionState" id="101" type="SessionState"/>
         <data name="address" id="18" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="InitiateConnection" id="11" description="Try to make an outbound connection">
@@ -136,6 +159,8 @@
         <field name="libraryId" id="99" type="LibraryId"/>
         <field name="connection" id="91" type="ConnectionId"/>
         <field name="correlationId" id="92" type="CorrelationId"/>
+        <field name="heartbeatIntervalInMs" id="103" type="int64"/>
+        <field name="state" id="104" type="SessionState"/>
     </sbe:message>
     <sbe:message name="ReleaseSessionReply" id="30"
                  description="response to ReleaseSession">

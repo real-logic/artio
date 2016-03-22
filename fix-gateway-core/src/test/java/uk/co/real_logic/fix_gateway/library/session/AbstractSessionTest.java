@@ -19,6 +19,8 @@ import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
+import uk.co.real_logic.fix_gateway.messages.SessionState;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -26,12 +28,12 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.fields.RejectReason.*;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.fix_gateway.fields.RejectReason.*;
 import static uk.co.real_logic.fix_gateway.library.session.Session.TEST_REQ_ID;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
-import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
 public abstract class AbstractSessionTest
 {
@@ -42,7 +44,28 @@ public abstract class AbstractSessionTest
     public static final long SESSION_ID = 2L;
     public static final int HEARTBEAT_INTERVAL = 2;
     public static final byte[] MSG_TYPE_BYTES = "D".getBytes(US_ASCII);
-    public static final Object SESSION_KEY = new Object();
+    public static final CompositeKey SESSION_KEY = new CompositeKey()
+    {
+        public String senderCompId()
+        {
+            return null;
+        }
+
+        public String senderSubId()
+        {
+            return null;
+        }
+
+        public String senderLocationId()
+        {
+            return null;
+        }
+
+        public String targetCompId()
+        {
+            return null;
+        }
+    };
     public static final int LIBRARY_ID = 4;
 
     protected SessionProxy mockProxy = mock(SessionProxy.class);

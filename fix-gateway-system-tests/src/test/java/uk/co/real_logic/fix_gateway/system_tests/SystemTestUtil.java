@@ -42,8 +42,7 @@ import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.aeron.CommonContext.IPC_CHANNEL;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.fix_gateway.library.session.SessionState.ACTIVE;
-import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
 public final class SystemTestUtil
 {

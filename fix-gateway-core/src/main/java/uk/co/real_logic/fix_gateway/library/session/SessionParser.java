@@ -22,6 +22,8 @@ import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.messages.SessionState;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -31,8 +33,8 @@ import static uk.co.real_logic.fix_gateway.builder.Validation.isValidMsgType;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
-import static uk.co.real_logic.fix_gateway.library.session.SessionState.AWAITING_LOGOUT;
-import static uk.co.real_logic.fix_gateway.library.session.SessionState.DISCONNECTED;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.AWAITING_LOGOUT;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 
 public class SessionParser
 {
@@ -312,7 +314,7 @@ public class SessionParser
         {
             if (authenticationStrategy.authenticate(logon))
             {
-                final Object sessionKey = sessionIdStrategy.onAcceptorLogon(header);
+                final CompositeKey sessionKey = sessionIdStrategy.onAcceptorLogon(header);
 
                 final long origSendingTime = origSendingTime(header);
 

@@ -28,11 +28,10 @@ import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.library.session.ProcessProtocolHandler;
+import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
-import uk.co.real_logic.fix_gateway.messages.ConnectionType;
-import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
-import uk.co.real_logic.fix_gateway.messages.GatewayError;
-import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
+import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscription;
@@ -59,6 +58,7 @@ import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.UNKNOWN_SESSION;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
 import static uk.co.real_logic.fix_gateway.streams.Streams.UNKNOWN_TEMPLATE;
 
 /**
@@ -185,7 +185,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
                pollEndPoints() +
                pollNewConnections() +
                pollLibraries(timeInMs) +
-               //gatewaySessions.pollSessions(timeInMs) +
+               // TODO: gatewaySessions.pollSessions(timeInMs) +
                adminCommands.drain(onAdminCommand);
     }
 
@@ -263,11 +263,12 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
                 else
                 {
                     final long connectionId = this.nextConnectionId++;
-                    setupConnection(channel, connectionId, UNKNOWN, acceptorLibraryId, ACCEPTOR);
+                    setupConnection(channel, connectionId, UNKNOWN, null, acceptorLibraryId, ACCEPTOR);
 
                     final String address = channel.getRemoteAddress().toString();
                     inboundPublication.saveConnect(connectionId, address, acceptorLibraryId, ACCEPTOR,
-                        SequenceNumberIndexReader.UNKNOWN_SESSION, SequenceNumberIndexReader.UNKNOWN_SESSION);
+                        SequenceNumberIndexReader.UNKNOWN_SESSION, SequenceNumberIndexReader.UNKNOWN_SESSION,
+                        SessionState.CONNECTED);
                 }
 
                 it.remove();
@@ -312,7 +313,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
 
             final long connectionId = this.nextConnectionId++;
 
-            final Object sessionKey = sessionIdStrategy.onInitiatorLogon(
+            final CompositeKey sessionKey = sessionIdStrategy.onInitiatorLogon(
                 senderCompId, senderSubId, senderLocationId, targetCompId);
             final long sessionId = sessionIds.onLogon(sessionKey);
             if (sessionId == SessionIds.DUPLICATE_SESSION)
@@ -321,7 +322,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
                 return;
             }
 
-            setupConnection(channel, connectionId, sessionId, libraryId, INITIATOR);
+            setupConnection(channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR);
 
             while (!sentSequenceNumberIndex.hasIndexedUpTo(header))
             {
@@ -332,7 +333,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
             final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             inboundPublication.saveConnect(connectionId, address.toString(), libraryId, INITIATOR,
-                lastSentSequenceNumber, lastReceivedSequenceNumber);
+                lastSentSequenceNumber, lastReceivedSequenceNumber, CONNECTED);
             inboundPublication.saveLogon(libraryId, connectionId, sessionId);
         }
         catch (final Exception e)
@@ -380,6 +381,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         final SocketChannel channel,
         final long connectionId,
         final long sessionId,
+        final CompositeKey sessionKey,
         final int libraryId,
         final ConnectionType connectionType)
         throws IOException
@@ -409,7 +411,8 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
             sessionId,
             channel.getRemoteAddress().toString(),
             receiverEndPoint,
-            connectionType
+            connectionType,
+            sessionKey
         ));
     }
 
@@ -469,7 +472,12 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         }
     }
 
-    public void onReleaseSession(final int libraryId, final long connectionId, final long correlationId)
+    public void onReleaseSession(
+        final int libraryId,
+        final long connectionId,
+        final long correlationId,
+        final SessionState state,
+        final long heartbeatIntervalInMs)
     {
         final LibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
@@ -485,7 +493,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
             return;
         }
 
-        gatewaySessions.acquire(session);
+        gatewaySessions.acquire(session, state, heartbeatIntervalInMs);
 
         inboundPublication.saveReleaseSessionReply(OK, correlationId);
     }
@@ -495,28 +503,49 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         final LibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
         {
-            inboundPublication.saveReleaseSessionReply(SessionReplyStatus.UNKNOWN_LIBRARY, correlationId);
+            inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_LIBRARY, correlationId);
             return;
         }
 
-        final GatewaySession session = gatewaySessions.release(connectionId);
-        if (session == null)
+        final GatewaySession gatewaySession = gatewaySessions.release(connectionId);
+        if (gatewaySession == null)
         {
-            inboundPublication.saveReleaseSessionReply(UNKNOWN_SESSION, correlationId);
+            inboundPublication.saveRequestSessionReply(UNKNOWN_SESSION, correlationId);
             return;
         }
 
+        final Session session = gatewaySession.session();
         final int lastSentSeqNum = session.lastSentMsgSeqNum();
         final int lastReceivedSeqNum = session.lastReceivedMsgSeqNum();
-        session.stopManaging();
-        libraryInfo.addSession(session);
+        final SessionState sessionState = session.state();
+        final CompositeKey compositeKey = gatewaySession.compositeKey();
+        gatewaySession.stopManaging();
+        libraryInfo.addSession(gatewaySession);
 
-        // TODO: send correct connection type
         inboundPublication.saveConnect(
-            connectionId, session.address(), libraryId, ACCEPTOR, lastSentSeqNum, lastReceivedSeqNum);
-        inboundPublication.saveLogon(
-            libraryId, connectionId, session.sessionId(), lastSentSeqNum, lastReceivedSeqNum);
-        inboundPublication.saveReleaseSessionReply(OK, correlationId);
+            connectionId,
+            gatewaySession.address(),
+            libraryId,
+            gatewaySession.connectionType(),
+            lastSentSeqNum,
+            lastReceivedSeqNum,
+            sessionState);
+
+        if (compositeKey != null)
+        {
+            inboundPublication.saveLogon(
+                libraryId,
+                connectionId,
+                gatewaySession.sessionId(),
+                lastSentSeqNum,
+                lastReceivedSeqNum,
+                compositeKey.senderCompId(),
+                compositeKey.senderSubId(),
+                compositeKey.senderLocationId(),
+                compositeKey.targetCompId());
+        }
+
+        inboundPublication.saveRequestSessionReply(OK, correlationId);
     }
 
     void onQueryLibraries(final QueryLibrariesCommand queryLibrariesCommand)

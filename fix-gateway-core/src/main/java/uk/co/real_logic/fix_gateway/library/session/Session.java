@@ -26,6 +26,8 @@ import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
+import uk.co.real_logic.fix_gateway.messages.SessionState;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -37,13 +39,37 @@ import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.*;
-import static uk.co.real_logic.fix_gateway.library.session.SessionState.*;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound.
  *
  * Should only be accessed on a single thread.
+ *
+ * <h1>State Transitions</h1>
+ *
+ * Successful Login: CONNECTED -> ACTIVE
+ * Login with high sequence number: CONNECTED -> AWAITING_RESEND
+ * Login with low sequence number: CONNECTED -> DISCONNECTED
+ * Login with wrong credentials: CONNECTED -> DISCONNECTED or CONNECTED -> DISABLED
+ * depending on authentication plugin
+ *
+ * Successful Hijack: * -> ACTIVE (same as regular login)
+ * Hijack with high sequence number: * -> AWAITING_RESEND (same as regular login)
+ * Hijack with low sequence number: requestDisconnect the hijacker and leave main system ACTIVE
+ * Hijack with wrong credentials: requestDisconnect the hijacker and leave main system ACTIVE
+ *
+ * Successful resend: AWAITING_RESEND -> ACTIVE
+ *
+ * Send test request: ACTIVE -> ACTIVE - but alter the timeout for the next expected heartbeat.
+ * Successful Heartbeat: ACTIVE -> ACTIVE - updates the timeout time.
+ * Heartbeat Timeout: ACTIVE -> DISCONNECTED
+ *
+ * Logout request: ACTIVE -> AWAITING_LOGOUT
+ * Logout acknowledgement: AWAITING_LOGOUT -> DISCONNECTED
+ *
+ * Manual disable: * -> DISABLED
  */
 public class Session implements AutoCloseable
 {
@@ -77,7 +103,7 @@ public class Session implements AutoCloseable
     protected final int libraryId;
     private final boolean versionHasUserNameAndPassword;
 
-    protected Object sessionKey;
+    protected CompositeKey sessionKey;
 
     private SessionState state;
     private long id = UNKNOWN;
@@ -514,7 +540,7 @@ public class Session implements AutoCloseable
     void onLogon(final int heartbeatInterval,
                  final int msgSeqNo,
                  final long sessionId,
-                 final Object sessionKey,
+                 final CompositeKey sessionKey,
                  long sendingTime,
                  final long origSendingTime,
                  final String username,
@@ -758,6 +784,11 @@ public class Session implements AutoCloseable
         return this;
     }
 
+    void sessionKey(final CompositeKey sessionKey)
+    {
+        this.sessionKey = sessionKey;
+    }
+
     protected void username(final String username)
     {
         this.username = username;
@@ -830,4 +861,5 @@ public class Session implements AutoCloseable
         state(SessionState.DISABLED);
         close();
     }
+
 }

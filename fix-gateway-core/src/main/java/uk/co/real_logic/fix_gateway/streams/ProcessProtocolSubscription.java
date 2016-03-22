@@ -146,7 +146,9 @@ public class ProcessProtocolSubscription implements FragmentHandler
         processProtocolHandler.onReleaseSession(
             releaseSession.libraryId(),
             releaseSession.connection(),
-            releaseSession.correlationId());
+            releaseSession.correlationId(),
+            releaseSession.state(),
+            releaseSession.heartbeatIntervalInMs());
         return releaseSession.limit();
     }
 
@@ -238,7 +240,8 @@ public class ProcessProtocolSubscription implements FragmentHandler
             connect.lastReceivedSequenceNumber(),
             buffer,
             addressOffset,
-            connect.addressLength());
+            connect.addressLength(),
+            connect.sessionState());
         return connect.limit();
     }
 
@@ -251,7 +254,11 @@ public class ProcessProtocolSubscription implements FragmentHandler
             logon.connection(),
             logon.session(),
             logon.lastSentSequenceNumber(),
-            logon.lastReceivedSequenceNumber());
+            logon.lastReceivedSequenceNumber(),
+            logon.senderCompId(),
+            logon.senderSubId(),
+            logon.senderLocationId(),
+            logon.targetCompId());
         return logon.limit();
     }
 }

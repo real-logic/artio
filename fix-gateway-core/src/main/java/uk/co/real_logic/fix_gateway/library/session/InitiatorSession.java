@@ -18,6 +18,8 @@ package uk.co.real_logic.fix_gateway.library.session;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
+import uk.co.real_logic.fix_gateway.messages.SessionState;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
@@ -40,13 +42,14 @@ public class InitiatorSession extends Session
         final String password,
         final int libraryId,
         final int sessionBufferSize,
-        final int initialSequenceNumber)
+        final int initialSequenceNumber,
+        final SessionState state)
     {
         super(
             heartbeatInterval,
             connectionId,
             clock,
-            SessionState.CONNECTED,
+            state,
             proxy,
             publication,
             sessionIdStrategy,
@@ -66,7 +69,7 @@ public class InitiatorSession extends Session
         final int heartbeatInterval,
         final int msgSeqNo,
         final long sessionId,
-        final Object sessionKey,
+        final CompositeKey sessionKey,
         final long sendingTime,
         final long origSendingTime,
         final String username,

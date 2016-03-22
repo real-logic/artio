@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.library.session.ProcessProtocolHandler;
 import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
+import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscription;
 import uk.co.real_logic.fix_gateway.streams.SessionSubscription;
@@ -142,7 +143,11 @@ public class ArchivePrinter implements ProcessProtocolHandler, SessionHandler
         final long connectionId,
         final long sessionId,
         final int lastSentSequenceNumber,
-        final int lastReceivedSequenceNumber)
+        final int lastReceivedSequenceNumber,
+        final String senderCompId,
+        final String senderSubId,
+        final String senderLocationId,
+        final String targetCompId)
     {
         output.printf("connection %d has logged in as session %d @ (%d, %d)\n", connectionId, sessionId,
             lastSentSequenceNumber, lastReceivedSequenceNumber);
@@ -156,7 +161,8 @@ public class ArchivePrinter implements ProcessProtocolHandler, SessionHandler
         final int lastReceivedSequenceNumber,
         final DirectBuffer buffer,
         final int addressOffset,
-        final int addressLength)
+        final int addressLength,
+        final SessionState state)
     {
         final String address = buffer.getStringUtf8(addressOffset, addressLength);
         output.printf("Connected to %s as connection %d\n", address, connectionId);

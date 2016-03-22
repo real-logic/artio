@@ -19,6 +19,7 @@ import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.library.session.SessionParser;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 
 class GatewaySession implements SessionInfo
 {
@@ -29,18 +30,21 @@ class GatewaySession implements SessionInfo
 
     private long sessionId;
     private Session session;
+    private CompositeKey compositeKey;
 
     GatewaySession(final long connectionId,
                    final long sessionId,
                    final String address,
                    final ReceiverEndPoint receiverEndPoint,
-                   final ConnectionType connectionType)
+                   final ConnectionType connectionType,
+                   final CompositeKey compositeKey)
     {
         this.connectionId = connectionId;
         this.sessionId = sessionId;
         this.address = address;
         this.receiverEndPoint = receiverEndPoint;
         this.connectionType = connectionType;
+        this.compositeKey = compositeKey;
     }
 
     public long connectionId()
@@ -94,29 +98,23 @@ class GatewaySession implements SessionInfo
         return session.poll(time);
     }
 
-    int lastSentMsgSeqNum()
+    Session session()
     {
-        return session.lastSentMsgSeqNum();
+        return session;
     }
 
-    int lastReceivedMsgSeqNum()
-    {
-        return session.lastReceivedMsgSeqNum();
-    }
-
-    public ConnectionType connectionType()
+    ConnectionType connectionType()
     {
         return connectionType;
     }
 
-    public String toString()
+    void compositeKey(final CompositeKey compositeKey)
     {
-        return "GatewaySession{" +
-            "connectionId=" + connectionId +
-            ", address='" + address + '\'' +
-            ", connectionType=" + connectionType +
-            ", sessionId=" + sessionId +
-            ", session=" + session +
-            '}';
+        this.compositeKey = compositeKey;
+    }
+
+    CompositeKey compositeKey()
+    {
+        return compositeKey;
     }
 }

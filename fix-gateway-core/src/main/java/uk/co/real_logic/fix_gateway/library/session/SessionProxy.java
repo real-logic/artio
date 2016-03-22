@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.builder.*;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiFormatter;
@@ -92,7 +93,7 @@ public class SessionProxy
     private final long connectionId;
     private final int libraryId;
     private long sessionId;
-    private Object sessionKey;
+    private CompositeKey sessionKey;
 
     public SessionProxy(
         final int bufferSize,
@@ -114,7 +115,7 @@ public class SessionProxy
         lowSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
     }
 
-    public SessionProxy setupSession(final long sessionId, final Object sessionKey)
+    public SessionProxy setupSession(final long sessionId, final CompositeKey sessionKey)
     {
         requireNonNull(sessionKey, "sessionKey");
 

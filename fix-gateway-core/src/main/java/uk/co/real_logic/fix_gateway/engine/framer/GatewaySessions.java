@@ -20,17 +20,21 @@ import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
-import uk.co.real_logic.fix_gateway.library.session.*;
+import uk.co.real_logic.fix_gateway.library.session.Session;
+import uk.co.real_logic.fix_gateway.library.session.SessionCustomisationStrategy;
+import uk.co.real_logic.fix_gateway.library.session.SessionParser;
+import uk.co.real_logic.fix_gateway.library.session.SessionProxy;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 import static java.util.Collections.unmodifiableList;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * Keeps track of which sessions managed by the gateway
@@ -39,7 +43,6 @@ public class GatewaySessions
 {
     private final List<GatewaySession> sessions = new ArrayList<>();
     private final List<SessionInfo> unmodifiableSessions = unmodifiableList(sessions);
-    private final Consumer<GatewaySession> startManagingFunc = this::acquire;
     private final EpochClock clock;
     private final GatewayPublication publication;
     private final SessionIdStrategy sessionIdStrategy;
@@ -66,12 +69,7 @@ public class GatewaySessions
         this.validationStrategy = validationStrategy;
     }
 
-    void onLibraryTimeout(final LibraryInfo library)
-    {
-        library.gatewaySessions().forEach(startManagingFunc);
-    }
-
-    void acquire(final GatewaySession gatewaySession)
+    void acquire(final GatewaySession gatewaySession, final SessionState state, final long heartbeatIntervalInMs)
     {
         final long connectionId = gatewaySession.connectionId();
         final int sessionBufferSize = gatewaySession.sessionBufferSize();
@@ -89,12 +87,13 @@ public class GatewaySessions
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final int sentSequenceNumber = 0; // TODO: lookup
+        final int heartbeatIntervalInS = (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs);
 
         final Session session = new Session(
-            gatewaySession.heartbeatIntervalInS(),
+            heartbeatIntervalInS,
             connectionId,
             clock,
-            SessionState.CONNECTED,
+            state,
             proxy,
             publication,
             sessionIdStrategy,

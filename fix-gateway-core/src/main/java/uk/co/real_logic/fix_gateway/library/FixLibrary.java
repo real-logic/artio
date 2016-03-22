@@ -26,10 +26,8 @@ import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.library.session.*;
 import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.messages.ConnectionType;
-import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
-import uk.co.real_logic.fix_gateway.messages.GatewayError;
-import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
+import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscription;
@@ -318,7 +316,12 @@ public final class FixLibrary extends GatewayProcess
             return concurrentError();
         }
 
-        outboundPublication.saveReleaseSession(libraryId, session.connectionId(), ++correlationId);
+        outboundPublication.saveReleaseSession(
+            libraryId,
+            session.connectionId(),
+            ++correlationId,
+            session.state(),
+            session.heartbeatIntervalInMs());
 
         awaitReply(idleStrategy, () -> replyStatus == null);
 
@@ -431,7 +434,8 @@ public final class FixLibrary extends GatewayProcess
             final int lastReceivedSequenceNumber,
             final DirectBuffer buffer,
             final int addressOffset,
-            final int addressLength)
+            final int addressLength,
+            final SessionState state)
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
@@ -439,7 +443,7 @@ public final class FixLibrary extends GatewayProcess
                 {
                     DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
                     final Session session = initiateSession(
-                        connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber);
+                        connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state);
                     newSession(connectionId, session);
                     incomingSession = session;
                 }
@@ -459,7 +463,11 @@ public final class FixLibrary extends GatewayProcess
             final long connectionId,
             final long sessionId,
             int lastSentSequenceNumber,
-            int lastReceivedSequenceNumber)
+            int lastReceivedSequenceNumber,
+            final String senderCompId,
+            final String senderSubId,
+            final String senderLocationId,
+            final String targetCompId)
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
@@ -469,7 +477,13 @@ public final class FixLibrary extends GatewayProcess
                 {
                     lastSentSequenceNumber = acceptorSequenceNumber(lastSentSequenceNumber);
                     lastReceivedSequenceNumber = acceptorSequenceNumber(lastReceivedSequenceNumber);
-                    subscriber.onLogon(connectionId, sessionId, lastSentSequenceNumber, lastReceivedSequenceNumber);
+                    final CompositeKey compositeKey = senderCompId.length() == 0 ? null :
+                        sessionIdStrategy.onInitiatorLogon(senderCompId, senderSubId, senderLocationId, targetCompId);
+                    subscriber.onLogon(
+                        sessionId,
+                        lastSentSequenceNumber,
+                        lastReceivedSequenceNumber,
+                        compositeKey);
                 }
             }
         }
@@ -573,36 +587,65 @@ public final class FixLibrary extends GatewayProcess
 
     private Session initiateSession(final long connectionId,
                                     final int lastSequenceNumber,
-                                    final int lastReceivedSequenceNumber)
+                                    final int lastReceivedSequenceNumber,
+                                    final SessionState state)
     {
-        final Object key = sessionIdStrategy.onInitiatorLogon(
-            sessionConfiguration.senderCompId(), sessionConfiguration.senderSubId(),
-            sessionConfiguration.senderLocationId(), sessionConfiguration.targetCompId());
         final int defaultInterval = configuration.defaultHeartbeatInterval();
         final GatewayPublication publication = outboundLibraryStreams.gatewayPublication(idleStrategy);
+
+        final SessionProxy sessionProxy = sessionProxy(connectionId);
+        // First time we're initiated
+        // TODO: should we even have this special casing?
+        final String username;
+        final String password;
+        // TODO: move this to the common configuration
+        final int sessionBufferSize;
+        if (sessionConfiguration != null)
+        {
+            final CompositeKey key = sessionIdStrategy.onInitiatorLogon(
+                sessionConfiguration.senderCompId(), sessionConfiguration.senderSubId(),
+                sessionConfiguration.senderLocationId(), sessionConfiguration.targetCompId());
+            sessionProxy.setupSession(-1, key);
+            username = sessionConfiguration.username();
+            password = sessionConfiguration.password();
+            sessionBufferSize = sessionConfiguration.bufferSize();
+        }
+        else
+        {
+            username = null;
+            password = null;
+            sessionBufferSize = SessionConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
+        }
 
         return new InitiatorSession(
             defaultInterval,
             connectionId,
             clock,
-            sessionProxy(connectionId).setupSession(-1, key),
+            sessionProxy,
             publication,
             sessionIdStrategy,
             configuration.beginString(),
             configuration.sendingTimeWindowInMs(),
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId),
-            sessionConfiguration.username(),
-            sessionConfiguration.password(),
+            username,
+            password,
             libraryId,
-            sessionConfiguration.bufferSize(),
-            initiatorInitialSequenceNumber(lastSequenceNumber))
+            sessionBufferSize,
+            initiatorInitialSequenceNumber(lastSequenceNumber),
+            state)
             .lastReceivedMsgSeqNum(initiatorInitialSequenceNumber(lastReceivedSequenceNumber) - 1);
     }
 
     private int initiatorInitialSequenceNumber(
         final int lastSequenceNumber)
     {
+        // TODO: send appropriate configuration around
+        if (sessionConfiguration == null)
+        {
+            return 1;
+        }
+
         if (sessionConfiguration.hasCustomInitialSequenceNumber())
         {
             return sessionConfiguration.initialSequenceNumber();

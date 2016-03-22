@@ -20,6 +20,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
+import uk.co.real_logic.fix_gateway.messages.SessionState;
 
 public interface ProcessProtocolHandler
 {
@@ -31,7 +32,8 @@ public interface ProcessProtocolHandler
         final int lastReceivedSequenceNumber,
         final DirectBuffer buffer,
         final int addressOffset,
-        final int addressLength)
+        final int addressLength,
+        final SessionState state)
     {
         // Optional method, implement if you care about this type of message.
     }
@@ -40,7 +42,11 @@ public interface ProcessProtocolHandler
                          final long connectionId,
                          final long sessionId,
                          final int lastSentSequenceNumber,
-                         final int lastReceivedSequenceNumber)
+                         final int lastReceivedSequenceNumber,
+                         final String senderCompId,
+                         final String senderSubId,
+                         final String senderLocationId,
+                         final String targetCompId)
     {
         // Optional method, implement if you care about this type of message.
     }
@@ -78,7 +84,12 @@ public interface ProcessProtocolHandler
         // Optional method, implement if you care about this type of message.
     }
 
-    default void onReleaseSession(final int libraryId, final long connectionId, final long correlationId)
+    default void onReleaseSession(
+        final int libraryId,
+        final long connectionId,
+        final long correlationId,
+        final SessionState state,
+        final long heartbeatIntervalInMs)
     {
         // Optional method, implement if you care about this type of message.
     }

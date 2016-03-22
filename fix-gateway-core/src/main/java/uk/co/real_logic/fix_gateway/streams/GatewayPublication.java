@@ -25,7 +25,6 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.messages.*;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader.UNKNOWN_SESSION;
@@ -133,7 +132,35 @@ public class GatewayPublication extends AbstractPublication
                           final int lastSentSequenceNumber,
                           final int lastReceivedSequenceNumber)
     {
-        final long position = claim(header.encodedLength() + LogonEncoder.BLOCK_LENGTH);
+        return saveLogon(
+            libraryId, connectionId, sessionId,
+            lastSentSequenceNumber, lastReceivedSequenceNumber,
+            "", "", "", "");
+    }
+
+    public long saveLogon(final int libraryId,
+                          final long connectionId,
+                          final long sessionId,
+                          final int lastSentSequenceNumber,
+                          final int lastReceivedSequenceNumber,
+                          final String senderCompId,
+                          final String senderSubId,
+                          final String senderLocationId,
+                          final String targetCompId)
+    {
+        final byte[] senderCompIdBytes = senderCompId.getBytes(UTF_8);
+        final byte[] senderSubIdBytes = senderSubId.getBytes(UTF_8);
+        final byte[] senderLocationIdBytes = senderLocationId.getBytes(UTF_8);
+        final byte[] targetCompIdBytes = targetCompId.getBytes(UTF_8);
+
+        final long position = claim(
+            header.encodedLength() +
+            LogonEncoder.BLOCK_LENGTH +
+            LogonEncoder.senderSubIdHeaderLength() * 4 +
+            senderCompIdBytes.length +
+            senderSubIdBytes.length +
+            senderLocationIdBytes.length +
+            targetCompIdBytes.length);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -155,6 +182,11 @@ public class GatewayPublication extends AbstractPublication
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber);
 
+        logon.putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length);
+        logon.putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length);
+        logon.putSenderLocationId(senderLocationIdBytes, 0, senderLocationIdBytes.length);
+        logon.putTargetCompId(targetCompIdBytes, 0, targetCompIdBytes.length);
+
         bufferClaim.commit();
 
         return position;
@@ -165,7 +197,8 @@ public class GatewayPublication extends AbstractPublication
                             final int libraryId,
                             final ConnectionType type,
                             final int lastSentSequenceNumber,
-                            final int lastReceivedSequenceNumber)
+                            final int lastReceivedSequenceNumber,
+                            final SessionState sessionState)
     {
         final byte[] addressString = address.getBytes(UTF_8);
 
@@ -191,6 +224,7 @@ public class GatewayPublication extends AbstractPublication
             .type(type)
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
+            .sessionState(sessionState)
             .putAddress(addressString, 0, addressString.length);
 
         bufferClaim.commit();
@@ -260,11 +294,11 @@ public class GatewayPublication extends AbstractPublication
         final String senderLocationId,
         final String targetCompId)
     {
-        final byte[] hostBytes = host.getBytes(US_ASCII);
-        final byte[] senderCompIdBytes = senderCompId.getBytes(US_ASCII);
-        final byte[] senderSubIdBytes = senderSubId.getBytes(US_ASCII);
-        final byte[] senderLocationIdBytes = senderLocationId.getBytes(US_ASCII);
-        final byte[] targetCompIdBytes = targetCompId.getBytes(US_ASCII);
+        final byte[] hostBytes = host.getBytes(UTF_8);
+        final byte[] senderCompIdBytes = senderCompId.getBytes(UTF_8);
+        final byte[] senderSubIdBytes = senderSubId.getBytes(UTF_8);
+        final byte[] senderLocationIdBytes = senderLocationId.getBytes(UTF_8);
+        final byte[] targetCompIdBytes = targetCompId.getBytes(UTF_8);
 
         final long position = claim(
             header.encodedLength() +
@@ -385,7 +419,12 @@ public class GatewayPublication extends AbstractPublication
         return position;
     }
 
-    public long saveReleaseSession(final int libraryId, final long connectionId, final long correlationId)
+    public long saveReleaseSession(
+        final int libraryId,
+        final long connectionId,
+        final long correlationId,
+        final SessionState state,
+        final long heartbeatIntervalInMs)
     {
         final long position = claim(RELEASE_SESSION_LENGTH);
 
@@ -405,7 +444,9 @@ public class GatewayPublication extends AbstractPublication
             .wrap(buffer, offset)
             .libraryId(libraryId)
             .connection(connectionId)
-            .correlationId(correlationId);
+            .correlationId(correlationId)
+            .heartbeatIntervalInMs(heartbeatIntervalInMs)
+            .state(state);
 
         bufferClaim.commit();
 
@@ -465,7 +506,7 @@ public class GatewayPublication extends AbstractPublication
         return position;
     }
 
-    public long saveRequestSessionReply(final SessionReplyStatus status, final int correlationId)
+    public long saveRequestSessionReply(final SessionReplyStatus status, final long correlationId)
     {
         final long position = claim(REQUEST_SESSION_REPLY_LENGTH);
 

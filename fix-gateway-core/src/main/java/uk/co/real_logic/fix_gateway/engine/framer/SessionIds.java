@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.messages.SessionIdDecoder;
 import uk.co.real_logic.fix_gateway.messages.SessionIdEncoder;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.File;
@@ -63,9 +64,9 @@ public class SessionIds
     private final int actingBlockLength = sessionIdEncoder.sbeBlockLength();
     private final int actingVersion = sessionIdEncoder.sbeSchemaVersion();
 
-    private final Function<Object, Long> onLogonFunc = this::onNewLogon;
+    private final Function<CompositeKey, Long> onLogonFunc = this::onNewLogon;
     private final LongHashSet currentlyAuthenticated = new LongHashSet(MISSING);
-    private final Map<Object, Long> compositeToSurrogate = new HashMap<>();
+    private final Map<CompositeKey, Long> compositeToSurrogate = new HashMap<>();
 
     private final CRC32 crc32 = new CRC32();
     private final SectorFramer sectorFramer;
@@ -125,7 +126,7 @@ public class SessionIds
             }
 
             final int compositeKeyLength = sessionIdDecoder.compositeKeyLength();
-            final Object compositeKey = idStrategy.load(
+            final CompositeKey compositeKey = idStrategy.load(
                 buffer, filePosition + BLOCK_LENGTH, compositeKeyLength);
             if (compositeKey == null)
             {
@@ -187,7 +188,7 @@ public class SessionIds
         return sectorEnd;
     }
 
-    public long onLogon(final Object compositeKey)
+    public long onLogon(final CompositeKey compositeKey)
     {
         final Long sessionId = compositeToSurrogate.computeIfAbsent(compositeKey, onLogonFunc);
 
@@ -199,7 +200,7 @@ public class SessionIds
         return sessionId;
     }
 
-    private long onNewLogon(final Object compositeKey)
+    private long onNewLogon(final CompositeKey compositeKey)
     {
         final long sessionId = counter++;
         final int compositeKeyLength = idStrategy.save(compositeKey, compositeKeyBuffer, 0);

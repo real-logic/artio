@@ -304,7 +304,7 @@ public class FramerTest
     private void notifyLibraryOfConnection()
     {
         verify(mockGatewayPublication).saveConnect(anyLong(), anyString(), eq(LIBRARY_ID), eq(INITIATOR),
-            anyInt(), anyInt());
+            anyInt(), anyInt(), any());
         verify(mockGatewayPublication).saveLogon(eq(LIBRARY_ID), anyLong(), anyLong());
     }
 
