@@ -185,7 +185,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
                pollEndPoints() +
                pollNewConnections() +
                pollLibraries(timeInMs) +
-               // TODO: gatewaySessions.pollSessions(timeInMs) +
+               gatewaySessions.pollSessions(timeInMs) +
                adminCommands.drain(onAdminCommand);
     }
 
