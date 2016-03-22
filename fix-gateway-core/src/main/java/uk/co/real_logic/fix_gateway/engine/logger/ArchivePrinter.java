@@ -37,8 +37,6 @@ import java.io.File;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
 
-import static uk.co.real_logic.fix_gateway.streams.Streams.UNKNOWN_TEMPLATE;
-
 /**
  * Eg: -Dlogging.dir=/home/richard/monotonic/Fix-Engine/fix-gateway-system-tests/client-logs \
  * ArchivePrinter 'UDP-00000000-0-7f000001-10048' 0
@@ -48,17 +46,9 @@ public class ArchivePrinter implements ProcessProtocolHandler, SessionHandler
     private static final int CHANNEL_ARG = 0;
     private static final int ID_ARG = 1;
 
-    private final ProcessProtocolSubscription processProtocolSubscription =
-        new ProcessProtocolSubscription(this);
-    private final SessionSubscription sessionSubscription =
-        new SessionSubscription(this);
-    private final FragmentHandler outboundSubscription = (buffer, offset, length, header) ->
-    {
-        if (sessionSubscription.readFragment(buffer, offset, header) == UNKNOWN_TEMPLATE)
-        {
-            processProtocolSubscription.onFragment(buffer, offset, length, header);
-        }
-    };
+    private final FragmentHandler outboundSubscription =
+        new SessionSubscription(this)
+            .andThen(new ProcessProtocolSubscription(this));
 
     private final AsciiBuffer ascii = new MutableAsciiBuffer();
 

@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.messages.*;
 
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.streams.GatewayPublication.FRAME_SIZE;
+import static uk.co.real_logic.fix_gateway.streams.Streams.UNKNOWN_TEMPLATE;
 
 public class SessionSubscription implements FragmentHandler
 {
@@ -42,6 +43,17 @@ public class SessionSubscription implements FragmentHandler
     public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
         readFragment(buffer, offset, header);
+    }
+
+    public FragmentHandler andThen(final ProcessProtocolSubscription other)
+    {
+        return (buffer, offset, length, header) ->
+        {
+            if (readFragment(buffer, offset, header) == UNKNOWN_TEMPLATE)
+            {
+                other.onFragment(buffer, offset, length, header);
+            }
+        };
     }
 
     public int readFragment(final DirectBuffer buffer, int offset, final Header header)

@@ -44,7 +44,6 @@ import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
-import static uk.co.real_logic.fix_gateway.streams.Streams.UNKNOWN_TEMPLATE;
 
 /**
  * FIX Library instances represent a process in the gateway where session management,
@@ -411,16 +410,9 @@ public final class FixLibrary extends GatewayProcess
     }
 
     private final FixLibraryProtocolHandler processProtocolHandler = new FixLibraryProtocolHandler();
-    private final ProcessProtocolSubscription processProtocolSubscription =
-        new ProcessProtocolSubscription(processProtocolHandler);
-    private final SessionSubscription sessionSubscription = new SessionSubscription(processProtocolHandler);
-    private final FragmentHandler outboundSubscription = (buffer, offset, length, header) ->
-    {
-        if (sessionSubscription.readFragment(buffer, offset, header) == UNKNOWN_TEMPLATE)
-        {
-            processProtocolSubscription.onFragment(buffer, offset, length, header);
-        }
-    };
+    private final FragmentHandler outboundSubscription =
+        new SessionSubscription(processProtocolHandler)
+            .andThen(new ProcessProtocolSubscription(processProtocolHandler));
 
     private class FixLibraryProtocolHandler implements ProcessProtocolHandler, SessionHandler
     {

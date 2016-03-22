@@ -59,7 +59,6 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
-import static uk.co.real_logic.fix_gateway.streams.Streams.UNKNOWN_TEMPLATE;
 
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
@@ -88,14 +87,8 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
     private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
     private final Timer sendTimer = new Timer("Send", new SystemNanoClock());
     private final SessionSubscription sessionSubscription = new SessionSubscription(this);
-    private final ProcessProtocolSubscription processProtocolSubscription = new ProcessProtocolSubscription(this);
-    private final FragmentHandler outboundSubscription = (buffer, offset, length, header) ->
-    {
-        if (sessionSubscription.readFragment(buffer, offset, header) == UNKNOWN_TEMPLATE)
-        {
-            processProtocolSubscription.onFragment(buffer, offset, length, header);
-        }
-    };
+    private final FragmentHandler outboundSubscription =
+        sessionSubscription.andThen(new ProcessProtocolSubscription(this));
 
     private final boolean hasBindAddress;
     private final Selector selector;
