@@ -263,7 +263,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
                 else
                 {
                     final long connectionId = this.nextConnectionId++;
-                    setupConnection(channel, connectionId, UNKNOWN, acceptorLibraryId);
+                    setupConnection(channel, connectionId, UNKNOWN, acceptorLibraryId, ACCEPTOR);
 
                     final String address = channel.getRemoteAddress().toString();
                     inboundPublication.saveConnect(connectionId, address, acceptorLibraryId, ACCEPTOR,
@@ -321,7 +321,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
                 return;
             }
 
-            setupConnection(channel, connectionId, sessionId, libraryId);
+            setupConnection(channel, connectionId, sessionId, libraryId, INITIATOR);
 
             while (!sentSequenceNumberIndex.hasIndexedUpTo(header))
             {
@@ -380,7 +380,8 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         final SocketChannel channel,
         final long connectionId,
         final long sessionId,
-        final int libraryId)
+        final int libraryId,
+        final ConnectionType connectionType)
         throws IOException
     {
         channel.setOption(TCP_NODELAY, true);
@@ -407,7 +408,8 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
             connectionId,
             sessionId,
             channel.getRemoteAddress().toString(),
-            receiverEndPoint
+            receiverEndPoint,
+            connectionType
         ));
     }
 
@@ -504,14 +506,16 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
             return;
         }
 
-        final int lastSentSequenceNumber = session.lastSentMsgSeqNum();
-        final int lastReceivedSequenceNumber = session.lastReceivedMsgSeqNum();
+        final int lastSentSeqNum = session.lastSentMsgSeqNum();
+        final int lastReceivedSeqNum = session.lastReceivedMsgSeqNum();
         session.stopManaging();
         libraryInfo.addSession(session);
 
-        // TODO: combine messages
-        inboundPublication.saveConnect(connectionId, session.address(), libraryId, INITIATOR,
-            lastSentSequenceNumber, lastReceivedSequenceNumber);
+        // TODO: send correct connection type
+        inboundPublication.saveConnect(
+            connectionId, session.address(), libraryId, ACCEPTOR, lastSentSeqNum, lastReceivedSeqNum);
+        inboundPublication.saveLogon(
+            libraryId, connectionId, session.sessionId(), lastSentSeqNum, lastReceivedSeqNum);
         inboundPublication.saveReleaseSessionReply(OK, correlationId);
     }
 

@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
@@ -202,7 +201,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             contains(hasConnectionId(connectionId)));
     }
 
-    @Ignore
     @Test
     public void librariesShouldBeAbleToAcquireReleasedSessions()
     {

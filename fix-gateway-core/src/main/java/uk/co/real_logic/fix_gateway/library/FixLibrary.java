@@ -448,19 +448,8 @@ public final class FixLibrary extends GatewayProcess
                     DebugLogger.log("Acct Connect: %d, %d\n", connectionId, libraryId);
                     asciiBuffer.wrap(buffer);
                     final String address = asciiBuffer.getAscii(addressOffset, addressLength);
-                    if (isAcceptor)
-                    {
-                        final Session session = acceptSession(connectionId, address);
-                        newSession(connectionId, session);
-                    }
-                    else
-                    {
-                        throw new IllegalArgumentException(String.format(
-                            "Received accept for session %d connecting from %s on non-accepting FIX Library",
-                            connectionId,
-                            address
-                        ));
-                    }
+                    final Session session = acceptSession(connectionId, address);
+                    newSession(connectionId, session);
                 }
             }
         }
@@ -561,7 +550,6 @@ public final class FixLibrary extends GatewayProcess
 
         public void onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
         {
-
             if (FixLibrary.this.correlationId == correlationId)
             {
                 // TODO: add information required to connect.
