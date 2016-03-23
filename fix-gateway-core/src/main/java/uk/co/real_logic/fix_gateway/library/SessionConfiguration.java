@@ -24,7 +24,6 @@ import java.util.Objects;
  */
 public final class SessionConfiguration
 {
-    public static final int DEFAULT_SESSION_BUFFER_SIZE = 8 * 1024;
 
     private static final int AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1;
 
@@ -36,7 +35,6 @@ public final class SessionConfiguration
     private final String targetCompId;
     private final String senderSubId;
     private final String senderLocationId;
-    private final int bufferSize;
     private final boolean sequenceNumbersPersistent;
     private final int initialSequenceNumber;
 
@@ -54,7 +52,6 @@ public final class SessionConfiguration
         final String senderSubId,
         final String senderLocationId,
         final String targetCompId,
-        final int bufferSize,
         final boolean sequenceNumbersPersistent,
         final int initialSequenceNumber)
     {
@@ -76,7 +73,6 @@ public final class SessionConfiguration
         this.ports = ports;
         this.username = username;
         this.password = password;
-        this.bufferSize = bufferSize;
         this.sequenceNumbersPersistent = sequenceNumbersPersistent;
         this.initialSequenceNumber = initialSequenceNumber;
     }
@@ -129,11 +125,6 @@ public final class SessionConfiguration
         return targetCompId;
     }
 
-    public int bufferSize()
-    {
-        return bufferSize;
-    }
-
     public boolean sequenceNumbersPersistent()
     {
         return sequenceNumbersPersistent;
@@ -159,7 +150,6 @@ public final class SessionConfiguration
         private String targetCompId;
         private String senderSubId = "";
         private String senderLocationId = "";
-        private int bufferSize = DEFAULT_SESSION_BUFFER_SIZE;
         private boolean sequenceNumbersPersistent = false;
         private int initialSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 
@@ -251,19 +241,6 @@ public final class SessionConfiguration
         }
 
         /**
-         * Sets the session's encoding buffer size. The session buffer is a buffer used by each Session to encode
-         * messages via {@link uk.co.real_logic.fix_gateway.library.session.Session#send(uk.co.real_logic.fix_gateway.builder.MessageEncoder)}.
-         *
-         * @param bufferSize the session's encoding buffer size
-         * @return this
-         */
-        public Builder bufferSize(final int bufferSize)
-        {
-            this.bufferSize = bufferSize;
-            return this;
-        }
-
-        /**
          * Set this flag if you want sequence numbers to persistent when you reconnect
          * to the acceptor.
          *
@@ -297,7 +274,7 @@ public final class SessionConfiguration
         public SessionConfiguration build()
         {
             return new SessionConfiguration(hosts, ports, username, password, senderCompId, senderSubId,
-                senderLocationId, targetCompId, bufferSize, sequenceNumbersPersistent, initialSequenceNumber);
+                senderLocationId, targetCompId, sequenceNumbersPersistent, initialSequenceNumber);
         }
     }
 

@@ -50,6 +50,7 @@ public class GatewaySessions
     private final FixCounters fixCounters;
     private final AuthenticationStrategy authenticationStrategy;
     private final MessageValidationStrategy validationStrategy;
+    private final int sessionBufferSize;
 
     public GatewaySessions(
         final EpochClock clock,
@@ -58,7 +59,8 @@ public class GatewaySessions
         final SessionCustomisationStrategy customisationStrategy,
         final FixCounters fixCounters,
         final AuthenticationStrategy authenticationStrategy,
-        final MessageValidationStrategy validationStrategy)
+        final MessageValidationStrategy validationStrategy,
+        final int sessionBufferSize)
     {
         this.clock = clock;
         this.publication = publication;
@@ -67,12 +69,12 @@ public class GatewaySessions
         this.fixCounters = fixCounters;
         this.authenticationStrategy = authenticationStrategy;
         this.validationStrategy = validationStrategy;
+        this.sessionBufferSize = sessionBufferSize;
     }
 
     void acquire(final GatewaySession gatewaySession, final SessionState state, final long heartbeatIntervalInMs)
     {
         final long connectionId = gatewaySession.connectionId();
-        final int sessionBufferSize = gatewaySession.sessionBufferSize();
 
         final SessionProxy proxy = new SessionProxy(
             sessionBufferSize,

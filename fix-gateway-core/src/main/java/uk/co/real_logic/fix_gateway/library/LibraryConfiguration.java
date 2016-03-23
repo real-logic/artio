@@ -21,7 +21,6 @@ import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 
 
 /**
@@ -47,7 +46,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
 
     private int libraryId = DEFAULT_LIBRARY_ID;
-    private int acceptorSessionBufferSize = DEFAULT_SESSION_BUFFER_SIZE;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
     private boolean isAcceptor = false;
     private boolean acceptorSequenceNumbersResetUponReconnect = ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT;
@@ -143,23 +141,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     }
 
     /**
-     * Sets the size of an acceptor's session buffer. The session buffer is a buffer used by each
-     * Session to encode messages via {@link uk.co.real_logic.fix_gateway.library.session.Session#send(uk.co.real_logic.fix_gateway.builder.MessageEncoder)}.
-     * <p>
-     * This only needs to be set if this FIX Library is the acceptor library.
-     *
-     * @see uk.co.real_logic.fix_gateway.library.SessionConfiguration.Builder#bufferSize(int)
-     *
-     * @param acceptorSessionBufferSize the size of an acceptor's session buffer
-     * @return this
-     */
-    public LibraryConfiguration acceptorSessionBufferSize(final int acceptorSessionBufferSize)
-    {
-        this.acceptorSessionBufferSize = acceptorSessionBufferSize;
-        return this;
-    }
-
-    /**
      * Sets the idle strategy for the FIX library instance.
      *
      * @param libraryIdleStrategy the idle strategy for the FIX library instance.
@@ -230,11 +211,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public int libraryId()
     {
         return libraryId;
-    }
-
-    public int acceptorSessionBufferSize()
-    {
-        return acceptorSessionBufferSize;
     }
 
     public IdleStrategy libraryIdleStrategy()

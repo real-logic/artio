@@ -98,6 +98,8 @@ public class CommonConfiguration
     public static final int DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS = BACKOFF_SPINS + BACKOFF_YIELDS + 1000;
     public static final int DEFAULT_OUTBOUND_MAX_CLAIM_ATTEMPTS = DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS;
 
+    public static final int DEFAULT_SESSION_BUFFER_SIZE = 8 * 1024;
+
     private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
     private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
     protected boolean printErrorMessages = true;
@@ -113,6 +115,7 @@ public class CommonConfiguration
     private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
     private Aeron.Context aeronContext = new Aeron.Context();
     private int errorSlotSize = DEFAULT_ERROR_SLOT_SIZE;
+    private int sessionBufferSize = DEFAULT_SESSION_BUFFER_SIZE;
 
     private int inboundMaxClaimAttempts =
         getInteger(INBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS);
@@ -309,6 +312,19 @@ public class CommonConfiguration
         return this;
     }
 
+    /**
+     * Sets the session's encoding buffer size. The session buffer is a buffer used by each Session to encode
+     * messages via {@link uk.co.real_logic.fix_gateway.library.session.Session#send(uk.co.real_logic.fix_gateway.builder.MessageEncoder)}.
+     *
+     * @param bufferSize the session's encoding buffer size
+     * @return this
+     */
+    public CommonConfiguration sessionBufferSize(final int bufferSize)
+    {
+        this.sessionBufferSize = bufferSize;
+        return this;
+    }
+
     public Aeron.Context aeronContext()
     {
         return aeronContext;
@@ -393,6 +409,11 @@ public class CommonConfiguration
     public int outboundMaxClaimAttempts()
     {
         return outboundMaxClaimAttempts;
+    }
+
+    public int sessionBufferSize()
+    {
+        return sessionBufferSize;
     }
 
     protected void conclude(final String fixSuffix)

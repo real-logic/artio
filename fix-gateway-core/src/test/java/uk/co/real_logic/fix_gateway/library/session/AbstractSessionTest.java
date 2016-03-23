@@ -44,28 +44,7 @@ public abstract class AbstractSessionTest
     public static final long SESSION_ID = 2L;
     public static final int HEARTBEAT_INTERVAL = 2;
     public static final byte[] MSG_TYPE_BYTES = "D".getBytes(US_ASCII);
-    public static final CompositeKey SESSION_KEY = new CompositeKey()
-    {
-        public String senderCompId()
-        {
-            return null;
-        }
-
-        public String senderSubId()
-        {
-            return null;
-        }
-
-        public String senderLocationId()
-        {
-            return null;
-        }
-
-        public String targetCompId()
-        {
-            return null;
-        }
-    };
+    public static final CompositeKey SESSION_KEY = mock(CompositeKey.class);
     public static final int LIBRARY_ID = 4;
 
     protected SessionProxy mockProxy = mock(SessionProxy.class);

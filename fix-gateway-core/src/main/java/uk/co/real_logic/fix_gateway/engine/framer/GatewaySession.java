@@ -67,11 +67,6 @@ class GatewaySession implements SessionInfo
         this.sessionId = sessionId;
     }
 
-    int sessionBufferSize()
-    {
-        return 0;
-    }
-
     int heartbeatIntervalInS()
     {
         return 0;

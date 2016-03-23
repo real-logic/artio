@@ -591,7 +591,6 @@ public final class FixLibrary extends GatewayProcess
         final String username;
         final String password;
         // TODO: move this to the common configuration
-        final int sessionBufferSize;
         if (sessionConfiguration != null)
         {
             final CompositeKey key = sessionIdStrategy.onInitiatorLogon(
@@ -600,13 +599,11 @@ public final class FixLibrary extends GatewayProcess
             sessionProxy.setupSession(-1, key);
             username = sessionConfiguration.username();
             password = sessionConfiguration.password();
-            sessionBufferSize = sessionConfiguration.bufferSize();
         }
         else
         {
             username = null;
             password = null;
-            sessionBufferSize = SessionConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
         }
 
         return new InitiatorSession(
@@ -623,7 +620,7 @@ public final class FixLibrary extends GatewayProcess
             username,
             password,
             libraryId,
-            sessionBufferSize,
+            configuration.sessionBufferSize(),
             initiatorInitialSequenceNumber(lastSequenceNumber),
             state)
             .lastReceivedMsgSeqNum(initiatorInitialSequenceNumber(lastReceivedSequenceNumber) - 1);
@@ -663,7 +660,7 @@ public final class FixLibrary extends GatewayProcess
         final long sendingTimeWindow = configuration.sendingTimeWindowInMs();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
-        final int sessionBufferSize = configuration.acceptorSessionBufferSize();
+        final int sessionBufferSize = configuration.sessionBufferSize();
 
         return new AcceptorSession(
             defaultInterval,
