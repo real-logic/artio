@@ -105,7 +105,7 @@ public class GatewaySessions
             FixEngine.GATEWAY_LIBRARY_ID,
             sessionBufferSize,
             sentSequenceNumber
-        );
+        ).id(gatewaySession.sessionId());
 
         final SessionParser sessionParser = new SessionParser(
             session,

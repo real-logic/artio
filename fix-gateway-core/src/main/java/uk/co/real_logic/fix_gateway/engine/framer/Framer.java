@@ -390,23 +390,24 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         }
         channel.configureBlocking(false);
 
+        final GatewaySession gatewaySession = new GatewaySession(
+            connectionId,
+            sessionId,
+            channel.getRemoteAddress().toString(),
+            connectionType,
+            sessionKey
+        );
+
         final ReceiverEndPoint receiverEndPoint =
             connectionHandler.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
-                sendOutboundMessagesFunc, sentSequenceNumberIndex, receivedSequenceNumberIndex);
+                sendOutboundMessagesFunc, sentSequenceNumberIndex, receivedSequenceNumberIndex, gatewaySession);
         receiverEndPoints.add(receiverEndPoint);
 
         final SenderEndPoint senderEndPoint =
             connectionHandler.senderEndPoint(channel, connectionId, libraryId, this, pollEndpointsFunc);
         senderEndPoints.add(senderEndPoint);
 
-        idToLibrary.get(libraryId).addSession(new GatewaySession(
-            connectionId,
-            sessionId,
-            channel.getRemoteAddress().toString(),
-            receiverEndPoint,
-            connectionType,
-            sessionKey
-        ));
+        idToLibrary.get(libraryId).addSession(gatewaySession);
     }
 
     public void onRequestDisconnect(final int libraryId, final long connectionId)

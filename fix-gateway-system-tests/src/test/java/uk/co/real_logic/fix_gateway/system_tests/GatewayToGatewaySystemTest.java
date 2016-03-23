@@ -219,28 +219,39 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldBeAbleToAcquireReleasedInitiatedSessions()
     {
-        final long connectionId = initiatedSession.connectionId();
-        final long sessionId = initiatedSession.id();
+        reacquireReleasedSession(initiatedSession, initiatingLibrary, initiatingEngine);
+    }
 
-        initiatingLibrary.releaseToGateway(initiatedSession, ADMIN_IDLE_STRATEGY);
+    @Test
+    public void librariesShouldBeAbleToAcquireReleasedAcceptedSessions()
+    {
+        reacquireReleasedSession(acceptingSession, acceptingLibrary, acceptingEngine);
+    }
 
-        final SessionReplyStatus status = initiatingLibrary.acquireSession(connectionId, ADMIN_IDLE_STRATEGY);
+    private void reacquireReleasedSession(
+        final Session session, final FixLibrary library, final FixEngine engine)
+    {
+        final long connectionId = session.connectionId();
+
+        library.releaseToGateway(session, ADMIN_IDLE_STRATEGY);
+
+        final SessionReplyStatus status = library.acquireSession(connectionId, ADMIN_IDLE_STRATEGY);
 
         assertEquals(SessionReplyStatus.OK, status);
 
-        assertThat(initiatingEngine.gatewaySessions(ADMIN_IDLE_STRATEGY), hasSize(0));
+        assertThat(engine.gatewaySessions(ADMIN_IDLE_STRATEGY), hasSize(0));
 
-        final List<LibraryInfo> libraries = initiatingEngine.libraries(ADMIN_IDLE_STRATEGY);
+        final List<LibraryInfo> libraries = engine.libraries(ADMIN_IDLE_STRATEGY);
         assertThat(libraries.get(0).sessions(),
             contains(hasConnectionId(connectionId)));
 
-        final List<Session> sessions = initiatingLibrary.sessions();
+        final List<Session> sessions = library.sessions();
         assertThat(sessions, hasSize(1));
 
-        initiatedSession = sessions.get(0);
-        assertTrue(initiatedSession.isConnected());
-        assertEquals(connectionId, initiatedSession.connectionId());
-        assertEquals(sessionId, initiatedSession.id());
+        final Session newSession = sessions.get(0);
+        assertTrue(newSession.isConnected());
+        assertEquals(connectionId, newSession.connectionId());
+        assertEquals(session.id(), newSession.id());
     }
 
     @Test

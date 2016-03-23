@@ -20,29 +20,28 @@ import uk.co.real_logic.fix_gateway.library.session.Session;
 import uk.co.real_logic.fix_gateway.library.session.SessionParser;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 class GatewaySession implements SessionInfo
 {
     private final long connectionId;
     private final String address;
-    private final ReceiverEndPoint receiverEndPoint;
     private final ConnectionType connectionType;
 
     private long sessionId;
+    private SessionParser sessionParser;
     private Session session;
     private CompositeKey compositeKey;
 
     GatewaySession(final long connectionId,
                    final long sessionId,
                    final String address,
-                   final ReceiverEndPoint receiverEndPoint,
                    final ConnectionType connectionType,
                    final CompositeKey compositeKey)
     {
         this.connectionId = connectionId;
         this.sessionId = sessionId;
         this.address = address;
-        this.receiverEndPoint = receiverEndPoint;
         this.connectionType = connectionType;
         this.compositeKey = compositeKey;
     }
@@ -62,11 +61,6 @@ class GatewaySession implements SessionInfo
         return sessionId;
     }
 
-    void sessionId(final long sessionId)
-    {
-        this.sessionId = sessionId;
-    }
-
     int heartbeatIntervalInS()
     {
         return 0;
@@ -79,8 +73,8 @@ class GatewaySession implements SessionInfo
 
     void manage(final SessionParser sessionParser, final Session session)
     {
+        this.sessionParser = sessionParser;
         this.session = session;
-        receiverEndPoint.manage(sessionParser);
     }
 
     void stopManaging()
@@ -103,13 +97,27 @@ class GatewaySession implements SessionInfo
         return connectionType;
     }
 
-    void compositeKey(final CompositeKey compositeKey)
-    {
-        this.compositeKey = compositeKey;
-    }
-
     CompositeKey compositeKey()
     {
         return compositeKey;
+    }
+
+    public void onMessage(final MutableAsciiBuffer buffer,
+                          final int offset,
+                          final int length,
+                          final int messageType,
+                          final long sessionId)
+    {
+        if (sessionParser != null)
+        {
+            sessionParser.onMessage(buffer, offset, length, messageType, sessionId);
+        }
+    }
+
+    public void onLogon(final long sessionId,
+                        final CompositeKey compositeKey)
+    {
+        this.sessionId = sessionId;
+        this.compositeKey = compositeKey;
     }
 }

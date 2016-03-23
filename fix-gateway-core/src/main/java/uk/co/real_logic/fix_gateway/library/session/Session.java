@@ -738,7 +738,7 @@ public class Session implements AutoCloseable
         return this;
     }
 
-    protected Session id(final long id)
+    public Session id(final long id)
     {
         this.id = id;
         return this;

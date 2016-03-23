@@ -20,7 +20,6 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.fix_gateway.library.session.SessionParser;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
@@ -79,11 +78,11 @@ class ReceiverEndPoint
     private final ByteBuffer byteBuffer;
 
     private int libraryId;
+    private final GatewaySession gatewaySession;
     private long sessionId;
     private int usedBufferData = 0;
     private boolean hasDisconnected = false;
     private SelectionKey selectionKey;
-    private SessionParser sessionParser;
 
     ReceiverEndPoint(
         final SocketChannel channel,
@@ -98,7 +97,8 @@ class ReceiverEndPoint
         final AtomicCounter messagesRead,
         final Framer framer,
         final ErrorHandler errorHandler,
-        final int libraryId)
+        final int libraryId,
+        final GatewaySession gatewaySession)
     {
         this.channel = channel;
         this.publication = publication;
@@ -112,6 +112,7 @@ class ReceiverEndPoint
         this.framer = framer;
         this.errorHandler = errorHandler;
         this.libraryId = libraryId;
+        this.gatewaySession = gatewaySession;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
@@ -290,10 +291,7 @@ class ReceiverEndPoint
         messagesRead.orderedIncrement();
         publication.saveMessage(
             buffer, offset, length, libraryId, messageType, sessionId, connectionId, OK);
-        if (sessionParser != null)
-        {
-            sessionParser.onMessage(buffer, offset, length, messageType, sessionId);
-        }
+        gatewaySession.onMessage(buffer, offset, length, messageType, sessionId);
     }
 
     private void checkSessionId(final int offset, final int length)
@@ -313,6 +311,7 @@ class ReceiverEndPoint
             {
                 final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                 final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+                gatewaySession.onLogon(sessionId, compositeKey);
                 publication.saveLogon(libraryId, connectionId, sessionId, sentSequenceNumber, receivedSequenceNumber);
             }
         }
@@ -438,8 +437,4 @@ class ReceiverEndPoint
         return libraryId;
     }
 
-    public void manage(final SessionParser sessionParser)
-    {
-        this.sessionParser = sessionParser;
-    }
 }
