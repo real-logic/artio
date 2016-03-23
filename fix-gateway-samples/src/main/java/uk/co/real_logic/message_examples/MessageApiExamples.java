@@ -38,7 +38,6 @@ import static uk.co.real_logic.fix_gateway.builder.Side.Sell;
  */
 public final class MessageApiExamples
 {
-
     public static final String TARGET_COMP_ID = "targetCompId";
     public static final String SENDER_COMP_ID = "senderCompId";
     public static final String AERON_CHANNEL = "ipc:9999";
@@ -49,14 +48,18 @@ public final class MessageApiExamples
         final EngineConfiguration configuration = new EngineConfiguration()
             .aeronChannel(AERON_CHANNEL);
 
+        final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(TARGET_COMP_ID)
+            .and(new SenderCompIdValidationStrategy(asList(SENDER_COMP_ID)));
+
+        final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
+
+        configuration.messageValidationStrategy(validationStrategy)
+                     .authenticationStrategy(authenticationStrategy);
+
         try (final FixEngine gateway = FixEngine.launch(configuration))
         {
-            final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(TARGET_COMP_ID)
-                .and(new SenderCompIdValidationStrategy(asList(SENDER_COMP_ID)));
-
-            final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
-
-            final LibraryConfiguration libraryConfiguration = new LibraryConfiguration()
+            final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
+            libraryConfiguration
                 .aeronChannel(AERON_CHANNEL)
                 .messageValidationStrategy(validationStrategy)
                 .authenticationStrategy(authenticationStrategy);

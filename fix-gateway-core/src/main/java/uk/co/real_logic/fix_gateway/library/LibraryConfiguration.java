@@ -18,12 +18,6 @@ package uk.co.real_logic.fix_gateway.library;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
-import uk.co.real_logic.fix_gateway.library.session.NoSessionCustomisationStrategy;
-import uk.co.real_logic.fix_gateway.library.session.SessionCustomisationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.NoAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.NoMessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -51,9 +45,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private NewSessionHandler newSessionHandler;
     private char[] beginString;
     private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
-    private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
-    private MessageValidationStrategy messageValidationStrategy = new NoMessageValidationStrategy();
-    private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
+
     private int libraryId = DEFAULT_LIBRARY_ID;
     private int acceptorSessionBufferSize = DEFAULT_SESSION_BUFFER_SIZE;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
@@ -129,49 +121,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConfiguration encoderBufferSize(final int encoderBufferSize)
     {
         this.encoderBufferSize = encoderBufferSize;
-        return this;
-    }
-
-    /**
-     * Sets the authentication strategy of the FIX Library, see {@link AuthenticationStrategy} for details.
-     * <p>
-     * This only needs to be set if this FIX Library is the acceptor library.
-     *
-     * @param authenticationStrategy the authentication strategy to use.
-     * @return this
-     */
-    public LibraryConfiguration authenticationStrategy(final AuthenticationStrategy authenticationStrategy)
-    {
-        this.authenticationStrategy = authenticationStrategy;
-        return this;
-    }
-
-    /**
-     * Sets the session customisation strategy of the FIX Library,
-     * see {@link SessionCustomisationStrategy} for details.
-     * <p>
-     * This only needs to be set if this FIX Library is the acceptor library.
-     *
-     * @param sessionCustomisationStrategy the session customisation strategy to use.
-     * @return this
-     */
-    public LibraryConfiguration sessionCustomisationStrategy(
-        final SessionCustomisationStrategy sessionCustomisationStrategy)
-    {
-        this.sessionCustomisationStrategy = sessionCustomisationStrategy;
-        return this;
-    }
-
-    /**
-     * Sets the message validation strategy of the FIX Library,
-     * see {@link MessageValidationStrategy} for details.
-     *
-     * @param messageValidationStrategy the message validation strategy to use.
-     * @return this
-     */
-    public LibraryConfiguration messageValidationStrategy(final MessageValidationStrategy messageValidationStrategy)
-    {
-        this.messageValidationStrategy = messageValidationStrategy;
         return this;
     }
 
@@ -263,11 +212,6 @@ public final class LibraryConfiguration extends CommonConfiguration
         return encoderBufferSize;
     }
 
-    public AuthenticationStrategy authenticationStrategy()
-    {
-        return authenticationStrategy;
-    }
-
     public NewSessionHandler newSessionHandler()
     {
         return newSessionHandler;
@@ -281,16 +225,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public long sendingTimeWindowInMs()
     {
         return sendingTimeWindowInMs;
-    }
-
-    public SessionCustomisationStrategy sessionCustomisationStrategy()
-    {
-        return sessionCustomisationStrategy;
-    }
-
-    public MessageValidationStrategy messageValidationStrategy()
-    {
-        return messageValidationStrategy;
     }
 
     public int libraryId()

@@ -16,9 +16,11 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.hamcrest.Matcher;
+import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
+import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -214,23 +216,31 @@ public final class SystemTestUtil
         }
     }
 
-    public static FixEngine launchAcceptingGateway(final int port)
+    public static FixEngine launchAcceptingEngine(final int port,
+                                                  final String acceptorId,
+                                                  final String initiatorId)
     {
         delete(ACCEPTOR_LOGS);
-        return launchAcceptingGatewayWithSameLogs(port);
+        return launchAcceptingEngineWithSameLogs(port, acceptorId, initiatorId);
     }
 
-    public static FixEngine launchAcceptingGatewayWithSameLogs(final int port)
+    public static FixEngine launchAcceptingEngineWithSameLogs(final int port,
+                                                              final String acceptorId,
+                                                              final String initiatorId)
     {
-        final EngineConfiguration config = acceptingConfig(port, "engineCounters");
+        final EngineConfiguration config = acceptingConfig(port, "engineCounters", acceptorId, initiatorId);
         return FixEngine.launch(config);
     }
 
     public static EngineConfiguration acceptingConfig(
         final int port,
-        final String countersSuffix)
+        final String countersSuffix,
+        final String acceptorId,
+        final String initiatorId)
     {
-        return new EngineConfiguration()
+        final EngineConfiguration configuration = new EngineConfiguration();
+        setupAuthentication(acceptorId, initiatorId, configuration);
+        return configuration
             .bindTo("localhost", port)
             .aeronChannel("aeron:ipc")
             .monitoringFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + countersSuffix)
@@ -243,18 +253,30 @@ public final class SystemTestUtil
         final String initiatorId,
         final String monitorDir)
     {
+        final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
+        setupAuthentication(acceptorId, initiatorId, libraryConfiguration);
+
+        libraryConfiguration
+            .isAcceptor(true)
+            .newSessionHandler(sessionHandler)
+            .aeronChannel(IPC_CHANNEL)
+            .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "accLibraryCounters");
+
+        return libraryConfiguration;
+    }
+
+    private static void setupAuthentication(final String acceptorId,
+                                            final String initiatorId,
+                                            final CommonConfiguration configuration)
+    {
         final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(acceptorId)
             .and(new SenderCompIdValidationStrategy(Arrays.asList(initiatorId, INITIATOR_ID2)));
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
-        return new LibraryConfiguration()
-            .isAcceptor(true)
+        configuration
             .authenticationStrategy(authenticationStrategy)
-            .messageValidationStrategy(validationStrategy)
-            .newSessionHandler(sessionHandler)
-            .aeronChannel(IPC_CHANNEL)
-            .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "accLibraryCounters");
+            .messageValidationStrategy(validationStrategy);
     }
 
     public static Session acceptSession(final FakeSessionHandler acceptingSessionHandler,
@@ -283,17 +305,7 @@ public final class SystemTestUtil
 
     public static void closeIfOpen(final AutoCloseable closable)
     {
-        try
-        {
-            if (closable != null)
-            {
-                closable.close();
-            }
-        }
-        catch (final Exception ex)
-        {
-            ex.printStackTrace();
-        }
+        CloseHelper.close(closable);
     }
 
     public static FixLibrary newInitiatingLibrary(

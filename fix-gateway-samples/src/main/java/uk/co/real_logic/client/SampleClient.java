@@ -53,39 +53,41 @@ public final class SampleClient
                 .senderCompId(INITIATOR_COMP_ID)
                 .build();
 
-            final FixLibrary library = FixLibrary.connect(new LibraryConfiguration()
+            try (final FixLibrary library = FixLibrary.connect(new LibraryConfiguration()
                 .newSessionHandler(SampleClient::onConnect)
-                .aeronChannel(aeronChannel));
-            final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
-            final Session session = library.initiate(sessionConfig, idleStrategy);
-
-            while (session.state() != ACTIVE)
+                .aeronChannel(aeronChannel)))
             {
-                idleStrategy.idle(library.poll(1));
+                final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
+                final Session session = library.initiate(sessionConfig, idleStrategy);
+
+                while (session.state() != ACTIVE)
+                {
+                    idleStrategy.idle(library.poll(1));
+                }
+
+                final TestRequestEncoder testRequest = new TestRequestEncoder();
+                testRequest.testReqID("Hello World");
+
+                session.send(testRequest);
+
+                while (!"Hello World".equals(TEST_REQ_ID_FINDER.testReqId()))
+                {
+                    idleStrategy.idle(library.poll(1));
+                }
+
+                System.out.println("Success, received reply!");
+                System.out.println(TEST_REQ_ID_FINDER.testReqId());
+
+                session.startLogout();
+                session.requestDisconnect();
+
+                while (session.state() != DISCONNECTED)
+                {
+                    idleStrategy.idle(library.poll(1));
+                }
+
+                System.out.println("Disconnected");
             }
-
-            final TestRequestEncoder testRequest = new TestRequestEncoder();
-            testRequest.testReqID("Hello World");
-
-            session.send(testRequest);
-
-            while (!"Hello World".equals(TEST_REQ_ID_FINDER.testReqId()))
-            {
-                idleStrategy.idle(library.poll(1));
-            }
-
-            System.out.println("Success, received reply!");
-            System.out.println(TEST_REQ_ID_FINDER.testReqId());
-
-            session.startLogout();
-            session.requestDisconnect();
-
-            while (session.state() != DISCONNECTED)
-            {
-                idleStrategy.idle(library.poll(1));
-            }
-
-            System.out.println("Disconnected");
         }
 
         System.exit(0);

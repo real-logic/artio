@@ -24,9 +24,6 @@ import uk.co.real_logic.fix_gateway.engine.framer.*;
 import uk.co.real_logic.fix_gateway.engine.logger.Logger;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexWriter;
-import uk.co.real_logic.fix_gateway.library.session.NoSessionCustomisationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.NoAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.NoMessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.File;
@@ -173,10 +170,10 @@ public final class FixEngine extends GatewayProcess
             clock,
             outboundLibraryStreams.gatewayPublication(idleStrategy),
             sessionIdStrategy,
-            new NoSessionCustomisationStrategy(),
+            configuration.sessionCustomisationStrategy(),
             fixCounters,
-            new NoAuthenticationStrategy(),
-            new NoMessageValidationStrategy());
+            configuration.authenticationStrategy(),
+            configuration.messageValidationStrategy());
 
         final Framer framer = new Framer(
             clock, configuration, handler, librarySubscription, replaySubscription(),

@@ -40,7 +40,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         mediaDriver = launchMediaDriver();
 
-        acceptingEngine = launchAcceptingGateway(port);
+        acceptingEngine = launchAcceptingEngine(port, ACCEPTOR_ID, INITIATOR_ID);
         initiatingEngine = launchInitiatingGateway(initAeronPort);
 
         acceptingLibrary = newAcceptingLibrary(acceptingSessionHandler);

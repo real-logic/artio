@@ -56,6 +56,7 @@ public final class SampleServer
         final EngineConfiguration configuration = new EngineConfiguration()
             .bindTo("localhost", 9999)
             .aeronChannel(aeronChannel);
+        configuration.authenticationStrategy(authenticationStrategy);
 
         cleanupOldLogFileDir(configuration);
 
@@ -65,28 +66,29 @@ public final class SampleServer
         try (final MediaDriver driver = MediaDriver.launch(context);
              final FixEngine gateway = FixEngine.launch(configuration))
         {
-
-            final FixLibrary library = FixLibrary.connect(new LibraryConfiguration()
+            final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
+            libraryConfiguration.authenticationStrategy(authenticationStrategy);
+            try (final FixLibrary library = FixLibrary.connect(libraryConfiguration
                 // You register the new session handler - which is your application hook
                 // that receives messages for new sessions
-                .authenticationStrategy(authenticationStrategy)
                 .newSessionHandler(SampleServer::onConnect)
                 .isAcceptor(true)
-                .aeronChannel(aeronChannel));
-
-            final AtomicBoolean running = new AtomicBoolean(true);
-            SigInt.register(() -> running.set(false));
-
-            while (running.get())
+                .aeronChannel(aeronChannel)))
             {
-                library.poll(1);
+                final AtomicBoolean running = new AtomicBoolean(true);
+                SigInt.register(() -> running.set(false));
 
-                if (session != null && session.state() == DISCONNECTED)
+                while (running.get())
                 {
-                    break;
-                }
+                    library.poll(1);
 
-                Thread.sleep(100);
+                    if (session != null && session.state() == DISCONNECTED)
+                    {
+                        break;
+                    }
+
+                    Thread.sleep(100);
+                }
             }
         }
 

@@ -19,6 +19,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -89,9 +90,9 @@ public class LibraryAndGatewayRandomTimeoutTest
     @After
     public void close() throws Exception
     {
-        closeIfOpen(initiatingLibrary);
-        closeIfOpen(initiatingEngine);
-        closeIfOpen(mediaDriver);
+        CloseHelper.close(initiatingLibrary);
+        CloseHelper.close(initiatingEngine);
+        CloseHelper.close(mediaDriver);
         cleanupDirectory(mediaDriver);
     }
 }

@@ -40,6 +40,7 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
+import static uk.co.real_logic.aeron.CommonContext.IPC_CHANNEL;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -65,7 +66,8 @@ public class EngineAndLibraryIntegrationTest
         delete(ACCEPTOR_LOGS);
         mediaDriver = launchMediaDriver();
 
-        final EngineConfiguration config = acceptingConfig(unusedPort(), "engineCounters");
+        final EngineConfiguration config = acceptingConfig(
+            unusedPort(), "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
         config.replyTimeoutInMs(TIMEOUT_IN_MS);
         engine = FixEngine.launch(config);
     }
@@ -191,17 +193,6 @@ public class EngineAndLibraryIntegrationTest
         library2 = connectLibrary(2, false);
     }
 
-    private void assertLibrary2(final List<LibraryInfo> libraries)
-    {
-        assertLibrary(libraries.get(0), false, 3);
-    }
-
-    private void assertLibrary(final LibraryInfo library, final boolean expectedAcceptor, final int libraryId)
-    {
-        assertThat(library,
-            matchesLibrary(expectedAcceptor, libraryId));
-    }
-
     private Matcher<LibraryInfo> matchesLibrary(final boolean expectedAcceptor, final int libraryId)
     {
         return allOf(
@@ -237,16 +228,16 @@ public class EngineAndLibraryIntegrationTest
         final String monitoringFile = IoUtil.tmpDirName() + "fix-acceptor-" + libraryId + "-" +
                 TestFixtures.unusedPort() + File.separator + "accLibraryCounters";
 
-        final LibraryConfiguration config =
-            new LibraryConfiguration()
-                .isAcceptor(isAcceptor)
-                .authenticationStrategy(authenticationStrategy)
-                .messageValidationStrategy(validationStrategy)
-                .newSessionHandler(sessionHandler)
-                .aeronChannel("aeron:ipc")
-                .monitoringFile(monitoringFile)
-                .libraryId(libraryId)
-                .replyTimeoutInMs(TIMEOUT_IN_MS);
+        final LibraryConfiguration config = new LibraryConfiguration();
+        config
+            .isAcceptor(isAcceptor)
+            .newSessionHandler(sessionHandler)
+            .libraryId(libraryId)
+            .authenticationStrategy(authenticationStrategy)
+            .messageValidationStrategy(validationStrategy)
+            .aeronChannel(IPC_CHANNEL)
+            .monitoringFile(monitoringFile)
+            .replyTimeoutInMs(TIMEOUT_IN_MS);
 
         return FixLibrary.connect(config);
     }

@@ -20,6 +20,7 @@ import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 /**
  * Implement this interface in order to add customisable checks to logon messages.
  */
+@FunctionalInterface
 public interface AuthenticationStrategy
 {
     boolean authenticate(final LogonDecoder logon);

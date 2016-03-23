@@ -37,7 +37,7 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
 
         mediaDriver = launchMediaDriver();
         initiatingEngine = launchInitiatingGateway(initAeronPort);
-        acceptingEngine = launchAcceptingGateway(port);
+        acceptingEngine = launchAcceptingEngine(port, ACCEPTOR_ID, INITIATOR_ID);
 
         initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
         acceptingLibrary = newAcceptingLibrary(acceptingSessionHandler);

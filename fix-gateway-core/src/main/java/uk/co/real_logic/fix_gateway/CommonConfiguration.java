@@ -19,6 +19,12 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.library.session.NoSessionCustomisationStrategy;
+import uk.co.real_logic.fix_gateway.library.session.SessionCustomisationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.NoAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.library.validation.NoMessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
@@ -98,6 +104,9 @@ public class CommonConfiguration
     protected IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
 
     private SessionIdStrategy sessionIdStrategy = new SenderAndTargetSessionIdStrategy();
+    private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
+    private MessageValidationStrategy messageValidationStrategy = new NoMessageValidationStrategy();
+    private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
     private int monitoringBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROPERTY, DEFAULT_MONITORING_BUFFER_LENGTH);
     private String monitoringFile = null;
     private String aeronChannel = null;
@@ -121,6 +130,49 @@ public class CommonConfiguration
     public CommonConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
     {
         this.sessionIdStrategy = sessionIdStrategy;
+        return this;
+    }
+
+    /**
+     * Sets the authentication strategy of the FIX Library, see {@link AuthenticationStrategy} for details.
+     * <p>
+     * This only needs to be set if this FIX Library is the acceptor library.
+     *
+     * @param authenticationStrategy the authentication strategy to use.
+     * @return this
+     */
+    public CommonConfiguration authenticationStrategy(final AuthenticationStrategy authenticationStrategy)
+    {
+        this.authenticationStrategy = authenticationStrategy;
+        return this;
+    }
+
+    /**
+     * Sets the session customisation strategy of the FIX Library,
+     * see {@link SessionCustomisationStrategy} for details.
+     * <p>
+     * This only needs to be set if this FIX Library is the acceptor library.
+     *
+     * @param sessionCustomisationStrategy the session customisation strategy to use.
+     * @return this
+     */
+    public CommonConfiguration sessionCustomisationStrategy(
+        final SessionCustomisationStrategy sessionCustomisationStrategy)
+    {
+        this.sessionCustomisationStrategy = sessionCustomisationStrategy;
+        return this;
+    }
+
+    /**
+     * Sets the message validation strategy of the FIX Library,
+     * see {@link MessageValidationStrategy} for details.
+     *
+     * @param messageValidationStrategy the message validation strategy to use.
+     * @return this
+     */
+    public CommonConfiguration messageValidationStrategy(final MessageValidationStrategy messageValidationStrategy)
+    {
+        this.messageValidationStrategy = messageValidationStrategy;
         return this;
     }
 
@@ -265,6 +317,21 @@ public class CommonConfiguration
     public SessionIdStrategy sessionIdStrategy()
     {
         return sessionIdStrategy;
+    }
+
+    public AuthenticationStrategy authenticationStrategy()
+    {
+        return authenticationStrategy;
+    }
+
+    public SessionCustomisationStrategy sessionCustomisationStrategy()
+    {
+        return sessionCustomisationStrategy;
+    }
+
+    public MessageValidationStrategy messageValidationStrategy()
+    {
+        return messageValidationStrategy;
     }
 
     public int monitoringBuffersLength()

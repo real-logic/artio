@@ -41,7 +41,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         mediaDriver = launchMediaDriver();
 
-        acceptingEngine = launchAcceptingGatewayWithSameLogs(port);
+        acceptingEngine = launchAcceptingEngineWithSameLogs(port, ACCEPTOR_ID, INITIATOR_ID);
         initiatingEngine = launchInitiatingGatewayWithSameLogs(initAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig =

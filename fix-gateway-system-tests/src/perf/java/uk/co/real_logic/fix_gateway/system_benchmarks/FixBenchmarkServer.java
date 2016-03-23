@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.system_benchmarks;
 import uk.co.real_logic.aeron.driver.MediaDriver;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -70,7 +71,9 @@ public final class FixBenchmarkServer
             IoUtil.delete(dir, false);
         }
 
-        return new EngineConfiguration()
+        final EngineConfiguration configuration = new EngineConfiguration();
+        setupAuthentication(configuration);
+        return configuration
             .bindTo("localhost", Configuration.PORT)
             .aeronChannel(AERON_CHANNEL)
             .logFileDir(acceptorLogs)
@@ -81,16 +84,23 @@ public final class FixBenchmarkServer
 
     private static LibraryConfiguration libraryConfiguration()
     {
+        final LibraryConfiguration configuration = new LibraryConfiguration();
+        setupAuthentication(configuration);
+        return configuration
+            .aeronChannel(AERON_CHANNEL)
+            .newSessionHandler(session -> new BenchmarkSessionHandler())
+            .isAcceptor(true);
+    }
+
+    private static void setupAuthentication(final CommonConfiguration configuration)
+    {
         final MessageValidationStrategy validationStrategy =
             new TargetCompIdValidationStrategy(ACCEPTOR_ID)
                 .and(new SenderCompIdValidationStrategy(Arrays.asList(INITIATOR_ID)));
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
-        return new LibraryConfiguration()
-            .aeronChannel(AERON_CHANNEL)
-            .authenticationStrategy(authenticationStrategy)
-            .newSessionHandler(session -> new BenchmarkSessionHandler())
-            .isAcceptor(true);
+        configuration.authenticationStrategy(authenticationStrategy);
     }
+
 }
