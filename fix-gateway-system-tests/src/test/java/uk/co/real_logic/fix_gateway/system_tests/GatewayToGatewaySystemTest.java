@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -188,15 +189,29 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldBeAbleToReleaseInitiatedSessionToTheGateway()
     {
-        final long connectionId = initiatedSession.connectionId();
+        releaseSessionToGateway(initiatedSession, initiatingLibrary, initiatingEngine);
+    }
 
-        final SessionReplyStatus status = releaseInitiatedSession();
+    @Test
+    public void librariesShouldBeAbleToReleaseAcceptedSessionToTheGateway()
+    {
+        releaseSessionToGateway(acceptingSession, acceptingLibrary, acceptingEngine);
+    }
+
+    private void releaseSessionToGateway(
+        final Session session,
+        final FixLibrary library,
+        final FixEngine engine)
+    {
+        final long connectionId = session.connectionId();
+
+        final SessionReplyStatus status = library.releaseToGateway(session, ADMIN_IDLE_STRATEGY);
 
         assertEquals(SessionReplyStatus.OK, status);
-        assertEquals(SessionState.DISABLED, initiatedSession.state());
-        assertThat(initiatingLibrary.sessions(), hasSize(0));
+        assertEquals(SessionState.DISABLED, session.state());
+        assertThat(library.sessions(), hasSize(0));
 
-        final List<SessionInfo> sessions = initiatingEngine.gatewaySessions(ADMIN_IDLE_STRATEGY);
+        final List<SessionInfo> sessions = engine.gatewaySessions(ADMIN_IDLE_STRATEGY);
         assertThat(sessions,
             contains(hasConnectionId(connectionId)));
     }
@@ -207,7 +222,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final long connectionId = initiatedSession.connectionId();
         final long sessionId = initiatedSession.id();
 
-        releaseInitiatedSession();
+        initiatingLibrary.releaseToGateway(initiatedSession, ADMIN_IDLE_STRATEGY);
 
         final SessionReplyStatus status = initiatingLibrary.acquireSession(connectionId, ADMIN_IDLE_STRATEGY);
 
@@ -236,8 +251,4 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(SessionReplyStatus.UNKNOWN_SESSION, status);
     }
 
-    private SessionReplyStatus releaseInitiatedSession()
-    {
-        return initiatingLibrary.releaseToGateway(initiatedSession, ADMIN_IDLE_STRATEGY);
-    }
 }
