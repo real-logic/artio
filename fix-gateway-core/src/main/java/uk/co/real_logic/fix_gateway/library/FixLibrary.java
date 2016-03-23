@@ -558,7 +558,6 @@ public final class FixLibrary extends GatewayProcess
         {
             if (FixLibrary.this.correlationId == correlationId)
             {
-                // TODO: add information required to connect.
                 FixLibrary.this.replyStatus = status;
             }
         }
