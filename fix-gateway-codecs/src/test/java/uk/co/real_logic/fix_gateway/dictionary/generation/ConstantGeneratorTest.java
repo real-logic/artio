@@ -76,4 +76,12 @@ public class ConstantGeneratorTest
         assertThat(allFields, not(hasItem(999)));
     }
 
+    @Test
+    public void shouldGenerateBeginString() throws Exception
+    {
+        final Object version = getField(constants, ConstantGenerator.VERSION);
+
+        assertEquals("FIX.4.4", version);
+    }
+
 }

@@ -32,10 +32,13 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import java.util.stream.Stream;
+
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.VERSION_CHARS;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.*;
@@ -84,7 +87,6 @@ public class Session implements AutoCloseable
     public static final String TEST_REQ_ID = "TEST";
     public static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
     public static final int FIX_VERSION_OFFSET = 4;
-    public static final float FIRST_FIX_VERSION_WITH_USERNAME = 4.4f;
 
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
 
@@ -96,7 +98,6 @@ public class Session implements AutoCloseable
     protected final GatewayPublication publication;
     protected final MutableDirectBuffer buffer;
     protected final MutableAsciiBuffer string;
-    private final char[] expectedBeginString;
     private final long sendingTimeWindow;
     private final AtomicCounter receivedMsgSeqNo;
     private final AtomicCounter sentMsgSeqNo;
@@ -128,7 +129,6 @@ public class Session implements AutoCloseable
         final SessionProxy proxy,
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
-        final char[] expectedBeginString,
         final long sendingTimeWindow,
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo,
@@ -140,7 +140,6 @@ public class Session implements AutoCloseable
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
         Verify.notNull(publication, "publication");
-        Verify.notNull(expectedBeginString, "expected begin string");
         Verify.notNull(receivedMsgSeqNo, "received MsgSeqNo counter");
         Verify.notNull(sentMsgSeqNo, "sent MsgSeqNo counter");
 
@@ -149,7 +148,6 @@ public class Session implements AutoCloseable
         this.connectionId = connectionId;
         this.publication = publication;
         this.sessionIdStrategy = sessionIdStrategy;
-        this.expectedBeginString = expectedBeginString;
         this.sendingTimeWindow = sendingTimeWindow;
         this.receivedMsgSeqNo = receivedMsgSeqNo;
         this.sentMsgSeqNo = sentMsgSeqNo;
@@ -161,10 +159,15 @@ public class Session implements AutoCloseable
 
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);
+        versionHasUserNameAndPassword = detectUsernameAndPassword();
+    }
 
-        final float fixVersionNumber = Float.parseFloat(
-            new String(expectedBeginString, FIX_VERSION_OFFSET, expectedBeginString.length - FIX_VERSION_OFFSET));
-        versionHasUserNameAndPassword = fixVersionNumber >= FIRST_FIX_VERSION_WITH_USERNAME;
+    private boolean detectUsernameAndPassword()
+    {
+        return Stream.of(LogonDecoder.class.getMethods())
+                     .filter(method -> "usernameAsString".equals(method.getName()))
+                     .findAny()
+                     .isPresent();
     }
 
     // ---------- PUBLIC API ----------
@@ -682,7 +685,7 @@ public class Session implements AutoCloseable
 
     public boolean onBeginString(final char[] value, final int length, final boolean isLogon)
     {
-        final boolean isValid = CodecUtil.equals(value, expectedBeginString, length);
+        final boolean isValid = CodecUtil.equals(value, VERSION_CHARS, length);
         if (!isValid)
         {
             if (!isLogon)

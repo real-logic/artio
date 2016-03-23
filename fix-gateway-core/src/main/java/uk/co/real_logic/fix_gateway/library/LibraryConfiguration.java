@@ -33,7 +33,6 @@ public final class LibraryConfiguration extends CommonConfiguration
 {
     private static final boolean ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT = true;
 
-    public static final String DEFAULT_BEGIN_STRING = "FIX.4.4";
     public static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
     public static final long DEFAULT_SENDING_TIME_WINDOW = MINUTES.toMillis(2);
@@ -42,18 +41,12 @@ public final class LibraryConfiguration extends CommonConfiguration
     private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
     private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
     private NewSessionHandler newSessionHandler;
-    private char[] beginString;
     private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
 
     private int libraryId = DEFAULT_LIBRARY_ID;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
     private boolean isAcceptor = false;
     private boolean acceptorSequenceNumbersResetUponReconnect = ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT;
-
-    public LibraryConfiguration()
-    {
-        beginString(DEFAULT_BEGIN_STRING);
-    }
 
     /**
      * The default interval for heartbeats if not exchanged upon logon. Specified in seconds.
@@ -78,19 +71,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConfiguration newSessionHandler(final NewSessionHandler newSessionHandler)
     {
         this.newSessionHandler = newSessionHandler;
-        return this;
-    }
-
-    /**
-     * The begin string to use for messages in the FIX protocol. This is used for validating
-     * messages received by the gateway.
-     *
-     * @param beginString the beginString to use.
-     * @return this
-     */
-    public LibraryConfiguration beginString(final String beginString)
-    {
-        this.beginString = beginString.toCharArray();
         return this;
     }
 
@@ -196,11 +176,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public NewSessionHandler newSessionHandler()
     {
         return newSessionHandler;
-    }
-
-    public char[] beginString()
-    {
-        return beginString;
     }
 
     public long sendingTimeWindowInMs()

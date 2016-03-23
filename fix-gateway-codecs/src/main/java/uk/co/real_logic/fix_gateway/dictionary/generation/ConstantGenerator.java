@@ -35,6 +35,7 @@ public class ConstantGenerator
     private static final String BODY =
         "public class " + CLASS_NAME + "\n" + "{\n\n";
     public static final String ALL_FIELDS = "ALL_FIELDS";
+    public static final String VERSION = "VERSION";
 
     private final Dictionary dictionary;
     private final String builderPackage;
@@ -55,11 +56,21 @@ public class ConstantGenerator
             out.append(fileHeader(builderPackage));
             out.append(importFor(IntHashSet.class));
             out.append(BODY);
+            out.append(generateVersion());
             out.append(generateMessageTypes());
             out.append(generateFieldTags());
             out.append(generateFieldDictionary());
             out.append("}\n");
         });
+    }
+
+    private String generateVersion()
+    {
+        return String.format(
+            "public static String VERSION = \"FIX.%d.%d\";\n" +
+            "public static char[] VERSION_CHARS = VERSION.toCharArray();\n",
+            dictionary.majorVersion(),
+            dictionary.minorVersion());
     }
 
     private String generateFieldDictionary()

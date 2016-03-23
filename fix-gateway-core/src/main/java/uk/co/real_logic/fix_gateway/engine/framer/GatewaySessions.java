@@ -99,7 +99,6 @@ public class GatewaySessions
             proxy,
             publication,
             sessionIdStrategy,
-            "FIX.4.4".toCharArray(), // TODO
             gatewaySession.sendingTimeWindow(),
             receivedMsgSeqNo,
             sentMsgSeqNo,

@@ -26,7 +26,7 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 public class InitiatorSessionTest extends AbstractSessionTest
 {
     private InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy,
-        mockPublication, null, BEGIN_STRING, SENDING_TIME_WINDOW,
+        mockPublication, null, SENDING_TIME_WINDOW,
         mockReceivedMsgSeqNo, mockSentMsgSeqNo, null, null, LIBRARY_ID, DEFAULT_SESSION_BUFFER_SIZE, 1, CONNECTED);
 
     @Test

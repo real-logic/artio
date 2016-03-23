@@ -612,7 +612,6 @@ public final class FixLibrary extends GatewayProcess
             sessionProxy,
             publication,
             sessionIdStrategy,
-            configuration.beginString(),
             configuration.sendingTimeWindowInMs(),
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId),
@@ -655,7 +654,6 @@ public final class FixLibrary extends GatewayProcess
         final int start = address.startsWith("/") ? 1 : 0;
         final String host = address.substring(start, split);
         final int port = Integer.parseInt(address.substring(split + 1));
-        final char[] beginString = configuration.beginString();
         final long sendingTimeWindow = configuration.sendingTimeWindowInMs();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
@@ -668,7 +666,6 @@ public final class FixLibrary extends GatewayProcess
             sessionProxy(connectionId),
             publication,
             sessionIdStrategy,
-            beginString,
             sendingTimeWindow,
             receivedMsgSeqNo,
             sentMsgSeqNo,

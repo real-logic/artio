@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.library.session;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
@@ -28,13 +27,13 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
 public class AcceptorSessionTest extends AbstractSessionTest
 {
-    private AcceptorSession session = newAcceptorSession(BEGIN_STRING);
+    private AcceptorSession session = newAcceptorSession();
 
-    private AcceptorSession newAcceptorSession(final char[] beginString)
+    private AcceptorSession newAcceptorSession()
     {
         return new AcceptorSession(
             HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy, mockPublication, null,
-            beginString, SENDING_TIME_WINDOW, mockReceivedMsgSeqNo,
+            SENDING_TIME_WINDOW, mockReceivedMsgSeqNo,
             mockSentMsgSeqNo, LIBRARY_ID, DEFAULT_SESSION_BUFFER_SIZE, 1);
     }
 
@@ -119,25 +118,9 @@ public class AcceptorSessionTest extends AbstractSessionTest
     }
 
     @Test
-    public void shouldSupportUsernameAndPasswordForFix44()
+    public void shouldSupportUsernameAndPassword()
     {
         assertTrue(session.versionHasUserNameAndPassword());
-    }
-
-    @Test
-    public void shouldSupportUsernameAndPasswordForFix50()
-    {
-        final AcceptorSession session = newAcceptorSession("FIX.5.0".toCharArray());
-
-        assertTrue(session.versionHasUserNameAndPassword());
-    }
-
-    @Test
-    public void shouldNotSupportUsernameAndPasswordForFix42()
-    {
-        final AcceptorSession session = newAcceptorSession("FIX.4.2".toCharArray());
-
-        assertFalse(session.versionHasUserNameAndPassword());
     }
 
     protected void readyForLogon()
