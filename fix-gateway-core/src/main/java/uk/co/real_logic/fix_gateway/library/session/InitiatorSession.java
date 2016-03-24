@@ -37,8 +37,6 @@ public class InitiatorSession extends Session
         final long sendingTimeWindow,
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo,
-        final String username,
-        final String password,
         final int libraryId,
         final int sessionBufferSize,
         final int initialSequenceNumber,
@@ -58,9 +56,6 @@ public class InitiatorSession extends Session
             libraryId,
             sessionBufferSize,
             initialSequenceNumber);
-
-        username(username);
-        password(password);
     }
 
     void onLogon(

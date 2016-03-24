@@ -595,22 +595,12 @@ public final class FixLibrary extends GatewayProcess
         final SessionProxy sessionProxy = sessionProxy(connectionId);
         // First time we're initiated
         // TODO: should we even have this special casing?
-        final String username;
-        final String password;
-        // TODO: move this to the common configuration
         if (sessionConfiguration != null)
         {
             final CompositeKey key = sessionIdStrategy.onLogon(
                 sessionConfiguration.senderCompId(), sessionConfiguration.senderSubId(),
                 sessionConfiguration.senderLocationId(), sessionConfiguration.targetCompId());
             sessionProxy.setupSession(-1, key);
-            username = sessionConfiguration.username();
-            password = sessionConfiguration.password();
-        }
-        else
-        {
-            username = null;
-            password = null;
         }
 
         return new InitiatorSession(
@@ -623,8 +613,6 @@ public final class FixLibrary extends GatewayProcess
             configuration.sendingTimeWindowInMs(),
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId),
-            username,
-            password,
             libraryId,
             configuration.sessionBufferSize(),
             initiatorInitialSequenceNumber(lastSequenceNumber),

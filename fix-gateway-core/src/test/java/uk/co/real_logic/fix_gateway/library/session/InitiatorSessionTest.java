@@ -27,7 +27,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 {
     private InitiatorSession session = new InitiatorSession(HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy,
         mockPublication, null, SENDING_TIME_WINDOW,
-        mockReceivedMsgSeqNo, mockSentMsgSeqNo, null, null, LIBRARY_ID, DEFAULT_SESSION_BUFFER_SIZE, 1, CONNECTED);
+        mockReceivedMsgSeqNo, mockSentMsgSeqNo, LIBRARY_ID, DEFAULT_SESSION_BUFFER_SIZE, 1, CONNECTED);
 
     @Test
     public void shouldInitiallyBeConnected()
