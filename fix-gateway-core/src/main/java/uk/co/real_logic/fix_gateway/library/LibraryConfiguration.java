@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.library;
 
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
-import uk.co.real_logic.fix_gateway.session.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -47,6 +46,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
     private boolean isAcceptor = false;
     private boolean acceptorSequenceNumbersResetUponReconnect = ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT;
+    private NewConnectHandler newConnectHandler;
 
     /**
      * The default interval for heartbeats if not exchanged upon logon. Specified in seconds.
@@ -163,6 +163,12 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    public LibraryConfiguration newConnectHandler(final NewConnectHandler newConnectHandler)
+    {
+        this.newConnectHandler = newConnectHandler;
+        return this;
+    }
+
     public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
@@ -253,4 +259,8 @@ public final class LibraryConfiguration extends CommonConfiguration
         super.conclude("library-" + libraryId());
     }
 
+    NewConnectHandler newConnectHandler()
+    {
+        return newConnectHandler;
+    }
 }

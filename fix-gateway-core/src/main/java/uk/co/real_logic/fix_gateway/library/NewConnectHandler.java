@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.session;
+package uk.co.real_logic.fix_gateway.library;
 
 @FunctionalInterface
-public interface NewSessionHandler
+public interface NewConnectHandler
 {
-    SessionHandler onConnect(Session session);
+    void onConnect(final long connectionId, final String address);
 }

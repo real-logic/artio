@@ -24,7 +24,6 @@ import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.session.*;
-import uk.co.real_logic.fix_gateway.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolHandler;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
@@ -73,6 +72,7 @@ public final class FixLibrary extends GatewayProcess
     private final Timer sessionTimer = new Timer("Session", new SystemNanoClock());
     private final Timer receiveTimer = new Timer("Receive", new SystemNanoClock());
     private final LivenessDetector livenessDetector;
+    private final NewConnectHandler newConnectHandler;
     private final int libraryId;
     private final IdleStrategy idleStrategy;
     private final boolean isAcceptor;
@@ -106,6 +106,7 @@ public final class FixLibrary extends GatewayProcess
             outboundPublication,
             configuration.libraryId(),
             configuration.replyTimeoutInMs());
+        newConnectHandler = configuration.newConnectHandler();
     }
 
     private FixLibrary connect()
@@ -569,6 +570,14 @@ public final class FixLibrary extends GatewayProcess
             if (FixLibrary.this.correlationId == correlationId)
             {
                 FixLibrary.this.replyStatus = status;
+            }
+        }
+
+        public void onConnect(final long connectionId, final String address)
+        {
+            if (newConnectHandler != null)
+            {
+                newConnectHandler.onConnect(connectionId, address);
             }
         }
     }

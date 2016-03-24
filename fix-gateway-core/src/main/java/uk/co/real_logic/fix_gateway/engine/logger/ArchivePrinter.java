@@ -23,7 +23,7 @@ import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolHandler;
-import uk.co.real_logic.fix_gateway.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.library.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.SequenceNumberType;

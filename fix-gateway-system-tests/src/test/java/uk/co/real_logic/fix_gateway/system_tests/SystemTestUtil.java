@@ -27,7 +27,7 @@ import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.session.NewSessionHandler;
+import uk.co.real_logic.fix_gateway.library.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;

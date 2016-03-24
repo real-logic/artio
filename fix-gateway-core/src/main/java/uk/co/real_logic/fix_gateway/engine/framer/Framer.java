@@ -29,7 +29,7 @@ import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolHandler;
 import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.library.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;

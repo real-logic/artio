@@ -23,7 +23,7 @@ import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.library.SessionHandler;
 
 import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 import static uk.co.real_logic.server.SampleServer.*;
