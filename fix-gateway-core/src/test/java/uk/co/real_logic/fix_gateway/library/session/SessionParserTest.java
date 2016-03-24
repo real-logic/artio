@@ -20,9 +20,9 @@ import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.fields.RejectReason;
-import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.TargetCompIdValidationStrategy;
+import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.validation.TargetCompIdValidationStrategy;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 

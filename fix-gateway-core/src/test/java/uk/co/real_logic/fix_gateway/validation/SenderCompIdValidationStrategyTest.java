@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.library.validation;
+package uk.co.real_logic.fix_gateway.validation;
 
 import org.junit.Before;
 import org.junit.Test;

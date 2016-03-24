@@ -23,10 +23,10 @@ import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
-import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.SenderCompIdValidationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.TargetCompIdValidationStrategy;
+import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.validation.SenderCompIdValidationStrategy;
+import uk.co.real_logic.fix_gateway.validation.TargetCompIdValidationStrategy;
 
 import java.io.File;
 import java.util.Arrays;

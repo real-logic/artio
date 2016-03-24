@@ -21,10 +21,10 @@ import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.library.session.NoSessionCustomisationStrategy;
 import uk.co.real_logic.fix_gateway.library.session.SessionCustomisationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.NoAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.library.validation.NoMessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.validation.NoAuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.validation.NoMessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 

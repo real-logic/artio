@@ -13,39 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.library.validation;
+package uk.co.real_logic.fix_gateway.validation;
 
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
-import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
+import uk.co.real_logic.fix_gateway.dictionary.CharArraySet;
+
+import java.util.Collection;
 
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.COMPID_PROBLEM;
 
 /**
- * A message validation strategy that checks the target comp id of each message.
+ * A message validation strategy that checks the sender comp id of each message.
  */
-public final class TargetCompIdValidationStrategy implements MessageValidationStrategy
+public class SenderCompIdValidationStrategy implements MessageValidationStrategy
 {
-    private final char[] gatewayCompId;
+    private final CharArraySet validSenderIds;
 
-    public TargetCompIdValidationStrategy(final String gatewayCompId)
+    public SenderCompIdValidationStrategy(final Collection<String> validSenderIds)
     {
-        this(gatewayCompId.toCharArray());
-    }
-
-    public TargetCompIdValidationStrategy(final char[] gatewayCompId)
-    {
-        this.gatewayCompId = gatewayCompId;
+        this.validSenderIds = new CharArraySet(validSenderIds);
     }
 
     public boolean validate(final HeaderDecoder header)
     {
-        return CodecUtil.equals(gatewayCompId, header.targetCompID(), header.targetCompIDLength());
+        final char[] senderCompID = header.senderCompID();
+        final int senderCompIDLength = header.senderCompIDLength();
+
+        return validSenderIds.contains(senderCompID, senderCompIDLength);
     }
 
     public int invalidTagId()
     {
-        return Constants.TARGET_COMP_ID;
+        return Constants.SENDER_COMP_ID;
     }
 
     public int rejectReason()
