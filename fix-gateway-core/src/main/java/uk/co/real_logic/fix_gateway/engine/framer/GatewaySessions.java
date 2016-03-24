@@ -75,6 +75,11 @@ public class GatewaySessions
     void acquire(final GatewaySession gatewaySession, final SessionState state, final long heartbeatIntervalInMs)
     {
         final long connectionId = gatewaySession.connectionId();
+        final long sessionId = gatewaySession.sessionId();
+        final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
+        final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
+        final int sentSequenceNumber = 0; // TODO: lookup
+        final int heartbeatIntervalInS = (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs);
 
         final SessionProxy proxy = new SessionProxy(
             sessionBufferSize,
@@ -85,11 +90,6 @@ public class GatewaySessions
             connectionId,
             FixEngine.GATEWAY_LIBRARY_ID
         );
-
-        final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
-        final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
-        final int sentSequenceNumber = 0; // TODO: lookup
-        final int heartbeatIntervalInS = (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs);
 
         final Session session = new Session(
             heartbeatIntervalInS,
@@ -105,7 +105,7 @@ public class GatewaySessions
             FixEngine.GATEWAY_LIBRARY_ID,
             sessionBufferSize,
             sentSequenceNumber
-        ).id(gatewaySession.sessionId());
+        ).id(sessionId);
 
         final SessionParser sessionParser = new SessionParser(
             session,

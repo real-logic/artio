@@ -61,11 +61,6 @@ class GatewaySession implements SessionInfo
         return sessionId;
     }
 
-    int heartbeatIntervalInS()
-    {
-        return 0;
-    }
-
     long sendingTimeWindow()
     {
         return 0;
