@@ -271,7 +271,11 @@ public final class FixLibrary extends GatewayProcess
                     configuration.senderCompId(),
                     configuration.senderSubId(),
                     configuration.senderLocationId(),
-                    configuration.targetCompId());
+                    configuration.targetCompId(),
+                    configuration.sequenceNumberType(),
+                    configuration.initialSequenceNumber(),
+                    configuration.username(),
+                    configuration.password());
 
                 awaitReply(idleStrategy, () -> incomingSession == null && errorType == null);
 
@@ -459,7 +463,9 @@ public final class FixLibrary extends GatewayProcess
             final String senderCompId,
             final String senderSubId,
             final String senderLocationId,
-            final String targetCompId)
+            final String targetCompId,
+            final String username,
+            final String password)
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
@@ -470,12 +476,14 @@ public final class FixLibrary extends GatewayProcess
                     lastSentSequenceNumber = acceptorSequenceNumber(lastSentSequenceNumber);
                     lastReceivedSequenceNumber = acceptorSequenceNumber(lastReceivedSequenceNumber);
                     final CompositeKey compositeKey = senderCompId.length() == 0 ? null :
-                        sessionIdStrategy.onInitiatorLogon(senderCompId, senderSubId, senderLocationId, targetCompId);
+                        sessionIdStrategy.onLogon(senderCompId, senderSubId, senderLocationId, targetCompId);
                     subscriber.onLogon(
                         sessionId,
                         lastSentSequenceNumber,
                         lastReceivedSequenceNumber,
-                        compositeKey);
+                        compositeKey,
+                        username,
+                        password);
                 }
             }
         }
@@ -592,7 +600,7 @@ public final class FixLibrary extends GatewayProcess
         // TODO: move this to the common configuration
         if (sessionConfiguration != null)
         {
-            final CompositeKey key = sessionIdStrategy.onInitiatorLogon(
+            final CompositeKey key = sessionIdStrategy.onLogon(
                 sessionConfiguration.senderCompId(), sessionConfiguration.senderSubId(),
                 sessionConfiguration.senderLocationId(), sessionConfiguration.targetCompId());
             sessionProxy.setupSession(-1, key);

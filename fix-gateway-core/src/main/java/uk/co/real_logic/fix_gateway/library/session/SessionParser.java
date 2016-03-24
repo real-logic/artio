@@ -28,6 +28,8 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import java.util.stream.Stream;
+
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.fix_gateway.builder.Validation.isValidMsgType;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
@@ -38,6 +40,8 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 
 public class SessionParser
 {
+
+    private static final boolean HAS_USER_NAME_AND_PASSWORD = detectUsernameAndPassword();
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final UtcTimestampDecoder timestampDecoder = new UtcTimestampDecoder();
@@ -67,6 +71,24 @@ public class SessionParser
         this.sessionIdStrategy = sessionIdStrategy;
         this.authenticationStrategy = authenticationStrategy;
         this.validationStrategy = validationStrategy;
+    }
+
+    public static String username(final LogonDecoder logon)
+    {
+        return HAS_USER_NAME_AND_PASSWORD ? logon.usernameAsString() : null;
+    }
+
+    public static String password(final LogonDecoder logon)
+    {
+        return HAS_USER_NAME_AND_PASSWORD ? logon.passwordAsString() : null;
+    }
+
+    private static boolean detectUsernameAndPassword()
+    {
+        return Stream.of(LogonDecoder.class.getMethods())
+                     .filter(method -> "usernameAsString".equals(method.getName()))
+                     .findAny()
+                     .isPresent();
     }
 
     public boolean onMessage(
@@ -314,23 +336,10 @@ public class SessionParser
         {
             if (authenticationStrategy.authenticate(logon))
             {
-                final CompositeKey sessionKey = sessionIdStrategy.onAcceptorLogon(header);
-
+                final CompositeKey sessionKey = sessionIdStrategy.onLogon(header);
                 final long origSendingTime = origSendingTime(header);
-
-                final String username;
-                final String password;
-
-                if (session.versionHasUserNameAndPassword())
-                {
-                    username = logon.usernameAsString();
-                    password = logon.passwordAsString();
-                }
-                else
-                {
-                    username = null;
-                    password = null;
-                }
+                final String username = username(logon);
+                final String password = password(logon);
 
                 session.onLogon(
                     logon.heartBtInt(),

@@ -25,6 +25,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.MessageStatus;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
@@ -50,6 +51,7 @@ public class ReceiverEndPointTest
     private static final long SESSION_ID = 4L;
     private static final int LIBRARY_ID = 3;
 
+    private CompositeKey compositeKey = mock(CompositeKey.class);
     private SocketChannel mockChannel = mock(SocketChannel.class);
     private GatewayPublication mockPublication = mock(GatewayPublication.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
@@ -69,6 +71,7 @@ public class ReceiverEndPointTest
     public void setUp()
     {
         when(mockSessionIds.onLogon(any())).thenReturn(SESSION_ID);
+        when(mockSessionIdStrategy.onLogon(any())).thenReturn(compositeKey);
     }
 
     @Test

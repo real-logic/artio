@@ -47,7 +47,7 @@ public interface SessionIdStrategy
      * @param header the header of the logon message.
      * @return the composite session key.
      */
-    CompositeKey onAcceptorLogon(final HeaderDecoder header);
+    CompositeKey onLogon(final HeaderDecoder header);
 
     /**
      * Creates the composite session key when you initiate a logon.
@@ -58,7 +58,7 @@ public interface SessionIdStrategy
      * @param targetCompId the target company id, always present.
      * @return the composite session key.
      */
-    CompositeKey onInitiatorLogon(String senderCompId, String senderSubId, String senderLocationId, String targetCompId);
+    CompositeKey onLogon(String senderCompId, String senderSubId, String senderLocationId, String targetCompId);
 
     /**
      * Sets up an outbound message header with the composite session key.

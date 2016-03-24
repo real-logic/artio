@@ -39,11 +39,13 @@ import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LIBRARY_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
+import static uk.co.real_logic.fix_gateway.messages.SequenceNumberType.TRANSIENT;
 
 public class FramerTest
 {
@@ -205,7 +207,8 @@ public class FramerTest
     public void shouldNotConnectIfLibraryUnknown() throws Exception
     {
         framer.onInitiateConnection(
-            LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG", header);
+            LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG",
+            TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, "", "", header);
 
         framer.doWork();
 
@@ -289,7 +292,8 @@ public class FramerTest
         connectLibrary();
 
         framer.onInitiateConnection(
-            LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG", header);
+            LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG",
+            TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, "", "", header);
 
         framer.doWork();
     }
@@ -303,9 +307,13 @@ public class FramerTest
 
     private void notifyLibraryOfConnection()
     {
-        verify(mockGatewayPublication).saveConnect(anyLong(), anyString(), eq(LIBRARY_ID), eq(INITIATOR),
+        verify(mockGatewayPublication).saveConnect(eq(connectionId.getValue()), anyString(), eq(LIBRARY_ID), eq(INITIATOR),
             anyInt(), anyInt(), any());
-        verify(mockGatewayPublication).saveLogon(eq(LIBRARY_ID), anyLong(), anyLong());
+        verify(mockGatewayPublication).saveLogon(
+            eq(LIBRARY_ID), eq(connectionId.getValue()), anyLong(),
+            anyInt(), anyInt(),
+            any(), any(), any(), any(),
+            any(), any());
     }
 
     private void aClientSendsData() throws IOException

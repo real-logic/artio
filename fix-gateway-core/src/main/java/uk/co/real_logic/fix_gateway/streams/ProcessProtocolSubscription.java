@@ -212,6 +212,10 @@ public class ProcessProtocolSubscription implements FragmentHandler
             initiateConnection.senderSubId(),
             initiateConnection.senderLocationId(),
             initiateConnection.targetCompId(),
+            initiateConnection.sequenceNumberType(),
+            initiateConnection.requestedInitialSequenceNumber(),
+            initiateConnection.username(),
+            initiateConnection.password(),
             header
         );
         return initiateConnection.limit();
@@ -258,7 +262,9 @@ public class ProcessProtocolSubscription implements FragmentHandler
             logon.senderCompId(),
             logon.senderSubId(),
             logon.senderLocationId(),
-            logon.targetCompId());
+            logon.targetCompId(),
+            logon.username(),
+            logon.password());
         return logon.limit();
     }
 }

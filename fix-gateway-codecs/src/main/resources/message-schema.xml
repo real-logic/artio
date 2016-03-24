@@ -72,6 +72,10 @@
             <validValue name="DISABLED"
                         description="DISCONNECTED and unable to reconnect.">7</validValue>
         </enum>
+        <enum name="SequenceNumberType" encodingType="uint8">
+            <validValue name="TRANSIENT">0</validValue>
+            <validValue name="PERSISTENT">1</validValue>
+        </enum>
 
         <enum name="AcknowledgementStatus" encodingType="uint8">
             <validValue name="OK">0</validValue>
@@ -108,15 +112,17 @@
         <field name="reason" id="46" type="DisconnectReason"/>
     </sbe:message>
     <sbe:message name="Logon" id="9" description="A session has connected">
-        <field name="libraryId" id="43" type="LibraryId"/>
-        <field name="connection" id="10" type="ConnectionId"/>
-        <field name="session" id="11" type="FixSessionId"/>
-        <field name="lastSentSequenceNumber" id="77" type="int32"/>
-        <field name="lastReceivedSequenceNumber" id="78" type="int32"/>
-        <data name="senderCompId" id="100" type="varDataEncoding"/>
-        <data name="senderSubId" id="101" type="varDataEncoding"/>
-        <data name="senderLocationId" id="102" type="varDataEncoding"/>
-        <data name="targetCompId" id="103" type="varDataEncoding"/>
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="session" id="3" type="FixSessionId"/>
+        <field name="lastSentSequenceNumber" id="4" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
+        <data name="senderCompId" id="6" type="varDataEncoding"/>
+        <data name="senderSubId" id="7" type="varDataEncoding"/>
+        <data name="senderLocationId" id="8" type="varDataEncoding"/>
+        <data name="targetCompId" id="9" type="varDataEncoding"/>
+        <data name="username" id="10" type="varDataEncoding"/>
+        <data name="password" id="11" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="Connect" id="10" description="Here's a connection to manage">
         <field name="libraryId" id="19" type="LibraryId"/>
@@ -129,12 +135,16 @@
     </sbe:message>
     <sbe:message name="InitiateConnection" id="11" description="Try to make an outbound connection">
         <field name="libraryId" id="44" type="LibraryId"/>
+        <field name="requestedInitialSequenceNumber" id="107" type="int32"/>
+        <field name="sequenceNumberType" id="108" type="SequenceNumberType"/>
         <field name="port" id="20" type="int32"/>
         <data name="host" id="21" type="varDataEncoding"/>
         <data name="senderCompId" id="22" type="varDataEncoding"/>
         <data name="senderSubId" id="38" type="varDataEncoding"/>
         <data name="senderLocationId" id="39" type="varDataEncoding"/>
         <data name="targetCompId" id="23" type="varDataEncoding"/>
+        <data name="username" id="105" type="varDataEncoding"/>
+        <data name="password" id="106" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">
         <field name="libraryId" id="45" type="LibraryId"/>

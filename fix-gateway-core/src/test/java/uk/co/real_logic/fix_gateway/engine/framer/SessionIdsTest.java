@@ -45,9 +45,9 @@ public class SessionIdsTest
     private SessionIdStrategy idStrategy = new SenderAndTargetSessionIdStrategy();
     private SessionIds sessionIds = newSessionIds(buffer);
 
-    private CompositeKey aSession = idStrategy.onInitiatorLogon("a", null, null, "b");
-    private CompositeKey bSession = idStrategy.onInitiatorLogon("b", null, null, "a");
-    private CompositeKey cSession = idStrategy.onInitiatorLogon("c", null, null, "c");
+    private CompositeKey aSession = idStrategy.onLogon("a", null, null, "b");
+    private CompositeKey bSession = idStrategy.onLogon("b", null, null, "a");
+    private CompositeKey cSession = idStrategy.onLogon("c", null, null, "c");
 
     @Test
     public void sessionIdsAreUnique()
@@ -126,7 +126,7 @@ public class SessionIdsTest
 
         for (int i = 0; i < requiredNumberOfWritesToSpanSector; i++)
         {
-            compositeKey = idStrategy.onInitiatorLogon("b" + i, null, null, "a" + i);
+            compositeKey = idStrategy.onLogon("b" + i, null, null, "a" + i);
             surrogateKey = sessionIds.onLogon(compositeKey);
         }
 

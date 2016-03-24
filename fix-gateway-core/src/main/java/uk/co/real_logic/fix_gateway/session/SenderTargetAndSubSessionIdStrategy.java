@@ -42,7 +42,7 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
     private final int actingBlockLength = keyDecoder.sbeBlockLength();
     private final int actingVersion = keyDecoder.sbeSchemaVersion();
 
-    public CompositeKey onAcceptorLogon(final HeaderDecoder header)
+    public CompositeKey onLogon(final HeaderDecoder header)
     {
         return new CompositeKeyImpl(
             header.targetCompID(), header.targetCompIDLength(),
@@ -50,7 +50,7 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
             header.senderCompID(), header.senderCompIDLength());
     }
 
-    public CompositeKey onInitiatorLogon(
+    public CompositeKey onLogon(
         final String senderCompId, final String senderSubId, final String senderLocationId, final String targetCompId)
     {
         final char[] senderCompIdChars = senderCompId.toCharArray();

@@ -32,6 +32,8 @@ class GatewaySession implements SessionInfo
     private SessionParser sessionParser;
     private Session session;
     private CompositeKey compositeKey;
+    private String username;
+    private String password;
 
     GatewaySession(final long connectionId,
                    final long sessionId,
@@ -109,10 +111,25 @@ class GatewaySession implements SessionInfo
         }
     }
 
-    public void onLogon(final long sessionId,
-                        final CompositeKey compositeKey)
+    public void onLogon(
+        final long sessionId,
+        final CompositeKey compositeKey,
+        final String username,
+        final String password)
     {
         this.sessionId = sessionId;
         this.compositeKey = compositeKey;
+        this.username = username;
+        this.password = password;
+    }
+
+    public String username()
+    {
+        return username;
+    }
+
+    public String password()
+    {
+        return password;
     }
 }

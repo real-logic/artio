@@ -17,10 +17,7 @@ package uk.co.real_logic.fix_gateway.library.session;
 
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.messages.ConnectionType;
-import uk.co.real_logic.fix_gateway.messages.GatewayError;
-import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
-import uk.co.real_logic.fix_gateway.messages.SessionState;
+import uk.co.real_logic.fix_gateway.messages.*;
 
 public interface ProcessProtocolHandler
 {
@@ -38,15 +35,18 @@ public interface ProcessProtocolHandler
         // Optional method, implement if you care about this type of message.
     }
 
-    default void onLogon(final int libraryId,
-                         final long connectionId,
-                         final long sessionId,
-                         final int lastSentSequenceNumber,
-                         final int lastReceivedSequenceNumber,
-                         final String senderCompId,
-                         final String senderSubId,
-                         final String senderLocationId,
-                         final String targetCompId)
+    default void onLogon(
+        final int libraryId,
+        final long connectionId,
+        final long sessionId,
+        final int lastSentSequenceNumber,
+        final int lastReceivedSequenceNumber,
+        final String senderCompId,
+        final String senderSubId,
+        final String senderLocationId,
+        final String targetCompId,
+        final String username,
+        final String password)
     {
         // Optional method, implement if you care about this type of message.
     }
@@ -59,6 +59,10 @@ public interface ProcessProtocolHandler
         final String senderSubId,
         final String senderLocationId,
         final String targetCompId,
+        final SequenceNumberType sequenceNumberType,
+        final int requestedInitialSequenceNumber,
+        final String username,
+        final String password,
         final Header header)
     {
         // Optional method, implement if you care about this type of message.

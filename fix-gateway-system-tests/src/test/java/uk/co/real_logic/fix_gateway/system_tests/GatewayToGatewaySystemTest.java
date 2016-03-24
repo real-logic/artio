@@ -252,6 +252,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertTrue(newSession.isConnected());
         assertEquals(connectionId, newSession.connectionId());
         assertEquals(session.id(), newSession.id());
+        assertEquals(session.username(), newSession.username());
+        assertEquals(session.password(), newSession.password());
     }
 
     @Test

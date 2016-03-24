@@ -36,6 +36,7 @@ import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
  */
 public class GatewayPublication extends AbstractPublication
 {
+    private static final byte[] NO_BYTES = {};
 
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
     public static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
@@ -123,19 +124,10 @@ public class GatewayPublication extends AbstractPublication
                           final long connectionId,
                           final long sessionId)
     {
-        return saveLogon(libraryId, connectionId, sessionId, UNKNOWN_SESSION, UNKNOWN_SESSION);
-    }
-
-    public long saveLogon(final int libraryId,
-                          final long connectionId,
-                          final long sessionId,
-                          final int lastSentSequenceNumber,
-                          final int lastReceivedSequenceNumber)
-    {
         return saveLogon(
             libraryId, connectionId, sessionId,
-            lastSentSequenceNumber, lastReceivedSequenceNumber,
-            "", "", "", "");
+            UNKNOWN_SESSION, UNKNOWN_SESSION,
+            null, null, null, null, null, null);
     }
 
     public long saveLogon(final int libraryId,
@@ -146,21 +138,27 @@ public class GatewayPublication extends AbstractPublication
                           final String senderCompId,
                           final String senderSubId,
                           final String senderLocationId,
-                          final String targetCompId)
+                          final String targetCompId,
+                          final String username,
+                          final String password)
     {
-        final byte[] senderCompIdBytes = senderCompId.getBytes(UTF_8);
-        final byte[] senderSubIdBytes = senderSubId.getBytes(UTF_8);
-        final byte[] senderLocationIdBytes = senderLocationId.getBytes(UTF_8);
-        final byte[] targetCompIdBytes = targetCompId.getBytes(UTF_8);
+        final byte[] senderCompIdBytes = bytes(senderCompId);
+        final byte[] senderSubIdBytes = bytes(senderSubId);
+        final byte[] senderLocationIdBytes = bytes(senderLocationId);
+        final byte[] targetCompIdBytes = bytes(targetCompId);
+        final byte[] usernameBytes = bytes(username);
+        final byte[] passwordBytes = bytes(password);
 
         final long position = claim(
             header.encodedLength() +
             LogonEncoder.BLOCK_LENGTH +
-            LogonEncoder.senderSubIdHeaderLength() * 4 +
+            LogonEncoder.senderSubIdHeaderLength() * 6 +
             senderCompIdBytes.length +
             senderSubIdBytes.length +
             senderLocationIdBytes.length +
-            targetCompIdBytes.length);
+            targetCompIdBytes.length +
+            usernameBytes.length +
+            passwordBytes.length);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -180,12 +178,13 @@ public class GatewayPublication extends AbstractPublication
             .connection(connectionId)
             .session(sessionId)
             .lastSentSequenceNumber(lastSentSequenceNumber)
-            .lastReceivedSequenceNumber(lastReceivedSequenceNumber);
-
-        logon.putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length);
-        logon.putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length);
-        logon.putSenderLocationId(senderLocationIdBytes, 0, senderLocationIdBytes.length);
-        logon.putTargetCompId(targetCompIdBytes, 0, targetCompIdBytes.length);
+            .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
+            .putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length)
+            .putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length)
+            .putSenderLocationId(senderLocationIdBytes, 0, senderLocationIdBytes.length)
+            .putTargetCompId(targetCompIdBytes, 0, targetCompIdBytes.length)
+            .putUsername(usernameBytes, 0, usernameBytes.length)
+            .putPassword(passwordBytes, 0, passwordBytes.length);
 
         bufferClaim.commit();
 
@@ -200,7 +199,7 @@ public class GatewayPublication extends AbstractPublication
                             final int lastReceivedSequenceNumber,
                             final SessionState sessionState)
     {
-        final byte[] addressString = address.getBytes(UTF_8);
+        final byte[] addressString = bytes(address);
 
         final int length = header.encodedLength() + CONNECT_SIZE + addressString.length;
         final long position = claim(length);
@@ -292,23 +291,31 @@ public class GatewayPublication extends AbstractPublication
         final String senderCompId,
         final String senderSubId,
         final String senderLocationId,
-        final String targetCompId)
+        final String targetCompId,
+        final SequenceNumberType sequenceNumberType,
+        final int requestedInitialSequenceNumber,
+        final String username,
+        final String password)
     {
-        final byte[] hostBytes = host.getBytes(UTF_8);
-        final byte[] senderCompIdBytes = senderCompId.getBytes(UTF_8);
-        final byte[] senderSubIdBytes = senderSubId.getBytes(UTF_8);
-        final byte[] senderLocationIdBytes = senderLocationId.getBytes(UTF_8);
-        final byte[] targetCompIdBytes = targetCompId.getBytes(UTF_8);
+        final byte[] hostBytes = bytes(host);
+        final byte[] senderCompIdBytes = bytes(senderCompId);
+        final byte[] senderSubIdBytes = bytes(senderSubId);
+        final byte[] senderLocationIdBytes = bytes(senderLocationId);
+        final byte[] targetCompIdBytes = bytes(targetCompId);
+        final byte[] usernameBytes = bytes(username);
+        final byte[] passwordBytes = bytes(password);
 
         final long position = claim(
             header.encodedLength() +
             InitiateConnectionEncoder.BLOCK_LENGTH +
-            InitiateConnectionDecoder.hostHeaderLength() * 5 +
+            InitiateConnectionDecoder.hostHeaderLength() * 7 +
             hostBytes.length +
             senderCompIdBytes.length +
             senderSubIdBytes.length +
             senderLocationIdBytes.length +
-            targetCompIdBytes.length);
+            targetCompIdBytes.length +
+            usernameBytes.length +
+            passwordBytes.length);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -326,12 +333,15 @@ public class GatewayPublication extends AbstractPublication
             .wrap(buffer, offset)
             .libraryId(libraryId)
             .port(port)
-            .putHost(hostBytes, 0, hostBytes.length);
-
-        initiateConnection.putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length);
-        initiateConnection.putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length);
-        initiateConnection.putSenderLocationId(senderLocationIdBytes, 0, senderLocationIdBytes.length);
-        initiateConnection.putTargetCompId(targetCompIdBytes, 0, targetCompIdBytes.length);
+            .requestedInitialSequenceNumber(requestedInitialSequenceNumber)
+            .sequenceNumberType(sequenceNumberType)
+            .putHost(hostBytes, 0, hostBytes.length)
+            .putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length)
+            .putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length)
+            .putSenderLocationId(senderLocationIdBytes, 0, senderLocationIdBytes.length)
+            .putTargetCompId(targetCompIdBytes, 0, targetCompIdBytes.length)
+            .putUsername(usernameBytes, 0, usernameBytes.length)
+            .putPassword(passwordBytes, 0, passwordBytes.length);
 
         bufferClaim.commit();
 
@@ -340,7 +350,7 @@ public class GatewayPublication extends AbstractPublication
 
     public long saveError(final GatewayError errorType, final int libraryId, final String message)
     {
-        final byte[] messageBytes = message.getBytes(UTF_8);
+        final byte[] messageBytes = bytes(message);
         final int length = header.encodedLength() + ErrorEncoder.BLOCK_LENGTH + ErrorDecoder.messageHeaderLength() +
             messageBytes.length;
         final long position = claim(length);
@@ -542,4 +552,12 @@ public class GatewayPublication extends AbstractPublication
         return dataPublication.sessionId();
     }
 
+    private byte[] bytes(final String host)
+    {
+        if (host == null)
+        {
+            return NO_BYTES;
+        }
+        return host.getBytes(UTF_8);
+    }
 }

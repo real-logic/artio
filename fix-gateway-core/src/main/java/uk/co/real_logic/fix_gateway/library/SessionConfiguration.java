@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import uk.co.real_logic.fix_gateway.messages.SequenceNumberType;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -25,7 +27,7 @@ import java.util.Objects;
 public final class SessionConfiguration
 {
 
-    private static final int AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1;
+    public static final int AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1;
 
     private final List<String> hosts;
     private final List<Integer> ports;
@@ -128,6 +130,11 @@ public final class SessionConfiguration
     public boolean sequenceNumbersPersistent()
     {
         return sequenceNumbersPersistent;
+    }
+
+    public SequenceNumberType sequenceNumberType()
+    {
+        return sequenceNumbersPersistent ? SequenceNumberType.PERSISTENT : SequenceNumberType.TRANSIENT;
     }
 
     public int initialSequenceNumber()

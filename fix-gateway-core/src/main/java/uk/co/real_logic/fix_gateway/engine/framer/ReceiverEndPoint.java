@@ -20,6 +20,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.fix_gateway.library.session.SessionParser;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
@@ -299,7 +300,7 @@ class ReceiverEndPoint
         if (sessionId == UNKNOWN)
         {
             logon.decode(buffer, offset, length);
-            final CompositeKey compositeKey = sessionIdStrategy.onAcceptorLogon(logon.header());
+            final CompositeKey compositeKey = sessionIdStrategy.onLogon(logon.header());
             sessionId = sessionIds.onLogon(compositeKey);
             if (sessionId == DUPLICATE_SESSION)
             {
@@ -311,8 +312,22 @@ class ReceiverEndPoint
             {
                 final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                 final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-                gatewaySession.onLogon(sessionId, compositeKey);
-                publication.saveLogon(libraryId, connectionId, sessionId, sentSequenceNumber, receivedSequenceNumber);
+                final String username = SessionParser.username(logon);
+                final String password = SessionParser.password(logon);
+                gatewaySession.onLogon(sessionId, compositeKey, username, password);
+
+                publication.saveLogon(
+                    libraryId,
+                    connectionId,
+                    sessionId,
+                    sentSequenceNumber,
+                    receivedSequenceNumber,
+                    compositeKey.senderCompId(),
+                    compositeKey.senderSubId(),
+                    compositeKey.senderLocationId(),
+                    compositeKey.targetCompId(),
+                    username,
+                    password);
             }
         }
     }

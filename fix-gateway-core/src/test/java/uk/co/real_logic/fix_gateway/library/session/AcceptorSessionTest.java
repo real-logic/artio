@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.library.session;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.SENDINGTIME_ACCURACY_PROBLEM;
@@ -115,12 +114,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
     public void shouldDisconnectIfMissingSequenceNumber()
     {
         shouldDisconnectIfMissingSequenceNumber(2);
-    }
-
-    @Test
-    public void shouldSupportUsernameAndPassword()
-    {
-        assertTrue(session.versionHasUserNameAndPassword());
     }
 
     protected void readyForLogon()

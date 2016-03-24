@@ -32,8 +32,6 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-import java.util.stream.Stream;
-
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_ENABLED;
@@ -102,7 +100,6 @@ public class Session implements AutoCloseable
     private final AtomicCounter receivedMsgSeqNo;
     private final AtomicCounter sentMsgSeqNo;
     protected final int libraryId;
-    private final boolean versionHasUserNameAndPassword;
 
     protected CompositeKey sessionKey;
 
@@ -159,15 +156,6 @@ public class Session implements AutoCloseable
 
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);
-        versionHasUserNameAndPassword = detectUsernameAndPassword();
-    }
-
-    private boolean detectUsernameAndPassword()
-    {
-        return Stream.of(LogonDecoder.class.getMethods())
-                     .filter(method -> "usernameAsString".equals(method.getName()))
-                     .findAny()
-                     .isPresent();
     }
 
     // ---------- PUBLIC API ----------
@@ -852,11 +840,6 @@ public class Session implements AutoCloseable
             ", sessionId=" + id +
             ", state=" + state +
             '}';
-    }
-
-    boolean versionHasUserNameAndPassword()
-    {
-        return versionHasUserNameAndPassword;
     }
 
     public void disable()
