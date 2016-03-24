@@ -671,6 +671,7 @@ public final class FixLibrary extends GatewayProcess
             sentMsgSeqNo,
             libraryId,
             sessionBufferSize,
+            // If a persisted sequence number is needed then it will be set with the logon message.
             1)
             .address(host, port);
     }
