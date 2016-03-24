@@ -111,7 +111,20 @@
         <field name="connection" id="8" type="ConnectionId"/>
         <field name="reason" id="46" type="DisconnectReason"/>
     </sbe:message>
-    <sbe:message name="Logon" id="9" description="A session has connected">
+    <sbe:message name="Connect" id="33" description="We have accepted an inbound TCP Connection">
+        <field name="connection" id="17" type="ConnectionId"/>
+        <data name="address" id="18" type="varDataEncoding"/>
+    </sbe:message>
+    <sbe:message name="ManageConnection" id="10" description="Here's a connection to manage">
+        <field name="libraryId" id="19" type="LibraryId"/>
+        <field name="connection" id="17" type="ConnectionId"/>
+        <field name="type" id="24" type="ConnectionType"/>
+        <field name="lastSentSequenceNumber" id="79" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="80" type="int32"/>
+        <field name="sessionState" id="101" type="SessionState"/>
+        <data name="address" id="18" type="varDataEncoding"/>
+    </sbe:message>
+    <sbe:message name="Logon" id="9" description="A logon has occurred">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connection" id="2" type="ConnectionId"/>
         <field name="session" id="3" type="FixSessionId"/>
@@ -123,15 +136,6 @@
         <data name="targetCompId" id="9" type="varDataEncoding"/>
         <data name="username" id="10" type="varDataEncoding"/>
         <data name="password" id="11" type="varDataEncoding"/>
-    </sbe:message>
-    <sbe:message name="Connect" id="10" description="Here's a connection to manage">
-        <field name="libraryId" id="19" type="LibraryId"/>
-        <field name="connection" id="17" type="ConnectionId"/>
-        <field name="type" id="24" type="ConnectionType"/>
-        <field name="lastSentSequenceNumber" id="79" type="int32"/>
-        <field name="lastReceivedSequenceNumber" id="80" type="int32"/>
-        <field name="sessionState" id="101" type="SessionState"/>
-        <data name="address" id="18" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="InitiateConnection" id="11" description="Try to make an outbound connection">
         <field name="libraryId" id="44" type="LibraryId"/>

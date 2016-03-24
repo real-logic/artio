@@ -19,7 +19,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
-import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
 

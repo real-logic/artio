@@ -20,7 +20,7 @@ import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
-import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MINUTES;

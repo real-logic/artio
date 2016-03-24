@@ -27,7 +27,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -307,8 +307,14 @@ public class FramerTest
 
     private void notifyLibraryOfConnection()
     {
-        verify(mockGatewayPublication).saveConnect(eq(connectionId.getValue()), anyString(), eq(LIBRARY_ID), eq(INITIATOR),
-            anyInt(), anyInt(), any());
+        verify(mockGatewayPublication).saveManageConnection(
+            eq(connectionId.getValue()),
+            anyString(),
+            eq(LIBRARY_ID),
+            eq(INITIATOR),
+            anyInt(),
+            anyInt(),
+            any());
         verify(mockGatewayPublication).saveLogon(
             eq(LIBRARY_ID), eq(connectionId.getValue()), anyLong(),
             anyInt(), anyInt(),

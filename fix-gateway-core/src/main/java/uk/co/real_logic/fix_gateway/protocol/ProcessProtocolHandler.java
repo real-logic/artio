@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.streams;
+package uk.co.real_logic.fix_gateway.protocol;
 
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
@@ -21,7 +21,7 @@ import uk.co.real_logic.fix_gateway.messages.*;
 
 public interface ProcessProtocolHandler
 {
-    default void onConnect(
+    default void onManageConnection(
         final int libraryId,
         final long connectionId,
         final ConnectionType type,

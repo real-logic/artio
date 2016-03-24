@@ -22,15 +22,15 @@ import uk.co.real_logic.aeron.logbuffer.TermReader;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.streams.ProcessProtocolHandler;
+import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolHandler;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.SequenceNumberType;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
-import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscription;
-import uk.co.real_logic.fix_gateway.streams.SessionSubscription;
+import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolSubscription;
+import uk.co.real_logic.fix_gateway.protocol.SessionSubscription;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -146,7 +146,7 @@ public class ArchivePrinter implements ProcessProtocolHandler, SessionHandler
             lastSentSequenceNumber, lastReceivedSequenceNumber);
     }
 
-    public void onConnect(
+    public void onManageConnection(
         final int libraryId,
         final long connectionId,
         final ConnectionType type,

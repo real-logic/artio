@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.streams;
+package uk.co.real_logic.fix_gateway.protocol;
 
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.agrona.DirectBuffer;
@@ -39,7 +39,7 @@ public class GatewayPublication extends AbstractPublication
     private static final byte[] NO_BYTES = {};
 
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
-    public static final int CONNECT_SIZE = ConnectEncoder.BLOCK_LENGTH + ConnectDecoder.addressHeaderLength();
+    public static final int CONNECT_SIZE = ManageConnectionEncoder.BLOCK_LENGTH + ManageConnectionDecoder.addressHeaderLength();
     public static final int HEARTBEAT_LENGTH = HEADER_LENGTH + ApplicationHeartbeatEncoder.BLOCK_LENGTH;
     public static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH;
     public static final int DISCONNECT_LENGTH = HEADER_LENGTH + DisconnectEncoder.BLOCK_LENGTH;
@@ -49,7 +49,7 @@ public class GatewayPublication extends AbstractPublication
     public static final int REQUEST_SESSION_REPLY_LENGTH = HEADER_LENGTH + RequestSessionReplyEncoder.BLOCK_LENGTH;
 
     private final LogonEncoder logon = new LogonEncoder();
-    private final ConnectEncoder connect = new ConnectEncoder();
+    private final ManageConnectionEncoder connect = new ManageConnectionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
     private final RequestDisconnectEncoder requestDisconnect = new RequestDisconnectEncoder();
     private final DisconnectEncoder disconnect = new DisconnectEncoder();
@@ -191,13 +191,13 @@ public class GatewayPublication extends AbstractPublication
         return position;
     }
 
-    public long saveConnect(final long connectionId,
-                            final String address,
-                            final int libraryId,
-                            final ConnectionType type,
-                            final int lastSentSequenceNumber,
-                            final int lastReceivedSequenceNumber,
-                            final SessionState sessionState)
+    public long saveManageConnection(final long connectionId,
+                                     final String address,
+                                     final int libraryId,
+                                     final ConnectionType type,
+                                     final int lastSentSequenceNumber,
+                                     final int lastReceivedSequenceNumber,
+                                     final SessionState sessionState)
     {
         final byte[] addressString = bytes(address);
 

@@ -32,7 +32,7 @@ import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
-import uk.co.real_logic.fix_gateway.streams.SessionSubscription;
+import uk.co.real_logic.fix_gateway.protocol.SessionSubscription;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 

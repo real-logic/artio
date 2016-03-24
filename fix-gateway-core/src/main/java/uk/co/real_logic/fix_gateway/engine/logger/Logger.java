@@ -24,7 +24,7 @@ import uk.co.real_logic.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
-import uk.co.real_logic.fix_gateway.streams.Streams;
+import uk.co.real_logic.fix_gateway.protocol.Streams;
 
 import java.util.ArrayList;
 import java.util.Arrays;

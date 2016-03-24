@@ -19,7 +19,7 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.ErrorHandler;
 import uk.co.real_logic.agrona.concurrent.*;
 import uk.co.real_logic.agrona.concurrent.errors.DistinctErrorLog;
-import uk.co.real_logic.fix_gateway.streams.Streams;
+import uk.co.real_logic.fix_gateway.protocol.Streams;
 
 import java.nio.channels.ClosedByInterruptException;
 

@@ -18,4 +18,4 @@
  * This module deals with replicating bytes of data over the wire to other machines in a consistent and partition
  * tolerant fashion.
  */
-package uk.co.real_logic.fix_gateway.streams;
+package uk.co.real_logic.fix_gateway.protocol;

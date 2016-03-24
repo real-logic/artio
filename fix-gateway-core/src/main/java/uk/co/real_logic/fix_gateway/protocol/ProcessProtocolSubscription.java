@@ -13,21 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.streams;
+package uk.co.real_logic.fix_gateway.protocol;
 
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
-import static uk.co.real_logic.fix_gateway.messages.ConnectDecoder.addressHeaderLength;
-import static uk.co.real_logic.fix_gateway.streams.Streams.UNKNOWN_TEMPLATE;
+import static uk.co.real_logic.fix_gateway.messages.ManageConnectionDecoder.addressHeaderLength;
+import static uk.co.real_logic.fix_gateway.protocol.Streams.UNKNOWN_TEMPLATE;
 
 public class ProcessProtocolSubscription implements FragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final LogonDecoder logon = new LogonDecoder();
-    private final ConnectDecoder connect = new ConnectDecoder();
+    private final ManageConnectionDecoder connect = new ManageConnectionDecoder();
     private final InitiateConnectionDecoder initiateConnection = new InitiateConnectionDecoder();
     private final RequestDisconnectDecoder requestDisconnect = new RequestDisconnectDecoder();
     private final ErrorDecoder error = new ErrorDecoder();
@@ -65,9 +65,9 @@ public class ProcessProtocolSubscription implements FragmentHandler
                 return onLogon(buffer, offset, blockLength, version);
             }
 
-            case ConnectDecoder.TEMPLATE_ID:
+            case ManageConnectionDecoder.TEMPLATE_ID:
             {
-                return onConnect(buffer, offset, blockLength, version);
+                return onManageConnection(buffer, offset, blockLength, version);
             }
 
             case RequestDisconnectDecoder.TEMPLATE_ID:
@@ -230,12 +230,12 @@ public class ProcessProtocolSubscription implements FragmentHandler
         return requestDisconnect.limit();
     }
 
-    private int onConnect(
+    private int onManageConnection(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         connect.wrap(buffer, offset, blockLength, version);
-        final int addressOffset = offset + ConnectDecoder.BLOCK_LENGTH + addressHeaderLength();
-        processProtocolHandler.onConnect(
+        final int addressOffset = offset + ManageConnectionDecoder.BLOCK_LENGTH + addressHeaderLength();
+        processProtocolHandler.onManageConnection(
             connect.libraryId(),
             connect.connection(),
             connect.type(),

@@ -20,7 +20,7 @@ import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.Agent;
-import uk.co.real_logic.fix_gateway.streams.Streams;
+import uk.co.real_logic.fix_gateway.protocol.Streams;
 
 public class ReplicationAgent implements Agent
 {

@@ -28,7 +28,7 @@ import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 import java.util.ArrayList;
 import java.util.List;

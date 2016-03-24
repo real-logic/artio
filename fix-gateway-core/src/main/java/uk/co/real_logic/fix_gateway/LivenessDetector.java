@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 import static uk.co.real_logic.fix_gateway.LivenessDetector.LivenessState.*;
 

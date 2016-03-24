@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.streams;
+package uk.co.real_logic.fix_gateway.protocol;
 
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;

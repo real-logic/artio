@@ -25,15 +25,15 @@ import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.session.SessionHandler;
-import uk.co.real_logic.fix_gateway.streams.ProcessProtocolHandler;
+import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolHandler;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
-import uk.co.real_logic.fix_gateway.streams.ProcessProtocolSubscription;
-import uk.co.real_logic.fix_gateway.streams.SessionSubscription;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolSubscription;
+import uk.co.real_logic.fix_gateway.protocol.SessionSubscription;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -424,7 +424,7 @@ public final class FixLibrary extends GatewayProcess
     {
         private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
-        public void onConnect(
+        public void onManageConnection(
             final int libraryId,
             final long connectionId,
             final ConnectionType type,

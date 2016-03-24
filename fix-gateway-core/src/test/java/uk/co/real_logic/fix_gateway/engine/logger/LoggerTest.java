@@ -37,7 +37,7 @@ import uk.co.real_logic.agrona.concurrent.NanoClock;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
-import uk.co.real_logic.fix_gateway.streams.Streams;
+import uk.co.real_logic.fix_gateway.protocol.Streams;
 
 import java.io.File;
 import java.nio.ByteBuffer;
