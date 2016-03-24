@@ -13,21 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.library.session;
+package uk.co.real_logic.fix_gateway.session;
 
-import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
-import uk.co.real_logic.fix_gateway.builder.LogoutEncoder;
-
-/**
- * A {@link SessionCustomisationStrategy} that does no customisation.
- */
-public class NoSessionCustomisationStrategy implements SessionCustomisationStrategy
+@FunctionalInterface
+public interface NewSessionHandler
 {
-    public void configureLogon(final LogonEncoder logon, final long sessionId)
-    {
-    }
-
-    public void configureLogout(final LogoutEncoder logout, final long sessionId)
-    {
-    }
+    SessionHandler onConnect(Session session);
 }

@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
-import uk.co.real_logic.fix_gateway.library.session.Session;
+import uk.co.real_logic.fix_gateway.session.Session;
 
 /**
  * Convenient dumb fix message wrapper for testing purposes.

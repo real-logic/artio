@@ -16,8 +16,8 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
-import uk.co.real_logic.fix_gateway.library.session.Session;
-import uk.co.real_logic.fix_gateway.library.session.SessionParser;
+import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;

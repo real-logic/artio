@@ -21,7 +21,7 @@ import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
-import uk.co.real_logic.fix_gateway.library.session.Session;
+import uk.co.real_logic.fix_gateway.session.Session;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;

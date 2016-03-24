@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.library.session;
+package uk.co.real_logic.fix_gateway.session;
 
 import uk.co.real_logic.agrona.MutableDirectBuffer;
 import uk.co.real_logic.agrona.Verify;
@@ -27,8 +27,6 @@ import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
-import uk.co.real_logic.fix_gateway.session.CompositeKey;
-import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -428,7 +426,7 @@ public class Session implements AutoCloseable
 
     // ---------- Event Handlers & Logic ----------
 
-    protected void onDisconnect()
+    public void onDisconnect()
     {
         state(DISCONNECTED);
     }
@@ -754,7 +752,7 @@ public class Session implements AutoCloseable
         return lastSentMsgSeqNum(this.lastSentMsgSeqNum + 1);
     }
 
-    protected int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
+    public int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
     {
         this.lastSentMsgSeqNum = lastSentMsgSeqNum;
         sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
@@ -775,17 +773,17 @@ public class Session implements AutoCloseable
         return this;
     }
 
-    void sessionKey(final CompositeKey sessionKey)
+    public void sessionKey(final CompositeKey sessionKey)
     {
         this.sessionKey = sessionKey;
     }
 
-    protected void username(final String username)
+    public void username(final String username)
     {
         this.username = username;
     }
 
-    protected void password(final String password)
+    public void password(final String password)
     {
         this.password = password;
     }

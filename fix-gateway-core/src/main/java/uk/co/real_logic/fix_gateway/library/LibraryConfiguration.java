@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.library;
 
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
-import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
+import uk.co.real_logic.fix_gateway.session.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import static java.util.concurrent.TimeUnit.MINUTES;

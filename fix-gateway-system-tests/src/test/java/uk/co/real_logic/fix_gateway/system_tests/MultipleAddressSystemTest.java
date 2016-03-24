@@ -19,7 +19,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.library.session.Session;
+import uk.co.real_logic.fix_gateway.session.Session;
 
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;

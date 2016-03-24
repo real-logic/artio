@@ -19,8 +19,8 @@ import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.fix_gateway.library.session.NoSessionCustomisationStrategy;
-import uk.co.real_logic.fix_gateway.library.session.SessionCustomisationStrategy;
+import uk.co.real_logic.fix_gateway.session.NoSessionCustomisationStrategy;
+import uk.co.real_logic.fix_gateway.session.SessionCustomisationStrategy;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.validation.NoAuthenticationStrategy;
@@ -314,7 +314,7 @@ public class CommonConfiguration
 
     /**
      * Sets the session's encoding buffer size. The session buffer is a buffer used by each Session to encode
-     * messages via {@link uk.co.real_logic.fix_gateway.library.session.Session#send(uk.co.real_logic.fix_gateway.builder.MessageEncoder)}.
+     * messages via {@link uk.co.real_logic.fix_gateway.session.Session#send(uk.co.real_logic.fix_gateway.builder.MessageEncoder)}.
      *
      * @param bufferSize the session's encoding buffer size
      * @return this

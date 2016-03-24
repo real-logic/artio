@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.library.session;
+package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.Test;
 
@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.SENDINGTIME_ACCURACY_PROBLEM;
-import static uk.co.real_logic.fix_gateway.library.session.Session.UNKNOWN;
+import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
 public class AcceptorSessionTest extends AbstractSessionTest

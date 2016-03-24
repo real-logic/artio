@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.streams;
 import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.library.session.ProcessProtocolHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import static uk.co.real_logic.fix_gateway.messages.ConnectDecoder.addressHeaderLength;

@@ -13,21 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.library.session;
+package uk.co.real_logic.fix_gateway.session;
 
 import uk.co.real_logic.agrona.concurrent.AtomicCounter;
 import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
-import uk.co.real_logic.fix_gateway.session.CompositeKey;
-import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.streams.GatewayPublication;
 
-public final class AcceptorSession extends Session
-{
+import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
 
-    public AcceptorSession(
-        final int defaultInterval,
+public class InitiatorSession extends Session
+{
+    public InitiatorSession(
+        final int heartbeatInterval,
         final long connectionId,
         final EpochClock clock,
         final SessionProxy proxy,
@@ -38,13 +37,14 @@ public final class AcceptorSession extends Session
         final AtomicCounter sentMsgSeqNo,
         final int libraryId,
         final int sessionBufferSize,
-        final int initialSequenceNumber)
+        final int initialSequenceNumber,
+        final SessionState state)
     {
         super(
-            defaultInterval,
+            heartbeatInterval,
             connectionId,
             clock,
-            SessionState.CONNECTED,
+            state,
             proxy,
             publication,
             sessionIdStrategy,
@@ -56,8 +56,7 @@ public final class AcceptorSession extends Session
             initialSequenceNumber);
     }
 
-    @Override
-    public void onLogon(
+    void onLogon(
         final int heartbeatInterval,
         final int msgSeqNo,
         final long sessionId,
@@ -68,39 +67,35 @@ public final class AcceptorSession extends Session
         final String password,
         final boolean isPossDupOrResend)
     {
-        id(sessionId);
-        this.sessionKey = sessionKey;
-        proxy.setupSession(sessionId, sessionKey);
-
-        if (state() == SessionState.CONNECTED)
+        if (msgSeqNo == expectedReceivedSeqNum() && state() == SessionState.SENT_LOGON)
         {
-            if (!validateHeartbeat(heartbeatInterval) || !validateSendingTime(sendingTime))
+            state(SessionState.ACTIVE);
+            this.sessionKey = sessionKey;
+            proxy.setupSession(sessionId, sessionKey);
+            if (CODEC_VALIDATION_DISABLED || (validateHeartbeat(heartbeatInterval) && validateSendingTime(sendingTime)))
             {
-                return;
-            }
-
-            final int expectedSeqNo = expectedReceivedSeqNum();
-            if (expectedSeqNo == msgSeqNo)
-            {
+                id(sessionId);
                 heartbeatIntervalInS(heartbeatInterval);
-                state(SessionState.ACTIVE);
-                username(username);
-                password(password);
-                replyToLogon(heartbeatInterval);
+                onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+                publication.saveLogon(libraryId, connectionId, sessionId);
             }
-            else if (expectedSeqNo < msgSeqNo)
-            {
-                state(SessionState.AWAITING_RESEND);
-                replyToLogon(heartbeatInterval);
-            }
-            publication.saveLogon(libraryId, connectionId, sessionId);
         }
-        onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+        else
+        {
+            onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+        }
     }
 
-    private void replyToLogon(int heartbeatInterval)
+    public int poll(final long time)
     {
-        proxy.logon(heartbeatInterval, newSentSeqNum(), null, null);
+        int actions = 0;
+        if (state() == SessionState.CONNECTED && id() != UNKNOWN)
+        {
+            state(SessionState.SENT_LOGON);
+            proxy.logon((int) (heartbeatIntervalInMs() / 1000), newSentSeqNum(), username(), password());
+            actions++;
+        }
+        return actions + super.poll(time);
     }
 
 }

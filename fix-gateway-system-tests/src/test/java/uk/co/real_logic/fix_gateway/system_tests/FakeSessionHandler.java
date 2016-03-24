@@ -18,9 +18,9 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
-import uk.co.real_logic.fix_gateway.library.session.NewSessionHandler;
-import uk.co.real_logic.fix_gateway.library.session.Session;
-import uk.co.real_logic.fix_gateway.library.session.SessionHandler;
+import uk.co.real_logic.fix_gateway.session.NewSessionHandler;
+import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.session.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
 
