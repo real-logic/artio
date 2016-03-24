@@ -47,13 +47,15 @@ public class GatewayPublication extends AbstractPublication
     public static final int RELEASE_SESSION_REPLY_LENGTH = HEADER_LENGTH + ReleaseSessionReplyDecoder.BLOCK_LENGTH;
     public static final int REQUEST_SESSION_LENGTH = HEADER_LENGTH + RequestSessionEncoder.BLOCK_LENGTH;
     public static final int REQUEST_SESSION_REPLY_LENGTH = HEADER_LENGTH + RequestSessionReplyEncoder.BLOCK_LENGTH;
+    public static final int CONNECT_FIXED_LENGTH = HEADER_LENGTH + ConnectEncoder.BLOCK_LENGTH +
+        ConnectEncoder.addressHeaderLength();
 
     private final LogonEncoder logon = new LogonEncoder();
-    private final ManageConnectionEncoder connect = new ManageConnectionEncoder();
+    private final ManageConnectionEncoder manageConnection = new ManageConnectionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
     private final RequestDisconnectEncoder requestDisconnect = new RequestDisconnectEncoder();
     private final DisconnectEncoder disconnect = new DisconnectEncoder();
-    private final FixMessageEncoder messageFrame = new FixMessageEncoder();
+    private final FixMessageEncoder fixMessage = new FixMessageEncoder();
     private final ErrorEncoder error = new ErrorEncoder();
     private final ApplicationHeartbeatEncoder applicationHeartbeat = new ApplicationHeartbeatEncoder();
     private final LibraryConnectEncoder libraryConnect = new LibraryConnectEncoder();
@@ -61,6 +63,7 @@ public class GatewayPublication extends AbstractPublication
     private final RequestSessionReplyEncoder requestSessionReply = new RequestSessionReplyEncoder();
     private final ReleaseSessionEncoder releaseSession = new ReleaseSessionEncoder();
     private final ReleaseSessionReplyEncoder releaseSessionReply = new ReleaseSessionReplyEncoder();
+    private final ConnectEncoder connect = new ConnectEncoder();
 
     private final NanoClock nanoClock;
 
@@ -96,14 +99,14 @@ public class GatewayPublication extends AbstractPublication
 
         header
             .wrap(destBuffer, offset)
-            .blockLength(messageFrame.sbeBlockLength())
-            .templateId(messageFrame.sbeTemplateId())
-            .schemaId(messageFrame.sbeSchemaId())
-            .version(messageFrame.sbeSchemaVersion());
+            .blockLength(fixMessage.sbeBlockLength())
+            .templateId(fixMessage.sbeTemplateId())
+            .schemaId(fixMessage.sbeSchemaId())
+            .version(fixMessage.sbeSchemaVersion());
 
         offset += header.encodedLength();
 
-        messageFrame
+        fixMessage
             .wrap(destBuffer, offset)
             .libraryId(libraryId)
             .messageType(messageType)
@@ -199,9 +202,9 @@ public class GatewayPublication extends AbstractPublication
                                      final int lastReceivedSequenceNumber,
                                      final SessionState sessionState)
     {
-        final byte[] addressString = bytes(address);
+        final byte[] addressBytes = bytes(address);
 
-        final int length = header.encodedLength() + CONNECT_SIZE + addressString.length;
+        final int length = header.encodedLength() + CONNECT_SIZE + addressBytes.length;
         final long position = claim(length);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
@@ -209,14 +212,14 @@ public class GatewayPublication extends AbstractPublication
 
         header
             .wrap(buffer, offset)
-            .blockLength(connect.sbeBlockLength())
-            .templateId(connect.sbeTemplateId())
-            .schemaId(connect.sbeSchemaId())
-            .version(connect.sbeSchemaVersion());
+            .blockLength(manageConnection.sbeBlockLength())
+            .templateId(manageConnection.sbeTemplateId())
+            .schemaId(manageConnection.sbeSchemaId())
+            .version(manageConnection.sbeSchemaVersion());
 
         offset += header.encodedLength();
 
-        connect
+        manageConnection
             .wrap(buffer, offset)
             .connection(connectionId)
             .libraryId(libraryId)
@@ -224,7 +227,7 @@ public class GatewayPublication extends AbstractPublication
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .sessionState(sessionState)
-            .putAddress(addressString, 0, addressString.length);
+            .putAddress(addressBytes, 0, addressBytes.length);
 
         bufferClaim.commit();
 
@@ -258,9 +261,37 @@ public class GatewayPublication extends AbstractPublication
         return position;
     }
 
+    public long saveConnect(final long connectionId, final String address)
+    {
+        final byte[] addressBytes = bytes(address);
+
+        final long position = claim(CONNECT_FIXED_LENGTH + addressBytes.length);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(connect.sbeBlockLength())
+            .templateId(connect.sbeTemplateId())
+            .schemaId(connect.sbeSchemaId())
+            .version(connect.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        connect
+            .wrap(buffer, offset)
+            .connection(connectionId)
+            .putAddress(addressBytes, 0, addressBytes.length);
+
+        bufferClaim.commit();
+
+        return position;
+    }
+
     public long saveRequestDisconnect(final int libraryId, final long connectionId)
     {
-        final long position = claim(header.encodedLength() + RequestDisconnectDecoder.BLOCK_LENGTH);
+        final long position = claim(header.encodedLength() + RequestDisconnectEncoder.BLOCK_LENGTH);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();

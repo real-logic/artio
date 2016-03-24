@@ -259,6 +259,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
                     setupConnection(channel, connectionId, UNKNOWN, null, acceptorLibraryId, ACCEPTOR);
 
                     final String address = channel.getRemoteAddress().toString();
+                    inboundPublication.saveConnect(connectionId, address);
                     inboundPublication.saveManageConnection(connectionId, address, acceptorLibraryId, ACCEPTOR,
                         SequenceNumberIndexReader.UNKNOWN_SESSION, SequenceNumberIndexReader.UNKNOWN_SESSION,
                         SessionState.CONNECTED);

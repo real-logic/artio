@@ -27,7 +27,8 @@ public class ProcessProtocolSubscription implements FragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final LogonDecoder logon = new LogonDecoder();
-    private final ManageConnectionDecoder connect = new ManageConnectionDecoder();
+    private final ConnectDecoder connect = new ConnectDecoder();
+    private final ManageConnectionDecoder manageConnection = new ManageConnectionDecoder();
     private final InitiateConnectionDecoder initiateConnection = new InitiateConnectionDecoder();
     private final RequestDisconnectDecoder requestDisconnect = new RequestDisconnectDecoder();
     private final ErrorDecoder error = new ErrorDecoder();
@@ -114,9 +115,24 @@ public class ProcessProtocolSubscription implements FragmentHandler
             {
                 return onRequestSessionReply(buffer, offset, blockLength, version);
             }
+
+            case ConnectDecoder.TEMPLATE_ID:
+            {
+                return onConnect(buffer, offset, blockLength, version);
+            }
         }
 
         return UNKNOWN_TEMPLATE;
+    }
+
+    private int onConnect(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        connect.wrap(buffer, offset, blockLength, version);
+        processProtocolHandler.onConnect(
+            connect.connection(),
+            connect.address()
+        );
+        return connect.limit();
     }
 
     private int onApplicationHeartbeat(final DirectBuffer buffer,
@@ -233,19 +249,19 @@ public class ProcessProtocolSubscription implements FragmentHandler
     private int onManageConnection(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
-        connect.wrap(buffer, offset, blockLength, version);
+        manageConnection.wrap(buffer, offset, blockLength, version);
         final int addressOffset = offset + ManageConnectionDecoder.BLOCK_LENGTH + addressHeaderLength();
         processProtocolHandler.onManageConnection(
-            connect.libraryId(),
-            connect.connection(),
-            connect.type(),
-            connect.lastSentSequenceNumber(),
-            connect.lastReceivedSequenceNumber(),
+            manageConnection.libraryId(),
+            manageConnection.connection(),
+            manageConnection.type(),
+            manageConnection.lastSentSequenceNumber(),
+            manageConnection.lastReceivedSequenceNumber(),
             buffer,
             addressOffset,
-            connect.addressLength(),
-            connect.sessionState());
-        return connect.limit();
+            manageConnection.addressLength(),
+            manageConnection.sessionState());
+        return manageConnection.limit();
     }
 
     private int onLogon(

@@ -35,6 +35,13 @@ public interface ProcessProtocolHandler
         // Optional method, implement if you care about this type of message.
     }
 
+    default void onConnect(
+        final long connectionId,
+        final String address)
+    {
+        // Optional method, implement if you care about this type of message.
+    }
+
     default void onLogon(
         final int libraryId,
         final long connectionId,
