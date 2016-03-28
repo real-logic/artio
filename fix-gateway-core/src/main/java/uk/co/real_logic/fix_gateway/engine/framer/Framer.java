@@ -433,6 +433,10 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         {
             library.removeSession(connectionId);
         }
+        else
+        {
+            gatewaySessions.release(connectionId);
+        }
     }
 
     public void onLibraryConnect(final int libraryId, final ConnectionType connectionType)
