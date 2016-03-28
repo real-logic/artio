@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
@@ -258,11 +259,20 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void enginesShouldManageAcceptedSession()
+    public void enginesShouldManageAcceptingSession()
     {
         engineShouldManageSession(
             acceptingSession, acceptingLibrary,
             initiatingSession, initiatingLibrary, initiatingOtfAcceptor);
+    }
+
+    @Ignore
+    @Test
+    public void enginesShouldManageInitiatingSession()
+    {
+        engineShouldManageSession(
+            initiatingSession, initiatingLibrary,
+            acceptingSession, acceptingLibrary, acceptingOtfAcceptor);
     }
 
     private void engineShouldManageSession(
@@ -277,13 +287,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertReceivedHeartbeat(otherLibrary, otherAcceptor);
 
-        /*
         final SessionReplyStatus status = library.acquireSession(connectionId, ADMIN_IDLE_STRATEGY);
         assertEquals(SessionReplyStatus.OK, status);
 
         sendTestRequest(otherSession);
 
-        assertReceivedHeartbeat(otherLibrary, otherAcceptor);*/
+        assertReceivedHeartbeat(otherLibrary, otherAcceptor);
     }
 
     private void assertReceivedHeartbeat(final FixLibrary library, final FakeOtfAcceptor acceptor)
