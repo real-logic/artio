@@ -30,8 +30,6 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 /**
  * A simple, and dumb session id Strategy based upon hashing SenderCompID and TargetCompID. Makes no assumptions
  * about the nature of either identifiers.
- *
- * Threadsafe - no state;
  */
 public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
 {

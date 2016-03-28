@@ -31,8 +31,6 @@ import static java.util.Objects.requireNonNull;
 /**
  * A simple, and dumb session id Strategy based upon hashing SenderCompID and TargetCompID. Makes no assumptions
  * about the nature of either identifiers.
- *
- * Threadsafe - no state;
  */
 public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 {
