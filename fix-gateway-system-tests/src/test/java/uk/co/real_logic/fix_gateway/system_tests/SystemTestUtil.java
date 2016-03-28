@@ -50,8 +50,8 @@ public final class SystemTestUtil
 {
     public static final IdleStrategy ADMIN_IDLE_STRATEGY = backoffIdleStrategy();
     public static final long CONNECTION_ID = 0L;
-    public static final String ACCEPTOR_ID = "CCG";
-    public static final String INITIATOR_ID = "LEH_LZJ02";
+    public static final String ACCEPTOR_ID = "acceptor";
+    public static final String INITIATOR_ID = "initiator";
     public static final String INITIATOR_ID2 = "initiator2";
     public static final String CLIENT_LOGS = "client-logs";
     public static final String ACCEPTOR_LOGS = "acceptor-logs";

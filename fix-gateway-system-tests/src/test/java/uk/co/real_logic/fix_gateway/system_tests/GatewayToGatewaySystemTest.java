@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
@@ -266,7 +265,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             initiatingSession, initiatingLibrary, initiatingOtfAcceptor);
     }
 
-    @Ignore
     @Test
     public void enginesShouldManageInitiatingSession()
     {

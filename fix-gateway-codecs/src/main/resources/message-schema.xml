@@ -170,11 +170,13 @@
     </sbe:message>
     <sbe:message name="ReleaseSession" id="29"
                  description="releases a session from the library's control to the gateway">
-        <field name="libraryId" id="99" type="LibraryId"/>
-        <field name="connection" id="91" type="ConnectionId"/>
-        <field name="correlationId" id="92" type="CorrelationId"/>
-        <field name="heartbeatIntervalInMs" id="103" type="int64"/>
-        <field name="state" id="104" type="SessionState"/>
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="correlationId" id="3" type="CorrelationId"/>
+        <field name="heartbeatIntervalInMs" id="4" type="int64"/>
+        <field name="state" id="5" type="SessionState"/>
+        <field name="lastSentSequenceNumber" id="6" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="7" type="int32"/>
     </sbe:message>
     <sbe:message name="ReleaseSessionReply" id="30"
                  description="response to ReleaseSession">

@@ -164,6 +164,8 @@ public class ProcessProtocolSubscription implements FragmentHandler
             releaseSession.correlationId(),
             releaseSession.state(),
             releaseSession.heartbeatIntervalInMs(),
+            releaseSession.lastSentSequenceNumber(),
+            releaseSession.lastReceivedSequenceNumber(),
             header);
         return releaseSession.limit();
     }

@@ -480,7 +480,10 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         final long connectionId,
         final long correlationId,
         final SessionState state,
-        final long heartbeatIntervalInMs, final Header header)
+        final long heartbeatIntervalInMs,
+        final int lastSentSequenceNumber,
+        final int lastReceivedSequenceNumber,
+        final Header header)
     {
         final LibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
@@ -496,11 +499,6 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
             return;
         }
 
-        sentSequenceNumberIndex.awaitingIndexingUpTo(header, idleStrategy);
-
-        final long sessionId = session.sessionId();
-        final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-        final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
         gatewaySessions.acquire(
             session, state, heartbeatIntervalInMs, lastSentSequenceNumber, lastReceivedSequenceNumber);
 

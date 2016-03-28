@@ -100,7 +100,10 @@ public interface ProcessProtocolHandler
         final long connectionId,
         final long correlationId,
         final SessionState state,
-        final long heartbeatIntervalInMs, final Header header)
+        final long heartbeatIntervalInMs,
+        final int lastSentSequenceNumber,
+        final int lastReceivedSequenceNumber,
+        final Header header)
     {
         // Optional method, implement if you care about this type of message.
     }

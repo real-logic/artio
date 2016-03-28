@@ -465,7 +465,9 @@ public class GatewayPublication extends AbstractPublication
         final long connectionId,
         final long correlationId,
         final SessionState state,
-        final long heartbeatIntervalInMs)
+        final long heartbeatIntervalInMs,
+        final int lastSentSequenceNumber,
+        final int lastReceivedSequenceNumber)
     {
         final long position = claim(RELEASE_SESSION_LENGTH);
 
@@ -487,7 +489,9 @@ public class GatewayPublication extends AbstractPublication
             .connection(connectionId)
             .correlationId(correlationId)
             .heartbeatIntervalInMs(heartbeatIntervalInMs)
-            .state(state);
+            .state(state)
+            .lastSentSequenceNumber(lastSentSequenceNumber)
+            .lastReceivedSequenceNumber(lastReceivedSequenceNumber);
 
         bufferClaim.commit();
 

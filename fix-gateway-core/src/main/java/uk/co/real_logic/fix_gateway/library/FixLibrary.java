@@ -327,7 +327,9 @@ public final class FixLibrary extends GatewayProcess
             session.connectionId(),
             ++correlationId,
             session.state(),
-            session.heartbeatIntervalInMs());
+            session.heartbeatIntervalInMs(),
+            session.lastSentMsgSeqNum(),
+            session.lastReceivedMsgSeqNum());
 
         awaitReply(idleStrategy, () -> replyStatus == null);
 
