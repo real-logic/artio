@@ -35,6 +35,7 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
 
     private Session latestSession;
     private long connectionId = -1;
+    private boolean hasDisconnected = false;
 
     public FakeSessionHandler(final FakeOtfAcceptor acceptor)
     {
@@ -60,6 +61,7 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
     {
         this.connectionId = connectionId;
         connectionIdToSession.remove(connectionId);
+        hasDisconnected = true;
     }
 
     public long connectionId()
@@ -89,4 +91,8 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
         return connectionIdToSession.values();
     }
 
+    public boolean hasDisconnected()
+    {
+        return hasDisconnected;
+    }
 }

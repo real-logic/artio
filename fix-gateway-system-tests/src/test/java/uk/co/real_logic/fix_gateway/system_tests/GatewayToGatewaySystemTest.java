@@ -181,10 +181,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void acceptorsShouldHandleInitiatorDisconnectsGracefully()
     {
-        //initiatingLibrary.close();
+        assertFalse("Premature Acceptor Disconnect", acceptingSessionHandler.hasDisconnected());
+
         initiatingEngine.close();
 
-        //LockSupport.parkNanos(10_000_000_000L);
+        assertEventuallyTrue("Acceptor Disconnected", () -> {
+            acceptingLibrary.poll(1);
+            return acceptingSessionHandler.hasDisconnected();
+        });
     }
 
     @Test
