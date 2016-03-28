@@ -63,34 +63,34 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             .sequenceNumbersPersistent(true)
             .build();
 
-        initiatedSession = initiatingLibrary.initiate(config, new SleepingIdleStrategy(10));
+        initiatingSession = initiatingLibrary.initiate(config, new SleepingIdleStrategy(10));
 
-        assertConnected(initiatedSession);
-        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatedSession);
+        assertConnected(initiatingSession);
+        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
         acceptingSession = acceptSession(acceptingSessionHandler, acceptingLibrary);
     }
 
     @Test(timeout = 10_000L)
     public void sequenceNumbersCanPersistOverRestarts()
     {
-        sendTestRequest(initiatedSession);
+        sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
         assertSequenceFromInitToAcceptAt(2);
 
-        final long initiatedSessionId = initiatedSession.id();
+        final long initiatedSessionId = initiatingSession.id();
         final long acceptingSessionId = acceptingSession.id();
 
-        initiatedSession.startLogout();
+        initiatingSession.startLogout();
         assertSessionsDisconnected();
 
         close();
 
         launch();
 
-        assertEquals("initiatedSessionId not stable over restarts", initiatedSessionId, initiatedSession.id());
+        assertEquals("initiatedSessionId not stable over restarts", initiatedSessionId, initiatingSession.id());
         assertEquals("acceptingSessionId not stable over restarts", acceptingSessionId, acceptingSession.id());
 
-        sendTestRequest(initiatedSession);
+        sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, 4);
         assertSequenceFromInitToAcceptAt(4);
     }

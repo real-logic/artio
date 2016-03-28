@@ -27,15 +27,15 @@ import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolHandler;
-import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.library.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
-import uk.co.real_logic.fix_gateway.session.CompositeKey;
-import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolHandler;
 import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolSubscription;
 import uk.co.real_logic.fix_gateway.protocol.SessionSubscription;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
+import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,13 +52,13 @@ import java.util.function.Consumer;
 import static java.net.StandardSocketOptions.*;
 import static uk.co.real_logic.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
-import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
+import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
@@ -500,7 +500,8 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
             return;
         }
 
-        gatewaySessions.acquire(session, state, heartbeatIntervalInMs);
+        final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(session.sessionId());
+        gatewaySessions.acquire(session, state, heartbeatIntervalInMs, lastSentSequenceNumber);
 
         inboundPublication.saveReleaseSessionReply(OK, correlationId);
     }

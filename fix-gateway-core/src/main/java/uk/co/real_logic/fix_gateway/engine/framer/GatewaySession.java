@@ -63,11 +63,6 @@ class GatewaySession implements SessionInfo
         return sessionId;
     }
 
-    long sendingTimeWindow()
-    {
-        return 0;
-    }
-
     void manage(final SessionParser sessionParser, final Session session)
     {
         this.sessionParser = sessionParser;

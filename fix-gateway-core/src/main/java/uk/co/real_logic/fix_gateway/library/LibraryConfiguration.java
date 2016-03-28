@@ -19,8 +19,6 @@ import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
-import static java.util.concurrent.TimeUnit.MINUTES;
-
 
 /**
  * Provides configuration for initiating an instance of Fix Library. Individual configuration options are
@@ -34,13 +32,11 @@ public final class LibraryConfiguration extends CommonConfiguration
 
     public static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
-    public static final long DEFAULT_SENDING_TIME_WINDOW = MINUTES.toMillis(2);
     public static final int DEFAULT_LIBRARY_ID = 1;
 
     private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
     private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
     private NewSessionHandler newSessionHandler;
-    private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
 
     private int libraryId = DEFAULT_LIBRARY_ID;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
@@ -71,21 +67,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConfiguration newSessionHandler(final NewSessionHandler newSessionHandler)
     {
         this.newSessionHandler = newSessionHandler;
-        return this;
-    }
-
-    /**
-     * Sets the sending time window. The sending time window is the period of acceptance
-     * delta between the current time on the Fix Library thread and the sending time
-     * received in messages. Sessions are disconnected if the sending time diverges by
-     * more than this window and if validation is enabled.
-     *
-     * @param sendingTimeWindowInMs the current sending time in milliseconds
-     * @return this
-     */
-    public LibraryConfiguration sendingTimeWindowInMs(long sendingTimeWindowInMs)
-    {
-        this.sendingTimeWindowInMs = sendingTimeWindowInMs;
         return this;
     }
 
@@ -182,11 +163,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public NewSessionHandler newSessionHandler()
     {
         return newSessionHandler;
-    }
-
-    public long sendingTimeWindowInMs()
-    {
-        return sendingTimeWindowInMs;
     }
 
     public int libraryId()

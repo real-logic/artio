@@ -40,7 +40,7 @@ public class AbstractGatewayToGatewaySystemTest
     protected FixEngine initiatingEngine;
     protected FixLibrary acceptingLibrary;
     protected FixLibrary initiatingLibrary;
-    protected Session initiatedSession;
+    protected Session initiatingSession;
     protected Session acceptingSession;
 
     protected FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
@@ -49,7 +49,7 @@ public class AbstractGatewayToGatewaySystemTest
     protected FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
     protected FakeSessionHandler initiatingSessionHandler = new FakeSessionHandler(initiatingOtfAcceptor);
 
-    protected void assertOriginalLibraryDoesntReceiveMessages(final int initiator1MessageCount)
+    protected void assertOriginalLibraryDoesNotReceiveMessages(final int initiator1MessageCount)
     {
         initiatingLibrary.poll(5);
         assertThat("Messages received by wrong initiator",
@@ -58,28 +58,28 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void assertSequenceFromInitToAcceptAt(final int expectedSeqNum)
     {
-        assertEquals(expectedSeqNum, initiatedSession.lastSentMsgSeqNum());
+        assertEquals(expectedSeqNum, initiatingSession.lastSentMsgSeqNum());
         assertEquals(expectedSeqNum, acceptingSession.lastReceivedMsgSeqNum());
 
-        while (initiatedSession.lastReceivedMsgSeqNum() < expectedSeqNum)
+        while (initiatingSession.lastReceivedMsgSeqNum() < expectedSeqNum)
         {
             initiatingLibrary.poll(1);
         }
 
-        assertEquals(expectedSeqNum, initiatedSession.lastReceivedMsgSeqNum());
+        assertEquals(expectedSeqNum, initiatingSession.lastReceivedMsgSeqNum());
         assertEquals(expectedSeqNum, acceptingSession.lastSentMsgSeqNum());
     }
 
     protected void assertSessionsDisconnected()
     {
-        assertSessionDisconnected(initiatingLibrary, acceptingLibrary, initiatedSession);
+        assertSessionDisconnected(initiatingLibrary, acceptingLibrary, initiatingSession);
         assertSessionDisconnected(acceptingLibrary, initiatingLibrary, acceptingSession);
 
         assertEventuallyTrue("libraries receive disconnect messages", () ->
         {
             poll(initiatingLibrary, acceptingLibrary);
             assertNotSession(acceptingSessionHandler, acceptingSession);
-            assertNotSession(initiatingSessionHandler, initiatedSession);
+            assertNotSession(initiatingSessionHandler, initiatingSession);
         });
     }
 
@@ -90,10 +90,10 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void connectSessions()
     {
-        initiatedSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        initiatingSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
 
-        assertConnected(initiatedSession);
-        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatedSession);
+        assertConnected(initiatingSession);
+        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
         acceptingSession = acceptSession(acceptingSessionHandler, acceptingLibrary);
     }
 

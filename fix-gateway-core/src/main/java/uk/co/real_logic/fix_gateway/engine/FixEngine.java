@@ -174,7 +174,8 @@ public final class FixEngine extends GatewayProcess
             fixCounters,
             configuration.authenticationStrategy(),
             configuration.messageValidationStrategy(),
-            configuration.sessionBufferSize());
+            configuration.sessionBufferSize(),
+            configuration.sendingTimeWindowInMs());
 
         final Framer framer = new Framer(
             clock, configuration, handler, librarySubscription, replaySubscription(),

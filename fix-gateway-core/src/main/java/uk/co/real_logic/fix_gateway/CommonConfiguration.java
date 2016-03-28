@@ -20,18 +20,19 @@ import uk.co.real_logic.agrona.IoUtil;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.session.NoSessionCustomisationStrategy;
+import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionCustomisationStrategy;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.validation.NoAuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.NoMessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
-import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.File;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 /**
  * Common configuration for both the Fix Engine and Library. Some options are configurable via
@@ -99,11 +100,13 @@ public class CommonConfiguration
     public static final int DEFAULT_OUTBOUND_MAX_CLAIM_ATTEMPTS = DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS;
 
     public static final int DEFAULT_SESSION_BUFFER_SIZE = 8 * 1024;
+    public static final long DEFAULT_SENDING_TIME_WINDOW = MINUTES.toMillis(2);
 
     private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
     private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
     protected boolean printErrorMessages = true;
     protected IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
+    protected long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
 
     private SessionIdStrategy sessionIdStrategy = new SenderAndTargetSessionIdStrategy();
     private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
@@ -121,6 +124,26 @@ public class CommonConfiguration
         getInteger(INBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS);
     private int outboundMaxClaimAttempts =
         getInteger(OUTBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_OUTBOUND_MAX_CLAIM_ATTEMPTS);
+
+    /**
+     * Sets the sending time window. The sending time window is the period of acceptance
+     * delta between the current time on the Fix Library thread and the sending time
+     * received in messages. Sessions are disconnected if the sending time diverges by
+     * more than this window and if validation is enabled.
+     *
+     * @param sendingTimeWindowInMs the current sending time in milliseconds
+     * @return this
+     */
+    public CommonConfiguration sendingTimeWindowInMs(long sendingTimeWindowInMs)
+    {
+        this.sendingTimeWindowInMs = sendingTimeWindowInMs;
+        return this;
+    }
+
+    public long sendingTimeWindowInMs()
+    {
+        return sendingTimeWindowInMs;
+    }
 
     /**
      * Sets the session id strategy.

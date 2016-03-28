@@ -21,9 +21,9 @@ import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
-import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
+import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.util.List;
 
@@ -31,6 +31,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.CommonMatchers.hasConnectionId;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -59,7 +60,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptor()
     {
-        sendTestRequest(initiatedSession);
+        sendTestRequest(initiatingSession);
 
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
     }
@@ -75,7 +76,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void initiatorSessionCanBeDisconnected()
     {
-        initiatedSession.startLogout();
+        initiatingSession.startLogout();
 
         assertSessionsDisconnected();
     }
@@ -109,7 +110,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         connectSessions();
 
-        sendTestRequest(initiatedSession);
+        sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
     }
 
@@ -128,10 +129,10 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final SessionInfo sessionInfo = sessions.get(0);
         assertThat(sessionInfo.address(), containsString("localhost"));
         assertThat(sessionInfo.address(), containsString(String.valueOf(port)));
-        assertEquals(initiatedSession.connectionId(), sessionInfo.connectionId());
+        assertEquals(initiatingSession.connectionId(), sessionInfo.connectionId());
 
-        assertEquals(initiatedSession.connectedPort(), port);
-        assertEquals(initiatedSession.connectedHost(), "localhost");
+        assertEquals(initiatingSession.connectedPort(), port);
+        assertEquals(initiatingSession.connectedHost(), "localhost");
 
         assertNotEquals(0, acceptingSession.connectedPort());
         assertEquals("127.0.0.1", acceptingSession.connectedHost());
@@ -155,24 +156,24 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             sendTestRequest(acceptingSession2);
             assertReceivedTestRequest(library2, acceptingLibrary, initiatingOtfAcceptor2);
 
-            assertOriginalLibraryDoesntReceiveMessages(initiator1MessageCount);
+            assertOriginalLibraryDoesNotReceiveMessages(initiator1MessageCount);
         }
     }
 
     @Test
     public void sequenceNumbersShouldResetOverDisconnects()
     {
-        sendTestRequest(initiatedSession);
+        sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
         assertSequenceFromInitToAcceptAt(2);
 
-        initiatedSession.startLogout();
+        initiatingSession.startLogout();
 
         assertSessionsDisconnected();
 
         connectSessions();
 
-        sendTestRequest(initiatedSession);
+        sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, 4);
         assertSequenceFromInitToAcceptAt(2);
     }
@@ -189,7 +190,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldBeAbleToReleaseInitiatedSessionToTheGateway()
     {
-        releaseSessionToGateway(initiatedSession, initiatingLibrary, initiatingEngine);
+        releaseSessionToGateway(initiatingSession, initiatingLibrary, initiatingEngine);
     }
 
     @Test
@@ -219,7 +220,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldBeAbleToAcquireReleasedInitiatedSessions()
     {
-        reacquireReleasedSession(initiatedSession, initiatingLibrary, initiatingEngine);
+        reacquireReleasedSession(initiatingSession, initiatingLibrary, initiatingEngine);
     }
 
     @Test
@@ -254,6 +255,46 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(session.id(), newSession.id());
         assertEquals(session.username(), newSession.username());
         assertEquals(session.password(), newSession.password());
+    }
+
+    @Test
+    public void enginesShouldManageAcceptedSession()
+    {
+        engineShouldManageSession(
+            acceptingSession, acceptingLibrary,
+            initiatingSession, initiatingLibrary, initiatingOtfAcceptor);
+    }
+
+    private void engineShouldManageSession(
+        final Session session, final FixLibrary library,
+        final Session otherSession, final FixLibrary otherLibrary, final FakeOtfAcceptor otherAcceptor)
+    {
+        final long connectionId = session.connectionId();
+
+        library.releaseToGateway(session, ADMIN_IDLE_STRATEGY);
+
+        sendTestRequest(otherSession);
+
+        assertReceivedHeartbeat(otherLibrary, otherAcceptor);
+
+        /*
+        final SessionReplyStatus status = library.acquireSession(connectionId, ADMIN_IDLE_STRATEGY);
+        assertEquals(SessionReplyStatus.OK, status);
+
+        sendTestRequest(otherSession);
+
+        assertReceivedHeartbeat(otherLibrary, otherAcceptor);*/
+    }
+
+    private void assertReceivedHeartbeat(final FixLibrary library, final FakeOtfAcceptor acceptor)
+    {
+        assertEventuallyTrue("Failed to received heartbeat", () ->
+        {
+            library.poll(1);
+            return acceptor.messages()
+                           .stream()
+                           .anyMatch(fixMessage -> fixMessage.get(35).equals("0"));
+        });
     }
 
     @Test

@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 
 class SenderEndPoints implements AutoCloseable
 {
@@ -58,6 +59,11 @@ class SenderEndPoints implements AutoCloseable
         if (endPoint != null)
         {
             endPoint.onFramedMessage(buffer, offset, length);
+        }
+        else
+        {
+            // TODO: better error logging
+            DebugLogger.log("Ignoring: %s\n", buffer, offset, length);
         }
     }
 

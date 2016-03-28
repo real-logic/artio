@@ -20,14 +20,10 @@ import uk.co.real_logic.agrona.concurrent.EpochClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
-import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.session.SessionCustomisationStrategy;
-import uk.co.real_logic.fix_gateway.session.SessionParser;
-import uk.co.real_logic.fix_gateway.session.SessionProxy;
+import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
-import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 import java.util.ArrayList;
@@ -51,6 +47,7 @@ public class GatewaySessions
     private final AuthenticationStrategy authenticationStrategy;
     private final MessageValidationStrategy validationStrategy;
     private final int sessionBufferSize;
+    private final long sendingTimeWindowInMs;
 
     public GatewaySessions(
         final EpochClock clock,
@@ -60,7 +57,8 @@ public class GatewaySessions
         final FixCounters fixCounters,
         final AuthenticationStrategy authenticationStrategy,
         final MessageValidationStrategy validationStrategy,
-        final int sessionBufferSize)
+        final int sessionBufferSize,
+        final long sendingTimeWindowInMs)
     {
         this.clock = clock;
         this.publication = publication;
@@ -70,15 +68,20 @@ public class GatewaySessions
         this.authenticationStrategy = authenticationStrategy;
         this.validationStrategy = validationStrategy;
         this.sessionBufferSize = sessionBufferSize;
+        this.sendingTimeWindowInMs = sendingTimeWindowInMs;
     }
 
-    void acquire(final GatewaySession gatewaySession, final SessionState state, final long heartbeatIntervalInMs)
+    void acquire(
+        final GatewaySession gatewaySession,
+        final SessionState state,
+        final long heartbeatIntervalInMs,
+        final int lastSentSequenceNumber)
     {
         final long connectionId = gatewaySession.connectionId();
         final long sessionId = gatewaySession.sessionId();
+        final CompositeKey sessionKey = gatewaySession.compositeKey();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
-        final int sentSequenceNumber = 0; // TODO: lookup
         final int heartbeatIntervalInS = (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs);
 
         final SessionProxy proxy = new SessionProxy(
@@ -89,7 +92,7 @@ public class GatewaySessions
             clock,
             connectionId,
             FixEngine.GATEWAY_LIBRARY_ID
-        );
+        ).setupSession(sessionId, sessionKey);
 
         final Session session = new Session(
             heartbeatIntervalInS,
@@ -99,13 +102,13 @@ public class GatewaySessions
             proxy,
             publication,
             sessionIdStrategy,
-            gatewaySession.sendingTimeWindow(),
+            sendingTimeWindowInMs,
             receivedMsgSeqNo,
             sentMsgSeqNo,
             FixEngine.GATEWAY_LIBRARY_ID,
             sessionBufferSize,
-            sentSequenceNumber
-        ).id(sessionId);
+            lastSentSequenceNumber + 1
+        ).id(sessionId).sessionKey(sessionKey);
 
         final SessionParser sessionParser = new SessionParser(
             session,

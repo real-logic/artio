@@ -94,7 +94,7 @@ public class Session implements AutoCloseable
     protected final GatewayPublication publication;
     protected final MutableDirectBuffer buffer;
     protected final MutableAsciiBuffer string;
-    private final long sendingTimeWindow;
+    private final long sendingTimeWindowInMs;
     private final AtomicCounter receivedMsgSeqNo;
     private final AtomicCounter sentMsgSeqNo;
     protected final int libraryId;
@@ -124,7 +124,7 @@ public class Session implements AutoCloseable
         final SessionProxy proxy,
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
-        final long sendingTimeWindow,
+        final long sendingTimeWindowInMs,
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo,
         final int libraryId,
@@ -143,7 +143,7 @@ public class Session implements AutoCloseable
         this.connectionId = connectionId;
         this.publication = publication;
         this.sessionIdStrategy = sessionIdStrategy;
-        this.sendingTimeWindow = sendingTimeWindow;
+        this.sendingTimeWindowInMs = sendingTimeWindowInMs;
         this.receivedMsgSeqNo = receivedMsgSeqNo;
         this.sentMsgSeqNo = sentMsgSeqNo;
         this.libraryId = libraryId;
@@ -484,7 +484,7 @@ public class Session implements AutoCloseable
                     }
                 }
 
-                if ((sendingTime < time - sendingTimeWindow) || (sendingTime > time + sendingTimeWindow))
+                if ((sendingTime < time - sendingTimeWindowInMs) || (sendingTime > time + sendingTimeWindowInMs))
                 {
                     rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
                     logoutAndDisconnect();
@@ -547,8 +547,7 @@ public class Session implements AutoCloseable
         }
 
         final long time = time();
-        final boolean isValid = sendingTime < (time + sendingTimeWindow) && sendingTime > (time - sendingTimeWindow);
-
+        final boolean isValid = sendingTime < (time + sendingTimeWindowInMs) && sendingTime > (time - sendingTimeWindowInMs);
         if (!isValid)
         {
             proxy.rejectWhilstNotLoggedOn(newSentSeqNum(), SENDINGTIME_ACCURACY_PROBLEM);
@@ -773,9 +772,10 @@ public class Session implements AutoCloseable
         return this;
     }
 
-    public void sessionKey(final CompositeKey sessionKey)
+    public Session sessionKey(final CompositeKey sessionKey)
     {
         this.sessionKey = sessionKey;
+        return this;
     }
 
     public void username(final String username)
