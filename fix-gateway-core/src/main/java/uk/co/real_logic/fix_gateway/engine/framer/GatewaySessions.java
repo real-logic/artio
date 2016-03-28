@@ -75,7 +75,8 @@ public class GatewaySessions
         final GatewaySession gatewaySession,
         final SessionState state,
         final long heartbeatIntervalInMs,
-        final int lastSentSequenceNumber)
+        final int lastSentSequenceNumber,
+        final int lastReceivedSequenceNumber)
     {
         final long connectionId = gatewaySession.connectionId();
         final long sessionId = gatewaySession.sessionId();
@@ -108,7 +109,7 @@ public class GatewaySessions
             FixEngine.GATEWAY_LIBRARY_ID,
             sessionBufferSize,
             lastSentSequenceNumber + 1
-        ).id(sessionId).sessionKey(sessionKey);
+        ).id(sessionId).sessionKey(sessionKey).lastReceivedMsgSeqNum(lastReceivedSequenceNumber);
 
         final SessionParser sessionParser = new SessionParser(
             session,

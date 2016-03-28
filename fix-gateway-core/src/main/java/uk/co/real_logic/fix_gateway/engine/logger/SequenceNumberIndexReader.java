@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.SectorFramer;
 import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder;
@@ -71,9 +72,16 @@ public class SequenceNumberIndexReader
         }
     }
 
-    public boolean hasIndexedUpTo(final Header header)
+    public void awaitingIndexingUpTo(final Header header, final IdleStrategy idleStrategy)
     {
-        return header.position() < indexedPosition(header.sessionId());
+        final int aeronSessionId = header.sessionId();
+        final long requiredPosition = header.position();
+
+        while (indexedPosition(aeronSessionId) < requiredPosition)
+        {
+            idleStrategy.idle();
+        }
+        idleStrategy.reset();
     }
 
     public long indexedPosition(final int aeronSessionId)

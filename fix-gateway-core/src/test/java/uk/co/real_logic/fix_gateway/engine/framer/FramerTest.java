@@ -89,8 +89,6 @@ public class FramerTest
 
         clientBuffer.putInt(10, 5);
 
-        when(sentSequenceNumberIndex.hasIndexedUpTo(any())).thenReturn(true);
-
         when(mockConnectionHandler
             .receiverEndPoint(any(), connectionId.capture(), anyLong(), anyInt(), any(), any(),
                 eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any()))

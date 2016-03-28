@@ -98,7 +98,7 @@ public class ProcessProtocolSubscription implements FragmentHandler
 
             case ReleaseSessionDecoder.TEMPLATE_ID:
             {
-                return onReleaseSession(buffer, offset, blockLength, version);
+                return onReleaseSession(buffer, offset, blockLength, version, header);
             }
 
             case ReleaseSessionReplyDecoder.TEMPLATE_ID:
@@ -155,7 +155,7 @@ public class ProcessProtocolSubscription implements FragmentHandler
     }
 
     private int onReleaseSession(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
     {
         releaseSession.wrap(buffer, offset, blockLength, version);
         processProtocolHandler.onReleaseSession(
@@ -163,7 +163,8 @@ public class ProcessProtocolSubscription implements FragmentHandler
             releaseSession.connection(),
             releaseSession.correlationId(),
             releaseSession.state(),
-            releaseSession.heartbeatIntervalInMs());
+            releaseSession.heartbeatIntervalInMs(),
+            header);
         return releaseSession.limit();
     }
 
