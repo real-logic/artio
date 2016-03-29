@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.agrona.LangUtil;
+import org.agrona.LangUtil;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;

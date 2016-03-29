@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.agrona.concurrent.SleepingIdleStrategy;
+import org.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;

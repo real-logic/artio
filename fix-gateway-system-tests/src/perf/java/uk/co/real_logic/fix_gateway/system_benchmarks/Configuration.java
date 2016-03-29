@@ -15,11 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.agrona.concurrent.NoOpIdleStrategy;
-import uk.co.real_logic.agrona.concurrent.YieldingIdleStrategy;
+import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.NoOpIdleStrategy;
+import org.agrona.concurrent.YieldingIdleStrategy;
 
-import static uk.co.real_logic.aeron.CommonContext.IPC_CHANNEL;
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 
 public final class Configuration

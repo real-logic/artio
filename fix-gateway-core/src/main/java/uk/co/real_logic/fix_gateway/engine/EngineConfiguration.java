@@ -15,10 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
-import uk.co.real_logic.agrona.CloseHelper;
-import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import org.agrona.CloseHelper;
+import org.agrona.concurrent.AtomicBuffer;
+import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 
 import java.io.File;
@@ -215,7 +215,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * into. This and {@link this#loggerCacheNumSets} controls the size of those caches.
      * Should be increased if you see files being opened/closed in that area too frequently.
      * <p>
-     * {@link uk.co.real_logic.agrona.collections.Int2ObjectCache} explains the difference between set size
+     * {@link org.agrona.collections.Int2ObjectCache} explains the difference between set size
      * and num sets.
      *
      * @param loggerCacheSetSize the set size of the logger's caches.

@@ -15,17 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.aeron.Aeron;
-import uk.co.real_logic.agrona.ErrorHandler;
-import uk.co.real_logic.agrona.concurrent.*;
-import uk.co.real_logic.agrona.concurrent.errors.DistinctErrorLog;
+import io.aeron.Aeron;
+import org.agrona.ErrorHandler;
+import org.agrona.concurrent.*;
+import org.agrona.concurrent.errors.DistinctErrorLog;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 
 import java.nio.channels.ClosedByInterruptException;
 
-import static uk.co.real_logic.aeron.driver.Configuration.ERROR_BUFFER_LENGTH_PROP_NAME;
-import static uk.co.real_logic.agrona.CloseHelper.quietClose;
-import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
+import static io.aeron.driver.Configuration.ERROR_BUFFER_LENGTH_PROP_NAME;
+import static org.agrona.CloseHelper.quietClose;
+import static org.agrona.concurrent.AgentRunner.startOnThread;
 
 public class GatewayProcess implements AutoCloseable
 {

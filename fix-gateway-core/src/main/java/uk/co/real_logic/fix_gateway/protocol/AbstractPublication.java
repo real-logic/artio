@@ -15,15 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
-import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.aeron.logbuffer.BufferClaim;
-import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import io.aeron.Publication;
+import io.aeron.logbuffer.BufferClaim;
+import org.agrona.concurrent.status.AtomicCounter;
+import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 
-import static uk.co.real_logic.aeron.Publication.BACK_PRESSURED;
-import static uk.co.real_logic.aeron.Publication.NOT_CONNECTED;
+import static io.aeron.Publication.BACK_PRESSURED;
+import static io.aeron.Publication.NOT_CONNECTED;
 
 /**
  * .

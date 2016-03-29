@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Test;
-import uk.co.real_logic.agrona.collections.Long2LongHashMap;
+import org.agrona.collections.Long2LongHashMap;
 
 import static org.junit.Assert.assertEquals;
 

@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 

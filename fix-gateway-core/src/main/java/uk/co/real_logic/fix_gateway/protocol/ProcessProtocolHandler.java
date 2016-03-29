@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
-import uk.co.real_logic.aeron.logbuffer.Header;
-import uk.co.real_logic.agrona.DirectBuffer;
+import io.aeron.logbuffer.Header;
+import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 public interface ProcessProtocolHandler

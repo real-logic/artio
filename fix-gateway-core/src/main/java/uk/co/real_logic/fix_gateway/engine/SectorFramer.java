@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 
-import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
+import static org.agrona.BitUtil.SIZE_OF_INT;
 
 /**
  * Frames data writes into sector aligned chunks with checksums at the end of each sector.

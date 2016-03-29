@@ -15,10 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
-import uk.co.real_logic.agrona.MutableDirectBuffer;
-import uk.co.real_logic.agrona.collections.IntHashSet;
-import uk.co.real_logic.agrona.collections.IntIterator;
-import uk.co.real_logic.agrona.generation.OutputManager;
+import org.agrona.MutableDirectBuffer;
+import org.agrona.collections.IntHashSet;
+import org.agrona.collections.IntIterator;
+import org.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.EncodingException;
 import uk.co.real_logic.fix_gateway.dictionary.CharArraySet;
 import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;

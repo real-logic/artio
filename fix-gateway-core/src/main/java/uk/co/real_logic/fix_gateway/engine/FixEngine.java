@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
-import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.agrona.concurrent.*;
+import io.aeron.Publication;
+import io.aeron.Subscription;
+import org.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.engine.framer.*;
@@ -29,7 +29,7 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import java.io.File;
 import java.util.List;
 
-import static uk.co.real_logic.agrona.concurrent.AgentRunner.startOnThread;
+import static org.agrona.concurrent.AgentRunner.startOnThread;
 
 /**
  * A FIX Engine is a process in the gateway that accepts or initiates FIX connections and

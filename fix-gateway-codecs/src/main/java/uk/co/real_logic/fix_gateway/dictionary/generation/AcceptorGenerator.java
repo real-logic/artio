@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
-import uk.co.real_logic.agrona.generation.OutputManager;
+import org.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Message;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;

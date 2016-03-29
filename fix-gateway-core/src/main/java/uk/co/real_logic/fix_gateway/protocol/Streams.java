@@ -15,12 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
-import uk.co.real_logic.aeron.Aeron;
-import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.agrona.concurrent.NanoClock;
+import io.aeron.Aeron;
+import io.aeron.Publication;
+import io.aeron.Subscription;
+import org.agrona.concurrent.status.AtomicCounter;
+import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.NanoClock;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 
 import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;

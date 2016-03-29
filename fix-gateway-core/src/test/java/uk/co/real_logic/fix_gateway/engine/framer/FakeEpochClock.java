@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import uk.co.real_logic.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.EpochClock;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 

@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import uk.co.real_logic.agrona.collections.IntHashSet;
-import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
+import org.agrona.collections.IntHashSet;
+import org.agrona.generation.StringWriterOutputManager;
 
 import java.util.Map;
 import java.util.Set;
@@ -26,7 +26,7 @@ import java.util.Set;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
+import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.ALL_FIELDS;
 import static uk.co.real_logic.fix_gateway.util.Reflection.getField;

@@ -15,10 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.aeron.Aeron;
-import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import io.aeron.Aeron;
+import org.agrona.IoUtil;
+import org.agrona.concurrent.BackoffIdleStrategy;
+import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.session.NoSessionCustomisationStrategy;
 import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionCustomisationStrategy;

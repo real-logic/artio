@@ -15,24 +15,24 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import uk.co.real_logic.aeron.Aeron;
-import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.aeron.driver.ReceiveChannelEndpointSupplier;
-import uk.co.real_logic.aeron.driver.SendChannelEndpointSupplier;
-import uk.co.real_logic.aeron.driver.ext.DebugReceiveChannelEndpoint;
-import uk.co.real_logic.aeron.driver.ext.DebugSendChannelEndpoint;
-import uk.co.real_logic.agrona.CloseHelper;
-import uk.co.real_logic.agrona.collections.IntHashSet;
-import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.agrona.concurrent.YieldingIdleStrategy;
+import io.aeron.Aeron;
+import io.aeron.driver.MediaDriver;
+import io.aeron.driver.ReceiveChannelEndpointSupplier;
+import io.aeron.driver.SendChannelEndpointSupplier;
+import io.aeron.driver.ext.DebugReceiveChannelEndpoint;
+import io.aeron.driver.ext.DebugSendChannelEndpoint;
+import org.agrona.CloseHelper;
+import org.agrona.collections.IntHashSet;
+import org.agrona.concurrent.status.AtomicCounter;
+import org.agrona.concurrent.YieldingIdleStrategy;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
 import static org.mockito.Mockito.mock;
-import static uk.co.real_logic.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
-import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
+import static io.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
+import static io.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;

@@ -15,12 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
-import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.MutableDirectBuffer;
-import uk.co.real_logic.agrona.concurrent.AtomicCounter;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.agrona.concurrent.NanoClock;
+import io.aeron.Publication;
+import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.status.AtomicCounter;
+import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.NanoClock;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.messages.*;

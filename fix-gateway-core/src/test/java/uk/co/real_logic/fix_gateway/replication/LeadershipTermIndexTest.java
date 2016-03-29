@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Test;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.replication.LeadershipTermIndex.Cursor;
 
 import static org.junit.Assert.*;

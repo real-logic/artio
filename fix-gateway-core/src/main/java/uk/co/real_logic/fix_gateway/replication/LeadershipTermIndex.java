@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import uk.co.real_logic.agrona.MutableDirectBuffer;
+import org.agrona.MutableDirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.LeadershipTermDecoder;
 import uk.co.real_logic.fix_gateway.messages.LeadershipTermEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
@@ -24,7 +24,7 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import java.nio.ByteOrder;
 
 import static java.util.Objects.requireNonNull;
-import static uk.co.real_logic.agrona.BitUtil.SIZE_OF_INT;
+import static org.agrona.BitUtil.SIZE_OF_INT;
 
 /**
  * A sequence of session id and position intervals that correspond to leadership terms.

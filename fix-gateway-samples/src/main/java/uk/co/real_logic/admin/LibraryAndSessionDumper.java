@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.admin;
 
-import uk.co.real_logic.agrona.concurrent.Agent;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;

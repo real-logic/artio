@@ -17,9 +17,9 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.agrona.ErrorHandler;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import io.aeron.Subscription;
+import org.agrona.ErrorHandler;
+import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;

@@ -15,12 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.agrona.IoUtil;
+import io.aeron.driver.MediaDriver;
+import org.agrona.IoUtil;
 
 import java.io.File;
 
-import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
+import static io.aeron.driver.ThreadingMode.SHARED;
 
 public class TestFixtures
 {

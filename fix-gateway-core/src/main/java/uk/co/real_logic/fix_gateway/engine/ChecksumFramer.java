@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
-import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
+import org.agrona.concurrent.AtomicBuffer;
 
 import java.util.zip.CRC32;
 

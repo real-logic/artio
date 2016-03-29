@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.agrona.concurrent.*;
-import uk.co.real_logic.agrona.concurrent.errors.ErrorConsumer;
-import uk.co.real_logic.agrona.concurrent.errors.ErrorLogReader;
+import org.agrona.concurrent.*;
+import org.agrona.concurrent.errors.ErrorConsumer;
+import org.agrona.concurrent.errors.ErrorLogReader;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 
 public class ErrorPrinter implements Agent

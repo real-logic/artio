@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.agrona.concurrent.CountersManager;
-import uk.co.real_logic.agrona.concurrent.SigInt;
+import org.agrona.concurrent.AtomicBuffer;
+import org.agrona.concurrent.status.CountersManager;
+import org.agrona.concurrent.SigInt;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 
 import java.time.LocalTime;

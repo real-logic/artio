@@ -17,9 +17,9 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.junit.After;
 import org.junit.Test;
-import uk.co.real_logic.agrona.ErrorHandler;
-import uk.co.real_logic.agrona.concurrent.AtomicBuffer;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import org.agrona.ErrorHandler;
+import org.agrona.concurrent.AtomicBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 
 import static org.junit.Assert.assertEquals;

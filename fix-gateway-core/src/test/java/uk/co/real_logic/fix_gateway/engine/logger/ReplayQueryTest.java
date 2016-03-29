@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.FragmentHandler;
 
 import java.nio.ByteBuffer;
 

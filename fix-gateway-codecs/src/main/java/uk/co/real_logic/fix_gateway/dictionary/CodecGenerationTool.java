@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary;
 
-import uk.co.real_logic.agrona.generation.PackageOutputManager;
+import org.agrona.generation.PackageOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Validation;
 import uk.co.real_logic.fix_gateway.dictionary.generation.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;

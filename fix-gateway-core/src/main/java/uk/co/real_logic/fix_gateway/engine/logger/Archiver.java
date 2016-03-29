@@ -15,15 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import uk.co.real_logic.aeron.Image;
-import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.logbuffer.FileBlockHandler;
-import uk.co.real_logic.aeron.protocol.DataHeaderFlyweight;
-import uk.co.real_logic.agrona.CloseHelper;
-import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.LangUtil;
-import uk.co.real_logic.agrona.collections.Int2ObjectCache;
-import uk.co.real_logic.agrona.concurrent.Agent;
+import io.aeron.Image;
+import io.aeron.Subscription;
+import io.aeron.logbuffer.FileBlockHandler;
+import io.aeron.protocol.DataHeaderFlyweight;
+import org.agrona.CloseHelper;
+import org.agrona.DirectBuffer;
+import org.agrona.LangUtil;
+import org.agrona.collections.Int2ObjectCache;
+import org.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
@@ -33,8 +33,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.function.IntFunction;
 
-import static uk.co.real_logic.aeron.driver.Configuration.termBufferLength;
-import static uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor.computePosition;
+import static io.aeron.driver.Configuration.termBufferLength;
+import static io.aeron.logbuffer.LogBufferDescriptor.computePosition;
 
 public class Archiver implements Agent, FileBlockHandler
 {

@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
-import uk.co.real_logic.agrona.Verify;
+import org.agrona.Verify;
 
 import java.util.stream.Stream;
 

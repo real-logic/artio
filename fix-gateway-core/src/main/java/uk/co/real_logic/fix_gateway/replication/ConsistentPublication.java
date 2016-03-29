@@ -15,10 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import uk.co.real_logic.aeron.Publication;
-import uk.co.real_logic.aeron.logbuffer.BufferClaim;
-import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.concurrent.IdleStrategy;
+import io.aeron.Publication;
+import io.aeron.logbuffer.BufferClaim;
+import org.agrona.DirectBuffer;
+import org.agrona.concurrent.IdleStrategy;
 
 /**
  * A Consistent Publication is a publication that support the raft protocol and allows

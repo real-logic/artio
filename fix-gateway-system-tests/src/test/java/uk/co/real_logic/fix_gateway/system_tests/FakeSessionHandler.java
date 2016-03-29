@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
-import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
+import org.agrona.DirectBuffer;
+import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.library.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.session.Session;

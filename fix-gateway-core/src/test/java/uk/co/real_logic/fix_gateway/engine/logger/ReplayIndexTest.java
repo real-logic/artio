@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.LogonEncoder;
 import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordDecoder;
 

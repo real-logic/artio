@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.util;
 
-import uk.co.real_logic.agrona.DirectBuffer;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import org.agrona.DirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.fields.*;
 
 import java.nio.ByteBuffer;

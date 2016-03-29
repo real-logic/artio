@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;

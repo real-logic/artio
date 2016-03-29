@@ -25,8 +25,8 @@ buildscript {
 apply plugin: 'maven'
 apply plugin: 'signing'
 
-def aeronVersion = '0.9.4'
-def agronaVersion = '0.4.12'
+def aeronVersion = '0.9.5'
+def agronaVersion = '0.4.13'
 
 defaultTasks 'clean', 'build', 'install'
 
@@ -147,8 +147,8 @@ project(':fix-gateway-codecs') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
     dependencies {
-        compile "uk.co.real-logic:Agrona:${agronaVersion}"
-        compile 'uk.co.real-logic:sbe-all:1.3.3-RC3'
+        compile "org.agrona:Agrona:${agronaVersion}"
+        compile 'uk.co.real-logic:sbe-all:1.3.4-RC3'
     }
 
     def generatedDir = file("$buildDir/generated-src")
@@ -232,8 +232,8 @@ project(':fix-gateway-core') {
         testCompile project(path: ':fix-gateway-codecs', configuration: 'tests')
         compile project(path: ':fix-gateway-session-codecs')
         compile project(path: ':fix-gateway-codecs')
-        compile "uk.co.real-logic:aeron-client:${aeronVersion}"
-        compile "uk.co.real-logic:aeron-driver:${aeronVersion}"
+        compile "io.aeron:aeron-client:${aeronVersion}"
+        compile "io.aeron:aeron-driver:${aeronVersion}"
         compile 'org.hdrhistogram:HdrHistogram:2.1.8'
     }
 
@@ -262,7 +262,7 @@ project(':fix-gateway-system-tests') {
                     project(path: ':fix-gateway-codecs', configuration: 'tests')
 
         compile project(path: ':fix-gateway-core'),
-                "uk.co.real-logic:aeron-client:${aeronVersion}"
+                "io.aeron:aeron-client:${aeronVersion}"
 
         perfCompile project,
                     'org.openjdk.jmh:jmh-core:1.11.3',

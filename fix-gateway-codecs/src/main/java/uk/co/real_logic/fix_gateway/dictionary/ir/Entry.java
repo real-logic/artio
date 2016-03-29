@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
-import uk.co.real_logic.agrona.Verify;
+import org.agrona.Verify;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;

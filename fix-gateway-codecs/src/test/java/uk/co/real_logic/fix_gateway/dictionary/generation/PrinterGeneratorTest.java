@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
+import org.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -25,7 +25,7 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertThat;
-import static uk.co.real_logic.agrona.generation.CompilerUtil.compileInMemory;
+import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 
 public class PrinterGeneratorTest

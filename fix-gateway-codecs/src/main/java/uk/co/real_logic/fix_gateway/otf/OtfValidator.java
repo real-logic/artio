@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.otf;
 
-import uk.co.real_logic.agrona.collections.IntHashSet;
+import org.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;

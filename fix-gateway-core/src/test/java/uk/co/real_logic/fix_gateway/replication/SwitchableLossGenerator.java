@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import uk.co.real_logic.aeron.driver.ext.LossGenerator;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import io.aeron.driver.ext.LossGenerator;
+import org.agrona.concurrent.UnsafeBuffer;
 
 import java.net.InetSocketAddress;
 

@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway;
 
 
-import uk.co.real_logic.agrona.DirectBuffer;
+import org.agrona.DirectBuffer;
 
 import java.io.FileOutputStream;
 import java.io.IOException;

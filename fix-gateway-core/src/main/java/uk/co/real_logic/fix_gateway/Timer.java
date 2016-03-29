@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway;
 
 import org.HdrHistogram.Histogram;
-import uk.co.real_logic.agrona.concurrent.NanoClock;
+import org.agrona.concurrent.NanoClock;
 
 import java.util.concurrent.TimeUnit;
 

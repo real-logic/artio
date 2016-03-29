@@ -18,8 +18,8 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import uk.co.real_logic.agrona.generation.CompilerUtil;
-import uk.co.real_logic.agrona.generation.StringWriterOutputManager;
+import org.agrona.generation.CompilerUtil;
+import org.agrona.generation.StringWriterOutputManager;
 
 import java.lang.reflect.Method;
 

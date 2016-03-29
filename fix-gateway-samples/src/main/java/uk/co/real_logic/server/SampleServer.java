@@ -15,10 +15,10 @@
  */
 package uk.co.real_logic.server;
 
-import uk.co.real_logic.aeron.driver.MediaDriver;
-import uk.co.real_logic.aeron.driver.MediaDriver.Context;
-import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.agrona.concurrent.SigInt;
+import io.aeron.driver.MediaDriver;
+import io.aeron.driver.MediaDriver.Context;
+import org.agrona.IoUtil;
+import org.agrona.concurrent.SigInt;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -34,7 +34,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static uk.co.real_logic.aeron.driver.ThreadingMode.SHARED;
+import static io.aeron.driver.ThreadingMode.SHARED;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
 public final class SampleServer

@@ -15,14 +15,14 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import uk.co.real_logic.aeron.logbuffer.BlockHandler;
-import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
-import uk.co.real_logic.aeron.logbuffer.Header;
-import uk.co.real_logic.aeron.logbuffer.LogBufferDescriptor;
-import uk.co.real_logic.agrona.IoUtil;
-import uk.co.real_logic.agrona.collections.Int2ObjectCache;
-import uk.co.real_logic.agrona.collections.Int2ObjectHashMap;
-import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
+import io.aeron.logbuffer.BlockHandler;
+import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.Header;
+import io.aeron.logbuffer.LogBufferDescriptor;
+import org.agrona.IoUtil;
+import org.agrona.collections.Int2ObjectCache;
+import org.agrona.collections.Int2ObjectHashMap;
+import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
@@ -32,7 +32,7 @@ import java.nio.MappedByteBuffer;
 import java.util.function.IntFunction;
 
 import static java.lang.Integer.numberOfTrailingZeros;
-import static uk.co.real_logic.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
+import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 public class ArchiveReader implements AutoCloseable
 {
