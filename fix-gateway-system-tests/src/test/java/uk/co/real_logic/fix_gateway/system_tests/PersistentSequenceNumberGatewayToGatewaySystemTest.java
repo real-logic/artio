@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -34,10 +35,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         delete(ACCEPTOR_LOGS);
         delete(CLIENT_LOGS);
 
-        launch();
+        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
     }
 
-    private void launch()
+    private void launch(final int initialSequenceNumber)
     {
         mediaDriver = launchMediaDriver();
 
@@ -50,10 +51,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         acceptingLibrary = FixLibrary.connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
 
-        connectPersistingSessions();
+        connectPersistingSessions(initialSequenceNumber);
     }
 
-    private void connectPersistingSessions()
+    private void connectPersistingSessions(final int initialSequenceNumber)
     {
         final SessionConfiguration config = SessionConfiguration.builder()
             .address("localhost", port)
@@ -61,6 +62,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             .senderCompId(INITIATOR_ID)
             .targetCompId(ACCEPTOR_ID)
             .sequenceNumbersPersistent(true)
+            .initialSequenceNumber(initialSequenceNumber)
             .build();
 
         initiatingSession = initiatingLibrary.initiate(config, new SleepingIdleStrategy(10));
@@ -72,6 +74,17 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     @Test(timeout = 10_000L)
     public void sequenceNumbersCanPersistOverRestarts()
+    {
+        sequenceNumbersCanPersistOverRestarts(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
+    }
+
+    @Test(timeout = 10_000L)
+    public void customInitialSequenceNumbersCanBeSet()
+    {
+        sequenceNumbersCanPersistOverRestarts(3);
+    }
+
+    private void sequenceNumbersCanPersistOverRestarts(final int initialSequenceNumber)
     {
         sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
@@ -85,7 +98,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         close();
 
-        launch();
+        launch(initialSequenceNumber);
 
         assertEquals("initiatedSessionId not stable over restarts", initiatedSessionId, initiatingSession.id());
         assertEquals("acceptingSessionId not stable over restarts", acceptingSessionId, acceptingSession.id());
