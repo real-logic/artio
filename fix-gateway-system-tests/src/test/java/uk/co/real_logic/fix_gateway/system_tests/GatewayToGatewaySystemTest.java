@@ -60,17 +60,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptor()
     {
-        sendTestRequest(initiatingSession);
-
-        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+        messagesCanBeExchanged();
     }
 
     @Test
     public void messagesCanBeSentFromAcceptorToInitiator()
     {
-        sendTestRequest(acceptingSession);
-
-        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
+        messagesCanBeExchanged(
+            acceptingSession, acceptingLibrary, initiatingLibrary, initiatingOtfAcceptor, acceptingOtfAcceptor);
     }
 
     @Test
@@ -110,8 +107,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         connectSessions();
 
-        sendTestRequest(initiatingSession);
-        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+        messagesCanBeExchanged();
     }
 
     @Test
@@ -163,8 +159,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void sequenceNumbersShouldResetOverDisconnects()
     {
-        sendTestRequest(initiatingSession);
-        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+        messagesCanBeExchanged();
         assertSequenceFromInitToAcceptAt(2);
 
         initiatingSession.startLogout();
@@ -295,17 +290,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         sendTestRequest(otherSession);
 
         assertReceivedHeartbeat(otherLibrary, otherAcceptor);
-    }
-
-    private void assertReceivedHeartbeat(final FixLibrary library, final FakeOtfAcceptor acceptor)
-    {
-        assertEventuallyTrue("Failed to received heartbeat", () ->
-        {
-            library.poll(1);
-            return acceptor.messages()
-                           .stream()
-                           .anyMatch(fixMessage -> fixMessage.get(35).equals("0"));
-        });
     }
 
     @Test

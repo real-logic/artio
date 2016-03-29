@@ -138,4 +138,32 @@ public class AbstractGatewayToGatewaySystemTest
         cleanupDirectory(mediaDriver);
     }
 
+    protected void messagesCanBeExchanged()
+    {
+        messagesCanBeExchanged(initiatingSession, initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, initiatingOtfAcceptor);
+    }
+
+    protected void messagesCanBeExchanged(final Session session,
+                                          final FixLibrary library,
+                                          final FixLibrary otherLibrary,
+                                          final FakeOtfAcceptor otherAcceptor,
+                                          final FakeOtfAcceptor acceptor)
+    {
+        sendTestRequest(session);
+
+        assertReceivedTestRequest(library, otherLibrary, otherAcceptor);
+
+        assertReceivedHeartbeat(library, acceptor);
+    }
+
+    protected void assertReceivedHeartbeat(final FixLibrary library, final FakeOtfAcceptor acceptor)
+    {
+        assertEventuallyTrue("Failed to received heartbeat", () ->
+        {
+            library.poll(1);
+            return acceptor.messages()
+                           .stream()
+                           .anyMatch(fixMessage -> fixMessage.get(35).equals("0"));
+        });
+    }
 }
