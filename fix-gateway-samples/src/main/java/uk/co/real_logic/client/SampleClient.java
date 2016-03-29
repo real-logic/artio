@@ -58,7 +58,7 @@ public final class SampleClient
                 .aeronChannel(aeronChannel)))
             {
                 final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
-                final Session session = library.initiate(sessionConfig, idleStrategy);
+                final Session session = library.initiate(sessionConfig);
 
                 while (session.state() != ACTIVE)
                 {

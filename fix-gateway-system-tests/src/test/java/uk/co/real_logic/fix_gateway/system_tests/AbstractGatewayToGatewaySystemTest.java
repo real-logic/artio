@@ -140,7 +140,8 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void messagesCanBeExchanged()
     {
-        messagesCanBeExchanged(initiatingSession, initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, initiatingOtfAcceptor);
+        messagesCanBeExchanged(
+            initiatingSession, initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, initiatingOtfAcceptor);
     }
 
     protected void messagesCanBeExchanged(final Session session,

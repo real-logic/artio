@@ -205,7 +205,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final long connectionId = session.connectionId();
 
-        final SessionReplyStatus status = library.releaseToGateway(session, ADMIN_IDLE_STRATEGY);
+        final SessionReplyStatus status = library.releaseToGateway(session);
 
         assertEquals(SessionReplyStatus.OK, status);
         assertEquals(SessionState.DISABLED, session.state());
@@ -233,9 +233,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final long connectionId = session.connectionId();
 
-        library.releaseToGateway(session, ADMIN_IDLE_STRATEGY);
+        library.releaseToGateway(session);
 
-        final SessionReplyStatus status = library.acquireSession(connectionId, ADMIN_IDLE_STRATEGY);
+        final SessionReplyStatus status = library.acquireSession(connectionId);
 
         assertEquals(SessionReplyStatus.OK, status);
 
@@ -278,13 +278,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final long connectionId = session.connectionId();
 
-        library.releaseToGateway(session, ADMIN_IDLE_STRATEGY);
+        library.releaseToGateway(session);
 
         sendTestRequest(otherSession);
 
         assertReceivedHeartbeat(otherLibrary, otherAcceptor);
 
-        final SessionReplyStatus status = library.acquireSession(connectionId, ADMIN_IDLE_STRATEGY);
+        final SessionReplyStatus status = library.acquireSession(connectionId);
         assertEquals(SessionReplyStatus.OK, status);
 
         sendTestRequest(otherSession);
@@ -295,7 +295,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldNotBeAbleToAcquireSessionsThatDontExist()
     {
-        final SessionReplyStatus status = initiatingLibrary.acquireSession(42, ADMIN_IDLE_STRATEGY);
+        final SessionReplyStatus status = initiatingLibrary.acquireSession(42);
 
         assertEquals(SessionReplyStatus.UNKNOWN_SESSION, status);
     }

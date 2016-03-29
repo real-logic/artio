@@ -15,8 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
-@FunctionalInterface
-public interface NewConnectHandler
+public class AcquiringNewConnectHandler implements NewConnectHandler
 {
-    void onConnect(final FixLibrary library, final long connectionId, final String address);
+    public void onConnect(final FixLibrary library, final long connectionId, final String address)
+    {
+        library.acquireSession(connectionId);
+    }
 }

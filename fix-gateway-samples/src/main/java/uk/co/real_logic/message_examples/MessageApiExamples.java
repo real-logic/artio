@@ -29,7 +29,6 @@ import uk.co.real_logic.fix_gateway.validation.SenderCompIdValidationStrategy;
 import uk.co.real_logic.fix_gateway.validation.TargetCompIdValidationStrategy;
 
 import static java.util.Arrays.asList;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.builder.OrdType.Market;
 import static uk.co.real_logic.fix_gateway.builder.Side.Sell;
 
@@ -76,7 +75,7 @@ public final class MessageApiExamples
                     .targetCompId(TARGET_COMP_ID)
                     .build();
 
-                final Session session = library.initiate(sessionConfig, backoffIdleStrategy());
+                final Session session = library.initiate(sessionConfig);
 
                 // Specific encoders are generated for each type of message
                 // from the same dictionary as the decoders.

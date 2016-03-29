@@ -236,7 +236,6 @@ public final class FixLibrary extends GatewayProcess
      * object has connected to the acceptor.
      *
      * @param configuration the configuration to use for the session.
-     * @param idleStrategy an idle strategy to use for backoffs whilst waiting.
      * @return the session object for the session that you've initiated.
      * @throws IllegalStateException
      *         if you're trying to initiate two sessions at the same time or if there's a timeout talking to
@@ -246,10 +245,9 @@ public final class FixLibrary extends GatewayProcess
      *         if you're unable to connect to the accepting gateway.
      *         This probably indicates a configuration problem related to the external gateway.
      */
-    public Session initiate(final SessionConfiguration configuration, final IdleStrategy idleStrategy)
+    public Session initiate(final SessionConfiguration configuration)
     {
         requireNonNull(configuration, "configuration");
-        requireNonNull(idleStrategy, "idleStrategy");
 
         if (sessionConfiguration != null || incomingSession != null || errorType != null)
         {
@@ -281,7 +279,7 @@ public final class FixLibrary extends GatewayProcess
                     configuration.username(),
                     configuration.password());
 
-                awaitReply(idleStrategy, () -> incomingSession == null && errorType == null);
+                awaitReply(() -> incomingSession == null && errorType == null);
 
                 if (incomingSession != null)
                 {
@@ -311,13 +309,11 @@ public final class FixLibrary extends GatewayProcess
      * Release this session object to the gateway to manage.
      *
      * @param session the session to release
-     * @param idleStrategy an idle strategy to use for backoffs whilst waiting.
      * @return the result of this operation.
      */
-    public SessionReplyStatus releaseToGateway(final Session session, final IdleStrategy idleStrategy)
+    public SessionReplyStatus releaseToGateway(final Session session)
     {
         requireNonNull(session, "session");
-        requireIdleStrategy(idleStrategy);
         if (replyStatus != null)
         {
             return concurrentError();
@@ -332,7 +328,7 @@ public final class FixLibrary extends GatewayProcess
             session.lastSentMsgSeqNum(),
             session.lastReceivedMsgSeqNum());
 
-        awaitReply(idleStrategy, () -> replyStatus == null);
+        awaitReply(() -> replyStatus == null);
 
         final SessionReplyStatus replyStatus = this.replyStatus;
         this.replyStatus = null;
@@ -345,9 +341,8 @@ public final class FixLibrary extends GatewayProcess
         return replyStatus;
     }
 
-    public SessionReplyStatus acquireSession(final long connectionId, final IdleStrategy idleStrategy)
+    public SessionReplyStatus acquireSession(final long connectionId)
     {
-        requireIdleStrategy(idleStrategy);
         if (replyStatus != null)
         {
             return concurrentError();
@@ -355,7 +350,7 @@ public final class FixLibrary extends GatewayProcess
 
         outboundPublication.saveRequestSession(libraryId, connectionId, ++correlationId);
 
-        awaitReply(idleStrategy, () -> replyStatus == null);
+        awaitReply(() -> replyStatus == null);
 
         final SessionReplyStatus replyStatus = this.replyStatus;
         this.replyStatus = null;
@@ -374,8 +369,9 @@ public final class FixLibrary extends GatewayProcess
         requireNonNull(idleStrategy, "idleStrategy");
     }
 
-    private void awaitReply(final IdleStrategy idleStrategy, final BooleanSupplier notReady)
+    private void awaitReply(final BooleanSupplier notReady)
     {
+        final IdleStrategy idleStrategy = this.idleStrategy;
         final long latestReplyArrivalTime = latestReplyArrivalTime();
 
         while (notReady.getAsBoolean())
@@ -580,7 +576,7 @@ public final class FixLibrary extends GatewayProcess
         {
             if (newConnectHandler != null)
             {
-                newConnectHandler.onConnect(connectionId, address);
+                newConnectHandler.onConnect(FixLibrary.this, connectionId, address);
             }
         }
     }

@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
@@ -65,7 +64,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             .initialSequenceNumber(initialSequenceNumber)
             .build();
 
-        initiatingSession = initiatingLibrary.initiate(config, new SleepingIdleStrategy(10));
+        initiatingSession = initiatingLibrary.initiate(config);
 
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);

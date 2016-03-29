@@ -15,19 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
-import org.hamcrest.Matcher;
 import org.agrona.CloseHelper;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.SleepingIdleStrategy;
+import org.hamcrest.Matcher;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.library.FixLibrary;
-import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
-import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.library.NewSessionHandler;
+import uk.co.real_logic.fix_gateway.library.*;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
@@ -38,13 +34,14 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.concurrent.locks.LockSupport;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static io.aeron.CommonContext.IPC_CHANNEL;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 
 public final class SystemTestUtil
 {
@@ -182,7 +179,7 @@ public final class SystemTestUtil
             .targetCompId(acceptorId)
             .build();
 
-        return library.initiate(config, new SleepingIdleStrategy(10));
+        return library.initiate(config);
     }
 
     public static FixEngine launchInitiatingGateway(final int initAeronPort)
@@ -258,6 +255,7 @@ public final class SystemTestUtil
 
         libraryConfiguration
             .isAcceptor(true)
+            //.newConnectHandler(new AcquiringNewConnectHandler())
             .newSessionHandler(sessionHandler)
             .aeronChannel(IPC_CHANNEL)
             .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "accLibraryCounters");

@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.session.Session;
 
@@ -55,7 +54,7 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
             .targetCompId(ACCEPTOR_ID)
             .build();
 
-        final Session initiatedSession = initiatingLibrary.initiate(config, new SleepingIdleStrategy(10));
+        final Session initiatedSession = initiatingLibrary.initiate(config);
 
         assertConnected(initiatedSession);
         assertEquals("localhost", initiatedSession.connectedHost());
