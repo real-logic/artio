@@ -348,19 +348,13 @@ public final class FixLibrary extends GatewayProcess
             return concurrentError();
         }
 
-        acquireSession2(connectionId);
+        outboundPublication.saveRequestSession(libraryId, connectionId, ++correlationId);
 
         awaitReply(() -> replyStatus == null);
 
         final SessionReplyStatus replyStatus = this.replyStatus;
         this.replyStatus = null;
         return replyStatus;
-    }
-
-    // TODO: make this a non-blocking acquire session
-    void acquireSession2(final long connectionId)
-    {
-        outboundPublication.saveRequestSession(libraryId, connectionId, ++correlationId);
     }
 
     // ------------- End Public API -------------
