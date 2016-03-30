@@ -315,6 +315,7 @@ class ReceiverEndPoint
                 final String username = SessionParser.username(logon);
                 final String password = SessionParser.password(logon);
                 gatewaySession.onLogon(sessionId, compositeKey, username, password);
+                gatewaySession.sequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
 
                 publication.saveLogon(
                     libraryId,
@@ -452,4 +453,8 @@ class ReceiverEndPoint
         return libraryId;
     }
 
+    public void libraryId(final int libraryId)
+    {
+        this.libraryId = libraryId;
+    }
 }

@@ -88,13 +88,24 @@ public class AbstractGatewayToGatewaySystemTest
         assertThat(sessionHandler.sessions(), not(hasItem(session)));
     }
 
+    protected void wireSessions()
+    {
+        connectSessions();
+        acquireAcceptingSession();
+    }
+
+    protected void acquireAcceptingSession()
+    {
+        acceptingSession = acquireSession(acceptingSessionHandler, acceptingLibrary);
+        assertNotNull("unable to acquire accepting session", acceptingSession);
+    }
+
     protected void connectSessions()
     {
         initiatingSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
 
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
-        acceptingSession = acceptSession(acceptingSessionHandler, acceptingLibrary);
     }
 
     protected void assertMessageResent()
@@ -141,30 +152,17 @@ public class AbstractGatewayToGatewaySystemTest
     protected void messagesCanBeExchanged()
     {
         messagesCanBeExchanged(
-            initiatingSession, initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, initiatingOtfAcceptor);
+            initiatingSession, initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
     }
 
     protected void messagesCanBeExchanged(final Session session,
                                           final FixLibrary library,
-                                          final FixLibrary otherLibrary,
-                                          final FakeOtfAcceptor otherAcceptor,
+                                          final FixLibrary library2,
                                           final FakeOtfAcceptor acceptor)
     {
         sendTestRequest(session);
 
-        assertReceivedTestRequest(library, otherLibrary, otherAcceptor);
-
-        assertReceivedHeartbeat(library, acceptor);
+        assertReceivedHeartbeat(library, library2, acceptor);
     }
 
-    protected void assertReceivedHeartbeat(final FixLibrary library, final FakeOtfAcceptor acceptor)
-    {
-        assertEventuallyTrue("Failed to received heartbeat", () ->
-        {
-            library.poll(1);
-            return acceptor.messages()
-                           .stream()
-                           .anyMatch(fixMessage -> fixMessage.get(35).equals("0"));
-        });
-    }
 }

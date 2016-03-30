@@ -389,7 +389,7 @@ public class Session implements AutoCloseable
     {
         int actions = 0;
 
-        if (time >= nextRequiredHeartbeatTimeInMs)
+        if (isActive() && time >= nextRequiredHeartbeatTimeInMs)
         {
             proxy.heartbeat(newSentSeqNum());
             actions++;
@@ -401,7 +401,7 @@ public class Session implements AutoCloseable
             {
                 requestDisconnect();
             }
-            else
+            else if (isActive())
             {
                 proxy.testRequest(newSentSeqNum(), TEST_REQ_ID);
                 state(AWAITING_RESEND);
@@ -411,6 +411,11 @@ public class Session implements AutoCloseable
         }
 
         return actions;
+    }
+
+    private boolean isActive()
+    {
+        return state == ACTIVE || state == AWAITING_RESEND;
     }
 
     /**
@@ -526,17 +531,55 @@ public class Session implements AutoCloseable
         nextRequiredMessageTime(time + heartbeatIntervalInMs());
     }
 
-    void onLogon(final int heartbeatInterval,
-                 final int msgSeqNo,
-                 final long sessionId,
-                 final CompositeKey sessionKey,
-                 long sendingTime,
-                 final long origSendingTime,
-                 final String username,
-                 final String password,
-                 final boolean isPossDupOrResend)
+    public void onLogon(
+        final int heartbeatInterval,
+        final int msgSeqNo,
+        final long sessionId,
+        final CompositeKey sessionKey,
+        final long sendingTime,
+        final long origSendingTime,
+        final String username,
+        final String password,
+        final boolean isPossDupOrResend)
     {
-        throw new UnsupportedOperationException();
+        setupSession(sessionId, sessionKey);
+
+        if (state() == SessionState.CONNECTED)
+        {
+            if (!validateHeartbeat(heartbeatInterval) || !validateSendingTime(sendingTime))
+            {
+                return;
+            }
+
+            final int expectedSeqNo = expectedReceivedSeqNum();
+            if (expectedSeqNo == msgSeqNo)
+            {
+                heartbeatIntervalInS(heartbeatInterval);
+                state(SessionState.ACTIVE);
+                username(username);
+                password(password);
+                replyToLogon(heartbeatInterval);
+            }
+            else if (expectedSeqNo < msgSeqNo)
+            {
+                state(SessionState.AWAITING_RESEND);
+                replyToLogon(heartbeatInterval);
+            }
+            publication.saveLogon(libraryId, connectionId, sessionId);
+        }
+        onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+    }
+
+    public void setupSession(final long sessionId, final CompositeKey sessionKey)
+    {
+        id(sessionId);
+        this.sessionKey = sessionKey;
+        proxy.setupSession(sessionId, sessionKey);
+    }
+
+    private void replyToLogon(int heartbeatInterval)
+    {
+        proxy.logon(heartbeatInterval, newSentSeqNum(), null, null);
     }
 
     protected boolean validateSendingTime(final long sendingTime)
@@ -769,12 +812,6 @@ public class Session implements AutoCloseable
     {
         this.connectedHost = connectedHost;
         this.connectedPort = connectedPort;
-        return this;
-    }
-
-    public Session sessionKey(final CompositeKey sessionKey)
-    {
-        this.sessionKey = sessionKey;
         return this;
     }
 

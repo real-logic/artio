@@ -29,13 +29,14 @@ import java.nio.channels.SocketChannel;
 class SenderEndPoint implements AutoCloseable
 {
     private final long connectionId;
-    private final int libraryId;
     private final SocketChannel channel;
     private final IdleStrategy idleStrategy;
     private final AtomicCounter messageWrites;
     private final ErrorHandler errorHandler;
     private final Framer framer;
     private final ReliefValve reliefValve;
+
+    private int libraryId;
 
     SenderEndPoint(
         final long connectionId,
@@ -98,6 +99,11 @@ class SenderEndPoint implements AutoCloseable
     public long connectionId()
     {
         return connectionId;
+    }
+
+    public void libraryId(final int libraryId)
+    {
+        this.libraryId = libraryId;
     }
 
     public int libraryId()

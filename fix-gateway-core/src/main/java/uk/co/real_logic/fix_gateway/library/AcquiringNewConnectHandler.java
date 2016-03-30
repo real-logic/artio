@@ -19,6 +19,6 @@ public class AcquiringNewConnectHandler implements NewConnectHandler
 {
     public void onConnect(final FixLibrary library, final long connectionId, final String address)
     {
-        library.acquireSession(connectionId);
+        library.acquireSession2(connectionId);
     }
 }

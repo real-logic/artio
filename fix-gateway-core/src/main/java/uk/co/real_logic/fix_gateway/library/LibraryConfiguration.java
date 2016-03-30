@@ -30,11 +30,9 @@ public final class LibraryConfiguration extends CommonConfiguration
 {
     private static final boolean ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT = true;
 
-    public static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
     public static final int DEFAULT_LIBRARY_ID = 1;
 
-    private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
     private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
     private NewSessionHandler newSessionHandler;
 
@@ -43,17 +41,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     private boolean isAcceptor = false;
     private boolean acceptorSequenceNumbersResetUponReconnect = ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT;
     private NewConnectHandler newConnectHandler;
-
-    /**
-     * The default interval for heartbeats if not exchanged upon logon. Specified in seconds.
-     *
-     * @return this
-     */
-    public LibraryConfiguration defaultHeartbeatInterval(final int value)
-    {
-        defaultHeartbeatInterval = value;
-        return this;
-    }
 
     /**
      * When a new session connects to the gateway you register a callback handler to find
@@ -148,11 +135,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     {
         this.newConnectHandler = newConnectHandler;
         return this;
-    }
-
-    public int defaultHeartbeatInterval()
-    {
-        return defaultHeartbeatInterval;
     }
 
     public int encoderBufferSize()

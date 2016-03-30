@@ -15,12 +15,16 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
-import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
+import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.session.SessionParser;
+import uk.co.real_logic.fix_gateway.session.SessionProxy;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
+
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader.UNKNOWN_SESSION;
 
 class GatewaySession implements SessionInfo
 {
@@ -28,10 +32,14 @@ class GatewaySession implements SessionInfo
     private final String address;
     private final ConnectionType connectionType;
 
+    private ReceiverEndPoint receiverEndPoint;
+    private SenderEndPoint senderEndPoint;
+
     private long sessionId;
     private SessionParser sessionParser;
     private Session session;
-    private CompositeKey compositeKey;
+    private SessionProxy proxy;
+    private CompositeKey sessionKey;
     private String username;
     private String password;
 
@@ -39,13 +47,13 @@ class GatewaySession implements SessionInfo
                    final long sessionId,
                    final String address,
                    final ConnectionType connectionType,
-                   final CompositeKey compositeKey)
+                   final CompositeKey sessionKey)
     {
         this.connectionId = connectionId;
         this.sessionId = sessionId;
         this.address = address;
         this.connectionType = connectionType;
-        this.compositeKey = compositeKey;
+        this.sessionKey = sessionKey;
     }
 
     public long connectionId()
@@ -63,15 +71,18 @@ class GatewaySession implements SessionInfo
         return sessionId;
     }
 
-    void manage(final SessionParser sessionParser, final Session session)
+    void manage(final SessionParser sessionParser, final Session session, final SessionProxy proxy)
     {
         this.sessionParser = sessionParser;
         this.session = session;
+        this.proxy = proxy;
     }
 
-    void stopManaging()
+    void handoverManagementTo(final int libraryId)
     {
-        manage(null, null);
+        receiverEndPoint.libraryId(libraryId);
+        senderEndPoint.libraryId(libraryId);
+        manage(null, null, null);
     }
 
     int poll(final long time)
@@ -91,7 +102,7 @@ class GatewaySession implements SessionInfo
 
     CompositeKey compositeKey()
     {
-        return compositeKey;
+        return sessionKey;
     }
 
     public void onMessage(final MutableAsciiBuffer buffer,
@@ -108,14 +119,25 @@ class GatewaySession implements SessionInfo
 
     public void onLogon(
         final long sessionId,
-        final CompositeKey compositeKey,
+        final CompositeKey sessionKey,
         final String username,
         final String password)
     {
         this.sessionId = sessionId;
-        this.compositeKey = compositeKey;
+        this.sessionKey = sessionKey;
         this.username = username;
         this.password = password;
+        if (session != null)
+        {
+            session.setupSession(sessionId, sessionKey);
+            DebugLogger.log("Setup Session As: " + sessionKey.senderCompId());
+        }
+    }
+
+    public void endPoints(final ReceiverEndPoint receiverEndPoint, final SenderEndPoint senderEndPoint)
+    {
+        this.receiverEndPoint = receiverEndPoint;
+        this.senderEndPoint = senderEndPoint;
     }
 
     public String username()
@@ -126,5 +148,19 @@ class GatewaySession implements SessionInfo
     public String password()
     {
         return password;
+    }
+
+    void sequenceNumbers(final int sentSequenceNumber, final int receivedSequenceNumber)
+    {
+        if (session != null)
+        {
+            session.lastSentMsgSeqNum(adjustLastSequenceNumber(sentSequenceNumber));
+            session.lastReceivedMsgSeqNum(adjustLastSequenceNumber(receivedSequenceNumber));
+        }
+    }
+
+    private int adjustLastSequenceNumber(final int lastSequenceNumber)
+    {
+        return (lastSequenceNumber == UNKNOWN_SESSION) ? 0 : lastSequenceNumber;
     }
 }

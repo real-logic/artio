@@ -166,6 +166,8 @@ public class ProcessProtocolSubscription implements FragmentHandler
             releaseSession.heartbeatIntervalInMs(),
             releaseSession.lastSentSequenceNumber(),
             releaseSession.lastReceivedSequenceNumber(),
+            releaseSession.username(),
+            releaseSession.password(),
             header);
         return releaseSession.limit();
     }

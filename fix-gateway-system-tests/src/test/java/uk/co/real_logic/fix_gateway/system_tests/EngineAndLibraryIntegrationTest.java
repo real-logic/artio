@@ -230,7 +230,7 @@ public class EngineAndLibraryIntegrationTest
 
         final LibraryConfiguration config = new LibraryConfiguration();
         config
-            .isAcceptor(isAcceptor)
+            .isAcceptor(isAcceptor) // TODO: remove
             .newSessionHandler(sessionHandler)
             .libraryId(libraryId)
             .authenticationStrategy(authenticationStrategy)

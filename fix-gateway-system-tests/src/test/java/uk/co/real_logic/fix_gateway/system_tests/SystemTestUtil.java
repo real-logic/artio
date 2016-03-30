@@ -23,7 +23,11 @@ import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.library.*;
+import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
+import uk.co.real_logic.fix_gateway.library.NewSessionHandler;
+import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
+import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
@@ -32,7 +36,6 @@ import uk.co.real_logic.fix_gateway.validation.TargetCompIdValidationStrategy;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.concurrent.locks.LockSupport;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.hamcrest.Matchers.*;
@@ -120,14 +123,11 @@ public final class SystemTestUtil
         final FakeOtfAcceptor acceptor,
         final int messageCount)
     {
-        assertEventuallyTrue("Failed to receive " + messageCount + " messages", () ->
+        assertEventuallyTrue("Failed to receive a test request message", () ->
         {
             poll(library1, library2);
-            assertEquals(messageCount, acceptor.messages().size());
+            return acceptor.hasReceivedMessage("1");
         });
-
-        final FixMessage message = acceptor.messages().get(messageCount - 1);
-        assertEquals("Not a test request message", "1", message.getMessageType());
     }
 
     public static void poll(final FixLibrary library1, final FixLibrary library2)
@@ -245,7 +245,7 @@ public final class SystemTestUtil
     }
 
     public static LibraryConfiguration acceptingLibraryConfig(
-        final NewSessionHandler sessionHandler,
+        final FakeSessionHandler sessionHandler,
         final String acceptorId,
         final String initiatorId,
         final String monitorDir)
@@ -254,8 +254,8 @@ public final class SystemTestUtil
         setupAuthentication(acceptorId, initiatorId, libraryConfiguration);
 
         libraryConfiguration
-            .isAcceptor(true)
             //.newConnectHandler(new AcquiringNewConnectHandler())
+            .newConnectHandler(sessionHandler)
             .newSessionHandler(sessionHandler)
             .aeronChannel(IPC_CHANNEL)
             .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "accLibraryCounters");
@@ -277,15 +277,14 @@ public final class SystemTestUtil
             .messageValidationStrategy(validationStrategy);
     }
 
-    public static Session acceptSession(final FakeSessionHandler acceptingSessionHandler,
-                                        final FixLibrary acceptingLibrary)
+    public static Session acquireSession(
+        final FakeSessionHandler acceptingSessionHandler,
+        final FixLibrary acceptingLibrary)
     {
-        Session session;
-        while ((session = acceptingSessionHandler.latestSession()) == null)
-        {
-            acceptingLibrary.poll(1);
-            LockSupport.parkNanos(10_000);
-        }
+        final Long connectionId = acceptingSessionHandler.connections().get(0);
+        final SessionReplyStatus reply = acceptingLibrary.acquireSession(connectionId);
+        assertEquals(SessionReplyStatus.OK, reply);
+        final Session session = acceptingSessionHandler.latestSession();
         acceptingSessionHandler.resetSession();
         return session;
     }
@@ -319,7 +318,7 @@ public final class SystemTestUtil
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters-" + libraryId));
     }
 
-    public static FixLibrary newAcceptingLibrary(final NewSessionHandler sessionHandler)
+    public static FixLibrary newAcceptingLibrary(final FakeSessionHandler sessionHandler)
     {
         return FixLibrary.connect(
             acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor"));
@@ -351,9 +350,20 @@ public final class SystemTestUtil
             "Library hasn't seen Engine", () ->
             {
                 library.poll(5);
-                final boolean connected = library.isConnected();
-                return connected;
+                return library.isConnected();
             },
             AWAIT_TIMEOUT, 1);
+    }
+
+    public static void assertReceivedHeartbeat(final FixLibrary library,
+                                               final FixLibrary library2,
+                                               final FakeOtfAcceptor acceptor)
+    {
+        assertEventuallyTrue("Failed to received heartbeat", () ->
+        {
+            library.poll(1);
+            library2.poll(1);
+            return acceptor.hasReceivedMessage("0");
+        });
     }
 }

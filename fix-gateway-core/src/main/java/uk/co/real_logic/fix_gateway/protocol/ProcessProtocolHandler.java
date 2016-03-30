@@ -103,6 +103,8 @@ public interface ProcessProtocolHandler
         final long heartbeatIntervalInMs,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
+        final String username,
+        final String password,
         final Header header)
     {
         // Optional method, implement if you care about this type of message.

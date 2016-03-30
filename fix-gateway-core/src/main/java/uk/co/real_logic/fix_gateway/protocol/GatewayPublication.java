@@ -43,7 +43,8 @@ public class GatewayPublication extends AbstractPublication
     public static final int HEARTBEAT_LENGTH = HEADER_LENGTH + ApplicationHeartbeatEncoder.BLOCK_LENGTH;
     public static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH;
     public static final int DISCONNECT_LENGTH = HEADER_LENGTH + DisconnectEncoder.BLOCK_LENGTH;
-    public static final int RELEASE_SESSION_LENGTH = HEADER_LENGTH + ReleaseSessionEncoder.BLOCK_LENGTH;
+    public static final int RELEASE_SESSION_LENGTH = HEADER_LENGTH + ReleaseSessionEncoder.BLOCK_LENGTH +
+        ReleaseSessionEncoder.usernameHeaderLength() + ReleaseSessionEncoder.passwordHeaderLength();
     public static final int RELEASE_SESSION_REPLY_LENGTH = HEADER_LENGTH + ReleaseSessionReplyDecoder.BLOCK_LENGTH;
     public static final int REQUEST_SESSION_LENGTH = HEADER_LENGTH + RequestSessionEncoder.BLOCK_LENGTH;
     public static final int REQUEST_SESSION_REPLY_LENGTH = HEADER_LENGTH + RequestSessionReplyEncoder.BLOCK_LENGTH;
@@ -467,9 +468,14 @@ public class GatewayPublication extends AbstractPublication
         final SessionState state,
         final long heartbeatIntervalInMs,
         final int lastSentSequenceNumber,
-        final int lastReceivedSequenceNumber)
+        final int lastReceivedSequenceNumber,
+        final String username,
+        final String password)
     {
-        final long position = claim(RELEASE_SESSION_LENGTH);
+        final byte[] usernameBytes = bytes(username);
+        final byte[] passwordBytes = bytes(password);
+
+        final long position = claim(RELEASE_SESSION_LENGTH + usernameBytes.length + passwordBytes.length);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -491,7 +497,9 @@ public class GatewayPublication extends AbstractPublication
             .heartbeatIntervalInMs(heartbeatIntervalInMs)
             .state(state)
             .lastSentSequenceNumber(lastSentSequenceNumber)
-            .lastReceivedSequenceNumber(lastReceivedSequenceNumber);
+            .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
+            .putUsername(usernameBytes, 0, usernameBytes.length)
+            .putPassword(passwordBytes, 0, passwordBytes.length);
 
         bufferClaim.commit();
 

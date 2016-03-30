@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
@@ -26,6 +27,7 @@ import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
+@Ignore
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
     @Before
@@ -68,7 +70,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
-        acceptingSession = acceptSession(acceptingSessionHandler, acceptingLibrary);
+        acceptingSession = acquireSession(acceptingSessionHandler, acceptingLibrary);
     }
 
     @Test(timeout = 10_000L)

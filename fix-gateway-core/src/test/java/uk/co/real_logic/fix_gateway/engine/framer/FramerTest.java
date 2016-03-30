@@ -145,22 +145,7 @@ public class FramerTest
 
         framer.doWork();
 
-        verify(mockConnectionHandler).receiverEndPoint(
-            notNull(SocketChannel.class), anyLong(), anyLong(), eq(LIBRARY_ID), eq(framer),
-            any(), eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any());
-
-        verify(mockConnectionHandler).senderEndPoint(
-            notNull(SocketChannel.class), anyLong(), eq(LIBRARY_ID), eq(framer), any());
-    }
-
-    @Test
-    public void shouldDisconnectClientIfTheresNoAcceptorLibrary() throws Exception
-    {
-        client = SocketChannel.open(FRAMER_ADDRESS);
-
-        framer.doWork();
-
-        verify(mockGatewayPublication).saveError(eq(UNKNOWN_LIBRARY), eq(-1), anyString());
+        verifyEndpointsCreated();
     }
 
     @Test
@@ -324,5 +309,15 @@ public class FramerTest
     {
         clientBuffer.position(0);
         assertEquals("Has written bytes", clientBuffer.remaining(), client.write(clientBuffer));
+    }
+
+    private void verifyEndpointsCreated() throws IOException
+    {
+        verify(mockConnectionHandler).receiverEndPoint(
+            notNull(SocketChannel.class), anyLong(), anyLong(), eq(LIBRARY_ID), eq(framer),
+            any(), eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any());
+
+        verify(mockConnectionHandler).senderEndPoint(
+            notNull(SocketChannel.class), anyLong(), eq(LIBRARY_ID), eq(framer), any());
     }
 }

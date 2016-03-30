@@ -27,6 +27,8 @@ import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_TYPE;
+
 /**
  * An otf acceptor used to accumulate/log/check acceptor interactions.
  */
@@ -134,5 +136,12 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
     public FixMessage lastMessage()
     {
         return messages.get(messages.size() - 1);
+    }
+
+    public boolean hasReceivedMessage(final String messageType)
+    {
+        return messages()
+              .stream()
+              .anyMatch(fixMessage -> fixMessage.get(MSG_TYPE).equals(messageType));
     }
 }

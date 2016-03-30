@@ -101,6 +101,7 @@ public class CommonConfiguration
 
     public static final int DEFAULT_SESSION_BUFFER_SIZE = 8 * 1024;
     public static final long DEFAULT_SENDING_TIME_WINDOW = MINUTES.toMillis(2);
+    public static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
 
     private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
     private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
@@ -124,6 +125,7 @@ public class CommonConfiguration
         getInteger(INBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS);
     private int outboundMaxClaimAttempts =
         getInteger(OUTBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_OUTBOUND_MAX_CLAIM_ATTEMPTS);
+    private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
 
     /**
      * Sets the sending time window. The sending time window is the period of acceptance
@@ -143,6 +145,22 @@ public class CommonConfiguration
     public long sendingTimeWindowInMs()
     {
         return sendingTimeWindowInMs;
+    }
+
+    /**
+     * The default interval for heartbeats if not exchanged upon logon. Specified in seconds.
+     *
+     * @return this
+     */
+    public CommonConfiguration defaultHeartbeatInterval(final int value)
+    {
+        defaultHeartbeatInterval = value;
+        return this;
+    }
+
+    public int defaultHeartbeatInterval()
+    {
+        return defaultHeartbeatInterval;
     }
 
     /**

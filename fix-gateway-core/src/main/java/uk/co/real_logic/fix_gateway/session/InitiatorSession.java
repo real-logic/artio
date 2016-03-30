@@ -56,7 +56,7 @@ public class InitiatorSession extends Session
             initialSequenceNumber);
     }
 
-    void onLogon(
+    public void onLogon(
         final int heartbeatInterval,
         final int msgSeqNo,
         final long sessionId,

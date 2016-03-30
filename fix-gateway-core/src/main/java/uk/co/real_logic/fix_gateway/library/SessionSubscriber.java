@@ -87,17 +87,21 @@ public class SessionSubscriber implements AutoCloseable
         final String username,
         final String password)
     {
-        session.id(sessionId);
+
         if (compositeKey != null)
         {
-            session.sessionKey(compositeKey);
+            session.setupSession(sessionId, compositeKey);
+        }
+        else
+        {
+            session.id(sessionId);
         }
 
         // Acceptors need to wait for Logon message to identify
         if (session instanceof AcceptorSession)
         {
-            session.lastSentMsgSeqNum(lastSentSequenceNumber - 1);
-            session.lastReceivedMsgSeqNum(lastReceivedSequenceNumber - 1);
+            session.lastSentMsgSeqNum(lastSentSequenceNumber);
+            session.lastReceivedMsgSeqNum(lastReceivedSequenceNumber);
         }
 
         session.username(username);

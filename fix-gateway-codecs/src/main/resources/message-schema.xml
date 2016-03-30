@@ -177,6 +177,8 @@
         <field name="state" id="5" type="SessionState"/>
         <field name="lastSentSequenceNumber" id="6" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="7" type="int32"/>
+        <data name="username" id="8" type="varDataEncoding"/>
+        <data name="password" id="9" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="ReleaseSessionReply" id="30"
                  description="response to ReleaseSession">

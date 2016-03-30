@@ -52,6 +52,7 @@ import java.util.function.Consumer;
 import static java.net.StandardSocketOptions.*;
 import static org.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
@@ -250,8 +251,21 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
                 final SocketChannel channel = listeningChannel.accept();
                 if (acceptorLibraryId == NO_ACCEPTOR)
                 {
-                    saveError(UNKNOWN_LIBRARY, NO_ACCEPTOR);
-                    channel.close();
+                    final long connectionId = this.nextConnectionId++;
+                    final GatewaySession session =
+                        setupConnection(channel, connectionId, UNKNOWN, null, GATEWAY_LIBRARY_ID, ACCEPTOR);
+
+                    gatewaySessions.acquire(
+                        session,
+                        SessionState.CONNECTED,
+                        configuration.defaultHeartbeatInterval(),
+                        SequenceNumberIndexReader.UNKNOWN_SESSION,
+                        SequenceNumberIndexReader.UNKNOWN_SESSION,
+                        null,
+                        null);
+
+                    final String address = channel.getRemoteAddress().toString();
+                    inboundPublication.saveConnect(connectionId, address);
                 }
                 else
                 {
@@ -322,6 +336,8 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
 
             final GatewaySession session =
                 setupConnection(channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR);
+
+            idToLibrary.get(libraryId).addSession(session);
 
             sentSequenceNumberIndex.awaitingIndexingUpTo(header, idleStrategy);
 
@@ -414,7 +430,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
             connectionHandler.senderEndPoint(channel, connectionId, libraryId, this, pollEndpointsFunc);
         senderEndPoints.add(senderEndPoint);
 
-        idToLibrary.get(libraryId).addSession(gatewaySession);
+        gatewaySession.endPoints(receiverEndPoint, senderEndPoint);
 
         return gatewaySession;
     }
@@ -487,6 +503,8 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         final long heartbeatIntervalInMs,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
+        final String username,
+        final String password,
         final Header header)
     {
         final LibraryInfo libraryInfo = idToLibrary.get(libraryId);
@@ -504,7 +522,13 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         }
 
         gatewaySessions.acquire(
-            session, state, heartbeatIntervalInMs, lastSentSequenceNumber, lastReceivedSequenceNumber);
+            session,
+            state,
+            heartbeatIntervalInMs,
+            lastSentSequenceNumber,
+            lastReceivedSequenceNumber,
+            username,
+            password);
 
         inboundPublication.saveReleaseSessionReply(OK, correlationId);
     }
@@ -530,7 +554,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         final int lastReceivedSeqNum = session.lastReceivedMsgSeqNum();
         final SessionState sessionState = session.state();
         final CompositeKey compositeKey = gatewaySession.compositeKey();
-        gatewaySession.stopManaging();
+        gatewaySession.handoverManagementTo(libraryId);
         libraryInfo.addSession(gatewaySession);
 
         inboundPublication.saveManageConnection(

@@ -15,16 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.messages.SessionState;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.messages.SessionState;
-import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,11 +77,11 @@ public class GatewaySessions
         final SessionState state,
         final long heartbeatIntervalInMs,
         final int lastSentSequenceNumber,
-        final int lastReceivedSequenceNumber)
+        final int lastReceivedSequenceNumber,
+        final String username,
+        final String password)
     {
         final long connectionId = gatewaySession.connectionId();
-        final long sessionId = gatewaySession.sessionId();
-        final CompositeKey sessionKey = gatewaySession.compositeKey();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final int heartbeatIntervalInS = (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs);
@@ -93,7 +94,7 @@ public class GatewaySessions
             clock,
             connectionId,
             FixEngine.GATEWAY_LIBRARY_ID
-        ).setupSession(sessionId, sessionKey);
+        );
 
         final Session session = new Session(
             heartbeatIntervalInS,
@@ -109,7 +110,7 @@ public class GatewaySessions
             FixEngine.GATEWAY_LIBRARY_ID,
             sessionBufferSize,
             lastSentSequenceNumber + 1
-        ).id(sessionId).sessionKey(sessionKey).lastReceivedMsgSeqNum(lastReceivedSequenceNumber);
+        );
 
         final SessionParser sessionParser = new SessionParser(
             session,
@@ -119,7 +120,20 @@ public class GatewaySessions
         );
 
         sessions.add(gatewaySession);
-        gatewaySession.manage(sessionParser, session);
+        gatewaySession.manage(sessionParser, session, proxy);
+
+        final CompositeKey sessionKey = gatewaySession.compositeKey();
+        DebugLogger.log("Gateway Acquired Session %d", connectionId);
+        if (sessionKey != null)
+        {
+            gatewaySession.onLogon(
+                gatewaySession.sessionId(),
+                sessionKey,
+                username,
+                password
+            );
+            session.lastReceivedMsgSeqNum(lastReceivedSequenceNumber);
+        }
     }
 
     GatewaySession release(final long connectionId)

@@ -326,7 +326,9 @@ public final class FixLibrary extends GatewayProcess
             session.state(),
             session.heartbeatIntervalInMs(),
             session.lastSentMsgSeqNum(),
-            session.lastReceivedMsgSeqNum());
+            session.lastReceivedMsgSeqNum(),
+            session.username(),
+            session.password());
 
         awaitReply(() -> replyStatus == null);
 
@@ -348,7 +350,7 @@ public final class FixLibrary extends GatewayProcess
             return concurrentError();
         }
 
-        outboundPublication.saveRequestSession(libraryId, connectionId, ++correlationId);
+        acquireSession2(connectionId);
 
         awaitReply(() -> replyStatus == null);
 
@@ -357,16 +359,17 @@ public final class FixLibrary extends GatewayProcess
         return replyStatus;
     }
 
+    // TODO: make this a non-blocking acquire session
+    void acquireSession2(final long connectionId)
+    {
+        outboundPublication.saveRequestSession(libraryId, connectionId, ++correlationId);
+    }
+
     // ------------- End Public API -------------
 
     private <T> T concurrentError()
     {
         throw new IllegalStateException("You can't perform this operation concurrently");
-    }
-
-    private void requireIdleStrategy(final IdleStrategy idleStrategy)
-    {
-        requireNonNull(idleStrategy, "idleStrategy");
     }
 
     private void awaitReply(final BooleanSupplier notReady)
@@ -450,7 +453,7 @@ public final class FixLibrary extends GatewayProcess
                     DebugLogger.log("Acct Connect: %d, %d\n", connectionId, libraryId);
                     asciiBuffer.wrap(buffer);
                     final String address = asciiBuffer.getAscii(addressOffset, addressLength);
-                    final Session session = acceptSession(connectionId, address);
+                    final Session session = acceptSession(connectionId, address, state);
                     newSession(connectionId, session);
                 }
             }
@@ -652,7 +655,7 @@ public final class FixLibrary extends GatewayProcess
         return 1;
     }
 
-    private Session acceptSession(final long connectionId, final String address)
+    private Session acceptSession(final long connectionId, final String address, final SessionState state)
     {
         final GatewayPublication publication = outboundLibraryStreams.gatewayPublication(idleStrategy);
         final int defaultInterval = configuration.defaultHeartbeatInterval();
@@ -678,7 +681,8 @@ public final class FixLibrary extends GatewayProcess
             libraryId,
             sessionBufferSize,
             // If a persisted sequence number is needed then it will be set with the logon message.
-            1)
+            1,
+            state)
             .address(host, port);
     }
 

@@ -15,9 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.EpochClock;
-import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
@@ -36,13 +35,14 @@ public final class AcceptorSession extends Session
         final AtomicCounter sentMsgSeqNo,
         final int libraryId,
         final int sessionBufferSize,
-        final int initialSequenceNumber)
+        final int initialSequenceNumber,
+        final SessionState state)
     {
         super(
             defaultInterval,
             connectionId,
             clock,
-            SessionState.CONNECTED,
+            state,
             proxy,
             publication,
             sessionIdStrategy,
@@ -52,53 +52,6 @@ public final class AcceptorSession extends Session
             libraryId,
             sessionBufferSize,
             initialSequenceNumber);
-    }
-
-    @Override
-    public void onLogon(
-        final int heartbeatInterval,
-        final int msgSeqNo,
-        final long sessionId,
-        final CompositeKey sessionKey,
-        final long sendingTime,
-        final long origSendingTime,
-        final String username,
-        final String password,
-        final boolean isPossDupOrResend)
-    {
-        id(sessionId);
-        this.sessionKey = sessionKey;
-        proxy.setupSession(sessionId, sessionKey);
-
-        if (state() == SessionState.CONNECTED)
-        {
-            if (!validateHeartbeat(heartbeatInterval) || !validateSendingTime(sendingTime))
-            {
-                return;
-            }
-
-            final int expectedSeqNo = expectedReceivedSeqNum();
-            if (expectedSeqNo == msgSeqNo)
-            {
-                heartbeatIntervalInS(heartbeatInterval);
-                state(SessionState.ACTIVE);
-                username(username);
-                password(password);
-                replyToLogon(heartbeatInterval);
-            }
-            else if (expectedSeqNo < msgSeqNo)
-            {
-                state(SessionState.AWAITING_RESEND);
-                replyToLogon(heartbeatInterval);
-            }
-            publication.saveLogon(libraryId, connectionId, sessionId);
-        }
-        onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
-    }
-
-    private void replyToLogon(int heartbeatInterval)
-    {
-        proxy.logon(heartbeatInterval, newSentSeqNum(), null, null);
     }
 
 }

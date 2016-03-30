@@ -18,15 +18,17 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
+import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.NewConnectHandler;
 import uk.co.real_logic.fix_gateway.library.NewSessionHandler;
-import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.library.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
+import uk.co.real_logic.fix_gateway.session.Session;
 
-import java.util.Collection;
+import java.util.*;
 
-public class FakeSessionHandler implements SessionHandler, NewSessionHandler
+public class FakeSessionHandler implements SessionHandler, NewSessionHandler, NewConnectHandler
 {
 
     private final Long2ObjectHashMap<Session> connectionIdToSession = new Long2ObjectHashMap<>();
@@ -94,5 +96,17 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler
     public boolean hasDisconnected()
     {
         return hasDisconnected;
+    }
+
+    private List<Long> connections = new ArrayList<>();
+
+    public void onConnect(final FixLibrary library, final long connectionId, final String address)
+    {
+        connections.add(connectionId);
+    }
+
+    public List<Long> connections()
+    {
+        return connections;
     }
 }
