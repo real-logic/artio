@@ -85,7 +85,7 @@ public class EngineAndLibraryIntegrationTest
 
         awaitLibraryConnect(library);
 
-        assertHasLibraries(matchesLibrary(true, DEFAULT_LIBRARY_ID));
+        assertHasLibraries(matchesLibrary(DEFAULT_LIBRARY_ID));
     }
 
     @Test
@@ -102,15 +102,15 @@ public class EngineAndLibraryIntegrationTest
     @Test
     public void engineDetectsMultipleLibraryInstances()
     {
-        library = connectLibrary(2, true);
+        library = connectLibrary(2);
         awaitLibraryConnect(library);
 
-        library2 = connectLibrary(3, false);
+        library2 = connectLibrary(3);
         awaitLibraryConnect(library2);
 
         assertHasLibraries(
-            matchesLibrary(true, 2),
-            matchesLibrary(false, 3));
+            matchesLibrary(2),
+            matchesLibrary(3));
     }
 
     @Test
@@ -121,33 +121,19 @@ public class EngineAndLibraryIntegrationTest
 
     private FixLibrary setupTwoLibrariesAndCloseTheFirst()
     {
-        library = connectLibrary(2, true);
+        library = connectLibrary(2);
         awaitLibraryConnect(library);
 
-        library2 = connectLibrary(3, false);
+        library2 = connectLibrary(3);
         awaitLibraryConnect(library2);
 
         library.close();
 
         assertLibrariesDisconnect(1, library2, engine);
 
-        assertHasLibraries(matchesLibrary(false, 3));
+        assertHasLibraries(matchesLibrary(3));
 
         return library2;
-    }
-
-    @Test
-    public void engineMakesNewLibraryAcceptorLibrary()
-    {
-        setupTwoLibrariesAndCloseTheFirst();
-
-        library = connectLibrary(4, true);
-
-        awaitLibraryConnect(library);
-
-        assertHasLibraries(
-            matchesLibrary(true, 4),
-            matchesLibrary(false, 3));
     }
 
     @Test
@@ -178,26 +164,16 @@ public class EngineAndLibraryIntegrationTest
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void refuseTwoAcceptorLibraries()
-    {
-        library = connectLibrary(2, true);
-
-        library2 = connectLibrary(3, true);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
     public void refuseDuplicateLibraryId()
     {
-        library = connectLibrary(2, true);
+        library = connectLibrary(2);
 
-        library2 = connectLibrary(2, false);
+        library2 = connectLibrary(2);
     }
 
-    private Matcher<LibraryInfo> matchesLibrary(final boolean expectedAcceptor, final int libraryId)
+    private Matcher<LibraryInfo> matchesLibrary(final int libraryId)
     {
-        return allOf(
-            hasFluentProperty("isAcceptor", is(expectedAcceptor)),
-            hasFluentProperty("libraryId", is(libraryId)));
+        return hasFluentProperty("libraryId", is(libraryId));
     }
 
     @SafeVarargs
@@ -214,10 +190,10 @@ public class EngineAndLibraryIntegrationTest
 
     private FixLibrary connectLibrary()
     {
-        return connectLibrary(DEFAULT_LIBRARY_ID, true);
+        return connectLibrary(DEFAULT_LIBRARY_ID);
     }
 
-    private FixLibrary connectLibrary(final int libraryId, final boolean isAcceptor)
+    private FixLibrary connectLibrary(final int libraryId)
     {
         final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(ACCEPTOR_ID)
             .and(new SenderCompIdValidationStrategy(Arrays.asList(INITIATOR_ID, INITIATOR_ID2)));
@@ -230,7 +206,6 @@ public class EngineAndLibraryIntegrationTest
 
         final LibraryConfiguration config = new LibraryConfiguration();
         config
-            .isAcceptor(isAcceptor) // TODO: remove
             .newSessionHandler(sessionHandler)
             .libraryId(libraryId)
             .authenticationStrategy(authenticationStrategy)

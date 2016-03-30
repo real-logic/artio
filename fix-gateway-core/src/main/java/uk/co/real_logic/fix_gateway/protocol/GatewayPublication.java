@@ -18,9 +18,9 @@ package uk.co.real_logic.fix_gateway.protocol;
 import io.aeron.Publication;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.NanoClock;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -28,8 +28,6 @@ import uk.co.real_logic.fix_gateway.messages.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader.UNKNOWN_SESSION;
-import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
-import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 
 /**
  * A proxy for publishing messages fix related messages
@@ -435,7 +433,7 @@ public class GatewayPublication extends AbstractPublication
         return position;
     }
 
-    public long saveLibraryConnect(final int libraryId, final boolean isAcceptor)
+    public long saveLibraryConnect(final int libraryId)
     {
         final long position = claim(LIBRARY_CONNECT_LENGTH);
 
@@ -453,8 +451,7 @@ public class GatewayPublication extends AbstractPublication
 
         libraryConnect
             .wrap(buffer, offset)
-            .libraryId(libraryId)
-            .typeHandled(isAcceptor ? ACCEPTOR : INITIATOR);
+            .libraryId(libraryId);
 
         bufferClaim.commit();
 

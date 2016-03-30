@@ -150,7 +150,7 @@ public class ProcessProtocolSubscription implements FragmentHandler
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         libraryConnect.wrap(buffer, offset, blockLength, version);
-        processProtocolHandler.onLibraryConnect(libraryConnect.libraryId(), libraryConnect.typeHandled());
+        processProtocolHandler.onLibraryConnect(libraryConnect.libraryId());
         return libraryConnect.limit();
     }
 

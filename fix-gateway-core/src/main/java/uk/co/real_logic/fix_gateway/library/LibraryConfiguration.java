@@ -38,7 +38,6 @@ public final class LibraryConfiguration extends CommonConfiguration
 
     private int libraryId = DEFAULT_LIBRARY_ID;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
-    private boolean isAcceptor = false;
     private boolean acceptorSequenceNumbersResetUponReconnect = ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT;
     private NewConnectHandler newConnectHandler;
 
@@ -101,20 +100,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     }
 
     /**
-     * Sets whether this FIX library instance is the acceptor instance. When new connections arrive at a FIX
-     * gateway they need to be forwarded to an instance called the the acceptor library. Only one library instance
-     * per gateway can be the acceptor.
-     *
-     * @param isAcceptor whether this FIX library instance is the acceptor instance.
-     * @return this
-     */
-    public LibraryConfiguration isAcceptor(final boolean isAcceptor)
-    {
-        this.isAcceptor = isAcceptor;
-        return this;
-    }
-
-    /**
      * Configure whether you want the session to reset its sequence number when it reconnects.
      * The session is determined to be the same if the session id strategy allocates it the same
      * id.
@@ -155,11 +140,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public IdleStrategy libraryIdleStrategy()
     {
         return libraryIdleStrategy;
-    }
-
-    public boolean isAcceptor()
-    {
-        return isAcceptor;
     }
 
     public boolean acceptorSequenceNumbersResetUponReconnect()

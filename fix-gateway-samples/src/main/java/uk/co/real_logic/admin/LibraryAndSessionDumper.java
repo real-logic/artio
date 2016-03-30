@@ -42,8 +42,7 @@ public class LibraryAndSessionDumper implements Agent
         for (final LibraryInfo library : engine.libraries(idleStrategy))
         {
             System.out.println("--------------------------------");
-            final String note = library.isAcceptor() ? " is Acceptor" : "";
-            System.out.printf("Library %d %s\n", library.libraryId(), note);
+            System.out.printf("Library %d\n", library.libraryId());
             System.out.println("--------------------------------\n");
             System.out.println("| Id   | Remote Address ");
             for (final SessionInfo session : library.sessions())

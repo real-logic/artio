@@ -114,7 +114,6 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
     private final GatewaySessions gatewaySessions;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
-    private int acceptorLibraryId = NO_ACCEPTOR;
 
     public Framer(
         final EpochClock clock,
@@ -207,10 +206,6 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
                 final int libraryId = library.libraryId();
                 receiverEndPoints.removeLibrary(libraryId);
                 senderEndPoints.removeLibrary(libraryId);
-                if (library.isAcceptor())
-                {
-                    acceptorLibraryId = NO_ACCEPTOR;
-                }
             }
         }
 
@@ -249,35 +244,21 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
                 it.next();
 
                 final SocketChannel channel = listeningChannel.accept();
-                if (acceptorLibraryId == NO_ACCEPTOR)
-                {
-                    final long connectionId = this.nextConnectionId++;
-                    final GatewaySession session =
-                        setupConnection(channel, connectionId, UNKNOWN, null, GATEWAY_LIBRARY_ID, ACCEPTOR);
+                final long connectionId = this.nextConnectionId++;
+                final GatewaySession session =
+                    setupConnection(channel, connectionId, UNKNOWN, null, GATEWAY_LIBRARY_ID, ACCEPTOR);
 
-                    gatewaySessions.acquire(
-                        session,
-                        SessionState.CONNECTED,
-                        configuration.defaultHeartbeatInterval(),
-                        SequenceNumberIndexReader.UNKNOWN_SESSION,
-                        SequenceNumberIndexReader.UNKNOWN_SESSION,
-                        null,
-                        null);
+                gatewaySessions.acquire(
+                    session,
+                    SessionState.CONNECTED,
+                    configuration.defaultHeartbeatInterval(),
+                    SequenceNumberIndexReader.UNKNOWN_SESSION,
+                    SequenceNumberIndexReader.UNKNOWN_SESSION,
+                    null,
+                    null);
 
-                    final String address = channel.getRemoteAddress().toString();
-                    inboundPublication.saveConnect(connectionId, address);
-                }
-                else
-                {
-                    final long connectionId = this.nextConnectionId++;
-                    setupConnection(channel, connectionId, UNKNOWN, null, acceptorLibraryId, ACCEPTOR);
-
-                    final String address = channel.getRemoteAddress().toString();
-                    inboundPublication.saveConnect(connectionId, address);
-                    inboundPublication.saveManageConnection(connectionId, address, acceptorLibraryId, ACCEPTOR,
-                        SequenceNumberIndexReader.UNKNOWN_SESSION, SequenceNumberIndexReader.UNKNOWN_SESSION,
-                        SessionState.CONNECTED);
-                }
+                final String address = channel.getRemoteAddress().toString();
+                inboundPublication.saveConnect(connectionId, address);
 
                 it.remove();
             }
@@ -455,19 +436,12 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         }
     }
 
-    public void onLibraryConnect(final int libraryId, final ConnectionType connectionType)
+    public void onLibraryConnect(final int libraryId)
     {
         final long timeInMs = clock.time();
         if (idToLibrary.containsKey(libraryId))
         {
             saveError(DUPLICATE_LIBRARY_ID, libraryId);
-            return;
-        }
-
-        final boolean isAcceptor = connectionType == ACCEPTOR;
-        if (isAcceptor && acceptorLibraryId != NO_ACCEPTOR)
-        {
-            saveError(DUPLICATE_ACCEPTOR, libraryId);
             return;
         }
 
@@ -477,11 +451,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
             configuration.replyTimeoutInMs(),
             timeInMs);
 
-        final LibraryInfo library = new LibraryInfo(isAcceptor, libraryId, livenessDetector);
-        if (isAcceptor)
-        {
-            acceptorLibraryId = libraryId;
-        }
+        final LibraryInfo library = new LibraryInfo(libraryId, livenessDetector);
         idToLibrary.put(libraryId, library);
     }
 

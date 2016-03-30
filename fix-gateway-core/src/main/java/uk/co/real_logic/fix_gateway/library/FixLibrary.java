@@ -76,7 +76,6 @@ public final class FixLibrary extends GatewayProcess
     private final NewConnectHandler newConnectHandler;
     private final int libraryId;
     private final IdleStrategy idleStrategy;
-    private final boolean isAcceptor;
 
     /** Correlation Id is initialised to a random number to reduce the chance of correlation id collision. */
     private long correlationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
@@ -97,7 +96,6 @@ public final class FixLibrary extends GatewayProcess
         this.sessionIdStrategy = configuration.sessionIdStrategy();
         this.libraryId = configuration.libraryId();
         idleStrategy = configuration.libraryIdleStrategy();
-        isAcceptor = configuration.isAcceptor();
 
         inboundSubscription = inboundLibraryStreams.subscription();
         outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy);
@@ -114,7 +112,7 @@ public final class FixLibrary extends GatewayProcess
     {
         try
         {
-            outboundPublication.saveLibraryConnect(libraryId, isAcceptor);
+            outboundPublication.saveLibraryConnect(libraryId);
 
             final long latestReplyArrivalTime = latestReplyArrivalTime();
             while (!livenessDetector.isConnected() && errorType == null)

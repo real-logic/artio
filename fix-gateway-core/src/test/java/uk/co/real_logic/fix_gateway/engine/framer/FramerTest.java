@@ -15,19 +15,19 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import io.aeron.Subscription;
+import io.aeron.logbuffer.Header;
+import org.agrona.concurrent.QueuedPipe;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import io.aeron.Subscription;
-import io.aeron.logbuffer.Header;
-import org.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
-import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -39,8 +39,8 @@ import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
-import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LIBRARY_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
@@ -267,7 +267,7 @@ public class FramerTest
 
     private void connectLibrary()
     {
-        framer.onLibraryConnect(LIBRARY_ID, ACCEPTOR);
+        framer.onLibraryConnect(LIBRARY_ID);
     }
 
     private void initiateConnection() throws Exception
@@ -314,10 +314,10 @@ public class FramerTest
     private void verifyEndpointsCreated() throws IOException
     {
         verify(mockConnectionHandler).receiverEndPoint(
-            notNull(SocketChannel.class), anyLong(), anyLong(), eq(LIBRARY_ID), eq(framer),
+            notNull(SocketChannel.class), anyLong(), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer),
             any(), eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any());
 
         verify(mockConnectionHandler).senderEndPoint(
-            notNull(SocketChannel.class), anyLong(), eq(LIBRARY_ID), eq(framer), any());
+            notNull(SocketChannel.class), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer), any());
     }
 }

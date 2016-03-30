@@ -28,27 +28,15 @@ import static java.util.Collections.unmodifiableList;
  */
 public final class LibraryInfo
 {
-    private final boolean acceptor;
     private final int libraryId;
     private final LivenessDetector livenessDetector;
     private final List<GatewaySession> allSessions = new CopyOnWriteArrayList<>();
     private final List<SessionInfo> unmodifiableAllSessions = unmodifiableList(allSessions);
 
-    LibraryInfo(final boolean acceptor, final int libraryId, final LivenessDetector livenessDetector)
+    LibraryInfo(final int libraryId, final LivenessDetector livenessDetector)
     {
-        this.acceptor = acceptor;
         this.libraryId = libraryId;
         this.livenessDetector = livenessDetector;
-    }
-
-    /**
-     * Check whether the library is listed as the acceptor.
-     *
-     * @return true if the library is the acceptor, false otherwise.
-     */
-    public boolean isAcceptor()
-    {
-        return acceptor;
     }
 
     /**
@@ -100,7 +88,6 @@ public final class LibraryInfo
     {
         return "LibraryInfo{" +
             "libraryId=" + libraryId +
-            ", acceptor=" + acceptor +
             ", allSessions=" + allSessions +
             '}';
     }

@@ -160,13 +160,12 @@
         <data name="message" id="26" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="ApplicationHeartbeat" id="16"
-                 description="A heartbeat message sent within the application protocol">
+                 description="A heartbeat message sent within the application protocol">u
         <field name="libraryId" id="40" type="LibraryId"/>
     </sbe:message>
     <sbe:message name="LibraryConnect" id="17"
                  description="Notify an engine that a new library has connected">
-        <field name="libraryId" id="47" type="LibraryId"/>
-        <field name="typeHandled" id="48" type="ConnectionType"/>
+        <field name="libraryId" id="1" type="LibraryId"/>
     </sbe:message>
     <sbe:message name="ReleaseSession" id="29"
                  description="releases a session from the library's control to the gateway">
