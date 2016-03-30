@@ -21,7 +21,6 @@ import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
-import uk.co.real_logic.fix_gateway.session.SessionProxy;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader.UNKNOWN_SESSION;
@@ -38,7 +37,6 @@ class GatewaySession implements SessionInfo
     private long sessionId;
     private SessionParser sessionParser;
     private Session session;
-    private SessionProxy proxy;
     private CompositeKey sessionKey;
     private String username;
     private String password;
@@ -47,13 +45,17 @@ class GatewaySession implements SessionInfo
                    final long sessionId,
                    final String address,
                    final ConnectionType connectionType,
-                   final CompositeKey sessionKey)
+                   final CompositeKey sessionKey,
+                   final ReceiverEndPoint receiverEndPoint,
+                   final SenderEndPoint senderEndPoint)
     {
         this.connectionId = connectionId;
         this.sessionId = sessionId;
         this.address = address;
         this.connectionType = connectionType;
         this.sessionKey = sessionKey;
+        this.receiverEndPoint = receiverEndPoint;
+        this.senderEndPoint = senderEndPoint;
     }
 
     public long connectionId()
@@ -71,18 +73,17 @@ class GatewaySession implements SessionInfo
         return sessionId;
     }
 
-    void manage(final SessionParser sessionParser, final Session session, final SessionProxy proxy)
+    void manage(final SessionParser sessionParser, final Session session)
     {
         this.sessionParser = sessionParser;
         this.session = session;
-        this.proxy = proxy;
     }
 
     void handoverManagementTo(final int libraryId)
     {
         receiverEndPoint.libraryId(libraryId);
         senderEndPoint.libraryId(libraryId);
-        manage(null, null, null);
+        manage(null, null);
     }
 
     int poll(final long time)
@@ -132,12 +133,6 @@ class GatewaySession implements SessionInfo
             session.setupSession(sessionId, sessionKey);
             DebugLogger.log("Setup Session As: " + sessionKey.senderCompId());
         }
-    }
-
-    public void endPoints(final ReceiverEndPoint receiverEndPoint, final SenderEndPoint senderEndPoint)
-    {
-        this.receiverEndPoint = receiverEndPoint;
-        this.senderEndPoint = senderEndPoint;
     }
 
     public String username()

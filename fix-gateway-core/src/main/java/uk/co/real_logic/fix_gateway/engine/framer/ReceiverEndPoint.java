@@ -60,8 +60,8 @@ class ReceiverEndPoint
     private static final byte CHECKSUM3 = (byte) '=';
 
     private static final int MIN_CHECKSUM_SIZE = " 10=".length() + 1;
-    public static final int SOCKET_DISCONNECTED = -1;
-    public static final int UNKNOWN_MESSAGE_TYPE = -1;
+    private static final int SOCKET_DISCONNECTED = -1;
+    private static final int UNKNOWN_MESSAGE_TYPE = -1;
 
     private final LogonDecoder logon = new LogonDecoder();
 
@@ -79,7 +79,7 @@ class ReceiverEndPoint
     private final ByteBuffer byteBuffer;
 
     private int libraryId;
-    private final GatewaySession gatewaySession;
+    private GatewaySession gatewaySession;
     private long sessionId;
     private int usedBufferData = 0;
     private boolean hasDisconnected = false;
@@ -98,8 +98,7 @@ class ReceiverEndPoint
         final AtomicCounter messagesRead,
         final Framer framer,
         final ErrorHandler errorHandler,
-        final int libraryId,
-        final GatewaySession gatewaySession)
+        final int libraryId)
     {
         this.channel = channel;
         this.publication = publication;
@@ -113,7 +112,6 @@ class ReceiverEndPoint
         this.framer = framer;
         this.errorHandler = errorHandler;
         this.libraryId = libraryId;
-        this.gatewaySession = gatewaySession;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
@@ -456,5 +454,10 @@ class ReceiverEndPoint
     public void libraryId(final int libraryId)
     {
         this.libraryId = libraryId;
+    }
+
+    public void gatewaySession(final GatewaySession gatewaySession)
+    {
+        this.gatewaySession = gatewaySession;
     }
 }

@@ -69,8 +69,7 @@ public class ConnectionHandler
         final Framer framer,
         final ReliefValve reliefValve,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex,
-        final GatewaySession gatewaySession) throws IOException
+        final SequenceNumberIndexReader receivedSequenceNumberIndex) throws IOException
     {
         return new ReceiverEndPoint(
             channel,
@@ -85,8 +84,7 @@ public class ConnectionHandler
             fixCounters.messagesRead(channel.getRemoteAddress()),
             framer,
             errorHandler,
-            libraryId,
-            gatewaySession
+            libraryId
         );
     }
 

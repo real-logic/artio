@@ -120,7 +120,7 @@ public class GatewaySessions
         );
 
         sessions.add(gatewaySession);
-        gatewaySession.manage(sessionParser, session, proxy);
+        gatewaySession.manage(sessionParser, session);
 
         final CompositeKey sessionKey = gatewaySession.compositeKey();
         DebugLogger.log("Gateway Acquired Session %d", connectionId);

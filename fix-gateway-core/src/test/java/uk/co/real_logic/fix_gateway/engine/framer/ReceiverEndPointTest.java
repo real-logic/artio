@@ -23,6 +23,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
@@ -49,7 +50,7 @@ public class ReceiverEndPointTest
     private static final int MESSAGE_TYPE = 'D';
     private static final long CONNECTION_ID = 20L;
     private static final long SESSION_ID = 4L;
-    private static final int LIBRARY_ID = 3;
+    private static final int LIBRARY_ID = FixEngine.GATEWAY_LIBRARY_ID;
 
     private CompositeKey compositeKey = mock(CompositeKey.class);
     private SocketChannel mockChannel = mock(SocketChannel.class);
@@ -64,12 +65,12 @@ public class ReceiverEndPointTest
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
             mockChannel, 16 * 1024, mockPublication, CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
-            sentSequenceNumbers, receivedSequenceNumbers, messagesRead, mock(Framer.class), errorHandler, LIBRARY_ID,
-            mock(GatewaySession.class));
+            sentSequenceNumbers, receivedSequenceNumbers, messagesRead, mock(Framer.class), errorHandler, LIBRARY_ID);
 
     @Before
     public void setUp()
     {
+        endPoint.gatewaySession(mock(GatewaySession.class));
         when(mockSessionIds.onLogon(any())).thenReturn(SESSION_ID);
         when(mockSessionIdStrategy.onLogon(any())).thenReturn(compositeKey);
     }
