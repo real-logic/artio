@@ -17,11 +17,21 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
-import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNKNOWN_SESSION;
 
 class SenderEndPoints implements AutoCloseable
 {
     private final Long2ObjectHashMap<SenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
+
+    private GatewayPublication publication;
+
+    SenderEndPoints(final GatewayPublication publication)
+    {
+        this.publication = publication;
+    }
 
     public void add(final SenderEndPoint senderEndPoint)
     {
@@ -62,8 +72,8 @@ class SenderEndPoints implements AutoCloseable
         }
         else
         {
-            // TODO: better error logging
-            DebugLogger.log("Ignoring: %s\n", buffer, offset, length);
+            publication.saveError(
+                UNKNOWN_SESSION, GATEWAY_LIBRARY_ID, "Ignoring: " + buffer.getStringUtf8(offset, length));
         }
     }
 

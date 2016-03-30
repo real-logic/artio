@@ -95,7 +95,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
     private final Selector selector;
     private final ServerSocketChannel listeningChannel;
     private final ReceiverEndPoints receiverEndPoints = new ReceiverEndPoints();
-    private final SenderEndPoints senderEndPoints = new SenderEndPoints();
+    private final SenderEndPoints senderEndPoints;
 
     private final EngineConfiguration configuration;
     private final ConnectionHandler connectionHandler;
@@ -135,6 +135,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
         this.replaySubscription = replaySubscription;
         this.gatewaySessions = gatewaySessions;
         this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
+        senderEndPoints = new SenderEndPoints(inboundPublication);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
         this.adminCommands = adminCommands;

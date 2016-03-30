@@ -37,6 +37,7 @@
             <validValue name="UNKNOWN_LIBRARY">3</validValue>
             <validValue name="DUPLICATE_LIBRARY_ID">4</validValue>
             <validValue name="DUPLICATE_ACCEPTOR">5</validValue>
+            <validValue name="UNKNOWN_SESSION">6</validValue>
         </enum>
         <enum name="MessageStatus" encodingType="uint8">
             <validValue name="OK">0</validValue>
