@@ -22,15 +22,10 @@ import io.aeron.logbuffer.TermReader;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolHandler;
-import uk.co.real_logic.fix_gateway.library.SessionHandler;
-import uk.co.real_logic.fix_gateway.messages.ConnectionType;
-import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
-import uk.co.real_logic.fix_gateway.messages.SequenceNumberType;
-import uk.co.real_logic.fix_gateway.messages.SessionState;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
-import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolSubscription;
-import uk.co.real_logic.fix_gateway.protocol.SessionSubscription;
+import uk.co.real_logic.fix_gateway.sbe_util.MessageDumper;
+import uk.co.real_logic.fix_gateway.sbe_util.MessageSchemaIr;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -42,14 +37,10 @@ import java.nio.ByteBuffer;
  * Eg: -Dlogging.dir=/home/richard/monotonic/Fix-Engine/fix-gateway-system-tests/client-logs \
  * ArchivePrinter 'UDP-00000000-0-7f000001-10048' 0
  */
-public class ArchivePrinter implements ProcessProtocolHandler, SessionHandler
+public class ArchivePrinter implements FragmentHandler
 {
     private static final int CHANNEL_ARG = 0;
     private static final int ID_ARG = 1;
-
-    private final FragmentHandler outboundSubscription =
-        new SessionSubscription(this)
-            .andThen(new ProcessProtocolSubscription(this));
 
     private final AsciiBuffer ascii = new MutableAsciiBuffer();
 
@@ -57,6 +48,8 @@ public class ArchivePrinter implements ProcessProtocolHandler, SessionHandler
     private final ExistingBufferFactory bufferFactory;
     private final StreamIdentifier streamId;
     private final PrintStream output;
+    private final MessageDumper dumper = new MessageDumper(MessageSchemaIr.SCHEMA_BUFFER);
+    private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
 
     public static void main(final String[] args)
     {
@@ -91,7 +84,7 @@ public class ArchivePrinter implements ProcessProtocolHandler, SessionHandler
         final UnsafeBuffer termBuffer = new UnsafeBuffer(0, 0);
         for (final File logFile : directoryDescriptor.listLogFiles(streamId))
         {
-            System.out.printf("Printing %s\n", logFile);
+            output.printf("Printing %s\n", logFile);
             final ByteBuffer byteBuffer = bufferFactory.map(logFile);
             if (byteBuffer.capacity() > 0)
             {
@@ -101,80 +94,28 @@ public class ArchivePrinter implements ProcessProtocolHandler, SessionHandler
                 final long messagesRead = TermReader.read(
                     termBuffer,
                     0,
-                    outboundSubscription,
+                    this,
                     Integer.MAX_VALUE,
                     header,
                     Throwable::printStackTrace);
-                System.out.printf("Read %d messages\n", messagesRead);
+                output.printf("Read %d messages\n", messagesRead);
             }
         }
     }
 
-    public void onMessage(
-        final DirectBuffer buffer,
-        final int offset,
-        final int length,
-        final int libraryId,
-        final long connectionId,
-        final long sessionId,
-        final int messageType,
-        final long timestamp)
+    public void onFragment(
+        final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        ascii.wrap(buffer);
-        output.println(ascii.getAscii(offset, length));
-    }
+        headerDecoder.wrap(buffer, offset);
 
-    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
-    {
-        output.printf("%d Disconnected: %s\n", connectionId, reason);
-    }
+        final String result = dumper.toString(
+            headerDecoder.templateId(),
+            headerDecoder.version(),
+            headerDecoder.blockLength(),
+            buffer,
+            offset + MessageHeaderDecoder.ENCODED_LENGTH
+        );
 
-    public void onLogon(
-        final int libraryId,
-        final long connectionId,
-        final long sessionId,
-        final int lastSentSequenceNumber,
-        final int lastReceivedSequenceNumber,
-        final String senderCompId,
-        final String senderSubId,
-        final String senderLocationId,
-        final String targetCompId,
-        final String username,
-        final String password)
-    {
-        output.printf("connection %d has logged in as session %d @ (%d, %d)\n", connectionId, sessionId,
-            lastSentSequenceNumber, lastReceivedSequenceNumber);
-    }
-
-    public void onManageConnection(
-        final int libraryId,
-        final long connectionId,
-        final ConnectionType type,
-        final int lastSequenceNumber,
-        final int lastReceivedSequenceNumber,
-        final DirectBuffer buffer,
-        final int addressOffset,
-        final int addressLength,
-        final SessionState state)
-    {
-        final String address = buffer.getStringUtf8(addressOffset, addressLength);
-        output.printf("Connected to %s as connection %d\n", address, connectionId);
-    }
-
-    public void onInitiateConnection(
-        final int libraryId,
-        final int port,
-        final String host,
-        final String senderCompId,
-        final String senderSubId,
-        final String senderLocationId,
-        final String targetCompId,
-        final SequenceNumberType sequenceNumberType,
-        final int i,
-        final String username,
-        final String password,
-        final Header header)
-    {
-        output.printf("Initiate Connection to %s:%d as %s to %s", host, port, senderCompId, targetCompId);
+        output.println(result);
     }
 }

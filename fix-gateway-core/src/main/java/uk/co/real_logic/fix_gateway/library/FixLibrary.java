@@ -24,16 +24,13 @@ import org.agrona.concurrent.*;
 import org.agrona.concurrent.status.*;
 import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.fix_gateway.protocol.*;
 import uk.co.real_logic.fix_gateway.session.*;
-import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolHandler;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
-import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolSubscription;
-import uk.co.real_logic.fix_gateway.protocol.SessionSubscription;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -413,9 +410,9 @@ public final class FixLibrary extends GatewayProcess
     private final FixLibraryProtocolHandler processProtocolHandler = new FixLibraryProtocolHandler();
     private final FragmentHandler outboundSubscription =
         new SessionSubscription(processProtocolHandler)
-            .andThen(new ProcessProtocolSubscription(processProtocolHandler));
+            .andThen(new LibraryProtocolSubscription(processProtocolHandler));
 
-    private class FixLibraryProtocolHandler implements ProcessProtocolHandler, SessionHandler
+    private class FixLibraryProtocolHandler implements LibraryProtocolHandler, SessionHandler
     {
         private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 

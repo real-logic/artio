@@ -45,7 +45,7 @@ public class SessionSubscription implements FragmentHandler
         readFragment(buffer, offset, header);
     }
 
-    public FragmentHandler andThen(final ProcessProtocolSubscription other)
+    public FragmentHandler andThen(final FragmentHandler other)
     {
         return (buffer, offset, length, header) ->
         {

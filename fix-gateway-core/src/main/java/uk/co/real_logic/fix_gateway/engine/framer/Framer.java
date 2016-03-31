@@ -29,10 +29,7 @@ import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.library.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
-import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
-import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolHandler;
-import uk.co.real_logic.fix_gateway.protocol.ProcessProtocolSubscription;
-import uk.co.real_logic.fix_gateway.protocol.SessionSubscription;
+import uk.co.real_logic.fix_gateway.protocol.*;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -64,7 +61,7 @@ import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
  */
-public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
+public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 {
     public static final int NO_ACCEPTOR = -1;
 
@@ -89,7 +86,7 @@ public class Framer implements Agent, ProcessProtocolHandler, SessionHandler
     private final Timer sendTimer = new Timer("Send", new SystemNanoClock());
     private final SessionSubscription sessionSubscription = new SessionSubscription(this);
     private final FragmentHandler outboundSubscription =
-        sessionSubscription.andThen(new ProcessProtocolSubscription(this));
+        sessionSubscription.andThen(new EngineProtocolSubscription(this));
 
     private final boolean hasBindAddress;
     private final Selector selector;

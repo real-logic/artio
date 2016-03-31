@@ -23,7 +23,7 @@ import uk.co.real_logic.fix_gateway.messages.*;
 import static uk.co.real_logic.fix_gateway.messages.ManageConnectionDecoder.addressHeaderLength;
 import static uk.co.real_logic.fix_gateway.protocol.Streams.UNKNOWN_TEMPLATE;
 
-public class ProcessProtocolSubscription implements FragmentHandler
+public class LibraryProtocolSubscription implements FragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final LogonDecoder logon = new LogonDecoder();
@@ -39,11 +39,11 @@ public class ProcessProtocolSubscription implements FragmentHandler
     private final RequestSessionDecoder requestSession = new RequestSessionDecoder();
     private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
 
-    private final ProcessProtocolHandler processProtocolHandler;
+    private final LibraryProtocolHandler handler;
 
-    public ProcessProtocolSubscription(final ProcessProtocolHandler processProtocolHandler)
+    public LibraryProtocolSubscription(final LibraryProtocolHandler handler)
     {
-        this.processProtocolHandler = processProtocolHandler;
+        this.handler = handler;
     }
 
     public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
@@ -71,16 +71,6 @@ public class ProcessProtocolSubscription implements FragmentHandler
                 return onManageConnection(buffer, offset, blockLength, version);
             }
 
-            case RequestDisconnectDecoder.TEMPLATE_ID:
-            {
-                return onRequestDisconnect(buffer, offset, blockLength, version);
-            }
-
-            case InitiateConnectionDecoder.TEMPLATE_ID:
-            {
-                return onInitiateConnection(buffer, offset, blockLength, version, header);
-            }
-
             case ErrorDecoder.TEMPLATE_ID:
             {
                 return onError(buffer, offset, blockLength, version);
@@ -91,24 +81,9 @@ public class ProcessProtocolSubscription implements FragmentHandler
                 return onApplicationHeartbeat(buffer, offset, blockLength, version);
             }
 
-            case LibraryConnectDecoder.TEMPLATE_ID:
-            {
-                return onLibraryConnect(buffer, offset, blockLength, version);
-            }
-
-            case ReleaseSessionDecoder.TEMPLATE_ID:
-            {
-                return onReleaseSession(buffer, offset, blockLength, version, header);
-            }
-
             case ReleaseSessionReplyDecoder.TEMPLATE_ID:
             {
                 return onReleaseSessionReply(buffer, offset, blockLength, version);
-            }
-
-            case RequestSessionDecoder.TEMPLATE_ID:
-            {
-                return onRequestSession(buffer, offset, blockLength, version);
             }
 
             case RequestSessionReplyDecoder.TEMPLATE_ID:
@@ -128,7 +103,7 @@ public class ProcessProtocolSubscription implements FragmentHandler
     private int onConnect(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         connect.wrap(buffer, offset, blockLength, version);
-        processProtocolHandler.onConnect(
+        handler.onConnect(
             connect.connection(),
             connect.address()
         );
@@ -141,63 +116,25 @@ public class ProcessProtocolSubscription implements FragmentHandler
                                        final int version)
     {
         applicationHeartbeat.wrap(buffer, offset, blockLength, version);
-        processProtocolHandler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
+        handler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
         return applicationHeartbeat.limit();
-    }
-
-
-    private int onLibraryConnect(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
-    {
-        libraryConnect.wrap(buffer, offset, blockLength, version);
-        processProtocolHandler.onLibraryConnect(libraryConnect.libraryId());
-        return libraryConnect.limit();
-    }
-
-    private int onReleaseSession(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
-    {
-        releaseSession.wrap(buffer, offset, blockLength, version);
-        processProtocolHandler.onReleaseSession(
-            releaseSession.libraryId(),
-            releaseSession.connection(),
-            releaseSession.correlationId(),
-            releaseSession.state(),
-            releaseSession.heartbeatIntervalInMs(),
-            releaseSession.lastSentSequenceNumber(),
-            releaseSession.lastReceivedSequenceNumber(),
-            releaseSession.username(),
-            releaseSession.password(),
-            header);
-        return releaseSession.limit();
     }
 
     private int onReleaseSessionReply(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         releaseSessionReply.wrap(buffer, offset, blockLength, version);
-        processProtocolHandler.onReleaseSessionReply(
+        handler.onReleaseSessionReply(
             releaseSessionReply.correlationId(),
             releaseSessionReply.status());
         return releaseSessionReply.limit();
-    }
-
-    private int onRequestSession(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
-    {
-        requestSession.wrap(buffer, offset, blockLength, version);
-        processProtocolHandler.onRequestSession(
-            requestSession.libraryId(),
-            requestSession.connection(),
-            requestSession.correlationId());
-        return requestSession.limit();
     }
 
     private int onRequestSessionReply(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         requestSessionReply.wrap(buffer, offset, blockLength, version);
-        processProtocolHandler.onRequestSessionReply(
+        handler.onRequestSessionReply(
             requestSessionReply.correlationId(),
             requestSessionReply.status());
         return requestSessionReply.limit();
@@ -207,7 +144,7 @@ public class ProcessProtocolSubscription implements FragmentHandler
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         error.wrap(buffer, offset, blockLength, version);
-        processProtocolHandler.onError(
+        handler.onError(
             error.type(),
             error.libraryId(),
             error.message()
@@ -216,47 +153,12 @@ public class ProcessProtocolSubscription implements FragmentHandler
         return error.limit();
     }
 
-    private int onInitiateConnection(
-        final DirectBuffer buffer,
-        final int offset,
-        final int blockLength,
-        final int version,
-        final Header header)
-    {
-        initiateConnection.wrap(buffer, offset, blockLength, version);
-        processProtocolHandler.onInitiateConnection(
-            initiateConnection.libraryId(),
-            initiateConnection.port(),
-            initiateConnection.host(),
-            initiateConnection.senderCompId(),
-            initiateConnection.senderSubId(),
-            initiateConnection.senderLocationId(),
-            initiateConnection.targetCompId(),
-            initiateConnection.sequenceNumberType(),
-            initiateConnection.requestedInitialSequenceNumber(),
-            initiateConnection.username(),
-            initiateConnection.password(),
-            header
-        );
-        return initiateConnection.limit();
-    }
-
-    private int onRequestDisconnect(final DirectBuffer buffer,
-                                    final int offset,
-                                    final int blockLength,
-                                    final int version)
-    {
-        requestDisconnect.wrap(buffer, offset, blockLength, version);
-        processProtocolHandler.onRequestDisconnect(requestDisconnect.libraryId(), requestDisconnect.connection());
-        return requestDisconnect.limit();
-    }
-
     private int onManageConnection(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         manageConnection.wrap(buffer, offset, blockLength, version);
         final int addressOffset = offset + ManageConnectionDecoder.BLOCK_LENGTH + addressHeaderLength();
-        processProtocolHandler.onManageConnection(
+        handler.onManageConnection(
             manageConnection.libraryId(),
             manageConnection.connection(),
             manageConnection.type(),
@@ -273,7 +175,7 @@ public class ProcessProtocolSubscription implements FragmentHandler
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         logon.wrap(buffer, offset, blockLength, version);
-        processProtocolHandler.onLogon(
+        handler.onLogon(
             logon.libraryId(),
             logon.connection(),
             logon.session(),
