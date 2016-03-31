@@ -82,7 +82,6 @@ public final class DebugLogger
         {
             final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
             headerDecoder.wrap(buffer, offset);
-            final int blockLength = headerDecoder.blockLength();
             final MessageDumper dumper = new MessageDumper(MessageSchemaIr.SCHEMA_BUFFER);
             OUTPUT.println(dumper.toString(
                 headerDecoder.templateId(),

@@ -191,7 +191,7 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
-        logSbeMessage(buffer, offset);
+        logSbeMessage(buffer, bufferClaim.offset());
 
         return position;
     }
@@ -233,7 +233,7 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
-        logSbeMessage(buffer, offset);
+        logSbeMessage(buffer, bufferClaim.offset());
 
         return position;
     }
@@ -262,7 +262,7 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
-        logSbeMessage(buffer, offset);
+        logSbeMessage(buffer, bufferClaim.offset());
 
         return position;
     }
@@ -292,7 +292,7 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
-        logSbeMessage(buffer, offset);
+        logSbeMessage(buffer, bufferClaim.offset());
 
         return position;
     }
@@ -320,7 +320,7 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
-        logSbeMessage(buffer, offset);
+        logSbeMessage(buffer, bufferClaim.offset());
 
         return position;
     }
@@ -386,7 +386,7 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
-        logSbeMessage(buffer, offset);
+        logSbeMessage(buffer, bufferClaim.offset());
 
         return position;
     }
@@ -418,7 +418,7 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
-        logSbeMessage(buffer, offset);
+        logSbeMessage(buffer, bufferClaim.offset());
 
         return position;
     }
@@ -445,7 +445,7 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
-        logSbeMessage(buffer, offset);
+        logSbeMessage(buffer, bufferClaim.offset());
 
         return position;
     }
@@ -472,7 +472,7 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
-        logSbeMessage(buffer, offset);
+        logSbeMessage(buffer, bufferClaim.offset());
 
         return position;
     }
@@ -519,7 +519,7 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
-        logSbeMessage(buffer, offset);
+        logSbeMessage(buffer, bufferClaim.offset());
 
         return position;
     }
@@ -547,7 +547,7 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
-        logSbeMessage(buffer, offset);
+        logSbeMessage(buffer, bufferClaim.offset());
 
         return position;
     }
@@ -576,7 +576,7 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
-        logSbeMessage(buffer, offset);
+        logSbeMessage(buffer, bufferClaim.offset());
 
         return position;
     }
@@ -604,7 +604,7 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
-        logSbeMessage(buffer, offset);
+        logSbeMessage(buffer, bufferClaim.offset());
 
         return position;
     }
