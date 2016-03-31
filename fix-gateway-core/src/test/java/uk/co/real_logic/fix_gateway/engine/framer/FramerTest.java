@@ -91,7 +91,7 @@ public class FramerTest
 
         when(mockConnectionHandler
             .receiverEndPoint(any(), connectionId.capture(), anyLong(), anyInt(), any(), any(),
-                eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex)))
+                eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean()))
             .thenReturn(mockReceiverEndPoint);
 
         when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong(), anyInt(), any(), any()))
@@ -315,7 +315,7 @@ public class FramerTest
     {
         verify(mockConnectionHandler).receiverEndPoint(
             notNull(SocketChannel.class), anyLong(), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer),
-            any(), eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex));
+            any(), eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean());
 
         verify(mockConnectionHandler).senderEndPoint(
             notNull(SocketChannel.class), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer), any());

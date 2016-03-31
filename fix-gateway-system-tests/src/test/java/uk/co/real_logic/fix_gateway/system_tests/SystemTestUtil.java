@@ -218,13 +218,6 @@ public final class SystemTestUtil
                                                   final String initiatorId)
     {
         delete(ACCEPTOR_LOGS);
-        return launchAcceptingEngineWithSameLogs(port, acceptorId, initiatorId);
-    }
-
-    public static FixEngine launchAcceptingEngineWithSameLogs(final int port,
-                                                              final String acceptorId,
-                                                              final String initiatorId)
-    {
         final EngineConfiguration config = acceptingConfig(port, "engineCounters", acceptorId, initiatorId);
         return FixEngine.launch(config);
     }

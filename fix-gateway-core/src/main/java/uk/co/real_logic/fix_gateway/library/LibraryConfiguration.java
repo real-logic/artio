@@ -28,7 +28,6 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
  */
 public final class LibraryConfiguration extends CommonConfiguration
 {
-    private static final boolean ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT = true;
 
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
     public static final int DEFAULT_LIBRARY_ID = 1;
@@ -38,7 +37,6 @@ public final class LibraryConfiguration extends CommonConfiguration
 
     private int libraryId = DEFAULT_LIBRARY_ID;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
-    private boolean acceptorSequenceNumbersResetUponReconnect = ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT;
     private NewConnectHandler newConnectHandler;
 
     /**
@@ -99,23 +97,6 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
-    /**
-     * Configure whether you want the session to reset its sequence number when it reconnects.
-     * The session is determined to be the same if the session id strategy allocates it the same
-     * id.
-     *
-     * @param value true if you want them to reset
-     * @return this configuration object.
-     *
-     * @see SessionConfiguration#sequenceNumbersPersistent()
-     * @see this#sessionIdStrategy(SessionIdStrategy)
-     */
-    public LibraryConfiguration acceptorSequenceNumbersResetUponReconnect(final boolean value)
-    {
-        this.acceptorSequenceNumbersResetUponReconnect = value;
-        return this;
-    }
-
     public LibraryConfiguration newConnectHandler(final NewConnectHandler newConnectHandler)
     {
         this.newConnectHandler = newConnectHandler;
@@ -140,11 +121,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public IdleStrategy libraryIdleStrategy()
     {
         return libraryIdleStrategy;
-    }
-
-    public boolean acceptorSequenceNumbersResetUponReconnect()
-    {
-        return acceptorSequenceNumbersResetUponReconnect;
     }
 
     /**

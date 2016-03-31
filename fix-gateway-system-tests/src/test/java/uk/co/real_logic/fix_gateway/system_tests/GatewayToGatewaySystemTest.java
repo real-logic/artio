@@ -168,7 +168,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         }
     }
 
-    @Ignore
     @Test
     public void sequenceNumbersShouldResetOverDisconnects()
     {
@@ -185,7 +184,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, 4);
-        assertSequenceFromInitToAcceptAt(2, 2);
+        assertSequenceFromInitToAcceptAt(2, 1);
     }
 
     @Test

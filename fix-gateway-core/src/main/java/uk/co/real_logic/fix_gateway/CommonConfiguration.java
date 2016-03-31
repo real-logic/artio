@@ -105,6 +105,7 @@ public class CommonConfiguration
 
     private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
     private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
+    private static final boolean ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT = true;
     protected boolean printErrorMessages = true;
     protected IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
     protected long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
@@ -126,6 +127,7 @@ public class CommonConfiguration
     private int outboundMaxClaimAttempts =
         getInteger(OUTBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_OUTBOUND_MAX_CLAIM_ATTEMPTS);
     private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
+    private boolean acceptorSequenceNumbersResetUponReconnect = ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT;
 
     /**
      * Sets the sending time window. The sending time window is the period of acceptance
@@ -161,6 +163,28 @@ public class CommonConfiguration
     public int defaultHeartbeatInterval()
     {
         return defaultHeartbeatInterval;
+    }
+
+    /**
+     * Configure whether you want the session to reset its sequence number when it reconnects.
+     * The session is determined to be the same if the session id strategy allocates it the same
+     * id.
+     *
+     * @param value true if you want them to reset
+     * @return this configuration object.
+     *
+     * @see SessionConfiguration#sequenceNumbersPersistent()
+     * @see this#sessionIdStrategy(SessionIdStrategy)
+     */
+    public CommonConfiguration acceptorSequenceNumbersResetUponReconnect(final boolean value)
+    {
+        this.acceptorSequenceNumbersResetUponReconnect = value;
+        return this;
+    }
+
+    public boolean acceptorSequenceNumbersResetUponReconnect()
+    {
+        return acceptorSequenceNumbersResetUponReconnect;
     }
 
     /**

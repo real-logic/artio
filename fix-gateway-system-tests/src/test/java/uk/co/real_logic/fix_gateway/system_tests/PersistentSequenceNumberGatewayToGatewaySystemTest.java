@@ -17,6 +17,8 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
@@ -41,7 +43,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         mediaDriver = launchMediaDriver();
 
-        acceptingEngine = launchAcceptingEngineWithSameLogs(port, ACCEPTOR_ID, INITIATOR_ID);
+        final EngineConfiguration config =
+            acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
+        config.acceptorSequenceNumbersResetUponReconnect(false);
+        acceptingEngine = FixEngine.launch(config);
         initiatingEngine = launchInitiatingGatewayWithSameLogs(initAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig =

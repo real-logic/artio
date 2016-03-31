@@ -243,8 +243,9 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
                 final SocketChannel channel = listeningChannel.accept();
                 final long connectionId = this.nextConnectionId++;
-                final GatewaySession session =
-                    setupConnection(channel, connectionId, UNKNOWN, null, GATEWAY_LIBRARY_ID, ACCEPTOR);
+                final boolean resetSequenceNumbers = configuration.acceptorSequenceNumbersResetUponReconnect();
+                final GatewaySession session = setupConnection(
+                        channel, connectionId, UNKNOWN, null, GATEWAY_LIBRARY_ID, ACCEPTOR, resetSequenceNumbers);
 
                 gatewaySessions.acquire(
                     session,
@@ -313,8 +314,9 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                 return;
             }
 
+            final boolean resetSeqNumbers = sequenceNumberType == SequenceNumberType.TRANSIENT;
             final GatewaySession session =
-                setupConnection(channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR);
+                setupConnection(channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR, resetSeqNumbers);
 
             idToLibrary.get(libraryId).addSession(session);
 
@@ -378,7 +380,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final long sessionId,
         final CompositeKey sessionKey,
         final int libraryId,
-        final ConnectionType connectionType)
+        final ConnectionType connectionType,
+        final boolean resetSequenceNumbers)
         throws IOException
     {
         channel.setOption(TCP_NODELAY, true);
@@ -394,7 +397,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
         final ReceiverEndPoint receiverEndPoint =
             connectionHandler.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
-                sendOutboundMessagesFunc, sentSequenceNumberIndex, receivedSequenceNumberIndex);
+                sendOutboundMessagesFunc, sentSequenceNumberIndex, receivedSequenceNumberIndex, resetSequenceNumbers);
         receiverEndPoints.add(receiverEndPoint);
 
         final SenderEndPoint senderEndPoint =

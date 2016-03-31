@@ -79,6 +79,7 @@ class ReceiverEndPoint
     private final ByteBuffer byteBuffer;
 
     private int libraryId;
+    private final boolean resetSequenceNumbers;
     private GatewaySession gatewaySession;
     private long sessionId;
     private int usedBufferData = 0;
@@ -98,7 +99,8 @@ class ReceiverEndPoint
         final AtomicCounter messagesRead,
         final Framer framer,
         final ErrorHandler errorHandler,
-        final int libraryId)
+        final int libraryId,
+        final boolean resetSequenceNumbers)
     {
         this.channel = channel;
         this.publication = publication;
@@ -112,6 +114,7 @@ class ReceiverEndPoint
         this.framer = framer;
         this.errorHandler = errorHandler;
         this.libraryId = libraryId;
+        this.resetSequenceNumbers = resetSequenceNumbers;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
@@ -308,8 +311,10 @@ class ReceiverEndPoint
             }
             else
             {
-                final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-                final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+                final int sentSequenceNumber =
+                    sentSequenceNumberIndex.lastKnownSequenceNumber(resetSequenceNumbers, sessionId);
+                final int receivedSequenceNumber =
+                    receivedSequenceNumberIndex.lastKnownSequenceNumber(resetSequenceNumbers, sessionId);
                 final String username = SessionParser.username(logon);
                 final String password = SessionParser.password(logon);
                 gatewaySession.onLogon(sessionId, compositeKey, username, password);
