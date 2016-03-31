@@ -56,18 +56,19 @@ public class AbstractGatewayToGatewaySystemTest
             initiatingOtfAcceptor.messages(), hasSize(initiator1MessageCount));
     }
 
-    protected void assertSequenceFromInitToAcceptAt(final int expectedSeqNum)
+    protected void assertSequenceFromInitToAcceptAt(
+        final int expectedInitToAccSeqNum, final int expectedAccToInitSeqNum)
     {
-        assertEquals(expectedSeqNum, initiatingSession.lastSentMsgSeqNum());
-        assertEquals(expectedSeqNum, acceptingSession.lastReceivedMsgSeqNum());
+        assertEquals(expectedInitToAccSeqNum, initiatingSession.lastSentMsgSeqNum());
+        assertEquals(expectedAccToInitSeqNum, acceptingSession.lastReceivedMsgSeqNum());
 
-        while (initiatingSession.lastReceivedMsgSeqNum() < expectedSeqNum)
+        while (initiatingSession.lastReceivedMsgSeqNum() < expectedAccToInitSeqNum)
         {
             initiatingLibrary.poll(1);
         }
 
-        assertEquals(expectedSeqNum, initiatingSession.lastReceivedMsgSeqNum());
-        assertEquals(expectedSeqNum, acceptingSession.lastSentMsgSeqNum());
+        assertEquals(expectedAccToInitSeqNum, initiatingSession.lastReceivedMsgSeqNum());
+        assertEquals(expectedAccToInitSeqNum, acceptingSession.lastSentMsgSeqNum());
     }
 
     protected void assertSessionsDisconnected()

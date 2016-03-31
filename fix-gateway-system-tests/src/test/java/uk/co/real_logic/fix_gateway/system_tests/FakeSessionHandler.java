@@ -98,15 +98,15 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler, Ne
         return hasDisconnected;
     }
 
-    private List<Long> connections = new ArrayList<>();
+    private Deque<Long> connections = new ArrayDeque<>();
 
     public void onConnect(final FixLibrary library, final long connectionId, final String address)
     {
-        connections.add(connectionId);
+        connections.addFirst(connectionId);
     }
 
-    public List<Long> connections()
+    public long latestConnection()
     {
-        return connections;
+        return connections.peekFirst();
     }
 }

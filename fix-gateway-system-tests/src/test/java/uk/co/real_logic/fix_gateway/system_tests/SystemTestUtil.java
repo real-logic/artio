@@ -280,7 +280,7 @@ public final class SystemTestUtil
         final FakeSessionHandler acceptingSessionHandler,
         final FixLibrary acceptingLibrary)
     {
-        final Long connectionId = acceptingSessionHandler.connections().get(0);
+        final long connectionId = acceptingSessionHandler.latestConnection();
         final SessionReplyStatus reply = acceptingLibrary.acquireSession(connectionId);
         assertEquals(SessionReplyStatus.OK, reply);
         final Session session = acceptingSessionHandler.latestSession();

@@ -175,7 +175,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acquireAcceptingSession();
 
         messagesCanBeExchanged();
-        assertSequenceFromInitToAcceptAt(2);
+        assertSequenceFromInitToAcceptAt(2, 2);
 
         initiatingSession.startLogout();
 
@@ -185,7 +185,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, 4);
-        assertSequenceFromInitToAcceptAt(2);
+        assertSequenceFromInitToAcceptAt(2, 2);
     }
 
     @Test
