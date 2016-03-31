@@ -107,7 +107,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSessionsDisconnected();
     }
 
-    @Ignore
     @Test
     public void twoSessionsCanConnect()
     {
