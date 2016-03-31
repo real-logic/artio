@@ -82,7 +82,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = 10_000L)
     public void customInitialSequenceNumbersCanBeSet()
     {
-        sequenceNumbersCanPersistOverRestarts(3);
+        sequenceNumbersCanPersistOverRestarts(4);
     }
 
     private void sequenceNumbersCanPersistOverRestarts(final int initialSequenceNumber)

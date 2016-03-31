@@ -638,7 +638,7 @@ public final class FixLibrary extends GatewayProcess
 
         if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != SequenceNumberIndexReader.UNKNOWN_SESSION)
         {
-            return lastSequenceNumber;
+            return lastSequenceNumber + 1;
         }
 
         return 1;

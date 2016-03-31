@@ -254,7 +254,6 @@ public final class SystemTestUtil
         setupAuthentication(acceptorId, initiatorId, libraryConfiguration);
 
         libraryConfiguration
-            //.newConnectHandler(new AcquiringNewConnectHandler())
             .newConnectHandler(sessionHandler)
             .newSessionHandler(sessionHandler)
             .aeronChannel(IPC_CHANNEL)

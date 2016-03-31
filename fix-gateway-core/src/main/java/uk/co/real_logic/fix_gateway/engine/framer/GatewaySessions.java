@@ -123,7 +123,7 @@ public class GatewaySessions
         gatewaySession.manage(sessionParser, session);
 
         final CompositeKey sessionKey = gatewaySession.compositeKey();
-        DebugLogger.log("Gateway Acquired Session %d", connectionId);
+        DebugLogger.log("Gateway Acquired Session %d\n", connectionId);
         if (sessionKey != null)
         {
             gatewaySession.onLogon(
