@@ -27,6 +27,7 @@ import uk.co.real_logic.fix_gateway.messages.*;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
+import static uk.co.real_logic.fix_gateway.DebugLogger.logSbeMessage;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader.UNKNOWN_SESSION;
 
 /**
@@ -190,6 +191,8 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
+        logSbeMessage(buffer, offset);
+
         return position;
     }
 
@@ -230,6 +233,8 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
+        logSbeMessage(buffer, offset);
+
         return position;
     }
 
@@ -256,6 +261,8 @@ public class GatewayPublication extends AbstractPublication
             .reason(reason);
 
         bufferClaim.commit();
+
+        logSbeMessage(buffer, offset);
 
         return position;
     }
@@ -285,6 +292,8 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
+        logSbeMessage(buffer, offset);
+
         return position;
     }
 
@@ -310,6 +319,8 @@ public class GatewayPublication extends AbstractPublication
             .connection(connectionId);
 
         bufferClaim.commit();
+
+        logSbeMessage(buffer, offset);
 
         return position;
     }
@@ -375,6 +386,8 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
+        logSbeMessage(buffer, offset);
+
         return position;
     }
 
@@ -405,6 +418,8 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
+        logSbeMessage(buffer, offset);
+
         return position;
     }
 
@@ -430,6 +445,8 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
+        logSbeMessage(buffer, offset);
+
         return position;
     }
 
@@ -454,6 +471,8 @@ public class GatewayPublication extends AbstractPublication
             .libraryId(libraryId);
 
         bufferClaim.commit();
+
+        logSbeMessage(buffer, offset);
 
         return position;
     }
@@ -500,6 +519,8 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
+        logSbeMessage(buffer, offset);
+
         return position;
     }
 
@@ -525,6 +546,8 @@ public class GatewayPublication extends AbstractPublication
             .status(status);
 
         bufferClaim.commit();
+
+        logSbeMessage(buffer, offset);
 
         return position;
     }
@@ -553,6 +576,8 @@ public class GatewayPublication extends AbstractPublication
 
         bufferClaim.commit();
 
+        logSbeMessage(buffer, offset);
+
         return position;
     }
 
@@ -578,6 +603,8 @@ public class GatewayPublication extends AbstractPublication
             .status(status);
 
         bufferClaim.commit();
+
+        logSbeMessage(buffer, offset);
 
         return position;
     }

@@ -17,6 +17,9 @@ package uk.co.real_logic.fix_gateway;
 
 
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.sbe_util.MessageDumper;
+import uk.co.real_logic.fix_gateway.sbe_util.MessageSchemaIr;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -33,7 +36,6 @@ import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEBUG_PRIN
  */
 public final class DebugLogger
 {
-
     private static final PrintStream OUTPUT;
 
     static
@@ -69,6 +71,26 @@ public final class DebugLogger
             final byte[] data = new byte[length];
             buffer.getBytes(offset, data);
             OUTPUT.printf(formatString, value, new String(data, US_ASCII));
+        }
+    }
+
+    public static void logSbeMessage(
+        final DirectBuffer buffer,
+        final int offset)
+    {
+        if (DEBUG_PRINT_MESSAGES)
+        {
+            final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
+            headerDecoder.wrap(buffer, offset);
+            final int blockLength = headerDecoder.blockLength();
+            final MessageDumper dumper = new MessageDumper(MessageSchemaIr.SCHEMA_BUFFER);
+            OUTPUT.println(dumper.toString(
+                headerDecoder.templateId(),
+                headerDecoder.version(),
+                headerDecoder.blockLength(),
+                buffer,
+                offset + MessageHeaderDecoder.ENCODED_LENGTH
+            ));
         }
     }
 

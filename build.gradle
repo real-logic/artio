@@ -154,6 +154,7 @@ project(':fix-gateway-codecs') {
     dependencies {
         compile "org.agrona:Agrona:${agronaVersion}"
         compile 'uk.co.real-logic:sbe-all:1.3.4-RC3'
+        testCompile sourceSets.generated.output
     }
 
     // Code Generation Configuration
