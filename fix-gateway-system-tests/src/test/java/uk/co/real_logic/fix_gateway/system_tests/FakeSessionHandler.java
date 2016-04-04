@@ -109,4 +109,9 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler, Ne
     {
         return connections.peekFirst();
     }
+
+    public boolean hasConnection()
+    {
+        return !connections.isEmpty();
+    }
 }

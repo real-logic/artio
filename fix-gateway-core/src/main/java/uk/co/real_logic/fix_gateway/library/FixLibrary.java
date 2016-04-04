@@ -43,6 +43,7 @@ import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
 /**
  * FIX Library instances represent a process in the gateway where session management,
@@ -467,8 +468,9 @@ public final class FixLibrary extends GatewayProcess
                 final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
                 if (subscriber != null)
                 {
-                    lastSentSequenceNumber = acceptorSequenceNumber(lastSentSequenceNumber);
-                    lastReceivedSequenceNumber = acceptorSequenceNumber(lastReceivedSequenceNumber);
+                    final SessionState state = subscriber.session().state();
+                    lastSentSequenceNumber = acceptorSequenceNumber(lastSentSequenceNumber, state);
+                    lastReceivedSequenceNumber = acceptorSequenceNumber(lastReceivedSequenceNumber, state);
                     final CompositeKey compositeKey = senderCompId.length() == 0 ? null :
                         sessionIdStrategy.onLogon(senderCompId, senderSubId, senderLocationId, targetCompId);
                     subscriber.onLogon(
@@ -482,7 +484,7 @@ public final class FixLibrary extends GatewayProcess
             }
         }
 
-        private int acceptorSequenceNumber(int lastSequenceNumber)
+        private int acceptorSequenceNumber(int lastSequenceNumber, final SessionState state)
         {
             if (!configuration.acceptorSequenceNumbersResetUponReconnect() &&
                 lastSequenceNumber != SequenceNumberIndexReader.UNKNOWN_SESSION)
@@ -490,7 +492,7 @@ public final class FixLibrary extends GatewayProcess
                 return lastSequenceNumber;
             }
 
-            return 1;
+            return state == ACTIVE ? 1 : 0;
         }
 
         public void onMessage(

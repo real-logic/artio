@@ -21,6 +21,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -57,6 +58,7 @@ public final class SystemTestUtil
     public static final String ACCEPTOR_LOGS = "acceptor-logs";
     public static final long TIMEOUT_IN_MS = 100;
     public static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
+    public static final String HI_ID = "hi";
 
     public static void assertDisconnected(final FixLibrary handlerLibrary,
                                           final FakeSessionHandler sessionHandler,
@@ -100,7 +102,7 @@ public final class SystemTestUtil
         assertEventuallyTrue("Session not connected", session::isConnected);
 
         final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest.testReqID("hi");
+        testRequest.testReqID(HI_ID);
 
         session.send(testRequest);
     }
@@ -126,7 +128,7 @@ public final class SystemTestUtil
         assertEventuallyTrue("Failed to receive a test request message", () ->
         {
             poll(library1, library2);
-            return acceptor.hasReceivedMessage("1");
+            return acceptor.hasReceivedMessage("1").isPresent();
         });
     }
 
@@ -270,14 +272,18 @@ public final class SystemTestUtil
     }
 
     public static Session acquireSession(
-        final FakeSessionHandler acceptingSessionHandler,
-        final FixLibrary acceptingLibrary)
+        final FakeSessionHandler sessionHandler,
+        final FixLibrary library)
     {
-        final long connectionId = acceptingSessionHandler.latestConnection();
-        final SessionReplyStatus reply = acceptingLibrary.acquireSession(connectionId);
+        while (!sessionHandler.hasConnection())
+        {
+            library.poll(1);
+        }
+        final long connectionId = sessionHandler.latestConnection();
+        final SessionReplyStatus reply = library.acquireSession(connectionId);
         assertEquals(SessionReplyStatus.OK, reply);
-        final Session session = acceptingSessionHandler.latestSession();
-        acceptingSessionHandler.resetSession();
+        final Session session = sessionHandler.latestSession();
+        sessionHandler.resetSession();
         return session;
     }
 
@@ -355,7 +361,10 @@ public final class SystemTestUtil
         {
             library.poll(1);
             library2.poll(1);
-            return acceptor.hasReceivedMessage("0");
+            return acceptor
+                .hasReceivedMessage("0")
+                .filter(message -> HI_ID.equals(message.get(Constants.TEST_REQ_ID)))
+                .isPresent();
         });
     }
 }

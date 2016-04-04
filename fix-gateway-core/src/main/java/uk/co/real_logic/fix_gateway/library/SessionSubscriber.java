@@ -87,7 +87,6 @@ public class SessionSubscriber implements AutoCloseable
         final String username,
         final String password)
     {
-
         if (compositeKey != null)
         {
             session.setupSession(sessionId, compositeKey);
