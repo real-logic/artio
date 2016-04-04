@@ -15,8 +15,19 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+/**
+ * Callback that is invoked when a library is notified of new connections being made
+ * to the gateway.
+ */
 @FunctionalInterface
 public interface NewConnectHandler
 {
+    /**
+     * Called when a library knows of a new connection being made to the gateway.
+     *
+     * @param library the library object that this callback is associated with
+     * @param connectionId the identifying number of the connection.
+     * @param address the host/port combination of the inbound connection.
+     */
     void onConnect(final FixLibrary library, final long connectionId, final String address);
 }

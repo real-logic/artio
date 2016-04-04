@@ -17,6 +17,12 @@ package uk.co.real_logic.fix_gateway.library;
 
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 
+/**
+ * Callback that gets notified when an error occurs on the gateway associated with
+ * this library.
+ *
+ * This can be used to detect things like duplicate sessions being rejected.
+ */
 @FunctionalInterface
 public interface GatewayErrorHandler
 {

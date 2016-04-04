@@ -15,6 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+/**
+ * {@link NewConnectHandler} implementation that tries to acquire any session
+ * that has connected to the engine. Very useful for implementing simple 1-to-1
+ * topology configurations between engine and library.
+ */
 public class AcquiringNewConnectHandler implements NewConnectHandler
 {
     public void onConnect(final FixLibrary library, final long connectionId, final String address)
