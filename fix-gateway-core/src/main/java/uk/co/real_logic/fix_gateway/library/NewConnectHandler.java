@@ -18,6 +18,8 @@ package uk.co.real_logic.fix_gateway.library;
 /**
  * Callback that is invoked when a library is notified of new connections being made
  * to the gateway.
+ *
+ * @see LibraryConfiguration#newConnectHandler(NewConnectHandler)
  */
 @FunctionalInterface
 public interface NewConnectHandler

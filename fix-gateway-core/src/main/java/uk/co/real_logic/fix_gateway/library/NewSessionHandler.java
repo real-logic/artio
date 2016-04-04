@@ -17,6 +17,12 @@ package uk.co.real_logic.fix_gateway.library;
 
 import uk.co.real_logic.fix_gateway.session.Session;
 
+/**
+ * Callback that gets invoked when a new session comes under the control of
+ * the library interface that its associated with.
+ *
+ * @see LibraryConfiguration#newSessionHandler(NewSessionHandler)
+ */
 @FunctionalInterface
 public interface NewSessionHandler
 {

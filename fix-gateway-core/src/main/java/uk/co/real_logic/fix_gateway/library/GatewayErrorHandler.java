@@ -22,6 +22,8 @@ import uk.co.real_logic.fix_gateway.messages.GatewayError;
  * this library.
  *
  * This can be used to detect things like duplicate sessions being rejected.
+ *
+ * @see LibraryConfiguration#gatewayErrorHandler(GatewayErrorHandler)
  */
 @FunctionalInterface
 public interface GatewayErrorHandler
