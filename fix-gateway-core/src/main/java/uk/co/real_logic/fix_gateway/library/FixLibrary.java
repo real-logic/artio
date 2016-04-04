@@ -540,6 +540,7 @@ public final class FixLibrary extends GatewayProcess
                 FixLibrary.this.errorType = errorType;
                 FixLibrary.this.errorMessage = message;
             }
+            configuration.gatewayErrorHandler().onError(errorType, libraryId, message);
         }
 
         public void onApplicationHeartbeat(final int libraryId)

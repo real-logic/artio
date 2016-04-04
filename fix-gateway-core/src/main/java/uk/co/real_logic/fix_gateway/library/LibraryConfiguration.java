@@ -31,6 +31,8 @@ public final class LibraryConfiguration extends CommonConfiguration
 
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
     public static final int DEFAULT_LIBRARY_ID = 1;
+    public static final GatewayErrorHandler DEFAULT_GATEWAY_ERROR_HANDLER =
+        (errorType, libraryId, message) -> { };
 
     private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
     private NewSessionHandler newSessionHandler;
@@ -38,6 +40,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private int libraryId = DEFAULT_LIBRARY_ID;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
     private NewConnectHandler newConnectHandler;
+    private GatewayErrorHandler gatewayErrorHandler = DEFAULT_GATEWAY_ERROR_HANDLER;
 
     /**
      * When a new session connects to the gateway you register a callback handler to find
@@ -103,6 +106,12 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    public LibraryConfiguration gatewayErrorHandler(final GatewayErrorHandler gatewayErrorHandler)
+    {
+        this.gatewayErrorHandler = gatewayErrorHandler;
+        return this;
+    }
+
     public int encoderBufferSize()
     {
         return encoderBufferSize;
@@ -121,6 +130,11 @@ public final class LibraryConfiguration extends CommonConfiguration
     public IdleStrategy libraryIdleStrategy()
     {
         return libraryIdleStrategy;
+    }
+
+    public GatewayErrorHandler gatewayErrorHandler()
+    {
+        return gatewayErrorHandler;
     }
 
     /**
