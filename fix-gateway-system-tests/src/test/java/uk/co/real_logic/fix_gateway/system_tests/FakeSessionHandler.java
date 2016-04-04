@@ -114,4 +114,9 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler, Ne
     {
         return !connections.isEmpty();
     }
+
+    public void clearConnections()
+    {
+        connections.clear();
+    }
 }
