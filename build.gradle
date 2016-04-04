@@ -167,7 +167,7 @@ project(':fix-gateway-codecs') {
         systemProperties('sbe.output.dir': generatedDir,
                 'sbe.target.language': 'Java',
                 'sbe.validation.stop.on.error': 'true')
-        args = ['src/main/resources/message-schema.xml']
+        args = ['src/main/resources/uk/co/real_logic/fix_gateway/message-schema.xml']
     }
 
     jar {

@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.sbe_util;
 
-import uk.MessageSchemaLocation;
+import uk.co.real_logic.fix_gateway.MessageSchemaLocation;
 import uk.co.real_logic.sbe.ir.Ir;
 import uk.co.real_logic.sbe.ir.IrEncoder;
 import uk.co.real_logic.sbe.xml.IrGenerator;
@@ -26,9 +26,9 @@ import uk.co.real_logic.sbe.xml.XmlSchemaParser;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-public class MessageSchemaIr
+public final class MessageSchemaIr
 {
-    private static final String PATH = "../message-schema.xml";
+    private static final String PATH = "message-schema.xml";
     public static final ByteBuffer SCHEMA_BUFFER = encodeSchema();
 
     private static ByteBuffer encodeSchema()
