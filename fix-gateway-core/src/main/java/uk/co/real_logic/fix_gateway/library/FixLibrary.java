@@ -302,7 +302,8 @@ public final class FixLibrary extends GatewayProcess
     }
 
     /**
-     * Release this session object to the gateway to manage.
+     * Release this session object to the gateway to manage. If the release
+     * operation has successfully completed then it will return {@link SessionReplyStatus#OK}
      *
      * @param session the session to release
      * @return the result of this operation.
@@ -339,6 +340,20 @@ public final class FixLibrary extends GatewayProcess
         return replyStatus;
     }
 
+    /**
+     * Try to acquire control of a session. If this session is being managed by
+     * the gateway then your {@link NewSessionHandler} will receive a callback
+     * and this method will return {@link SessionReplyStatus#OK}.
+     *
+     * If another library has acquired the session then this method will return
+     * {@link SessionReplyStatus#OTHER_SESSION_OWNER}. If the connection id refers
+     * to an unknown session then the method returns {@link SessionReplyStatus#UNKNOWN_SESSION}.
+     * If this library instance is unknown to the gateway, for example if its heartbeating
+     * mechanism has timed out due to {@link this#poll(int)} not being called often enough.
+     *
+     * @param connectionId the id of the connection to acquire.
+     * @return the result of this operation.
+     */
     public SessionReplyStatus acquireSession(final long connectionId)
     {
         if (replyStatus != null)
