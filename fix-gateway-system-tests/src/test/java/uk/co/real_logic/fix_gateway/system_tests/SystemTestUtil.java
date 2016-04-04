@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
-import org.agrona.CloseHelper;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
 import org.hamcrest.Matcher;
@@ -60,27 +59,6 @@ public final class SystemTestUtil
     public static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
     public static final String HI_ID = "hi";
 
-    public static void assertDisconnected(final FixLibrary handlerLibrary,
-                                          final FakeSessionHandler sessionHandler,
-                                          final FixLibrary sessionLibrary,
-                                          final Session session)
-    {
-        assertAcceptorDisconnected(handlerLibrary, sessionHandler);
-
-        assertSessionDisconnected(handlerLibrary, sessionLibrary, session);
-    }
-
-    public static void assertAcceptorDisconnected(final FixLibrary library,
-                                                  final FakeSessionHandler sessionHandler)
-    {
-        assertEventuallyTrue("Failed to requestDisconnect",
-            () ->
-            {
-                library.poll(1);
-                assertEquals(CONNECTION_ID, sessionHandler.connectionId());
-            });
-    }
-
     public static void assertSessionDisconnected(final FixLibrary library1, final Session session)
     {
         assertSessionDisconnected(library1, null, session);
@@ -108,22 +86,7 @@ public final class SystemTestUtil
     }
 
     public static void assertReceivedTestRequest(
-        final FixLibrary library, final FakeOtfAcceptor acceptor)
-    {
-        assertReceivedTestRequest(library, null, acceptor);
-    }
-
-    public static void assertReceivedTestRequest(
         final FixLibrary library1, final FixLibrary library2, final FakeOtfAcceptor acceptor)
-    {
-        assertReceivedTestRequest(library1, library2, acceptor, 2);
-    }
-
-    public static void assertReceivedTestRequest(
-        final FixLibrary library1,
-        final FixLibrary library2,
-        final FakeOtfAcceptor acceptor,
-        final int messageCount)
     {
         assertEventuallyTrue("Failed to receive a test request message", () ->
         {
@@ -296,11 +259,6 @@ public final class SystemTestUtil
             poll(library1, library2);
             assertEquals(ACTIVE, session.state());
         });
-    }
-
-    public static void closeIfOpen(final AutoCloseable closable)
-    {
-        CloseHelper.close(closable);
     }
 
     public static FixLibrary newInitiatingLibrary(

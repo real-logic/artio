@@ -180,7 +180,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         wireSessions();
 
         sendTestRequest(initiatingSession);
-        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor, 4);
+        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
         assertSequenceFromInitToAcceptAt(2, 1);
     }
 
