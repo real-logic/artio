@@ -70,6 +70,7 @@ public class FramerTest
     private FakeEpochClock mockClock = new FakeEpochClock();
     private SequenceNumberIndexReader sentSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
     private SequenceNumberIndexReader receivedSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
+    private ReplayQuery replayQuery = mock(ReplayQuery.class);
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
@@ -119,7 +120,7 @@ public class FramerTest
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex,
             mock(GatewaySessions.class),
-            mock(ReplayQuery.class),
+            replayQuery,
             mock(ErrorHandler.class));
     }
 
