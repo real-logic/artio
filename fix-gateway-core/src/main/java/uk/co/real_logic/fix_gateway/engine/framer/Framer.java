@@ -19,6 +19,7 @@ import io.aeron.Subscription;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.*;
@@ -111,6 +112,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final GatewaySessions gatewaySessions;
     private final CatchupReplayer catchupReplayer;
     private final ReplayQuery inboundMessages;
+    private final ErrorHandler errorHandler;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
@@ -126,7 +128,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final GatewaySessions gatewaySessions,
-        final ReplayQuery inboundMessages)
+        final ReplayQuery inboundMessages,
+        final ErrorHandler errorHandler)
     {
         this.clock = clock;
         this.configuration = configuration;
@@ -135,6 +138,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         this.replaySubscription = replaySubscription;
         this.gatewaySessions = gatewaySessions;
         this.inboundMessages = inboundMessages;
+        this.errorHandler = errorHandler;
         this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
         senderEndPoints = new SenderEndPoints(inboundPublication);
         this.sessionIdStrategy = sessionIdStrategy;
@@ -578,8 +582,11 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
             if (expectedNumberOfMessages < 0)
             {
-                // TODO: log numbers
-                // System.out.println("Messages: " + expectedNumberOfMessages);
+                errorHandler.onError(new IllegalStateException(String.format(
+                    "Sequence Number too high for %d, wanted %d, but we've only archived %d",
+                    correlationId,
+                    replayFromSequenceNumber,
+                    lastReceivedSeqNum)));
                 inboundPublication.saveRequestSessionReply(SEQUENCE_NUMBER_TOO_HIGH, correlationId);
                 return;
             }
@@ -591,13 +598,16 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                 inboundMessages.query(
                     catchupReplayer,
                     sessionId,
-                    replayFromSequenceNumber + 1, // inclusive numbering
+                    replayFromSequenceNumber + 1, // convert to inclusive numbering
                     lastReceivedSeqNum);
 
             if (numberOfMessages != expectedNumberOfMessages)
             {
-                // TODO: log numbers
-                // System.out.println("Messages: " + numberOfMessages + " vs " + expectedNumberOfMessages);
+                errorHandler.onError(new IllegalStateException(String.format(
+                    "Failed to read correct number of messages for %d, expected %d, read %d",
+                    correlationId,
+                    expectedNumberOfMessages,
+                    numberOfMessages)));
                 inboundPublication.saveRequestSessionReply(MISSING_MESSAGES, correlationId);
                 return;
             }

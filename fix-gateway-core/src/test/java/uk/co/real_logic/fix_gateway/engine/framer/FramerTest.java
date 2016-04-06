@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import io.aeron.Subscription;
 import io.aeron.logbuffer.Header;
+import org.agrona.ErrorHandler;
 import org.agrona.concurrent.QueuedPipe;
 import org.junit.After;
 import org.junit.Before;
@@ -118,7 +119,8 @@ public class FramerTest
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex,
             mock(GatewaySessions.class),
-            mock(ReplayQuery.class));
+            mock(ReplayQuery.class),
+            mock(ErrorHandler.class));
     }
 
     @After
