@@ -71,7 +71,7 @@ public class EngineProtocolSubscription implements FragmentHandler
 
             case LibraryConnectDecoder.TEMPLATE_ID:
             {
-                return onLibraryConnect(buffer, offset, blockLength, version);
+                return onLibraryConnect(buffer, offset, blockLength, version, header);
             }
 
             case ReleaseSessionDecoder.TEMPLATE_ID:
@@ -100,10 +100,12 @@ public class EngineProtocolSubscription implements FragmentHandler
 
 
     private int onLibraryConnect(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
     {
         libraryConnect.wrap(buffer, offset, blockLength, version);
-        handler.onLibraryConnect(libraryConnect.libraryId());
+        handler.onLibraryConnect(
+            libraryConnect.libraryId(),
+            header.sessionId());
         return libraryConnect.limit();
     }
 

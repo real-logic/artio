@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.Header;
 import org.agrona.ErrorHandler;
@@ -74,6 +75,10 @@ public class FramerTest
     private SequenceNumberIndexReader sentSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
     private SequenceNumberIndexReader receivedSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
     private ReplayQuery replayQuery = mock(ReplayQuery.class);
+    private SessionIds sessionIds = mock(SessionIds.class);
+    private GatewaySessions gatewaySessions = mock(GatewaySessions.class);;
+    private Subscription outboundSubscription = mock(Subscription.class);
+    private Image image = mock(Image.class);
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
@@ -82,8 +87,6 @@ public class FramerTest
     private Framer framer;
 
     private ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);
-    private SessionIds sessionIds = mock(SessionIds.class);
-    private GatewaySessions gatewaySessions = mock(GatewaySessions.class);;
 
     @Before
     @SuppressWarnings("unchecked")
@@ -112,11 +115,13 @@ public class FramerTest
 
         when(mockSenderEndPoint.libraryId()).thenReturn(LIBRARY_ID);
 
+        when(outboundSubscription.getImage(anyInt())).thenReturn(image);
+
         framer = new Framer(
             mockClock,
             engineConfiguration,
             mockConnectionHandler,
-            mock(Subscription.class),
+            outboundSubscription,
             mock(Subscription.class),
             mock(QueuedPipe.class),
             mockSessionIdStrategy,
@@ -289,7 +294,7 @@ public class FramerTest
 
     private void connectLibrary()
     {
-        framer.onLibraryConnect(LIBRARY_ID);
+        framer.onLibraryConnect(LIBRARY_ID, 1);
     }
 
     private void initiateConnection() throws Exception

@@ -33,13 +33,14 @@ public interface EngineProtocolHandler
         final int requestedInitialSequenceNumber,
         final String username,
         final String password,
-        final int heartbeatIntervalInS, final Header header);
+        final int heartbeatIntervalInS,
+        final Header header);
 
     void onRequestDisconnect(final int libraryId, final long connectionId);
 
     void onApplicationHeartbeat(final int libraryId);
 
-    void onLibraryConnect(final int libraryId);
+    void onLibraryConnect(final int libraryId, final int aeronSessionId);
 
     void onReleaseSession(
         final int libraryId,

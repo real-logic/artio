@@ -30,13 +30,15 @@ public final class LibraryInfo
 {
     private final int libraryId;
     private final LivenessDetector livenessDetector;
+    private final int aeronSessionId;
     private final List<GatewaySession> allSessions = new CopyOnWriteArrayList<>();
     private final List<SessionInfo> unmodifiableAllSessions = unmodifiableList(allSessions);
 
-    LibraryInfo(final int libraryId, final LivenessDetector livenessDetector)
+    LibraryInfo(final int libraryId, final LivenessDetector livenessDetector, final int aeronSessionId)
     {
         this.libraryId = libraryId;
         this.livenessDetector = livenessDetector;
+        this.aeronSessionId = aeronSessionId;
     }
 
     /**
@@ -57,6 +59,11 @@ public final class LibraryInfo
     public List<SessionInfo> sessions()
     {
         return unmodifiableAllSessions;
+    }
+
+    int aeronSessionId()
+    {
+        return aeronSessionId;
     }
 
     List<GatewaySession> gatewaySessions()

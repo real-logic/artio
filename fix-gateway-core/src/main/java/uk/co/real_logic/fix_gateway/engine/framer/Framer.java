@@ -212,16 +212,18 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             if (!library.isConnected())
             {
                 iterator.remove();
-                acquireSessions(library);
+                acquireLibrarySessions(library);
             }
         }
 
         return total;
     }
 
-    private void acquireSessions(final LibraryInfo library)
+    private void acquireLibrarySessions(final LibraryInfo library)
     {
-        // TODO: wait for the archiver to get up to date.
+        final long position = outboundDataSubscription.getImage(library.aeronSessionId()).position();
+        sentSequenceNumberIndex.awaitingIndexingUpTo(
+            library.aeronSessionId(), position, idleStrategy);
 
         for (final GatewaySession session : library.gatewaySessions())
         {
@@ -472,7 +474,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         }
     }
 
-    public void onLibraryConnect(final int libraryId)
+    public void onLibraryConnect(final int libraryId, final int aeronSessionId)
     {
         final long timeInMs = clock.time();
         if (idToLibrary.containsKey(libraryId))
@@ -487,7 +489,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             configuration.replyTimeoutInMs(),
             timeInMs);
 
-        final LibraryInfo library = new LibraryInfo(libraryId, livenessDetector);
+        final LibraryInfo library = new LibraryInfo(libraryId, livenessDetector, aeronSessionId);
         idToLibrary.put(libraryId, library);
     }
 
