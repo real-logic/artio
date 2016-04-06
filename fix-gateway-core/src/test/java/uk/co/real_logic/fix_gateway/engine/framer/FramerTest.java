@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
+import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
@@ -44,10 +45,11 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
-import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LIBRARY_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 import static uk.co.real_logic.fix_gateway.messages.SequenceNumberType.TRANSIENT;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
 
 public class FramerTest
 {
@@ -80,6 +82,7 @@ public class FramerTest
 
     private ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);
     private SessionIds sessionIds = mock(SessionIds.class);
+    private GatewaySessions gatewaySessions = mock(GatewaySessions.class);;
 
     @Before
     @SuppressWarnings("unchecked")
@@ -119,7 +122,7 @@ public class FramerTest
             sessionIds,
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex,
-            mock(GatewaySessions.class),
+            gatewaySessions,
             replayQuery,
             mock(ErrorHandler.class));
     }
@@ -174,13 +177,7 @@ public class FramerTest
         framer.onDisconnect(LIBRARY_ID, connectionId.getValue(), null);
         framer.doWork();
 
-        verifyEndpointsClosed(LOCAL_DISCONNECT);
-    }
-
-    private void verifyEndpointsClosed(final DisconnectReason reason)
-    {
-        verify(mockReceiverEndPoint).close(reason);
-        verify(mockSenderEndPoint).close();
+        verifyEndPointsDisconnected(LOCAL_DISCONNECT);
     }
 
     @Test
@@ -242,7 +239,7 @@ public class FramerTest
     }
 
     @Test
-    public void shouldDisconnectInitiatedClientsWhenLibraryDisconnects() throws Exception
+    public void shouldAcquireInitiatedClientsWhenLibraryDisconnects() throws Exception
     {
         initiateConnection();
 
@@ -250,11 +247,11 @@ public class FramerTest
 
         framer.doWork();
 
-        verifyEndpointsClosed(LIBRARY_DISCONNECT);
+        verifySessionsAcquired(ACTIVE);
     }
 
     @Test
-    public void shouldDisconnectAcceptedClientsWhenLibraryDisconnects() throws Exception
+    public void shouldAcquireAcceptedClientsWhenLibraryDisconnects() throws Exception
     {
         aClientConnects();
 
@@ -262,7 +259,26 @@ public class FramerTest
 
         framer.doWork();
 
-        verifyEndpointsClosed(LIBRARY_DISCONNECT);
+        verifySessionsAcquired(CONNECTED);
+    }
+
+    private void verifySessionsAcquired(final SessionState state)
+    {
+        verify(gatewaySessions, times(1)).acquire(
+            any(),
+            eq(state),
+            anyInt(),
+            anyInt(),
+            anyInt(),
+            any(),
+            any()
+        );
+    }
+
+    private void verifyEndPointsDisconnected(final DisconnectReason reason)
+    {
+        verify(mockReceiverEndPoint).close(reason);
+        verify(mockSenderEndPoint).close();
     }
 
     private void timeoutLibrary()

@@ -77,6 +77,7 @@ public class LibraryAndGatewayRandomTimeoutTest
     {
         initiatingLibrary = FixLibrary.connect(
             new LibraryConfiguration()
+                .replyTimeoutInMs(300)
                 .newSessionHandler(initiatingSessionHandler)
                 .aeronChannel("udp://localhost:" + aeronPort)
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters"));

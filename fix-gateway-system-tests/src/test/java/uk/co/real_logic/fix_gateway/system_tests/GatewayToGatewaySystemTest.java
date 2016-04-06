@@ -33,7 +33,6 @@ import static uk.co.real_logic.fix_gateway.CommonMatchers.hasConnectionId;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
-import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_TYPE;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -202,22 +201,22 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void librariesShouldBeAbleToReleaseInitiatedSessionToTheGateway()
+    public void librariesShouldBeAbleToReleaseInitiatedSessionToEngine()
     {
         acquireAcceptingSession();
 
-        releaseSessionToGateway(initiatingSession, initiatingLibrary, initiatingEngine);
+        releaseSessionToEngine(initiatingSession, initiatingLibrary, initiatingEngine);
     }
 
     @Test
-    public void librariesShouldBeAbleToReleaseAcceptedSessionToTheGateway()
+    public void librariesShouldBeAbleToReleaseAcceptedSessionToEngine()
     {
         acquireAcceptingSession();
 
-        releaseSessionToGateway(acceptingSession, acceptingLibrary, acceptingEngine);
+        releaseSessionToEngine(acceptingSession, acceptingLibrary, acceptingEngine);
     }
 
-    private void releaseSessionToGateway(
+    private void releaseSessionToEngine(
         final Session session,
         final FixLibrary library,
         final FixEngine engine)
@@ -334,11 +333,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
         assertEquals(1, messages
             .stream()
-            .filter(msg -> msg.get(MSG_TYPE).equals("1") && msg.get(MSG_SEQ_NUM).equals(expectedSeqNum))
+            .filter(msg -> msg.getMsgType().equals("1") && msg.get(MSG_SEQ_NUM).equals(expectedSeqNum))
             .count());
     }
-
-
 
     @Test
     public void librariesShouldNotBeAbleToAcquireSessionsThatDontExist()

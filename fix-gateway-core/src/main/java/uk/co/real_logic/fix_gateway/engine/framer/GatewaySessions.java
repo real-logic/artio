@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.Collections.unmodifiableList;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * Keeps track of which sessions managed by the gateway
@@ -75,7 +74,7 @@ public class GatewaySessions
     void acquire(
         final GatewaySession gatewaySession,
         final SessionState state,
-        final long heartbeatIntervalInMs,
+        final int heartbeatIntervalInS,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
         final String username,
@@ -84,7 +83,6 @@ public class GatewaySessions
         final long connectionId = gatewaySession.connectionId();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
-        final int heartbeatIntervalInS = (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs);
 
         final SessionProxy proxy = new SessionProxy(
             sessionBufferSize,

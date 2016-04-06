@@ -317,8 +317,7 @@ public final class SystemTestUtil
     {
         assertEventuallyTrue("Failed to received heartbeat", () ->
         {
-            library.poll(1);
-            library2.poll(1);
+            poll(library, library2);
             return acceptor
                 .hasReceivedMessage("0")
                 .filter(message -> HI_ID.equals(message.get(Constants.TEST_REQ_ID)))

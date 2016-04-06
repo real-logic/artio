@@ -118,7 +118,7 @@ public class AbstractGatewayToGatewaySystemTest
             initiatingLibrary.poll(1);
 
             final FixMessage message = acceptingOtfAcceptor.lastMessage();
-            final String messageType = message.getMessageType();
+            final String messageType = message.getMsgType();
             assertEquals("1", messageType);
             assertEquals("Y", message.getPossDup());
             assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());

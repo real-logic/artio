@@ -101,7 +101,7 @@ public class CommonConfiguration
 
     public static final int DEFAULT_SESSION_BUFFER_SIZE = 8 * 1024;
     public static final long DEFAULT_SENDING_TIME_WINDOW = MINUTES.toMillis(2);
-    public static final int DEFAULT_HEARTBEAT_INTERVAL = 10;
+    public static final int DEFAULT_HEARTBEAT_INTERVAL_IN_S = 10;
 
     private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
     private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
@@ -126,7 +126,7 @@ public class CommonConfiguration
         getInteger(INBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS);
     private int outboundMaxClaimAttempts =
         getInteger(OUTBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_OUTBOUND_MAX_CLAIM_ATTEMPTS);
-    private int defaultHeartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
+    private int defaultHeartbeatIntervalInS = DEFAULT_HEARTBEAT_INTERVAL_IN_S;
     private boolean acceptorSequenceNumbersResetUponReconnect = ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT;
 
     /**
@@ -154,15 +154,15 @@ public class CommonConfiguration
      *
      * @return this
      */
-    public CommonConfiguration defaultHeartbeatInterval(final int value)
+    public CommonConfiguration defaultHeartbeatIntervalInS(final int value)
     {
-        defaultHeartbeatInterval = value;
+        defaultHeartbeatIntervalInS = value;
         return this;
     }
 
-    public int defaultHeartbeatInterval()
+    public int defaultHeartbeatIntervalInS()
     {
-        return defaultHeartbeatInterval;
+        return defaultHeartbeatIntervalInS;
     }
 
     /**

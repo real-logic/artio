@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import static java.net.StandardSocketOptions.*;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
@@ -57,6 +58,7 @@ import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.*;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
 import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 
@@ -210,13 +212,35 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             if (!library.isConnected())
             {
                 iterator.remove();
-                final int libraryId = library.libraryId();
-                receiverEndPoints.removeLibrary(libraryId);
-                senderEndPoints.removeLibrary(libraryId);
+                acquireLibrary(library);
             }
         }
 
         return total;
+    }
+
+    private void acquireLibrary(final LibraryInfo library)
+    {
+        // wait for the archiver to get up to date.
+
+        for (final GatewaySession session : library.gatewaySessions())
+        {
+            final long sessionId = session.sessionId();
+            final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+            final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+            final boolean hasLoggedIn = receivedSequenceNumber != SequenceNumberIndexReader.UNKNOWN_SESSION;
+            final SessionState state = hasLoggedIn ? ACTIVE : CONNECTED;
+            gatewaySessions.acquire(
+                session,
+                state,
+                configuration.defaultHeartbeatIntervalInS(), // TODO: heartbeat interval
+                sentSequenceNumber,
+                receivedSequenceNumber,
+                session.username(), // TODO: ensure that these are set upon logon by REP
+                session.password()
+            );
+            // TODO: should backscan the gap between last received message at the engine and the library
+        }
     }
 
     private int pollEndPoints() throws IOException
@@ -258,8 +282,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
                 gatewaySessions.acquire(
                     session,
-                    SessionState.CONNECTED,
-                    configuration.defaultHeartbeatInterval(),
+                    CONNECTED,
+                    configuration.defaultHeartbeatIntervalInS(),
                     SequenceNumberIndexReader.UNKNOWN_SESSION,
                     SequenceNumberIndexReader.UNKNOWN_SESSION,
                     null,
@@ -506,7 +530,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         gatewaySessions.acquire(
             session,
             state,
-            heartbeatIntervalInMs,
+            (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs),
             lastSentSequenceNumber,
             lastReceivedSequenceNumber,
             username,

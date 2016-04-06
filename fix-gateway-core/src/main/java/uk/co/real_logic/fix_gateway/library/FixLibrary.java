@@ -648,7 +648,7 @@ public final class FixLibrary extends GatewayProcess
                                     final int lastReceivedSequenceNumber,
                                     final SessionState state)
     {
-        final int defaultInterval = configuration.defaultHeartbeatInterval();
+        final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
         final GatewayPublication publication = outboundLibraryStreams.gatewayPublication(idleStrategy);
 
         final SessionProxy sessionProxy = sessionProxy(connectionId);
@@ -704,7 +704,7 @@ public final class FixLibrary extends GatewayProcess
     private Session acceptSession(final long connectionId, final String address, final SessionState state)
     {
         final GatewayPublication publication = outboundLibraryStreams.gatewayPublication(idleStrategy);
-        final int defaultInterval = configuration.defaultHeartbeatInterval();
+        final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
         final int split = address.lastIndexOf(':');
         final int start = address.startsWith("/") ? 1 : 0;
         final String host = address.substring(start, split);

@@ -31,7 +31,7 @@ public class FixMessage extends Int2ObjectHashMap<String>
     {
     }
 
-    public String getMessageType()
+    public String getMsgType()
     {
         return get(Constants.MSG_TYPE);
     }

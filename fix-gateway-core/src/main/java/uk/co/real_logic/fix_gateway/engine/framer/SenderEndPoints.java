@@ -47,21 +47,6 @@ class SenderEndPoints implements AutoCloseable
         }
     }
 
-    public void removeLibrary(final int libraryId)
-    {
-        connectionIdToSenderEndpoint
-            .values()
-            .removeIf(senderEndPoint ->
-            {
-                final boolean remove = senderEndPoint.libraryId() == libraryId;
-                if (remove)
-                {
-                    senderEndPoint.close();
-                }
-                return remove;
-            });
-    }
-
     public void onMessage(
         final long connectionId, final DirectBuffer buffer, final int offset, final int length)
     {
