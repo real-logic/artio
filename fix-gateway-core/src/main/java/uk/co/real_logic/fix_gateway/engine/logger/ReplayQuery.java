@@ -26,13 +26,12 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.function.LongFunction;
 
-import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
 /**
  * Queries an index of a composite key of session id and sequence number
  */
-class ReplayQuery implements AutoCloseable
+public class ReplayQuery implements AutoCloseable
 {
     private final MessageHeaderDecoder messageFrameHeader = new MessageHeaderDecoder();
     private final ReplayIndexRecordDecoder indexRecord = new ReplayIndexRecordDecoder();
@@ -41,22 +40,32 @@ class ReplayQuery implements AutoCloseable
     private final Long2ObjectCache<SessionQuery> sessionToIndex;
     private final String logFileDir;
     private final ExistingBufferFactory indexBufferFactory;
+    private final ArchiveReader archiveReader;
+    private final int requiredStreamId;
 
-    private final ArchiveReader outboundArchiveReader;
-
-    ReplayQuery(
+    public ReplayQuery(
         final String logFileDir,
         final int cacheNumSets,
         final int cacheSetSize,
         final ExistingBufferFactory indexBufferFactory,
-        final ArchiveReader outboundArchiveReader)
+        final ArchiveReader archiveReader,
+        final int requiredStreamId)
     {
         this.logFileDir = logFileDir;
         this.indexBufferFactory = indexBufferFactory;
-        this.outboundArchiveReader = outboundArchiveReader;
+        this.archiveReader = archiveReader;
+        this.requiredStreamId = requiredStreamId;
         sessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionQuery::close);
     }
 
+    /**
+     *
+     * @param handler the handler to pass the messages to
+     * @param sessionId the FIX session id of the stream to replay.
+     * @param beginSeqNo sequence number to begin replay at (inclusive).
+     * @param endSeqNo sequence number to end replay at (inclusive).
+     * @return number of messages replayed
+     */
     public int query(
         final FragmentHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
     {
@@ -89,6 +98,7 @@ class ReplayQuery implements AutoCloseable
             int index = messageFrameHeader.encodedLength();
             final int actingBlockLength = messageFrameHeader.blockLength();
             final int actingVersion = messageFrameHeader.version();
+            final int requiredStreamId = ReplayQuery.this.requiredStreamId;
 
             int count = 0;
             int lastAeronSessionId = 0;
@@ -108,11 +118,11 @@ class ReplayQuery implements AutoCloseable
                 if (sessionReader == null || aeronSessionId != lastAeronSessionId)
                 {
                     lastAeronSessionId = aeronSessionId;
-                    sessionReader = outboundArchiveReader.session(aeronSessionId);
+                    sessionReader = archiveReader.session(aeronSessionId);
                 }
 
                 final int sequenceNumber = indexRecord.sequenceNumber();
-                if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo && streamId == OUTBOUND_LIBRARY_STREAM)
+                if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo && streamId == requiredStreamId)
                 {
                     count++;
                     if (sessionReader.read(position, handler) < 0)

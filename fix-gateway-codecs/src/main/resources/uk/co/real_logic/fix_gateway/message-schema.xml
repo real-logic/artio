@@ -90,10 +90,20 @@
         </enum>
 
         <enum name="SessionReplyStatus" encodingType="uint8">
-            <validValue name="OK">0</validValue>
-            <validValue name="UNKNOWN_SESSION">1</validValue>
-            <validValue name="UNKNOWN_LIBRARY">2</validValue>
-            <validValue name="OTHER_SESSION_OWNER">3</validValue>
+            <validValue name="OK"
+                        description="Operation Succeeded">0</validValue>
+            <validValue name="UNKNOWN_SESSION"
+                        description="The gateway doesn't know about the specified connection id">1</validValue>
+            <validValue name="UNKNOWN_LIBRARY"
+                        description="The gateway doesn't know about your library">2</validValue>
+            <validValue name="OTHER_SESSION_OWNER"
+                        description="Another library owns that session">3</validValue>
+            <validValue name="SESSION_NOT_LOGGED_IN"
+                        description="The session hasn't logged in yet so you can't replay anything">4</validValue>
+            <validValue name="SEQUENCE_NUMBER_TOO_HIGH"
+                        description="Can't replay to that sequence number: haven't archived it yet">5</validValue>
+            <validValue name="MISSING_MESSAGES"
+                        description="We can't find the required number of messages in the log">6</validValue>
         </enum>
     </types>
 
@@ -187,14 +197,20 @@
     </sbe:message>
     <sbe:message name="RequestSession" id="31"
                  description="requests control of a session for this library">
-        <field name="libraryId" id="95" type="LibraryId"/>
-        <field name="connection" id="96" type="ConnectionId"/>
-        <field name="correlationId" id="97" type="CorrelationId"/>
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="correlationId" id="3" type="CorrelationId"/>
+        <field name="lastReceivedSequenceNumber" id="4" type="int32"/>
     </sbe:message>
     <sbe:message name="RequestSessionReply" id="32"
                  description="response to ReleaseSession">
         <field name="correlationId" id="98" type="CorrelationId"/>
         <field name="status" id="94" type="SessionReplyStatus"/>
+    </sbe:message>
+    <sbe:message name="Catchup" id="34" description="A notice that the following messages will be catchups">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="messageCount" id="3" type="int32"/>
     </sbe:message>
 
     <!-- EXCEPTION STORAGE DATA STRUCTURES -->

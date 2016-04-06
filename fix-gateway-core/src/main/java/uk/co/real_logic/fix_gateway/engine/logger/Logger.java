@@ -82,16 +82,22 @@ public class Logger implements AutoCloseable
             final int cacheSetSize = configuration.loggerCacheSetSize();
             final int cacheNumSets = configuration.loggerCacheNumSets();
             final String logFileDir = configuration.logFileDir();
-            final List<Index> indices = Arrays.asList(
-                new ReplayIndex(logFileDir, configuration.indexFileSize(), cacheNumSets, cacheSetSize, LoggerUtil::map),
-                sentSequenceNumberIndex);
-            final Indexer outboundIndexer = new Indexer(
-                indices, outboundLibraryStreams.subscription(), outboundArchiveReader);
-            final Indexer inboundIndexer = new Indexer(
-                Arrays.asList(receivedSequenceNumberIndex), inboundLibraryStreams.subscription(), inboundArchiveReader);
 
-            final ReplayQuery replayQuery = new ReplayQuery(
-                logFileDir, cacheNumSets, cacheSetSize, LoggerUtil::mapExistingFile, outboundArchiveReader);
+            final ReplayIndex replayIndex =
+                new ReplayIndex(logFileDir, configuration.indexFileSize(), cacheNumSets, cacheSetSize, LoggerUtil::map);
+
+            final Indexer outboundIndexer = new Indexer(
+                Arrays.asList(replayIndex, sentSequenceNumberIndex),
+                outboundLibraryStreams.subscription(),
+                outboundArchiveReader);
+
+            final Indexer inboundIndexer = new Indexer(
+                Arrays.asList(replayIndex, receivedSequenceNumberIndex),
+                inboundLibraryStreams.subscription(),
+                inboundArchiveReader);
+
+            final ReplayQuery replayQuery =
+                newReplayQuery(logFileDir, outboundArchiveReader);
             final Replayer replayer = new Replayer(
                 inboundLibraryStreams.subscription(),
                 replayQuery,
@@ -117,6 +123,21 @@ public class Logger implements AutoCloseable
                 outboundLibraryStreams.gatewayPublication(configuration.loggerIdleStrategy()));
             loggingRunner = newRunner(gapFiller);
         }
+    }
+
+    private ReplayQuery newReplayQuery(final String logFileDir,
+                                       final ArchiveReader archiveReader)
+    {
+        final int cacheSetSize = configuration.loggerCacheSetSize();
+        final int cacheNumSets = configuration.loggerCacheNumSets();
+        final int streamId = archiveReader.fullStreamId().streamId();
+        return new ReplayQuery(
+            logFileDir,
+            cacheNumSets,
+            cacheSetSize,
+            LoggerUtil::mapExistingFile,
+            archiveReader,
+            streamId);
     }
 
     public void initArchival()
@@ -208,5 +229,12 @@ public class Logger implements AutoCloseable
         outboundArchiveReader.close();
         sentSequenceNumberIndex.close();
         receivedSequenceNumberIndex.close();
+    }
+
+    public ReplayQuery inboundMessageQuery()
+    {
+        final String logFileDir = configuration.logFileDir();
+        final ArchiveReader archiveReader = archiveReader(logFileDir, inboundLibraryStreams.subscription());
+        return newReplayQuery(logFileDir, archiveReader);
     }
 }

@@ -182,7 +182,7 @@ public final class FixEngine extends GatewayProcess
             adminCommands, sessionIdStrategy, sessionIds,
             new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer()),
             new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer()),
-            gatewaySessions);
+            gatewaySessions, logger.inboundMessageQuery());
         framerRunner = new AgentRunner(idleStrategy, errorHandler, null, framer);
     }
 

@@ -23,6 +23,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
@@ -116,7 +117,8 @@ public class FramerTest
             sessionIds,
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex,
-            mock(GatewaySessions.class));
+            mock(GatewaySessions.class),
+            mock(ReplayQuery.class));
     }
 
     @After

@@ -22,9 +22,9 @@ import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.messages.*;
-import uk.co.real_logic.fix_gateway.protocol.AbstractPublication;
+import uk.co.real_logic.fix_gateway.protocol.ClaimablePublication;
 
-public class RaftPublication extends AbstractPublication
+public class RaftPublication extends ClaimablePublication
 {
     private static final int MESSAGE_ACKNOWLEDGEMENT_LENGTH = HEADER_LENGTH + MessageAcknowledgementEncoder.BLOCK_LENGTH;
     private static final int REQUEST_VOTE_LENGTH = HEADER_LENGTH + RequestVoteEncoder.BLOCK_LENGTH;

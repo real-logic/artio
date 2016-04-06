@@ -25,15 +25,16 @@ import uk.co.real_logic.fix_gateway.session.CompositeKey;
 
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 
-public class SessionSubscriber implements AutoCloseable
+class SessionSubscriber implements AutoCloseable
 {
     private final SessionParser parser;
     private final Session session;
     private final SessionHandler handler;
     private final Timer receiveTimer;
     private final Timer sessionTimer;
+    private int remainingCatchupCount;
 
-    public SessionSubscriber(
+    SessionSubscriber(
         final SessionParser parser,
         final Session session,
         final SessionHandler handler,
@@ -62,8 +63,16 @@ public class SessionSubscriber implements AutoCloseable
             now = receiveTimer.recordSince(timestamp);
         }
 
-        if (parser.onMessage(buffer, offset, length, messageType, sessionId))
+        if (remainingCatchupCount == 0)
         {
+            if (parser.onMessage(buffer, offset, length, messageType, sessionId))
+            {
+                handler.onMessage(buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp);
+            }
+        }
+        else
+        {
+            remainingCatchupCount--;
             handler.onMessage(buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp);
         }
 
@@ -120,5 +129,10 @@ public class SessionSubscriber implements AutoCloseable
     public Session session()
     {
         return session;
+    }
+
+    void startCatchup(final int messageCount)
+    {
+        remainingCatchupCount = messageCount;
     }
 }

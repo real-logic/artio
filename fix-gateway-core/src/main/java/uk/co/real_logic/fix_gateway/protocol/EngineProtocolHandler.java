@@ -53,5 +53,9 @@ public interface EngineProtocolHandler
         final String password,
         final Header header);
 
-    void onRequestSession(final int libraryId, final long connectionId, final long correlationId);
+    void onRequestSession(
+        final int libraryId,
+        final long connectionId,
+        final long correlationId,
+        final int lastReceivedSequenceNumber);
 }

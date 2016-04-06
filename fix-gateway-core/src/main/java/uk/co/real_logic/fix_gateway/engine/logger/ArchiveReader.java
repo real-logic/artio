@@ -156,6 +156,11 @@ public class ArchiveReader implements AutoCloseable
         return new SessionReader(sessionId, streamMetaData.initialTermId(), streamMetaData.termBufferLength());
     }
 
+    public StreamIdentifier fullStreamId()
+    {
+        return streamId;
+    }
+
     public class SessionReader implements AutoCloseable
     {
         private final IntFunction<ByteBuffer> newBuffer = this::newBuffer;

@@ -20,19 +20,23 @@ import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.collections.Long2ObjectHashMap;
-import org.agrona.concurrent.*;
-import org.agrona.concurrent.status.*;
+import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.SystemEpochClock;
+import org.agrona.concurrent.SystemNanoClock;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.fix_gateway.protocol.*;
-import uk.co.real_logic.fix_gateway.session.*;
-import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.messages.*;
-import uk.co.real_logic.fix_gateway.session.CompositeKey;
-import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.protocol.LibraryProtocolHandler;
+import uk.co.real_logic.fix_gateway.protocol.LibraryProtocolSubscription;
+import uk.co.real_logic.fix_gateway.protocol.SessionSubscription;
+import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
+import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
+import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,6 +63,8 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
  */
 public final class FixLibrary extends GatewayProcess
 {
+    public static final int NO_MESSAGE_REPLAY = -1;
+
     private final Subscription inboundSubscription;
     private final GatewayPublication outboundPublication;
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
@@ -352,22 +358,43 @@ public final class FixLibrary extends GatewayProcess
      * mechanism has timed out due to {@link this#poll(int)} not being called often enough.
      *
      * @param connectionId the id of the connection to acquire.
+     * @param lastReceivedSequenceNumber the last received message sequence number
+     *                                   that you know about. You will get a stream
+     *                                   of messages replayed to you from
+     *                                   <code>lastReceivedMessageSequenceNumber + 1</code>
+     *                                   to the latest message sequence number.
+     *                                   If you don't care about message replay then
+     *                                   use {@link this#acquireSession(long)}
      * @return the result of this operation.
      */
-    public SessionReplyStatus acquireSession(final long connectionId)
+    public SessionReplyStatus acquireSession(final long connectionId, final int lastReceivedSequenceNumber)
     {
         if (replyStatus != null)
         {
             return concurrentError();
         }
 
-        outboundPublication.saveRequestSession(libraryId, connectionId, ++correlationId);
+        outboundPublication.saveRequestSession(libraryId, connectionId, ++correlationId, lastReceivedSequenceNumber);
 
         awaitReply(() -> replyStatus == null);
+
+        // TODO: detect missing catchup messages
 
         final SessionReplyStatus replyStatus = this.replyStatus;
         this.replyStatus = null;
         return replyStatus;
+    }
+
+    /**
+     * Variant of {@link this#acquireSession(long)} (long, String, SessionState)} that doesn't
+     * replay any messages.
+     *
+     * @param connectionId the id of the connection to acquire.
+     * @return the result of this operation.
+     */
+    public SessionReplyStatus acquireSession(final long connectionId)
+    {
+        return acquireSession(connectionId, NO_MESSAGE_REPLAY);
     }
 
     // ------------- End Public API -------------
@@ -579,6 +606,18 @@ public final class FixLibrary extends GatewayProcess
             if (FixLibrary.this.correlationId == correlationId)
             {
                 FixLibrary.this.replyStatus = status;
+            }
+        }
+
+        public void onCatchup(final int libraryId, final long connectionId, final int messageCount)
+        {
+            if (FixLibrary.this.libraryId == libraryId)
+            {
+                final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
+                if (subscriber != null)
+                {
+                    subscriber.startCatchup(messageCount);
+                }
             }
         }
 

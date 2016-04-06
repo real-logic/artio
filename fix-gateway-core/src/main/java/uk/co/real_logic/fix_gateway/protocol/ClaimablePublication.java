@@ -26,9 +26,9 @@ import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.Publication.NOT_CONNECTED;
 
 /**
- * .
+ * A publication designed for deterministic claiming.
  */
-public class AbstractPublication implements AutoCloseable
+public class ClaimablePublication implements AutoCloseable
 {
     public static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
 
@@ -41,7 +41,7 @@ public class AbstractPublication implements AutoCloseable
     protected final IdleStrategy idleStrategy;
     protected final AtomicCounter fails;
 
-    public AbstractPublication(
+    public ClaimablePublication(
         final int maxClaimAttempts,
         final IdleStrategy idleStrategy,
         final AtomicCounter fails,
@@ -57,6 +57,11 @@ public class AbstractPublication implements AutoCloseable
     }
 
     protected long claim(final int framedLength)
+    {
+        return claim(framedLength, bufferClaim);
+    }
+
+    public long claim(final int framedLength, final BufferClaim bufferClaim)
     {
         long position = 0;
         long i = 0;

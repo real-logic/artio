@@ -29,15 +29,11 @@ public class LibraryProtocolSubscription implements FragmentHandler
     private final LogonDecoder logon = new LogonDecoder();
     private final ConnectDecoder connect = new ConnectDecoder();
     private final ManageConnectionDecoder manageConnection = new ManageConnectionDecoder();
-    private final InitiateConnectionDecoder initiateConnection = new InitiateConnectionDecoder();
-    private final RequestDisconnectDecoder requestDisconnect = new RequestDisconnectDecoder();
     private final ErrorDecoder error = new ErrorDecoder();
     private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
-    private final LibraryConnectDecoder libraryConnect = new LibraryConnectDecoder();
-    private final ReleaseSessionDecoder releaseSession = new ReleaseSessionDecoder();
     private final ReleaseSessionReplyDecoder releaseSessionReply = new ReleaseSessionReplyDecoder();
-    private final RequestSessionDecoder requestSession = new RequestSessionDecoder();
     private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
+    private final CatchupDecoder catchup = new CatchupDecoder();
 
     private final LibraryProtocolHandler handler;
 
@@ -95,9 +91,25 @@ public class LibraryProtocolSubscription implements FragmentHandler
             {
                 return onConnect(buffer, offset, blockLength, version);
             }
+
+            case CatchupDecoder.TEMPLATE_ID:
+            {
+                return onCatchup(buffer, offset, blockLength, version);
+            }
         }
 
         return UNKNOWN_TEMPLATE;
+    }
+
+    private int onCatchup(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        catchup.wrap(buffer, offset, blockLength, version);
+        handler.onCatchup(
+            catchup.libraryId(),
+            catchup.connection(),
+            catchup.messageCount()
+        );
+        return catchup.limit();
     }
 
     private int onConnect(final DirectBuffer buffer, final int offset, final int blockLength, final int version)

@@ -132,7 +132,8 @@ public class EngineProtocolSubscription implements FragmentHandler
         handler.onRequestSession(
             requestSession.libraryId(),
             requestSession.connection(),
-            requestSession.correlationId());
+            requestSession.correlationId(),
+            requestSession.lastReceivedSequenceNumber());
         return requestSession.limit();
     }
 

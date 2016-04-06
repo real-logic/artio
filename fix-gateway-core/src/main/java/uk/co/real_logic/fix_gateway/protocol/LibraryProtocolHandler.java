@@ -58,4 +58,6 @@ public interface LibraryProtocolHandler
     void onReleaseSessionReply(final long correlationId, final SessionReplyStatus status);
 
     void onRequestSessionReply(final long correlationId, final SessionReplyStatus status);
+
+    void onCatchup(int libraryId, long connectionId, final int messageCount);
 }

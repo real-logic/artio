@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.library.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -50,11 +51,11 @@ import static java.net.StandardSocketOptions.*;
 import static org.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
-import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
-import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.UNKNOWN_SESSION;
+import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
 import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 
@@ -63,7 +64,6 @@ import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
  */
 public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 {
-    public static final int NO_ACCEPTOR = -1;
 
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
@@ -109,6 +109,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
     private final GatewaySessions gatewaySessions;
+    private final CatchupReplayer catchupReplayer;
+    private final ReplayQuery inboundMessages;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
@@ -123,7 +125,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final SessionIds sessionIds,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
-        final GatewaySessions gatewaySessions)
+        final GatewaySessions gatewaySessions,
+        final ReplayQuery inboundMessages)
     {
         this.clock = clock;
         this.configuration = configuration;
@@ -131,6 +134,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         this.outboundDataSubscription = outboundLibrarySubscription;
         this.replaySubscription = replaySubscription;
         this.gatewaySessions = gatewaySessions;
+        this.inboundMessages = inboundMessages;
         this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
         senderEndPoints = new SenderEndPoints(inboundPublication);
         this.sessionIdStrategy = sessionIdStrategy;
@@ -139,6 +143,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.idleStrategy = configuration.framerIdleStrategy();
+        catchupReplayer = new CatchupReplayer(inboundPublication);
 
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
@@ -283,7 +288,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final LibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
         {
-            saveError(UNKNOWN_LIBRARY, libraryId);
+            saveError(GatewayError.UNKNOWN_LIBRARY, libraryId);
             return;
         }
 
@@ -490,7 +495,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final GatewaySession session = libraryInfo.removeSession(connectionId);
         if (session == null)
         {
-            inboundPublication.saveReleaseSessionReply(UNKNOWN_SESSION, correlationId);
+            inboundPublication.saveReleaseSessionReply(SessionReplyStatus.UNKNOWN_SESSION, correlationId);
             return;
         }
 
@@ -506,7 +511,11 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         inboundPublication.saveReleaseSessionReply(OK, correlationId);
     }
 
-    public void onRequestSession(final int libraryId, final long connectionId, final long correlationId)
+    public void onRequestSession(
+        final int libraryId,
+        final long connectionId,
+        final long correlationId,
+        int replayFromSequenceNumber)
     {
         final LibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
@@ -518,7 +527,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final GatewaySession gatewaySession = gatewaySessions.release(connectionId);
         if (gatewaySession == null)
         {
-            inboundPublication.saveRequestSessionReply(UNKNOWN_SESSION, correlationId);
+            inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_SESSION, correlationId);
             return;
         }
 
@@ -555,6 +564,43 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                 compositeKey.targetCompId(),
                 username,
                 password);
+        }
+
+        if (replayFromSequenceNumber != NO_MESSAGE_REPLAY)
+        {
+            final long sessionId = session.id();
+            if (sessionId == Session.UNKNOWN)
+            {
+                inboundPublication.saveRequestSessionReply(SESSION_NOT_LOGGED_IN, correlationId);
+                return;
+            }
+            final int expectedNumberOfMessages = lastReceivedSeqNum - replayFromSequenceNumber;
+
+            if (expectedNumberOfMessages < 0)
+            {
+                // TODO: log numbers
+                // System.out.println("Messages: " + expectedNumberOfMessages);
+                inboundPublication.saveRequestSessionReply(SEQUENCE_NUMBER_TOO_HIGH, correlationId);
+                return;
+            }
+
+            inboundPublication.saveCatchup(libraryId, connectionId, expectedNumberOfMessages);
+
+            catchupReplayer.libraryId(libraryId);
+            final int numberOfMessages =
+                inboundMessages.query(
+                    catchupReplayer,
+                    sessionId,
+                    replayFromSequenceNumber + 1, // inclusive numbering
+                    lastReceivedSeqNum);
+
+            if (numberOfMessages != expectedNumberOfMessages)
+            {
+                // TODO: log numbers
+                // System.out.println("Messages: " + numberOfMessages + " vs " + expectedNumberOfMessages);
+                inboundPublication.saveRequestSessionReply(MISSING_MESSAGES, correlationId);
+                return;
+            }
         }
 
         inboundPublication.saveRequestSessionReply(OK, correlationId);

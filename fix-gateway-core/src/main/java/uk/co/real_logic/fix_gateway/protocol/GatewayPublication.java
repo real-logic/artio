@@ -33,7 +33,7 @@ import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexRead
 /**
  * A proxy for publishing messages fix related messages
  */
-public class GatewayPublication extends AbstractPublication
+public class GatewayPublication extends ClaimablePublication
 {
     private static final byte[] NO_BYTES = {};
 
@@ -64,6 +64,7 @@ public class GatewayPublication extends AbstractPublication
     private final ReleaseSessionEncoder releaseSession = new ReleaseSessionEncoder();
     private final ReleaseSessionReplyEncoder releaseSessionReply = new ReleaseSessionReplyEncoder();
     private final ConnectEncoder connect = new ConnectEncoder();
+    private final CatchupEncoder catchup = new CatchupEncoder();
 
     private final NanoClock nanoClock;
 
@@ -552,7 +553,10 @@ public class GatewayPublication extends AbstractPublication
         return position;
     }
 
-    public long saveRequestSession(final int libraryId, final long connectionId, final long correlationId)
+    public long saveRequestSession(final int libraryId,
+                                   final long connectionId,
+                                   final long correlationId,
+                                   final int lastReceivedSequenceNumber)
     {
         final long position = claim(REQUEST_SESSION_LENGTH);
 
@@ -572,7 +576,8 @@ public class GatewayPublication extends AbstractPublication
             .wrap(buffer, offset)
             .libraryId(libraryId)
             .connection(connectionId)
-            .correlationId(correlationId);
+            .correlationId(correlationId)
+            .lastReceivedSequenceNumber(lastReceivedSequenceNumber);
 
         bufferClaim.commit();
 
@@ -601,6 +606,36 @@ public class GatewayPublication extends AbstractPublication
             .wrap(buffer, offset)
             .correlationId(correlationId)
             .status(status);
+
+        bufferClaim.commit();
+
+        logSbeMessage(buffer, bufferClaim.offset());
+
+        return position;
+    }
+
+    public long saveCatchup(
+        final int libraryId, final long connectionId, final int messageCount)
+    {
+        final long position = claim(CatchupEncoder.BLOCK_LENGTH + HEADER_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(catchup.sbeBlockLength())
+            .templateId(catchup.sbeTemplateId())
+            .schemaId(catchup.sbeSchemaId())
+            .version(catchup.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        catchup
+            .wrap(buffer, offset)
+            .libraryId(libraryId)
+            .connection(connectionId)
+            .messageCount(messageCount);
 
         bufferClaim.commit();
 

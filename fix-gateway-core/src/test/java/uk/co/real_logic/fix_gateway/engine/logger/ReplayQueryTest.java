@@ -15,14 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import io.aeron.logbuffer.FragmentHandler;
 import org.junit.Before;
 import org.junit.Test;
-import io.aeron.logbuffer.FragmentHandler;
 
 import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
@@ -46,7 +47,8 @@ public class ReplayQueryTest extends AbstractLogTest
         DEFAULT_LOGGER_CACHE_NUM_SETS,
         DEFAULT_LOGGER_CACHE_SET_SIZE,
         mockBufferFactory,
-        mockReader);
+        mockReader,
+        OUTBOUND_LIBRARY_STREAM);
 
     @Before
     public void setUp()
