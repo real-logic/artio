@@ -57,6 +57,7 @@ public class FramerTest
     private static final InetSocketAddress FRAMER_ADDRESS = new InetSocketAddress("localhost", 9999);
     private static final int LIBRARY_ID = 3;
     private static final int REPLY_TIMEOUT_IN_MS = 10;
+    public static final int HEARTBEAT_INTERVAL_IN_S = 10;
 
     private ServerSocketChannel server;
 
@@ -193,7 +194,7 @@ public class FramerTest
     {
         framer.onInitiateConnection(
             LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG",
-            TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, "", "", header);
+            TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, "", "", HEARTBEAT_INTERVAL_IN_S, header);
 
         framer.doWork();
 
@@ -267,7 +268,7 @@ public class FramerTest
         verify(gatewaySessions, times(1)).acquire(
             any(),
             eq(state),
-            anyInt(),
+            eq(HEARTBEAT_INTERVAL_IN_S),
             anyInt(),
             anyInt(),
             any(),
@@ -297,7 +298,7 @@ public class FramerTest
 
         framer.onInitiateConnection(
             LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG",
-            TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, "", "", header);
+            TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, "", "", HEARTBEAT_INTERVAL_IN_S, header);
 
         framer.doWork();
     }

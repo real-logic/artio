@@ -212,16 +212,16 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             if (!library.isConnected())
             {
                 iterator.remove();
-                acquireLibrary(library);
+                acquireSessions(library);
             }
         }
 
         return total;
     }
 
-    private void acquireLibrary(final LibraryInfo library)
+    private void acquireSessions(final LibraryInfo library)
     {
-        // wait for the archiver to get up to date.
+        // TODO: wait for the archiver to get up to date.
 
         for (final GatewaySession session : library.gatewaySessions())
         {
@@ -233,10 +233,10 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             gatewaySessions.acquire(
                 session,
                 state,
-                configuration.defaultHeartbeatIntervalInS(), // TODO: heartbeat interval
+                session.heartbeatIntervalInS(),
                 sentSequenceNumber,
                 receivedSequenceNumber,
-                session.username(), // TODO: ensure that these are set upon logon by REP
+                session.username(),
                 session.password()
             );
             // TODO: should backscan the gap between last received message at the engine and the library
@@ -311,7 +311,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final int requestedInitialSequenceNumber,
         final String username,
         final String password,
-        final Header header)
+        final int heartbeatIntervalInS, final Header header)
     {
         final LibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
@@ -357,7 +357,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
             final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-            session.onLogon(sessionId, sessionKey, username, password);
+            session.onLogon(sessionId, sessionKey, username, password, heartbeatIntervalInS);
             inboundPublication.saveManageConnection(connectionId, address.toString(), libraryId, INITIATOR,
                 lastSentSequenceNumber, lastReceivedSequenceNumber, CONNECTED);
             inboundPublication.saveLogon(

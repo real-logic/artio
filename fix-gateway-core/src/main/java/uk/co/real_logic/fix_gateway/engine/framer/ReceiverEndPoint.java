@@ -317,7 +317,7 @@ class ReceiverEndPoint
                     receivedSequenceNumberIndex.lastKnownSequenceNumber(resetSequenceNumbers, sessionId);
                 final String username = SessionParser.username(logon);
                 final String password = SessionParser.password(logon);
-                gatewaySession.onLogon(sessionId, compositeKey, username, password);
+                gatewaySession.onLogon(sessionId, compositeKey, username, password, logon.heartBtInt());
                 gatewaySession.sequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
 
                 publication.saveLogon(

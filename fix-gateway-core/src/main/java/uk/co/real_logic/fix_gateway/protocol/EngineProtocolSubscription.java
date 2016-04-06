@@ -157,6 +157,7 @@ public class EngineProtocolSubscription implements FragmentHandler
             initiateConnection.requestedInitialSequenceNumber(),
             initiateConnection.username(),
             initiateConnection.password(),
+            initiateConnection.heartbeatIntervalInS(),
             header
         );
         return initiateConnection.limit();

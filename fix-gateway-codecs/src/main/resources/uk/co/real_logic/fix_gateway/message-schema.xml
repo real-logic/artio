@@ -149,17 +149,18 @@
         <data name="password" id="11" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="InitiateConnection" id="11" description="Try to make an outbound connection">
-        <field name="libraryId" id="44" type="LibraryId"/>
-        <field name="requestedInitialSequenceNumber" id="107" type="int32"/>
-        <field name="sequenceNumberType" id="108" type="SequenceNumberType"/>
-        <field name="port" id="20" type="int32"/>
-        <data name="host" id="21" type="varDataEncoding"/>
-        <data name="senderCompId" id="22" type="varDataEncoding"/>
-        <data name="senderSubId" id="38" type="varDataEncoding"/>
-        <data name="senderLocationId" id="39" type="varDataEncoding"/>
-        <data name="targetCompId" id="23" type="varDataEncoding"/>
-        <data name="username" id="105" type="varDataEncoding"/>
-        <data name="password" id="106" type="varDataEncoding"/>
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="requestedInitialSequenceNumber" id="2" type="int32"/>
+        <field name="sequenceNumberType" id="3" type="SequenceNumberType"/>
+        <field name="port" id="4" type="int32"/>
+        <field name="heartbeatIntervalInS" id="12" type="int32"/>
+        <data name="host" id="5" type="varDataEncoding"/>
+        <data name="senderCompId" id="6" type="varDataEncoding"/>
+        <data name="senderSubId" id="7" type="varDataEncoding"/>
+        <data name="senderLocationId" id="8" type="varDataEncoding"/>
+        <data name="targetCompId" id="9" type="varDataEncoding"/>
+        <data name="username" id="10" type="varDataEncoding"/>
+        <data name="password" id="11" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">
         <field name="libraryId" id="45" type="LibraryId"/>

@@ -128,8 +128,8 @@ public class GatewaySessions
                 gatewaySession.sessionId(),
                 sessionKey,
                 username,
-                password
-            );
+                password,
+                heartbeatIntervalInS);
             session.lastReceivedMsgSeqNum(lastReceivedSequenceNumber);
         }
     }

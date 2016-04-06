@@ -40,6 +40,7 @@ class GatewaySession implements SessionInfo
     private CompositeKey sessionKey;
     private String username;
     private String password;
+    private int heartbeatIntervalInS;
 
     GatewaySession(final long connectionId,
                    final long sessionId,
@@ -122,12 +123,14 @@ class GatewaySession implements SessionInfo
         final long sessionId,
         final CompositeKey sessionKey,
         final String username,
-        final String password)
+        final String password,
+        final int heartbeatIntervalInS)
     {
         this.sessionId = sessionId;
         this.sessionKey = sessionKey;
         this.username = username;
         this.password = password;
+        this.heartbeatIntervalInS = heartbeatIntervalInS;
         if (session != null)
         {
             session.setupSession(sessionId, sessionKey);
@@ -143,6 +146,11 @@ class GatewaySession implements SessionInfo
     public String password()
     {
         return password;
+    }
+
+    public int heartbeatIntervalInS()
+    {
+        return heartbeatIntervalInS;
     }
 
     void sequenceNumbers(final int sentSequenceNumber, final int receivedSequenceNumber)
