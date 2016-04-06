@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
-import org.junit.After;
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
+import org.junit.After;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -117,8 +117,10 @@ public class AbstractGatewayToGatewaySystemTest
             acceptingLibrary.poll(1);
             initiatingLibrary.poll(1);
 
-            final String messageType = acceptingOtfAcceptor.lastMessage().getMessageType();
-            assertEquals("0", messageType);
+            final FixMessage message = acceptingOtfAcceptor.lastMessage();
+            final String messageType = message.getMessageType();
+            assertEquals("1", messageType);
+            assertEquals("Y", message.getPossDup());
             assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
             assertNull("Detected Error", acceptingOtfAcceptor.lastError());
             assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());

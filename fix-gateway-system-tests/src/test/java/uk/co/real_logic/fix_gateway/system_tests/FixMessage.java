@@ -36,6 +36,11 @@ public class FixMessage extends Int2ObjectHashMap<String>
         return get(Constants.MSG_TYPE);
     }
 
+    public String getPossDup()
+    {
+        return get(Constants.POSS_DUP_FLAG);
+    }
+
     public Session session()
     {
         return session;
