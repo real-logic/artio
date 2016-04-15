@@ -19,6 +19,7 @@ import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
@@ -32,11 +33,13 @@ class CatchupReplayer implements FragmentHandler
     private final FixMessageEncoder messageEncoder = new FixMessageEncoder();
     private final BufferClaim bufferClaim = new BufferClaim();
     private final ClaimablePublication publication;
+    private final ErrorHandler errorHandler;
     private int libraryId;
 
-    CatchupReplayer(final ClaimablePublication publication)
+    CatchupReplayer(final ClaimablePublication publication, final ErrorHandler errorHandler)
     {
         this.publication = publication;
+        this.errorHandler = errorHandler;
     }
 
     public void onFragment(
@@ -59,6 +62,11 @@ class CatchupReplayer implements FragmentHandler
             DebugLogger.log("Resending: %s\n", destBuffer, destOffset + FRAME_LENGTH, length - FRAME_LENGTH);
 
             bufferClaim.commit();
+        }
+        else
+        {
+            errorHandler.onError(new IllegalStateException(
+                "Failed to claim buffer space when trying to resend " + srcBuffer.getStringUtf8(srcOffset, length)));
         }
     }
 

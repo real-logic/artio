@@ -152,7 +152,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.idleStrategy = configuration.framerIdleStrategy();
-        catchupReplayer = new CatchupReplayer(inboundPublication);
+        catchupReplayer = new CatchupReplayer(inboundPublication, errorHandler);
 
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
@@ -570,7 +570,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
         final Session session = gatewaySession.session();
         final int lastSentSeqNum = session.lastSentMsgSeqNum();
-        final int lastReceivedSeqNum = session.lastReceivedMsgSeqNum();
+        final int lastRecvSeqNum = session.lastReceivedMsgSeqNum();
         final SessionState sessionState = session.state();
         final CompositeKey compositeKey = gatewaySession.compositeKey();
         gatewaySession.handoverManagementTo(libraryId);
@@ -582,9 +582,24 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             libraryId,
             gatewaySession.connectionType(),
             lastSentSeqNum,
-            lastReceivedSeqNum,
+            lastRecvSeqNum,
             sessionState);
 
+        saveLogon(libraryId, connectionId, gatewaySession, lastSentSeqNum, lastRecvSeqNum, compositeKey);
+
+        if (catchupSession(libraryId, connectionId, correlationId, replayFromSequenceNumber, session, lastRecvSeqNum))
+        {
+            inboundPublication.saveRequestSessionReply(OK, correlationId);
+        }
+    }
+
+    private void saveLogon(final int libraryId,
+                           final long connectionId,
+                           final GatewaySession gatewaySession,
+                           final int lastSentSeqNum,
+                           final int lastReceivedSeqNum,
+                           final CompositeKey compositeKey)
+    {
         if (compositeKey != null)
         {
             final String username = gatewaySession.username();
@@ -602,29 +617,38 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                 username,
                 password);
         }
+    }
 
+    private boolean catchupSession(final int libraryId,
+                                   final long connectionId,
+                                   final long correlationId,
+                                   final int replayFromSequenceNumber,
+                                   final Session session,
+                                   final int lastReceivedSeqNum)
+    {
         if (replayFromSequenceNumber != NO_MESSAGE_REPLAY)
         {
             final long sessionId = session.id();
             if (sessionId == Session.UNKNOWN)
             {
                 inboundPublication.saveRequestSessionReply(SESSION_NOT_LOGGED_IN, correlationId);
-                return;
+                return false;
             }
             final int expectedNumberOfMessages = lastReceivedSeqNum - replayFromSequenceNumber;
 
             if (expectedNumberOfMessages < 0)
             {
-                errorHandler.onError(new IllegalStateException(String.format(
-                    "Sequence Number too high for %d, wanted %d, but we've only archived %d",
-                    correlationId,
-                    replayFromSequenceNumber,
-                    lastReceivedSeqNum)));
-                inboundPublication.saveRequestSessionReply(SEQUENCE_NUMBER_TOO_HIGH, correlationId);
-                return;
+                sequenceNumberTooHigh(correlationId, replayFromSequenceNumber, lastReceivedSeqNum);
+                return false;
             }
 
             inboundPublication.saveCatchup(libraryId, connectionId, expectedNumberOfMessages);
+
+            while (receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId) < lastReceivedSeqNum)
+            {
+                idleStrategy.idle();
+            }
+            idleStrategy.reset();
 
             catchupReplayer.libraryId(libraryId);
             final int numberOfMessages =
@@ -634,19 +658,38 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                     replayFromSequenceNumber + 1, // convert to inclusive numbering
                     lastReceivedSeqNum);
 
-            if (numberOfMessages != expectedNumberOfMessages)
+            if (numberOfMessages < expectedNumberOfMessages)
             {
-                errorHandler.onError(new IllegalStateException(String.format(
-                    "Failed to read correct number of messages for %d, expected %d, read %d",
-                    correlationId,
-                    expectedNumberOfMessages,
-                    numberOfMessages)));
-                inboundPublication.saveRequestSessionReply(MISSING_MESSAGES, correlationId);
-                return;
+                missingMessages(correlationId, expectedNumberOfMessages, numberOfMessages);
+                return false;
             }
         }
 
-        inboundPublication.saveRequestSessionReply(OK, correlationId);
+        return true;
+    }
+
+    private void missingMessages(final long correlationId,
+                                 final int expectedNumberOfMessages,
+                                 final int numberOfMessages)
+    {
+        errorHandler.onError(new IllegalStateException(String.format(
+            "Failed to read correct number of messages for %d, expected %d, read %d",
+            correlationId,
+            expectedNumberOfMessages,
+            numberOfMessages)));
+        inboundPublication.saveRequestSessionReply(MISSING_MESSAGES, correlationId);
+    }
+
+    private void sequenceNumberTooHigh(final long correlationId,
+                                       final int replayFromSequenceNumber,
+                                       final int lastReceivedSeqNum)
+    {
+        errorHandler.onError(new IllegalStateException(String.format(
+            "Sequence Number too high for %d, wanted %d, but we've only archived %d",
+            correlationId,
+            replayFromSequenceNumber,
+            lastReceivedSeqNum)));
+        inboundPublication.saveRequestSessionReply(SEQUENCE_NUMBER_TOO_HIGH, correlationId);
     }
 
     void onQueryLibraries(final QueryLibrariesCommand queryLibrariesCommand)
