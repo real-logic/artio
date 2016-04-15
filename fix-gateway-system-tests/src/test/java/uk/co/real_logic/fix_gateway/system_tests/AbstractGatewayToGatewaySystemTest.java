@@ -60,15 +60,20 @@ public class AbstractGatewayToGatewaySystemTest
         final int expectedInitToAccSeqNum, final int expectedAccToInitSeqNum)
     {
         assertEquals(expectedInitToAccSeqNum, initiatingSession.lastSentMsgSeqNum());
-        assertEquals(expectedAccToInitSeqNum, acceptingSession.lastReceivedMsgSeqNum());
+        assertEquals(expectedInitToAccSeqNum, acceptingSession.lastReceivedMsgSeqNum());
 
-        while (initiatingSession.lastReceivedMsgSeqNum() < expectedAccToInitSeqNum)
-        {
-            initiatingLibrary.poll(1);
-        }
+        awaitMessage(expectedAccToInitSeqNum, initiatingSession, initiatingLibrary);
 
         assertEquals(expectedAccToInitSeqNum, initiatingSession.lastReceivedMsgSeqNum());
         assertEquals(expectedAccToInitSeqNum, acceptingSession.lastSentMsgSeqNum());
+    }
+
+    private void awaitMessage(final int sequenceNumber, final Session session, final FixLibrary library)
+    {
+        while (session.lastReceivedMsgSeqNum() < sequenceNumber)
+        {
+            library.poll(1);
+        }
     }
 
     protected void assertSessionsDisconnected()

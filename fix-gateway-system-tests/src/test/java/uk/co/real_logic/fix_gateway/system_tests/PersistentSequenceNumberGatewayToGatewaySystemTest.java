@@ -106,9 +106,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertEquals("initiatedSessionId not stable over restarts", initiatedSessionId, initiatingSession.id());
         assertEquals("acceptingSessionId not stable over restarts", acceptingSessionId, acceptingSession.id());
+        assertSequenceFromInitToAcceptAt(4, 4);
 
         sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
-        assertSequenceFromInitToAcceptAt(5, 4);
     }
 }
