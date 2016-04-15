@@ -77,6 +77,10 @@ public final class TestMessages
     public static final byte[] INVALID_LENGTH = toAscii(
         "8=FIX.4.4\0019=40\00135=A\00134=1\00149=TW\00152=20150604-12:46:54\00156=ISLD\00198=0\001108=30\001");
 
+    public static final byte[] ZERO_CHECKSUM_MESSAGE = toAscii(
+        "8=FIX.4.4\0019=0067\00135=0\00149=acceptor\00156=initiator\00134=2" +
+            "\00152=20160415-12:50:23.294\001112=hi\00110=000\001");
+
     public static final int NO_ORDERS = 73;
     public static final int NO_ALLOCS = 78;
 

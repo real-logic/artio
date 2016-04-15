@@ -38,7 +38,7 @@ import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
  */
 public final class OtfParser
 {
-    private static final int NO_CHECKSUM = 0;
+    private static final int NO_CHECKSUM = -2;
     private static final int UNKNOWN = -1;
 
     private final AsciiBuffer string = new MutableAsciiBuffer();

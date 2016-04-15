@@ -188,6 +188,16 @@ public class OtfParserTest
         verifyNoOrdersGroup(1);
     }
 
+    @Theory
+    public void parsesZeroChecksumMessages(final int offset)
+    {
+        buffer.putBytes(offset, ZERO_CHECKSUM_MESSAGE);
+
+        parser.onMessage(buffer, offset, ZERO_CHECKSUM_MESSAGE.length);
+
+        verify(mockAcceptor, never()).onError(any(), anyInt(), anyInt(), any());
+    }
+
     private void verifyGroupHeader(final int groupNumber, final int numberOfElements)
     {
         inOrder.verify(mockAcceptor, times(1)).onGroupHeader(groupNumber, numberOfElements);
