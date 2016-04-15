@@ -625,9 +625,12 @@ public final class FixLibrary extends GatewayProcess
             }
         }
 
-        public void onNewSentPosition(final long position)
+        public void onNewSentPosition(final int libraryId, final long position)
         {
-            sentPositionHandler.onSendCompleted(position);
+            if (FixLibrary.this.libraryId == libraryId)
+            {
+                sentPositionHandler.onSendCompleted(position);
+            }
         }
 
         public void onConnect(final long connectionId, final String address)

@@ -648,7 +648,7 @@ public class GatewayPublication extends ClaimablePublication
     }
 
     public long saveNewSentPosition(
-        final long sentPosition)
+        final int libraryId, final long sentPosition)
     {
         final long position = claim(NewSentPositionEncoder.BLOCK_LENGTH + HEADER_LENGTH);
 
@@ -666,6 +666,7 @@ public class GatewayPublication extends ClaimablePublication
 
         newSentPosition
             .wrap(buffer, offset)
+            .libraryId(libraryId)
             .position(sentPosition);
 
         bufferClaim.commit();

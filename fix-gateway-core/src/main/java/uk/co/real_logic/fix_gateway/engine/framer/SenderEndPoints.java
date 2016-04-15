@@ -47,21 +47,19 @@ class SenderEndPoints implements AutoCloseable
         }
     }
 
-    public void onMessage(
-        final long connectionId, final DirectBuffer buffer, final int offset, final int length, final long position)
+    public boolean onMessage(
+        final long connectionId, final DirectBuffer buffer, final int offset, final int length)
     {
         final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            if (endPoint.onFramedMessage(buffer, offset, length))
-            {
-                publication.saveNewSentPosition(position + length);
-            }
+            return endPoint.onFramedMessage(buffer, offset, length);
         }
         else
         {
             publication.saveError(
                 UNKNOWN_SESSION, GATEWAY_LIBRARY_ID, "Ignoring: " + buffer.getStringUtf8(offset, length));
+            return false;
         }
     }
 

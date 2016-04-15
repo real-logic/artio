@@ -61,5 +61,5 @@ public interface LibraryProtocolHandler
 
     void onCatchup(int libraryId, long connectionId, final int messageCount);
 
-    void onNewSentPosition(long position);
+    void onNewSentPosition(final int libraryId, long position);
 }

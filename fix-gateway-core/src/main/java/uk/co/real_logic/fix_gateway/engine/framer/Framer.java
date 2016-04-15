@@ -405,7 +405,10 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             now = outboundTimer.recordSince(timestamp);
         }
 
-        senderEndPoints.onMessage(connectionId, buffer, offset, length, position);
+        if (senderEndPoints.onMessage(connectionId, buffer, offset, length))
+        {
+            inboundPublication.saveNewSentPosition(libraryId, position + length);
+        }
 
         if (TIME_MESSAGES)
         {

@@ -176,6 +176,7 @@ public class LibraryProtocolSubscription implements FragmentHandler
     {
         newSentPosition.wrap(buffer, offset, blockLength, version);
         handler.onNewSentPosition(
+            newSentPosition.libraryId(),
             newSentPosition.position()
         );
 
