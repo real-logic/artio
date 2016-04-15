@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.util;
 
-import org.junit.Test;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;

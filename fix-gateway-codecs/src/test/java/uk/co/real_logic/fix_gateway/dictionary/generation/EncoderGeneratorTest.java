@@ -15,10 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import org.agrona.generation.StringWriterOutputManager;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.EncodingException;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
@@ -31,9 +31,9 @@ import java.util.Map;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
+import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
 import static uk.co.real_logic.fix_gateway.util.Reflection.*;

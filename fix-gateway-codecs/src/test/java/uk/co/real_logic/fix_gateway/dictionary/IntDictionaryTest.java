@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary;
 
+import org.agrona.collections.IntHashSet;
 import org.junit.Before;
 import org.junit.Test;
-import org.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;

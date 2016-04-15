@@ -31,8 +31,8 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.function.IntFunction;
 
-import static java.lang.Integer.numberOfTrailingZeros;
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
+import static java.lang.Integer.numberOfTrailingZeros;
 
 public class ArchiveReader implements AutoCloseable
 {

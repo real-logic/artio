@@ -25,7 +25,6 @@ import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
-import uk.co.real_logic.fix_gateway.library.NewSessionHandler;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -75,14 +74,14 @@ public final class SystemTestUtil
         });
     }
 
-    public static void sendTestRequest(final Session session)
+    public static long sendTestRequest(final Session session)
     {
         assertEventuallyTrue("Session not connected", session::isConnected);
 
         final TestRequestEncoder testRequest = new TestRequestEncoder();
         testRequest.testReqID(HI_ID);
 
-        session.send(testRequest);
+        return session.send(testRequest);
     }
 
     public static void assertReceivedTestRequest(
@@ -214,6 +213,7 @@ public final class SystemTestUtil
         libraryConfiguration
             .newConnectHandler(sessionHandler)
             .newSessionHandler(sessionHandler)
+            .sentPositionHandler(sessionHandler)
             .aeronChannel(IPC_CHANNEL)
             .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "accLibraryCounters");
 
@@ -263,13 +263,14 @@ public final class SystemTestUtil
 
     public static FixLibrary newInitiatingLibrary(
         final int initAeronPort,
-        final NewSessionHandler sessionHandler,
+        final FakeSessionHandler sessionHandler,
         final int libraryId)
     {
         return FixLibrary.connect(
             new LibraryConfiguration()
                 .libraryId(libraryId)
                 .newSessionHandler(sessionHandler)
+                .sentPositionHandler(sessionHandler)
                 .aeronChannel("udp://localhost:" + initAeronPort)
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters-" + libraryId));
     }

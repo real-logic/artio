@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;

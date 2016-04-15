@@ -15,26 +15,24 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 
 import java.io.File;
 
+import static org.agrona.IoUtil.deleteIfExists;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
-import static org.agrona.IoUtil.deleteIfExists;
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.SECTOR_SIZE;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.passingPath;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.writablePath;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.*;
 
 public class SequenceNumberIndexTest extends AbstractLogTest
 {

@@ -154,18 +154,23 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void messagesCanBeExchanged()
     {
-        messagesCanBeExchanged(
+        final long position = messagesCanBeExchanged(
             initiatingSession, initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
+
+        // TODO:
+        // assertThat(initiatingSessionHandler.sentPosition(), greaterThanOrEqualTo(position));
     }
 
-    protected void messagesCanBeExchanged(final Session session,
+    protected long messagesCanBeExchanged(final Session sendingSession,
                                           final FixLibrary library,
                                           final FixLibrary library2,
-                                          final FakeOtfAcceptor acceptor)
+                                          final FakeOtfAcceptor receivingAcceptor)
     {
-        sendTestRequest(session);
+        final long position = sendTestRequest(sendingSession);
 
-        assertReceivedHeartbeat(library, library2, acceptor);
+        assertReceivedHeartbeat(library, library2, receivingAcceptor);
+
+        return position;
     }
 
 }

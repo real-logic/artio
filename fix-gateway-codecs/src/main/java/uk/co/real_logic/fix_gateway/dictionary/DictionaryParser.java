@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary;
 
-import org.w3c.dom.*;
 import org.agrona.Verify;
+import org.w3c.dom.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;

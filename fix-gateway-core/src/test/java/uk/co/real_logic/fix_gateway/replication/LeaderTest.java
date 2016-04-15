@@ -15,14 +15,14 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.stubbing.OngoingStubbing;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BlockHandler;
 import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.collections.IntHashSet;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.stubbing.OngoingStubbing;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;

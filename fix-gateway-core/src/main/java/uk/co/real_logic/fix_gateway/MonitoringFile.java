@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway;
 
 import org.agrona.IoUtil;
 import org.agrona.concurrent.AtomicBuffer;
-import org.agrona.concurrent.status.CountersManager;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.status.CountersManager;
 
 import java.io.File;
 import java.nio.MappedByteBuffer;

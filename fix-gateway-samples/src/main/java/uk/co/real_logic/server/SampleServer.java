@@ -24,8 +24,8 @@ import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.AcquiringNewConnectHandler;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
-import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.library.SessionHandler;
+import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import uk.co.real_logic.fix_gateway.validation.SenderCompIdValidationStrategy;
@@ -36,7 +36,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.aeron.driver.ThreadingMode.SHARED;
-import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 
 public final class SampleServer
 {

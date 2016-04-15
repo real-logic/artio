@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import io.aeron.logbuffer.FragmentHandler;
 import org.junit.Before;
 import org.junit.Test;
-import io.aeron.logbuffer.FragmentHandler;
 
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.*;

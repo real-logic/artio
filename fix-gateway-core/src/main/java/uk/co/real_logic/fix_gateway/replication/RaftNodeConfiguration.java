@@ -18,8 +18,8 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Aeron;
 import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.collections.IntHashSet;
-import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 

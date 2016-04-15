@@ -24,9 +24,7 @@ import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.OUT_OF_SPACE;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.RECORD_SIZE;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.positionsBuffer;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.positionTableOffset;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 

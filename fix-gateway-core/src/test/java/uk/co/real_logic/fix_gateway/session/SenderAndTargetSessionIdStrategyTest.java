@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import org.junit.Test;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;

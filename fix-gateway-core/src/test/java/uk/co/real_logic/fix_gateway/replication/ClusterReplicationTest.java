@@ -15,18 +15,18 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.*;
 import org.junit.rules.Timeout;
-import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.*;
-import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 /**
  * Test simulated cluster.

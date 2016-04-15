@@ -16,11 +16,11 @@
 
 package uk.co.real_logic.fix_gateway.util;
 
+import org.agrona.DirectBuffer;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeMatcher;
-import org.agrona.DirectBuffer;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Objects;

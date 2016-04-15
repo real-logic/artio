@@ -17,9 +17,9 @@ package uk.co.real_logic.fix_gateway.session;
 
 import org.agrona.MutableDirectBuffer;
 import org.agrona.Verify;
-import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.decoder.*;

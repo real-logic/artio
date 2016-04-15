@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
-import org.junit.Test;
 import org.agrona.concurrent.status.AtomicCounter;
+import org.junit.Test;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
@@ -30,9 +30,9 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.*;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 import static uk.co.real_logic.fix_gateway.session.Session.TEST_REQ_ID;
 import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
-import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
 public abstract class AbstractSessionTest
 {

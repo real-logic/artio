@@ -15,11 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import org.agrona.generation.CompilerUtil;
+import org.agrona.generation.StringWriterOutputManager;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.agrona.generation.CompilerUtil;
-import org.agrona.generation.StringWriterOutputManager;
 
 import java.lang.reflect.Method;
 

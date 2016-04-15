@@ -18,17 +18,16 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
-import uk.co.real_logic.fix_gateway.library.FixLibrary;
-import uk.co.real_logic.fix_gateway.library.NewConnectHandler;
-import uk.co.real_logic.fix_gateway.library.NewSessionHandler;
-import uk.co.real_logic.fix_gateway.library.SessionHandler;
+import uk.co.real_logic.fix_gateway.library.*;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.session.Session;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Collection;
+import java.util.Deque;
 
-public class FakeSessionHandler implements SessionHandler, NewSessionHandler, NewConnectHandler
+public class FakeSessionHandler implements SessionHandler, NewSessionHandler, NewConnectHandler, SentPositionHandler
 {
 
     private final Long2ObjectHashMap<Session> connectionIdToSession = new Long2ObjectHashMap<>();
@@ -38,6 +37,7 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler, Ne
     private Session latestSession;
     private long connectionId = -1;
     private boolean hasDisconnected = false;
+    private long sentPosition;
 
     public FakeSessionHandler(final FakeOtfAcceptor acceptor)
     {
@@ -118,5 +118,15 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler, Ne
     public void clearConnections()
     {
         connections.clear();
+    }
+
+    public void onSendCompleted(final long position)
+    {
+        this.sentPosition = position;
+    }
+
+    public long sentPosition()
+    {
+        return sentPosition;
     }
 }

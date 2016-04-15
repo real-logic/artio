@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway.protocol;
 
 import io.aeron.Publication;
 import io.aeron.logbuffer.BufferClaim;
-import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 

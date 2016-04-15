@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import org.junit.Test;
 import io.aeron.Subscription;
+import org.junit.Test;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageStatus;

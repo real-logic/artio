@@ -15,11 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.util;
 
+import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 
 import java.util.Arrays;

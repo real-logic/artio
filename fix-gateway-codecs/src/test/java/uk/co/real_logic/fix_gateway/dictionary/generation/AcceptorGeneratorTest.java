@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -25,8 +25,8 @@ import java.lang.reflect.Proxy;
 import java.util.Map;
 
 import static java.lang.reflect.Modifier.*;
-import static org.junit.Assert.*;
 import static org.agrona.generation.CompilerUtil.compileInMemory;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AcceptorGenerator.*;
 

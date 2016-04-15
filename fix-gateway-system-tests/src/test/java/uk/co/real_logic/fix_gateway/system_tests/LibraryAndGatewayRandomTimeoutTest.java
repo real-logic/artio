@@ -15,12 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.IoUtil;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;

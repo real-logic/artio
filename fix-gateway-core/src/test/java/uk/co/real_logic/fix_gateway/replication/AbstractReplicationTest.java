@@ -15,18 +15,18 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import org.junit.After;
-import org.junit.Before;
 import io.aeron.Aeron;
 import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.IoUtil;
-import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.NoOpIdleStrategy;
-import uk.co.real_logic.fix_gateway.TestFixtures;
+import org.agrona.concurrent.status.AtomicCounter;
+import org.junit.After;
+import org.junit.Before;
 import uk.co.real_logic.fix_gateway.ReliefValve;
+import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
@@ -34,8 +34,8 @@ import uk.co.real_logic.fix_gateway.engine.logger.LogDirectoryDescriptor;
 
 import java.io.File;
 
-import static org.mockito.Mockito.mock;
 import static org.agrona.CloseHelper.close;
+import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;

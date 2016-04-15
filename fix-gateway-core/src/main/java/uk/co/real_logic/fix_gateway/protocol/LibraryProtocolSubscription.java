@@ -34,6 +34,7 @@ public class LibraryProtocolSubscription implements FragmentHandler
     private final ReleaseSessionReplyDecoder releaseSessionReply = new ReleaseSessionReplyDecoder();
     private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
     private final CatchupDecoder catchup = new CatchupDecoder();
+    private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
 
     private final LibraryProtocolHandler handler;
 
@@ -57,6 +58,11 @@ public class LibraryProtocolSubscription implements FragmentHandler
 
         switch (messageHeader.templateId())
         {
+            case NewSentPositionDecoder.TEMPLATE_ID:
+            {
+                return onNewSentPosition(buffer, offset, blockLength, version);
+            }
+
             case LogonDecoder.TEMPLATE_ID:
             {
                 return onLogon(buffer, offset, blockLength, version);
@@ -160,6 +166,17 @@ public class LibraryProtocolSubscription implements FragmentHandler
             error.type(),
             error.libraryId(),
             error.message()
+        );
+
+        return error.limit();
+    }
+
+    private int onNewSentPosition(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        newSentPosition.wrap(buffer, offset, blockLength, version);
+        handler.onNewSentPosition(
+            newSentPosition.position()
         );
 
         return error.limit();

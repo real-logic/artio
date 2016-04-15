@@ -15,17 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import org.agrona.IoUtil;
 import org.junit.After;
 import org.junit.Test;
-import org.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 
-import static org.junit.Assert.assertEquals;
 import static io.aeron.CommonContext.IPC_CHANNEL;
+import static org.junit.Assert.assertEquals;
 
 public class ArchiveMetaDataTest
 {

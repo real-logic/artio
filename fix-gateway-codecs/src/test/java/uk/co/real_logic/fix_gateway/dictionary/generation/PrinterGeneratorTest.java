@@ -15,17 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.agrona.generation.StringWriterOutputManager;
 import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.util.Map;
 
+import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertThat;
-import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
 
 public class PrinterGeneratorTest

@@ -65,6 +65,7 @@ public class GatewayPublication extends ClaimablePublication
     private final ReleaseSessionReplyEncoder releaseSessionReply = new ReleaseSessionReplyEncoder();
     private final ConnectEncoder connect = new ConnectEncoder();
     private final CatchupEncoder catchup = new CatchupEncoder();
+    private final NewSentPositionEncoder newSentPosition = new NewSentPositionEncoder();
 
     private final NanoClock nanoClock;
 
@@ -638,6 +639,34 @@ public class GatewayPublication extends ClaimablePublication
             .libraryId(libraryId)
             .connection(connectionId)
             .messageCount(messageCount);
+
+        bufferClaim.commit();
+
+        logSbeMessage(buffer, bufferClaim.offset());
+
+        return position;
+    }
+
+    public long saveNewSentPosition(
+        final long sentPosition)
+    {
+        final long position = claim(NewSentPositionEncoder.BLOCK_LENGTH + HEADER_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(newSentPosition.sbeBlockLength())
+            .templateId(newSentPosition.sbeTemplateId())
+            .schemaId(newSentPosition.sbeSchemaId())
+            .version(newSentPosition.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        newSentPosition
+            .wrap(buffer, offset)
+            .position(sentPosition);
 
         bufferClaim.commit();
 

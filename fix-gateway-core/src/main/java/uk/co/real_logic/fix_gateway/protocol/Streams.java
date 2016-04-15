@@ -18,9 +18,9 @@ package uk.co.real_logic.fix_gateway.protocol;
 import io.aeron.Aeron;
 import io.aeron.Publication;
 import io.aeron.Subscription;
-import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.NanoClock;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 
 import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;
