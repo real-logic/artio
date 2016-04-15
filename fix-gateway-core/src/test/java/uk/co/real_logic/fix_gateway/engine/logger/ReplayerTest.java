@@ -121,6 +121,6 @@ public class ReplayerTest extends AbstractLogTest
 
     private void onMessage(final int messageType)
     {
-        replayer.onMessage(buffer, 1, buffer.capacity(), LIBRARY_ID, CONNECTION_ID, SESSION_ID, messageType, 0L);
+        replayer.onMessage(buffer, 1, buffer.capacity(), LIBRARY_ID, CONNECTION_ID, SESSION_ID, messageType, 0L, 0L);
     }
 }

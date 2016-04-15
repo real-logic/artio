@@ -70,7 +70,7 @@ public class SessionSubscription implements FragmentHandler
         {
             case FixMessageDecoder.TEMPLATE_ID:
             {
-                return onFixMessage(buffer, offset, blockLength, version);
+                return onFixMessage(buffer, offset, blockLength, version, header);
             }
 
             case DisconnectDecoder.TEMPLATE_ID:
@@ -93,7 +93,7 @@ public class SessionSubscription implements FragmentHandler
     }
 
     private int onFixMessage(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
     {
         messageFrame.wrap(buffer, offset, blockLength, version);
         final int messageLength = messageFrame.bodyLength();
@@ -107,7 +107,8 @@ public class SessionSubscription implements FragmentHandler
                 messageFrame.connection(),
                 messageFrame.session(),
                 messageFrame.messageType(),
-                messageFrame.timestamp());
+                messageFrame.timestamp(),
+                header.position());
         }
 
         return offset + FRAME_SIZE + messageLength;

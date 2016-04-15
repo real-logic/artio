@@ -157,8 +157,7 @@ public class AbstractGatewayToGatewaySystemTest
         final long position = messagesCanBeExchanged(
             initiatingSession, initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
 
-        // TODO:
-        // assertThat(initiatingSessionHandler.sentPosition(), greaterThanOrEqualTo(position));
+        assertThat(initiatingSessionHandler.sentPosition(), greaterThanOrEqualTo(position));
     }
 
     protected long messagesCanBeExchanged(final Session sendingSession,

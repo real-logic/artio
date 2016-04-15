@@ -55,7 +55,8 @@ class SessionSubscriber implements AutoCloseable
                           final long connectionId,
                           final long sessionId,
                           final int messageType,
-                          final long timestamp)
+                          final long timestamp,
+                          final long position)
     {
         long now = 0;
         if (TIME_MESSAGES)
@@ -67,13 +68,15 @@ class SessionSubscriber implements AutoCloseable
         {
             if (parser.onMessage(buffer, offset, length, messageType, sessionId))
             {
-                handler.onMessage(buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp);
+                handler.onMessage(
+                    buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
             }
         }
         else
         {
             remainingCatchupCount--;
-            handler.onMessage(buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp);
+            handler.onMessage(
+                buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
         }
 
         if (TIME_MESSAGES)

@@ -548,7 +548,8 @@ public final class FixLibrary extends GatewayProcess
             final long connectionId,
             final long sessionId,
             final int messageType,
-            final long timestamp)
+            final long timestamp,
+            final long position)
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
@@ -557,7 +558,7 @@ public final class FixLibrary extends GatewayProcess
                 if (subscriber != null)
                 {
                     subscriber.onMessage(
-                        buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp);
+                        buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
                 }
             }
         }

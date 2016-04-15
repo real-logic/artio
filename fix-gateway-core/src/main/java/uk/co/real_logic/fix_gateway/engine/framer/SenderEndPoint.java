@@ -58,7 +58,9 @@ class SenderEndPoint implements AutoCloseable
         this.reliefValve = reliefValve;
     }
 
-    public void onFramedMessage(final DirectBuffer directBuffer, final int offset, final int length)
+    public boolean onFramedMessage(final DirectBuffer directBuffer,
+                                   final int offset,
+                                   final int length)
     {
         final SocketChannel channel = this.channel;
         final AtomicCounter messageWrites = this.messageWrites;
@@ -83,11 +85,14 @@ class SenderEndPoint implements AutoCloseable
                     idleStrategy.idle(reliefValve.vent());
                 }
             }
+
+            return true;
         }
         catch (final IOException ex)
         {
             errorHandler.onError(ex);
             removeEndpoint();
+            return false;
         }
     }
 

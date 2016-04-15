@@ -396,7 +396,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final long connectionId,
         final long sessionId,
         final int messageType,
-        final long timestamp)
+        final long timestamp,
+        final long position)
     {
         long now = 0;
         if (TIME_MESSAGES)
@@ -404,7 +405,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             now = outboundTimer.recordSince(timestamp);
         }
 
-        senderEndPoints.onMessage(connectionId, buffer, offset, length);
+        senderEndPoints.onMessage(connectionId, buffer, offset, length, position);
 
         if (TIME_MESSAGES)
         {
