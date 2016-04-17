@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BufferClaim;
+import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
@@ -226,6 +227,7 @@ public class Logger implements AutoCloseable
             archivers.forEach(Archiver::onClose);
         }
 
+        CloseHelper.close(inboundArchiveReader);
         outboundArchiveReader.close();
         sentSequenceNumberIndex.close();
         receivedSequenceNumberIndex.close();
