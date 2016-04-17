@@ -31,7 +31,6 @@ import static org.junit.Assert.*;
 /**
  * Test simulated cluster.
  */
-@Ignore
 public class ClusterReplicationTest
 {
 
