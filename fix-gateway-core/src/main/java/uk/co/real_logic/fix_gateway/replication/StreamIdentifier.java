@@ -39,11 +39,11 @@ public final class StreamIdentifier
         this.channel = channel;
         if (CommonContext.IPC_CHANNEL.equals(channel))
         {
-            canonicalForm = channel;
+            canonicalForm = "aeron_ipc";
         }
         else
         {
-            canonicalForm = UdpChannel.parse(channel).canonicalForm();
+            canonicalForm = UdpChannel.parse(channel).canonicalForm().replace(':', '_');
         }
     }
 

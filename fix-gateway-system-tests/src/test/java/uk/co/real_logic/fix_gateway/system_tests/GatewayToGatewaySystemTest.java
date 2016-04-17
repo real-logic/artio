@@ -43,6 +43,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         mediaDriver = launchMediaDriver();
 
+        // System GC required to ensure file closed. Hypothesis: finalizer thread holding onto object references?
+        System.gc();
+
         acceptingEngine = launchAcceptingEngine(port, ACCEPTOR_ID, INITIATOR_ID);
         initiatingEngine = launchInitiatingGateway(initAeronPort);
 

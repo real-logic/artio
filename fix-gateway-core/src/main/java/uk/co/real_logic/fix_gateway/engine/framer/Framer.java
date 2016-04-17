@@ -718,6 +718,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
     public void onClose()
     {
+        inboundMessages.close();
         receiverEndPoints.close();
         senderEndPoints.close();
         close(selector);

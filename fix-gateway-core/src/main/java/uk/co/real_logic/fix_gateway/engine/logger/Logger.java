@@ -228,7 +228,7 @@ public class Logger implements AutoCloseable
         }
 
         CloseHelper.close(inboundArchiveReader);
-        outboundArchiveReader.close();
+        CloseHelper.close(outboundArchiveReader);
         sentSequenceNumberIndex.close();
         receivedSequenceNumberIndex.close();
     }

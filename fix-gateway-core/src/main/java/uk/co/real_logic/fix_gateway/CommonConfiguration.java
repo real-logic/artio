@@ -106,10 +106,10 @@ public class CommonConfiguration
     private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
     private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
     private static final boolean ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT = true;
-    protected boolean printErrorMessages = true;
-    protected IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
-    protected long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
 
+    private boolean printErrorMessages = true;
+    private IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
+    private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
     private SessionIdStrategy sessionIdStrategy = new SenderAndTargetSessionIdStrategy();
     private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
     private MessageValidationStrategy messageValidationStrategy = new NoMessageValidationStrategy();
