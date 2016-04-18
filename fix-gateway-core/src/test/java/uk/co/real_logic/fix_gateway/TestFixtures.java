@@ -57,6 +57,9 @@ public class TestFixtures
 
     public static void cleanupDirectory(final MediaDriver mediaDriver)
     {
-        IoUtil.delete(new File(mediaDriver.aeronDirectoryName()), false);
+        if (mediaDriver != null)
+        {
+            IoUtil.delete(new File(mediaDriver.aeronDirectoryName()), false);
+        }
     }
 }

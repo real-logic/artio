@@ -36,7 +36,6 @@ import java.util.function.LongFunction;
  */
 public class ReplayIndex implements Index
 {
-
     static final int REPLAY_BUFFER_SIZE = 128 * 1024;
 
     static File logFile(final String logFileDir, final long fixSessionId, final int streamId)
@@ -66,7 +65,7 @@ public class ReplayIndex implements Index
     private final int requiredStreamId;
     private final int indexFileSize;
     private final BufferFactory bufferFactory;
-    private final AtomicBuffer replayBuffer;
+    private final AtomicBuffer positionBuffer;
 
     public ReplayIndex(
         final String logFileDir,
@@ -75,17 +74,17 @@ public class ReplayIndex implements Index
         final int cacheNumSets,
         final int cacheSetSize,
         final BufferFactory bufferFactory,
-        final AtomicBuffer replayBuffer,
+        final AtomicBuffer positionBuffer,
         final ErrorHandler errorHandler)
     {
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
         this.indexFileSize = indexFileSize;
         this.bufferFactory = bufferFactory;
-        this.replayBuffer = replayBuffer;
+        this.positionBuffer = positionBuffer;
         sessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
-        positionWriter = new IndexedPositionWriter(replayBuffer, errorHandler);
-        positionReader = new IndexedPositionReader(replayBuffer);
+        positionWriter = new IndexedPositionWriter(positionBuffer, errorHandler);
+        positionReader = new IndexedPositionReader(positionBuffer);
     }
 
     public void indexRecord(final DirectBuffer srcBuffer,
@@ -118,6 +117,7 @@ public class ReplayIndex implements Index
     public void close()
     {
         sessionToIndex.clear();
+        IoUtil.unmap(positionBuffer.byteBuffer());
     }
 
     public void readLastPosition(final IndexedPositionConsumer consumer)
@@ -167,7 +167,6 @@ public class ReplayIndex implements Index
         public void close()
         {
             IoUtil.unmap(wrappedBuffer);
-            IoUtil.unmap(replayBuffer.byteBuffer());
         }
     }
 }
