@@ -107,7 +107,12 @@ public class AbstractLogTest
 
     protected int fragmentLength()
     {
-        return offset + logEntryLength - START;
+        return endPosition() - START;
+    }
+
+    protected int endPosition()
+    {
+        return offset + logEntryLength;
     }
 
     protected void bufferHasResendRequest(final int endSeqNo)

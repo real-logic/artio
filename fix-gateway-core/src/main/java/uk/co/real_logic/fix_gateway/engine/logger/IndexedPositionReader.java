@@ -24,11 +24,11 @@ import static uk.co.real_logic.fix_gateway.engine.SectorFramer.OUT_OF_SPACE;
 import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionWriter.*;
 
 /**
- * .
+ * Reads out the position at which indexes have been written up to.
  */
 class IndexedPositionReader
 {
-    public static final long UNKNOWN_POSITION = -1;
+    static final long UNKNOWN_POSITION = -1;
 
     private final IndexedPositionDecoder decoder = new IndexedPositionDecoder();
 
@@ -47,7 +47,7 @@ class IndexedPositionReader
         sectorFramer = new SectorFramer(buffer.capacity());
     }
 
-    public long indexedPosition(final int aeronSessionId)
+    long indexedPosition(final int aeronSessionId)
     {
         final IndexedPositionDecoder decoder = this.decoder;
         final int actingBlockLength = this.actingBlockLength;
@@ -73,7 +73,12 @@ class IndexedPositionReader
         }
     }
 
-    public void forEach(final IndexedPositionConsumer consumer)
+    /**
+     * Reads the last position that has been indexed.
+     *
+     * @param consumer a callback that receives each session id and position
+     */
+    void readLastPosition(final IndexedPositionConsumer consumer)
     {
         final IndexedPositionDecoder decoder = this.decoder;
         final int actingBlockLength = this.actingBlockLength;

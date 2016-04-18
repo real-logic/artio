@@ -19,6 +19,12 @@ import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 
+/**
+ * Different indexes to be run on the archiver implement this interface.
+ *
+ * Extends {@link FragmentHandler} so that it can be easily used to replay/catchup
+ * a Stream.
+ */
 public interface Index extends FragmentHandler, AutoCloseable
 {
     default void onFragment(DirectBuffer buffer, int offset, int length, Header header)
@@ -32,6 +38,16 @@ public interface Index extends FragmentHandler, AutoCloseable
             header.position());
     }
 
+    /**
+     * Index a record from an aeron stream.
+     *
+     * @param buffer buffer where the record is stored.
+     * @param offset offset within the buffer.
+     * @param length length of the data record within the buffer.
+     * @param streamId the Aeron stream Id of the data
+     * @param aeronSessionId the Aeron session id.
+     * @param position the position in the aeron stream of the start of the buffer
+     */
     void indexRecord(final DirectBuffer buffer,
                      final int offset,
                      final int length,
@@ -46,5 +62,10 @@ public interface Index extends FragmentHandler, AutoCloseable
 
     void close();
 
-    void forEachPosition(final IndexedPositionConsumer consumer);
+    /**
+     * Reads the last position that has been indexed.
+     *
+     * @param consumer a callback that receives each session id and position
+     */
+    void readLastPosition(final IndexedPositionConsumer consumer);
 }

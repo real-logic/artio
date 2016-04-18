@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import org.agrona.concurrent.AtomicBuffer;
 
+import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
 
 // TODO: optimisation: write and checksum only needed bytes
@@ -56,6 +57,7 @@ public class ChecksumFramer extends SectorFramer
     private void withChecksums(final ChecksumConsumer consumer)
     {
         final byte[] inMemoryBytes = buffer.byteArray();
+        final ByteBuffer inMemoryByteBuffer = buffer.byteBuffer();
         final int capacity = this.capacity;
 
         for (int sectorEnd = SECTOR_SIZE; sectorEnd <= capacity; sectorEnd += SECTOR_SIZE)
@@ -64,9 +66,22 @@ public class ChecksumFramer extends SectorFramer
             final int checksumOffset = sectorEnd - CHECKSUM_SIZE;
 
             crc32.reset();
-            crc32.update(inMemoryBytes, sectorStart, SECTOR_DATA_LENGTH);
+            if (inMemoryBytes != null)
+            {
+                crc32.update(inMemoryBytes, sectorStart, SECTOR_DATA_LENGTH);
+            }
+            else
+            {
+                inMemoryByteBuffer.limit(sectorStart + SECTOR_DATA_LENGTH).position(sectorStart);
+                crc32.update(inMemoryByteBuffer);
+            }
             final int sectorChecksum = (int) crc32.getValue();
             consumer.accept(checksumOffset, sectorChecksum);
+        }
+
+        if (inMemoryByteBuffer != null)
+        {
+            inMemoryByteBuffer.clear();
         }
     }
 

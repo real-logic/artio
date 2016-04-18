@@ -16,9 +16,11 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.Long2ObjectCache;
+import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -27,18 +29,25 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.File;
 import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
 import java.util.function.LongFunction;
 
 /**
- * Builds an index of a composite key of session id and sequence number
+ * Builds an index of a composite key of session id and sequence number for a given stream.
  */
 public class ReplayIndex implements Index
 {
 
-    static File logFile(final String logFileDir, final long sessionId)
+    static final int REPLAY_BUFFER_SIZE = 128 * 1024;
+
+    static File logFile(final String logFileDir, final long fixSessionId, final int streamId)
     {
-        return new File(String.format(logFileDir + File.separator + "replay-index-%d", sessionId));
+        return new File(String.format(logFileDir + File.separator + "replay-index-%d-%d", fixSessionId, streamId));
+    }
+
+    static UnsafeBuffer replayBuffer(final String logFileDir, final int streamId)
+    {
+        final String pathname = logFileDir + File.separator + "replay-positions-"  + streamId;
+        return new UnsafeBuffer(LoggerUtil.map(new File(pathname), REPLAY_BUFFER_SIZE));
     }
 
     private final LongFunction<SessionIndex> newSessionIndex = SessionIndex::new;
@@ -48,31 +57,43 @@ public class ReplayIndex implements Index
     private final HeaderDecoder fixHeader = new HeaderDecoder();
     private final ReplayIndexRecordEncoder replayIndexRecord = new ReplayIndexRecordEncoder();
     private final MessageHeaderEncoder indexHeaderEncoder = new MessageHeaderEncoder();
+    private final IndexedPositionWriter positionWriter;
+    private final IndexedPositionReader positionReader;
 
     private final Long2ObjectCache<SessionIndex> sessionToIndex;
 
     private final String logFileDir;
+    private final int requiredStreamId;
     private final int indexFileSize;
     private final BufferFactory bufferFactory;
+    private final AtomicBuffer replayBuffer;
 
     public ReplayIndex(
         final String logFileDir,
+        final int requiredStreamId,
         final int indexFileSize,
         final int cacheNumSets,
         final int cacheSetSize,
-        final BufferFactory bufferFactory)
+        final BufferFactory bufferFactory,
+        final AtomicBuffer replayBuffer,
+        final ErrorHandler errorHandler)
     {
         this.logFileDir = logFileDir;
+        this.requiredStreamId = requiredStreamId;
         this.indexFileSize = indexFileSize;
         this.bufferFactory = bufferFactory;
+        this.replayBuffer = replayBuffer;
         sessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
+        positionWriter = new IndexedPositionWriter(replayBuffer, errorHandler);
+        positionReader = new IndexedPositionReader(replayBuffer);
     }
 
     public void indexRecord(final DirectBuffer srcBuffer,
                             final int srcOffset,
                             final int srcLength,
                             final int streamId,
-                            final int aeronSessionId, final long position)
+                            final int aeronSessionId,
+                            final long position)
     {
         int offset = srcOffset;
         frameHeaderDecoder.wrap(srcBuffer, offset);
@@ -90,7 +111,7 @@ public class ReplayIndex implements Index
 
             sessionToIndex
                 .computeIfAbsent(messageFrame.session(), newSessionIndex)
-                .onRecord(streamId, aeronSessionId, srcOffset, fixHeader.msgSeqNum());
+                .onRecord(streamId, aeronSessionId, srcOffset, srcLength, position, fixHeader.msgSeqNum());
         }
     }
 
@@ -99,9 +120,9 @@ public class ReplayIndex implements Index
         sessionToIndex.clear();
     }
 
-    public void forEachPosition(final IndexedPositionConsumer indexedPositionConsumer)
+    public void readLastPosition(final IndexedPositionConsumer consumer)
     {
-        // TODO
+        positionReader.readLastPosition(consumer);
     }
 
     private final class SessionIndex implements AutoCloseable
@@ -113,7 +134,7 @@ public class ReplayIndex implements Index
 
         private SessionIndex(final long sessionId)
         {
-            this.wrappedBuffer = bufferFactory.map(logFile(logFileDir, sessionId), indexFileSize);
+            this.wrappedBuffer = bufferFactory.map(logFile(logFileDir, sessionId, requiredStreamId), indexFileSize);
             this.buffer = new UnsafeBuffer(wrappedBuffer);
             indexHeaderEncoder
                 .wrap(buffer, 0)
@@ -123,27 +144,30 @@ public class ReplayIndex implements Index
                 .version(replayIndexRecord.sbeSchemaVersion());
         }
 
-        public void onRecord(final int streamId,
-                             final int aeronSessionId,
-                             final long position,
-                             final int sequenceNumber)
+        void onRecord(final int streamId,
+                      final int aeronSessionId,
+                      final long offset,
+                      final int length,
+                      final long position,
+                      final int sequenceNumber)
         {
             replayIndexRecord
-                .wrap(buffer, offset)
+                .wrap(buffer, this.offset)
                 .streamId(streamId)
                 .aeronSessionId(aeronSessionId)
-                .position(position)
+                .position(offset)
                 .sequenceNumber(sequenceNumber);
 
-            offset = replayIndexRecord.limit();
+            positionWriter.indexedUpTo(aeronSessionId, position + length);
+            positionWriter.updateChecksums();
+
+            this.offset = replayIndexRecord.limit();
         }
 
         public void close()
         {
-            if (wrappedBuffer instanceof MappedByteBuffer)
-            {
-                IoUtil.unmap((MappedByteBuffer) wrappedBuffer);
-            }
+            IoUtil.unmap(wrappedBuffer);
+            IoUtil.unmap(replayBuffer.byteBuffer());
         }
     }
 }

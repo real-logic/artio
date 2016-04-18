@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import org.agrona.ErrorHandler;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,20 +28,28 @@ import java.nio.ByteBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
+import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.REPLAY_BUFFER_SIZE;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
 public class ReplayIndexTest extends AbstractLogTest
 {
     private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024);
     private BufferFactory mockBufferFactory = mock(BufferFactory.class);
+    private UnsafeBuffer replayBuffer = new UnsafeBuffer(new byte[REPLAY_BUFFER_SIZE]);
+    private ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private IndexedPositionConsumer positionConsumer = mock(IndexedPositionConsumer.class);
+    private IndexedPositionReader positionReader = new IndexedPositionReader(replayBuffer);
 
     private LogonEncoder logon = new LogonEncoder();
     private ReplayIndex replayIndex = new ReplayIndex(
         DEFAULT_LOG_FILE_DIR,
+        STREAM_ID,
         DEFAULT_INDEX_FILE_SIZE,
         DEFAULT_LOGGER_CACHE_NUM_SETS,
         DEFAULT_LOGGER_CACHE_SET_SIZE,
-        mockBufferFactory);
+        mockBufferFactory,
+        replayBuffer,
+        errorHandler);
 
     @Before
     public void setUp()
@@ -64,6 +73,18 @@ public class ReplayIndexTest extends AbstractLogTest
         assertEquals(AERON_SESSION_ID, replayIndexRecord.aeronSessionId());
         assertEquals(START, replayIndexRecord.position());
         assertEquals(SEQUENCE_NUMBER, replayIndexRecord.sequenceNumber());
+    }
+
+    @Test
+    public void shouldUpdatePositionForIndexedRecord()
+    {
+        bufferContainsMessage(true);
+
+        indexRecord();
+
+        positionReader.readLastPosition(positionConsumer);
+
+        verify(positionConsumer, times(1)).accept(AERON_SESSION_ID, endPosition());
     }
 
     @Test
@@ -97,7 +118,9 @@ public class ReplayIndexTest extends AbstractLogTest
 
         indexRecord();
 
-        verifyNoMoreInteractions(mockBufferFactory);
+        positionReader.readLastPosition(positionConsumer);
+
+        verifyNoMoreInteractions(mockBufferFactory, positionConsumer);
     }
 
     private void bufferContainsLogon()
@@ -122,7 +145,7 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private void verifyMappedFile(final long sessionId)
     {
-        verify(mockBufferFactory, times(1)).map(eq(logFile(DEFAULT_LOG_FILE_DIR, sessionId)), anyInt());
+        verify(mockBufferFactory, times(1)).map(eq(logFile(DEFAULT_LOG_FILE_DIR, sessionId, STREAM_ID)), anyInt());
     }
 
     private void indexRecord()

@@ -16,6 +16,8 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.logbuffer.FragmentHandler;
+import org.agrona.ErrorHandler;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -26,6 +28,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.UNKNOWN_SESSION;
+import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.REPLAY_BUFFER_SIZE;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
 public class ReplayQueryTest extends AbstractLogTest
@@ -35,12 +38,17 @@ public class ReplayQueryTest extends AbstractLogTest
     private FragmentHandler mockHandler = mock(FragmentHandler.class);
     private ArchiveReader mockReader = mock(ArchiveReader.class);
     private ArchiveReader.SessionReader mockSessionReader = mock(ArchiveReader.SessionReader.class);
+    private UnsafeBuffer replayBuffer = new UnsafeBuffer(new byte[REPLAY_BUFFER_SIZE]);
+    private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private ReplayIndex replayIndex = new ReplayIndex(
         DEFAULT_LOG_FILE_DIR,
+        STREAM_ID,
         DEFAULT_INDEX_FILE_SIZE,
         DEFAULT_LOGGER_CACHE_NUM_SETS,
         DEFAULT_LOGGER_CACHE_SET_SIZE,
-        (name, size) -> indexBuffer);
+        (name, size) -> indexBuffer,
+        buffer,
+        errorHandler);
 
     private ReplayQuery query = new ReplayQuery(
         DEFAULT_LOG_FILE_DIR,
@@ -115,12 +123,13 @@ public class ReplayQueryTest extends AbstractLogTest
 
     private void returnBuffer(final ByteBuffer buffer, final long sessionId)
     {
-        when(mockBufferFactory.map(logFile(DEFAULT_LOG_FILE_DIR, sessionId))).thenReturn(buffer);
+        when(mockBufferFactory.map(logFile(DEFAULT_LOG_FILE_DIR, sessionId, STREAM_ID))).thenReturn(buffer);
     }
 
     private void verifyMappedFile(final long sessionId, final int wantedNumberOfInvocations)
     {
-        verify(mockBufferFactory, times(wantedNumberOfInvocations)).map(logFile(DEFAULT_LOG_FILE_DIR, sessionId));
+        verify(mockBufferFactory, times(wantedNumberOfInvocations))
+            .map(logFile(DEFAULT_LOG_FILE_DIR, sessionId, STREAM_ID));
     }
 
     private void indexSecondRecord()

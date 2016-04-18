@@ -86,7 +86,7 @@ public class ReplayQuery implements AutoCloseable
 
         private SessionQuery(final long sessionId)
         {
-            wrappedBuffer = indexBufferFactory.map(logFile(logFileDir, sessionId));
+            wrappedBuffer = indexBufferFactory.map(logFile(logFileDir, sessionId, requiredStreamId));
             buffer = new UnsafeBuffer(wrappedBuffer);
         }
 

@@ -52,7 +52,7 @@ public class Indexer implements Agent, FragmentHandler
     {
         for (final Index index : indices)
         {
-            index.forEachPosition((aeronSessionId, position) ->
+            index.readLastPosition((aeronSessionId, position) ->
             {
                 final ArchiveReader.SessionReader sessionReader = archiveReader.session(aeronSessionId);
                 do

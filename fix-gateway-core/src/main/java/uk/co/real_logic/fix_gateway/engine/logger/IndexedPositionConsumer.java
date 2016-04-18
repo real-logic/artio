@@ -15,6 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+/**
+ * A callback for receiving information that what position each stream has been indexed up to.
+ */
 @FunctionalInterface
 public interface IndexedPositionConsumer
 {

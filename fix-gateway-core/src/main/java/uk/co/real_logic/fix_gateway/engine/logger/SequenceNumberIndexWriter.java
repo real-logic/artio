@@ -221,9 +221,9 @@ public class SequenceNumberIndexWriter implements Index
         }
     }
 
-    public void forEachPosition(final IndexedPositionConsumer consumer)
+    public void readLastPosition(final IndexedPositionConsumer consumer)
     {
-        new IndexedPositionReader(positions.buffer()).forEach(consumer);
+        new IndexedPositionReader(positions.buffer()).readLastPosition(consumer);
     }
 
     private void saveRecord(final int newSequenceNumber,

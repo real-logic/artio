@@ -28,10 +28,12 @@ import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
+import static java.util.Arrays.asList;
 import static org.agrona.concurrent.AgentRunner.startOnThread;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 
 /**
  * Top level entry point for the whole logging module.
@@ -84,16 +86,17 @@ public class Logger implements AutoCloseable
             final int cacheNumSets = configuration.loggerCacheNumSets();
             final String logFileDir = configuration.logFileDir();
 
-            final ReplayIndex replayIndex =
-                new ReplayIndex(logFileDir, configuration.indexFileSize(), cacheNumSets, cacheSetSize, LoggerUtil::map);
-
             final Indexer outboundIndexer = new Indexer(
-                Arrays.asList(replayIndex, sentSequenceNumberIndex),
+                asList(
+                    newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM),
+                    sentSequenceNumberIndex),
                 outboundLibraryStreams.subscription(),
                 outboundArchiveReader);
 
             final Indexer inboundIndexer = new Indexer(
-                Arrays.asList(replayIndex, receivedSequenceNumberIndex),
+                asList(
+                    newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM),
+                    receivedSequenceNumberIndex),
                 inboundLibraryStreams.subscription(),
                 inboundArchiveReader);
 
@@ -124,6 +127,22 @@ public class Logger implements AutoCloseable
                 outboundLibraryStreams.gatewayPublication(configuration.loggerIdleStrategy()));
             loggingRunner = newRunner(gapFiller);
         }
+    }
+
+    private ReplayIndex newReplayIndex(final int cacheSetSize,
+                                       final int cacheNumSets,
+                                       final String logFileDir,
+                                       final int streamId)
+    {
+        return new ReplayIndex(
+            logFileDir,
+            streamId,
+            configuration.indexFileSize(),
+            cacheNumSets,
+            cacheSetSize,
+            LoggerUtil::map,
+            ReplayIndex.replayBuffer(logFileDir, streamId),
+            errorHandler);
     }
 
     private ReplayQuery newReplayQuery(final String logFileDir,
@@ -233,7 +252,7 @@ public class Logger implements AutoCloseable
         receivedSequenceNumberIndex.close();
     }
 
-    public ReplayQuery inboundMessageQuery()
+    public ReplayQuery inboundReplayQuery()
     {
         final String logFileDir = configuration.logFileDir();
         final ArchiveReader archiveReader = archiveReader(logFileDir, inboundLibraryStreams.subscription());
