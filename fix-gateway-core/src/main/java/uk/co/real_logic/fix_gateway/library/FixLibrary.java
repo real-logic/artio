@@ -47,6 +47,7 @@ import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
+import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
 /**
@@ -381,9 +382,14 @@ public final class FixLibrary extends GatewayProcess
 
         awaitReply(() -> replyStatus == null);
 
-        // TODO: detect missing catchup messages
-
         final SessionReplyStatus replyStatus = this.replyStatus;
+        if (replyStatus == MISSING_MESSAGES)
+        {
+            // ensure that session subscription doesn't get stuck waiting for more messages if there
+            // are some missing.
+            connectionIdToSession.get(connectionId).startCatchup(0);
+        }
+
         this.replyStatus = null;
         return replyStatus;
     }
