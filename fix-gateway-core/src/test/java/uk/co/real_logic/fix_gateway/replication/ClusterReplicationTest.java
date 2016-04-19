@@ -94,8 +94,6 @@ public class ClusterReplicationTest
         assertBecomesFollower(leader);
     }
 
-    // TODO: unignore once its easy to loss generated both inbound and outbound traffic.
-    @Ignore
     @Test
     public void shouldReformClusterAfterLeaderNetsplit()
     {
@@ -111,7 +109,6 @@ public class ClusterReplicationTest
         assertBecomesFollower(leader);
     }
 
-    @Ignore
     @Test
     public void shouldRejoinClusterAfterFollowerNetsplit()
     {
