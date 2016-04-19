@@ -264,7 +264,10 @@ public class SessionIds
         currentlyAuthenticated.clear();
         compositeToSurrogate.clear();
 
-        mappedFile.transferTo(backupLocation);
+        if (backupLocation != null)
+        {
+            mappedFile.transferTo(backupLocation);
+        }
 
         buffer.setMemory(0, buffer.capacity(), (byte) 0);
         initialiseBuffer();

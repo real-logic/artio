@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -23,23 +24,48 @@ import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 
+import java.io.File;
+import java.io.IOException;
+
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    private File backupLocation;
+
     @Before
-    public void setUp()
+    public void setUp() throws IOException
     {
         delete(ACCEPTOR_LOGS);
         delete(CLIENT_LOGS);
+        backupLocation = File.createTempFile("backup", "tmp");
 
-        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
+        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
     }
 
-    private void launch(final int initialSequenceNumber)
+    @Test(timeout = 10_000L)
+    public void sequenceNumbersCanPersistOverRestarts()
+    {
+        sequenceNumbersCanPersistOverRestarts(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
+    }
+
+    @Test(timeout = 10_000L)
+    public void customInitialSequenceNumbersCanBeSet()
+    {
+        sequenceNumbersCanPersistOverRestarts(4);
+    }
+
+    @Test(timeout = 10_000L)
+    public void sequenceNumbersCanBeReset()
+    {
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, true);
+    }
+
+    private void launch(final int initialSequenceNumber, final boolean reset)
     {
         mediaDriver = launchMediaDriver();
 
@@ -54,6 +80,12 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         acceptingLibraryConfig.acceptorSequenceNumbersResetUponReconnect(false);
         acceptingLibrary = FixLibrary.connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
+
+        if (reset)
+        {
+            acceptingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY);
+            initiatingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY);
+        }
 
         connectPersistingSessions(initialSequenceNumber);
     }
@@ -76,19 +108,14 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         acceptingSession = acquireSession(acceptingSessionHandler, acceptingLibrary);
     }
 
-    @Test(timeout = 10_000L)
-    public void sequenceNumbersCanPersistOverRestarts()
-    {
-        sequenceNumbersCanPersistOverRestarts(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
-    }
-
-    @Test(timeout = 10_000L)
-    public void customInitialSequenceNumbersCanBeSet()
-    {
-        sequenceNumbersCanPersistOverRestarts(4);
-    }
-
     private void sequenceNumbersCanPersistOverRestarts(final int initialSequenceNumber)
+    {
+        exchangeMessagesAroundARestart(initialSequenceNumber, 4, false);
+    }
+
+    private void exchangeMessagesAroundARestart(final int initialSequenceNumber,
+                                                final int sequNumAfter,
+                                                final boolean reset)
     {
         sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
@@ -102,13 +129,19 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         close();
 
-        launch(initialSequenceNumber);
+        launch(initialSequenceNumber, reset);
 
         assertEquals("initiatedSessionId not stable over restarts", initiatedSessionId, initiatingSession.id());
         assertEquals("acceptingSessionId not stable over restarts", acceptingSessionId, acceptingSession.id());
-        assertSequenceFromInitToAcceptAt(4, 4);
+        assertSequenceFromInitToAcceptAt(sequNumAfter, sequNumAfter);
 
         sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+    }
+
+    @After
+    public void cleanupBackup()
+    {
+        assertTrue("Failed to delete: " + backupLocation, backupLocation.delete());
     }
 }

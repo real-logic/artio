@@ -58,7 +58,7 @@ public class FramerTest
     private static final InetSocketAddress FRAMER_ADDRESS = new InetSocketAddress("localhost", 9999);
     private static final int LIBRARY_ID = 3;
     private static final int REPLY_TIMEOUT_IN_MS = 10;
-    public static final int HEARTBEAT_INTERVAL_IN_S = 10;
+    private static final int HEARTBEAT_INTERVAL_IN_S = 10;
 
     private ServerSocketChannel server;
 
@@ -130,7 +130,8 @@ public class FramerTest
             receivedSequenceNumberIndex,
             gatewaySessions,
             replayQuery,
-            mock(ErrorHandler.class));
+            mock(ErrorHandler.class),
+            mock(GatewayPublication.class));
     }
 
     @After

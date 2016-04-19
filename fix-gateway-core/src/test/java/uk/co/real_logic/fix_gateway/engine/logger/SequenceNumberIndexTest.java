@@ -60,7 +60,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test
     public void shouldNotInitiallyKnowASequenceNumber()
     {
-        assertLastKnownSequenceNumberIs(SESSION_ID, SequenceNumberIndexReader.UNKNOWN_SESSION);
+        assertUnknownSession();
     }
 
     @Test
@@ -203,6 +203,16 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         }
     }
 
+    @Test
+    public void shouldResetSequenceNumbers()
+    {
+        indexFixMessage();
+
+        writer.resetSequenceNumbers();
+
+        assertUnknownSession();
+    }
+
     @After
     public void verifyNoErrors()
     {
@@ -231,6 +241,11 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private UnsafeBuffer newBuffer()
     {
         return new UnsafeBuffer(new byte[BUFFER_SIZE]);
+    }
+
+    private void assertUnknownSession()
+    {
+        assertLastKnownSequenceNumberIs(SESSION_ID, SequenceNumberIndexReader.UNKNOWN_SESSION);
     }
 
     private void indexFixMessage()

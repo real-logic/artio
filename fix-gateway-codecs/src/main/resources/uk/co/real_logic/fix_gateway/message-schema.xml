@@ -135,6 +135,8 @@
         <field name="sessionState" id="101" type="SessionState"/>
         <data name="address" id="18" type="varDataEncoding"/>
     </sbe:message>
+    <sbe:message name="ResetSessionIds" id="36" description="All session ids have been reset">
+    </sbe:message>
     <sbe:message name="Logon" id="9" description="A logon has occurred">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connection" id="2" type="ConnectionId"/>

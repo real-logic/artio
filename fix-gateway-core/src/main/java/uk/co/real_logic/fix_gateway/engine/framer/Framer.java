@@ -56,6 +56,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
@@ -118,6 +119,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final CatchupReplayer catchupReplayer;
     private final ReplayQuery inboundMessages;
     private final ErrorHandler errorHandler;
+    private final GatewayPublication outboundPublication;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
@@ -134,7 +136,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final GatewaySessions gatewaySessions,
         final ReplayQuery inboundMessages,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final GatewayPublication outboundPublication)
     {
         this.clock = clock;
         this.configuration = configuration;
@@ -144,8 +147,9 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         this.gatewaySessions = gatewaySessions;
         this.inboundMessages = inboundMessages;
         this.errorHandler = errorHandler;
+        this.outboundPublication = outboundPublication;
         this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
-        senderEndPoints = new SenderEndPoints(inboundPublication);
+        this.senderEndPoints = new SenderEndPoints(inboundPublication);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
         this.adminCommands = adminCommands;
@@ -233,7 +237,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             final long sessionId = session.sessionId();
             final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-            final boolean hasLoggedIn = receivedSequenceNumber != SequenceNumberIndexReader.UNKNOWN_SESSION;
+            final boolean hasLoggedIn = receivedSequenceNumber != UNKNOWN_SESSION;
             final SessionState state = hasLoggedIn ? ACTIVE : CONNECTED;
             gatewaySessions.acquire(
                 session,
@@ -289,8 +293,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                     session,
                     CONNECTED,
                     configuration.defaultHeartbeatIntervalInS(),
-                    SequenceNumberIndexReader.UNKNOWN_SESSION,
-                    SequenceNumberIndexReader.UNKNOWN_SESSION,
+                    UNKNOWN_SESSION,
+                    UNKNOWN_SESSION,
                     null,
                     null);
 
@@ -692,28 +696,42 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         inboundPublication.saveRequestSessionReply(SEQUENCE_NUMBER_TOO_HIGH, correlationId);
     }
 
-    void onQueryLibraries(final QueryLibrariesCommand queryLibrariesCommand)
+    void onQueryLibraries(final QueryLibrariesCommand command)
     {
         final List<LibraryInfo> libraries = new ArrayList<>(idToLibrary.values());
-        queryLibrariesCommand.success(libraries);
+        command.success(libraries);
     }
 
-    void onGatewaySessions(final GatewaySessionsCommand gatewaySessionsCommand)
+    void onGatewaySessions(final GatewaySessionsCommand command)
     {
-        gatewaySessionsCommand.success(new ArrayList<>(gatewaySessions.sessions()));
+        command.success(new ArrayList<>(gatewaySessions.sessions()));
     }
 
-    void resetSessionIds(final File backupLocation, final ResetSessionIdsCommand command)
+    void onResetSessionIds(final File backupLocation, final ResetSessionIdsCommand command)
     {
         try
         {
+            inboundPublication.saveResetSessionIds();
+            outboundPublication.saveResetSessionIds();
             sessionIds.reset(backupLocation);
+            while (sequenceNumbersNotReset())
+            {
+                idleStrategy.idle();
+            }
+            idleStrategy.reset();
+
             command.success();
         }
-        catch (Exception e)
+        catch (final Exception ex)
         {
-            command.onError(e);
+            command.onError(ex);
         }
+    }
+
+    private boolean sequenceNumbersNotReset()
+    {
+        return sentSequenceNumberIndex.lastKnownSequenceNumber(1) != UNKNOWN_SESSION
+            || receivedSequenceNumberIndex.lastKnownSequenceNumber(1) != UNKNOWN_SESSION;
     }
 
     public void onClose()

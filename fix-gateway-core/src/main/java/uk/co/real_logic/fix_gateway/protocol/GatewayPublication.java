@@ -66,6 +66,7 @@ public class GatewayPublication extends ClaimablePublication
     private final ConnectEncoder connect = new ConnectEncoder();
     private final CatchupEncoder catchup = new CatchupEncoder();
     private final NewSentPositionEncoder newSentPosition = new NewSentPositionEncoder();
+    private final ResetSessionIdsEncoder resetSessionIds = new ResetSessionIdsEncoder();
 
     private final NanoClock nanoClock;
 
@@ -291,6 +292,27 @@ public class GatewayPublication extends ClaimablePublication
             .wrap(buffer, offset)
             .connection(connectionId)
             .putAddress(addressBytes, 0, addressBytes.length);
+
+        bufferClaim.commit();
+
+        logSbeMessage(buffer, bufferClaim.offset());
+
+        return position;
+    }
+
+    public long saveResetSessionIds()
+    {
+        final long position = claim(HEADER_LENGTH);
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(resetSessionIds.sbeBlockLength())
+            .templateId(resetSessionIds.sbeTemplateId())
+            .schemaId(resetSessionIds.sbeSchemaId())
+            .version(resetSessionIds.sbeSchemaVersion());
 
         bufferClaim.commit();
 

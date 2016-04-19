@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import org.agrona.LangUtil;
 import org.agrona.concurrent.IdleStrategy;
 
 import java.io.File;
@@ -33,7 +34,7 @@ public final class ResetSessionIdsCommand implements AdminCommand
 
     public void execute(final Framer framer)
     {
-        framer.resetSessionIds(backupLocation, this);
+        framer.onResetSessionIds(backupLocation, this);
     }
 
     public void awaitResponse(final IdleStrategy idleStrategy)
@@ -46,7 +47,7 @@ public final class ResetSessionIdsCommand implements AdminCommand
 
         if (!done)
         {
-            throw new IllegalStateException(error);
+            LangUtil.rethrowUnchecked(error);
         }
     }
 

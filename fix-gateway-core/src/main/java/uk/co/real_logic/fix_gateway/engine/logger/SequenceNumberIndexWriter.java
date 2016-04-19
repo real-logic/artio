@@ -58,6 +58,7 @@ public class SequenceNumberIndexWriter implements Index
     private final File writablePath;
     private final File passingPlacePath;
     private final int fileCapacity;
+    private final int positionTableOffset;
     private final IndexedPositionWriter positions;
 
     private MappedFile writableFile;
@@ -82,7 +83,7 @@ public class SequenceNumberIndexWriter implements Index
         writableFile = MappedFile.map(writablePath, fileCapacity);
 
         // TODO: Fsync parent directory
-        final int positionTableOffset = positionTableOffset(fileCapacity);
+        positionTableOffset = positionTableOffset(fileCapacity);
         checksumFramer = new ChecksumFramer(inMemoryBuffer, positionTableOffset);
         try
         {
@@ -109,25 +110,41 @@ public class SequenceNumberIndexWriter implements Index
     {
         int offset = srcOffset;
         frameHeaderDecoder.wrap(buffer, offset);
-        if (frameHeaderDecoder.templateId() == FixMessageEncoder.TEMPLATE_ID)
+        switch (frameHeaderDecoder.templateId())
         {
-            final int actingBlockLength = frameHeaderDecoder.blockLength();
-            offset += frameHeaderDecoder.encodedLength();
-            messageFrame.wrap(buffer, offset, actingBlockLength, frameHeaderDecoder.version());
+            case FixMessageEncoder.TEMPLATE_ID:
+            {
+                final int actingBlockLength = frameHeaderDecoder.blockLength();
+                offset += frameHeaderDecoder.encodedLength();
+                messageFrame.wrap(buffer, offset, actingBlockLength, frameHeaderDecoder.version());
 
-            offset += actingBlockLength + 2;
+                offset += actingBlockLength + 2;
 
-            asciiBuffer.wrap(buffer);
-            fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
+                asciiBuffer.wrap(buffer);
+                fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
 
-            final int msgSeqNum = fixHeader.msgSeqNum();
-            final long sessionId = messageFrame.session();
+                final int msgSeqNum = fixHeader.msgSeqNum();
+                final long sessionId = messageFrame.session();
 
-            saveRecord(msgSeqNum, sessionId);
+                saveRecord(msgSeqNum, sessionId);
+                break;
+            }
+
+            case ResetSessionIdsDecoder.TEMPLATE_ID:
+            {
+                resetSequenceNumbers();
+                break;
+            }
         }
 
         checkTermRoll(buffer, srcOffset, position, length);
         positions.indexedUpTo(aeronSessionId, position + length);
+    }
+
+    void resetSequenceNumbers()
+    {
+        inMemoryBuffer.setMemory(0, positionTableOffset, (byte) 0);
+        initialiseBlankBuffer();
     }
 
     private void checkTermRoll(final DirectBuffer buffer, final int offset, final long position, final int length)
@@ -301,15 +318,20 @@ public class SequenceNumberIndexWriter implements Index
         }
         else
         {
-            LoggerUtil.initialiseBuffer(
-                inMemoryBuffer,
-                fileHeaderEncoder,
-                fileHeaderDecoder,
-                lastKnownEncoder.sbeSchemaId(),
-                lastKnownEncoder.sbeTemplateId(),
-                lastKnownEncoder.sbeSchemaVersion(),
-                lastKnownEncoder.sbeBlockLength());
+            initialiseBlankBuffer();
         }
+    }
+
+    private void initialiseBlankBuffer()
+    {
+        LoggerUtil.initialiseBuffer(
+            inMemoryBuffer,
+            fileHeaderEncoder,
+            fileHeaderDecoder,
+            lastKnownEncoder.sbeSchemaId(),
+            lastKnownEncoder.sbeTemplateId(),
+            lastKnownEncoder.sbeSchemaVersion(),
+            lastKnownEncoder.sbeBlockLength());
     }
 
     private boolean fileHasBeenInitialized(final AtomicBuffer filebuffer)
@@ -350,9 +372,8 @@ public class SequenceNumberIndexWriter implements Index
         inMemoryBuffer.putBytes(0, filebuffer, 0, fileCapacity);
     }
 
-
-    public void updateSequenceNumber(final int recordOffset,
-                                     final int value)
+    private void updateSequenceNumber(final int recordOffset,
+                                      final int value)
     {
         inMemoryBuffer.putIntOrdered(recordOffset + SEQUENCE_NUMBER_OFFSET, value);
     }

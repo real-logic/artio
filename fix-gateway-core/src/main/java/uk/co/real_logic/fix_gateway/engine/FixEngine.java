@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import io.aeron.Publication;
 import io.aeron.Subscription;
+import org.agrona.LangUtil;
 import org.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
@@ -27,6 +28,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexWriter;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 import static org.agrona.concurrent.AgentRunner.startOnThread;
@@ -98,14 +100,27 @@ public final class FixEngine extends GatewayProcess
      *
      * @param backupLocation the location to backup the current session ids file to.
      *                       Can be null to indicate that nobackup is required.
-     * @throws IllegalStateException thrown in the case that there was an error in backing up,
-     *                               or that there were currently connected sessions.
+     * @throws IOException thrown in the case that there was an error in backing up,
+     *                     or that there were currently connected sessions.
+     *                     NB: genuinely thrown even though not checked.
      */
     public void resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)
-        throws IllegalStateException
     {
+        if (backupLocation != null && !backupLocation.exists())
+        {
+            try
+            {
+                backupLocation.createNewFile();
+            }
+            catch (IOException e)
+            {
+                LangUtil.rethrowUnchecked(e);
+            }
+        }
+
         final ResetSessionIdsCommand command = new ResetSessionIdsCommand(backupLocation);
         sendAdminCommand(idleStrategy, command);
+        command.awaitResponse(idleStrategy);
     }
 
     private void sendAdminCommand(final IdleStrategy idleStrategy, final AdminCommand query)
@@ -183,7 +198,8 @@ public final class FixEngine extends GatewayProcess
             new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer()),
             new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer()),
             gatewaySessions, logger.inboundReplayQuery(),
-            errorHandler);
+            errorHandler,
+            outboundLibraryStreams.gatewayPublication(idleStrategy));
         framerRunner = new AgentRunner(idleStrategy, errorHandler, null, framer);
     }
 

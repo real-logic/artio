@@ -38,6 +38,7 @@ import java.nio.channels.SocketChannel;
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
@@ -311,10 +312,8 @@ class ReceiverEndPoint
             }
             else
             {
-                final int sentSequenceNumber =
-                    sentSequenceNumberIndex.lastKnownSequenceNumber(resetSequenceNumbers, sessionId);
-                final int receivedSequenceNumber =
-                    receivedSequenceNumberIndex.lastKnownSequenceNumber(resetSequenceNumbers, sessionId);
+                final int sentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, sessionId);
+                final int receivedSequenceNumber = sequenceNumber(receivedSequenceNumberIndex, sessionId);
                 final String username = SessionParser.username(logon);
                 final String password = SessionParser.password(logon);
                 gatewaySession.onLogon(sessionId, compositeKey, username, password, logon.heartBtInt());
@@ -334,6 +333,18 @@ class ReceiverEndPoint
                     password);
             }
         }
+    }
+
+    private int sequenceNumber(
+        final SequenceNumberIndexReader sequenceNumberIndexReader,
+        final long sessionId)
+    {
+        if (resetSequenceNumbers)
+        {
+            return UNKNOWN_SESSION;
+        }
+
+        return sequenceNumberIndexReader.lastKnownSequenceNumber(sessionId);
     }
 
     private void saveInvalidMessage(final int offset, final int startOfChecksumTag)

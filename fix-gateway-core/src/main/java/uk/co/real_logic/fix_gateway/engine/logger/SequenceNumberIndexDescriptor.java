@@ -31,11 +31,10 @@ import static uk.co.real_logic.fix_gateway.engine.SectorFramer.nextSectorStart;
  * Each instance is not thread-safe, however, they can share a common
  * off-heap in a single-writer threadsafe manner.
  *
- * Layout:
- *
  * Message Header
- * Known Stream Position
  * Series of LastKnownSequenceNumber records
+ * ...
+ * Positions Table
  */
 final class SequenceNumberIndexDescriptor
 {

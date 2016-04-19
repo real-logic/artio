@@ -48,16 +48,6 @@ public class SequenceNumberIndexReader
         positions = new IndexedPositionReader(positionsBuffer(inMemoryBuffer, positionTableOffset));
     }
 
-    public int lastKnownSequenceNumber(final boolean resetSequenceNumbers, final long sessionId)
-    {
-        if (resetSequenceNumbers)
-        {
-            return UNKNOWN_SESSION;
-        }
-
-        return lastKnownSequenceNumber(sessionId);
-    }
-
     public int lastKnownSequenceNumber(final long sessionId)
     {
         int position = SequenceNumberIndexDescriptor.HEADER_SIZE;

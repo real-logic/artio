@@ -143,6 +143,8 @@ public class SessionIdsTest
         sessionIds.reset(null);
 
         assertSessionIdsReset(aId, sessionIds);
+
+        verifyNoBackUp();
     }
 
     @Test
@@ -156,6 +158,8 @@ public class SessionIdsTest
         final SessionIds sessionIdsAfterRestart = newSessionIds(buffer);
 
         assertSessionIdsReset(aId, sessionIdsAfterRestart);
+
+        verifyNoBackUp();
     }
 
     @Test
@@ -180,6 +184,11 @@ public class SessionIdsTest
         }
     }
 
+    private void verifyNoBackUp()
+    {
+        verify(mappedFile, never()).transferTo(any());
+    }
+
     private void assertSessionIdsReset(final long aId, final SessionIds sessionIds)
     {
         final long bId = sessionIds.onLogon(bSession);
@@ -189,9 +198,6 @@ public class SessionIdsTest
         assertEquals("Session Ids haven't been reset", aId, bId);
         assertNotEquals("Session Ids haven't been reset", aId, newAId);
     }
-
-    /*final AtomicBuffer backupBuffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));
-    final File backupLocation = new File();*/
 
     private void assertValidSessionId(final long cId)
     {
