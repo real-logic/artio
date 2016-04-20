@@ -21,10 +21,14 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.ReliefValve;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.EXCEPTION;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.SLOW_CONSUMER;
 
 class SenderEndPoint implements AutoCloseable
 {
@@ -35,6 +39,7 @@ class SenderEndPoint implements AutoCloseable
     private final ErrorHandler errorHandler;
     private final Framer framer;
     private final ReliefValve reliefValve;
+    private final int maxAttempts;
 
     private int libraryId;
 
@@ -46,7 +51,8 @@ class SenderEndPoint implements AutoCloseable
         final AtomicCounter messageWrites,
         final ErrorHandler errorHandler,
         final Framer framer,
-        final ReliefValve reliefValve)
+        final ReliefValve reliefValve,
+        final int maxAttempts)
     {
         this.connectionId = connectionId;
         this.libraryId = libraryId;
@@ -56,6 +62,7 @@ class SenderEndPoint implements AutoCloseable
         this.errorHandler = errorHandler;
         this.framer = framer;
         this.reliefValve = reliefValve;
+        this.maxAttempts = maxAttempts;
     }
 
     public boolean onFramedMessage(final DirectBuffer directBuffer,
@@ -74,8 +81,14 @@ class SenderEndPoint implements AutoCloseable
         try
         {
             int bytesWritten = 0;
-            while (bytesWritten < length)
+            final int maxAttempts = this.maxAttempts;
+            for (int i = 0; i < maxAttempts; i++)
             {
+                if (length <= bytesWritten)
+                {
+                    return true;
+                }
+
                 final int written = channel.write(buffer);
                 DebugLogger.log("Written  %s\n", buffer, written);
                 messageWrites.orderedIncrement();
@@ -86,19 +99,20 @@ class SenderEndPoint implements AutoCloseable
                 }
             }
 
-            return true;
+            removeEndpoint(SLOW_CONSUMER);
+            return false;
         }
         catch (final IOException ex)
         {
             errorHandler.onError(ex);
-            removeEndpoint();
+            removeEndpoint(EXCEPTION);
             return false;
         }
     }
 
-    private void removeEndpoint()
+    private void removeEndpoint(final DisconnectReason reason)
     {
-        framer.onDisconnect(libraryId, connectionId, null);
+        framer.onDisconnect(libraryId, connectionId, reason);
     }
 
     public long connectionId()

@@ -68,6 +68,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final String SEQUENCE_NUMBER_INDEX_SIZE_PROP = "fix.core.sequence_number_cache_size";
     /** Property name for the size in bytes of the session id file */
     public static final String SESSION_ID_BUFFER_SIZE_PROP = "fix.core.session_id_file_size";
+    /** Property name for the maximum number of attempts to send on the TCP connection before a client detected slow */
+    public static final String SENDER_MAX_ATTEMPTS_PROP = "fix.core.sender_max_attempts";
 
     // ------------------------------------------------
     //          Configuration Defaults
@@ -86,6 +88,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_SENDER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE = 8 * 1024 * 1024;
     public static final int DEFAULT_SESSION_ID_BUFFER_SIZE = 4 * 1024 * 1024;
+    public static final int DEFAULT_SENDER_MAX_ATTEMPTS = 1000;
 
     private String host = null;
     private int port;
@@ -119,6 +122,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         getInteger(SEQUENCE_NUMBER_INDEX_SIZE_PROP, DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE);
     private int sessionIdBufferSize =
         getInteger(SESSION_ID_BUFFER_SIZE_PROP, DEFAULT_SESSION_ID_BUFFER_SIZE);
+    private int senderMaxAttempts =
+        getInteger(SENDER_MAX_ATTEMPTS_PROP, DEFAULT_SENDER_MAX_ATTEMPTS);
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -340,6 +345,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration senderMaxAttempts(final int senderMaxAttempts)
+    {
+        this.senderMaxAttempts = senderMaxAttempts;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -443,6 +454,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public MappedFile sessionIdBuffer()
     {
         return sessionIdBuffer;
+    }
+
+    public int senderMaxAttempts()
+    {
+        return senderMaxAttempts;
     }
 
     /**

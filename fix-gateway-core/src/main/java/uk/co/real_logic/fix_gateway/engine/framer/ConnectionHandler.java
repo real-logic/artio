@@ -110,7 +110,8 @@ public class ConnectionHandler
             fixCounters.messagesWritten(channel.getRemoteAddress()),
             errorHandler,
             framer,
-            reliefValue);
+            reliefValue,
+            configuration.senderMaxAttempts());
     }
 
 }
