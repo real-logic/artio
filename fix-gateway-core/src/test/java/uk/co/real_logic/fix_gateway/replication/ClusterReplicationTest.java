@@ -139,7 +139,6 @@ public class ClusterReplicationTest
         hasElectedLeader();
     }
 
-    @Ignore
     @Test
     public void shouldNotReplicateMessageUntilClusterReformed()
     {
@@ -148,11 +147,12 @@ public class ClusterReplicationTest
 
         follower.dropFrames(true);
 
-        sendMessageTo(leader);
-
         assertBecomesCandidate(follower);
 
-        assertTrue(notAllNodesReceivedMessage());
+        sendMessageTo(leader);
+
+        assertTrue("nodes received message when one was supposedly netsplit",
+            noNodesReceivedMessage());
 
         follower.dropFrames(false);
 
@@ -210,13 +210,13 @@ public class ClusterReplicationTest
 
     private void assertMessageReceived()
     {
-        while (notAllNodesReceivedMessage())
+        while (noNodesReceivedMessage())
         {
             pollAll();
         }
     }
 
-    private boolean notAllNodesReceivedMessage()
+    private boolean noNodesReceivedMessage()
     {
         return notReceivedMessage(node1) && notReceivedMessage(node2) && notReceivedMessage(node3);
     }
