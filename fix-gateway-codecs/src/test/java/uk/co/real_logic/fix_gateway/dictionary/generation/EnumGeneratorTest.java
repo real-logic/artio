@@ -109,8 +109,7 @@ public class EnumGeneratorTest
         assertEquals(values[2], decode.invoke(null, "AA"));
     }
 
-    // Low priority
-    @Ignore
+    @Ignore // Low priority
     @Test
     public void generatesCharArrayBasedDecode() throws Exception
     {
