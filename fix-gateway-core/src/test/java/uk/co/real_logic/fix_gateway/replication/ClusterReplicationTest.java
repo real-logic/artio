@@ -123,6 +123,22 @@ public class ClusterReplicationTest
         assertBecomesFollower(follower);
     }
 
+    @Test
+    public void shouldReformClusterAfterFollowerNetsplit()
+    {
+        final NodeRunner[] followers = followers();
+
+        nodes().forEach(nodeRunner -> nodeRunner.dropFrames(true));
+
+        assertBecomesCandidate(followers);
+
+        nodes().forEach(nodeRunner -> nodeRunner.dropFrames(false));
+
+        assertBecomesFollower(followers);
+
+        hasElectedLeader();
+    }
+
     @Ignore
     @Test
     public void shouldNotReplicateMessageUntilClusterReformed()
@@ -143,23 +159,6 @@ public class ClusterReplicationTest
         assertBecomesFollower(follower);
 
         assertMessageReceived();
-    }
-
-    @Ignore
-    @Test
-    public void shouldReformClusterAfterFollowerNetsplit()
-    {
-        final NodeRunner[] followers = followers();
-
-        nodes().forEach(nodeRunner -> nodeRunner.dropFrames(true));
-
-        assertBecomesCandidate(followers);
-
-        nodes().forEach(nodeRunner -> nodeRunner.dropFrames(false));
-
-        assertBecomesFollower(followers);
-
-        assertTrue(foundLeader());
     }
 
     private NodeRunner aFollower()
