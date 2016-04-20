@@ -198,7 +198,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         initiatingEngine.close();
 
-        assertEventuallyTrue("Acceptor Disconnected", () -> {
+        assertEventuallyTrue("Acceptor Disconnected", () ->
+        {
             acceptingLibrary.poll(1);
             return acceptingSessionHandler.hasDisconnected();
         });
@@ -348,5 +349,4 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertEquals(SessionReplyStatus.UNKNOWN_SESSION, status);
     }
-
 }

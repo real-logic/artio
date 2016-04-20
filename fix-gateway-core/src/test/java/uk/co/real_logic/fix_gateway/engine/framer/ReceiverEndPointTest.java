@@ -234,15 +234,16 @@ public class ReceiverEndPointTest
         handlerReceivesFramedMessages(1, OK, MSG_LEN);
     }
 
-    private void handlerReceivesFramedMessages(int numberOfMessages,
-                                               final MessageStatus status,
-                                               final int msgLen)
+    private void handlerReceivesFramedMessages(
+        int numberOfMessages,
+        final MessageStatus status,
+        final int msgLen)
     {
         verify(mockPublication, times(numberOfMessages))
             .saveMessage(
                 any(AtomicBuffer.class), eq(0), eq(msgLen), eq(LIBRARY_ID),
-                    eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
-                    eq(status));
+                eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
+                eq(status));
     }
 
     private void handlerReceivesTwoFramedMessages()
@@ -255,8 +256,8 @@ public class ReceiverEndPointTest
         inOrder.verify(mockPublication, times(1))
             .saveMessage(
                 any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(LIBRARY_ID),
-                    eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
-                    eq(OK));
+                eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
+                eq(OK));
         inOrder.verifyNoMoreInteractions();
     }
 
@@ -303,7 +304,8 @@ public class ReceiverEndPointTest
     private void theEndpointReceivesTwoMessages(final int secondOffset, final int secondLength)
     {
         endpointBufferUpdatedWith(
-            (buffer) -> {
+            (buffer) ->
+            {
                 buffer.put(EG_MESSAGE)
                     .put(EG_MESSAGE, secondOffset, secondLength);
                 return MSG_LEN + secondLength;
@@ -315,7 +317,8 @@ public class ReceiverEndPointTest
         try
         {
             doAnswer(
-                (invocation) -> {
+                (invocation) ->
+                {
                     final ByteBuffer buffer = (ByteBuffer)invocation.getArguments()[0];
                     return bufferUpdater.applyAsInt(buffer);
                 }).when(mockChannel).read(any(ByteBuffer.class));

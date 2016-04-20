@@ -32,9 +32,13 @@ public final class LibraryConfiguration extends CommonConfiguration
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
     public static final int DEFAULT_LIBRARY_ID = 1;
     public static final GatewayErrorHandler DEFAULT_GATEWAY_ERROR_HANDLER =
-        (errorType, libraryId, message) -> { };
+        (errorType, libraryId, message) ->
+        {
+        };
     private static final SentPositionHandler DEFAULT_SENT_POSITION_HANDLER =
-        position -> { };
+        position ->
+        {
+        };
 
     private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
     private NewSessionHandler newSessionHandler;

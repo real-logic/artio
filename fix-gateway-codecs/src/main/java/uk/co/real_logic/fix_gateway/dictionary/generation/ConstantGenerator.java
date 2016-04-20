@@ -32,8 +32,7 @@ public class ConstantGenerator
 {
     public static final String CLASS_NAME = "Constants";
 
-    private static final String BODY =
-        "public class " + CLASS_NAME + "\n" + "{\n\n";
+    public static final String BODY = "public class " + CLASS_NAME + "\n" + "{\n\n";
     public static final String ALL_FIELDS = "ALL_FIELDS";
     public static final String VERSION = "VERSION";
 
@@ -88,10 +87,10 @@ public class ConstantGenerator
         final int hashMapSize = sizeHashSet(fields);
         return String.format(
             "    public static final IntHashSet %3$s = new IntHashSet(%1$d, -1);\n\n" +
-                "    static\n" +
-                "    {\n" +
-                "%2$s" +
-                "    }\n\n",
+            "    static\n" +
+            "    {\n" +
+            "%2$s" +
+            "    }\n\n",
             hashMapSize,
             addFields,
             name);
@@ -141,15 +140,16 @@ public class ConstantGenerator
 
     private String generateMessageTypeConstant(final int messageType)
     {
-        char[] chars;
+        final char[] chars;
         if (messageType > Byte.MAX_VALUE)
         {
-            chars = new char[]{(char) (byte) messageType, (char) (byte) (messageType >>> 8)};
+            chars = new char[]{ (char)(byte)messageType, (char)(byte)(messageType >>> 8) };
         }
         else
         {
-            chars = new char[]{(char) (byte) messageType};
+            chars = new char[]{ (char)(byte)messageType };
         }
+
         return String.format("    /** In Ascii - %1$s */\n", new String(chars));
     }
 
@@ -170,5 +170,4 @@ public class ConstantGenerator
                 .mapToObj((codePoint) -> (isUpperCase(codePoint) ? "_" : "") + (char)toUpperCase(codePoint))
                 .collect(joining());
     }
-
 }

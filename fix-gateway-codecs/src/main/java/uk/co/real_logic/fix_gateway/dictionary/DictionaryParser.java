@@ -102,11 +102,11 @@ public final class DictionaryParser
     private void correctMultiCharacterCharEnums(final Map<String, Field> fields)
     {
         fields.values()
-              .stream()
-              .filter(Field::isEnum)
-              .filter(field -> field.type() == CHAR)
-              .filter(this::hasMultipleCharacters)
-              .forEach(field -> field.type(STRING));
+            .stream()
+            .filter(Field::isEnum)
+            .filter(field -> field.type() == CHAR)
+            .filter(this::hasMultipleCharacters)
+            .forEach(field -> field.type(STRING));
     }
 
     private boolean hasMultipleCharacters(final Field field)
@@ -115,7 +115,7 @@ public final class DictionaryParser
     }
 
     private void simplifyComponentsThatAreJustGroups(final Map<String, Component> components,
-                                                     final List<Message> messages)
+        final List<Message> messages)
     {
         final List<String> toRemove = new ArrayList<>();
         components.forEach((name, component) ->
@@ -138,10 +138,10 @@ public final class DictionaryParser
         final Entry.Element group)
     {
         aggregate.entriesWith(element -> element == component)
-                 .forEach(entry -> entry.element(group));
+            .forEach(entry -> entry.element(group));
 
         aggregate.entriesWith(element -> element instanceof Aggregate)
-                 .forEach(entry -> replaceComponent((Aggregate) entry.element(), component, group));
+            .forEach(entry -> replaceComponent((Aggregate)entry.element(), component, group));
     }
 
     private Entry.Element extractFirst(final Component component)
@@ -156,17 +156,19 @@ public final class DictionaryParser
     }
 
     private void reconnectForwardReferences(final Map<Entry, String> forwardReferences,
-                                            final Map<String, Component> components)
+        final Map<String, Component> components)
     {
-        forwardReferences.forEach((entry, name) -> {
+        forwardReferences.forEach((entry, name) ->
+        {
             final Component component = components.get(name);
             entry.element(component);
         });
     }
 
-    private Map<String, Component> parseComponents(final Document document,
-                                                   final Map<String, Field> fields,
-                                                   final Map<Entry, String> forwardReferences)
+    private Map<String, Component> parseComponents(
+        final Document document,
+        final Map<String, Field> fields,
+        final Map<Entry, String> forwardReferences)
         throws XPathExpressionException
     {
         final Map<String, Component> components = new HashMap<>();
@@ -265,10 +267,12 @@ public final class DictionaryParser
                 }
 
                 final boolean required = isRequired(attributes);
-                final Consumer<Entry.Element> newEntry = element -> {
-                    Verify.notNull(element, "element for " + name);
-                    entries.add(new Entry(required, element));
-                };
+                final Consumer<Entry.Element> newEntry =
+                    element ->
+                    {
+                        Verify.notNull(element, "element for " + name);
+                        entries.add(new Entry(required, element));
+                    };
 
                 switch (node.getNodeName())
                 {

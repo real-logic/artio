@@ -81,7 +81,7 @@ public class ScenariosTest
     @Parameterized.Parameters(name = "'{'{0}'}' {1} '{'{2}, {3}'}'")
     public static Iterable<Object[]> parameters()
     {
-        return Arrays.<Object[]>asList(
+        return Arrays.asList(
             scenario(leader, newLeaderHeartbeat, transitionsToFollower, hasNewLeader(NEW_LEADER_SESSION_ID)),
 
             scenario(leader, oldTermLeaderHeartbeat, neverTransitions, ignored),
@@ -393,10 +393,7 @@ public class ScenariosTest
         final String name)
     {
         return namedStimulus(
-            (st) ->
-            {
-                st.raftHandler.onConcensusHeartbeat(leaderId, leaderShipTerm, POSITION, dataSessionId);
-            }, name);
+            (st) -> st.raftHandler.onConcensusHeartbeat(leaderId, leaderShipTerm, POSITION, dataSessionId), name);
     }
 
     private static Stimulus timesOut =
@@ -433,7 +430,10 @@ public class ScenariosTest
         st.raftHandler.onConcensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
     }
 
-    private static Stimulus startElection = namedStimulus((st) -> { }, "startElection");
+    private static Stimulus startElection = namedStimulus(
+        (st) ->
+        {
+        }, "startElection");
 
     private static Stimulus onMajority =
         namedStimulus(
@@ -456,10 +456,7 @@ public class ScenariosTest
         final short candidateId, final int leaderShipTerm, final long lastAckedPosition, final String name)
     {
         return namedStimulus(
-            (st) ->
-            {
-                st.raftHandler.onRequestVote(candidateId, SESSION_ID, leaderShipTerm, lastAckedPosition);
-            }, name);
+            (st) -> st.raftHandler.onRequestVote(candidateId, SESSION_ID, leaderShipTerm, lastAckedPosition), name);
     }
 
     private void requestsVote(final int term)
@@ -556,5 +553,8 @@ public class ScenariosTest
         };
     }
 
-    private static State ignored = namedState((st) -> { }, "");
+    private static State ignored = namedState(
+        (st) ->
+        {
+        }, "");
 }

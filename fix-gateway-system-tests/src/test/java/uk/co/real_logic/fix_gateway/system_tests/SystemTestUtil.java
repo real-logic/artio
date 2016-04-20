@@ -63,9 +63,10 @@ public final class SystemTestUtil
         assertSessionDisconnected(library1, null, session);
     }
 
-    public static void assertSessionDisconnected(final FixLibrary library1,
-                                                 final FixLibrary library2,
-                                                 final Session session)
+    public static void assertSessionDisconnected(
+        final FixLibrary library1,
+        final FixLibrary library2,
+        final Session session)
     {
         assertEventuallyTrue("Session is still connected", () ->
         {
@@ -177,9 +178,10 @@ public final class SystemTestUtil
         }
     }
 
-    public static FixEngine launchAcceptingEngine(final int port,
-                                                  final String acceptorId,
-                                                  final String initiatorId)
+    public static FixEngine launchAcceptingEngine(
+        final int port,
+        final String acceptorId,
+        final String initiatorId)
     {
         delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(port, "engineCounters", acceptorId, initiatorId);
@@ -220,9 +222,10 @@ public final class SystemTestUtil
         return libraryConfiguration;
     }
 
-    private static void setupAuthentication(final String acceptorId,
-                                            final String initiatorId,
-                                            final CommonConfiguration configuration)
+    private static void setupAuthentication(
+        final String acceptorId,
+        final String initiatorId,
+        final CommonConfiguration configuration)
     {
         final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(acceptorId)
             .and(new SenderCompIdValidationStrategy(Arrays.asList(initiatorId, INITIATOR_ID2)));
@@ -251,8 +254,8 @@ public final class SystemTestUtil
     }
 
     public static void sessionLogsOn(final FixLibrary library1,
-                                     final FixLibrary library2,
-                                     final Session session)
+        final FixLibrary library2,
+        final Session session)
     {
         assertEventuallyTrue("Session has failed to logon", () ->
         {
@@ -290,7 +293,8 @@ public final class SystemTestUtil
     {
         assertEventuallyTrue(
             "libraries haven't disconnected yet",
-            () -> {
+            () ->
+            {
                 if (library != null)
                 {
                     library.poll(1);
@@ -313,8 +317,8 @@ public final class SystemTestUtil
     }
 
     public static void assertReceivedHeartbeat(final FixLibrary library,
-                                               final FixLibrary library2,
-                                               final FakeOtfAcceptor acceptor)
+        final FixLibrary library2,
+        final FakeOtfAcceptor acceptor)
     {
         assertEventuallyTrue("Failed to received heartbeat", () ->
         {

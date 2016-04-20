@@ -75,10 +75,11 @@ public class LoggerTest
     @Parameters
     public static Collection<Object[]> data()
     {
-        return Arrays.asList(new Object[][]{
-            {new UnsafeBuffer(ByteBuffer.allocateDirect(SIZE))},
-            {new UnsafeBuffer(new byte[SIZE])},
-        });
+        return Arrays.asList(new Object[][]
+            {
+                { new UnsafeBuffer(ByteBuffer.allocateDirect(SIZE)) },
+                { new UnsafeBuffer(new byte[SIZE]) },
+            });
     }
 
     private final BlockHandler blockHandler = mock(BlockHandler.class);
@@ -149,16 +150,16 @@ public class LoggerTest
 
         try
         {
-            archiveReader.read(publication.sessionId(), (long) HEADER_LENGTH,
-                (buffer, offset, length, header) -> {
+            archiveReader.read(publication.sessionId(), (long)HEADER_LENGTH,
+                (buffer, offset, length, header) ->
+                {
                     throw new RuntimeException();
                 });
 
             fail("continued despite exception");
         }
-        catch (RuntimeException e)
+        catch (final RuntimeException ignore)
         {
-            // Deliberately Blank
         }
 
         assertReadsInitialValue(HEADER_LENGTH);
@@ -202,7 +203,7 @@ public class LoggerTest
     @Test
     public void shouldNotReadDataForNotArchivedSession()
     {
-        final long position = readTo((long) HEADER_LENGTH);
+        final long position = readTo((long)HEADER_LENGTH);
 
         assertNothingRead(position, UNKNOWN_SESSION);
     }
@@ -242,16 +243,16 @@ public class LoggerTest
 
         try
         {
-            archiveReader.readBlock(publication.sessionId(), (long) HEADER_LENGTH, SIZE,
-                (buffer, offset, length, sessionId, termId) -> {
+            archiveReader.readBlock(publication.sessionId(), (long)HEADER_LENGTH, SIZE,
+                (buffer, offset, length, sessionId, termId) ->
+                {
                     throw new RuntimeException();
                 });
 
             fail("continued despite exception");
         }
-        catch (RuntimeException e)
+        catch (final RuntimeException ignore)
         {
-            // Deliberately Blank
         }
 
         assertCanBlockReadValueAt(HEADER_LENGTH);
@@ -268,7 +269,7 @@ public class LoggerTest
     @Test
     public void shouldNotBlockReadDataForNotArchivedSession()
     {
-        final boolean wasRead = readBlockTo((long) HEADER_LENGTH);
+        final boolean wasRead = readBlockTo((long)HEADER_LENGTH);
 
         assertNothingBlockRead(wasRead);
     }
@@ -442,7 +443,7 @@ public class LoggerTest
 
     private void assertDataPublished(final long endPosition)
     {
-        assertThat("Publication has failed an offer", endPosition, greaterThan((long) SIZE));
+        assertThat("Publication has failed an offer", endPosition, greaterThan((long)SIZE));
     }
 
     private void assertCanBlockReadValueAt(final int position)
@@ -486,7 +487,8 @@ public class LoggerTest
         do
         {
             work += archiver.doWork();
-        } while (work < endPosition);
+        }
+        while (work < endPosition);
     }
 
     @After
@@ -500,5 +502,4 @@ public class LoggerTest
 
         System.gc();
     }
-
 }
