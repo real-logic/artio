@@ -354,7 +354,7 @@ public final class FixLibrary extends GatewayProcess
     }
 
     /**
-     * Try to acquire control of a session. If this session is being managed by
+     * Accquire control of a session. If this session is being managed by
      * the gateway then your {@link NewSessionHandler} will receive a callback
      * and this method will return {@link SessionReplyStatus#OK}.
      *
@@ -363,6 +363,9 @@ public final class FixLibrary extends GatewayProcess
      * to an unknown session then the method returns {@link SessionReplyStatus#UNKNOWN_SESSION}.
      * If this library instance is unknown to the gateway, for example if its heartbeating
      * mechanism has timed out due to {@link this#poll(int)} not being called often enough.
+     *
+     * Equivalent to calling {@link this#requestSession(long, int)} and then waiting for the
+     * reply.
      *
      * @param connectionId the id of the connection to acquire.
      * @param lastReceivedSequenceNumber the last received message sequence number
@@ -383,11 +386,21 @@ public final class FixLibrary extends GatewayProcess
         return pollRequestStatus(correlationId);
     }
 
-    private boolean requestSessionAwaitingReply(final long correlationId)
-    {
-        return correlationIdToState.get(correlationId) instanceof Long;
-    }
-
+    /**
+     * Request a session be acquired from the Gateway. This is the non-blocking version
+     * of {@link this#acquireSession(long)}. It returns an id that can be used to
+     * inspect {@link this#pollRequestStatus(long)}.
+     *
+     * @param connectionId the id of the connection to acquire.
+     * @param lastReceivedSequenceNumber the last received message sequence number
+     *                                   that you know about. You will get a stream
+     *                                   of messages replayed to you from
+     *                                   <code>lastReceivedMessageSequenceNumber + 1</code>
+     *                                   to the latest message sequence number.
+     *                                   If you don't care about message replay then
+     *                                   use {@link this#acquireSession(long)}
+     * @return the correlation id corresponding to this request.
+     */
     public long requestSession(final long connectionId, final int lastReceivedSequenceNumber)
     {
         if (correlationIdToState.get(connectionId) != null)
@@ -401,6 +414,13 @@ public final class FixLibrary extends GatewayProcess
         return correlationId;
     }
 
+    /**
+     * Poll the status of a request to acquire a session. The correlation id
+     * used should have been returned by {@link this#requestSession(long, int)}.
+     *
+     * @param correlationId the identifier of the request message that was sent to the gateway.
+     * @return the status of the reply, or <code>null</code> if there was no reply.
+     */
     public SessionReplyStatus pollRequestStatus(final long correlationId)
     {
         if (requestSessionAwaitingReply(correlationId))
@@ -462,6 +482,11 @@ public final class FixLibrary extends GatewayProcess
                 "Failed to receive a reply from the engine within %dms, are you sure its running?",
                 this.configuration.replyTimeoutInMs()));
         }
+    }
+
+    private boolean requestSessionAwaitingReply(final long correlationId)
+    {
+        return correlationIdToState.get(correlationId) instanceof Long;
     }
 
     private int pollSessions(final long timeInMs)
