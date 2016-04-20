@@ -83,8 +83,11 @@ public final class FixLibrary extends GatewayProcess
     private final IdleStrategy idleStrategy;
     private final SentPositionHandler sentPositionHandler;
 
+    // The state consists of a connection id if an operation is happening, or the status if its done.
+    private final Long2ObjectHashMap<Object> correlationIdToState = new Long2ObjectHashMap<>();
+
     /** Correlation Id is initialised to a random number to reduce the chance of correlation id collision. */
-    private long correlationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
+    private long currentCorrelationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
 
     private Session incomingSession;
     private SessionConfiguration sessionConfiguration;
@@ -329,7 +332,7 @@ public final class FixLibrary extends GatewayProcess
         outboundPublication.saveReleaseSession(
             libraryId,
             session.connectionId(),
-            ++correlationId,
+            ++currentCorrelationId,
             session.state(),
             session.heartbeatIntervalInMs(),
             session.lastSentMsgSeqNum(),
@@ -373,25 +376,41 @@ public final class FixLibrary extends GatewayProcess
      */
     public SessionReplyStatus acquireSession(final long connectionId, final int lastReceivedSequenceNumber)
     {
-        if (replyStatus != null)
+        final long correlationId = requestSession(connectionId, lastReceivedSequenceNumber);
+
+        awaitReply(() -> requestSessionAwaitingReply(correlationId));
+
+        return pollRequestStatus(correlationId);
+    }
+
+    private boolean requestSessionAwaitingReply(final long correlationId)
+    {
+        return correlationIdToState.get(correlationId) instanceof Long;
+    }
+
+    public long requestSession(final long connectionId, final int lastReceivedSequenceNumber)
+    {
+        if (correlationIdToState.get(connectionId) != null)
         {
             return concurrentError();
         }
 
-        outboundPublication.saveRequestSession(libraryId, connectionId, ++correlationId, lastReceivedSequenceNumber);
+        final long correlationId = ++this.currentCorrelationId;
+        correlationIdToState.put(correlationId, Long.valueOf(connectionId));
+        outboundPublication.saveRequestSession(libraryId, connectionId, correlationId, lastReceivedSequenceNumber);
+        return correlationId;
+    }
 
-        awaitReply(() -> replyStatus == null);
-
-        final SessionReplyStatus replyStatus = this.replyStatus;
-        if (replyStatus == MISSING_MESSAGES)
+    public SessionReplyStatus pollRequestStatus(final long correlationId)
+    {
+        if (requestSessionAwaitingReply(correlationId))
         {
-            // ensure that session subscription doesn't get stuck waiting for more messages if there
-            // are some missing.
-            connectionIdToSession.get(connectionId).startCatchup(0);
+            return null;
         }
-
-        this.replyStatus = null;
-        return replyStatus;
+        else
+        {
+            return (SessionReplyStatus) correlationIdToState.remove(correlationId);
+        }
     }
 
     /**
@@ -605,7 +624,7 @@ public final class FixLibrary extends GatewayProcess
 
         public void onReleaseSessionReply(final long correlationId, final SessionReplyStatus status)
         {
-            if (FixLibrary.this.correlationId == correlationId)
+            if (FixLibrary.this.currentCorrelationId == correlationId)
             {
                 FixLibrary.this.replyStatus = status;
             }
@@ -613,9 +632,20 @@ public final class FixLibrary extends GatewayProcess
 
         public void onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
         {
-            if (FixLibrary.this.correlationId == correlationId)
+            final Object state = correlationIdToState.get(correlationId);
+            if (state instanceof Long)
             {
-                FixLibrary.this.replyStatus = status;
+                if (status == MISSING_MESSAGES)
+                {
+                    // Ensure session not left in a bad state as a result of missing messages.
+                    final long connectionId = (long) state;
+                    final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
+                    if (subscriber != null)
+                    {
+                        subscriber.startCatchup(0);
+                    }
+                }
+                correlationIdToState.put(correlationId, status);
             }
         }
 

@@ -149,11 +149,12 @@ public class SessionProxy
         setupHeader(header, msgSeqNo);
 
         logon.heartBtInt(heartbeatInterval);
-        if (username != null)
+
+        if (!nullOrEmpty(username))
         {
             logon.username(username);
         }
-        if (password != null)
+        if (!nullOrEmpty(password))
         {
             logon.password(password);
         }
@@ -161,6 +162,11 @@ public class SessionProxy
 
         final int length = logon.encode(string, 0);
         return send(length, LogonDecoder.MESSAGE_TYPE, logon);
+    }
+
+    private boolean nullOrEmpty(final String string)
+    {
+        return string == null || string.length() == 0;
     }
 
     public long logout(final int msgSeqNo)
