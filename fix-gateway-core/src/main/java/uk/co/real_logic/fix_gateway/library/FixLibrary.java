@@ -45,9 +45,9 @@ import java.util.function.BooleanSupplier;
 
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
-import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
 /**
@@ -78,7 +78,7 @@ public final class FixLibrary extends GatewayProcess
     private final Timer sessionTimer = new Timer("Session", new SystemNanoClock());
     private final Timer receiveTimer = new Timer("Receive", new SystemNanoClock());
     private final LivenessDetector livenessDetector;
-    private final NewConnectHandler newConnectHandler;
+    private final SessionExistsHandler sessionExistsHandler;
     private final int libraryId;
     private final IdleStrategy idleStrategy;
     private final SentPositionHandler sentPositionHandler;
@@ -115,7 +115,7 @@ public final class FixLibrary extends GatewayProcess
             outboundPublication,
             configuration.libraryId(),
             configuration.replyTimeoutInMs());
-        newConnectHandler = configuration.newConnectHandler();
+        sessionExistsHandler = configuration.sessionExistsHandler();
     }
 
     private FixLibrary connect()
@@ -355,7 +355,7 @@ public final class FixLibrary extends GatewayProcess
 
     /**
      * Accquire control of a session. If this session is being managed by
-     * the gateway then your {@link NewSessionHandler} will receive a callback
+     * the gateway then your {@link SessionAcquireHandler} will receive a callback
      * and this method will return {@link SessionReplyStatus#OK}.
      *
      * If another library has acquired the session then this method will return
@@ -367,7 +367,7 @@ public final class FixLibrary extends GatewayProcess
      * Equivalent to calling {@link this#requestSession(long, int)} and then waiting for the
      * reply.
      *
-     * @param connectionId the id of the connection to acquire.
+     * @param sessionId the id of the session to acquire.
      * @param lastReceivedSequenceNumber the last received message sequence number
      *                                   that you know about. You will get a stream
      *                                   of messages replayed to you from
@@ -377,9 +377,9 @@ public final class FixLibrary extends GatewayProcess
      *                                   use {@link this#acquireSession(long)}
      * @return the result of this operation.
      */
-    public SessionReplyStatus acquireSession(final long connectionId, final int lastReceivedSequenceNumber)
+    public SessionReplyStatus acquireSession(final long sessionId, final int lastReceivedSequenceNumber)
     {
-        final long correlationId = requestSession(connectionId, lastReceivedSequenceNumber);
+        final long correlationId = requestSession(sessionId, lastReceivedSequenceNumber);
 
         awaitReply(() -> requestSessionAwaitingReply(correlationId));
 
@@ -391,7 +391,7 @@ public final class FixLibrary extends GatewayProcess
      * of {@link this#acquireSession(long)}. It returns an id that can be used to
      * inspect {@link this#pollRequestStatus(long)}.
      *
-     * @param connectionId the id of the connection to acquire.
+     * @param sessionId the id of the session to acquire.
      * @param lastReceivedSequenceNumber the last received message sequence number
      *                                   that you know about. You will get a stream
      *                                   of messages replayed to you from
@@ -401,16 +401,16 @@ public final class FixLibrary extends GatewayProcess
      *                                   use {@link this#acquireSession(long)}
      * @return the correlation id corresponding to this request.
      */
-    public long requestSession(final long connectionId, final int lastReceivedSequenceNumber)
+    public long requestSession(final long sessionId, final int lastReceivedSequenceNumber)
     {
-        if (correlationIdToState.get(connectionId) != null)
+        if (correlationIdToState.get(sessionId) != null)
         {
             return concurrentError();
         }
 
         final long correlationId = ++this.currentCorrelationId;
-        correlationIdToState.put(correlationId, Long.valueOf(connectionId));
-        outboundPublication.saveRequestSession(libraryId, connectionId, correlationId, lastReceivedSequenceNumber);
+        correlationIdToState.put(correlationId, Long.valueOf(sessionId));
+        outboundPublication.saveRequestSession(libraryId, sessionId, correlationId, lastReceivedSequenceNumber);
         return correlationId;
     }
 
@@ -577,6 +577,19 @@ public final class FixLibrary extends GatewayProcess
                         password);
                 }
             }
+            else if (libraryId == GATEWAY_LIBRARY_ID)
+            {
+                sessionExistsHandler.onSessionExists(
+                    FixLibrary.this,
+                    sessionId,
+                    senderCompId,
+                    senderSubId,
+                    senderLocationId,
+                    targetCompId,
+                    username,
+                    password
+                );
+            }
         }
 
         private int acceptorSequenceNumber(int lastSequenceNumber, final SessionState state)
@@ -604,6 +617,7 @@ public final class FixLibrary extends GatewayProcess
             if (libraryId == FixLibrary.this.libraryId)
             {
                 DebugLogger.log("Received %s\n", buffer, offset, length);
+                DebugLogger.log("(%d)\n", libraryId);
                 final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
                 if (subscriber != null)
                 {
@@ -660,16 +674,18 @@ public final class FixLibrary extends GatewayProcess
             final Object state = correlationIdToState.get(correlationId);
             if (state instanceof Long)
             {
-                if (status == MISSING_MESSAGES)
+                // TODO: re-enable
+                /*if (status == MISSING_MESSAGES)
                 {
                     // Ensure session not left in a bad state as a result of missing messages.
-                    final long connectionId = (long) state;
-                    final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
+                    final long sessionId = (long) state;
+
+                    final SessionSubscriber subscriber = connectionIdToSession.get(sessionId);
                     if (subscriber != null)
                     {
                         subscriber.startCatchup(0);
                     }
-                }
+                }*/
                 correlationIdToState.put(correlationId, status);
             }
         }
@@ -693,14 +709,6 @@ public final class FixLibrary extends GatewayProcess
                 sentPositionHandler.onSendCompleted(position);
             }
         }
-
-        public void onConnect(final long connectionId, final String address)
-        {
-            if (newConnectHandler != null)
-            {
-                newConnectHandler.onConnect(FixLibrary.this, connectionId, address);
-            }
-        }
     }
 
     private void newSession(final long connectionId, final Session session)
@@ -709,7 +717,7 @@ public final class FixLibrary extends GatewayProcess
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
             session, sessionIdStrategy, authenticationStrategy, validationStrategy);
-        final SessionHandler handler = configuration.newSessionHandler().onConnect(session);
+        final SessionHandler handler = configuration.sessionAcquireHandler().onSessionAcquired(session);
         final SessionSubscriber subscriber = new SessionSubscriber(parser, session, handler,
             receiveTimer, sessionTimer);
         connectionIdToSession.put(connectionId, subscriber);

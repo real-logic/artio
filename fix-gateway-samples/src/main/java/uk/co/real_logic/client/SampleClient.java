@@ -55,7 +55,7 @@ public final class SampleClient
                 .build();
 
             try (final FixLibrary library = FixLibrary.connect(new LibraryConfiguration()
-                .newSessionHandler(SampleClient::onConnect)
+                .sessionAcquireHandler(SampleClient::onConnect)
                 .aeronChannel(aeronChannel)))
             {
                 final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);

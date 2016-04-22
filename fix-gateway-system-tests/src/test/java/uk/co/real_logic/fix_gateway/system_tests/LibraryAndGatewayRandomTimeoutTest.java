@@ -40,7 +40,7 @@ public class LibraryAndGatewayRandomTimeoutTest
     private FixLibrary initiatingLibrary;
 
     private FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
-    private FakeSessionHandler initiatingSessionHandler = new FakeSessionHandler(initiatingOtfAcceptor);
+    private FakeHandler initiatingSessionHandler = new FakeHandler(initiatingOtfAcceptor);
 
     @Before
     public void launch()
@@ -78,7 +78,7 @@ public class LibraryAndGatewayRandomTimeoutTest
         initiatingLibrary = FixLibrary.connect(
             new LibraryConfiguration()
                 .replyTimeoutInMs(300)
-                .newSessionHandler(initiatingSessionHandler)
+                .sessionAcquireHandler(initiatingSessionHandler)
                 .aeronChannel("udp://localhost:" + aeronPort)
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters"));
     }

@@ -39,13 +39,17 @@ public final class LibraryConfiguration extends CommonConfiguration
         position ->
         {
         };
+    private static final SessionExistsHandler DEFAULT_SESSION_EXISTS_HANDLER =
+        (library, sessionId, senderCompId, senderSubId, senderLocationId, targetCompId, username, password) ->
+        {
+        };
 
     private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
-    private NewSessionHandler newSessionHandler;
+    private SessionAcquireHandler sessionAcquireHandler;
 
     private int libraryId = DEFAULT_LIBRARY_ID;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
-    private NewConnectHandler newConnectHandler;
+    private SessionExistsHandler sessionExistsHandler = DEFAULT_SESSION_EXISTS_HANDLER;
     private GatewayErrorHandler gatewayErrorHandler = DEFAULT_GATEWAY_ERROR_HANDLER;
     private SentPositionHandler sentPositionHandler = DEFAULT_SENT_POSITION_HANDLER;
 
@@ -55,12 +59,12 @@ public final class LibraryConfiguration extends CommonConfiguration
      * <p>
      * Only needed if this is the accepting library instance.
      *
-     * @param newSessionHandler the new session handler
+     * @param sessionAcquireHandler the new session handler
      * @return this
      */
-    public LibraryConfiguration newSessionHandler(final NewSessionHandler newSessionHandler)
+    public LibraryConfiguration sessionAcquireHandler(final SessionAcquireHandler sessionAcquireHandler)
     {
-        this.newSessionHandler = newSessionHandler;
+        this.sessionAcquireHandler = sessionAcquireHandler;
         return this;
     }
 
@@ -107,9 +111,9 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
-    public LibraryConfiguration newConnectHandler(final NewConnectHandler newConnectHandler)
+    public LibraryConfiguration sessionExistsHandler(final SessionExistsHandler sessionExistsHandler)
     {
-        this.newConnectHandler = newConnectHandler;
+        this.sessionExistsHandler = sessionExistsHandler;
         return this;
     }
 
@@ -130,9 +134,9 @@ public final class LibraryConfiguration extends CommonConfiguration
         return encoderBufferSize;
     }
 
-    public NewSessionHandler newSessionHandler()
+    public SessionAcquireHandler sessionAcquireHandler()
     {
-        return newSessionHandler;
+        return sessionAcquireHandler;
     }
 
     public int libraryId()
@@ -205,8 +209,8 @@ public final class LibraryConfiguration extends CommonConfiguration
         super.conclude("library-" + libraryId());
     }
 
-    NewConnectHandler newConnectHandler()
+    SessionExistsHandler sessionExistsHandler()
     {
-        return newConnectHandler;
+        return sessionExistsHandler;
     }
 }

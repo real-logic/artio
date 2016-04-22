@@ -34,10 +34,6 @@ public interface LibraryProtocolHandler
         final int addressLength,
         final SessionState state);
 
-    void onConnect(
-        final long connectionId,
-        final String address);
-
     void onLogon(
         final int libraryId,
         final long connectionId,

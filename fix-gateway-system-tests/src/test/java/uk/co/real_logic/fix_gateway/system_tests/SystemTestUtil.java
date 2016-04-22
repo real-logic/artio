@@ -204,7 +204,7 @@ public final class SystemTestUtil
     }
 
     public static LibraryConfiguration acceptingLibraryConfig(
-        final FakeSessionHandler sessionHandler,
+        final FakeHandler sessionHandler,
         final String acceptorId,
         final String initiatorId,
         final String monitorDir)
@@ -213,8 +213,8 @@ public final class SystemTestUtil
         setupAuthentication(acceptorId, initiatorId, libraryConfiguration);
 
         libraryConfiguration
-            .newConnectHandler(sessionHandler)
-            .newSessionHandler(sessionHandler)
+            .sessionExistsHandler(sessionHandler)
+            .sessionAcquireHandler(sessionHandler)
             .sentPositionHandler(sessionHandler)
             .aeronChannel(IPC_CHANNEL)
             .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "accLibraryCounters");
@@ -238,15 +238,15 @@ public final class SystemTestUtil
     }
 
     public static Session acquireSession(
-        final FakeSessionHandler sessionHandler,
+        final FakeHandler sessionHandler,
         final FixLibrary library)
     {
-        while (!sessionHandler.hasConnection())
+        while (!sessionHandler.hasSession())
         {
             library.poll(1);
         }
-        final long connectionId = sessionHandler.latestConnection();
-        final SessionReplyStatus reply = library.acquireSession(connectionId);
+        final long sessionId = sessionHandler.latestSessionId();
+        final SessionReplyStatus reply = library.acquireSession(sessionId);
         assertEquals(SessionReplyStatus.OK, reply);
         final Session session = sessionHandler.latestSession();
         sessionHandler.resetSession();
@@ -266,19 +266,19 @@ public final class SystemTestUtil
 
     public static FixLibrary newInitiatingLibrary(
         final int initAeronPort,
-        final FakeSessionHandler sessionHandler,
+        final FakeHandler sessionHandler,
         final int libraryId)
     {
         return FixLibrary.connect(
             new LibraryConfiguration()
                 .libraryId(libraryId)
-                .newSessionHandler(sessionHandler)
+                .sessionAcquireHandler(sessionHandler)
                 .sentPositionHandler(sessionHandler)
                 .aeronChannel("udp://localhost:" + initAeronPort)
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters-" + libraryId));
     }
 
-    public static FixLibrary newAcceptingLibrary(final FakeSessionHandler sessionHandler)
+    public static FixLibrary newAcceptingLibrary(final FakeHandler sessionHandler)
     {
         return FixLibrary.connect(
             acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor"));

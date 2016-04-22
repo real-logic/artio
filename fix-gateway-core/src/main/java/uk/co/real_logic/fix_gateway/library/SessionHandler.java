@@ -32,7 +32,8 @@ public interface SessionHandler
         final long connectionId,
         final long sessionId,
         final int messageType,
-        final long timestamp, final long position);
+        final long timestamp,
+        final long position);
 
     void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason);
 }

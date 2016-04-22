@@ -21,10 +21,10 @@ import uk.co.real_logic.fix_gateway.session.Session;
  * Callback that gets invoked when a new session comes under the control of
  * the library interface that its associated with.
  *
- * @see LibraryConfiguration#newSessionHandler(NewSessionHandler)
+ * @see LibraryConfiguration#sessionAcquireHandler(SessionAcquireHandler)
  */
 @FunctionalInterface
-public interface NewSessionHandler
+public interface SessionAcquireHandler
 {
-    SessionHandler onConnect(Session session);
+    SessionHandler onSessionAcquired(Session session);
 }

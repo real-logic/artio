@@ -554,7 +554,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
     public void onRequestSession(
         final int libraryId,
-        final long connectionId,
+        final long sessionId,
         final long correlationId,
         int replayFromSequenceNumber)
     {
@@ -565,13 +565,14 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             return;
         }
 
-        final GatewaySession gatewaySession = gatewaySessions.release(connectionId);
+        final GatewaySession gatewaySession = gatewaySessions.release(sessionId);
         if (gatewaySession == null)
         {
             inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_SESSION, correlationId);
             return;
         }
 
+        final long connectionId = gatewaySession.connectionId();
         final Session session = gatewaySession.session();
         final int lastSentSeqNum = session.lastSentMsgSeqNum();
         final int lastRecvSeqNum = session.lastReceivedMsgSeqNum();

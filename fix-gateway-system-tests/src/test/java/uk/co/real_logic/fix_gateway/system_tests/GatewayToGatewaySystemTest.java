@@ -153,9 +153,10 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final int initiator1MessageCount = initiatingOtfAcceptor.messages().size();
 
         final FakeOtfAcceptor initiatingOtfAcceptor2 = new FakeOtfAcceptor();
-        final FakeSessionHandler initiatingSessionHandler2 = new FakeSessionHandler(initiatingOtfAcceptor2);
+        final FakeHandler initiatingSessionHandler2 = new FakeHandler(initiatingOtfAcceptor2);
         try (final FixLibrary library2 = newInitiatingLibrary(initAeronPort, initiatingSessionHandler2, 2))
         {
+            acceptingSessionHandler.clearConnections();
             final Session session2 = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID);
 
             assertConnected(session2);
@@ -260,16 +261,16 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     private void reacquireReleasedSession(
         final Session session, final FixLibrary library, final FixEngine engine)
     {
-        final long connectionId = session.connectionId();
+        final long sessionId = session.id();
 
         library.releaseToGateway(session);
 
-        final SessionReplyStatus status = library.acquireSession(connectionId);
+        final SessionReplyStatus status = library.acquireSession(sessionId);
         assertEquals(SessionReplyStatus.OK, status);
 
         assertThat(engine.gatewaySessions(ADMIN_IDLE_STRATEGY), hasSize(0));
 
-        engineIsManagingSession(engine, connectionId);
+        engineIsManagingSession(engine, session.connectionId());
         assertContainsOnlySession(session, library);
     }
 
@@ -321,7 +322,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FixLibrary otherLibrary,
         final FakeOtfAcceptor otherAcceptor)
     {
-        final long connectionId = session.connectionId();
+        final long sessionId = session.id();
         final int lastReceivedMsgSeqNum = session.lastReceivedMsgSeqNum();
         final List<FixMessage> messages = otfAcceptor.messages();
 
@@ -329,7 +330,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
 
-        final SessionReplyStatus status = library.acquireSession(connectionId, lastReceivedMsgSeqNum);
+        final SessionReplyStatus status = library.acquireSession(sessionId, lastReceivedMsgSeqNum);
         assertEquals(SessionReplyStatus.OK, status);
 
         messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);

@@ -44,10 +44,10 @@ public class AbstractGatewayToGatewaySystemTest
     protected Session acceptingSession;
 
     protected FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
-    protected FakeSessionHandler acceptingSessionHandler = new FakeSessionHandler(acceptingOtfAcceptor);
+    protected FakeHandler acceptingSessionHandler = new FakeHandler(acceptingOtfAcceptor);
 
     protected FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
-    protected FakeSessionHandler initiatingSessionHandler = new FakeSessionHandler(initiatingOtfAcceptor);
+    protected FakeHandler initiatingSessionHandler = new FakeHandler(initiatingOtfAcceptor);
 
     protected void assertOriginalLibraryDoesNotReceiveMessages(final int initiator1MessageCount)
     {
@@ -89,7 +89,7 @@ public class AbstractGatewayToGatewaySystemTest
         });
     }
 
-    protected void assertNotSession(final FakeSessionHandler sessionHandler, final Session session)
+    protected void assertNotSession(final FakeHandler sessionHandler, final Session session)
     {
         assertThat(sessionHandler.sessions(), not(hasItem(session)));
     }

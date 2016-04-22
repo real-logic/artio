@@ -205,14 +205,14 @@
     <sbe:message name="RequestSession" id="31"
                  description="requests control of a session for this library">
         <field name="libraryId" id="1" type="LibraryId"/>
-        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="sessionId" id="2" type="FixSessionId"/>
         <field name="correlationId" id="3" type="CorrelationId"/>
         <field name="lastReceivedSequenceNumber" id="4" type="int32"/>
     </sbe:message>
     <sbe:message name="RequestSessionReply" id="32"
                  description="response to ReleaseSession">
-        <field name="correlationId" id="98" type="CorrelationId"/>
-        <field name="status" id="94" type="SessionReplyStatus"/>
+        <field name="correlationId" id="1" type="CorrelationId"/>
+        <field name="status" id="2" type="SessionReplyStatus"/>
     </sbe:message>
     <sbe:message name="Catchup" id="34" description="A notice that the following messages will be catchups">
         <field name="libraryId" id="1" type="LibraryId"/>

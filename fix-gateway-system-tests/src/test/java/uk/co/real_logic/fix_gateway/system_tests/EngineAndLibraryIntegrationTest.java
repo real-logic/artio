@@ -58,7 +58,7 @@ public class EngineAndLibraryIntegrationTest
     private FixLibrary library2;
 
     private FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
-    private FakeSessionHandler sessionHandler = new FakeSessionHandler(otfAcceptor);
+    private FakeHandler sessionHandler = new FakeHandler(otfAcceptor);
 
     @Before
     public void launch()
@@ -206,7 +206,7 @@ public class EngineAndLibraryIntegrationTest
 
         final LibraryConfiguration config = new LibraryConfiguration();
         config
-            .newSessionHandler(sessionHandler)
+            .sessionAcquireHandler(sessionHandler)
             .libraryId(libraryId)
             .authenticationStrategy(authenticationStrategy)
             .messageValidationStrategy(validationStrategy)

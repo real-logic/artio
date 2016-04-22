@@ -134,9 +134,9 @@ public class GatewaySessions
         }
     }
 
-    GatewaySession release(final long connectionId)
+    GatewaySession release(final long sessionId)
     {
-        return removeSession(connectionId, sessions);
+        return removeSession(sessionId, sessions);
     }
 
     int pollSessions(final long time)
@@ -154,12 +154,27 @@ public class GatewaySessions
         return unmodifiableSessions;
     }
 
-    static GatewaySession removeSession(final long connectionId, final List<GatewaySession> sessions)
+    static GatewaySession removeSessionByConn(final long connectionId, final List<GatewaySession> sessions)
     {
         for (int i = 0, size = sessions.size(); i < size; i++)
         {
             final GatewaySession session = sessions.get(i);
             if (session.connectionId() == connectionId)
+            {
+                sessions.remove(i);
+                return session;
+            }
+        }
+
+        return null;
+    }
+
+    static GatewaySession removeSession(final long sessionId, final List<GatewaySession> sessions)
+    {
+        for (int i = 0, size = sessions.size(); i < size; i++)
+        {
+            final GatewaySession session = sessions.get(i);
+            if (session.sessionId() == sessionId)
             {
                 sessions.remove(i);
                 return session;

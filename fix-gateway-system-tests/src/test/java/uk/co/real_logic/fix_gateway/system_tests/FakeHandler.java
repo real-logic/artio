@@ -27,19 +27,20 @@ import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 
-public class FakeSessionHandler implements SessionHandler, NewSessionHandler, NewConnectHandler, SentPositionHandler
+public class FakeHandler implements SessionHandler, SessionAcquireHandler, SessionExistsHandler, SentPositionHandler
 {
 
     private final Long2ObjectHashMap<Session> connectionIdToSession = new Long2ObjectHashMap<>();
     private final OtfParser parser;
     private final FakeOtfAcceptor acceptor;
+    private final Deque<Long> sessionIds = new ArrayDeque<>();
 
     private Session latestSession;
     private long connectionId = -1;
     private boolean hasDisconnected = false;
     private long sentPosition;
 
-    public FakeSessionHandler(final FakeOtfAcceptor acceptor)
+    public FakeHandler(final FakeOtfAcceptor acceptor)
     {
         this.acceptor = acceptor;
         parser = new OtfParser(acceptor, new IntDictionary());
@@ -71,7 +72,7 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler, Ne
         return connectionId;
     }
 
-    public SessionHandler onConnect(final Session session)
+    public SessionHandler onSessionAcquired(final Session session)
     {
         connectionIdToSession.put(session.connectionId(), session);
         this.latestSession = session;
@@ -98,26 +99,19 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler, Ne
         return hasDisconnected;
     }
 
-    private Deque<Long> connections = new ArrayDeque<>();
-
-    public void onConnect(final FixLibrary library, final long connectionId, final String address)
+    public long latestSessionId()
     {
-        connections.addFirst(connectionId);
+        return sessionIds.peekFirst();
     }
 
-    public long latestConnection()
+    public boolean hasSession()
     {
-        return connections.peekFirst();
-    }
-
-    public boolean hasConnection()
-    {
-        return !connections.isEmpty();
+        return !sessionIds.isEmpty();
     }
 
     public void clearConnections()
     {
-        connections.clear();
+        sessionIds.clear();
     }
 
     public void onSendCompleted(final long position)
@@ -128,5 +122,17 @@ public class FakeSessionHandler implements SessionHandler, NewSessionHandler, Ne
     public long sentPosition()
     {
         return sentPosition;
+    }
+
+    public void onSessionExists(final FixLibrary library,
+                                final long sessionId,
+                                final String senderCompId,
+                                final String senderSubId,
+                                final String senderLocationId,
+                                final String targetCompId,
+                                final String username,
+                                final String password)
+    {
+        sessionIds.add(sessionId);
     }
 }

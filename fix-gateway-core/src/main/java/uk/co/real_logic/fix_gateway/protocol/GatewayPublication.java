@@ -579,7 +579,7 @@ public class GatewayPublication extends ClaimablePublication
     }
 
     public long saveRequestSession(final int libraryId,
-                                   final long connectionId,
+                                   final long sessionId,
                                    final long correlationId,
                                    final int lastReceivedSequenceNumber)
     {
@@ -600,7 +600,7 @@ public class GatewayPublication extends ClaimablePublication
         requestSession
             .wrap(buffer, offset)
             .libraryId(libraryId)
-            .connection(connectionId)
+            .sessionId(sessionId)
             .correlationId(correlationId)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber);
 

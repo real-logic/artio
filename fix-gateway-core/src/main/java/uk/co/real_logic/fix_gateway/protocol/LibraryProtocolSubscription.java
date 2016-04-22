@@ -27,7 +27,6 @@ public class LibraryProtocolSubscription implements FragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final LogonDecoder logon = new LogonDecoder();
-    private final ConnectDecoder connect = new ConnectDecoder();
     private final ManageConnectionDecoder manageConnection = new ManageConnectionDecoder();
     private final ErrorDecoder error = new ErrorDecoder();
     private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
@@ -93,11 +92,6 @@ public class LibraryProtocolSubscription implements FragmentHandler
                 return onRequestSessionReply(buffer, offset, blockLength, version);
             }
 
-            case ConnectDecoder.TEMPLATE_ID:
-            {
-                return onConnect(buffer, offset, blockLength, version);
-            }
-
             case CatchupDecoder.TEMPLATE_ID:
             {
                 return onCatchup(buffer, offset, blockLength, version);
@@ -116,16 +110,6 @@ public class LibraryProtocolSubscription implements FragmentHandler
             catchup.messageCount()
         );
         return catchup.limit();
-    }
-
-    private int onConnect(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
-    {
-        connect.wrap(buffer, offset, blockLength, version);
-        handler.onConnect(
-            connect.connection(),
-            connect.address()
-        );
-        return connect.limit();
     }
 
     private int onApplicationHeartbeat(final DirectBuffer buffer,

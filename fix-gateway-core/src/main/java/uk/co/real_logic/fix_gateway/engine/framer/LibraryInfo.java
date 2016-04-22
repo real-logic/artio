@@ -101,6 +101,6 @@ public final class LibraryInfo
 
     GatewaySession removeSession(final long connectionId)
     {
-        return GatewaySessions.removeSession(connectionId, allSessions);
+        return GatewaySessions.removeSessionByConn(connectionId, allSessions);
     }
 }

@@ -21,7 +21,7 @@ import org.agrona.IoUtil;
 import org.agrona.concurrent.SigInt;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.library.AcquiringNewConnectHandler;
+import uk.co.real_logic.fix_gateway.library.AcquiringSessionExistsHandler;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionHandler;
@@ -72,8 +72,8 @@ public final class SampleServer
             try (final FixLibrary library = FixLibrary.connect(libraryConfiguration
                 // You register the new session handler - which is your application hook
                 // that receives messages for new sessions
-                .newSessionHandler(SampleServer::onConnect)
-                .newConnectHandler(new AcquiringNewConnectHandler())
+                .sessionAcquireHandler(SampleServer::onConnect)
+                .sessionExistsHandler(new AcquiringSessionExistsHandler())
                 .aeronChannel(aeronChannel)))
             {
                 final AtomicBoolean running = new AtomicBoolean(true);

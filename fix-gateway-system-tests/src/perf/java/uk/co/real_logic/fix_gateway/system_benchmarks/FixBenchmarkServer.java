@@ -21,7 +21,7 @@ import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.library.AcquiringNewConnectHandler;
+import uk.co.real_logic.fix_gateway.library.AcquiringSessionExistsHandler;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
@@ -89,8 +89,8 @@ public final class FixBenchmarkServer
         setupAuthentication(configuration);
         return configuration
             .aeronChannel(AERON_CHANNEL)
-            .newSessionHandler(session -> new BenchmarkSessionHandler())
-            .newConnectHandler(new AcquiringNewConnectHandler());
+            .sessionAcquireHandler(session -> new BenchmarkSessionHandler())
+            .sessionExistsHandler(new AcquiringSessionExistsHandler());
     }
 
     private static void setupAuthentication(final CommonConfiguration configuration)

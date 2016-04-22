@@ -56,7 +56,7 @@ public interface EngineProtocolHandler
 
     void onRequestSession(
         final int libraryId,
-        final long connectionId,
+        final long sessionId,
         final long correlationId,
         final int lastReceivedSequenceNumber);
 }
