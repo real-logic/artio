@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
@@ -47,6 +48,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
@@ -123,6 +125,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final GatewayPublication outboundPublication;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
+    private List<Image> images = Collections.emptyList();
 
     public Framer(
         final EpochClock clock,
@@ -206,7 +209,23 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
     private int sendOutboundMessages()
     {
-        return outboundDataSubscription.poll(outboundSubscription, outboundLibraryFragmentLimit);
+        final int messagesRead = outboundDataSubscription.poll(
+            outboundSubscription, outboundLibraryFragmentLimit);
+
+        if (messagesRead > 0)
+        {
+            if (images.size() != outboundDataSubscription.imageCount())
+            {
+                images = outboundDataSubscription.images();
+            }
+
+            for (final Image image : images)
+            {
+                inboundPublication.saveNewSentPosition(image.sessionId(), image.position());
+            }
+        }
+
+        return messagesRead;
     }
 
     private int pollLibraries(final long timeInMs)
@@ -412,10 +431,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             now = outboundTimer.recordSince(timestamp);
         }
 
-        if (senderEndPoints.onMessage(connectionId, buffer, offset, length))
-        {
-            inboundPublication.saveNewSentPosition(libraryId, position + length);
-        }
+        senderEndPoints.onMessage(connectionId, buffer, offset, length);
 
         if (TIME_MESSAGES)
         {

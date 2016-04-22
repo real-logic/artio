@@ -16,7 +16,9 @@
 package uk.co.real_logic.fix_gateway.library;
 
 /**
- * Callback handler to let clients know when the gateway has sent a message.
+ * Callback handler to let clients know when the gateway owns a message. In a clustered
+ * configuration this means that the gateway has replicated the message around the cluster.
+ * In a single node this means that the message is in a buffer on that node waiting to be sent.
  *
  * This can be correlated against the position returned by the session's send method.
  *

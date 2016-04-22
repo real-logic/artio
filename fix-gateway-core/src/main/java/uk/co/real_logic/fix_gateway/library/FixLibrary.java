@@ -110,6 +110,7 @@ public final class FixLibrary extends GatewayProcess
 
         inboundSubscription = inboundLibraryStreams.subscription();
         outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy);
+        processProtocolHandler.sessionId = outboundPublication.sessionId();
 
         clock = new SystemEpochClock();
         livenessDetector = LivenessDetector.forLibrary(
@@ -511,6 +512,7 @@ public final class FixLibrary extends GatewayProcess
 
     private class FixLibraryProtocolHandler implements LibraryProtocolHandler, SessionHandler
     {
+        private int sessionId;
         private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
         public void onManageConnection(
@@ -705,9 +707,9 @@ public final class FixLibrary extends GatewayProcess
             }
         }
 
-        public void onNewSentPosition(final int libraryId, final long position)
+        public void onNewSentPosition(final int sessionId, final long position)
         {
-            if (FixLibrary.this.libraryId == libraryId)
+            if (this.sessionId == sessionId)
             {
                 sentPositionHandler.onSendCompleted(position);
             }

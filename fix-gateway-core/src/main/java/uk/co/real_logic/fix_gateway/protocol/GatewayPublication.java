@@ -690,7 +690,7 @@ public class GatewayPublication extends ClaimablePublication
 
         newSentPosition
             .wrap(buffer, offset)
-            .libraryId(libraryId)
+            .sessionId(libraryId)
             .position(sentPosition);
 
         bufferClaim.commit();
