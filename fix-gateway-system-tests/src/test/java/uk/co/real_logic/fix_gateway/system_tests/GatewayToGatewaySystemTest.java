@@ -350,4 +350,22 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertEquals(SessionReplyStatus.UNKNOWN_SESSION, status);
     }
+
+    @Test
+    public void librariesShouldBeNotifiedOfGatewayManagedSessionsOnConnect()
+    {
+        final FakeOtfAcceptor otfAcceptor2 = new FakeOtfAcceptor();
+        final FakeHandler handler2 = new FakeHandler(otfAcceptor2);
+        try (final FixLibrary library2 = FixLibrary.connect(
+            acceptingLibraryConfig(handler2, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor")
+                .libraryId(2)))
+        {
+            while (!handler2.hasSession())
+            {
+                library2.poll(1);
+            }
+
+            assertEquals(1, handler2.latestSessionId());
+        }
+    }
 }

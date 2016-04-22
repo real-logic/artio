@@ -195,6 +195,7 @@ public class LibraryProtocolSubscription implements FragmentHandler
             logon.session(),
             logon.lastSentSequenceNumber(),
             logon.lastReceivedSequenceNumber(),
+            logon.status(),
             logon.senderCompId(),
             logon.senderSubId(),
             logon.senderLocationId(),

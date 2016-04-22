@@ -166,4 +166,12 @@ class GatewaySession implements SessionInfo
     {
         return (lastSequenceNumber == UNKNOWN_SESSION) ? 0 : lastSequenceNumber;
     }
+
+    public String toString()
+    {
+        return "GatewaySession{" +
+            "sessionId=" + sessionId +
+            ", sessionKey=" + sessionKey +
+            '}';
+    }
 }

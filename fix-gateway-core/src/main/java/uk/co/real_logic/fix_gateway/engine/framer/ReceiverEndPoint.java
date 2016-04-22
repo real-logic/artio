@@ -22,6 +22,7 @@ import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
+import uk.co.real_logic.fix_gateway.messages.LogonStatus;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -330,7 +331,8 @@ class ReceiverEndPoint
                     compositeKey.senderLocationId(),
                     compositeKey.targetCompId(),
                     username,
-                    password);
+                    password,
+                    LogonStatus.NEW);
             }
         }
     }

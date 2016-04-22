@@ -48,6 +48,7 @@ import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
+import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
 /**
@@ -550,6 +551,7 @@ public final class FixLibrary extends GatewayProcess
             final long sessionId,
             int lastSentSequenceNumber,
             int lastReceivedSequenceNumber,
+            final LogonStatus status,
             final String senderCompId,
             final String senderSubId,
             final String senderLocationId,
@@ -557,7 +559,8 @@ public final class FixLibrary extends GatewayProcess
             final String username,
             final String password)
         {
-            if (libraryId == FixLibrary.this.libraryId)
+            final boolean thisLibrary = libraryId == FixLibrary.this.libraryId;
+            if (thisLibrary && status == LogonStatus.NEW)
             {
                 DebugLogger.log("Library Logon: %d, %d\n", connectionId, sessionId);
                 final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
@@ -577,7 +580,7 @@ public final class FixLibrary extends GatewayProcess
                         password);
                 }
             }
-            else if (libraryId == GATEWAY_LIBRARY_ID)
+            else if (libraryId == GATEWAY_LIBRARY_ID || thisLibrary && status == LIBRARY_NOTIFICATION)
             {
                 sessionExistsHandler.onSessionExists(
                     FixLibrary.this,

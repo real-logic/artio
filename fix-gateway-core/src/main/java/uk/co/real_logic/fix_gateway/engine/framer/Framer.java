@@ -61,6 +61,7 @@ import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
+import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
@@ -373,7 +374,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                 libraryId, connectionId, sessionId,
                 lastSentSequenceNumber, lastReceivedSequenceNumber,
                 senderCompId, senderSubId, senderLocationId, targetCompId,
-                username, password);
+                username, password, LogonStatus.NEW);
         }
         catch (final Exception e)
         {
@@ -502,6 +503,11 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
         final LibraryInfo library = new LibraryInfo(libraryId, livenessDetector, aeronSessionId);
         idToLibrary.put(libraryId, library);
+
+        for (final GatewaySession gatewaySession : gatewaySessions.sessions())
+        {
+            saveLogon(libraryId, gatewaySession, UNKNOWN_SESSION, UNKNOWN_SESSION, LIBRARY_NOTIFICATION);
+        }
     }
 
     public void onApplicationHeartbeat(final int libraryId)
@@ -577,7 +583,6 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final int lastSentSeqNum = session.lastSentMsgSeqNum();
         final int lastRecvSeqNum = session.lastReceivedMsgSeqNum();
         final SessionState sessionState = session.state();
-        final CompositeKey compositeKey = gatewaySession.compositeKey();
         gatewaySession.handoverManagementTo(libraryId);
         libraryInfo.addSession(gatewaySession);
 
@@ -590,7 +595,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             lastRecvSeqNum,
             sessionState);
 
-        saveLogon(libraryId, connectionId, gatewaySession, lastSentSeqNum, lastRecvSeqNum, compositeKey);
+        saveLogon(libraryId, gatewaySession, lastSentSeqNum, lastRecvSeqNum, LogonStatus.NEW);
 
         if (catchupSession(libraryId, connectionId, correlationId, replayFromSequenceNumber, session, lastRecvSeqNum))
         {
@@ -599,14 +604,15 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     }
 
     private void saveLogon(final int libraryId,
-                           final long connectionId,
                            final GatewaySession gatewaySession,
                            final int lastSentSeqNum,
                            final int lastReceivedSeqNum,
-                           final CompositeKey compositeKey)
+                           final LogonStatus status)
     {
+        final CompositeKey compositeKey = gatewaySession.compositeKey();
         if (compositeKey != null)
         {
+            final long connectionId = gatewaySession.connectionId();
             final String username = gatewaySession.username();
             final String password = gatewaySession.password();
             inboundPublication.saveLogon(
@@ -620,7 +626,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                 compositeKey.senderLocationId(),
                 compositeKey.targetCompId(),
                 username,
-                password);
+                password,
+                status);
         }
     }
 

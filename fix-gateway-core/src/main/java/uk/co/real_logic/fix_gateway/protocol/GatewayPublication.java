@@ -133,7 +133,7 @@ public class GatewayPublication extends ClaimablePublication
         return saveLogon(
             libraryId, connectionId, sessionId,
             UNKNOWN_SESSION, UNKNOWN_SESSION,
-            null, null, null, null, null, null);
+            null, null, null, null, null, null, LogonStatus.NEW);
     }
 
     public long saveLogon(final int libraryId,
@@ -146,7 +146,8 @@ public class GatewayPublication extends ClaimablePublication
                           final String senderLocationId,
                           final String targetCompId,
                           final String username,
-                          final String password)
+                          final String password,
+                          final LogonStatus status)
     {
         final byte[] senderCompIdBytes = bytes(senderCompId);
         final byte[] senderSubIdBytes = bytes(senderSubId);
@@ -185,6 +186,7 @@ public class GatewayPublication extends ClaimablePublication
             .session(sessionId)
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
+            .status(status)
             .putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length)
             .putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length)
             .putSenderLocationId(senderLocationIdBytes, 0, senderLocationIdBytes.length)

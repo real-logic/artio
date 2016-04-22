@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
+import uk.co.real_logic.fix_gateway.messages.LogonStatus;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -330,7 +331,7 @@ public class FramerTest
             eq(LIBRARY_ID), eq(connectionId.getValue()), anyLong(),
             anyInt(), anyInt(),
             any(), any(), any(), any(),
-            any(), any());
+            any(), any(), eq(LogonStatus.NEW));
     }
 
     private void aClientSendsData() throws IOException

@@ -16,10 +16,7 @@
 package uk.co.real_logic.fix_gateway.protocol;
 
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.messages.ConnectionType;
-import uk.co.real_logic.fix_gateway.messages.GatewayError;
-import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
-import uk.co.real_logic.fix_gateway.messages.SessionState;
+import uk.co.real_logic.fix_gateway.messages.*;
 
 public interface LibraryProtocolHandler
 {
@@ -40,7 +37,7 @@ public interface LibraryProtocolHandler
         final long sessionId,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
-        final String senderCompId,
+        final LogonStatus status, final String senderCompId,
         final String senderSubId,
         final String senderLocationId,
         final String targetCompId,

@@ -20,7 +20,6 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.*;
@@ -30,15 +29,12 @@ import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.util.Collections.unmodifiableList;
-
 /**
  * Keeps track of which sessions managed by the gateway
  */
 public class GatewaySessions
 {
     private final List<GatewaySession> sessions = new ArrayList<>();
-    private final List<SessionInfo> unmodifiableSessions = unmodifiableList(sessions);
     private final EpochClock clock;
     private final GatewayPublication publication;
     private final SessionIdStrategy sessionIdStrategy;
@@ -149,9 +145,9 @@ public class GatewaySessions
         return eventsProcessed;
     }
 
-    List<SessionInfo> sessions()
+    List<GatewaySession> sessions()
     {
-        return unmodifiableSessions;
+        return sessions;
     }
 
     static GatewaySession removeSessionByConn(final long connectionId, final List<GatewaySession> sessions)
