@@ -49,8 +49,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingEngine = launchAcceptingEngine(port, ACCEPTOR_ID, INITIATOR_ID);
         initiatingEngine = launchInitiatingGateway(initAeronPort);
 
-        acceptingLibrary = newAcceptingLibrary(acceptingSessionHandler);
-        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
+        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingHandler, 1);
 
         connectSessions();
     }
@@ -156,12 +156,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FakeHandler initiatingSessionHandler2 = new FakeHandler(initiatingOtfAcceptor2);
         try (final FixLibrary library2 = newInitiatingLibrary(initAeronPort, initiatingSessionHandler2, 2))
         {
-            acceptingSessionHandler.clearConnections();
+            acceptingHandler.clearConnections();
             final Session session2 = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID);
 
             assertConnected(session2);
             sessionLogsOn(library2, acceptingLibrary, session2);
-            final Session acceptingSession2 = SystemTestUtil.acquireSession(acceptingSessionHandler, acceptingLibrary);
+            final Session acceptingSession2 = SystemTestUtil.acquireSession(acceptingHandler, acceptingLibrary);
 
             sendTestRequest(acceptingSession2);
             assertReceivedTestRequest(library2, acceptingLibrary, initiatingOtfAcceptor2);
@@ -195,14 +195,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        assertFalse("Premature Acceptor Disconnect", acceptingSessionHandler.hasDisconnected());
+        assertFalse("Premature Acceptor Disconnect", acceptingHandler.hasDisconnected());
 
         initiatingEngine.close();
 
         assertEventuallyTrue("Acceptor Disconnected", () ->
         {
             acceptingLibrary.poll(1);
-            return acceptingSessionHandler.hasDisconnected();
+            return acceptingHandler.hasDisconnected();
         });
     }
 

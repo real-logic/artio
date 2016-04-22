@@ -38,8 +38,8 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
         initiatingEngine = launchInitiatingGateway(initAeronPort);
         acceptingEngine = launchAcceptingEngine(port, ACCEPTOR_ID, INITIATOR_ID);
 
-        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
-        acceptingLibrary = newAcceptingLibrary(acceptingSessionHandler);
+        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingHandler, 1);
+        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
     }
 
     @Test

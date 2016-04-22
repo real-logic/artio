@@ -76,10 +76,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         initiatingEngine = launchInitiatingGatewayWithSameLogs(initAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig =
-            acceptingLibraryConfig(acceptingSessionHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor");
+            acceptingLibraryConfig(acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor");
         acceptingLibraryConfig.acceptorSequenceNumbersResetUponReconnect(false);
         acceptingLibrary = FixLibrary.connect(acceptingLibraryConfig);
-        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
+        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingHandler, 1);
 
         if (reset)
         {
@@ -105,7 +105,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
-        acceptingSession = acquireSession(acceptingSessionHandler, acceptingLibrary);
+        acceptingSession = acquireSession(acceptingHandler, acceptingLibrary);
     }
 
     private void sequenceNumbersCanPersistOverRestarts(final int initialSequenceNumber)

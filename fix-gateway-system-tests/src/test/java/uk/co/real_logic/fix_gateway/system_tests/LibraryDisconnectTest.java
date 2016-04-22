@@ -38,8 +38,8 @@ public class LibraryDisconnectTest extends AbstractGatewayToGatewaySystemTest
               .replyTimeoutInMs(400));
         initiatingEngine = launchInitiatingGateway(initAeronPort);
 
-        acceptingLibrary = newAcceptingLibrary(acceptingSessionHandler);
-        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingSessionHandler, 1);
+        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingHandler, 1);
 
         wireSessions();
     }

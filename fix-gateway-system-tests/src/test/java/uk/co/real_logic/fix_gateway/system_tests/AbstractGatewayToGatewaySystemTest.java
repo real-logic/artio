@@ -44,10 +44,10 @@ public class AbstractGatewayToGatewaySystemTest
     protected Session acceptingSession;
 
     protected FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
-    protected FakeHandler acceptingSessionHandler = new FakeHandler(acceptingOtfAcceptor);
+    protected FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor);
 
     protected FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
-    protected FakeHandler initiatingSessionHandler = new FakeHandler(initiatingOtfAcceptor);
+    protected FakeHandler initiatingHandler = new FakeHandler(initiatingOtfAcceptor);
 
     protected void assertOriginalLibraryDoesNotReceiveMessages(final int initiator1MessageCount)
     {
@@ -84,8 +84,8 @@ public class AbstractGatewayToGatewaySystemTest
         assertEventuallyTrue("libraries receive disconnect messages", () ->
         {
             poll(initiatingLibrary, acceptingLibrary);
-            assertNotSession(acceptingSessionHandler, acceptingSession);
-            assertNotSession(initiatingSessionHandler, initiatingSession);
+            assertNotSession(acceptingHandler, acceptingSession);
+            assertNotSession(initiatingHandler, initiatingSession);
         });
     }
 
@@ -102,7 +102,7 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void acquireAcceptingSession()
     {
-        acceptingSession = acquireSession(acceptingSessionHandler, acceptingLibrary);
+        acceptingSession = acquireSession(acceptingHandler, acceptingLibrary);
         assertNotNull("unable to acquire accepting session", acceptingSession);
     }
 
@@ -162,7 +162,7 @@ public class AbstractGatewayToGatewaySystemTest
         final long position = messagesCanBeExchanged(
             initiatingSession, initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
 
-        assertThat(initiatingSessionHandler.sentPosition(), greaterThanOrEqualTo(position));
+        assertThat(initiatingHandler.sentPosition(), greaterThanOrEqualTo(position));
     }
 
     protected long messagesCanBeExchanged(final Session sendingSession,
