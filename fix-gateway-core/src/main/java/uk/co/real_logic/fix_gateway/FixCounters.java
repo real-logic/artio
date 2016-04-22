@@ -43,14 +43,14 @@ public class FixCounters implements AutoCloseable
         return failedOutboundPublications;
     }
 
-    public AtomicCounter messagesRead(final SocketAddress address)
+    public AtomicCounter messagesRead(final long connectionId, final SocketAddress address)
     {
-        return newCounter("Messages Read from " + address);
+        return newCounter("Messages Read from " + address + " id = " + connectionId);
     }
 
-    public AtomicCounter messagesWritten(final SocketAddress address)
+    public AtomicCounter messagesWritten(final long connectionId, final SocketAddress address)
     {
-        return newCounter("Messages Written to " + address);
+        return newCounter("Messages Written to " + address + " id = " + connectionId);
     }
 
     public AtomicCounter sentMsgSeqNo(final long connectionId)
