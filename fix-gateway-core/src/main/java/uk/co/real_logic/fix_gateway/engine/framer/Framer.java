@@ -193,7 +193,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         return sendOutboundMessages() +
                sendReplayMessages() +
                pollEndPoints() +
-               pollNewConnections() +
+               pollNewConnections(timeInMs) +
                pollLibraries(timeInMs) +
                gatewaySessions.pollSessions(timeInMs) +
                adminCommands.drain(onAdminCommand);
@@ -269,7 +269,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         return totalBytesReceived;
     }
 
-    private int pollNewConnections() throws IOException
+    private int pollNewConnections(final long timeInMs) throws IOException
     {
         if (!hasBindAddress)
         {
@@ -289,6 +289,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                 final boolean resetSequenceNumbers = configuration.acceptorSequenceNumbersResetUponReconnect();
                 final GatewaySession session = setupConnection(
                         channel, connectionId, UNKNOWN, null, GATEWAY_LIBRARY_ID, ACCEPTOR, resetSequenceNumbers);
+
+                session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeout());
 
                 gatewaySessions.acquire(
                     session,

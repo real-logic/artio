@@ -27,6 +27,8 @@ import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexRead
 
 class GatewaySession implements SessionInfo
 {
+    private static final int NO_TIMEOUT = -1;
+
     private final long connectionId;
     private final String address;
     private final ConnectionType connectionType;
@@ -41,6 +43,7 @@ class GatewaySession implements SessionInfo
     private String username;
     private String password;
     private int heartbeatIntervalInS;
+    private long disconnectTimeout = NO_TIMEOUT;
 
     GatewaySession(final long connectionId,
                    final long sessionId,
@@ -89,7 +92,29 @@ class GatewaySession implements SessionInfo
 
     int poll(final long time)
     {
-        return session.poll(time);
+        return session.poll(time) + checkNoLogonDisconnect(time);
+    }
+
+    private int checkNoLogonDisconnect(final long time)
+    {
+        if (disconnectTimeout == NO_TIMEOUT)
+        {
+            return 0;
+        }
+
+        if (sessionKey != null)
+        {
+            disconnectTimeout = NO_TIMEOUT;
+            return 1;
+        }
+
+        if (disconnectTimeout <= time)
+        {
+            receiverEndPoint.onNoLogonDisconnect();
+            return 1;
+        }
+
+        return 0;
     }
 
     Session session()
@@ -173,5 +198,10 @@ class GatewaySession implements SessionInfo
             "sessionId=" + sessionId +
             ", sessionKey=" + sessionKey +
             '}';
+    }
+
+    public void disconnectAt(final long disconnectTimeout)
+    {
+        this.disconnectTimeout = disconnectTimeout;
     }
 }

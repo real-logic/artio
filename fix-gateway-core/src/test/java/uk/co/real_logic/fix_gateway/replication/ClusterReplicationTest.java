@@ -139,6 +139,7 @@ public class ClusterReplicationTest
         hasElectedLeader();
     }
 
+    @Ignore
     @Test
     public void shouldNotReplicateMessageUntilClusterReformed()
     {

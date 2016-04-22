@@ -27,6 +27,7 @@ import java.util.Objects;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Configuration that exists for the entire duration of a fix gateway. Some options are configurable via
@@ -70,6 +71,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final String SESSION_ID_BUFFER_SIZE_PROP = "fix.core.session_id_file_size";
     /** Property name for the maximum number of attempts to send on the TCP connection before a client detected slow */
     public static final String SENDER_MAX_ATTEMPTS_PROP = "fix.core.sender_max_attempts";
+    /** Property name for the timeout before a connection that hasn't sent a logon is disconnected */
+    public static final String NO_LOGON_DISCONNECT_TIMEOUT_PROP = "fix.core.no_logon_disconnect";
 
     // ------------------------------------------------
     //          Configuration Defaults
@@ -89,6 +92,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE = 8 * 1024 * 1024;
     public static final int DEFAULT_SESSION_ID_BUFFER_SIZE = 4 * 1024 * 1024;
     public static final int DEFAULT_SENDER_MAX_ATTEMPTS = 1000;
+    public static final int DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT = (int) SECONDS.toMillis(30);
 
     private String host = null;
     private int port;
@@ -124,6 +128,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         getInteger(SESSION_ID_BUFFER_SIZE_PROP, DEFAULT_SESSION_ID_BUFFER_SIZE);
     private int senderMaxAttempts =
         getInteger(SENDER_MAX_ATTEMPTS_PROP, DEFAULT_SENDER_MAX_ATTEMPTS);
+    private int noLogonDisconnectTimeout =
+        getInteger(NO_LOGON_DISCONNECT_TIMEOUT_PROP, DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT);
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -351,6 +357,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration noLogonDisconnectTimeout(final int noLogonDisconnectTimeout)
+    {
+        this.noLogonDisconnectTimeout = noLogonDisconnectTimeout;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -459,6 +471,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public int senderMaxAttempts()
     {
         return senderMaxAttempts;
+    }
+
+    public int noLogonDisconnectTimeout()
+    {
+        return noLogonDisconnectTimeout;
     }
 
     /**

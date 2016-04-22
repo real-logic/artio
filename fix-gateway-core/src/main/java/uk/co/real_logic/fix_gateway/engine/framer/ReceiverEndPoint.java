@@ -41,6 +41,7 @@ import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START
 import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.NO_LOGON;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
 import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
@@ -440,6 +441,12 @@ class ReceiverEndPoint
     private void onDisconnectDetected()
     {
         disconnectEndpoint(REMOTE_DISCONNECT);
+        removeEndpoint();
+    }
+
+    public void onNoLogonDisconnect()
+    {
+        disconnectEndpoint(NO_LOGON);
         removeEndpoint();
     }
 

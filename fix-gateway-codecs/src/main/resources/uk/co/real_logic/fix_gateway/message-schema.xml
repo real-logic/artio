@@ -58,6 +58,8 @@
                 description="We disconnected due to the engine receiving an IOException">4</validValue>
             <validValue name="SLOW_CONSUMER"
                 description="We disconnected due to the consumer being too slow at reading the connection">5</validValue>
+            <validValue name="NO_LOGON"
+                description="We disconnected due to no logon message being sent after a timeout">6</validValue>
         </enum>
         <enum name="SessionState" encodingType="uint8">
             <validValue name="CONNECTING"
