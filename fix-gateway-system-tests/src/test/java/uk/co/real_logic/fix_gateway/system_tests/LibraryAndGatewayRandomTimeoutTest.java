@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 
 import java.io.File;
 
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -54,6 +55,8 @@ public class LibraryAndGatewayRandomTimeoutTest
         launchEngine();
         launchLibrary();
 
+        assertTrue("Library not connected", initiatingLibrary.isConnected());
+
         initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
     }
 
@@ -77,7 +80,7 @@ public class LibraryAndGatewayRandomTimeoutTest
     {
         initiatingLibrary = FixLibrary.connect(
             new LibraryConfiguration()
-                .replyTimeoutInMs(300)
+                .replyTimeoutInMs(5000)
                 .sessionAcquireHandler(initiatingSessionHandler)
                 .aeronChannel("udp://localhost:" + aeronPort)
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters"));
