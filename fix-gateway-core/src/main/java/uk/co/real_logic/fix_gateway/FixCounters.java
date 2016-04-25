@@ -86,6 +86,8 @@ public class FixCounters implements AutoCloseable
     {
         failedInboundPublications.close();
         failedOutboundPublications.close();
+        failedCatchupSpins.close();
+        failedResetSessionIdSpins.close();
     }
 
 }
