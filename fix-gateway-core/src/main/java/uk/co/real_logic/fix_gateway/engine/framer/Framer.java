@@ -24,6 +24,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.*;
+import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.Timer;
@@ -123,6 +124,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final ReplayQuery inboundMessages;
     private final ErrorHandler errorHandler;
     private final GatewayPublication outboundPublication;
+    private final AtomicCounter failedCatchupSpins;
+    private final AtomicCounter failedResetSessionIdSpins;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
@@ -140,7 +143,9 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final GatewaySessions gatewaySessions,
         final ReplayQuery inboundMessages,
         final ErrorHandler errorHandler,
-        final GatewayPublication outboundPublication)
+        final GatewayPublication outboundPublication,
+        final AtomicCounter failedCatchupSpins,
+        final AtomicCounter failedResetSessionIdSpins)
     {
         this.clock = clock;
         this.configuration = configuration;
@@ -151,6 +156,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         this.inboundMessages = inboundMessages;
         this.errorHandler = errorHandler;
         this.outboundPublication = outboundPublication;
+        this.failedCatchupSpins = failedCatchupSpins;
+        this.failedResetSessionIdSpins = failedResetSessionIdSpins;
         this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
         this.senderEndPoints = new SenderEndPoints(inboundPublication);
         this.sessionIdStrategy = sessionIdStrategy;
@@ -672,6 +679,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             while (receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId) < lastReceivedSeqNum)
             {
                 idleStrategy.idle();
+                failedCatchupSpins.increment();
             }
             idleStrategy.reset();
 
@@ -738,6 +746,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             while (sequenceNumbersNotReset())
             {
                 idleStrategy.idle();
+                failedResetSessionIdSpins.increment();
             }
             idleStrategy.reset();
 

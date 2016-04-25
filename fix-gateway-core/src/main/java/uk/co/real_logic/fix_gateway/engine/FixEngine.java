@@ -199,7 +199,9 @@ public final class FixEngine extends GatewayProcess
             new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer()),
             gatewaySessions, logger.inboundReplayQuery(),
             errorHandler,
-            outboundLibraryStreams.gatewayPublication(idleStrategy));
+            outboundLibraryStreams.gatewayPublication(idleStrategy),
+            fixCounters.failedCatchupSpins(),
+            fixCounters.failedResetSessionIdSpins());
         framerRunner = new AgentRunner(idleStrategy, errorHandler, null, framer);
     }
 
