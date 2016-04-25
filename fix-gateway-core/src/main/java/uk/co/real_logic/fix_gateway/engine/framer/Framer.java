@@ -48,7 +48,6 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
@@ -90,6 +89,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             return 0;
         }
     };
+    private final Consumer<Image> positionSender;
 
     private final EpochClock clock;
     private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
@@ -125,7 +125,6 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final GatewayPublication outboundPublication;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
-    private List<Image> images = Collections.emptyList();
 
     public Framer(
         final EpochClock clock,
@@ -187,6 +186,10 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             listeningChannel = null;
             selector = null;
         }
+        positionSender = image ->
+        {
+            inboundPublication.saveNewSentPosition(image.sessionId(), image.position());
+        };
     }
 
     @Override
@@ -214,15 +217,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
         if (messagesRead > 0)
         {
-            if (images.size() != outboundDataSubscription.imageCount())
-            {
-                images = outboundDataSubscription.images();
-            }
-
-            for (final Image image : images)
-            {
-                inboundPublication.saveNewSentPosition(image.sessionId(), image.position());
-            }
+            outboundDataSubscription.forEachImage(positionSender);
         }
 
         return messagesRead;
