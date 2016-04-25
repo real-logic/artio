@@ -92,7 +92,7 @@ public class ReplayIndex implements Index
                             final int srcLength,
                             final int streamId,
                             final int aeronSessionId,
-                            final long position)
+                            final long endPosition)
     {
         int offset = srcOffset;
         frameHeaderDecoder.wrap(srcBuffer, offset);
@@ -110,7 +110,7 @@ public class ReplayIndex implements Index
 
             sessionToIndex
                 .computeIfAbsent(messageFrame.session(), newSessionIndex)
-                .onRecord(streamId, aeronSessionId, srcOffset, srcLength, position, fixHeader.msgSeqNum());
+                .onRecord(streamId, aeronSessionId, srcLength, endPosition, fixHeader.msgSeqNum());
         }
     }
 
@@ -146,19 +146,18 @@ public class ReplayIndex implements Index
 
         void onRecord(final int streamId,
                       final int aeronSessionId,
-                      final long offset,
                       final int length,
-                      final long position,
+                      final long endPosition,
                       final int sequenceNumber)
         {
             replayIndexRecord
                 .wrap(buffer, this.offset)
                 .streamId(streamId)
                 .aeronSessionId(aeronSessionId)
-                .position(offset)
+                .position(endPosition - length)
                 .sequenceNumber(sequenceNumber);
 
-            positionWriter.indexedUpTo(aeronSessionId, position + length);
+            positionWriter.indexedUpTo(aeronSessionId, endPosition);
             positionWriter.updateChecksums();
 
             this.offset = replayIndexRecord.limit();

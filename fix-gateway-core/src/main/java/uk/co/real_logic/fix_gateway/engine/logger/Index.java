@@ -46,14 +46,14 @@ public interface Index extends FragmentHandler, AutoCloseable
      * @param length length of the data record within the buffer.
      * @param streamId the Aeron stream Id of the data
      * @param aeronSessionId the Aeron session id.
-     * @param position the position in the aeron stream of the start of the buffer
+     * @param endPosition the position to which the image has advanced on reading this message.
      */
     void indexRecord(final DirectBuffer buffer,
                      final int offset,
                      final int length,
                      final int streamId,
                      final int aeronSessionId,
-                     final long position);
+                     final long endPosition);
 
     default String getName()
     {

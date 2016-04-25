@@ -55,10 +55,13 @@ public class Indexer implements Agent, FragmentHandler
             index.readLastPosition((aeronSessionId, position) ->
             {
                 final ArchiveReader.SessionReader sessionReader = archiveReader.session(aeronSessionId);
-                do
+                if (sessionReader != null)
                 {
-                    position = sessionReader.read(position, index);
-                } while (position > 0);
+                    do
+                    {
+                        position = sessionReader.read(position, index);
+                    } while (position > 0);
+                }
             });
         }
     }

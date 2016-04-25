@@ -88,7 +88,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         bufferContainsMessage(true, SESSION_ID, updatedSequenceNumber);
 
-        indexRecord(START + fragmentLength());
+        indexRecord(endPosition() + fragmentLength());
 
         assertLastKnownSequenceNumberIs(SESSION_ID, updatedSequenceNumber);
     }
@@ -169,7 +169,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         for (int i = 0; i <= requiredMessagesToRoll; i++)
         {
             bufferContainsMessage(true, SESSION_ID, SEQUENCE_NUMBER + i);
-            indexRecord(START + (i * fragmentLength()));
+            indexRecord(endPosition() + (i * fragmentLength()));
         }
 
         try (final MappedFile mappedFile = newIndexFile())
@@ -191,7 +191,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         for (int i = initialSequenceNumber; i <= recordsOverlappingABlock; i++)
         {
             bufferContainsMessage(true, i, i + sequenceNumberDiff);
-            indexRecord(START + (i * fragmentLength()));
+            indexRecord(endPosition() + (i * fragmentLength()));
         }
 
         writer.close();
@@ -251,7 +251,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private void indexFixMessage()
     {
         bufferContainsMessage(true);
-        indexRecord(START);
+        indexRecord(endPosition());
     }
 
     private void indexRecord(final int position)

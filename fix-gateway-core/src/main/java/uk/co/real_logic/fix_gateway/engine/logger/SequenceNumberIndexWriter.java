@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
@@ -106,7 +107,7 @@ public class SequenceNumberIndexWriter implements Index
         final int length,
         final int streamId,
         final int aeronSessionId,
-        final long position)
+        final long endPosition)
     {
         int offset = srcOffset;
         frameHeaderDecoder.wrap(buffer, offset);
@@ -137,8 +138,8 @@ public class SequenceNumberIndexWriter implements Index
             }
         }
 
-        checkTermRoll(buffer, srcOffset, position, length);
-        positions.indexedUpTo(aeronSessionId, position + length);
+        checkTermRoll(buffer, srcOffset, endPosition, length);
+        positions.indexedUpTo(aeronSessionId, endPosition);
     }
 
     void resetSequenceNumbers()
@@ -147,14 +148,15 @@ public class SequenceNumberIndexWriter implements Index
         initialiseBlankBuffer();
     }
 
-    private void checkTermRoll(final DirectBuffer buffer, final int offset, final long position, final int length)
+    private void checkTermRoll(final DirectBuffer buffer, final int offset, final long endPosition, final int length)
     {
         final long termBufferLength = buffer.capacity();
         if (nextRollPosition == UNINITIALISED)
         {
-            nextRollPosition = position + termBufferLength - offset;
+            final long startPosition = endPosition - (length + DataHeaderFlyweight.HEADER_LENGTH);
+            nextRollPosition = startPosition + termBufferLength - offset;
         }
-        else if ((position + length) > nextRollPosition)
+        else if (endPosition > nextRollPosition)
         {
             nextRollPosition += termBufferLength;
             updateFile();
