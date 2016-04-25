@@ -62,7 +62,8 @@ public class ReplayQueryTest extends AbstractLogTest
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
 
         when(mockReader.session(anyInt())).thenReturn(mockSessionReader);
-        when(mockSessionReader.read(anyLong(), any(FragmentHandler.class))).thenReturn((long) UNKNOWN_SESSION);
+        when(mockSessionReader.read(anyLong(), any(FragmentHandler.class)))
+            .thenReturn(100L, (long) UNKNOWN_SESSION);
 
         bufferContainsMessage(true);
         indexRecord();
@@ -73,9 +74,9 @@ public class ReplayQueryTest extends AbstractLogTest
     {
         final int msgCount = query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
 
-        assertEquals(1, msgCount);
         verifyMappedFile(SESSION_ID, 1);
-        verifyOneMessageRead();
+        verifyMessagesRead(1);
+        assertEquals(1, msgCount);
     }
 
     @Test
@@ -105,7 +106,7 @@ public class ReplayQueryTest extends AbstractLogTest
         final int msgCount = query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
 
         assertEquals(1, msgCount);
-        verifyOneMessageRead();
+        verifyMessagesRead(2);
     }
 
     private void verifyNoMessageRead()
@@ -113,9 +114,9 @@ public class ReplayQueryTest extends AbstractLogTest
         verifyNoMoreInteractions(mockSessionReader);
     }
 
-    private void verifyOneMessageRead()
+    private void verifyMessagesRead(final int number)
     {
-        verify(mockSessionReader, times(1)).read(START, mockHandler);
+        verify(mockSessionReader, times(number)).read(START, mockHandler);
     }
 
     private void returnBuffer(final ByteBuffer buffer, final long sessionId)
@@ -136,6 +137,6 @@ public class ReplayQueryTest extends AbstractLogTest
 
     private void indexRecord()
     {
-        replayIndex.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, endPosition());
+        replayIndex.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, alignedEndPosition());
     }
 }

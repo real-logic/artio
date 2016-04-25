@@ -25,8 +25,8 @@ buildscript {
 apply plugin: 'maven'
 apply plugin: 'signing'
 
-def aeronVersion = '0.9.5'
-def agronaVersion = '0.4.13'
+def aeronVersion = '0.9.7-SNAPSHOT'
+def agronaVersion = '0.5'
 
 defaultTasks 'clean', 'build', 'install'
 

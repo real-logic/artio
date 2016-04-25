@@ -84,7 +84,7 @@ public class ReplayIndexTest extends AbstractLogTest
 
         positionReader.readLastPosition(positionConsumer);
 
-        verify(positionConsumer, times(1)).accept(AERON_SESSION_ID, endPosition());
+        verify(positionConsumer, times(1)).accept(AERON_SESSION_ID, alignedEndPosition());
     }
 
     @Test
@@ -150,6 +150,6 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private void indexRecord()
     {
-        replayIndex.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, endPosition());
+        replayIndex.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, alignedEndPosition());
     }
 }

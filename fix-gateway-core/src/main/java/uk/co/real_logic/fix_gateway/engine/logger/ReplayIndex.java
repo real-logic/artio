@@ -15,10 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
-import org.agrona.IoUtil;
-import org.agrona.MutableDirectBuffer;
+import io.aeron.logbuffer.FrameDescriptor;
+import org.agrona.*;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -108,9 +106,12 @@ public class ReplayIndex implements Index
             asciiBuffer.wrap(srcBuffer);
             fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
 
+            final int alignedLength = BitUtil.align(srcLength, FrameDescriptor.FRAME_ALIGNMENT);
+            final long beginPosition = endPosition - alignedLength;
+
             sessionToIndex
                 .computeIfAbsent(messageFrame.session(), newSessionIndex)
-                .onRecord(streamId, aeronSessionId, srcLength, endPosition, fixHeader.msgSeqNum());
+                .onRecord(streamId, aeronSessionId, beginPosition, endPosition, fixHeader.msgSeqNum());
         }
     }
 
@@ -146,7 +147,7 @@ public class ReplayIndex implements Index
 
         void onRecord(final int streamId,
                       final int aeronSessionId,
-                      final int length,
+                      final long beginPosition,
                       final long endPosition,
                       final int sequenceNumber)
         {
@@ -154,7 +155,7 @@ public class ReplayIndex implements Index
                 .wrap(buffer, this.offset)
                 .streamId(streamId)
                 .aeronSessionId(aeronSessionId)
-                .position(endPosition - length)
+                .position(beginPosition)
                 .sequenceNumber(sequenceNumber);
 
             positionWriter.indexedUpTo(aeronSessionId, endPosition);

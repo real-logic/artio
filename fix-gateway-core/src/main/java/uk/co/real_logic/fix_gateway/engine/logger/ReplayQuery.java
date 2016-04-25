@@ -124,11 +124,12 @@ public class ReplayQuery implements AutoCloseable
                 final int sequenceNumber = indexRecord.sequenceNumber();
                 if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo && streamId == requiredStreamId)
                 {
-                    count++;
                     if (sessionReader.read(position, handler) < 0)
                     {
                         return count;
                     }
+
+                    count++;
                 }
                 index = indexRecord.limit();
             }

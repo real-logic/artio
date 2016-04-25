@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.Publication;
 import io.aeron.logbuffer.BufferClaim;
+import org.agrona.BitUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
@@ -26,6 +27,7 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
@@ -37,7 +39,7 @@ public class AbstractLogTest
     protected static final long SESSION_ID_2 = 2;
     protected static final long CONNECTION_ID = 1;
     protected static final int STREAM_ID = OUTBOUND_LIBRARY_STREAM;
-    protected static final int START = 1;
+    protected static final int START = FRAME_ALIGNMENT;
     protected static final int SEQUENCE_NUMBER = 5;
     protected static final int AERON_SESSION_ID = -10;
     protected static final int LIBRARY_ID = 7;
@@ -113,6 +115,11 @@ public class AbstractLogTest
     protected int endPosition()
     {
         return offset + logEntryLength;
+    }
+
+    protected int alignedEndPosition()
+    {
+        return BitUtil.align(endPosition(), FRAME_ALIGNMENT);
     }
 
     protected void bufferHasResendRequest(final int endSeqNo)

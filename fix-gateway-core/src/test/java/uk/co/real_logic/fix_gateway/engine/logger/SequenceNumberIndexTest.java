@@ -88,7 +88,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         bufferContainsMessage(true, SESSION_ID, updatedSequenceNumber);
 
-        indexRecord(endPosition() + fragmentLength());
+        indexRecord(alignedEndPosition() + fragmentLength());
 
         assertLastKnownSequenceNumberIs(SESSION_ID, updatedSequenceNumber);
     }
@@ -109,7 +109,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         writer.close();
 
         final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
-        assertEquals(START + fragmentLength(), newReader.indexedPosition(AERON_SESSION_ID));
+        assertEquals(alignedEndPosition(), newReader.indexedPosition(AERON_SESSION_ID));
     }
 
     @Test
@@ -169,7 +169,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         for (int i = 0; i <= requiredMessagesToRoll; i++)
         {
             bufferContainsMessage(true, SESSION_ID, SEQUENCE_NUMBER + i);
-            indexRecord(endPosition() + (i * fragmentLength()));
+            indexRecord(alignedEndPosition() + (i * fragmentLength()));
         }
 
         try (final MappedFile mappedFile = newIndexFile())
@@ -191,7 +191,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         for (int i = initialSequenceNumber; i <= recordsOverlappingABlock; i++)
         {
             bufferContainsMessage(true, i, i + sequenceNumberDiff);
-            indexRecord(endPosition() + (i * fragmentLength()));
+            indexRecord(alignedEndPosition() + (i * fragmentLength()));
         }
 
         writer.close();
@@ -251,7 +251,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private void indexFixMessage()
     {
         bufferContainsMessage(true);
-        indexRecord(endPosition());
+        indexRecord(alignedEndPosition());
     }
 
     private void indexRecord(final int position)
