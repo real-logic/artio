@@ -248,11 +248,9 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
     private void acquireLibrarySessions(final LibraryInfo library)
     {
-        // TODO: identify reliable way of ensuring that the stream is caught up
-        /*
         final long position = outboundDataSubscription.getImage(library.aeronSessionId()).position();
         sentSequenceNumberIndex.awaitingIndexingUpTo(
-            library.aeronSessionId(), position, idleStrategy);*/
+            library.aeronSessionId(), position, idleStrategy);
 
         for (final GatewaySession session : library.gatewaySessions())
         {
