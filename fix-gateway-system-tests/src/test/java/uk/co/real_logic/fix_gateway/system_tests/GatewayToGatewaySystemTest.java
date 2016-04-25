@@ -357,7 +357,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FakeOtfAcceptor otfAcceptor2 = new FakeOtfAcceptor();
         final FakeHandler handler2 = new FakeHandler(otfAcceptor2);
         try (final FixLibrary library2 = FixLibrary.connect(
-            acceptingLibraryConfig(handler2, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor")
+            acceptingLibraryConfig(handler2, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor-2")
                 .libraryId(2)))
         {
             while (!handler2.hasSession())
