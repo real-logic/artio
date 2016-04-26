@@ -99,19 +99,16 @@ public class ConnectionHandler
         final SocketChannel channel,
         final long connectionId,
         final int libraryId,
-        final Framer framer,
-        final ReliefValve reliefValue) throws IOException
+        final Framer framer) throws IOException
     {
         return new SenderEndPoint(
             connectionId,
             libraryId,
             channel,
-            idleStrategy,
             fixCounters.messagesWritten(connectionId, channel.getRemoteAddress()),
             errorHandler,
             framer,
-            reliefValue,
-            configuration.senderMaxAttempts());
+            configuration.senderMaxBytesInBuffer());
     }
 
 }

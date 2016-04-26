@@ -108,6 +108,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final EngineConfiguration configuration;
     private final ConnectionHandler connectionHandler;
     private final Subscription outboundDataSubscription;
+    private final Subscription outboundSlowSubscription;
     private final Subscription replaySubscription;
     private final GatewayPublication inboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
@@ -134,6 +135,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final EngineConfiguration configuration,
         final ConnectionHandler connectionHandler,
         final Subscription outboundLibrarySubscription,
+        final Subscription outboundSlowSubscription,
         final Subscription replaySubscription,
         final QueuedPipe<AdminCommand> adminCommands,
         final SessionIdStrategy sessionIdStrategy,
@@ -156,6 +158,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         this.inboundMessages = inboundMessages;
         this.errorHandler = errorHandler;
         this.outboundPublication = outboundPublication;
+        this.outboundSlowSubscription = outboundSlowSubscription;
         this.failedCatchupSpins = failedCatchupSpins;
         this.failedResetSessionIdSpins = failedResetSessionIdSpins;
         this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
@@ -219,8 +222,9 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
     private int sendOutboundMessages()
     {
-        final int messagesRead = outboundDataSubscription.poll(
-            outboundSubscription, outboundLibraryFragmentLimit);
+        final int messagesRead =
+            outboundDataSubscription.poll(outboundSubscription, outboundLibraryFragmentLimit) +
+            outboundSlowSubscription.controlledPoll(senderEndPoints, outboundLibraryFragmentLimit);
 
         if (messagesRead > 0)
         {
@@ -468,7 +472,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         receiverEndPoints.add(receiverEndPoint);
 
         final SenderEndPoint senderEndPoint =
-            connectionHandler.senderEndPoint(channel, connectionId, libraryId, this, pollEndpointsFunc);
+            connectionHandler.senderEndPoint(channel, connectionId, libraryId, this);
         senderEndPoints.add(senderEndPoint);
 
         final GatewaySession gatewaySession = new GatewaySession(

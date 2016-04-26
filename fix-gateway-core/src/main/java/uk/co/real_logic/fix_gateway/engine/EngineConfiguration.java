@@ -70,7 +70,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /** Property name for the size in bytes of the session id file */
     public static final String SESSION_ID_BUFFER_SIZE_PROP = "fix.core.session_id_file_size";
     /** Property name for the maximum number of attempts to send on the TCP connection before a client detected slow */
-    public static final String SENDER_MAX_ATTEMPTS_PROP = "fix.core.sender_max_attempts";
+    public static final String SENDER_MAX_BYTES_IN_BUFFER_PROP = "fix.core.sender_max_attempts";
     /** Property name for the timeout before a connection that hasn't sent a logon is disconnected */
     public static final String NO_LOGON_DISCONNECT_TIMEOUT_PROP = "fix.core.no_logon_disconnect";
 
@@ -91,7 +91,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_SENDER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE = 8 * 1024 * 1024;
     public static final int DEFAULT_SESSION_ID_BUFFER_SIZE = 4 * 1024 * 1024;
-    public static final int DEFAULT_SENDER_MAX_ATTEMPTS = 1000;
+    public static final int DEFAULT_SENDER_MAX_BYTES_IN_BUFFER = 1024 * 1024;
     public static final int DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT = (int) SECONDS.toMillis(30);
 
     private String host = null;
@@ -126,8 +126,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         getInteger(SEQUENCE_NUMBER_INDEX_SIZE_PROP, DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE);
     private int sessionIdBufferSize =
         getInteger(SESSION_ID_BUFFER_SIZE_PROP, DEFAULT_SESSION_ID_BUFFER_SIZE);
-    private int senderMaxAttempts =
-        getInteger(SENDER_MAX_ATTEMPTS_PROP, DEFAULT_SENDER_MAX_ATTEMPTS);
+    private int senderMaxBytesInBuffer =
+        getInteger(SENDER_MAX_BYTES_IN_BUFFER_PROP, DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
     private int noLogonDisconnectTimeout =
         getInteger(NO_LOGON_DISCONNECT_TIMEOUT_PROP, DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT);
 
@@ -351,9 +351,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    public EngineConfiguration senderMaxAttempts(final int senderMaxAttempts)
+    public EngineConfiguration senderMaxBytesInBuffer(final int senderMaxAttempts)
     {
-        this.senderMaxAttempts = senderMaxAttempts;
+        this.senderMaxBytesInBuffer = senderMaxAttempts;
         return this;
     }
 
@@ -468,9 +468,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return sessionIdBuffer;
     }
 
-    public int senderMaxAttempts()
+    public int senderMaxBytesInBuffer()
     {
-        return senderMaxAttempts;
+        return senderMaxBytesInBuffer;
     }
 
     public int noLogonDisconnectTimeout()

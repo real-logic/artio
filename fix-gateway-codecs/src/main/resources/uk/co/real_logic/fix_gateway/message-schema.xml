@@ -116,11 +116,6 @@
             <validValue name="NEW">0</validValue>
             <validValue name="LIBRARY_NOTIFICATION">1</validValue>
         </enum>
-
-        <enum name="SentMessage" encodingType="uint8">
-            <validValue name="NOT_SENT">0</validValue>
-            <validValue name="SENT">1</validValue>
-        </enum>
     </types>
 
     <!-- MESSAGING PROTOCOL -->
@@ -131,7 +126,7 @@
         <field name="timestamp" id="4" type="Timestamp"/>
         <field name="status" id="5" type="MessageStatus"/>
         <field name="libraryId" id="6" type="LibraryId"/>
-        <field name="sent" id="7" type="SentMessage" />
+        <field name="bytesSent" id="7" type="int32" />
         <data name="body" id="5" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="Disconnect" id="7" description="A connection has disconnected">

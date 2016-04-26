@@ -106,7 +106,7 @@ public class FramerTest
                 eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean()))
             .thenReturn(mockReceiverEndPoint);
 
-        when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong(), anyInt(), any(), any()))
+        when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong(), anyInt(), any()))
             .thenReturn(mockSenderEndPoint);
 
         when(mockReceiverEndPoint.connectionId()).then(inv -> connectionId.getValue());
@@ -125,6 +125,7 @@ public class FramerTest
             mockConnectionHandler,
             outboundSubscription,
             mock(Subscription.class),
+            mock(Subscription.class),
             mock(QueuedPipe.class),
             mockSessionIdStrategy,
             sessionIds,
@@ -133,7 +134,9 @@ public class FramerTest
             gatewaySessions,
             replayQuery,
             mock(ErrorHandler.class),
-            mock(GatewayPublication.class), mock(AtomicCounter.class), mock(AtomicCounter.class));
+            mock(GatewayPublication.class),
+            mock(AtomicCounter.class),
+            mock(AtomicCounter.class));
     }
 
     @After
@@ -348,6 +351,6 @@ public class FramerTest
             any(), eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean());
 
         verify(mockConnectionHandler).senderEndPoint(
-            notNull(SocketChannel.class), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer), any());
+            notNull(SocketChannel.class), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer));
     }
 }

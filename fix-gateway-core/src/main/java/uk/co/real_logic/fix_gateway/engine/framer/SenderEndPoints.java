@@ -15,15 +15,20 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
-import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
-import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNKNOWN_SESSION;
-
-class SenderEndPoints implements AutoCloseable
+class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 {
+    private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
+
+    private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
+    private final FixMessageDecoder fixMessage = new FixMessageDecoder();
     private final Long2ObjectHashMap<SenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
 
     private GatewayPublication publication;
@@ -47,20 +52,34 @@ class SenderEndPoints implements AutoCloseable
         }
     }
 
-    public boolean onMessage(
+    public void onMessage(
         final long connectionId, final DirectBuffer buffer, final int offset, final int length)
     {
         final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            return endPoint.onFramedMessage(buffer, offset, length);
+            endPoint.onNormalFramedMessage(buffer, offset, length);
         }
-        else
+    }
+
+    public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
+    {
+        messageHeader.wrap(buffer, offset);
+
+        if (messageHeader.templateId() == FixMessageDecoder.TEMPLATE_ID)
         {
-            publication.saveError(
-                UNKNOWN_SESSION, GATEWAY_LIBRARY_ID, "Ignoring: " + buffer.getStringUtf8(offset, length));
-            return false;
+            offset += HEADER_LENGTH;
+            fixMessage.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
+            final long connectionId = fixMessage.connection();
+
+            final SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
+            if (senderEndPoint != null)
+            {
+                return senderEndPoint.onSlowMessageFragment(fixMessage, buffer, offset, length - HEADER_LENGTH);
+            }
         }
+
+        return Action.CONTINUE;
     }
 
     public void close()

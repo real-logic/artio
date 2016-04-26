@@ -193,7 +193,8 @@ public final class FixEngine extends GatewayProcess
             configuration.sendingTimeWindowInMs());
 
         final Framer framer = new Framer(
-            clock, configuration, handler, librarySubscription, replaySubscription(),
+            clock, configuration, handler, librarySubscription,
+            outboundLibraryStreams.subscription(), replaySubscription(),
             adminCommands, sessionIdStrategy, sessionIds,
             new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer()),
             new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer()),

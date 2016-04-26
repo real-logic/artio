@@ -15,99 +15,115 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
-import org.agrona.concurrent.IdleStrategy;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
+import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.SLOW_CONSUMER;
+import static uk.co.real_logic.fix_gateway.protocol.GatewayPublication.FRAME_SIZE;
 
 class SenderEndPoint implements AutoCloseable
 {
+    private final FixMessageEncoder fixMessageEncoder = new FixMessageEncoder();
     private final long connectionId;
     private final SocketChannel channel;
-    private final IdleStrategy idleStrategy;
     private final AtomicCounter messageWrites;
     private final ErrorHandler errorHandler;
     private final Framer framer;
-    private final ReliefValve reliefValve;
-    private final int maxAttempts;
+    private final int maxBytesInBuffer;
 
+    private int bytesInbuffer = 0;
     private int libraryId;
 
     SenderEndPoint(
         final long connectionId,
         final int libraryId,
         final SocketChannel channel,
-        final IdleStrategy idleStrategy,
         final AtomicCounter messageWrites,
         final ErrorHandler errorHandler,
         final Framer framer,
-        final ReliefValve reliefValve,
-        final int maxAttempts)
+        final int maxBytesInBuffer)
     {
         this.connectionId = connectionId;
         this.libraryId = libraryId;
         this.channel = channel;
-        this.idleStrategy = idleStrategy;
         this.messageWrites = messageWrites;
         this.errorHandler = errorHandler;
         this.framer = framer;
-        this.reliefValve = reliefValve;
-        this.maxAttempts = maxAttempts;
+        this.maxBytesInBuffer = maxBytesInBuffer;
     }
 
-    public boolean onFramedMessage(final DirectBuffer directBuffer,
-                                   final int offset,
-                                   final int length)
+    void onNormalFramedMessage(
+        final DirectBuffer directBuffer,
+        final int offset,
+        final int length)
     {
-        final SocketChannel channel = this.channel;
-        final AtomicCounter messageWrites = this.messageWrites;
-        final IdleStrategy idleStrategy = this.idleStrategy;
-        final ReliefValve reliefValve = this.reliefValve;
+        if (isSlowConsumer())
+        {
+            bytesInbuffer += length;
 
-        final ByteBuffer buffer = directBuffer.byteBuffer();
-        buffer.limit(offset + length);
-        buffer.position(offset);
+            if (bytesInbuffer > maxBytesInBuffer)
+            {
+                removeEndpoint(SLOW_CONSUMER);
+            }
+
+            return;
+        }
 
         try
         {
-            int bytesWritten = 0;
-            final int maxAttempts = this.maxAttempts;
-            for (int i = 0; i < maxAttempts; i++)
+            final ByteBuffer buffer = directBuffer.byteBuffer();
+            buffer.limit(offset + length);
+            buffer.position(offset);
+
+            final int written = channel.write(buffer);
+            DebugLogger.log("Written  %s\n", buffer, written);
+            messageWrites.orderedIncrement();
+
+            if (written != length)
             {
-                if (length <= bytesWritten)
-                {
-                    return true;
-                }
-
-                final int written = channel.write(buffer);
-                DebugLogger.log("Written  %s\n", buffer, written);
-                messageWrites.orderedIncrement();
-                bytesWritten += written;
-                if (written == 0)
-                {
-                    idleStrategy.idle(reliefValve.vent());
-                }
+                becomeSlowConsumer(directBuffer, offset, written, length);
             }
-
-            removeEndpoint(SLOW_CONSUMER);
-            return false;
         }
         catch (final IOException ex)
         {
-            errorHandler.onError(ex);
-            removeEndpoint(EXCEPTION);
-            return false;
+            onError(ex);
         }
+    }
+
+    private void onError(final IOException ex)
+    {
+        errorHandler.onError(ex);
+        removeEndpoint(EXCEPTION);
+    }
+
+    private void becomeSlowConsumer(final DirectBuffer buffer, final int offset, final int written, final int length)
+    {
+        bytesInbuffer = length - written;
+        if (written > 0)
+        {
+            updateBytesSent(buffer, offset - FRAME_SIZE, written);
+        }
+    }
+
+    private void updateBytesSent(final DirectBuffer buffer, final int offset, final int bytesSent)
+    {
+        fixMessageEncoder
+            .wrap((MutableDirectBuffer) buffer, offset)
+            .bytesSent(bytesSent);
     }
 
     private void removeEndpoint(final DisconnectReason reason)
@@ -133,5 +149,53 @@ class SenderEndPoint implements AutoCloseable
     public void close()
     {
         messageWrites.close();
+    }
+
+    Action onSlowMessageFragment(
+        final FixMessageDecoder fixMessage,
+        final DirectBuffer directBuffer,
+        final int offset,
+        final int length)
+    {
+        if (!isSlowConsumer())
+        {
+            return CONTINUE;
+        }
+
+        int bytesSent = fixMessage.bytesSent();
+        final int bodyLength = fixMessage.bodyLength();
+        if (bodyLength == bytesSent)
+        {
+            return CONTINUE;
+        }
+
+        try
+        {
+            final int dataOffset = offset + FRAME_SIZE + bytesSent;
+            final ByteBuffer buffer = directBuffer.byteBuffer();
+            buffer.limit(offset + length);
+            buffer.position(dataOffset);
+
+            final int written = channel.write(buffer);
+            messageWrites.orderedIncrement();
+
+            bytesSent += written;
+            if (bodyLength > bytesSent)
+            {
+                updateBytesSent(directBuffer, fixMessage.offset(), bytesSent);
+                return ABORT;
+            }
+        }
+        catch (final IOException ex)
+        {
+            onError(ex);
+        }
+
+        return CONTINUE;
+    }
+
+    private boolean isSlowConsumer()
+    {
+        return bytesInbuffer > 0;
     }
 }
