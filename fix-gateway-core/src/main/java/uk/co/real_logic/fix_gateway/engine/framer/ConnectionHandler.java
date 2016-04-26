@@ -105,7 +105,7 @@ public class ConnectionHandler
             connectionId,
             libraryId,
             channel,
-            fixCounters.messagesWritten(connectionId, channel.getRemoteAddress()),
+            fixCounters.bytesInBuffer(connectionId, channel.getRemoteAddress()),
             errorHandler,
             framer,
             configuration.senderMaxBytesInBuffer());

@@ -40,19 +40,18 @@ class SenderEndPoint implements AutoCloseable
     private final FixMessageEncoder fixMessageEncoder = new FixMessageEncoder();
     private final long connectionId;
     private final SocketChannel channel;
-    private final AtomicCounter messageWrites;
+    private final AtomicCounter bytesInBuffer;
     private final ErrorHandler errorHandler;
     private final Framer framer;
     private final int maxBytesInBuffer;
 
-    private int bytesInbuffer = 0;
     private int libraryId;
 
     SenderEndPoint(
         final long connectionId,
         final int libraryId,
         final SocketChannel channel,
-        final AtomicCounter messageWrites,
+        final AtomicCounter bytesInBuffer,
         final ErrorHandler errorHandler,
         final Framer framer,
         final int maxBytesInBuffer)
@@ -60,7 +59,7 @@ class SenderEndPoint implements AutoCloseable
         this.connectionId = connectionId;
         this.libraryId = libraryId;
         this.channel = channel;
-        this.messageWrites = messageWrites;
+        this.bytesInBuffer = bytesInBuffer;
         this.errorHandler = errorHandler;
         this.framer = framer;
         this.maxBytesInBuffer = maxBytesInBuffer;
@@ -73,12 +72,13 @@ class SenderEndPoint implements AutoCloseable
     {
         if (isSlowConsumer())
         {
-            bytesInbuffer += length;
-
-            if (bytesInbuffer > maxBytesInBuffer)
+            final long bytesInBuffer = this.bytesInBuffer.getWeak() + length;
+            if (bytesInBuffer > maxBytesInBuffer)
             {
                 removeEndpoint(SLOW_CONSUMER);
             }
+
+            this.bytesInBuffer.setOrdered(bytesInBuffer);
 
             return;
         }
@@ -91,7 +91,6 @@ class SenderEndPoint implements AutoCloseable
 
             final int written = channel.write(buffer);
             DebugLogger.log("Written  %s\n", buffer, written);
-            messageWrites.orderedIncrement();
 
             if (written != length)
             {
@@ -112,7 +111,7 @@ class SenderEndPoint implements AutoCloseable
 
     private void becomeSlowConsumer(final DirectBuffer buffer, final int offset, final int written, final int length)
     {
-        bytesInbuffer = length - written;
+        bytesInBuffer.setOrdered(length - written);
         if (written > 0)
         {
             updateBytesSent(buffer, offset - FRAME_SIZE, written);
@@ -148,7 +147,7 @@ class SenderEndPoint implements AutoCloseable
 
     public void close()
     {
-        messageWrites.close();
+        bytesInBuffer.close();
     }
 
     Action onSlowMessageFragment(
@@ -177,7 +176,7 @@ class SenderEndPoint implements AutoCloseable
             buffer.position(dataOffset);
 
             final int written = channel.write(buffer);
-            messageWrites.orderedIncrement();
+            bytesInBuffer.orderedIncrement();
 
             bytesSent += written;
             if (bodyLength > bytesSent)
@@ -196,6 +195,11 @@ class SenderEndPoint implements AutoCloseable
 
     private boolean isSlowConsumer()
     {
-        return bytesInbuffer > 0;
+        return bytesInBuffer() > 0;
+    }
+
+    long bytesInBuffer()
+    {
+        return bytesInBuffer.getWeak();
     }
 }

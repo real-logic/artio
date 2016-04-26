@@ -23,6 +23,8 @@ import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -32,15 +34,21 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.List;
 
 import static org.agrona.CloseHelper.close;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class SlowConsumerTest
 {
+    private static final int MAX_BYTES_IN_BUFFER = 4 * 1024;
+
     private int port = unusedPort();
     private MediaDriver mediaDriver;
     private FixEngine engine;
@@ -59,7 +67,7 @@ public class SlowConsumerTest
         mediaDriver = launchMediaDriver();
         delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
-        config.senderMaxBytesInBuffer(4 * 1024);
+        config.senderMaxBytesInBuffer(MAX_BYTES_IN_BUFFER);
         engine = FixEngine.launch(config);
         library = newAcceptingLibrary(handler);
     }
@@ -73,6 +81,8 @@ public class SlowConsumerTest
         testRequest.testReqID("some relatively long test req id");
 
         final Session session = acquireSession(handler, library);
+        final SessionInfo sessionInfo = getSessionInfo();
+
         while (socketIsConnected() || session.canSendMessage())
         {
             if (session.canSendMessage())
@@ -82,6 +92,18 @@ public class SlowConsumerTest
 
             library.poll(1);
         }
+
+        assertThat(sessionInfo.bytesInBuffer(), greaterThanOrEqualTo((long) MAX_BYTES_IN_BUFFER));
+    }
+
+    private SessionInfo getSessionInfo()
+    {
+        final List<LibraryInfo> libraries = engine.libraries(ADMIN_IDLE_STRATEGY);
+        assertThat(libraries, hasSize(1));
+        final LibraryInfo libraryInfo = libraries.get(0);
+        final List<SessionInfo> sessions = libraryInfo.sessions();
+        assertThat(sessions, hasSize(1));
+        return sessions.get(0);
     }
 
     private void initiateConnection() throws IOException

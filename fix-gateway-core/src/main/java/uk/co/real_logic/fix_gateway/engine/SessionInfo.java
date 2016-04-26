@@ -46,4 +46,11 @@ public interface SessionInfo
      * @return the session id.
      */
     long sessionId();
+
+    /**
+     * Returns the number of bytes outstanding in the quarantine buffer to send.
+     *
+     * @return number of bytes outstanding in the quarantine buffer to send.
+     */
+    long bytesInBuffer();
 }

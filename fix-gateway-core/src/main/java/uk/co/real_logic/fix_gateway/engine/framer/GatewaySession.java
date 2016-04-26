@@ -171,7 +171,7 @@ class GatewaySession implements SessionInfo
         return password;
     }
 
-    public int heartbeatIntervalInS()
+    int heartbeatIntervalInS()
     {
         return heartbeatIntervalInS;
     }
@@ -198,8 +198,13 @@ class GatewaySession implements SessionInfo
             '}';
     }
 
-    public void disconnectAt(final long disconnectTimeout)
+    void disconnectAt(final long disconnectTimeout)
     {
         this.disconnectTimeout = disconnectTimeout;
+    }
+
+    public long bytesInBuffer()
+    {
+        return senderEndPoint.bytesInBuffer();
     }
 }

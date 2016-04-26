@@ -62,9 +62,9 @@ public class FixCounters implements AutoCloseable
         return newCounter("Messages Read from " + address + " id = " + connectionId);
     }
 
-    public AtomicCounter messagesWritten(final long connectionId, final SocketAddress address)
+    public AtomicCounter bytesInBuffer(final long connectionId, final SocketAddress address)
     {
-        return newCounter("Messages Written to " + address + " id = " + connectionId);
+        return newCounter("Quarantined bytes for " + address + " id = " + connectionId);
     }
 
     public AtomicCounter sentMsgSeqNo(final long connectionId)

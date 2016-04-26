@@ -69,8 +69,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final String SEQUENCE_NUMBER_INDEX_SIZE_PROP = "fix.core.sequence_number_cache_size";
     /** Property name for the size in bytes of the session id file */
     public static final String SESSION_ID_BUFFER_SIZE_PROP = "fix.core.session_id_file_size";
-    /** Property name for the maximum number of attempts to send on the TCP connection before a client detected slow */
-    public static final String SENDER_MAX_BYTES_IN_BUFFER_PROP = "fix.core.sender_max_attempts";
+    /** Property name for the maximum number of bytes to allow in the quarantine buffer before disconnection */
+    public static final String SENDER_MAX_BYTES_IN_BUFFER_PROP = "fix.core.sender_max_bytes_in_buffer";
     /** Property name for the timeout before a connection that hasn't sent a logon is disconnected */
     public static final String NO_LOGON_DISCONNECT_TIMEOUT_PROP = "fix.core.no_logon_disconnect";
 
@@ -351,9 +351,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    public EngineConfiguration senderMaxBytesInBuffer(final int senderMaxAttempts)
+    public EngineConfiguration senderMaxBytesInBuffer(final int senderMaxBytesInBuffer)
     {
-        this.senderMaxBytesInBuffer = senderMaxAttempts;
+        this.senderMaxBytesInBuffer = senderMaxBytesInBuffer;
         return this;
     }
 
