@@ -23,8 +23,6 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader.UNKNOWN_SESSION;
-
 class GatewaySession implements SessionInfo
 {
     private static final int NO_TIMEOUT = -1;

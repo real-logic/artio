@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.library.SessionHandler;
@@ -58,7 +59,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
@@ -263,7 +263,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             final long sessionId = session.sessionId();
             final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-            final boolean hasLoggedIn = receivedSequenceNumber != UNKNOWN_SESSION;
+            final boolean hasLoggedIn = receivedSequenceNumber != SessionInfo.UNKNOWN_SESSION;
             final SessionState state = hasLoggedIn ? ACTIVE : CONNECTED;
             gatewaySessions.acquire(
                 session,
@@ -321,8 +321,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                     session,
                     CONNECTED,
                     configuration.defaultHeartbeatIntervalInS(),
-                    UNKNOWN_SESSION,
-                    UNKNOWN_SESSION,
+                    SessionInfo.UNKNOWN_SESSION,
+                    SessionInfo.UNKNOWN_SESSION,
                     null,
                     null);
 
@@ -530,7 +530,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
         for (final GatewaySession gatewaySession : gatewaySessions.sessions())
         {
-            saveLogon(libraryId, gatewaySession, UNKNOWN_SESSION, UNKNOWN_SESSION, LIBRARY_NOTIFICATION);
+            saveLogon(libraryId, gatewaySession, SessionInfo.UNKNOWN_SESSION, SessionInfo.UNKNOWN_SESSION, LIBRARY_NOTIFICATION);
         }
     }
 
@@ -764,8 +764,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
     private boolean sequenceNumbersNotReset()
     {
-        return sentSequenceNumberIndex.lastKnownSequenceNumber(1) != UNKNOWN_SESSION
-            || receivedSequenceNumberIndex.lastKnownSequenceNumber(1) != UNKNOWN_SESSION;
+        return sentSequenceNumberIndex.lastKnownSequenceNumber(1) != SessionInfo.UNKNOWN_SESSION
+            || receivedSequenceNumberIndex.lastKnownSequenceNumber(1) != SessionInfo.UNKNOWN_SESSION;
     }
 
     public void onClose()

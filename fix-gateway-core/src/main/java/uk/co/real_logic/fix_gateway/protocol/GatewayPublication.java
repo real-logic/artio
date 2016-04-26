@@ -23,12 +23,12 @@ import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.ReliefValve;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.DebugLogger.logSbeMessage;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader.UNKNOWN_SESSION;
 
 /**
  * A proxy for publishing messages fix related messages
@@ -132,7 +132,7 @@ public class GatewayPublication extends ClaimablePublication
     {
         return saveLogon(
             libraryId, connectionId, sessionId,
-            UNKNOWN_SESSION, UNKNOWN_SESSION,
+            SessionInfo.UNKNOWN_SESSION, SessionInfo.UNKNOWN_SESSION,
             null, null, null, null, null, null, LogonStatus.NEW);
     }
 

@@ -18,10 +18,10 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import io.aeron.driver.MediaDriver;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -50,20 +50,43 @@ public class SlowConsumerTest
 
     private LogonEncoder logon = new LogonEncoder();
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(ByteBuffer.allocate(8 * 1024));
+    private ByteBuffer byteBuffer = buffer.byteBuffer();
+    private SocketChannel socket;
 
     @Before
     public void setUp()
     {
         mediaDriver = launchMediaDriver();
-        engine = launchAcceptingEngine(port, ACCEPTOR_ID, INITIATOR_ID);
+        delete(ACCEPTOR_LOGS);
+        final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
+        config.senderMaxBytesInBuffer(4 * 1024);
+        engine = FixEngine.launch(config);
         library = newAcceptingLibrary(handler);
     }
 
-    @Ignore
-    @Test
-    public void shouldSeperateThenDisconnectSlowConsumer() throws IOException
+    @Test(timeout = 10000)
+    public void shouldQuarantineThenDisconnectASlowConsumer() throws IOException
     {
-        final SocketChannel channel = SocketChannel.open(new InetSocketAddress("localhost", port));
+        initiateConnection();
+
+        final TestRequestEncoder testRequest = new TestRequestEncoder();
+        testRequest.testReqID("some relatively long test req id");
+
+        final Session session = acquireSession(handler, library);
+        while (socketIsConnected() || session.canSendMessage())
+        {
+            if (session.canSendMessage())
+            {
+                session.send(testRequest);
+            }
+
+            library.poll(1);
+        }
+    }
+
+    private void initiateConnection() throws IOException
+    {
+        socket = SocketChannel.open(new InetSocketAddress("localhost", port));
 
         final UtcTimestampEncoder timestamp = new UtcTimestampEncoder();
         timestamp.encode(System.currentTimeMillis());
@@ -76,21 +99,22 @@ public class SlowConsumerTest
                 .targetCompID(ACCEPTOR_ID);
 
         final int length = logon.encode(buffer, 0);
-        final ByteBuffer byteBuffer = buffer.byteBuffer();
         byteBuffer.limit(length);
-        assertEquals(length, channel.write(byteBuffer));
+        assertEquals(length, socket.write(byteBuffer));
+    }
 
-        final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest.testReqID("some relatively long test req id");
-
-        final Session session = acquireSession(handler, library);
-        while (channel.isConnected())
+    private boolean socketIsConnected()
+    {
+        // Need to poke to TCP connection to detect disconnection
+        try
         {
-            final long position = session.send(testRequest);
-            if (position < 0)
-            {
-                break;
-            }
+            byteBuffer.position(0).limit(1);
+            socket.write(byteBuffer);
+            return true;
+        }
+        catch (final IOException e)
+        {
+            return false;
         }
     }
 
@@ -99,5 +123,6 @@ public class SlowConsumerTest
     {
         close(engine);
         close(mediaDriver);
+        close(socket);
     }
 }

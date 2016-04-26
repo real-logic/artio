@@ -24,6 +24,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 
 import java.io.File;
 
@@ -76,7 +77,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         indexFixMessage();
 
-        assertLastKnownSequenceNumberIs(SESSION_ID_2, SequenceNumberIndexReader.UNKNOWN_SESSION);
+        assertLastKnownSequenceNumberIs(SESSION_ID_2, SessionInfo.UNKNOWN_SESSION);
     }
 
     @Test
@@ -245,7 +246,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private void assertUnknownSession()
     {
-        assertLastKnownSequenceNumberIs(SESSION_ID, SequenceNumberIndexReader.UNKNOWN_SESSION);
+        assertLastKnownSequenceNumberIs(SESSION_ID, SessionInfo.UNKNOWN_SESSION);
     }
 
     private void indexFixMessage()

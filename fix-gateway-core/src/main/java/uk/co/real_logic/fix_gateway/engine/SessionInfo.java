@@ -21,6 +21,11 @@ package uk.co.real_logic.fix_gateway.engine;
 public interface SessionInfo
 {
     /**
+     * The used to identify a session that hasn't yet been identified
+     */
+    int UNKNOWN_SESSION = -1;
+
+    /**
      * Get the identification number of the connection in question.
      *
      * @return the identification number of the connection in question.
@@ -33,4 +38,12 @@ public interface SessionInfo
      * @return the remove address to which this session is connected.
      */
     String address();
+
+    /**
+     * Get the identification number of the session in question or {@link #UNKNOWN_SESSION}
+     * if the session hasn't completed its logon yet.
+     *
+     * @return the session id.
+     */
+    long sessionId();
 }

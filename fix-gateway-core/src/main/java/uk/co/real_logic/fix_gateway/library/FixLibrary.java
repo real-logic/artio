@@ -26,7 +26,7 @@ import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.SystemNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.*;
-import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.LibraryProtocolHandler;
@@ -600,7 +600,7 @@ public final class FixLibrary extends GatewayProcess
         private int acceptorSequenceNumber(int lastSequenceNumber, final SessionState state)
         {
             if (!configuration.acceptorSequenceNumbersResetUponReconnect() &&
-                lastSequenceNumber != SequenceNumberIndexReader.UNKNOWN_SESSION)
+                lastSequenceNumber != SessionInfo.UNKNOWN_SESSION)
             {
                 return lastSequenceNumber;
             }
@@ -779,7 +779,7 @@ public final class FixLibrary extends GatewayProcess
             return sessionConfiguration.initialSequenceNumber();
         }
 
-        if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != SequenceNumberIndexReader.UNKNOWN_SESSION)
+        if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != SessionInfo.UNKNOWN_SESSION)
         {
             return lastSequenceNumber + 1;
         }

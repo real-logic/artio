@@ -19,6 +19,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
@@ -39,7 +40,6 @@ import java.nio.channels.SocketChannel;
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
-import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.NO_LOGON;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.REMOTE_DISCONNECT;
@@ -344,7 +344,7 @@ class ReceiverEndPoint
     {
         if (resetSequenceNumbers)
         {
-            return UNKNOWN_SESSION;
+            return SessionInfo.UNKNOWN_SESSION;
         }
 
         return sequenceNumberIndexReader.lastKnownSequenceNumber(sessionId);

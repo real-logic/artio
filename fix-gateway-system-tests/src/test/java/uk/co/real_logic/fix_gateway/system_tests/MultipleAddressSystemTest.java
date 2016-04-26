@@ -17,6 +17,8 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.session.Session;
 
@@ -36,7 +38,9 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
 
         mediaDriver = launchMediaDriver();
         initiatingEngine = launchInitiatingGateway(initAeronPort);
-        acceptingEngine = launchAcceptingEngine(port, ACCEPTOR_ID, INITIATOR_ID);
+        delete(ACCEPTOR_LOGS);
+        final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
+        acceptingEngine = FixEngine.launch(config);
 
         initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingHandler, 1);
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);

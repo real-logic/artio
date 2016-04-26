@@ -178,16 +178,6 @@ public final class SystemTestUtil
         }
     }
 
-    public static FixEngine launchAcceptingEngine(
-        final int port,
-        final String acceptorId,
-        final String initiatorId)
-    {
-        delete(ACCEPTOR_LOGS);
-        final EngineConfiguration config = acceptingConfig(port, "engineCounters", acceptorId, initiatorId);
-        return FixEngine.launch(config);
-    }
-
     public static EngineConfiguration acceptingConfig(
         final int port,
         final String countersSuffix,
