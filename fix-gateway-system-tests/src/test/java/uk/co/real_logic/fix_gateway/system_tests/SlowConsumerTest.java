@@ -51,6 +51,7 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 public class SlowConsumerTest
 {
     private static final int MAX_BYTES_IN_BUFFER = 4 * 1024;
+    private static final int BUFFER_CAPACITY = 8 * 1024;
 
     @Rule
     public Timeout timeout = Timeout.seconds(5);
@@ -63,8 +64,8 @@ public class SlowConsumerTest
     private FakeHandler handler = new FakeHandler(acceptingOtfAcceptor);
 
     private LogonEncoder logon = new LogonEncoder();
-    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(ByteBuffer.allocate(8 * 1024));
-    private ByteBuffer byteBuffer = buffer.byteBuffer();
+    private ByteBuffer byteBuffer = ByteBuffer.allocate(BUFFER_CAPACITY);
+    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(byteBuffer);
     private SocketChannel socket;
 
     @Before
@@ -127,7 +128,7 @@ public class SlowConsumerTest
             int bytesRead;
             do
             {
-                byteBuffer.position(1).limit(byteBuffer.capacity());
+                byteBuffer.position(1).limit(BUFFER_CAPACITY);
                 bytesRead = socket.read(byteBuffer);
             } while (bytesRead > 0);
 
