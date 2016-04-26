@@ -18,7 +18,9 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import io.aeron.driver.MediaDriver;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -35,19 +37,23 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.List;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.agrona.CloseHelper.close;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class SlowConsumerTest
 {
     private static final int MAX_BYTES_IN_BUFFER = 4 * 1024;
+
+    @Rule
+    public Timeout timeout = Timeout.seconds(5);
 
     private int port = unusedPort();
     private MediaDriver mediaDriver;
@@ -72,14 +78,12 @@ public class SlowConsumerTest
         library = newAcceptingLibrary(handler);
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void shouldQuarantineThenDisconnectASlowConsumer() throws IOException
     {
         initiateConnection();
 
-        final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest.testReqID("some relatively long test req id");
-
+        final TestRequestEncoder testRequest = newTestRequest();
         final Session session = acquireSession(handler, library);
         final SessionInfo sessionInfo = getSessionInfo();
 
@@ -93,7 +97,59 @@ public class SlowConsumerTest
             library.poll(1);
         }
 
-        assertThat(sessionInfo.bytesInBuffer(), greaterThanOrEqualTo((long) MAX_BYTES_IN_BUFFER));
+        bytesInBufferAtLeast(sessionInfo, (long) MAX_BYTES_IN_BUFFER);
+    }
+
+    @Test
+    public void shouldRestoreConnectionFromQuarantineWhenItCatchesUp() throws IOException
+    {
+        initiateConnection();
+
+        final TestRequestEncoder testRequest = newTestRequest();
+        final Session session = acquireSession(handler, library);
+        final SessionInfo sessionInfo = getSessionInfo();
+
+        // Get into a quarantined state
+        while (sessionInfo.bytesInBuffer() == 0)
+        {
+            session.send(testRequest);
+
+            library.poll(1);
+
+            LockSupport.parkNanos(1);
+        }
+
+        socket.configureBlocking(false);
+
+        // Get out of quarantined state
+        while (sessionInfo.bytesInBuffer() > 0)
+        {
+            int bytesRead;
+            do
+            {
+                byteBuffer.position(1).limit(byteBuffer.capacity());
+                bytesRead = socket.read(byteBuffer);
+            } while (bytesRead > 0);
+
+            session.send(testRequest);
+
+            library.poll(1);
+        }
+
+        assertEquals(ACTIVE, session.state());
+        assertTrue(socketIsConnected());
+    }
+
+    private void bytesInBufferAtLeast(final SessionInfo sessionInfo, final long bytesInBuffer)
+    {
+        assertThat(sessionInfo.bytesInBuffer(), greaterThanOrEqualTo(bytesInBuffer));
+    }
+
+    private TestRequestEncoder newTestRequest()
+    {
+        final TestRequestEncoder testRequest = new TestRequestEncoder();
+        testRequest.testReqID("some relatively long test req id");
+        return testRequest;
     }
 
     private SessionInfo getSessionInfo()
@@ -143,6 +199,7 @@ public class SlowConsumerTest
     @After
     public void cleanup()
     {
+        close(library);
         close(engine);
         close(mediaDriver);
         close(socket);
