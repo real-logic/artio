@@ -150,7 +150,7 @@ class SenderEndPoint implements AutoCloseable
         bytesInBuffer.close();
     }
 
-    Action onSlowMessageFragment(
+    Action onQuarantinedMessageFragment(
         final FixMessageDecoder fixMessage,
         final DirectBuffer directBuffer,
         final int offset,
@@ -176,7 +176,7 @@ class SenderEndPoint implements AutoCloseable
             buffer.position(dataOffset);
 
             final int written = channel.write(buffer);
-            bytesInBuffer.orderedIncrement();
+            bytesInBuffer.addOrdered(-written);
 
             bytesSent += written;
             if (bodyLength > bytesSent)
