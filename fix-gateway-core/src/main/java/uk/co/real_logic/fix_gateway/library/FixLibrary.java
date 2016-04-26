@@ -49,6 +49,7 @@ import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
+import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
 /**
@@ -679,8 +680,7 @@ public final class FixLibrary extends GatewayProcess
             final Object state = correlationIdToState.get(correlationId);
             if (state instanceof Long)
             {
-                // TODO: re-enable
-                /*if (status == MISSING_MESSAGES)
+                if (status == MISSING_MESSAGES)
                 {
                     // Ensure session not left in a bad state as a result of missing messages.
                     final long sessionId = (long) state;
@@ -690,7 +690,7 @@ public final class FixLibrary extends GatewayProcess
                     {
                         subscriber.startCatchup(0);
                     }
-                }*/
+                }
                 correlationIdToState.put(correlationId, status);
             }
         }

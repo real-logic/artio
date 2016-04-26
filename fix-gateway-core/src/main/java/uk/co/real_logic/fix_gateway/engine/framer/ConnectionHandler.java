@@ -61,7 +61,7 @@ public class ConnectionHandler
         this.errorHandler = errorHandler;
     }
 
-    public ReceiverEndPoint receiverEndPoint(
+    ReceiverEndPoint receiverEndPoint(
         final SocketChannel channel,
         final long connectionId,
         final long sessionId,
@@ -90,12 +90,12 @@ public class ConnectionHandler
         );
     }
 
-    public GatewayPublication inboundPublication(final ReliefValve reliefValve)
+    GatewayPublication inboundPublication(final ReliefValve reliefValve)
     {
         return inboundStreams.gatewayPublication(idleStrategy, reliefValve);
     }
 
-    public SenderEndPoint senderEndPoint(
+    SenderEndPoint senderEndPoint(
         final SocketChannel channel,
         final long connectionId,
         final int libraryId,
