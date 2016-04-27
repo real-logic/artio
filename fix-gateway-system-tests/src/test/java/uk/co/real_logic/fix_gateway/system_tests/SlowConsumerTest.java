@@ -21,6 +21,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -143,7 +144,10 @@ public class SlowConsumerTest
 
     private void bytesInBufferAtLeast(final SessionInfo sessionInfo, final long bytesInBuffer)
     {
-        assertThat(sessionInfo.bytesInBuffer(), greaterThanOrEqualTo(bytesInBuffer));
+        Timing.assertEventuallyTrue("Buffer doesn't have enough bytes in", () ->
+        {
+            assertThat(sessionInfo.bytesInBuffer(), greaterThanOrEqualTo(bytesInBuffer));
+        });
     }
 
     private TestRequestEncoder newTestRequest()
