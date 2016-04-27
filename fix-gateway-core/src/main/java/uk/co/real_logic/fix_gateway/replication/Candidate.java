@@ -85,6 +85,12 @@ public class Candidate implements Role, RaftHandler
         return controlSubscription.poll(raftSubscriber, fragmentLimit);
     }
 
+    public int readData()
+    {
+        // Candidates don't read data
+        return 0;
+    }
+
     public void closeStreams()
     {
 

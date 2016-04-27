@@ -27,20 +27,11 @@ interface Role
                checkConditions(timeInMs);
     }
 
-    default int pollCommands(final int fragmentLimit, final long timeInMs)
-    {
-        return 0;
-    }
+    int pollCommands(final int fragmentLimit, final long timeInMs);
 
-    default int readData()
-    {
-        return 0;
-    }
+    int readData();
 
-    default int checkConditions(final long timeInMs)
-    {
-        return 0;
-    }
+    int checkConditions(final long timeInMs);
 
     long commitPosition();
 

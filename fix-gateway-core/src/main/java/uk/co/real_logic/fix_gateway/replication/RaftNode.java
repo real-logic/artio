@@ -207,7 +207,8 @@ public class RaftNode
 
         if (role != currentRole)
         {
-            return commandCount + poll(fragmentLimit, timeInMs);
+            final int remainingFragments = fragmentLimit - commandCount;
+            return commandCount + poll(remainingFragments, timeInMs);
         }
 
         return commandCount +
