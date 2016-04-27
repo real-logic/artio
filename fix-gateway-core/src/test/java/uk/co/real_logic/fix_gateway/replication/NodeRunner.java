@@ -38,10 +38,10 @@ import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LO
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
 import static uk.co.real_logic.fix_gateway.replication.RaftNodeConfiguration.DEFAULT_DATA_STREAM_ID;
 
-public class NodeRunner implements AutoCloseable, Role
+class NodeRunner implements AutoCloseable
 {
-    public static final long TIMEOUT_IN_MS = 1000;
-    public static final String AERON_CHANNEL = "aeron:udp?group=224.0.1.1:40456";
+    private static final long TIMEOUT_IN_MS = 1000;
+    private static final String AERON_CHANNEL = "aeron:udp?group=224.0.1.1:40456";
 
     private final SwitchableLossGenerator lossGenerator = new SwitchableLossGenerator();
 
@@ -52,7 +52,7 @@ public class NodeRunner implements AutoCloseable, Role
 
     private long replicatedPosition = -1;
 
-    public NodeRunner(final int nodeId, final int... otherNodes)
+    NodeRunner(final int nodeId, final int... otherNodes)
     {
         this.nodeId = nodeId;
 
@@ -121,11 +121,6 @@ public class NodeRunner implements AutoCloseable, Role
         return raftNode.poll(fragmentLimit, timeInMs);
     }
 
-    public void closeStreams()
-    {
-        raftNode.closeStreams();
-    }
-
     public void dropFrames(final boolean dropFrames)
     {
         DebugLogger.log("Dropping frames to %d: %b\n", nodeId, dropFrames);
@@ -152,10 +147,5 @@ public class NodeRunner implements AutoCloseable, Role
         CloseHelper.close(aeron);
         CloseHelper.close(mediaDriver);
         cleanupDirectory(mediaDriver);
-    }
-
-    public long commitPosition()
-    {
-        return raftNode.commitPosition();
     }
 }
