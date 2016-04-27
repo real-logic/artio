@@ -64,7 +64,7 @@ public class SlowConsumerTest
     private FakeHandler handler = new FakeHandler(acceptingOtfAcceptor);
 
     private LogonEncoder logon = new LogonEncoder();
-    private ByteBuffer byteBuffer = ByteBuffer.allocate(BUFFER_CAPACITY);
+    private ByteBuffer byteBuffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(byteBuffer);
     private SocketChannel socket;
 
@@ -188,8 +188,7 @@ public class SlowConsumerTest
         try
         {
             byteBuffer.position(0).limit(1);
-            socket.write(byteBuffer);
-            return true;
+            return socket.write(byteBuffer) >= 0;
         }
         catch (final IOException e)
         {
