@@ -55,7 +55,8 @@ public class ClusterReplicationTest
             pollAll();
         }
 
-        DebugLogger.log("Leader elected");
+        final NodeRunner leader = leader();
+        DebugLogger.log("Leader elected: %d\n\n", leader.raftNode().nodeId());
     }
 
     @Test
@@ -120,7 +121,7 @@ public class ClusterReplicationTest
 
         follower.dropFrames(false);
 
-        assertBecomesFollower(follower);
+        eventuallyOneLeaderAndTwoFollowers();
     }
 
     @Test
@@ -136,10 +137,9 @@ public class ClusterReplicationTest
 
         assertBecomesFollower(followers);
 
-        hasElectedLeader();
+        eventuallyOneLeaderAndTwoFollowers();
     }
 
-    @Ignore
     @Test
     public void shouldNotReplicateMessageUntilClusterReformed()
     {
@@ -315,6 +315,34 @@ public class ClusterReplicationTest
     {
         final long leaderCount = Stream.of(nodes).filter(NodeRunner::isLeader).count();
         return leaderCount == 1;
+    }
+
+    private void eventuallyOneLeaderAndTwoFollowers()
+    {
+        while (!oneLeaderAndTwoFollowers())
+        {
+            pollAll();
+        }
+    }
+
+    private boolean oneLeaderAndTwoFollowers()
+    {
+        int leaderCount = 0;
+        int followerCount = 0;
+
+        for (final NodeRunner node: allNodes)
+        {
+            if (node.isLeader())
+            {
+                leaderCount++;
+            }
+            else if (node.raftNode().isFollower())
+            {
+                followerCount++;
+            }
+        }
+
+        return leaderCount == 1 && followerCount == 2;
     }
 
     private NodeRunner leader()

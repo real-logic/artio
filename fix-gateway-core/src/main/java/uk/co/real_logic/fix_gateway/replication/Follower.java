@@ -209,6 +209,12 @@ public class Follower implements Role, RaftHandler
     public void onRequestVote(
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long candidatePosition)
     {
+        // Ignore requests from yourself
+        if (candidateId == this.nodeId)
+        {
+            return;
+        }
+
         if (canVoteFor(candidateId) && safeToVote(leaderShipTerm, candidatePosition))
         {
             votedFor = candidateId;
@@ -216,7 +222,7 @@ public class Follower implements Role, RaftHandler
             DebugLogger.log("%d: vote for %d in %d%n", nodeId, candidateId, leaderShipTerm);
             onReplyKeepAlive(timeInMs);
         }
-        else if (candidateId != nodeId)
+        else
         {
             controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST);
             DebugLogger.log("%d: vote against %d in %d%n", nodeId, candidateId, leaderShipTerm);

@@ -242,6 +242,12 @@ public class Leader implements Role, RaftHandler
     public void onRequestVote(
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long lastAckedPosition)
     {
+        // Ignore requests from yourself
+        if (candidateId == this.nodeId)
+        {
+            return;
+        }
+
         if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= commitPosition)
         {
             controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.FOR);
