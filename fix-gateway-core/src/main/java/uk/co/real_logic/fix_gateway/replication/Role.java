@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.replication;
 /**
  * Replication role determines your actions.
  */
-public interface Role
+interface Role
 {
     default int poll(final int fragmentLimit, final long timeInMs)
     {

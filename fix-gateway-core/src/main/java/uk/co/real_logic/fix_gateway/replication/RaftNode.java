@@ -21,9 +21,9 @@ import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 /**
  * .
  */
-public class RaftNode implements Role
+public class RaftNode
 {
-    public static final int HEARTBEAT_TO_TIMEOUT_RATIO = 5;
+    private static final int HEARTBEAT_TO_TIMEOUT_RATIO = 5;
 
     private final ConsistentPublication publication;
     private final short nodeId;
@@ -37,27 +37,27 @@ public class RaftNode implements Role
 
     private abstract class NodeState
     {
-        public void transitionToLeader(final Candidate candidate, final long timeInMs)
+        void transitionToLeader(final Candidate candidate, final long timeInMs)
         {
             throw new UnsupportedOperationException();
         }
 
-        public void transitionToCandidate(final Follower follower, final long timeInMs)
+        void transitionToCandidate(final Follower follower, final long timeInMs)
         {
             throw new UnsupportedOperationException();
         }
 
-        public void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
+        void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
         {
             throw new UnsupportedOperationException();
         }
 
-        public void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
+        void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
         {
             throw new UnsupportedOperationException();
         }
 
-        public void transitionToCandidate(final Candidate candidate, final long timeInMs)
+        void transitionToCandidate(final Candidate candidate, final long timeInMs)
         {
             throw new UnsupportedOperationException();
         }
@@ -65,7 +65,7 @@ public class RaftNode implements Role
 
     private final NodeState leaderState = new NodeState()
     {
-        public void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
+        void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
         {
             DebugLogger.log("%d: L -> Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
@@ -80,7 +80,7 @@ public class RaftNode implements Role
 
     private final NodeState followerState = new NodeState()
     {
-        public void transitionToCandidate(final Follower follower, final long timeInMs)
+        void transitionToCandidate(final Follower follower, final long timeInMs)
         {
             DebugLogger.log("%d: F -> Candidate @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
@@ -92,7 +92,7 @@ public class RaftNode implements Role
 
     private final NodeState candidateState = new NodeState()
     {
-        public void transitionToLeader(final Candidate candidate, long timeInMs)
+        void transitionToLeader(final Candidate candidate, long timeInMs)
         {
             DebugLogger.log("%d: C -> Leader @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
@@ -103,7 +103,7 @@ public class RaftNode implements Role
             currentRole = leader.getsElected(timeInMs);
         }
 
-        public void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
+        void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
         {
             DebugLogger.log("%d: C -> Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
@@ -180,22 +180,22 @@ public class RaftNode implements Role
         currentRole = follower.follow(timeInMs);
     }
 
-    public void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
+    void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
     {
         candidateState.transitionToFollower(candidate, votedFor, timeInMs);
     }
 
-    public void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
+    void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
     {
         leaderState.transitionToFollower(leader, votedFor, timeInMs);
     }
 
-    public void transitionToLeader(final long timeInMs)
+    void transitionToLeader(final long timeInMs)
     {
         candidateState.transitionToLeader(candidate, timeInMs);
     }
 
-    public void transitionToCandidate(final long timeInMs)
+    void transitionToCandidate(final long timeInMs)
     {
         followerState.transitionToCandidate(follower, timeInMs);
     }

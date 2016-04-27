@@ -34,8 +34,8 @@ import static org.junit.Assert.*;
 public class ClusterReplicationTest
 {
 
-    public static final int BUFFER_SIZE = 16;
-    public static final int POSITION_AFTER_MESSAGE = BUFFER_SIZE + HEADER_LENGTH;
+    private static final int BUFFER_SIZE = 16;
+    private static final int POSITION_AFTER_MESSAGE = BUFFER_SIZE + HEADER_LENGTH;
 
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
 

@@ -37,7 +37,7 @@ public class Leader implements Role, RaftHandler
 {
     private static final UnsafeBuffer EMPTY_BUFFER = new UnsafeBuffer(new byte[0]);
 
-    public static final int NO_SESSION_ID = -1;
+    private static final int NO_SESSION_ID = -1;
 
     private final TermState termState;
     private final int ourSessionId;
