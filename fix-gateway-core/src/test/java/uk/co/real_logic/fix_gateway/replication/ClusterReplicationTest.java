@@ -230,7 +230,7 @@ public class ClusterReplicationTest
             pollAll();
         }
 
-        hasElectedLeader();
+        eventuallyOneLeaderAndTwoFollowers();
 
         assertAllNodesSeeSameLeader();
 
