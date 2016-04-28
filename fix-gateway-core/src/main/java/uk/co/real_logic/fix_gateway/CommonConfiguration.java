@@ -72,10 +72,17 @@ public class CommonConfiguration
     public static final String TIME_MESSAGES_PROPERTY = "fix.core.timing";
     /** Property name for the file to log debug messages to, default is standard output */
     public static final String DEBUG_FILE_PROPERTY = "fix.core.debug.file";
+    /** Property name for the period at which histogram intervals are polled and logged */
+    public static final String HISTOGRAM_POLL_PERIOD_IN_MS_PROPERTY = "fix.benchmark.histogram_poll_period";
+    /** Property name for the file to which histogram intervals are logged */
+    public static final String HISTOGRAM_LOGGING_FILE_PROPERTY = "fix.benchmark.histogram_file";
 
     public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 8 * 1024 * 1024;
     public static final String DEFAULT_MONITORING_FILE =
         optimalTmpDirName() + File.separator + "fix-%s" + File.separator + "monitoring";
+
+    public static final String DEFAULT_HISTOGRAM_LOGGING_FILE =
+        optimalTmpDirName() + File.separator + "fix-%s" + File.separator + "histograms";
 
     // ------------------------------------------------
     //          Static Configuration
@@ -106,6 +113,7 @@ public class CommonConfiguration
     private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
     private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
     private static final boolean ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT = true;
+    public static final long DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS = MINUTES.toMillis(1);
 
     private boolean printErrorMessages = true;
     private IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
@@ -128,6 +136,9 @@ public class CommonConfiguration
         getInteger(OUTBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_OUTBOUND_MAX_CLAIM_ATTEMPTS);
     private int defaultHeartbeatIntervalInS = DEFAULT_HEARTBEAT_INTERVAL_IN_S;
     private boolean acceptorSequenceNumbersResetUponReconnect = ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT;
+    private long histogramPollPeriodInMs =
+        Long.getLong(HISTOGRAM_POLL_PERIOD_IN_MS_PROPERTY, DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS);
+    private String histogramLoggingFile = null;
 
     /**
      * Sets the sending time window. The sending time window is the period of acceptance
@@ -173,7 +184,7 @@ public class CommonConfiguration
      * @param value true if you want them to reset
      * @return this configuration object.
      *
-     * @see SessionConfiguration#sequenceNumbersPersistent()
+     * @see uk.co.real_logic.fix_gateway.library.SessionConfiguration#sequenceNumbersPersistent()
      * @see this#sessionIdStrategy(SessionIdStrategy)
      */
     public CommonConfiguration acceptorSequenceNumbersResetUponReconnect(final boolean value)
@@ -270,16 +281,6 @@ public class CommonConfiguration
     {
         this.monitoringFile = monitoringFile;
         return this;
-    }
-
-    public boolean printErrorMessages()
-    {
-        return printErrorMessages;
-    }
-
-    public IdleStrategy errorPrinterIdleStrategy()
-    {
-        return errorPrinterIdleStrategy;
     }
 
     /**
@@ -390,9 +391,31 @@ public class CommonConfiguration
         return this;
     }
 
+    public CommonConfiguration histogramPollPeriodInMs(final long histogramPollPeriodInMs)
+    {
+        this.histogramPollPeriodInMs = histogramPollPeriodInMs;
+        return this;
+    }
+
+    public CommonConfiguration histogramLoggingFile(final String histogramLoggingFile)
+    {
+        this.histogramLoggingFile = histogramLoggingFile;
+        return this;
+    }
+
     public Aeron.Context aeronContext()
     {
         return aeronContext;
+    }
+
+    public boolean printErrorMessages()
+    {
+        return printErrorMessages;
+    }
+
+    public IdleStrategy errorPrinterIdleStrategy()
+    {
+        return errorPrinterIdleStrategy;
     }
 
     public SessionIdStrategy sessionIdStrategy()
@@ -440,6 +463,11 @@ public class CommonConfiguration
         return errorSlotSize;
     }
 
+    public long histogramPollPeriodInMs()
+    {
+        return histogramPollPeriodInMs;
+    }
+
     /**
      * If shared memory is available, use that as a temporary directory,
      * otherwise use the default temp directory
@@ -481,6 +509,11 @@ public class CommonConfiguration
         return sessionBufferSize;
     }
 
+    public String histogramLoggingFile()
+    {
+        return histogramLoggingFile;
+    }
+
     protected void conclude(final String fixSuffix)
     {
         if (aeronChannel() == null)
@@ -491,6 +524,12 @@ public class CommonConfiguration
         if (monitoringFile() == null)
         {
             monitoringFile(getProperty(MONITORING_FILE_PROPERTY, String.format(DEFAULT_MONITORING_FILE, fixSuffix)));
+        }
+
+        if (histogramLoggingFile() == null)
+        {
+            histogramLoggingFile(getProperty(
+                HISTOGRAM_LOGGING_FILE_PROPERTY, String.format(DEFAULT_HISTOGRAM_LOGGING_FILE, fixSuffix)));
         }
     }
 }

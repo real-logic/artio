@@ -23,7 +23,6 @@ import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.SystemEpochClock;
-import org.agrona.concurrent.SystemNanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
@@ -33,6 +32,8 @@ import uk.co.real_logic.fix_gateway.protocol.LibraryProtocolHandler;
 import uk.co.real_logic.fix_gateway.protocol.LibraryProtocolSubscription;
 import uk.co.real_logic.fix_gateway.protocol.SessionSubscription;
 import uk.co.real_logic.fix_gateway.session.*;
+import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
+import uk.co.real_logic.fix_gateway.timing.Timer;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
@@ -77,8 +78,8 @@ public final class FixLibrary extends GatewayProcess
     private final EpochClock clock;
     private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
-    private final Timer sessionTimer = new Timer("Session", new SystemNanoClock());
-    private final Timer receiveTimer = new Timer("Receive", new SystemNanoClock());
+    private final Timer sessionTimer;
+    private final Timer receiveTimer;
     private final LivenessDetector livenessDetector;
     private final SessionExistsHandler sessionExistsHandler;
     private final int libraryId;
@@ -102,6 +103,11 @@ public final class FixLibrary extends GatewayProcess
         configuration.conclude();
 
         init(configuration);
+
+        final LibraryTimers timers = new LibraryTimers();
+        sessionTimer = timers.sessionTimer();
+        receiveTimer = timers.receiveTimer();
+        initHistogramLogger(timers.all(), configuration);
 
         this.configuration = configuration;
         this.sessionIdStrategy = configuration.sessionIdStrategy();

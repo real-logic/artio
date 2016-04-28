@@ -34,6 +34,7 @@ import uk.co.real_logic.fix_gateway.messages.LogonStatus;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.timing.Timer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -121,6 +122,8 @@ public class FramerTest
 
         framer = new Framer(
             mockClock,
+            mock(Timer.class),
+            mock(Timer.class),
             engineConfiguration,
             mockConnectionHandler,
             outboundSubscription,

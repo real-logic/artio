@@ -27,7 +27,7 @@ import org.agrona.concurrent.*;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.ReliefValve;
-import uk.co.real_logic.fix_gateway.Timer;
+import uk.co.real_logic.fix_gateway.timing.Timer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
@@ -93,8 +93,9 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final Consumer<Image> positionSender;
 
     private final EpochClock clock;
-    private final Timer outboundTimer = new Timer("Outbound Framer", new SystemNanoClock());
-    private final Timer sendTimer = new Timer("Send", new SystemNanoClock());
+    private final Timer outboundTimer;
+    private final Timer sendTimer;
+
     private final SessionSubscription sessionSubscription = new SessionSubscription(this);
     private final FragmentHandler outboundSubscription =
         sessionSubscription.andThen(new EngineProtocolSubscription(this));
@@ -132,6 +133,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
     public Framer(
         final EpochClock clock,
+        final Timer outboundTimer,
+        final Timer sendTimer,
         final EngineConfiguration configuration,
         final ConnectionHandler connectionHandler,
         final Subscription outboundLibrarySubscription,
@@ -150,6 +153,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final AtomicCounter failedResetSessionIdSpins)
     {
         this.clock = clock;
+        this.outboundTimer = outboundTimer;
+        this.sendTimer = sendTimer;
         this.configuration = configuration;
         this.connectionHandler = connectionHandler;
         this.outboundDataSubscription = outboundLibrarySubscription;

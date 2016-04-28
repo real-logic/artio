@@ -16,9 +16,9 @@
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
 import org.HdrHistogram.Histogram;
-import uk.co.real_logic.fix_gateway.Timer;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+import uk.co.real_logic.fix_gateway.timing.HistogramLogReader;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
@@ -78,7 +78,7 @@ public final class LatencyBenchmarkClient extends AbstractBenchmarkClient
             exchangeMessage(socketChannel, testRequest, header, WARMUP_MESSAGES + i, histogram);
         }
 
-        Timer.prettyPrint("Client in Micros", histogram, 1000);
+        HistogramLogReader.prettyPrint(0, histogram, "Client in Micros", 1000);
     }
 
     private void exchangeMessage(

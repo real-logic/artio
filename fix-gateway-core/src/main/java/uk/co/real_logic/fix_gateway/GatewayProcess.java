@@ -20,12 +20,17 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.*;
 import org.agrona.concurrent.errors.DistinctErrorLog;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
+import uk.co.real_logic.fix_gateway.timing.HistogramLogWriter;
+import uk.co.real_logic.fix_gateway.timing.Timer;
 
 import java.nio.channels.ClosedByInterruptException;
+import java.util.List;
 
 import static io.aeron.driver.Configuration.ERROR_BUFFER_LENGTH_PROP_NAME;
 import static org.agrona.CloseHelper.quietClose;
 import static org.agrona.concurrent.AgentRunner.startOnThread;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 
 public class GatewayProcess implements AutoCloseable
 {
@@ -41,6 +46,7 @@ public class GatewayProcess implements AutoCloseable
     protected Aeron aeron;
     protected Streams inboundLibraryStreams;
     protected Streams outboundLibraryStreams;
+    protected AgentRunner histogramRunner;
 
     protected void init(final CommonConfiguration configuration)
     {
@@ -114,11 +120,30 @@ public class GatewayProcess implements AutoCloseable
         {
             startOnThread(errorPrinterRunner);
         }
+
+        if (TIME_MESSAGES)
+        {
+            startOnThread(histogramRunner);
+        }
+    }
+
+    protected void initHistogramLogger(final List<Timer> timers, final CommonConfiguration configuration)
+    {
+        if (TIME_MESSAGES)
+        {
+            final HistogramLogWriter logWriter = new HistogramLogWriter(
+                timers,
+                configuration.histogramLoggingFile(),
+                configuration.histogramPollPeriodInMs(),
+                errorHandler);
+            histogramRunner = new AgentRunner(backoffIdleStrategy(), errorHandler, null, logWriter);
+        }
     }
 
     public void close()
     {
         quietClose(errorPrinterRunner);
+        quietClose(histogramRunner);
         aeron.close();
         monitoringFile.close();
     }

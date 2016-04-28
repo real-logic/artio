@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.Logger;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexWriter;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.timing.EngineTimers;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,6 +50,7 @@ public final class FixEngine extends GatewayProcess
 
     private QueuedPipe<AdminCommand> adminCommands = new ManyToOneConcurrentArrayQueue<>(16);
 
+    private final EngineTimers timers = new EngineTimers();
     private final EngineConfiguration configuration;
 
     private AgentRunner framerRunner;
@@ -140,6 +142,7 @@ public final class FixEngine extends GatewayProcess
         newLogger(configuration);
         initFramer(configuration, fixCounters);
         logger.init();
+        initHistogramLogger(timers.all(), configuration);
     }
 
     private void newLogger(final EngineConfiguration configuration)
@@ -193,7 +196,10 @@ public final class FixEngine extends GatewayProcess
             configuration.sendingTimeWindowInMs());
 
         final Framer framer = new Framer(
-            clock, configuration, handler, librarySubscription,
+            clock,
+            timers.outboundTimer(),
+            timers.sendTimer(),
+            configuration, handler, librarySubscription,
             outboundLibraryStreams.subscription(), replaySubscription(),
             adminCommands, sessionIdStrategy, sessionIds,
             new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer()),
