@@ -298,7 +298,7 @@ public class ClusterReplicationTest
 
     private void poll(final NodeRunner ... nodes)
     {
-        final int fragmentLimit = 1;
+        final int fragmentLimit = 10;
         for (final NodeRunner node : nodes)
         {
             node.poll(fragmentLimit, System.currentTimeMillis());
