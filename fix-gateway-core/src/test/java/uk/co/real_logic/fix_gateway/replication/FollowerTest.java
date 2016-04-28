@@ -45,7 +45,6 @@ public class FollowerTest
     private static final int NEW_LEADERSHIP_TERM = OLD_LEADERSHIP_TERM + 1;
 
     private static final short ID = 3;
-    private static final int SESSION_ID_3 = 41;
     private static final short ID_4 = 4;
     private static final int SESSION_ID_4 = 42;
     private static final short ID_5 = 5;
@@ -310,7 +309,7 @@ public class FollowerTest
 
     private OngoingStubbing<Integer> whenControlPolled()
     {
-        return when(controlSubscription.poll(any(), anyInt()));
+        return when(controlSubscription.controlledPoll(any(), anyInt()));
     }
 
     private void dataCommitted()

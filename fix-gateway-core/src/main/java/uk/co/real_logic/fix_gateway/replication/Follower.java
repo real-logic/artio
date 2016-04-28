@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Subscription;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -33,9 +34,9 @@ import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 
 public class Follower implements Role, RaftHandler
 {
-    public static final short NO_ONE = -1;
+    static final short NO_ONE = -1;
 
-    private final RaftSubscriber raftSubscriber;
+    private final RaftSubscription raftSubscription;
 
     private final short nodeId;
     private final FragmentHandler handler;
@@ -75,14 +76,14 @@ public class Follower implements Role, RaftHandler
         this.archiveReader = archiveReader;
         this.archiver = archiver;
         replyTimeout = new RandomTimeout(replyTimeoutInMs, timeInMs);
-        raftSubscriber = new RaftSubscriber(DebugRaftHandler.wrap(nodeId, this));
+        raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));
     }
 
     public int pollCommands(final int fragmentLimit, final long timeInMs)
     {
         this.timeInMs = timeInMs;
 
-        final int read = controlSubscription.poll(raftSubscriber, fragmentLimit);
+        final int read = controlSubscription.controlledPoll(raftSubscription, fragmentLimit);
         if (read > 0)
         {
             onReplyKeepAlive(this.timeInMs);
@@ -200,33 +201,34 @@ public class Follower implements Role, RaftHandler
         replyTimeout.onKeepAlive(timeInMs);
     }
 
-    public void onMessageAcknowledgement(
+    public Action onMessageAcknowledgement(
         final long newAckedPosition, final short nodeId, final AcknowledgementStatus status)
     {
         // not interested in this message
+        return Action.CONTINUE;
     }
 
-    public void onRequestVote(
+    public Action onRequestVote(
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long candidatePosition)
     {
         // Ignore requests from yourself
-        if (candidateId == this.nodeId)
+        if (candidateId != this.nodeId)
         {
-            return;
+            if (canVoteFor(candidateId) && safeToVote(leaderShipTerm, candidatePosition))
+            {
+                votedFor = candidateId;
+                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR);
+                DebugLogger.log("%d: vote for %d in %d%n", nodeId, candidateId, leaderShipTerm);
+                onReplyKeepAlive(timeInMs);
+            }
+            else
+            {
+                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST);
+                DebugLogger.log("%d: vote against %d in %d%n", nodeId, candidateId, leaderShipTerm);
+            }
         }
 
-        if (canVoteFor(candidateId) && safeToVote(leaderShipTerm, candidatePosition))
-        {
-            votedFor = candidateId;
-            controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR);
-            DebugLogger.log("%d: vote for %d in %d%n", nodeId, candidateId, leaderShipTerm);
-            onReplyKeepAlive(timeInMs);
-        }
-        else
-        {
-            controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST);
-            DebugLogger.log("%d: vote against %d in %d%n", nodeId, candidateId, leaderShipTerm);
-        }
+        return Action.CONTINUE;
     }
 
     private boolean safeToVote(final int leaderShipTerm, final long candidatePosition)
@@ -242,13 +244,14 @@ public class Follower implements Role, RaftHandler
         return votedFor == NO_ONE || votedFor == candidateId;
     }
 
-    public void onReplyVote(
+    public Action onReplyVote(
         final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
         // not interested in this message
+        return Action.CONTINUE;
     }
 
-    public void onConcensusHeartbeat(final short leaderNodeId,
+    public Action onConcensusHeartbeat(final short leaderNodeId,
                                      final int leaderShipTerm,
                                      final long position,
                                      final int leaderSessionId)
@@ -275,9 +278,11 @@ public class Follower implements Role, RaftHandler
         {
             commitPosition = position;
         }
+
+        return Action.CONTINUE;
     }
 
-    public void onResend(final int leaderSessionId,
+    public Action onResend(final int leaderSessionId,
                          final int leaderShipTerm,
                          final long startPosition,
                          final DirectBuffer bodyBuffer,
@@ -294,6 +299,8 @@ public class Follower implements Role, RaftHandler
                 saveMessageAcknowledgement(OK);
             }
         }
+
+        return Action.CONTINUE;
     }
 
     private boolean isValidPosition(
@@ -304,7 +311,7 @@ public class Follower implements Role, RaftHandler
             && leaderShipTerm == this.leaderShipTerm;
     }
 
-    public Follower follow(final long timeInMs)
+    Follower follow(final long timeInMs)
     {
         onReplyKeepAlive(timeInMs);
         votedFor = NO_ONE;

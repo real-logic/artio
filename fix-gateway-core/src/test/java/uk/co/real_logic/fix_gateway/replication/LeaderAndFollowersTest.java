@@ -235,7 +235,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         final RaftHandler raftHandler = mock(RaftHandler.class);
 
-        final int readMessages = controlSubscription().poll(new RaftSubscriber(raftHandler), 10);
+        final int readMessages = controlSubscription().controlledPoll(new RaftSubscription(raftHandler), 10);
         assertEquals(0, readMessages);
         verify(raftHandler, never())
             .onConcensusHeartbeat(anyShort(), anyInt(), anyLong(), eq(dataPublication.sessionId()));

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -42,7 +43,7 @@ public class DebugRaftHandler implements RaftHandler
         this.delegateHandler = delegateHandler;
     }
 
-    public void onMessageAcknowledgement(
+    public Action onMessageAcknowledgement(
         final long newAckedPosition, final short nodeId, final AcknowledgementStatus status)
     {
         DebugLogger.log(
@@ -53,12 +54,12 @@ public class DebugRaftHandler implements RaftHandler
             nodeId
         );
 
-        delegateHandler.onMessageAcknowledgement(
+        return delegateHandler.onMessageAcknowledgement(
             newAckedPosition, nodeId, status
         );
     }
 
-    public void onRequestVote(
+    public Action onRequestVote(
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long lastAckedPosition)
     {
         DebugLogger.log(
@@ -70,12 +71,12 @@ public class DebugRaftHandler implements RaftHandler
             lastAckedPosition
         );
 
-        delegateHandler.onRequestVote(
+        return delegateHandler.onRequestVote(
             candidateId, candidateSessionId, leaderShipTerm, lastAckedPosition
         );
     }
 
-    public void onReplyVote(
+    public Action onReplyVote(
         final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
         DebugLogger.log(
@@ -87,12 +88,12 @@ public class DebugRaftHandler implements RaftHandler
             leaderShipTerm
         );
 
-        delegateHandler.onReplyVote(
+        return delegateHandler.onReplyVote(
             senderNodeId, candidateId, leaderShipTerm, vote
         );
     }
 
-    public void onConcensusHeartbeat(
+    public Action onConcensusHeartbeat(
         final short nodeId, final int leaderShipTerm, final long position, final int leaderSessionId)
     {
         DebugLogger.log(
@@ -104,12 +105,12 @@ public class DebugRaftHandler implements RaftHandler
             leaderSessionId
         );
 
-        delegateHandler.onConcensusHeartbeat(
+        return delegateHandler.onConcensusHeartbeat(
             nodeId, leaderShipTerm, position, leaderSessionId
         );
     }
 
-    public void onResend(
+    public Action onResend(
         final int leaderSessionId,
         final int leaderShipTerm,
         final long startPosition,
@@ -126,7 +127,7 @@ public class DebugRaftHandler implements RaftHandler
             bodyLength
         );
 
-        delegateHandler.onResend(
+        return delegateHandler.onResend(
             leaderSessionId, leaderShipTerm, startPosition, bodyBuffer, bodyOffset, bodyLength
         );
     }

@@ -15,15 +15,16 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder.ENCODED_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.ResendDecoder.bodyHeaderLength;
 
-public class RaftSubscriber implements FragmentHandler
+public class RaftSubscription implements ControlledFragmentHandler
 {
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
@@ -35,12 +36,12 @@ public class RaftSubscriber implements FragmentHandler
 
     private final RaftHandler handler;
 
-    public RaftSubscriber(final RaftHandler handler)
+    public RaftSubscription(final RaftHandler handler)
     {
         this.handler = handler;
     }
 
-    public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
+    public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);
 
@@ -53,54 +54,50 @@ public class RaftSubscriber implements FragmentHandler
             case MessageAcknowledgementDecoder.TEMPLATE_ID:
             {
                 messageAcknowledgement.wrap(buffer, offset, blockLength, version);
-                handler.onMessageAcknowledgement(
+                return handler.onMessageAcknowledgement(
                     messageAcknowledgement.newAckedPosition(),
                     messageAcknowledgement.nodeId(),
                     messageAcknowledgement.status()
                 );
-                return;
             }
 
             case RequestVoteDecoder.TEMPLATE_ID:
             {
                 requestVote.wrap(buffer, offset, blockLength, version);
-                handler.onRequestVote(
+                return handler.onRequestVote(
                     requestVote.candidateId(),
                     requestVote.candidateSessionId(),
                     requestVote.leaderShipTerm(),
                     requestVote.lastAckedPosition()
                 );
-                return;
             }
 
             case ReplyVoteDecoder.TEMPLATE_ID:
             {
                 replyVote.wrap(buffer, offset, blockLength, version);
-                handler.onReplyVote(
+                return handler.onReplyVote(
                     replyVote.senderNodeId(),
                     replyVote.candidateId(),
                     replyVote.leaderShipTerm(),
                     replyVote.vote()
                 );
-                return;
             }
 
             case ConcensusHeartbeatDecoder.TEMPLATE_ID:
             {
                 concensusHeartbeat.wrap(buffer, offset, blockLength, version);
-                handler.onConcensusHeartbeat(
+                return handler.onConcensusHeartbeat(
                     concensusHeartbeat.nodeId(),
                     concensusHeartbeat.leaderShipTerm(),
                     concensusHeartbeat.position(),
                     concensusHeartbeat.leaderSessionId());
-                return;
             }
 
             case ResendDecoder.TEMPLATE_ID:
             {
                 resend.wrap(buffer, offset, blockLength, version);
                 final int bodyOffset = offset + ENCODED_LENGTH + blockLength + bodyHeaderLength();
-                handler.onResend(
+                return handler.onResend(
                     resend.leaderSessionId(),
                     resend.leaderShipTerm(),
                     resend.startPosition(),
@@ -108,8 +105,9 @@ public class RaftSubscriber implements FragmentHandler
                     bodyOffset,
                     resend.bodyLength()
                 );
-                return;
             }
         }
+
+        return CONTINUE;
     }
 }

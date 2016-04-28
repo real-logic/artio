@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Subscription;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -28,7 +29,7 @@ import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
 
 public class Candidate implements Role, RaftHandler
 {
-    private final RaftSubscriber raftSubscriber;
+    private final RaftSubscription raftSubscription;
 
     private final TermState termState;
     private final short nodeId;
@@ -61,7 +62,7 @@ public class Candidate implements Role, RaftHandler
         this.voteTimeout = new RandomTimeout(voteTimeout, 0L);
         this.termState = termState;
         votesFor = new IntHashSet(2 * clusterSize, -1);
-        raftSubscriber = new RaftSubscriber(DebugRaftHandler.wrap(nodeId, this));
+        raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));
     }
 
     public int checkConditions(final long timeInMs)
@@ -82,7 +83,7 @@ public class Candidate implements Role, RaftHandler
     {
         this.timeInMs = timeInMs;
 
-        return controlSubscription.poll(raftSubscriber, fragmentLimit);
+        return controlSubscription.controlledPoll(raftSubscription, fragmentLimit);
     }
 
     public int readData()
@@ -96,13 +97,13 @@ public class Candidate implements Role, RaftHandler
 
     }
 
-    public void onMessageAcknowledgement(
+    public Action onMessageAcknowledgement(
         final long newAckedPosition, final short nodeId, final AcknowledgementStatus status)
     {
-
+        return Action.CONTINUE;
     }
 
-    public void onRequestVote(
+    public Action onRequestVote(
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, long lastAckedPosition)
     {
         if (leaderShipTerm > this.leaderShipTerm && lastAckedPosition >= this.position)
@@ -110,11 +111,15 @@ public class Candidate implements Role, RaftHandler
             replyVote(candidateId, leaderShipTerm, FOR);
 
             transitionToFollower(leaderShipTerm, candidateId, this.position, candidateSessionId);
+
+            return Action.BREAK;
         }
         else
         {
             replyVote(candidateId, leaderShipTerm, AGAINST);
         }
+
+        return Action.CONTINUE;
     }
 
     private long replyVote(final short candidateId, final int leaderShipTerm, final Vote vote)
@@ -122,7 +127,7 @@ public class Candidate implements Role, RaftHandler
         return controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, vote);
     }
 
-    public void onReplyVote(
+    public Action onReplyVote(
         final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
         DebugLogger.log("%d: Received vote from %d about %d in %d%n", nodeId, senderNodeId, candidateId, leaderShipTerm);
@@ -138,8 +143,12 @@ public class Candidate implements Role, RaftHandler
                     .leaderSessionId(sessionId);
 
                 raftNode.transitionToLeader(timeInMs);
+
+                return Action.BREAK;
             }
         }
+
+        return Action.CONTINUE;
     }
 
     private boolean countVote(final short senderNodeId)
@@ -152,20 +161,25 @@ public class Candidate implements Role, RaftHandler
         return candidateId == nodeId && leaderShipTerm == this.leaderShipTerm && vote == FOR;
     }
 
-    public void onConcensusHeartbeat(short nodeId,
-                                     final int leaderShipTerm,
-                                     final long position,
-                                     final int dataSessionId)
+    public Action onConcensusHeartbeat(
+        short nodeId,
+        final int leaderShipTerm,
+        final long position,
+        final int dataSessionId)
     {
         if (nodeId != this.nodeId)
         {
             final boolean hasHigherPosition = position >= this.position;
+            DebugLogger.log("%d: New Leader %s%n", this.nodeId, hasHigherPosition);
             if (hasHigherPosition)
             {
                 transitionToFollower(leaderShipTerm, NO_ONE, position, dataSessionId);
+
+                return Action.BREAK;
             }
-            DebugLogger.log("%d: New Leader %s%n", this.nodeId, hasHigherPosition);
         }
+
+        return Action.CONTINUE;
     }
 
     private void transitionToFollower(final int leaderShipTerm,
@@ -182,14 +196,17 @@ public class Candidate implements Role, RaftHandler
         raftNode.transitionToFollower(this, votedFor, timeInMs);
     }
 
-    public void onResend(final int leaderSessionId,
-                         final int leaderShipTerm,
-                         final long startPosition,
-                         final DirectBuffer bodyBuffer,
-                         final int bodyOffset,
-                         final int bodyLength)
+    public Action onResend(
+        final int leaderSessionId,
+        final int leaderShipTerm,
+        final long startPosition,
+        final DirectBuffer bodyBuffer,
+        final int bodyOffset,
+        final int bodyLength)
     {
         // Ignore this message
+
+        return Action.CONTINUE;
     }
 
     public Candidate startNewElection(final long timeInMs)

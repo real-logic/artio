@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BlockHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
@@ -43,7 +44,7 @@ public class Leader implements Role, RaftHandler
     private final int ourSessionId;
     private final short nodeId;
     private final AcknowledgementStrategy acknowledgementStrategy;
-    private final RaftSubscriber raftSubscriber;
+    private final RaftSubscription raftSubscription;
     private final RaftNode raftNode;
     private final FragmentHandler handler;
     private final long heartbeatIntervalInMs;
@@ -104,7 +105,7 @@ public class Leader implements Role, RaftHandler
 
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
         updateHeartbeatInterval(timeInMs);
-        raftSubscriber = new RaftSubscriber(DebugRaftHandler.wrap(nodeId, this));
+        raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));
     }
 
     public int readData()
@@ -176,8 +177,8 @@ public class Leader implements Role, RaftHandler
     {
         this.timeInMs = timeInMs;
 
-        return acknowledgementSubscription.poll(raftSubscriber, fragmentLimit) +
-               controlSubscription.poll(raftSubscriber, fragmentLimit);
+        return acknowledgementSubscription.controlledPoll(raftSubscription, fragmentLimit) +
+               controlSubscription.controlledPoll(raftSubscription, fragmentLimit);
     }
 
     public void closeStreams()
@@ -197,7 +198,7 @@ public class Leader implements Role, RaftHandler
         this.nextHeartbeatTimeInMs = timeInMs + heartbeatIntervalInMs;
     }
 
-    public void onMessageAcknowledgement(
+    public Action onMessageAcknowledgement(
         final long position, final short nodeId, final AcknowledgementStatus status)
     {
         if (status == OK)
@@ -222,6 +223,8 @@ public class Leader implements Role, RaftHandler
                 //saveResend(EMPTY_BUFFER, 0, 0);
             }
         }
+
+        return Action.CONTINUE;
     }
 
     private boolean validateReader()
@@ -239,46 +242,50 @@ public class Leader implements Role, RaftHandler
         return true;
     }
 
-    public void onRequestVote(
+    public Action onRequestVote(
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long lastAckedPosition)
     {
         // Ignore requests from yourself
-        if (candidateId == this.nodeId)
+        if (candidateId != this.nodeId)
         {
-            return;
+            if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= commitPosition)
+            {
+                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.FOR);
+
+                termState.noLeader();
+
+                transitionToFollower(leaderShipTerm, candidateId);
+                return Action.BREAK;
+            }
+            else
+            {
+                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.AGAINST);
+            }
         }
 
-        if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= commitPosition)
-        {
-            controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.FOR);
-
-            termState.noLeader();
-
-            transitionToFollower(leaderShipTerm, candidateId);
-        }
-        else
-        {
-            controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.AGAINST);
-        }
+        return Action.CONTINUE;
     }
 
-    public void onReplyVote(
+    public Action onReplyVote(
         final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
     {
         // Ignore this message
+        return Action.CONTINUE;
     }
 
-    public void onResend(final int leaderSessionId,
-                         final int leaderShipTerm,
-                         final long startPosition,
-                         final DirectBuffer bodyBuffer,
-                         final int bodyOffset,
-                         final int bodyLength)
+    public Action onResend(
+        final int leaderSessionId,
+        final int leaderShipTerm,
+        final long startPosition,
+        final DirectBuffer bodyBuffer,
+        final int bodyOffset,
+        final int bodyLength)
     {
         // Ignore this message
+        return Action.CONTINUE;
     }
 
-    public void onConcensusHeartbeat(final short nodeId,
+    public Action onConcensusHeartbeat(final short nodeId,
                                      final int leaderShipTerm,
                                      final long position,
                                      final int leaderSessionId)
@@ -288,7 +295,11 @@ public class Leader implements Role, RaftHandler
             termState.leaderSessionId(leaderSessionId);
 
             transitionToFollower(leaderShipTerm, Follower.NO_ONE);
+
+            return Action.BREAK;
         }
+
+        return Action.CONTINUE;
     }
 
     private void transitionToFollower(final int leaderShipTerm, final short votedFor)

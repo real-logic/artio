@@ -15,25 +15,26 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
 public interface RaftHandler
 {
-    void onMessageAcknowledgement(
+    Action onMessageAcknowledgement(
         final long newAckedPosition, final short nodeId, final AcknowledgementStatus status);
 
-    void onRequestVote(
+    Action onRequestVote(
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long lastAckedPosition);
 
-    void onReplyVote(
+    Action onReplyVote(
         final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote);
 
-    void onConcensusHeartbeat(
+    Action onConcensusHeartbeat(
         final short nodeId, final int leaderShipTerm, final long position, final int leaderSessionId);
 
-    void onResend(
+    Action onResend(
         final int leaderSessionId,
         final int leaderShipTerm,
         final long startPosition,

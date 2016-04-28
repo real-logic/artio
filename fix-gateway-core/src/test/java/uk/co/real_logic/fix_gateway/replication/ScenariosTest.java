@@ -403,7 +403,7 @@ public class ScenariosTest
         namedStimulus(
             (st) ->
             {
-                when(st.controlSubscription.poll(any(), anyInt())).thenAnswer(
+                when(st.controlSubscription.controlledPoll(any(), anyInt())).thenAnswer(
                     (inv) ->
                     {
                         st.raftHandler.onConcensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
