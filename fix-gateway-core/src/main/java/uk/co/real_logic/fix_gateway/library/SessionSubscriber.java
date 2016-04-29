@@ -16,14 +16,12 @@
 package uk.co.real_logic.fix_gateway.library;
 
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.timing.Timer;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.session.AcceptorSession;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
-
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
+import uk.co.real_logic.fix_gateway.timing.Timer;
 
 class SessionSubscriber implements AutoCloseable
 {
@@ -58,11 +56,7 @@ class SessionSubscriber implements AutoCloseable
                           final long timestamp,
                           final long position)
     {
-        long now = 0;
-        if (TIME_MESSAGES)
-        {
-            now = receiveTimer.recordSince(timestamp);
-        }
+        final long now = receiveTimer.recordSince(timestamp);
 
         if (remainingCatchupCount == 0)
         {
@@ -79,10 +73,7 @@ class SessionSubscriber implements AutoCloseable
                 buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
         }
 
-        if (TIME_MESSAGES)
-        {
-            sessionTimer.recordSince(now);
-        }
+        sessionTimer.recordSince(now);
     }
 
     public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)

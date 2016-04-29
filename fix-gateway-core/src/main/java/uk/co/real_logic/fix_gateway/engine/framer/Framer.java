@@ -23,11 +23,13 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.collections.Int2ObjectHashMap;
-import org.agrona.concurrent.*;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.QueuedPipe;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.ReliefValve;
-import uk.co.real_logic.fix_gateway.timing.Timer;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
@@ -41,6 +43,7 @@ import uk.co.real_logic.fix_gateway.protocol.SessionSubscription;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.timing.Timer;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,7 +60,6 @@ import java.util.function.Consumer;
 import static java.net.StandardSocketOptions.*;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
@@ -436,18 +438,11 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final long timestamp,
         final long position)
     {
-        long now = 0;
-        if (TIME_MESSAGES)
-        {
-            now = outboundTimer.recordSince(timestamp);
-        }
+        final long now = outboundTimer.recordSince(timestamp);
 
         senderEndPoints.onMessage(connectionId, buffer, offset, length);
 
-        if (TIME_MESSAGES)
-        {
-            sendTimer.recordSince(now);
-        }
+        sendTimer.recordSince(now);
     }
 
     private GatewaySession setupConnection(

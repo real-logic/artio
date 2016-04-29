@@ -21,6 +21,8 @@ import org.HdrHistogram.SingleWriterRecorder;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
+
 public class Timer
 {
     public static final int NUMBER_OF_SIGNIFICANT_VALUE_DIGITS = 3;
@@ -42,10 +44,20 @@ public class Timer
 
     public long recordSince(final long timestamp)
     {
-        final long time = System.nanoTime();
-        final long duration = time - timestamp;
+        if (TIME_MESSAGES)
+        {
+            final long time = System.nanoTime();
+            final long duration = time - timestamp;
+            recordValue(duration);
+            return time;
+        }
+
+        return 0;
+    }
+
+    void recordValue(final long duration)
+    {
         recorder.recordValue(duration);
-        return time;
     }
 
     public void writeName(final ByteBuffer buffer)

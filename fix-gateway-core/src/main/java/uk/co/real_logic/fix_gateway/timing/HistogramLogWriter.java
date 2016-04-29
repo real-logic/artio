@@ -67,6 +67,7 @@ public class HistogramLogWriter implements Agent
     {
         buffer.flip();
         logFile.write(buffer);
+        logFile.force(true);
     }
 
     private FileChannel open(final String logFile)
