@@ -216,11 +216,6 @@ public class RaftNode
                role.checkConditions(timeInMs);
     }
 
-    public void closeStreams()
-    {
-        currentRole.closeStreams();
-    }
-
     public boolean isLeader()
     {
         return currentRole == leader;
