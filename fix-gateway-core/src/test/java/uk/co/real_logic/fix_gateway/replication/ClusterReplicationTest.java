@@ -104,6 +104,7 @@ public class ClusterReplicationTest
     @Test
     public void shouldReformClusterAfterPartialLeaderNetsplit()
     {
+        // NB: under other partial failure, the leader would never stop being a leader
         leaderNetSplitScenario(false, true);
     }
 
@@ -116,7 +117,7 @@ public class ClusterReplicationTest
 
         assertElectsNewLeader(followers);
 
-        leader.dropFrames(false, false);
+        leader.dropFrames(false);
 
         assertBecomesFollower(leader);
     }
@@ -124,9 +125,21 @@ public class ClusterReplicationTest
     @Test
     public void shouldRejoinClusterAfterFollowerNetsplit()
     {
+        // NB: under other partial failure, the follower would never stop being a follower
+        followerNetSplitScenario(true, true);
+    }
+
+    @Test
+    public void shouldRejoinClusterAfterPartialFollowerNetsplit()
+    {
+        followerNetSplitScenario(true, false);
+    }
+
+    private void followerNetSplitScenario(final boolean dropInboundFrames, final boolean dropOutboundFrames)
+    {
         final NodeRunner follower = aFollower();
 
-        follower.dropFrames(true);
+        follower.dropFrames(dropInboundFrames, dropOutboundFrames);
 
         assertBecomesCandidate(follower);
 
@@ -138,9 +151,20 @@ public class ClusterReplicationTest
     @Test
     public void shouldReformClusterAfterFollowerNetsplit()
     {
+        clusterNetSplitScenario(true, true);
+    }
+
+    @Test
+    public void shouldReformClusterAfterPartialFollowerNetsplit()
+    {
+        clusterNetSplitScenario(true, false);
+    }
+
+    private void clusterNetSplitScenario(final boolean dropInboundFrames, final boolean dropOutboundFrames)
+    {
         final NodeRunner[] followers = followers();
 
-        nodes().forEach(nodeRunner -> nodeRunner.dropFrames(true));
+        nodes().forEach(nodeRunner -> nodeRunner.dropFrames(dropInboundFrames, dropOutboundFrames));
 
         assertBecomesCandidate(followers);
 
@@ -234,7 +258,6 @@ public class ClusterReplicationTest
 
     private void checkClusterStable()
     {
-        // TODO: loop until all nodes agree upon the same leader
         for (int i = 0; i < 100; i++)
         {
             pollAll();
