@@ -20,7 +20,7 @@ import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.INITIATOR_ID;
+import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.INITIATOR_ID;
 
 public final class RepeatConnectionBenchmarkClient extends AbstractBenchmarkClient
 {

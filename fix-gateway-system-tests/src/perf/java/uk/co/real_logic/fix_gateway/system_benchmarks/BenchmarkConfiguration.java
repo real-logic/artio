@@ -22,7 +22,7 @@ import org.agrona.concurrent.YieldingIdleStrategy;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 
-public final class Configuration
+public final class BenchmarkConfiguration
 {
     public static final int PORT = Integer.getInteger("fix.benchmark.port", 9999);
     public static final String AERON_CHANNEL = System.getProperty("fix.benchmark.aeron_channel", IPC_CHANNEL);
@@ -32,6 +32,8 @@ public final class Configuration
     public static final boolean LOG_INBOUND_MESSAGES = Boolean.getBoolean("fix.benchmark.log_in");
     public static final boolean LOG_OUTBOUND_MESSAGES = Boolean.getBoolean("fix.benchmark.log_out");
     public static final IdleStrategy IDLE_STRATEGY = idleStrategy("fix.benchmark.engine_idle");
+    public static final int WARMUP_MESSAGES = Integer.getInteger("fix.benchmark.warmup", 10_000);
+    public static final int MESSAGES_EXCHANGED = Integer.getInteger("fix.benchmark.messages", 100_000);
 
     private static IdleStrategy idleStrategy(final String propertyName)
     {

@@ -1,6 +1,5 @@
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
-import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
@@ -17,7 +16,7 @@ import java.util.concurrent.locks.LockSupport;
 import static java.net.StandardSocketOptions.SO_RCVBUF;
 import static java.net.StandardSocketOptions.TCP_NODELAY;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.*;
+import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.*;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
 public abstract class AbstractBenchmarkClient
@@ -125,8 +124,8 @@ public abstract class AbstractBenchmarkClient
     protected static void printTimes(final long startTime)
     {
         final long duration = System.currentTimeMillis() - startTime;
-        final double rate = (double) CommonConfiguration.MESSAGES_EXCHANGED / duration;
-        System.out.printf("%d messages in %d ms\n", CommonConfiguration.MESSAGES_EXCHANGED, duration);
+        final double rate = (double) MESSAGES_EXCHANGED / duration;
+        System.out.printf("%d messages in %d ms\n", MESSAGES_EXCHANGED, duration);
         System.out.printf("%G messages / ms\n", rate);
         System.out.printf("%G messages / s\n", rate * 1000.0);
     }

@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
-import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.TYPE;
+import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.TYPE;
 
 public final class FixBenchmarkClient
 {

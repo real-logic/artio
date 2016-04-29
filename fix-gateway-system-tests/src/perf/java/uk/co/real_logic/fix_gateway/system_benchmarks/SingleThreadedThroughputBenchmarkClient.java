@@ -22,7 +22,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.MESSAGES_EXCHANGED;
+import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.MESSAGES_EXCHANGED;
 
 public final class SingleThreadedThroughputBenchmarkClient extends AbstractBenchmarkClient
 {

@@ -23,8 +23,8 @@ import uk.co.real_logic.fix_gateway.timing.HistogramLogReader;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.MESSAGES_EXCHANGED;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.WARMUP_MESSAGES;
+import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.MESSAGES_EXCHANGED;
+import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.WARMUP_MESSAGES;
 
 public final class LatencyBenchmarkClient extends AbstractBenchmarkClient
 {

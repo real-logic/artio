@@ -32,7 +32,7 @@ import uk.co.real_logic.fix_gateway.validation.TargetCompIdValidationStrategy;
 import java.io.File;
 import java.util.Arrays;
 
-import static uk.co.real_logic.fix_gateway.system_benchmarks.Configuration.*;
+import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.*;
 
 public final class FixBenchmarkServer
 {
@@ -75,7 +75,7 @@ public final class FixBenchmarkServer
         final EngineConfiguration configuration = new EngineConfiguration();
         setupAuthentication(configuration);
         return configuration
-            .bindTo("localhost", Configuration.PORT)
+            .bindTo("localhost", BenchmarkConfiguration.PORT)
             .aeronChannel(AERON_CHANNEL)
             .logFileDir(acceptorLogs)
             .logInboundMessages(LOG_INBOUND_MESSAGES)
