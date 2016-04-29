@@ -135,7 +135,8 @@ public class GatewayProcess implements AutoCloseable
                 timers,
                 configuration.histogramLoggingFile(),
                 configuration.histogramPollPeriodInMs(),
-                errorHandler);
+                errorHandler,
+                new SystemEpochClock());
             histogramRunner = new AgentRunner(backoffIdleStrategy(), errorHandler, null, logWriter);
         }
     }

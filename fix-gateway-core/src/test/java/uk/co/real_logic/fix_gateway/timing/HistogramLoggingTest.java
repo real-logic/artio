@@ -15,25 +15,35 @@
  */
 package uk.co.real_logic.fix_gateway.timing;
 
+import org.HdrHistogram.Histogram;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.EpochClock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.*;
 
 public class HistogramLoggingTest
 {
+    private static final String NAME = "abc";
 
+    private EpochClock clock = mock(EpochClock.class);
     private HistogramLogHandler logHandler = mock(HistogramLogHandler.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private ArgumentCaptor<Histogram> histogramCaptor = ArgumentCaptor.forClass(Histogram.class);
+
     private File file;
     private Timer timer;
     private HistogramLogWriter writer;
@@ -42,18 +52,66 @@ public class HistogramLoggingTest
     @Before
     public void setUp() throws Exception
     {
+        when(clock.time()).thenReturn(110L, 220L, 330L, 440L);
+
         file = File.createTempFile("histogram", "tmp");
-        timer = new Timer("abc", 1);
+        timer = new Timer(NAME, 1);
         writer = new HistogramLogWriter(
             Arrays.asList(timer),
             file.getAbsolutePath(),
             100,
-            errorHandler);
+            errorHandler,
+            clock);
         reader = new HistogramLogReader(file);
     }
 
     @Test
     public void shouldWriteAndReadAHistogram() throws Exception
+    {
+        recordValues();
+
+        writeHistogram();
+
+        readsHistogram(6);
+
+        readsNothing();
+    }
+
+    @Test
+    public void shouldWriteAndReadMultipleHistograms() throws Exception
+    {
+        shouldWriteAndReadAHistogram();
+
+        writeHistogram();
+
+        readsHistogram(0);
+
+        recordValues();
+
+        writeHistogram();
+
+        readsHistogram(6);
+    }
+
+    private void writeHistogram() throws Exception
+    {
+        assertThat(writer.doWork(), greaterThan(0));
+    }
+
+    private void readsNothing() throws IOException
+    {
+        assertEquals("Tried to read more data again after first read", 0, reader.read(logHandler));
+    }
+
+    private void readsHistogram(final int expectedCount) throws IOException
+    {
+        reset(logHandler);
+        assertEquals(1, reader.read(logHandler));
+        verify(logHandler, times(1)).onHistogram(anyLong(), eq(NAME), histogramCaptor.capture());
+        assertEquals("Histogram returns unexpected count", expectedCount, histogram().getTotalCount());
+    }
+
+    private void recordValues()
     {
         timer.recordValue(20);
         timer.recordValue(50);
@@ -61,12 +119,11 @@ public class HistogramLoggingTest
         timer.recordValue(52);
         timer.recordValue(200);
         timer.recordValue(5);
+    }
 
-        assertThat(writer.doWork(), greaterThan(0));
-
-        assertEquals(1, reader.read(logHandler));
-
-        assertEquals("Tried to read more data again after first read", 0, reader.read(logHandler));
+    private Histogram histogram()
+    {
+        return histogramCaptor.getValue();
     }
 
     @After

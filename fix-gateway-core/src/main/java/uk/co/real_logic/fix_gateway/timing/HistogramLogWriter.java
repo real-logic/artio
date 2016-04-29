@@ -19,6 +19,7 @@ import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.EpochClock;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -37,6 +38,7 @@ public class HistogramLogWriter implements Agent
     private final FileChannel logFile;
     private final long intervalInMs;
     private final ErrorHandler errorHandler;
+    private final EpochClock milliClock;
     private final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
 
     private long nextWriteTimeInMs = 0;
@@ -45,11 +47,13 @@ public class HistogramLogWriter implements Agent
         final List<Timer> timers,
         final String logFile,
         final long intervalInMs,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final EpochClock milliClock)
     {
         this.timers = timers;
         this.intervalInMs = intervalInMs;
         this.errorHandler = errorHandler;
+        this.milliClock = milliClock;
         this.logFile = open(logFile);
         buffer.putInt(timers.size());
         timers.forEach(timer -> timer.writeName(buffer));
@@ -85,7 +89,7 @@ public class HistogramLogWriter implements Agent
 
     public int doWork() throws Exception
     {
-        final long currentTimeInMs = System.currentTimeMillis();
+        final long currentTimeInMs = milliClock.time();
 
         if (currentTimeInMs > nextWriteTimeInMs)
         {
