@@ -142,7 +142,7 @@ public final class FixEngine extends GatewayProcess
         newLogger(configuration);
         initFramer(configuration, fixCounters);
         logger.init();
-        initHistogramLogger(timers.all(), configuration);
+        initMonitoringAgent(timers.all(), configuration);
     }
 
     private void newLogger(final EngineConfiguration configuration)

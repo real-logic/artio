@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.timing.HistogramLogWriter;
 import uk.co.real_logic.fix_gateway.timing.Timer;
 
 import java.nio.channels.ClosedByInterruptException;
+import java.util.ArrayList;
 import java.util.List;
 
 import static io.aeron.driver.Configuration.ERROR_BUFFER_LENGTH_PROP_NAME;
@@ -40,18 +41,16 @@ public class GatewayProcess implements AutoCloseable
 
     protected MonitoringFile monitoringFile;
     protected FixCounters fixCounters;
-    protected AgentRunner errorPrinterRunner;
     protected ErrorHandler errorHandler;
     protected DistinctErrorLog distinctErrorLog;
     protected Aeron aeron;
     protected Streams inboundLibraryStreams;
     protected Streams outboundLibraryStreams;
-    protected AgentRunner histogramRunner;
+    protected AgentRunner monitoringRunner;
 
     protected void init(final CommonConfiguration configuration)
     {
         initMonitoring(configuration);
-        initErrorPrinter(configuration);
         initAeron(configuration);
         initStreams(configuration);
     }
@@ -70,16 +69,6 @@ public class GatewayProcess implements AutoCloseable
                 throwable.printStackTrace();
             }
         };
-    }
-
-    private void initErrorPrinter(final CommonConfiguration configuration)
-    {
-        if (configuration.printErrorMessages())
-        {
-            final ErrorPrinter printer = new ErrorPrinter(monitoringFile.errorBuffer());
-            errorPrinterRunner = new AgentRunner(
-                configuration.errorPrinterIdleStrategy(), Throwable::printStackTrace, null, printer);
-        }
     }
 
     private void initStreams(final CommonConfiguration configuration)
@@ -116,35 +105,40 @@ public class GatewayProcess implements AutoCloseable
 
     protected void start()
     {
-        if (errorPrinterRunner != null)
+        if (monitoringRunner != null)
         {
-            startOnThread(errorPrinterRunner);
-        }
-
-        if (TIME_MESSAGES)
-        {
-            startOnThread(histogramRunner);
+            startOnThread(monitoringRunner);
         }
     }
 
-    protected void initHistogramLogger(final List<Timer> timers, final CommonConfiguration configuration)
+    public void initMonitoringAgent(final List<Timer> timers, final CommonConfiguration configuration)
     {
+        final List<Agent> agents = new ArrayList<>();
         if (TIME_MESSAGES)
         {
-            final HistogramLogWriter logWriter = new HistogramLogWriter(
+            agents.add(new HistogramLogWriter(
                 timers,
                 configuration.histogramLoggingFile(),
                 configuration.histogramPollPeriodInMs(),
                 errorHandler,
-                new SystemEpochClock());
-            histogramRunner = new AgentRunner(backoffIdleStrategy(), errorHandler, null, logWriter);
+                new SystemEpochClock()));
+        }
+
+        if (configuration.printErrorMessages())
+        {
+            agents.add(new ErrorPrinter(monitoringFile.errorBuffer()));
+        }
+
+        if (!agents.isEmpty())
+        {
+            monitoringRunner = new AgentRunner(backoffIdleStrategy(), errorHandler, null,
+                new CompositeAgent(agents));
         }
     }
 
     public void close()
     {
-        quietClose(errorPrinterRunner);
-        quietClose(histogramRunner);
+        quietClose(monitoringRunner);
         aeron.close();
         monitoringFile.close();
     }

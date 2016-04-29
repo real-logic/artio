@@ -107,7 +107,7 @@ public final class FixLibrary extends GatewayProcess
         final LibraryTimers timers = new LibraryTimers();
         sessionTimer = timers.sessionTimer();
         receiveTimer = timers.receiveTimer();
-        initHistogramLogger(timers.all(), configuration);
+        initMonitoringAgent(timers.all(), configuration);
 
         this.configuration = configuration;
         this.sessionIdStrategy = configuration.sessionIdStrategy();
