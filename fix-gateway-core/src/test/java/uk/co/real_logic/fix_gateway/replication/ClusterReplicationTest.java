@@ -98,14 +98,25 @@ public class ClusterReplicationTest
     @Test
     public void shouldReformClusterAfterLeaderNetsplit()
     {
+        leaderNetSplitScenario(true, true);
+    }
+
+    @Test
+    public void shouldReformClusterAfterPartialLeaderNetsplit()
+    {
+        leaderNetSplitScenario(false, true);
+    }
+
+    private void leaderNetSplitScenario(final boolean dropInboundFrames, final boolean dropOutboundFrames)
+    {
         final NodeRunner leader = leader();
         final NodeRunner[] followers = followers();
 
-        leader.dropFrames(true);
+        leader.dropFrames(dropInboundFrames, dropOutboundFrames);
 
         assertElectsNewLeader(followers);
 
-        leader.dropFrames(false);
+        leader.dropFrames(false, false);
 
         assertBecomesFollower(leader);
     }
@@ -183,7 +194,6 @@ public class ClusterReplicationTest
         final NodeRunner... nodes)
     {
         final RaftNode[] raftNodes = getRaftNodes(nodes);
-        assertFalse(allMatch(raftNodes, predicate));
         while (!allMatch(raftNodes, predicate))
         {
             poll(toPoll);

@@ -43,7 +43,8 @@ class NodeRunner implements AutoCloseable
     private static final long TIMEOUT_IN_MS = 1000;
     private static final String AERON_CHANNEL = "aeron:udp?group=224.0.1.1:40456";
 
-    private final SwitchableLossGenerator lossGenerator = new SwitchableLossGenerator();
+    private final SwitchableLossGenerator outboundLossGenerator = new SwitchableLossGenerator();
+    private final SwitchableLossGenerator inboundLossGenerator = new SwitchableLossGenerator();
 
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
@@ -107,13 +108,13 @@ class NodeRunner implements AutoCloseable
     private SendChannelEndpointSupplier newSendChannelEndpointSupplier()
     {
         return (udpChannel, context) ->
-            new DebugSendChannelEndpoint(udpChannel, context, lossGenerator, lossGenerator);
+            new DebugSendChannelEndpoint(udpChannel, context, outboundLossGenerator, outboundLossGenerator);
     }
 
     private ReceiveChannelEndpointSupplier newReceiveChannelEndpointSupplier()
     {
         return (udpChannel, dispatcher, context) ->
-            new DebugReceiveChannelEndpoint(udpChannel, dispatcher, context, lossGenerator, lossGenerator);
+            new DebugReceiveChannelEndpoint(udpChannel, dispatcher, context, inboundLossGenerator, inboundLossGenerator);
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)
@@ -123,8 +124,15 @@ class NodeRunner implements AutoCloseable
 
     public void dropFrames(final boolean dropFrames)
     {
-        DebugLogger.log("Dropping frames to %d: %b\n", nodeId, dropFrames);
-        lossGenerator.dropFrames(dropFrames);
+        dropFrames(dropFrames, dropFrames);
+    }
+
+    public void dropFrames(final boolean dropInboundFrames, final boolean dropOutboundFrames)
+    {
+        DebugLogger.log("Dropping frames to %d: %b\n", nodeId, dropInboundFrames);
+        DebugLogger.log("Dropping frames from %d: %b\n", nodeId, dropOutboundFrames);
+        inboundLossGenerator.dropFrames(dropInboundFrames);
+        outboundLossGenerator.dropFrames(dropOutboundFrames);
     }
 
     public boolean isLeader()
