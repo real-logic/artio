@@ -35,6 +35,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.List;
@@ -55,7 +56,7 @@ public class SlowConsumerTest
     private static final int BUFFER_CAPACITY = 8 * 1024;
 
     @Rule
-    public Timeout timeout = Timeout.seconds(5);
+    public Timeout timeout = Timeout.seconds(10);
 
     private int port = unusedPort();
     private MediaDriver mediaDriver;
@@ -114,7 +115,10 @@ public class SlowConsumerTest
         // Get into a quarantined state
         while (sessionInfo.bytesInBuffer() == 0)
         {
-            session.send(testRequest);
+            for (int i = 0; i < 10; i++)
+            {
+                session.send(testRequest);
+            }
 
             library.poll(1);
 

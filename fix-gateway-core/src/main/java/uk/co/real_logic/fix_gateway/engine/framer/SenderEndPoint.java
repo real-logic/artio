@@ -200,6 +200,6 @@ class SenderEndPoint implements AutoCloseable
 
     long bytesInBuffer()
     {
-        return bytesInBuffer.getWeak();
+        return bytesInBuffer.get();
     }
 }
