@@ -44,6 +44,7 @@ public class MessageDumperTest
             .lastSentSequenceNumber(3)
             .lastReceivedSequenceNumber(2)
             .sessionState(ACTIVE)
+            .heartbeatIntervalInS(4)
             .address("www.example.com:8000");
 
         final String result = dumper.toString(
@@ -58,6 +59,7 @@ public class MessageDumperTest
             "    lastSentSequenceNumber: 3,\n" +
             "    lastReceivedSequenceNumber: 2,\n" +
             "    sessionState: 'ACTIVE',\n" +
+            "    heartbeatIntervalInS: 4,\n" +
             "    address: 'www.example.com:8000'\n" +
             "}",
             result
