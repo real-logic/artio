@@ -333,7 +333,8 @@ public class FramerTest
             eq(INITIATOR),
             anyInt(),
             anyInt(),
-            any());
+            any(),
+            anyInt());
         verify(mockGatewayPublication).saveLogon(
             eq(LIBRARY_ID), eq(connectionId.getValue()), anyLong(),
             anyInt(), anyInt(),

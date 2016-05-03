@@ -29,7 +29,7 @@ public interface LibraryProtocolHandler
         final DirectBuffer buffer,
         final int addressOffset,
         final int addressLength,
-        final SessionState state);
+        final SessionState state, final int heartbeatIntervalInS);
 
     void onLogon(
         final int libraryId,

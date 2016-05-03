@@ -403,7 +403,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             session.onLogon(sessionId, sessionKey, username, password, heartbeatIntervalInS);
             inboundPublication.saveManageConnection(connectionId, address.toString(), libraryId, INITIATOR,
-                lastSentSequenceNumber, lastReceivedSequenceNumber, CONNECTED);
+                lastSentSequenceNumber, lastReceivedSequenceNumber, CONNECTED, heartbeatIntervalInS);
             inboundPublication.saveLogon(
                 libraryId, connectionId, sessionId,
                 lastSentSequenceNumber, lastReceivedSequenceNumber,
@@ -617,7 +617,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             gatewaySession.connectionType(),
             lastSentSeqNum,
             lastRecvSeqNum,
-            sessionState);
+            sessionState,
+            gatewaySession.heartbeatIntervalInS());
 
         saveLogon(libraryId, gatewaySession, lastSentSeqNum, lastRecvSeqNum, LogonStatus.NEW);
 

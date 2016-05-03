@@ -207,7 +207,8 @@ public class GatewayPublication extends ClaimablePublication
                                      final ConnectionType type,
                                      final int lastSentSequenceNumber,
                                      final int lastReceivedSequenceNumber,
-                                     final SessionState sessionState)
+                                     final SessionState sessionState,
+                                     final int heartbeatIntervalInS)
     {
         final byte[] addressBytes = bytes(address);
 
@@ -234,6 +235,7 @@ public class GatewayPublication extends ClaimablePublication
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .sessionState(sessionState)
+            .heartbeatIntervalInS(heartbeatIntervalInS)
             .putAddress(addressBytes, 0, addressBytes.length);
 
         bufferClaim.commit();

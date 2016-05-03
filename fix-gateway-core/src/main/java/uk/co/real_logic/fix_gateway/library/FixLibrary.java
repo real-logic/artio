@@ -531,7 +531,8 @@ public final class FixLibrary extends GatewayProcess
             final DirectBuffer buffer,
             final int addressOffset,
             final int addressLength,
-            final SessionState state)
+            final SessionState state,
+            final int heartbeatIntervalInS)
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
@@ -548,7 +549,7 @@ public final class FixLibrary extends GatewayProcess
                     DebugLogger.log("Acct Connect: %d, %d\n", connectionId, libraryId);
                     asciiBuffer.wrap(buffer);
                     final String address = asciiBuffer.getAscii(addressOffset, addressLength);
-                    final Session session = acceptSession(connectionId, address, state);
+                    final Session session = acceptSession(connectionId, address, state, heartbeatIntervalInS);
                     newSession(connectionId, session);
                 }
             }
@@ -793,10 +794,12 @@ public final class FixLibrary extends GatewayProcess
         return 1;
     }
 
-    private Session acceptSession(final long connectionId, final String address, final SessionState state)
+    private Session acceptSession(final long connectionId,
+                                  final String address,
+                                  final SessionState state,
+                                  final int heartbeatIntervalInS)
     {
         final GatewayPublication publication = outboundLibraryStreams.gatewayPublication(idleStrategy);
-        final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
         final int split = address.lastIndexOf(':');
         final int start = address.startsWith("/") ? 1 : 0;
         final String host = address.substring(start, split);
@@ -807,7 +810,7 @@ public final class FixLibrary extends GatewayProcess
         final int sessionBufferSize = configuration.sessionBufferSize();
 
         return new AcceptorSession(
-            defaultInterval,
+            heartbeatIntervalInS,
             connectionId,
             clock,
             sessionProxy(connectionId),

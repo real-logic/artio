@@ -139,13 +139,14 @@
         <data name="address" id="18" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="ManageConnection" id="10" description="Here's a connection to manage">
-        <field name="libraryId" id="19" type="LibraryId"/>
-        <field name="connection" id="17" type="ConnectionId"/>
-        <field name="type" id="24" type="ConnectionType"/>
-        <field name="lastSentSequenceNumber" id="79" type="int32"/>
-        <field name="lastReceivedSequenceNumber" id="80" type="int32"/>
-        <field name="sessionState" id="101" type="SessionState"/>
-        <data name="address" id="18" type="varDataEncoding"/>
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="type" id="3" type="ConnectionType"/>
+        <field name="lastSentSequenceNumber" id="4" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
+        <field name="sessionState" id="6" type="SessionState"/>
+        <field name="heartbeatIntervalInS" id="7" type="int32"/>
+        <data name="address" id="8" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="ResetSessionIds" id="36" description="All session ids have been reset">
     </sbe:message>

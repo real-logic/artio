@@ -181,7 +181,8 @@ public class LibraryProtocolSubscription implements FragmentHandler
             buffer,
             addressOffset,
             manageConnection.addressLength(),
-            manageConnection.sessionState());
+            manageConnection.sessionState(),
+            manageConnection.heartbeatIntervalInS());
         return manageConnection.limit();
     }
 
