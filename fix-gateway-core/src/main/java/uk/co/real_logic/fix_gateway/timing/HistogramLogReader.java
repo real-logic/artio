@@ -168,7 +168,7 @@ public class HistogramLogReader implements AutoCloseable
         final double scalingFactor)
     {
         System.out.printf(
-            "%s Histogram @ %dmillis\n" +
+            "%s Histogram @ %d millis\n" +
             "----------\n" +
             "Mean: %G\n" +
             "1:    %G\n" +
