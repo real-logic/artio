@@ -204,9 +204,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             selector = null;
         }
         positionSender = image ->
-        {
             inboundPublication.saveNewSentPosition(image.sessionId(), image.position());
-        };
     }
 
     @Override
@@ -229,11 +227,11 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
     private int sendOutboundMessages()
     {
-        final int messagesRead =
-            outboundDataSubscription.poll(outboundSubscription, outboundLibraryFragmentLimit) +
+        final int newMessagesRead = outboundDataSubscription.poll(outboundSubscription, outboundLibraryFragmentLimit);
+        final int messagesRead = newMessagesRead +
             outboundSlowSubscription.controlledPoll(senderEndPoints, outboundLibraryFragmentLimit);
 
-        if (messagesRead > 0)
+        if (newMessagesRead > 0)
         {
             outboundDataSubscription.forEachImage(positionSender);
         }
