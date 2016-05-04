@@ -23,6 +23,7 @@ import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -163,7 +164,7 @@ public class EngineAndLibraryIntegrationTest
             1);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = FixGatewayException.class)
     public void refuseDuplicateLibraryId()
     {
         library = connectLibrary(2);

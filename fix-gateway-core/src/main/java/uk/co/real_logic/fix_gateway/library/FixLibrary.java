@@ -145,7 +145,7 @@ public final class FixLibrary extends GatewayProcess
 
             if (errorType != null)
             {
-                throw new IllegalArgumentException(String.format(
+                throw new FixGatewayException(String.format(
                         "Unable to connect to engine: %s", errorType
                 ));
             }
@@ -178,7 +178,7 @@ public final class FixLibrary extends GatewayProcess
      *
      * @param configuration the configuration for this library instance.
      * @return the library instance once it has connected.
-     * @throws IllegalStateException
+     * @throws FixGatewayException
      *         if there's an error connecting to the FIX Gateway or if there's a timeout talking to
      *         the FixEngine.
      */

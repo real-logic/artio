@@ -82,7 +82,6 @@ public class Session implements AutoCloseable
 
     public static final String TEST_REQ_ID = "TEST";
     public static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
-    public static final int FIX_VERSION_OFFSET = 4;
 
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
 
