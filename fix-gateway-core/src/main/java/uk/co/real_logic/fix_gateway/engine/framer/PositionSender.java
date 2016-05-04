@@ -31,6 +31,7 @@ class PositionSender implements Consumer<Image>
 
     public void accept(final Image image)
     {
+        // Willingly drop the position message in case of back pressure
         publication.saveNewSentPosition(image.sessionId(), image.position());
     }
 }
