@@ -587,6 +587,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final LibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
         {
+            // Drop when back pressured - other subscriber needs to handle timeouts anyway
             inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_LIBRARY, correlationId);
             return;
         }
@@ -594,6 +595,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final GatewaySession gatewaySession = gatewaySessions.release(sessionId);
         if (gatewaySession == null)
         {
+            // Drop when back pressured - other subscriber needs to handle timeouts anyway
             inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_SESSION, correlationId);
             return;
         }
@@ -606,6 +608,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         gatewaySession.handoverManagementTo(libraryId);
         libraryInfo.addSession(gatewaySession);
 
+        // TODO: ensure all or none of these messages get through.
         inboundPublication.saveManageConnection(
             connectionId,
             gatewaySession.address(),
