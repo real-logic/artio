@@ -36,6 +36,8 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.util.function.ToIntFunction;
 
+import static io.aeron.Publication.BACK_PRESSURED;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
@@ -51,10 +53,11 @@ public class ReceiverEndPointTest
     private static final long CONNECTION_ID = 20L;
     private static final long SESSION_ID = 4L;
     private static final int LIBRARY_ID = FixEngine.GATEWAY_LIBRARY_ID;
+    private static final long POSITION = 1024L;
 
     private CompositeKey compositeKey = mock(CompositeKey.class);
     private SocketChannel mockChannel = mock(SocketChannel.class);
-    private GatewayPublication mockPublication = mock(GatewayPublication.class);
+    private GatewayPublication publication = mock(GatewayPublication.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private SessionIds mockSessionIds = mock(SessionIds.class);
     private AtomicCounter messagesRead = mock(AtomicCounter.class);
@@ -64,7 +67,7 @@ public class ReceiverEndPointTest
 
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
-            mockChannel, 16 * 1024, mockPublication, CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
+            mockChannel, 16 * 1024, publication, CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
             sentSequenceNumbers, receivedSequenceNumbers, messagesRead, mock(Framer.class), errorHandler, LIBRARY_ID, false);
 
     @Before
@@ -76,13 +79,13 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldHandleValidFixMessageInOneGo()
+    public void shouldFrameValidFixMessage()
     {
         theEndpointReceivesACompleteMessage();
 
-        endPoint.pollForData();
+        pollsData(2 * MSG_LEN);
 
-        handlerReceivesAFramedMessage();
+        savesAFramedMessage();
     }
 
     @Test
@@ -104,7 +107,7 @@ public class ReceiverEndPointTest
 
         endPoint.pollForData();
 
-        handlerNotCalled();
+        nothingSaved();
     }
 
     @Test
@@ -116,7 +119,7 @@ public class ReceiverEndPointTest
         theEndpointReceivesTheRestOfTheMessage();
         endPoint.pollForData();
 
-        handlerReceivesAFramedMessage();
+        savesAFramedMessage();
     }
 
     @Test
@@ -126,7 +129,7 @@ public class ReceiverEndPointTest
 
         endPoint.pollForData();
 
-        handlerReceivesTwoFramedMessages();
+        savesTwoFramedMessages(1);
     }
 
     @Test
@@ -136,7 +139,7 @@ public class ReceiverEndPointTest
 
         endPoint.pollForData();
 
-        handlerReceivesAFramedMessage();
+        savesAFramedMessage();
     }
 
     @Test
@@ -148,7 +151,7 @@ public class ReceiverEndPointTest
         theEndpointReceivesTheRestOfTheMessage();
         endPoint.pollForData();
 
-        handlerReceivesFramedMessages(2, OK, MSG_LEN);
+        savesFramedMessages(2, OK, MSG_LEN);
     }
 
     @Test
@@ -179,9 +182,9 @@ public class ReceiverEndPointTest
 
         endPoint.pollForData();
 
-        verify(mockPublication, times(1))
+        verify(publication, times(1))
             .saveMessage(
-                any(AtomicBuffer.class), eq(0), eq(INVALID_CHECKSUM_LEN),
+                anyBuffer(), eq(0), eq(INVALID_CHECKSUM_LEN),
                 eq(LIBRARY_ID), eq(MESSAGE_TYPE), anyLong(), eq(CONNECTION_ID),
                 eq(INVALID_CHECKSUM));
     }
@@ -190,13 +193,103 @@ public class ReceiverEndPointTest
     public void fieldOutOfOrderMessageRecorded() throws IOException
     {
         final int length = TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES.length;
+
         theEndpointReceives(
             TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES, 0, length);
-
         endPoint.pollForData();
 
         savesInvalidMessage(length);
         verifyNoError();
+    }
+
+    @Test
+    public void shouldFrameValidFixMessageWhenBackpressured()
+    {
+        firstSaveAttemptIsBackpressured();
+
+        theEndpointReceivesACompleteMessage();
+        pollsData(MSG_LEN);
+
+        theEndpointReceivesNothing();
+        pollsData(MSG_LEN);
+
+        savesFramedMessages(2, OK, MSG_LEN);
+    }
+
+    @Test
+    public void shouldFrameSplitFixMessageWhenBackpressured()
+    {
+        firstSaveAttemptIsBackpressured();
+
+        theEndpointReceivesAnIncompleteMessage();
+        endPoint.pollForData();
+
+        theEndpointReceivesTheRestOfTheMessage();
+        endPoint.pollForData();
+
+        theEndpointReceivesNothing();
+        endPoint.pollForData();
+
+        savesFramedMessages(2, OK, MSG_LEN);
+    }
+
+    @Test
+    public void shouldFrameTwoCompleteFixMessagesInOnePacketWhenBackpressured()
+    {
+        firstSaveAttemptIsBackpressured();
+
+        theEndpointReceivesTwoCompleteMessages();
+        endPoint.pollForData();
+
+        theEndpointReceivesNothing();
+        endPoint.pollForData();
+
+        savesTwoFramedMessages(2);
+    }
+
+    @Test
+    public void shouldFrameOneCompleteMessageWhenTheSecondMessageIsIncompleteWhenBackpressured()
+    {
+        firstSaveAttemptIsBackpressured();
+
+        theEndpointReceivesACompleteAndAnIncompleteMessage();
+        endPoint.pollForData();
+
+        theEndpointReceivesNothing();
+        endPoint.pollForData();
+
+        savesFramedMessages(2, OK, MSG_LEN);
+    }
+
+    @Test
+    public void shouldFrameSecondSplitMessageWhenBackpressured()
+    {
+        firstSaveAttemptIsBackpressured();
+
+        theEndpointReceivesACompleteAndAnIncompleteMessage();
+        endPoint.pollForData();
+
+        theEndpointReceivesTheRestOfTheMessage();
+        endPoint.pollForData();
+
+        savesFramedMessages(2, OK, MSG_LEN);
+    }
+
+    private void firstSaveAttemptIsBackpressured()
+    {
+        when(publication
+            .saveMessage(anyBuffer(), anyInt(), anyInt(), anyInt(), anyInt(), anyLong(), anyLong(), eq(OK)))
+            .thenReturn(BACK_PRESSURED, POSITION);
+    }
+
+    private AtomicBuffer anyBuffer()
+    {
+        return any(AtomicBuffer.class);
+    }
+
+    private void pollsData(final int bytesReadAndSaved)
+    {
+        assertEquals(bytesReadAndSaved, endPoint.pollForData());
     }
 
     private void verifyNoError()
@@ -207,16 +300,16 @@ public class ReceiverEndPointTest
 
     private void savesInvalidMessage(final int length)
     {
-        verify(mockPublication, times(1))
+        verify(publication, times(1))
             .saveMessage(
-                any(AtomicBuffer.class), eq(0), eq(length), eq(LIBRARY_ID),
+                anyBuffer(), eq(0), eq(length), eq(LIBRARY_ID),
                 anyInt(), anyLong(), eq(CONNECTION_ID),
                 eq(INVALID));
     }
 
     private void assertSavesDisconnect()
     {
-        verify(mockPublication).saveDisconnect(LIBRARY_ID, CONNECTION_ID, REMOTE_DISCONNECT);
+        verify(publication).saveDisconnect(LIBRARY_ID, CONNECTION_ID, REMOTE_DISCONNECT);
     }
 
     private void theChannelIsClosed() throws IOException
@@ -229,41 +322,41 @@ public class ReceiverEndPointTest
         doThrow(new ClosedChannelException()).when(mockChannel).read(any(ByteBuffer.class));
     }
 
-    private void handlerReceivesAFramedMessage()
+    private void savesAFramedMessage()
     {
-        handlerReceivesFramedMessages(1, OK, MSG_LEN);
+        savesFramedMessages(1, OK, MSG_LEN);
     }
 
-    private void handlerReceivesFramedMessages(
+    private void savesFramedMessages(
         int numberOfMessages,
         final MessageStatus status,
         final int msgLen)
     {
-        verify(mockPublication, times(numberOfMessages))
+        verify(publication, times(numberOfMessages))
             .saveMessage(
-                any(AtomicBuffer.class), eq(0), eq(msgLen), eq(LIBRARY_ID),
+                anyBuffer(), eq(0), eq(msgLen), eq(LIBRARY_ID),
                 eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
                 eq(status));
     }
 
-    private void handlerReceivesTwoFramedMessages()
+    private void savesTwoFramedMessages(final int firstMessageSaveAttempts)
     {
-        final InOrder inOrder = Mockito.inOrder(mockPublication);
-        inOrder.verify(mockPublication, times(1))
+        final InOrder inOrder = Mockito.inOrder(publication);
+        inOrder.verify(publication, times(firstMessageSaveAttempts))
             .saveMessage(
-                any(AtomicBuffer.class), eq(0), eq(MSG_LEN), eq(LIBRARY_ID), eq(MESSAGE_TYPE), eq(SESSION_ID),
+                anyBuffer(), eq(0), eq(MSG_LEN), eq(LIBRARY_ID), eq(MESSAGE_TYPE), eq(SESSION_ID),
                 eq(CONNECTION_ID), eq(OK));
-        inOrder.verify(mockPublication, times(1))
+        inOrder.verify(publication, times(1))
             .saveMessage(
-                any(AtomicBuffer.class), eq(MSG_LEN), eq(MSG_LEN), eq(LIBRARY_ID),
+                anyBuffer(), eq(MSG_LEN), eq(MSG_LEN), eq(LIBRARY_ID),
                 eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
                 eq(OK));
         inOrder.verifyNoMoreInteractions();
     }
 
-    private void handlerNotCalled()
+    private void nothingSaved()
     {
-        verifyNoMoreInteractions(mockPublication);
+        verifyNoMoreInteractions(publication);
     }
 
     private void theEndpointReceivesACompleteMessage()
@@ -299,6 +392,11 @@ public class ReceiverEndPointTest
                 buffer.put(data, offset, length);
                 return length;
             });
+    }
+
+    private void theEndpointReceivesNothing()
+    {
+        endpointBufferUpdatedWith(buffer -> 0);
     }
 
     private void theEndpointReceivesTwoMessages(final int secondOffset, final int secondLength)

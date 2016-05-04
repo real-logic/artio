@@ -37,18 +37,21 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 
+import static io.aeron.Publication.BACK_PRESSURED;
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
-import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
-import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.NO_LOGON;
-import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.REMOTE_DISCONNECT;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.*;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
 import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
 /**
- * Handles incoming data from sockets
+ * Handles incoming data from sockets.
+ *
+ * The receiver end point frames the TCP FIX messages into Aeron fragments.
+ * It also handles backpressure coming from the Aeron stream and applies it to
+ * its own TCP connections.
  */
 class ReceiverEndPoint
 {
@@ -135,11 +138,11 @@ class ReceiverEndPoint
             return 0;
         }
 
+
         try
         {
-            final int bytesReceived = readData();
-            frameMessages();
-            return bytesReceived;
+            return readData() +
+                   frameMessages();
         }
         catch (final ClosedChannelException ex)
         {
@@ -177,7 +180,7 @@ class ReceiverEndPoint
         return dataRead;
     }
 
-    private void frameMessages()
+    private int frameMessages()
     {
         int offset = 0;
         while (true)
@@ -194,7 +197,7 @@ class ReceiverEndPoint
                 if (invalidBodyLengthTag(offset))
                 {
                     invalidateMessage(offset);
-                    return;
+                    return offset;
                 }
 
                 final int endOfBodyLength = scanEndOfBodyLength(startOfBodyLength);
@@ -237,7 +240,12 @@ class ReceiverEndPoint
                 else
                 {
                     checkSessionId(offset, length);
-                    saveMessage(offset, messageType, length);
+                    messagesRead.orderedIncrement();
+                    if (!saveMessage(offset, messageType, length))
+                    {
+                        moveRemainingDataToBufferStart(offset);
+                        return offset;
+                    }
                 }
 
                 offset += length;
@@ -245,7 +253,7 @@ class ReceiverEndPoint
             catch (final IllegalArgumentException ex)
             {
                 saveInvalidMessage(offset);
-                return;
+                return offset;
             }
             catch (final Exception ex)
             {
@@ -255,6 +263,7 @@ class ReceiverEndPoint
         }
 
         moveRemainingDataToBufferStart(offset);
+        return offset;
     }
 
     private boolean checksumInvalid(final int endOfMessage,
@@ -291,12 +300,19 @@ class ReceiverEndPoint
             buffer, offset, length, libraryId, messageType, sessionId, connectionId, INVALID_CHECKSUM);
     }
 
-    private void saveMessage(final int offset, final int messageType, final int length)
+    private boolean saveMessage(final int offset, final int messageType, final int length)
     {
-        messagesRead.orderedIncrement();
-        publication.saveMessage(
+        final long position = publication.saveMessage(
             buffer, offset, length, libraryId, messageType, sessionId, connectionId, OK);
-        gatewaySession.onMessage(buffer, offset, length, messageType, sessionId);
+        if (position == BACK_PRESSURED)
+        {
+            return false;
+        }
+        else
+        {
+            gatewaySession.onMessage(buffer, offset, length, messageType, sessionId);
+            return true;
+        }
     }
 
     private void checkSessionId(final int offset, final int length)
