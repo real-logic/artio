@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
 
+import static io.aeron.Publication.BACK_PRESSURED;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.DebugLogger.logSbeMessage;
@@ -95,6 +96,10 @@ public class GatewayPublication extends ClaimablePublication
         final long timestamp = TIME_MESSAGES ? nanoClock.nanoTime() : 0L;
         final int framedLength = header.encodedLength() + FRAME_SIZE + srcLength;
         final long position = claim(framedLength);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         int offset = bufferClaim.offset();
 
@@ -167,6 +172,11 @@ public class GatewayPublication extends ClaimablePublication
             usernameBytes.length +
             passwordBytes.length);
 
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
+
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
 
@@ -214,6 +224,10 @@ public class GatewayPublication extends ClaimablePublication
 
         final int length = header.encodedLength() + CONNECT_SIZE + addressBytes.length;
         final long position = claim(length);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -248,6 +262,10 @@ public class GatewayPublication extends ClaimablePublication
     public long saveDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         final long position = claim(DISCONNECT_LENGTH);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -279,6 +297,10 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] addressBytes = bytes(address);
 
         final long position = claim(CONNECT_FIXED_LENGTH + addressBytes.length);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -307,6 +329,10 @@ public class GatewayPublication extends ClaimablePublication
     public long saveResetSessionIds()
     {
         final long position = claim(HEADER_LENGTH);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
@@ -328,6 +354,10 @@ public class GatewayPublication extends ClaimablePublication
     public long saveRequestDisconnect(final int libraryId, final long connectionId)
     {
         final long position = claim(header.encodedLength() + RequestDisconnectEncoder.BLOCK_LENGTH);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -386,6 +416,10 @@ public class GatewayPublication extends ClaimablePublication
             targetCompIdBytes.length +
             usernameBytes.length +
             passwordBytes.length);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -427,6 +461,10 @@ public class GatewayPublication extends ClaimablePublication
         final int length = header.encodedLength() + ErrorEncoder.BLOCK_LENGTH + ErrorDecoder.messageHeaderLength() +
             messageBytes.length;
         final long position = claim(length);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -456,6 +494,10 @@ public class GatewayPublication extends ClaimablePublication
     public long saveApplicationHeartbeat(final int libraryId)
     {
         final long position = claim(HEARTBEAT_LENGTH);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -483,6 +525,10 @@ public class GatewayPublication extends ClaimablePublication
     public long saveLibraryConnect(final int libraryId)
     {
         final long position = claim(LIBRARY_CONNECT_LENGTH);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -522,6 +568,10 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] passwordBytes = bytes(password);
 
         final long position = claim(RELEASE_SESSION_LENGTH + usernameBytes.length + passwordBytes.length);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -557,6 +607,10 @@ public class GatewayPublication extends ClaimablePublication
     public long saveReleaseSessionReply(final SessionReplyStatus status, final long correlationId)
     {
         final long position = claim(RELEASE_SESSION_REPLY_LENGTH);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -588,6 +642,10 @@ public class GatewayPublication extends ClaimablePublication
                                    final int lastReceivedSequenceNumber)
     {
         final long position = claim(REQUEST_SESSION_LENGTH);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -618,6 +676,10 @@ public class GatewayPublication extends ClaimablePublication
     public long saveRequestSessionReply(final SessionReplyStatus status, final long correlationId)
     {
         final long position = claim(REQUEST_SESSION_REPLY_LENGTH);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -647,6 +709,10 @@ public class GatewayPublication extends ClaimablePublication
         final int libraryId, final long connectionId, final int messageCount)
     {
         final long position = claim(CatchupEncoder.BLOCK_LENGTH + HEADER_LENGTH);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -677,6 +743,10 @@ public class GatewayPublication extends ClaimablePublication
         final int libraryId, final long sentPosition)
     {
         final long position = claim(NewSentPositionEncoder.BLOCK_LENGTH + HEADER_LENGTH);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();

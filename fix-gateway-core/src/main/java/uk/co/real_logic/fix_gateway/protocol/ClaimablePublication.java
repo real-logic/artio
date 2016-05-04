@@ -91,11 +91,9 @@ public class ClaimablePublication implements AutoCloseable
             throw new IllegalStateException(
                 "Unable to send publish message, probably a missing an engine or library instance");
         }
-
-        // TODO: decide correct behaviour here
         else
         {
-            throw new RuntimeException("Backpressured");
+            return position;
         }
     }
 
