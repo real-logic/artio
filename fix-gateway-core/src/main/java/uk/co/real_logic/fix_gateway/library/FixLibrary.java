@@ -24,7 +24,10 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.fix_gateway.*;
+import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.FixGatewayException;
+import uk.co.real_logic.fix_gateway.GatewayProcess;
+import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
@@ -44,6 +47,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
 
+import static io.aeron.Publication.BACK_PRESSURED;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
@@ -131,7 +135,10 @@ public final class FixLibrary extends GatewayProcess
     {
         try
         {
-            outboundPublication.saveLibraryConnect(libraryId);
+            if (outboundPublication.saveLibraryConnect(libraryId) == BACK_PRESSURED)
+            {
+                return connectError("BackPressured upon connection");
+            }
 
             final long latestReplyArrivalTime = latestReplyArrivalTime();
             while (!livenessDetector.isConnected() && errorType == null)
@@ -145,9 +152,7 @@ public final class FixLibrary extends GatewayProcess
 
             if (errorType != null)
             {
-                throw new FixGatewayException(String.format(
-                        "Unable to connect to engine: %s", errorType
-                ));
+                return connectError(errorType.toString());
             }
 
             start();
@@ -169,6 +174,13 @@ public final class FixLibrary extends GatewayProcess
         }
 
         return this;
+    }
+
+    private FixLibrary connectError(final String message)
+    {
+        throw new FixGatewayException(String.format(
+                "Unable to connect to engine: %s", message
+        ));
     }
 
     // ------------- Public API -------------
