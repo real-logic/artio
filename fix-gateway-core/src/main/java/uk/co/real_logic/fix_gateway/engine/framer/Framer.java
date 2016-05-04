@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
@@ -92,8 +91,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             return 0;
         }
     };
-    private final Consumer<Image> positionSender;
 
+    private final PositionSender positionSender;
     private final EpochClock clock;
     private final Timer outboundTimer;
     private final Timer sendTimer;
@@ -203,8 +202,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             listeningChannel = null;
             selector = null;
         }
-        positionSender = image ->
-            inboundPublication.saveNewSentPosition(image.sessionId(), image.position());
+        positionSender = new PositionSender(inboundPublication);
     }
 
     @Override

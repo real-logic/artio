@@ -33,7 +33,7 @@ import static java.nio.file.StandardOpenOption.WRITE;
 
 public class HistogramLogWriter implements Agent
 {
-    static final int BUFFER_SIZE = 32 * 1024;
+    private static final int BUFFER_SIZE = 1024 * 1024;
 
     private final List<Timer> timers;
     private final FileChannel logFile;
