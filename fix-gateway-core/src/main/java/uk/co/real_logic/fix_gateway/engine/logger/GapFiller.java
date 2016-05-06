@@ -15,7 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import io.aeron.Publication;
 import io.aeron.Subscription;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
@@ -60,14 +62,16 @@ public class GapFiller implements SessionHandler, Agent
         return subscription.poll(sessionSubscription, FRAGMENT_LIMIT);
     }
 
-    public void onMessage(final DirectBuffer buffer,
-                          final int offset,
-                          final int length,
-                          final int libraryId,
-                          final long connectionId,
-                          final long sessionId,
-                          final int messageType,
-                          final long timestamp, final long position)
+    public Action onMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final int libraryId,
+        final long connectionId,
+        final long sessionId,
+        final int messageType,
+        final long timestamp,
+        final long position)
     {
         if (messageType == ResendRequestDecoder.MESSAGE_TYPE)
         {
@@ -99,15 +103,23 @@ public class GapFiller implements SessionHandler, Agent
             sequenceResetEncoder.newSeqNo(resendRequest.endSeqNo());
 
             final int encodedLength = sequenceResetEncoder.encode(encodeBuffer, 0);
-            publication.saveMessage(
+            final long sentPosition = publication.saveMessage(
                 encodeBuffer, 0, encodedLength,
                 libraryId, SequenceResetDecoder.MESSAGE_TYPE, sessionId, connectionId,
                 MessageStatus.OK);
+
+            if (sentPosition == Publication.BACK_PRESSURED)
+            {
+                return Action.ABORT;
+            }
         }
+
+        return Action.CONTINUE;
     }
 
-    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
+        return Action.CONTINUE;
     }
 
     public String roleName()

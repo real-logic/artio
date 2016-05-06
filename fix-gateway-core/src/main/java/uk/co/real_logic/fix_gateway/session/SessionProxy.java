@@ -272,7 +272,7 @@ public class SessionProxy
         return sendReject(msgSeqNo, refSeqNum, rejectReason);
     }
 
-    public void reject(
+    public long reject(
         final int msgSeqNo,
         final int refSeqNum,
         final int refTagId,
@@ -281,7 +281,7 @@ public class SessionProxy
         final int rejectReason)
     {
         reject.refTagID(refTagId);
-        reject(msgSeqNo, refSeqNum, refMsgType, refMsgTypeLength, rejectReason);
+        return reject(msgSeqNo, refSeqNum, refMsgType, refMsgTypeLength, rejectReason);
     }
 
     public long reject(

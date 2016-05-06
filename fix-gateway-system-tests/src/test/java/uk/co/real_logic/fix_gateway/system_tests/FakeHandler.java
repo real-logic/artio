@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
@@ -46,7 +47,7 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
         parser = new OtfParser(acceptor, new IntDictionary());
     }
 
-    public void onMessage(
+    public Action onMessage(
         final DirectBuffer buffer,
         final int offset,
         final int length,
@@ -54,17 +55,20 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
         final long connectionId,
         final long sessionId,
         final int messageType,
-        final long timestamp, final long position)
+        final long timestamp,
+        final long position)
     {
         parser.onMessage(buffer, offset, length);
         acceptor.forSession(connectionIdToSession.get(connectionId));
+        return Action.CONTINUE;
     }
 
-    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         this.connectionId = connectionId;
         connectionIdToSession.remove(connectionId);
         hasDisconnected = true;
+        return Action.CONTINUE;
     }
 
     public long connectionId()

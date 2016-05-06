@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.server;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.decoder.PrinterImpl;
@@ -34,20 +35,26 @@ public class SampleSessionHandler implements SessionHandler
     {
     }
 
-    public void onMessage(final DirectBuffer buffer,
-                          final int offset,
-                          final int length,
-                          final int libraryId,
-                          final long connectionId,
-                          final long sessionId,
-                          final int messageType, final long timestamp, final long position)
+    public Action onMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final int libraryId,
+        final long connectionId,
+        final long sessionId,
+        final int messageType,
+        final long timestamp,
+        final long position)
     {
         string.wrap(buffer);
         System.out.printf("%d -> %s\n", connectionId, printer.toString(string, offset, length, messageType));
+
+        return Action.CONTINUE;
     }
 
-    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         System.out.printf("%d Disconnected: %s\n", connectionId, reason);
+        return Action.CONTINUE;
     }
 }

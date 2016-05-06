@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.Verify;
 import org.agrona.concurrent.EpochClock;
@@ -30,6 +31,7 @@ import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_ENABLED;
@@ -70,6 +72,7 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
  *
  * Manual disable: * -> DISABLED
  */
+// TODO: apply back-pressure from failed message sends to on* methods
 public class Session implements AutoCloseable
 {
     public static final long UNKNOWN = -1;
@@ -435,21 +438,23 @@ public class Session implements AutoCloseable
         state(DISCONNECTED);
     }
 
-    void onMessage(final int msgSeqNo,
-                   final byte[] msgType,
-                   final long sendingTime,
-                   final long origSendingTime,
-                   final boolean isPossDupOrResend)
+    Action onMessage(
+        final int msgSeqNo,
+        final byte[] msgType,
+        final long sendingTime,
+        final long origSendingTime,
+        final boolean isPossDupOrResend)
     {
-        onMessage(msgSeqNo, msgType, msgType.length, sendingTime, origSendingTime, isPossDupOrResend);
+        return onMessage(msgSeqNo, msgType, msgType.length, sendingTime, origSendingTime, isPossDupOrResend);
     }
 
-    void onMessage(final int msgSeqNo,
-                   final byte[] msgType,
-                   final int msgTypeLength,
-                   final long sendingTime,
-                   final long origSendingTime,
-                   final boolean isPossDupOrResend)
+    Action onMessage(
+        final int msgSeqNo,
+        final byte[] msgType,
+        final int msgTypeLength,
+        final long sendingTime,
+        final long origSendingTime,
+        final boolean isPossDupOrResend)
     {
         if (state() == SessionState.CONNECTED)
         {
@@ -462,7 +467,7 @@ public class Session implements AutoCloseable
             {
                 proxy.receivedMessageWithoutSequenceNumber(newSentSeqNum());
                 requestDisconnect();
-                return;
+                return CONTINUE;
             }
 
             final long time = time();
@@ -479,12 +484,12 @@ public class Session implements AutoCloseable
                             msgType,
                             msgTypeLength,
                             REQUIRED_TAG_MISSING);
-                        return;
+                        return CONTINUE;
                     }
                     else if (origSendingTime > sendingTime)
                     {
                         rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
-                        return;
+                        return CONTINUE;
                     }
                 }
 
@@ -492,7 +497,7 @@ public class Session implements AutoCloseable
                 {
                     rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
                     logoutAndDisconnect();
-                    return;
+                    return CONTINUE;
                 }
             }
 
@@ -513,6 +518,8 @@ public class Session implements AutoCloseable
                 requestDisconnect();
             }
         }
+
+        return CONTINUE;
     }
 
     private void rejectDueToSendingTime(final int msgSeqNo, final byte[] msgType, final int msgTypeLength)
@@ -530,7 +537,7 @@ public class Session implements AutoCloseable
         nextRequiredMessageTime(time + heartbeatIntervalInMs());
     }
 
-    public void onLogon(
+    public Action onLogon(
         final int heartbeatInterval,
         final int msgSeqNo,
         final long sessionId,
@@ -547,7 +554,7 @@ public class Session implements AutoCloseable
         {
             if (!validateHeartbeat(heartbeatInterval) || !validateSendingTime(sendingTime))
             {
-                return;
+                return CONTINUE;
             }
 
             final int expectedSeqNo = expectedReceivedSeqNum();
@@ -567,6 +574,8 @@ public class Session implements AutoCloseable
             publication.saveLogon(libraryId, connectionId, sessionId);
         }
         onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+
+        return CONTINUE;
     }
 
     public void setupSession(final long sessionId, final CompositeKey sessionKey)
@@ -613,7 +622,7 @@ public class Session implements AutoCloseable
         }
     }
 
-    void onLogout(
+    Action onLogout(
         final int msgSeqNo,
         final long sendingTime,
         final long origSendingTime,
@@ -628,9 +637,11 @@ public class Session implements AutoCloseable
         {
             logoutAndDisconnect();
         }
+
+        return CONTINUE;
     }
 
-    void onTestRequest(
+    Action onTestRequest(
         final int msgSeqNo,
         final char[] testReqId,
         final int testReqIdLength,
@@ -643,9 +654,11 @@ public class Session implements AutoCloseable
             proxy.heartbeat(testReqId, testReqIdLength, newSentSeqNum());
         }
         onMessage(msgSeqNo, TestRequestDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+
+        return CONTINUE;
     }
 
-    void onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean gapFillFlag, final boolean possDupFlag)
+    Action onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean gapFillFlag, final boolean possDupFlag)
     {
         if (!gapFillFlag)
         {
@@ -659,6 +672,8 @@ public class Session implements AutoCloseable
         {
             applySequenceReset(msgSeqNo, newSeqNo);
         }
+
+        return CONTINUE;
     }
 
     private void applySequenceReset(final int receivedMsgSeqNo, final int newSeqNo)
@@ -702,15 +717,15 @@ public class Session implements AutoCloseable
         }
     }
 
-    void onReject(final int msgSeqNo,
-                  final long sendingTime,
-                  final long origSendingTime,
-                  final boolean isPossDupOrResend)
+    Action onReject(final int msgSeqNo,
+                    final long sendingTime,
+                    final long origSendingTime,
+                    final boolean isPossDupOrResend)
     {
-        onMessage(msgSeqNo, RejectDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+        return onMessage(msgSeqNo, RejectDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }
 
-    public boolean onBeginString(final char[] value, final int length, final boolean isLogon)
+    boolean onBeginString(final char[] value, final int length, final boolean isLogon)
     {
         final boolean isValid = CodecUtil.equals(value, VERSION_CHARS, length);
         if (!isValid)
@@ -824,7 +839,7 @@ public class Session implements AutoCloseable
         this.password = password;
     }
 
-    public void onInvalidMessage(
+    Action onInvalidMessage(
         final int refSeqNum,
         final int refTagId,
         final char[] refMsgType,
@@ -840,9 +855,11 @@ public class Session implements AutoCloseable
             refMsgType,
             refMsgTypeLength,
             rejectReason);
+
+        return CONTINUE;
     }
 
-    protected void onHeartbeat(
+    protected Action onHeartbeat(
         final int msgSeqNum,
         final char[] testReqID,
         final int testReqIDLength,
@@ -855,9 +872,11 @@ public class Session implements AutoCloseable
             state(ACTIVE);
         }
         onMessage(msgSeqNum, HeartbeatDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+
+        return CONTINUE;
     }
 
-    protected void onInvalidMessageType(final int msgSeqNum, final char[] msgType, final int msgTypeLength)
+    Action onInvalidMessageType(final int msgSeqNum, final char[] msgType, final int msgTypeLength)
     {
         proxy.reject(
             newSentSeqNum(),
@@ -865,6 +884,8 @@ public class Session implements AutoCloseable
             msgType,
             msgTypeLength,
             INVALID_MSGTYPE.representation());
+
+        return CONTINUE;
     }
 
     public String toString()

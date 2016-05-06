@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.decoder.PrinterImpl;
@@ -29,17 +30,18 @@ public final class BenchmarkSessionHandler implements SessionHandler
     private final AsciiBuffer flyweight = new MutableAsciiBuffer();
     private final Printer printer = new PrinterImpl();
 
-    public void onMessage(final DirectBuffer buffer,
-                          final int offset,
-                          final int length,
-                          final int libraryId,
-                          final long connectionId,
-                          final long sessionId,
-                          final int messageType, final long timestamp, final long position)
+    public Action onMessage(final DirectBuffer buffer,
+                                                      final int offset,
+                                                      final int length,
+                                                      final int libraryId,
+                                                      final long connectionId,
+                                                      final long sessionId,
+                                                      final int messageType, final long timestamp, final long position)
     {
         //flyweight.wrap(buffer);
         //System.out.printf("Received Message: ");
         //System.out.println(printer.toString(flyweight, offset, length, messageType));
+        return Action.CONTINUE;
     }
 
     public void onLogon(
@@ -52,9 +54,11 @@ public final class BenchmarkSessionHandler implements SessionHandler
         System.out.printf("%d logged on with sessionId=%d\n", connectionId, sessionId);
     }
 
-    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         System.out.printf("%d disconnected\n", connectionId);
+
+        return Action.CONTINUE;
     }
 
     public void onError(final GatewayError errorType, final int libraryId, final String message)

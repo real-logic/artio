@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.client;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
@@ -26,6 +27,7 @@ import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQ_ID;
 
 public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
@@ -35,22 +37,28 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
 
     private String testReqId;
 
-    public void onMessage(final DirectBuffer buffer,
-                          final int offset,
-                          final int length,
-                          final int libraryId,
-                          final long connectionId,
-                          final long sessionId,
-                          final int messageType, final long timestamp, final long position)
+    public Action onMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final int libraryId,
+        final long connectionId,
+        final long sessionId,
+        final int messageType,
+        final long timestamp,
+        final long position)
     {
         // You can hook your own parsers at this point,
         // Here's an example using our otf parser
 
         parser.onMessage(buffer, offset, length);
+
+        return CONTINUE;
     }
 
-    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
+        return CONTINUE;
     }
 
     public MessageControl onNext()

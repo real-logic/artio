@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
@@ -72,6 +73,15 @@ public class ReplayQuery implements AutoCloseable
         return sessionToIndex
             .computeIfAbsent(sessionId, newSessionQuery)
             .query(handler, beginSeqNo, endSeqNo);
+    }
+
+    // TODO: apply back pressure
+    public int query(
+        final ControlledFragmentHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
+    {
+        return sessionToIndex
+            .computeIfAbsent(sessionId, newSessionQuery)
+            .query(handler::onFragment, beginSeqNo, endSeqNo);
     }
 
     public void close()

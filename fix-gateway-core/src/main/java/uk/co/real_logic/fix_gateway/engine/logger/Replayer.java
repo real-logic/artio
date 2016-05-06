@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BufferClaim;
-import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
@@ -38,6 +38,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.nio.charset.StandardCharsets;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static uk.co.real_logic.fix_gateway.engine.logger.PossDupFinder.NO_ENTRY;
 
@@ -48,7 +49,8 @@ import static uk.co.real_logic.fix_gateway.engine.logger.PossDupFinder.NO_ENTRY;
  * Resend Request messages and searches the log, using the replay index to find
  * relevant messages to resend.
  */
-public class Replayer implements SessionHandler, FragmentHandler, Agent
+// TODO: apply back-pressure from failed message sends to on* methods
+public class Replayer implements SessionHandler, ControlledFragmentHandler, Agent
 {
     public static final int MESSAGE_FRAME_BLOCK_LENGTH =
         MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
@@ -97,7 +99,7 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
         this.maxClaimAttempts = maxClaimAttempts;
     }
 
-    public void onMessage(
+    public Action onMessage(
         final DirectBuffer srcBuffer,
         final int srcOffset,
         int length,
@@ -123,7 +125,7 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
                 onIllegalState(
                     "[%s] Error in resend request, endSeqNo (%d) < beginSeqNo (%d)",
                     message(), endSeqNo, beginSeqNo);
-                return;
+                return CONTINUE;
             }
 
             final int expectedCount = endSeqNo - beginSeqNo + 1;
@@ -135,9 +137,11 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
                     message(), count, expectedCount);
             }
         }
+
+        return CONTINUE;
     }
 
-    public void onFragment(
+    public Action onFragment(
         final DirectBuffer srcBuffer, final int srcOffset, final int length, final Header header)
     {
         final int messageOffset = srcOffset + MESSAGE_FRAME_BLOCK_LENGTH;
@@ -152,7 +156,7 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
             if (!claimBuffer(newLength))
             {
                 onIllegalState("[%s] unable to resend", message());
-                return;
+                return CONTINUE;
             }
 
             try
@@ -179,7 +183,7 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
             if (!claimBuffer(messageLength))
             {
                 onIllegalState("[%s] unable to resend", message());
-                return;
+                return CONTINUE;
             }
 
             try
@@ -197,10 +201,13 @@ public class Replayer implements SessionHandler, FragmentHandler, Agent
                 onException(e);
             }
         }
+
+        return CONTINUE;
     }
 
-    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
+        return CONTINUE;
     }
 
     private void onException(final Exception e)

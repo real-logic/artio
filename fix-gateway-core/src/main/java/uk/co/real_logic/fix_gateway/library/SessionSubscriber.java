@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.session.AcceptorSession;
@@ -22,6 +23,8 @@ import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.timing.Timer;
+
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
 
 class SessionSubscriber implements AutoCloseable
 {
@@ -46,40 +49,53 @@ class SessionSubscriber implements AutoCloseable
         this.sessionTimer = sessionTimer;
     }
 
-    public void onMessage(final DirectBuffer buffer,
-                          final int offset,
-                          final int length,
-                          final int libraryId,
-                          final long connectionId,
-                          final long sessionId,
-                          final int messageType,
-                          final long timestamp,
-                          final long position)
+    public Action onMessage(final DirectBuffer buffer,
+                            final int offset,
+                            final int length,
+                            final int libraryId,
+                            final long connectionId,
+                            final long sessionId,
+                            final int messageType,
+                            final long timestamp,
+                            final long position)
     {
         final long now = receiveTimer.recordSince(timestamp);
 
-        if (remainingCatchupCount == 0)
+        try
         {
-            if (parser.onMessage(buffer, offset, length, messageType, sessionId))
+            if (remainingCatchupCount == 0)
             {
-                handler.onMessage(
+                final Action action = parser.onMessage(buffer, offset, length, messageType, sessionId);
+                if (action == BREAK)
+                {
+                    return BREAK;
+                }
+
+                if (session.isConnected())
+                {
+                    return handler.onMessage(
+                        buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
+                }
+
+                return action;
+            }
+            else
+            {
+                remainingCatchupCount--;
+                return handler.onMessage(
                     buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
             }
         }
-        else
+        finally
         {
-            remainingCatchupCount--;
-            handler.onMessage(
-                buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
+            sessionTimer.recordSince(now);
         }
-
-        sessionTimer.recordSince(now);
     }
 
-    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         session.onDisconnect();
-        handler.onDisconnect(libraryId, connectionId, reason);
+        return handler.onDisconnect(libraryId, connectionId, reason);
     }
 
     public void onLogon(

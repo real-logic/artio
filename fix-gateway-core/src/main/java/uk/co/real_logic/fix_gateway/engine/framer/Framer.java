@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import io.aeron.Subscription;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
@@ -56,6 +57,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.net.StandardSocketOptions.*;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
@@ -423,7 +425,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         inboundPublication.saveError(error, libraryId, message == null ? "" : message);
     }
 
-    public void onMessage(
+    public Action onMessage(
         final DirectBuffer buffer,
         final int offset,
         final int length,
@@ -439,6 +441,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         senderEndPoints.onMessage(connectionId, buffer, offset, length);
 
         sendTimer.recordSince(now);
+
+        return CONTINUE;
     }
 
     private GatewaySession setupConnection(
@@ -491,7 +495,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         onDisconnect(libraryId, connectionId, null);
     }
 
-    public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         receiverEndPoints.removeConnection(connectionId);
         senderEndPoints.removeConnection(connectionId);
@@ -504,6 +508,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         {
             gatewaySessions.release(connectionId);
         }
+
+        return CONTINUE;
     }
 
     public void onLibraryConnect(final int libraryId, final int aeronSessionId)

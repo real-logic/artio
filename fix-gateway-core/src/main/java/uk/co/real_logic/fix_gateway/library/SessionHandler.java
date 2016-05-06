@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 
@@ -24,7 +25,7 @@ import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
  */
 public interface SessionHandler
 {
-    void onMessage(
+    Action onMessage(
         final DirectBuffer buffer,
         final int offset,
         final int length,
@@ -35,5 +36,5 @@ public interface SessionHandler
         final long timestamp,
         final long position);
 
-    void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason);
+    Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason);
 }

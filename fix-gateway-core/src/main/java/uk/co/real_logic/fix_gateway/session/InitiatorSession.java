@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
@@ -23,6 +24,7 @@ import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
 
+// TODO: apply back-pressure from failed message sends to on* methods
 public class InitiatorSession extends Session
 {
     public InitiatorSession(
@@ -56,7 +58,7 @@ public class InitiatorSession extends Session
             initialSequenceNumber);
     }
 
-    public void onLogon(
+    public Action onLogon(
         final int heartbeatInterval,
         final int msgSeqNo,
         final long sessionId,
@@ -84,6 +86,8 @@ public class InitiatorSession extends Session
         {
             onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
         }
+
+        return Action.CONTINUE;
     }
 
     public int poll(final long time)

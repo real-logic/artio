@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.library;
 
 import io.aeron.Subscription;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
@@ -48,6 +49,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
 
 import static io.aeron.Publication.BACK_PRESSURED;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
@@ -628,7 +631,7 @@ public final class FixLibrary extends GatewayProcess
             return state == ACTIVE ? 1 : 0;
         }
 
-        public void onMessage(
+        public Action onMessage(
             final DirectBuffer buffer,
             final int offset,
             final int length,
@@ -650,9 +653,11 @@ public final class FixLibrary extends GatewayProcess
                         buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
                 }
             }
+
+            return CONTINUE;
         }
 
-        public void onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+        public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
@@ -660,12 +665,17 @@ public final class FixLibrary extends GatewayProcess
                 DebugLogger.log("Library Disconnect %d, %s\n", connectionId, reason);
                 if (subscriber != null)
                 {
-                    subscriber.onDisconnect(libraryId, connectionId, reason);
-                    final Session session = subscriber.session();
-                    session.close();
-                    sessions.remove(session);
+                    final Action action = subscriber.onDisconnect(libraryId, connectionId, reason);
+                    if (action != ABORT)
+                    {
+                        final Session session = subscriber.session();
+                        session.close();
+                        sessions.remove(session);
+                    }
+                    return action;
                 }
             }
+            return CONTINUE;
         }
 
         public void onError(final GatewayError errorType, final int libraryId, final String message)
