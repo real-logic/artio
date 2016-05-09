@@ -335,7 +335,11 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                     null);
 
                 final String address = channel.getRemoteAddress().toString();
-                inboundPublication.saveConnect(connectionId, address);
+                if (inboundPublication.saveConnect(connectionId, address) == BACK_PRESSURED)
+                {
+                    errorHandler.onError(new IllegalStateException(
+                        "Failed to log connect from " + address + " due to backpressure"));
+                }
 
                 it.remove();
             }
