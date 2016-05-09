@@ -15,13 +15,14 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import uk.co.real_logic.fix_gateway.messages.SequenceNumberType;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 
 public interface EngineProtocolHandler
 {
-    void onInitiateConnection(
+    Action onInitiateConnection(
         final int libraryId,
         final int port,
         final String host,
@@ -36,13 +37,13 @@ public interface EngineProtocolHandler
         final int heartbeatIntervalInS,
         final Header header);
 
-    void onRequestDisconnect(final int libraryId, final long connectionId);
+    Action onRequestDisconnect(final int libraryId, final long connectionId);
 
-    void onApplicationHeartbeat(final int libraryId);
+    Action onApplicationHeartbeat(final int libraryId);
 
-    void onLibraryConnect(final int libraryId, final int aeronSessionId);
+    Action onLibraryConnect(final int libraryId, final int aeronSessionId);
 
-    void onReleaseSession(
+    Action onReleaseSession(
         final int libraryId,
         final long connectionId,
         final long correlationId,
@@ -54,7 +55,7 @@ public interface EngineProtocolHandler
         final String password,
         final Header header);
 
-    void onRequestSession(
+    Action onRequestSession(
         final int libraryId,
         final long sessionId,
         final long correlationId,

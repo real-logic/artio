@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
@@ -47,7 +48,7 @@ public class SessionSubscription implements FragmentHandler
         readFragment(buffer, offset, header);
     }
 
-    public FragmentHandler andThen(final FragmentHandler other)
+    public FragmentHandler andThen(final ControlledFragmentHandler other)
     {
         return (buffer, offset, length, header) ->
         {

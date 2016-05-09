@@ -30,9 +30,7 @@ import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import java.util.stream.Stream;
 
 import static io.aeron.Publication.BACK_PRESSURED;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.fix_gateway.builder.Validation.isValidMsgType;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;

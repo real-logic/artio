@@ -537,7 +537,7 @@ public final class FixLibrary extends GatewayProcess
         private int sessionId;
         private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
-        public void onManageConnection(
+        public Action onManageConnection(
             final int libraryId,
             final long connectionId,
             final ConnectionType type,
@@ -568,9 +568,11 @@ public final class FixLibrary extends GatewayProcess
                     newSession(connectionId, session);
                 }
             }
+
+            return CONTINUE;
         }
 
-        public void onLogon(
+        public Action onLogon(
             final int libraryId,
             final long connectionId,
             final long sessionId,
@@ -618,6 +620,8 @@ public final class FixLibrary extends GatewayProcess
                     password
                 );
             }
+
+            return CONTINUE;
         }
 
         private int acceptorSequenceNumber(int lastSequenceNumber, final SessionState state)
@@ -678,7 +682,7 @@ public final class FixLibrary extends GatewayProcess
             return CONTINUE;
         }
 
-        public void onError(final GatewayError errorType, final int libraryId, final String message)
+        public Action onError(final GatewayError errorType, final int libraryId, final String message)
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
@@ -686,25 +690,31 @@ public final class FixLibrary extends GatewayProcess
                 FixLibrary.this.errorMessage = message;
             }
             configuration.gatewayErrorHandler().onError(errorType, libraryId, message);
+
+            return CONTINUE;
         }
 
-        public void onApplicationHeartbeat(final int libraryId)
+        public Action onApplicationHeartbeat(final int libraryId)
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
                 livenessDetector.onHeartbeat(clock.time());
             }
+
+            return CONTINUE;
         }
 
-        public void onReleaseSessionReply(final long correlationId, final SessionReplyStatus status)
+        public Action onReleaseSessionReply(final long correlationId, final SessionReplyStatus status)
         {
             if (FixLibrary.this.currentCorrelationId == correlationId)
             {
                 FixLibrary.this.replyStatus = status;
             }
+
+            return CONTINUE;
         }
 
-        public void onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
+        public Action onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
         {
             final Object state = correlationIdToState.get(correlationId);
             if (state instanceof Long)
@@ -722,9 +732,11 @@ public final class FixLibrary extends GatewayProcess
                 }
                 correlationIdToState.put(correlationId, status);
             }
+
+            return CONTINUE;
         }
 
-        public void onCatchup(final int libraryId, final long connectionId, final int messageCount)
+        public Action onCatchup(final int libraryId, final long connectionId, final int messageCount)
         {
             if (FixLibrary.this.libraryId == libraryId)
             {
@@ -734,14 +746,18 @@ public final class FixLibrary extends GatewayProcess
                     subscriber.startCatchup(messageCount);
                 }
             }
+
+            return CONTINUE;
         }
 
-        public void onNewSentPosition(final int sessionId, final long position)
+        public Action onNewSentPosition(final int sessionId, final long position)
         {
             if (this.sessionId == sessionId)
             {
                 sentPositionHandler.onSendCompleted(position);
             }
+
+            return CONTINUE;
         }
     }
 

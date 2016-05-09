@@ -341,7 +341,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         return newConnections;
     }
 
-    public void onInitiateConnection(
+    public Action onInitiateConnection(
         final int libraryId,
         final int port,
         final String host,
@@ -359,7 +359,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         if (library == null)
         {
             saveError(GatewayError.UNKNOWN_LIBRARY, libraryId);
-            return;
+
+            return CONTINUE;
         }
 
         try
@@ -375,7 +376,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             catch (final Exception e)
             {
                 saveError(UNABLE_TO_CONNECT, libraryId, e);
-                return;
+
+                return CONTINUE;
             }
 
             final long connectionId = this.nextConnectionId++;
@@ -386,7 +388,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             if (sessionId == SessionIds.DUPLICATE_SESSION)
             {
                 saveError(DUPLICATE_SESSION, libraryId);
-                return;
+
+                return CONTINUE;
             }
 
             final boolean resetSeqNumbers = sequenceNumberType == SequenceNumberType.TRANSIENT;
@@ -412,6 +415,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         {
             saveError(EXCEPTION, libraryId, e);
         }
+
+        return CONTINUE;
     }
 
     private void saveError(final GatewayError error, final int libraryId)
@@ -490,9 +495,9 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         return gatewaySession;
     }
 
-    public void onRequestDisconnect(final int libraryId, final long connectionId)
+    public Action onRequestDisconnect(final int libraryId, final long connectionId)
     {
-        onDisconnect(libraryId, connectionId, null);
+        return onDisconnect(libraryId, connectionId, null);
     }
 
     public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
@@ -512,13 +517,14 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         return CONTINUE;
     }
 
-    public void onLibraryConnect(final int libraryId, final int aeronSessionId)
+    public Action onLibraryConnect(final int libraryId, final int aeronSessionId)
     {
         final long timeInMs = clock.time();
         if (idToLibrary.containsKey(libraryId))
         {
             saveError(DUPLICATE_LIBRARY_ID, libraryId);
-            return;
+
+            return CONTINUE;
         }
 
         final LivenessDetector livenessDetector = LivenessDetector.forEngine(
@@ -534,9 +540,11 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         {
             saveLogon(libraryId, gatewaySession, SessionInfo.UNKNOWN_SESSION, SessionInfo.UNKNOWN_SESSION, LIBRARY_NOTIFICATION);
         }
+
+        return CONTINUE;
     }
 
-    public void onApplicationHeartbeat(final int libraryId)
+    public Action onApplicationHeartbeat(final int libraryId)
     {
         final LibraryInfo library = idToLibrary.get(libraryId);
         if (library != null)
@@ -544,9 +552,11 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             final long timeInMs = clock.time();
             library.onHeartbeat(timeInMs);
         }
+
+        return CONTINUE;
     }
 
-    public void onReleaseSession(
+    public Action onReleaseSession(
         final int libraryId,
         final long connectionId,
         final long correlationId,
@@ -562,14 +572,16 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         if (libraryInfo == null)
         {
             inboundPublication.saveReleaseSessionReply(SessionReplyStatus.UNKNOWN_LIBRARY, correlationId);
-            return;
+
+            return CONTINUE;
         }
 
         final GatewaySession session = libraryInfo.removeSession(connectionId);
         if (session == null)
         {
             inboundPublication.saveReleaseSessionReply(SessionReplyStatus.UNKNOWN_SESSION, correlationId);
-            return;
+
+            return CONTINUE;
         }
 
         gatewaySessions.acquire(
@@ -582,9 +594,11 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             password);
 
         inboundPublication.saveReleaseSessionReply(OK, correlationId);
+
+        return CONTINUE;
     }
 
-    public void onRequestSession(
+    public Action onRequestSession(
         final int libraryId,
         final long sessionId,
         final long correlationId,
@@ -595,7 +609,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         {
             // Drop when back pressured - other subscriber needs to handle timeouts anyway
             inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_LIBRARY, correlationId);
-            return;
+
+            return CONTINUE;
         }
 
         final GatewaySession gatewaySession = gatewaySessions.release(sessionId);
@@ -603,7 +618,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         {
             // Drop when back pressured - other subscriber needs to handle timeouts anyway
             inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_SESSION, correlationId);
-            return;
+
+            return CONTINUE;
         }
 
         final long connectionId = gatewaySession.connectionId();
@@ -631,6 +647,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         {
             inboundPublication.saveRequestSessionReply(OK, correlationId);
         }
+
+        return CONTINUE;
     }
 
     private void saveLogon(final int libraryId,

@@ -15,15 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
-import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.messages.ManageConnectionDecoder.addressHeaderLength;
-import static uk.co.real_logic.fix_gateway.protocol.Streams.UNKNOWN_TEMPLATE;
 
-public class LibraryProtocolSubscription implements FragmentHandler
+public class LibraryProtocolSubscription implements ControlledFragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final LogonDecoder logon = new LogonDecoder();
@@ -42,12 +42,7 @@ public class LibraryProtocolSubscription implements FragmentHandler
         this.handler = handler;
     }
 
-    public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
-    {
-        readFragment(buffer, offset, header);
-    }
-
-    public int readFragment(final DirectBuffer buffer, int offset, final Header header)
+    public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);
 
@@ -98,81 +93,73 @@ public class LibraryProtocolSubscription implements FragmentHandler
             }
         }
 
-        return UNKNOWN_TEMPLATE;
+        return CONTINUE;
     }
 
-    private int onCatchup(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    private Action onCatchup(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         catchup.wrap(buffer, offset, blockLength, version);
-        handler.onCatchup(
+        return handler.onCatchup(
             catchup.libraryId(),
             catchup.connection(),
             catchup.messageCount()
         );
-        return catchup.limit();
     }
 
-    private int onApplicationHeartbeat(final DirectBuffer buffer,
+    private Action onApplicationHeartbeat(final DirectBuffer buffer,
                                        final int offset,
                                        final int blockLength,
                                        final int version)
     {
         applicationHeartbeat.wrap(buffer, offset, blockLength, version);
-        handler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
-        return applicationHeartbeat.limit();
+        return handler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
     }
 
-    private int onReleaseSessionReply(
+    private Action onReleaseSessionReply(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         releaseSessionReply.wrap(buffer, offset, blockLength, version);
-        handler.onReleaseSessionReply(
+        return handler.onReleaseSessionReply(
             releaseSessionReply.correlationId(),
             releaseSessionReply.status());
-        return releaseSessionReply.limit();
     }
 
-    private int onRequestSessionReply(
+    private Action onRequestSessionReply(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         requestSessionReply.wrap(buffer, offset, blockLength, version);
-        handler.onRequestSessionReply(
+        return handler.onRequestSessionReply(
             requestSessionReply.correlationId(),
             requestSessionReply.status());
-        return requestSessionReply.limit();
     }
 
-    private int onError(
+    private Action onError(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         error.wrap(buffer, offset, blockLength, version);
-        handler.onError(
+        return handler.onError(
             error.type(),
             error.libraryId(),
             error.message()
         );
-
-        return error.limit();
     }
 
-    private int onNewSentPosition(
+    private Action onNewSentPosition(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         newSentPosition.wrap(buffer, offset, blockLength, version);
-        handler.onNewSentPosition(
+        return handler.onNewSentPosition(
             newSentPosition.sessionId(),
             newSentPosition.position()
         );
-
-        return error.limit();
     }
 
-    private int onManageConnection(
+    private Action onManageConnection(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         manageConnection.wrap(buffer, offset, blockLength, version);
         final int addressOffset = offset + ManageConnectionDecoder.BLOCK_LENGTH + addressHeaderLength();
-        handler.onManageConnection(
+        return handler.onManageConnection(
             manageConnection.libraryId(),
             manageConnection.connection(),
             manageConnection.type(),
@@ -183,14 +170,13 @@ public class LibraryProtocolSubscription implements FragmentHandler
             manageConnection.addressLength(),
             manageConnection.sessionState(),
             manageConnection.heartbeatIntervalInS());
-        return manageConnection.limit();
     }
 
-    private int onLogon(
+    private Action onLogon(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         logon.wrap(buffer, offset, blockLength, version);
-        handler.onLogon(
+        return handler.onLogon(
             logon.libraryId(),
             logon.connection(),
             logon.session(),
@@ -203,6 +189,5 @@ public class LibraryProtocolSubscription implements FragmentHandler
             logon.targetCompId(),
             logon.username(),
             logon.password());
-        return logon.limit();
     }
 }

@@ -15,12 +15,13 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 public interface LibraryProtocolHandler
 {
-    void onManageConnection(
+    Action onManageConnection(
         final int libraryId,
         final long connectionId,
         final ConnectionType type,
@@ -31,7 +32,7 @@ public interface LibraryProtocolHandler
         final int addressLength,
         final SessionState state, final int heartbeatIntervalInS);
 
-    void onLogon(
+    Action onLogon(
         final int libraryId,
         final long connectionId,
         final long sessionId,
@@ -44,15 +45,15 @@ public interface LibraryProtocolHandler
         final String username,
         final String password);
 
-    void onError(final GatewayError errorType, final int libraryId, final String message);
+    Action onError(final GatewayError errorType, final int libraryId, final String message);
 
-    void onApplicationHeartbeat(final int libraryId);
+    Action onApplicationHeartbeat(final int libraryId);
 
-    void onReleaseSessionReply(final long correlationId, final SessionReplyStatus status);
+    Action onReleaseSessionReply(final long correlationId, final SessionReplyStatus status);
 
-    void onRequestSessionReply(final long correlationId, final SessionReplyStatus status);
+    Action onRequestSessionReply(final long correlationId, final SessionReplyStatus status);
 
-    void onCatchup(int libraryId, long connectionId, final int messageCount);
+    Action onCatchup(int libraryId, long connectionId, final int messageCount);
 
-    void onNewSentPosition(final int sessionId, long position);
+    Action onNewSentPosition(final int sessionId, long position);
 }

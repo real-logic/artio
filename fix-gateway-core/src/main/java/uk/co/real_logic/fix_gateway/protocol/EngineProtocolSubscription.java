@@ -15,14 +15,14 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
-import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
-import static uk.co.real_logic.fix_gateway.protocol.Streams.UNKNOWN_TEMPLATE;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-public class EngineProtocolSubscription implements FragmentHandler
+public class EngineProtocolSubscription implements ControlledFragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final InitiateConnectionDecoder initiateConnection = new InitiateConnectionDecoder();
@@ -39,12 +39,7 @@ public class EngineProtocolSubscription implements FragmentHandler
         this.handler = handler;
     }
 
-    public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
-    {
-        readFragment(buffer, offset, header);
-    }
-
-    public int readFragment(final DirectBuffer buffer, int offset, final Header header)
+    public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);
 
@@ -85,35 +80,33 @@ public class EngineProtocolSubscription implements FragmentHandler
             }
         }
 
-        return UNKNOWN_TEMPLATE;
+        return CONTINUE;
     }
 
-    private int onApplicationHeartbeat(final DirectBuffer buffer,
+    private Action onApplicationHeartbeat(final DirectBuffer buffer,
                                        final int offset,
                                        final int blockLength,
                                        final int version)
     {
         applicationHeartbeat.wrap(buffer, offset, blockLength, version);
-        handler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
-        return applicationHeartbeat.limit();
+        return handler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
     }
 
 
-    private int onLibraryConnect(
+    private Action onLibraryConnect(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
     {
         libraryConnect.wrap(buffer, offset, blockLength, version);
-        handler.onLibraryConnect(
+        return handler.onLibraryConnect(
             libraryConnect.libraryId(),
             header.sessionId());
-        return libraryConnect.limit();
     }
 
-    private int onReleaseSession(
+    private Action onReleaseSession(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
     {
         releaseSession.wrap(buffer, offset, blockLength, version);
-        handler.onReleaseSession(
+        return handler.onReleaseSession(
             releaseSession.libraryId(),
             releaseSession.connection(),
             releaseSession.correlationId(),
@@ -124,22 +117,20 @@ public class EngineProtocolSubscription implements FragmentHandler
             releaseSession.username(),
             releaseSession.password(),
             header);
-        return releaseSession.limit();
     }
 
-    private int onRequestSession(
+    private Action onRequestSession(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         requestSession.wrap(buffer, offset, blockLength, version);
-        handler.onRequestSession(
+        return handler.onRequestSession(
             requestSession.libraryId(),
             requestSession.sessionId(),
             requestSession.correlationId(),
             requestSession.lastReceivedSequenceNumber());
-        return requestSession.limit();
     }
 
-    private int onInitiateConnection(
+    private Action onInitiateConnection(
         final DirectBuffer buffer,
         final int offset,
         final int blockLength,
@@ -147,7 +138,7 @@ public class EngineProtocolSubscription implements FragmentHandler
         final Header header)
     {
         initiateConnection.wrap(buffer, offset, blockLength, version);
-        handler.onInitiateConnection(
+        return handler.onInitiateConnection(
             initiateConnection.libraryId(),
             initiateConnection.port(),
             initiateConnection.host(),
@@ -162,16 +153,14 @@ public class EngineProtocolSubscription implements FragmentHandler
             initiateConnection.heartbeatIntervalInS(),
             header
         );
-        return initiateConnection.limit();
     }
 
-    private int onRequestDisconnect(final DirectBuffer buffer,
+    private Action onRequestDisconnect(final DirectBuffer buffer,
                                     final int offset,
                                     final int blockLength,
                                     final int version)
     {
         requestDisconnect.wrap(buffer, offset, blockLength, version);
-        handler.onRequestDisconnect(requestDisconnect.libraryId(), requestDisconnect.connection());
-        return requestDisconnect.limit();
+        return handler.onRequestDisconnect(requestDisconnect.libraryId(), requestDisconnect.connection());
     }
 }

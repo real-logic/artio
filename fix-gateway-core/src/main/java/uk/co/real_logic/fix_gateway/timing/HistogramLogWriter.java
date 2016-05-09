@@ -27,9 +27,7 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
 import java.util.List;
 
-import static java.nio.file.StandardOpenOption.CREATE;
-import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
-import static java.nio.file.StandardOpenOption.WRITE;
+import static java.nio.file.StandardOpenOption.*;
 
 public class HistogramLogWriter implements Agent
 {
