@@ -16,8 +16,8 @@
 package uk.co.real_logic.fix_gateway.library;
 
 import io.aeron.Subscription;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.collections.Long2ObjectHashMap;
@@ -212,7 +212,7 @@ public final class FixLibrary extends GatewayProcess
     public int poll(final int fragmentLimit)
     {
         final long timeInMs = clock.time();
-        return inboundSubscription.poll(outboundSubscription, fragmentLimit) +
+        return inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit) +
                pollSessions(timeInMs) +
                livenessDetector.poll(timeInMs);
     }
@@ -528,9 +528,8 @@ public final class FixLibrary extends GatewayProcess
     }
 
     private final FixLibraryProtocolHandler processProtocolHandler = new FixLibraryProtocolHandler();
-    private final FragmentHandler outboundSubscription =
-        new SessionSubscription(processProtocolHandler)
-            .andThen(new LibraryProtocolSubscription(processProtocolHandler));
+    private final ControlledFragmentHandler outboundSubscription =
+        SessionSubscription.of(processProtocolHandler, new LibraryProtocolSubscription(processProtocolHandler));
 
     private class FixLibraryProtocolHandler implements LibraryProtocolHandler, SessionHandler
     {

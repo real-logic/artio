@@ -16,8 +16,8 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import io.aeron.Subscription;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
@@ -99,9 +99,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final Timer outboundTimer;
     private final Timer sendTimer;
 
-    private final SessionSubscription sessionSubscription = new SessionSubscription(this);
-    private final FragmentHandler outboundSubscription =
-        sessionSubscription.andThen(new EngineProtocolSubscription(this));
+    private final ControlledFragmentHandler outboundSubscription =
+        SessionSubscription.of(this, new EngineProtocolSubscription(this));
 
     private final boolean hasBindAddress;
     private final Selector selector;
@@ -222,12 +221,13 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
     private int sendReplayMessages()
     {
-        return replaySubscription.poll(sessionSubscription, replayFragmentLimit);
+        return replaySubscription.controlledPoll(outboundSubscription, replayFragmentLimit);
     }
 
     private int sendOutboundMessages()
     {
-        final int newMessagesRead = outboundDataSubscription.poll(outboundSubscription, outboundLibraryFragmentLimit);
+        final int newMessagesRead =
+            outboundDataSubscription.controlledPoll(outboundSubscription, outboundLibraryFragmentLimit);
         final int messagesRead = newMessagesRead +
             outboundSlowSubscription.controlledPoll(senderEndPoints, outboundLibraryFragmentLimit);
 

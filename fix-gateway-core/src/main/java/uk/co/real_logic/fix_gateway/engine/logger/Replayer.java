@@ -76,7 +76,7 @@ public class Replayer implements SessionHandler, ControlledFragmentHandler, Agen
 
     private final PossDupFinder possDupFinder = new PossDupFinder();
     private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
-    private final SessionSubscription sessionSubscription = new SessionSubscription(this);
+    private final SessionSubscription sessionSubscription = SessionSubscription.of(this);
 
     private int currentMessageOffset;
     private int currentMessageLength;
@@ -325,7 +325,7 @@ public class Replayer implements SessionHandler, ControlledFragmentHandler, Agen
 
     public int doWork() throws Exception
     {
-        return subscription.poll(sessionSubscription, POLL_LIMIT);
+        return subscription.controlledPoll(sessionSubscription, POLL_LIMIT);
     }
 
     public void onClose()

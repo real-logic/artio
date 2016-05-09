@@ -40,7 +40,7 @@ public class GapFiller implements SessionHandler, Agent
     private static final int ENCODE_BUFFER_SIZE = 8 * 1024;
 
     private final AsciiBuffer decoderBuffer = new MutableAsciiBuffer();
-    private final SessionSubscription sessionSubscription = new SessionSubscription(this);
+    private final SessionSubscription sessionSubscription = SessionSubscription.of(this);
 
     private final SequenceResetEncoder sequenceResetEncoder = new SequenceResetEncoder();
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
@@ -59,7 +59,7 @@ public class GapFiller implements SessionHandler, Agent
 
     public int doWork() throws Exception
     {
-        return subscription.poll(sessionSubscription, FRAGMENT_LIMIT);
+        return subscription.controlledPoll(sessionSubscription, FRAGMENT_LIMIT);
     }
 
     public Action onMessage(

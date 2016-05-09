@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.protocol;
 
 import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -25,41 +24,51 @@ import uk.co.real_logic.fix_gateway.messages.DisconnectDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.protocol.GatewayPublication.FRAME_SIZE;
-import static uk.co.real_logic.fix_gateway.protocol.Streams.UNKNOWN_TEMPLATE;
 
-public class SessionSubscription implements FragmentHandler
+public final class SessionSubscription implements ControlledFragmentHandler
 {
+
+    private static final Action UNKNOWN_TEMPLATE = null;
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
 
     private final SessionHandler sessionHandler;
+    private final Action defaultAction;
 
-    public SessionSubscription(final SessionHandler sessionHandler)
+    public static SessionSubscription of(final SessionHandler sessionHandler)
     {
-        this.sessionHandler = sessionHandler;
+        return new SessionSubscription(sessionHandler, CONTINUE);
     }
 
-    public void onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
+    public static ControlledFragmentHandler of(final SessionHandler sessionHandler, final ControlledFragmentHandler other)
     {
-        readFragment(buffer, offset, header);
-    }
-
-    public FragmentHandler andThen(final ControlledFragmentHandler other)
-    {
+        final SessionSubscription subscription = new SessionSubscription(sessionHandler, UNKNOWN_TEMPLATE);
         return (buffer, offset, length, header) ->
         {
-            if (readFragment(buffer, offset, header) == UNKNOWN_TEMPLATE)
+            final Action action = subscription.onFragment(buffer, offset, length, header);
+
+            if (action == UNKNOWN_TEMPLATE)
             {
-                other.onFragment(buffer, offset, length, header);
+                return other.onFragment(buffer, offset, length, header);
             }
+
+            return action;
         };
     }
 
-    public int readFragment(final DirectBuffer buffer, int offset, final Header header)
+    private SessionSubscription(final SessionHandler sessionHandler,
+                                final Action defaultAction)
+    {
+        this.sessionHandler = sessionHandler;
+        this.defaultAction = defaultAction;
+    }
+
+    public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);
 
@@ -80,27 +89,26 @@ public class SessionSubscription implements FragmentHandler
             }
         }
 
-        return Streams.UNKNOWN_TEMPLATE;
+        return defaultAction;
     }
 
-    private int onDisconnect(
+    private Action onDisconnect(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         disconnect.wrap(buffer, offset, blockLength, version);
         final long connectionId = disconnect.connection();
         DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
-        sessionHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
-        return offset + DisconnectDecoder.BLOCK_LENGTH;
+        return sessionHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
     }
 
-    private int onFixMessage(
+    private Action onFixMessage(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
     {
         messageFrame.wrap(buffer, offset, blockLength, version);
         final int messageLength = messageFrame.bodyLength();
         if (messageFrame.status() == OK)
         {
-            sessionHandler.onMessage(
+            return sessionHandler.onMessage(
                 buffer,
                 offset + FRAME_SIZE,
                 messageLength,
@@ -112,6 +120,6 @@ public class SessionSubscription implements FragmentHandler
                 header.position());
         }
 
-        return offset + FRAME_SIZE + messageLength;
+        return CONTINUE;
     }
 }
