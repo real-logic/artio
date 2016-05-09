@@ -395,7 +395,8 @@ public class GatewayPublication extends ClaimablePublication
         final int requestedInitialSequenceNumber,
         final String username,
         final String password,
-        final int heartbeatIntervalInS)
+        final int heartbeatIntervalInS,
+        final long correlationId)
     {
         final byte[] hostBytes = bytes(host);
         final byte[] senderCompIdBytes = bytes(senderCompId);
@@ -440,6 +441,7 @@ public class GatewayPublication extends ClaimablePublication
             .requestedInitialSequenceNumber(requestedInitialSequenceNumber)
             .sequenceNumberType(sequenceNumberType)
             .heartbeatIntervalInS(heartbeatIntervalInS)
+            .correlationId(correlationId)
             .putHost(hostBytes, 0, hostBytes.length)
             .putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length)
             .putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length)

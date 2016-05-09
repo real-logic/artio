@@ -35,6 +35,7 @@ public interface EngineProtocolHandler
         final String username,
         final String password,
         final int heartbeatIntervalInS,
+        final long correlationId,
         final Header header);
 
     Action onRequestDisconnect(final int libraryId, final long connectionId);

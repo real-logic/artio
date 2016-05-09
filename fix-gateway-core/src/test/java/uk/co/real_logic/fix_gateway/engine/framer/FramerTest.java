@@ -62,6 +62,7 @@ public class FramerTest
     private static final int LIBRARY_ID = 3;
     private static final int REPLY_TIMEOUT_IN_MS = 10;
     private static final int HEARTBEAT_INTERVAL_IN_S = 10;
+    public static final int CORR_ID = 1;
 
     private ServerSocketChannel server;
 
@@ -79,7 +80,7 @@ public class FramerTest
     private SequenceNumberIndexReader receivedSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
     private ReplayQuery replayQuery = mock(ReplayQuery.class);
     private SessionIds sessionIds = mock(SessionIds.class);
-    private GatewaySessions gatewaySessions = mock(GatewaySessions.class);;
+    private GatewaySessions gatewaySessions = mock(GatewaySessions.class);
     private Subscription outboundSubscription = mock(Subscription.class);
     private Image image = mock(Image.class);
 
@@ -208,7 +209,7 @@ public class FramerTest
     {
         framer.onInitiateConnection(
             LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG",
-            TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, "", "", HEARTBEAT_INTERVAL_IN_S, header);
+            TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, "", "", HEARTBEAT_INTERVAL_IN_S, CORR_ID, header);
 
         framer.doWork();
 
@@ -312,7 +313,7 @@ public class FramerTest
 
         framer.onInitiateConnection(
             LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG",
-            TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, "", "", HEARTBEAT_INTERVAL_IN_S, header);
+            TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, "", "", HEARTBEAT_INTERVAL_IN_S, CORR_ID, header);
 
         framer.doWork();
     }

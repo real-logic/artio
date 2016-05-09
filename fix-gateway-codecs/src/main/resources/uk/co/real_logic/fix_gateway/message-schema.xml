@@ -169,14 +169,15 @@
         <field name="requestedInitialSequenceNumber" id="2" type="int32"/>
         <field name="sequenceNumberType" id="3" type="SequenceNumberType"/>
         <field name="port" id="4" type="int32"/>
-        <field name="heartbeatIntervalInS" id="12" type="int32"/>
-        <data name="host" id="5" type="varDataEncoding"/>
-        <data name="senderCompId" id="6" type="varDataEncoding"/>
+        <field name="heartbeatIntervalInS" id="5" type="int32"/>
+        <field name="correlationId" id="6" type="CorrelationId"/>
+        <data name="host" id="7" type="varDataEncoding"/>
+        <data name="senderCompId" id="8" type="varDataEncoding"/>
         <data name="senderSubId" id="7" type="varDataEncoding"/>
-        <data name="senderLocationId" id="8" type="varDataEncoding"/>
-        <data name="targetCompId" id="9" type="varDataEncoding"/>
-        <data name="username" id="10" type="varDataEncoding"/>
-        <data name="password" id="11" type="varDataEncoding"/>
+        <data name="senderLocationId" id="9" type="varDataEncoding"/>
+        <data name="targetCompId" id="10" type="varDataEncoding"/>
+        <data name="username" id="11" type="varDataEncoding"/>
+        <data name="password" id="12" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">
         <field name="libraryId" id="45" type="LibraryId"/>

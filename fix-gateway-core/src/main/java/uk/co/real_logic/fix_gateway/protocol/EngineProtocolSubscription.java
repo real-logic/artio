@@ -151,6 +151,7 @@ public class EngineProtocolSubscription implements ControlledFragmentHandler
             initiateConnection.username(),
             initiateConnection.password(),
             initiateConnection.heartbeatIntervalInS(),
+            initiateConnection.correlationId(),
             header
         );
     }

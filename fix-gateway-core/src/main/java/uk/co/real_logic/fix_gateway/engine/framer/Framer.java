@@ -357,10 +357,10 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final String username,
         final String password,
         final int heartbeatIntervalInS,
+        final long correlationId,
         final Header header)
     {
-        // TODO: correlation id
-        final Action action = transactions.retry(libraryId);
+        final Action action = transactions.retry(correlationId);
         if (action != null)
         {
             return action;
@@ -426,8 +426,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                     username, password, LogonStatus.NEW)
             );
 
-            // TODO: correlation id
-            return transactions.firstAttempt(libraryId, transaction);
+            return transactions.firstAttempt(correlationId, transaction);
         }
         catch (final Exception e)
         {

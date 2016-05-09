@@ -310,7 +310,8 @@ public final class FixLibrary extends GatewayProcess
                     configuration.initialSequenceNumber(),
                     configuration.username(),
                     configuration.password(),
-                    this.configuration.defaultHeartbeatIntervalInS());
+                    this.configuration.defaultHeartbeatIntervalInS(),
+                    ++currentCorrelationId);
 
                 awaitReply(() -> incomingSession == null && errorType == null);
 
