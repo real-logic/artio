@@ -219,7 +219,7 @@ class ReceiverEndPoint
                 {
                     saveInvalidMessage(offset, startOfChecksumTag);
                     close(LOCAL_DISCONNECT);
-                    removeEndpoint();
+                    removeEndpointFromFramer();
                     break;
                 }
 
@@ -449,7 +449,7 @@ class ReceiverEndPoint
         }
     }
 
-    private void removeEndpoint()
+    private void removeEndpointFromFramer()
     {
         framer.onDisconnect(libraryId, connectionId, null);
     }
@@ -457,19 +457,20 @@ class ReceiverEndPoint
     private void onDisconnectDetected()
     {
         disconnectEndpoint(REMOTE_DISCONNECT);
-        removeEndpoint();
+        removeEndpointFromFramer();
     }
 
     public void onNoLogonDisconnect()
     {
         disconnectEndpoint(NO_LOGON);
-        removeEndpoint();
+        removeEndpointFromFramer();
     }
 
     private void disconnectEndpoint(final DisconnectReason reason)
     {
+        framer.schedule(() -> publication.saveDisconnect(libraryId, connectionId, reason));
+
         sessionIds.onDisconnect(sessionId);
-        publication.saveDisconnect(libraryId, connectionId, reason);
         if (selectionKey != null)
         {
             selectionKey.cancel();

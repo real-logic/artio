@@ -62,7 +62,7 @@ public class FramerTest
     private static final int LIBRARY_ID = 3;
     private static final int REPLY_TIMEOUT_IN_MS = 10;
     private static final int HEARTBEAT_INTERVAL_IN_S = 10;
-    public static final int CORR_ID = 1;
+    private static final int CORR_ID = 1;
 
     private ServerSocketChannel server;
 

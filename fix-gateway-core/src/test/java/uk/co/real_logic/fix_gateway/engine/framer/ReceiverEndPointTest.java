@@ -64,11 +64,12 @@ public class ReceiverEndPointTest
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private SequenceNumberIndexReader sentSequenceNumbers = mock(SequenceNumberIndexReader.class);
     private SequenceNumberIndexReader receivedSequenceNumbers = mock(SequenceNumberIndexReader.class);
+    private Framer framer = mock(Framer.class);
 
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
             mockChannel, 16 * 1024, publication, CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
-            sentSequenceNumbers, receivedSequenceNumbers, messagesRead, mock(Framer.class), errorHandler, LIBRARY_ID, false);
+            sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID, false);
 
     @Before
     public void setUp()
@@ -76,6 +77,11 @@ public class ReceiverEndPointTest
         endPoint.gatewaySession(mock(GatewaySession.class));
         when(mockSessionIds.onLogon(any())).thenReturn(SESSION_ID);
         when(mockSessionIdStrategy.onLogon(any())).thenReturn(compositeKey);
+        doAnswer(inv ->
+        {
+            ((Step) inv.getArguments()[0]).attempt();
+            return null;
+        }).when(framer).schedule(any(Step.class));
     }
 
     @Test

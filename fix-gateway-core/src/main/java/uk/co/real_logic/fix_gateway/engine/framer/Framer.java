@@ -80,7 +80,7 @@ import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 {
 
-    private final Transactions transactions = new Transactions();
+    private final RetryManager retryManager = new RetryManager();
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final ReliefValve sendOutboundMessagesFunc = this::sendOutboundMessages;
@@ -213,7 +213,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     public int doWork() throws Exception
     {
         final long timeInMs = clock.time();
-        return sendOutboundMessages() +
+        return retryManager.attemptSteps() +
+               sendOutboundMessages() +
                sendReplayMessages() +
                pollEndPoints() +
                pollNewConnections(timeInMs) +
@@ -364,7 +365,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final long correlationId,
         final Header header)
     {
-        final Action action = transactions.retry(correlationId);
+        final Action action = retryManager.retry(correlationId);
         if (action != null)
         {
             return action;
@@ -430,7 +431,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                     username, password, LogonStatus.NEW)
             );
 
-            return transactions.firstAttempt(correlationId, transaction);
+            return retryManager.firstAttempt(correlationId, transaction);
         }
         catch (final Exception e)
         {
@@ -579,7 +580,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
         for (final GatewaySession gatewaySession : gatewaySessions.sessions())
         {
-            saveLogon(libraryId, gatewaySession, SessionInfo.UNKNOWN_SESSION, SessionInfo.UNKNOWN_SESSION, LIBRARY_NOTIFICATION);
+            saveLogon(libraryId, gatewaySession, SessionInfo.UNKNOWN_SESSION, SessionInfo.UNKNOWN_SESSION,
+                LIBRARY_NOTIFICATION);
         }
 
         return CONTINUE;
@@ -843,4 +845,11 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         return "Framer";
     }
 
+    void schedule(final Step step)
+    {
+        if (step.attempt() < 0)
+        {
+            retryManager.schedule(step);
+        }
+    }
 }

@@ -44,7 +44,7 @@ class ReceiverEndPoints extends TransportPoller
         }
     }
 
-    public void removeConnection(final long connectionId)
+    void removeConnection(final long connectionId)
     {
         final ReceiverEndPoint[] endPoints = this.endPoints;
         final int length = endPoints.length;

@@ -18,11 +18,15 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.collections.Long2ObjectHashMap;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 
-public class Transactions
+public class RetryManager
 {
     private final Long2ObjectHashMap<Transaction> correlationIdToRetry = new Long2ObjectHashMap<>();
+    private List<Step> steps = new ArrayList<>();
 
     public Action retry(final long correlationId)
     {
@@ -50,5 +54,15 @@ public class Transactions
             correlationIdToRetry.remove(correlationId);
         }
         return action;
+    }
+
+    public void schedule(final Step step)
+    {
+        steps.add(step);
+    }
+
+    public int attemptSteps()
+    {
+        return steps.removeIf(step -> step.attempt() >= 0) ? 1 : 0;
     }
 }
