@@ -29,6 +29,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.QueuedPipe;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
+import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
@@ -57,6 +58,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.net.StandardSocketOptions.*;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -78,6 +80,7 @@ import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 {
 
+    private final Transactions transactions = new Transactions();
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final ReliefValve sendOutboundMessagesFunc = this::sendOutboundMessages;
@@ -353,8 +356,16 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final int requestedInitialSequenceNumber,
         final String username,
         final String password,
-        final int heartbeatIntervalInS, final Header header)
+        final int heartbeatIntervalInS,
+        final Header header)
     {
+        // TODO: correlation id
+        final Action action = transactions.retry(libraryId);
+        if (action != null)
+        {
+            return action;
+        }
+
         final LibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
         {
@@ -396,20 +407,27 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             final GatewaySession session =
                 setupConnection(channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR, resetSeqNumbers);
 
-            idToLibrary.get(libraryId).addSession(session);
+            library.addSession(session);
 
             sentSequenceNumberIndex.awaitingIndexingUpTo(header, idleStrategy);
 
             final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             session.onLogon(sessionId, sessionKey, username, password, heartbeatIntervalInS);
-            inboundPublication.saveManageConnection(connectionId, address.toString(), libraryId, INITIATOR,
-                lastSentSequenceNumber, lastReceivedSequenceNumber, CONNECTED, heartbeatIntervalInS);
-            inboundPublication.saveLogon(
-                libraryId, connectionId, sessionId,
-                lastSentSequenceNumber, lastReceivedSequenceNumber,
-                senderCompId, senderSubId, senderLocationId, targetCompId,
-                username, password, LogonStatus.NEW);
+
+            final Transaction transaction = new Transaction(
+                () -> inboundPublication.saveManageConnection(
+                    connectionId, address.toString(), libraryId, INITIATOR,
+                    lastSentSequenceNumber, lastReceivedSequenceNumber, CONNECTED, heartbeatIntervalInS),
+                () -> inboundPublication.saveLogon(
+                    libraryId, connectionId, sessionId,
+                    lastSentSequenceNumber, lastReceivedSequenceNumber,
+                    senderCompId, senderSubId, senderLocationId, targetCompId,
+                    username, password, LogonStatus.NEW)
+            );
+
+            // TODO: correlation id
+            return transactions.firstAttempt(libraryId, transaction);
         }
         catch (final Exception e)
         {
@@ -421,13 +439,33 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
     private void saveError(final GatewayError error, final int libraryId)
     {
-        inboundPublication.saveError(error, libraryId, "");
+        final long position = inboundPublication.saveError(error, libraryId, "");
+        pressuredError(error, libraryId, null, position);
     }
 
     private void saveError(final GatewayError error, final int libraryId, final Exception e)
     {
         final String message = e.getMessage();
-        inboundPublication.saveError(error, libraryId, message == null ? "" : message);
+        final long position = inboundPublication.saveError(error, libraryId, message == null ? "" : message);
+        pressuredError(error, libraryId, message, position);
+    }
+
+    private void pressuredError(
+        final GatewayError error, final int libraryId, final String message, final long position)
+    {
+        if (position == BACK_PRESSURED)
+        {
+            if (message == null)
+            {
+                errorHandler.onError(new IllegalStateException(
+                    "Back pressured " + error + " for " + libraryId));
+            }
+            else
+            {
+                errorHandler.onError(new IllegalStateException(
+                    "Back pressured " + error + ": " + message + " for " + libraryId));
+            }
+        }
     }
 
     public Action onMessage(
@@ -607,19 +645,15 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final LibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
         {
-            // Drop when back pressured - other subscriber needs to handle timeouts anyway
-            inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_LIBRARY, correlationId);
-
-            return CONTINUE;
+            return Pressure.apply(
+                inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_LIBRARY, correlationId));
         }
 
         final GatewaySession gatewaySession = gatewaySessions.release(sessionId);
         if (gatewaySession == null)
         {
-            // Drop when back pressured - other subscriber needs to handle timeouts anyway
-            inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_SESSION, correlationId);
-
-            return CONTINUE;
+            return Pressure.apply(
+                inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_SESSION, correlationId));
         }
 
         final long connectionId = gatewaySession.connectionId();
