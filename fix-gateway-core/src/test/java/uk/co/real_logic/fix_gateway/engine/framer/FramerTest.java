@@ -17,14 +17,17 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import io.aeron.Image;
 import io.aeron.Subscription;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.QueuedPipe;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
@@ -33,6 +36,7 @@ import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.messages.LogonStatus;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.timing.Timer;
 
@@ -42,6 +46,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
+import static io.aeron.Publication.BACK_PRESSURED;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
@@ -63,6 +70,7 @@ public class FramerTest
     private static final int REPLY_TIMEOUT_IN_MS = 10;
     private static final int HEARTBEAT_INTERVAL_IN_S = 10;
     private static final int CORR_ID = 1;
+    private static final long POSITION = 1024;
 
     private ServerSocketChannel server;
 
@@ -81,6 +89,7 @@ public class FramerTest
     private ReplayQuery replayQuery = mock(ReplayQuery.class);
     private SessionIds sessionIds = mock(SessionIds.class);
     private GatewaySessions gatewaySessions = mock(GatewaySessions.class);
+    private GatewaySession gatewaySession = mock(GatewaySession.class);
     private Subscription outboundSubscription = mock(Subscription.class);
     private Image image = mock(Image.class);
 
@@ -207,9 +216,7 @@ public class FramerTest
     @Test
     public void shouldNotConnectIfLibraryUnknown() throws Exception
     {
-        framer.onInitiateConnection(
-            LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG",
-            TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, "", "", HEARTBEAT_INTERVAL_IN_S, CORR_ID, header);
+        onInitiateConnection();
 
         framer.doWork();
 
@@ -278,6 +285,90 @@ public class FramerTest
         verifySessionsAcquired(CONNECTED);
     }
 
+    @Test
+    public void shouldRetryNotifyingLibraryOfInitiateWhenBackPressured() throws Exception
+    {
+        backPressureFirstSaveAttempts();
+
+        libraryConnects();
+
+        assertEquals(Action.ABORT, onInitiateConnection());
+
+        assertEquals(Action.ABORT, onInitiateConnection());
+
+        assertEquals(CONTINUE, onInitiateConnection());
+
+        notifyLibraryOfConnection(times(2));
+    }
+
+    @Test
+    public void shouldManageGatewaySessions() throws Exception
+    {
+        openSocket();
+
+        framer.doWork();
+
+        verifyEndpointsCreated();
+
+        verifySessionsAcquired(CONNECTED);
+    }
+
+    @Test
+    public void shouldNotifyLibraryOfAuthenticatedGatewaySessions() throws Exception
+    {
+        shouldManageGatewaySessions();
+
+        when(gatewaySession.connectionId()).thenReturn(connectionId.getValue());
+        when(gatewaySession.compositeKey()).thenReturn(mock(CompositeKey.class));
+        when(gatewaySessions.sessions()).thenReturn(singletonList(gatewaySession));
+
+        libraryConnects();
+
+        verifyLogonSaved(times(1), LogonStatus.LIBRARY_NOTIFICATION);
+    }
+
+    @Ignore
+    @Test
+    public void shouldRetryNotifyingLibraryOfAuthenticatedGatewaySessionsWhenBackPressured() throws Exception
+    {
+        shouldManageGatewaySessions();
+
+        when(gatewaySession.connectionId()).thenReturn(connectionId.getValue());
+        when(gatewaySession.compositeKey()).thenReturn(mock(CompositeKey.class));
+        when(gatewaySessions.sessions()).thenReturn(singletonList(gatewaySession));
+
+        backpressureSaveLogon();
+
+        libraryConnects();
+
+        verifyLogonSaved(times(2), LogonStatus.LIBRARY_NOTIFICATION);
+    }
+
+    private void backPressureFirstSaveAttempts()
+    {
+        when(mockGatewayPublication.saveManageConnection(
+            anyLong(),
+            anyString(),
+            eq(LIBRARY_ID),
+            eq(INITIATOR),
+            anyInt(),
+            anyInt(),
+            any(),
+            anyInt()))
+            .thenReturn(BACK_PRESSURED, POSITION);
+        backpressureSaveLogon();
+    }
+
+    private void backpressureSaveLogon()
+    {
+        when(mockGatewayPublication.saveLogon(
+            eq(LIBRARY_ID), anyLong(), anyLong(),
+            anyInt(), anyInt(),
+            any(), any(), any(), any(),
+            any(), any(), eq(LogonStatus.NEW)))
+            .thenReturn(BACK_PRESSURED, POSITION);
+    }
+
     private void verifySessionsAcquired(final SessionState state)
     {
         verify(gatewaySessions, times(1)).acquire(
@@ -302,32 +393,45 @@ public class FramerTest
         mockClock.advanceMilliSeconds(REPLY_TIMEOUT_IN_MS * 2);
     }
 
-    private void connectLibrary()
+    private void libraryConnects()
     {
-        framer.onLibraryConnect(LIBRARY_ID, CORR_ID, 1);
+        assertEquals(Action.CONTINUE, framer.onLibraryConnect(LIBRARY_ID, CORR_ID, 1));
     }
 
     private void initiateConnection() throws Exception
     {
-        connectLibrary();
+        libraryConnects();
 
-        framer.onInitiateConnection(
+        assertEquals(CONTINUE, onInitiateConnection());
+    }
+
+    private Action onInitiateConnection()
+    {
+        return framer.onInitiateConnection(
             LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG",
             TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, "", "", HEARTBEAT_INTERVAL_IN_S, CORR_ID, header);
-
-        framer.doWork();
     }
 
     private void aClientConnects() throws IOException
     {
-        connectLibrary();
+        libraryConnects();
 
+        openSocket();
+    }
+
+    private void openSocket() throws IOException
+    {
         client = SocketChannel.open(FRAMER_ADDRESS);
     }
 
     private void notifyLibraryOfConnection()
     {
-        verify(mockGatewayPublication).saveManageConnection(
+        notifyLibraryOfConnection(times(1));
+    }
+
+    private void notifyLibraryOfConnection(final VerificationMode times)
+    {
+        verify(mockGatewayPublication, times).saveManageConnection(
             eq(connectionId.getValue()),
             anyString(),
             eq(LIBRARY_ID),
@@ -336,11 +440,16 @@ public class FramerTest
             anyInt(),
             any(),
             anyInt());
-        verify(mockGatewayPublication).saveLogon(
+        verifyLogonSaved(times, LogonStatus.NEW);
+    }
+
+    private void verifyLogonSaved(final VerificationMode times, final LogonStatus status)
+    {
+        verify(mockGatewayPublication, times).saveLogon(
             eq(LIBRARY_ID), eq(connectionId.getValue()), anyLong(),
             anyInt(), anyInt(),
             any(), any(), any(), any(),
-            any(), any(), eq(LogonStatus.NEW));
+            any(), any(), eq(status));
     }
 
     private void aClientSendsData() throws IOException

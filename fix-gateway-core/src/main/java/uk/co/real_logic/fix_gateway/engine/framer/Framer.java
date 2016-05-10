@@ -564,7 +564,6 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
     public Action onLibraryConnect(final int libraryId, final long correlationId, final int aeronSessionId)
     {
-        final long timeInMs = clock.time();
         if (idToLibrary.containsKey(libraryId))
         {
             saveError(DUPLICATE_LIBRARY_ID, libraryId);
@@ -582,7 +581,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             inboundPublication,
             libraryId,
             configuration.replyTimeoutInMs(),
-            timeInMs);
+            clock.time());
 
         final LibraryInfo library = new LibraryInfo(libraryId, livenessDetector, aeronSessionId);
         idToLibrary.put(libraryId, library);
