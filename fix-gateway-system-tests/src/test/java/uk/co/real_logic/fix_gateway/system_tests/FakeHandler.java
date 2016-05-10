@@ -118,9 +118,10 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
         sessionIds.clear();
     }
 
-    public void onSendCompleted(final long position)
+    public Action onSendCompleted(final long position)
     {
         this.sentPosition = position;
+        return Action.CONTINUE;
     }
 
     public long sentPosition()

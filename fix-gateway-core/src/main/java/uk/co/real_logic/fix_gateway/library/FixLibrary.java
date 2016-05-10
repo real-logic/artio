@@ -653,7 +653,7 @@ public final class FixLibrary extends GatewayProcess
                 final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
                 if (subscriber != null)
                 {
-                    subscriber.onMessage(
+                    return subscriber.onMessage(
                         buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
                 }
             }
@@ -689,9 +689,8 @@ public final class FixLibrary extends GatewayProcess
                 FixLibrary.this.errorType = errorType;
                 FixLibrary.this.errorMessage = message;
             }
-            configuration.gatewayErrorHandler().onError(errorType, libraryId, message);
 
-            return CONTINUE;
+            return configuration.gatewayErrorHandler().onError(errorType, libraryId, message);
         }
 
         public Action onApplicationHeartbeat(final int libraryId)
@@ -754,7 +753,7 @@ public final class FixLibrary extends GatewayProcess
         {
             if (this.sessionId == sessionId)
             {
-                sentPositionHandler.onSendCompleted(position);
+                return sentPositionHandler.onSendCompleted(position);
             }
 
             return CONTINUE;

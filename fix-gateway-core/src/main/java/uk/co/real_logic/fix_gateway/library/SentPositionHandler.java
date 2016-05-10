@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+
 /**
  * Callback handler to let clients know when the gateway owns a message. In a clustered
  * configuration this means that the gateway has replicated the message around the cluster.
@@ -31,6 +33,7 @@ public interface SentPositionHandler
      * Called when one or more messages has been sent.
      *
      * @param position the position that corresponds to what has been sent via TCP.
+     * @return appropriate action to indicate back pressure
      */
-    void onSendCompleted(final long position);
+    Action onSendCompleted(final long position);
 }

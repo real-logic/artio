@@ -19,6 +19,8 @@ import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+
 
 /**
  * Provides configuration for initiating an instance of Fix Library. Individual configuration options are
@@ -32,13 +34,8 @@ public final class LibraryConfiguration extends CommonConfiguration
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
     public static final int DEFAULT_LIBRARY_ID = 1;
     public static final GatewayErrorHandler DEFAULT_GATEWAY_ERROR_HANDLER =
-        (errorType, libraryId, message) ->
-        {
-        };
-    private static final SentPositionHandler DEFAULT_SENT_POSITION_HANDLER =
-        position ->
-        {
-        };
+        (errorType, libraryId, message) -> CONTINUE;
+    private static final SentPositionHandler DEFAULT_SENT_POSITION_HANDLER = position -> CONTINUE;
     private static final SessionExistsHandler DEFAULT_SESSION_EXISTS_HANDLER =
         (library, sessionId, senderCompId, senderSubId, senderLocationId, targetCompId, username, password) ->
         {

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 
 /**
@@ -28,5 +29,5 @@ import uk.co.real_logic.fix_gateway.messages.GatewayError;
 @FunctionalInterface
 public interface GatewayErrorHandler
 {
-    void onError(final GatewayError errorType, final int libraryId, final String message);
+    Action onError(final GatewayError errorType, final int libraryId, final String message);
 }
