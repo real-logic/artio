@@ -564,17 +564,17 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
     public Action onLibraryConnect(final int libraryId, final long correlationId, final int aeronSessionId)
     {
+        final Action action = retryManager.retry(correlationId);
+        if (action != null)
+        {
+            return action;
+        }
+
         if (idToLibrary.containsKey(libraryId))
         {
             saveError(DUPLICATE_LIBRARY_ID, libraryId);
 
             return CONTINUE;
-        }
-
-        final Action action = retryManager.retry(correlationId);
-        if (action != null)
-        {
-            return action;
         }
 
         final LivenessDetector livenessDetector = LivenessDetector.forEngine(

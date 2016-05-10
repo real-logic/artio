@@ -24,7 +24,6 @@ import org.agrona.concurrent.QueuedPipe;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
@@ -47,6 +46,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 import static io.aeron.Publication.BACK_PRESSURED;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.*;
@@ -292,9 +292,9 @@ public class FramerTest
 
         libraryConnects();
 
-        assertEquals(Action.ABORT, onInitiateConnection());
+        assertEquals(ABORT, onInitiateConnection());
 
-        assertEquals(Action.ABORT, onInitiateConnection());
+        assertEquals(ABORT, onInitiateConnection());
 
         assertEquals(CONTINUE, onInitiateConnection());
 
@@ -318,30 +318,39 @@ public class FramerTest
     {
         shouldManageGatewaySessions();
 
-        when(gatewaySession.connectionId()).thenReturn(connectionId.getValue());
-        when(gatewaySession.compositeKey()).thenReturn(mock(CompositeKey.class));
-        when(gatewaySessions.sessions()).thenReturn(singletonList(gatewaySession));
+        givenAGatewayToManage();
 
         libraryConnects();
 
         verifyLogonSaved(times(1), LogonStatus.LIBRARY_NOTIFICATION);
     }
 
-    @Ignore
     @Test
     public void shouldRetryNotifyingLibraryOfAuthenticatedGatewaySessionsWhenBackPressured() throws Exception
     {
         shouldManageGatewaySessions();
 
-        when(gatewaySession.connectionId()).thenReturn(connectionId.getValue());
-        when(gatewaySession.compositeKey()).thenReturn(mock(CompositeKey.class));
-        when(gatewaySessions.sessions()).thenReturn(singletonList(gatewaySession));
+        givenAGatewayToManage();
 
         backpressureSaveLogon();
+
+        assertEquals(ABORT, onLibraryConnect());
 
         libraryConnects();
 
         verifyLogonSaved(times(2), LogonStatus.LIBRARY_NOTIFICATION);
+    }
+
+    private Action onLibraryConnect()
+    {
+        return framer.onLibraryConnect(LIBRARY_ID, CORR_ID, 1);
+    }
+
+    private void givenAGatewayToManage()
+    {
+        when(gatewaySession.connectionId()).thenReturn(connectionId.getValue());
+        when(gatewaySession.compositeKey()).thenReturn(mock(CompositeKey.class));
+        when(gatewaySessions.sessions()).thenReturn(singletonList(gatewaySession));
     }
 
     private void backPressureFirstSaveAttempts()
@@ -365,7 +374,7 @@ public class FramerTest
             eq(LIBRARY_ID), anyLong(), anyLong(),
             anyInt(), anyInt(),
             any(), any(), any(), any(),
-            any(), any(), eq(LogonStatus.NEW)))
+            any(), any(), any()))
             .thenReturn(BACK_PRESSURED, POSITION);
     }
 
@@ -395,7 +404,7 @@ public class FramerTest
 
     private void libraryConnects()
     {
-        assertEquals(Action.CONTINUE, framer.onLibraryConnect(LIBRARY_ID, CORR_ID, 1));
+        assertEquals(Action.CONTINUE, onLibraryConnect());
     }
 
     private void initiateConnection() throws Exception
