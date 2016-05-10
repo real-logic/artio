@@ -21,7 +21,7 @@ import uk.co.real_logic.fix_gateway.Pressure;
 import java.util.Arrays;
 import java.util.List;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 class Transaction
@@ -47,9 +47,9 @@ class Transaction
             final Continuation continuation = continuationList.get(index);
             final Action action = Pressure.apply(continuation.attempt());
 
-            if (action == BREAK)
+            if (action == ABORT)
             {
-                return BREAK;
+                return ABORT;
             }
         }
 

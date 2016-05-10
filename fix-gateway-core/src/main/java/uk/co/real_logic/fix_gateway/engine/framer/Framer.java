@@ -66,6 +66,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
+import static uk.co.real_logic.fix_gateway.engine.framer.Continuation.COMPLETE;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
@@ -123,7 +124,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final SessionIds sessionIds;
     private final QueuedPipe<AdminCommand> adminCommands;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
-    private final SequenceNumberIndexReader receivedSequenceNumberIndex;
+    private final SequenceNumberIndexReader recvSeqNumIndex;
     private final IdleStrategy idleStrategy;
     private final int inboundBytesReceivedLimit;
     private final int outboundLibraryFragmentLimit;
@@ -150,7 +151,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex,
+        final SequenceNumberIndexReader recvSeqNumIndex,
         final GatewaySessions gatewaySessions,
         final ReplayQuery inboundMessages,
         final ErrorHandler errorHandler,
@@ -178,7 +179,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         this.sessionIds = sessionIds;
         this.adminCommands = adminCommands;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
-        this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
+        this.recvSeqNumIndex = recvSeqNumIndex;
         this.idleStrategy = configuration.framerIdleStrategy();
 
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
@@ -271,7 +272,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         {
             final long sessionId = session.sessionId();
             final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-            final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+            final int receivedSequenceNumber = recvSeqNumIndex.lastKnownSequenceNumber(sessionId);
             final boolean hasLoggedIn = receivedSequenceNumber != UNK_SESSION;
             final SessionState state = hasLoggedIn ? ACTIVE : CONNECTED;
             gatewaySessions.acquire(
@@ -417,7 +418,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             sentSequenceNumberIndex.awaitingIndexingUpTo(header, idleStrategy);
 
             final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-            final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+            final int lastReceivedSequenceNumber = recvSeqNumIndex.lastKnownSequenceNumber(sessionId);
             session.onLogon(sessionId, sessionKey, username, password, heartbeatIntervalInS);
 
             final Transaction transaction = new Transaction(
@@ -515,7 +516,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
         final ReceiverEndPoint receiverEndPoint =
             connectionHandler.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
-                sendOutboundMessagesFunc, sentSequenceNumberIndex, receivedSequenceNumberIndex, resetSequenceNumbers);
+                sendOutboundMessagesFunc, sentSequenceNumberIndex, recvSeqNumIndex, resetSequenceNumbers);
         receiverEndPoints.add(receiverEndPoint);
 
         final SenderEndPoint senderEndPoint =
@@ -732,7 +733,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                 status);
         }
 
-        return 1L;
+        return COMPLETE;
     }
 
     private void catchupSession(final List<Continuation> continuations,
@@ -764,7 +765,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             continuations.add(() ->
                 inboundPublication.saveCatchup(libraryId, connectionId, expectedNumberOfMessages));
             continuations.add(() ->
-                receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId) < lastReceivedSeqNum ? BACK_PRESSURED : 1);
+                recvSeqNumIndex.lastKnownSequenceNumber(sessionId) < lastReceivedSeqNum ? BACK_PRESSURED : COMPLETE);
             continuations.add(
                 new CatchupReplayer(
                     inboundMessages,
@@ -811,33 +812,49 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         command.success(new ArrayList<>(gatewaySessions.sessions()));
     }
 
-    // Back-pressure aware to here
     void onResetSessionIds(final File backupLocation, final ResetSessionIdsCommand command)
     {
-        try
-        {
-            inboundPublication.saveResetSessionIds();
-            outboundPublication.saveResetSessionIds();
-            sessionIds.reset(backupLocation);
-            while (sequenceNumbersNotReset())
-            {
-                idleStrategy.idle();
-                failedResetSessionIdSpins.increment();
-            }
-            idleStrategy.reset();
+        schedule(
+            new Transaction(
+                inboundPublication::saveResetSessionIds,
+                outboundPublication::saveResetSessionIds,
+                () ->
+                {
+                    try
+                    {
+                        sessionIds.reset(backupLocation);
+                    }
+                    catch (final Exception ex)
+                    {
+                        command.onError(ex);
+                    }
+                    return COMPLETE;
+                },
+                () ->
+                {
+                    if (command.isDone())
+                    {
+                        return COMPLETE;
+                    }
 
-            command.success();
-        }
-        catch (final Exception ex)
-        {
-            command.onError(ex);
-        }
+                    if (sequenceNumbersNotReset())
+                    {
+                        return BACK_PRESSURED;
+                    }
+                    else
+                    {
+                        command.success();
+                        return COMPLETE;
+                    }
+                }
+            )
+        );
     }
 
     private boolean sequenceNumbersNotReset()
     {
         return sentSequenceNumberIndex.lastKnownSequenceNumber(1) != UNK_SESSION
-            || receivedSequenceNumberIndex.lastKnownSequenceNumber(1) != UNK_SESSION;
+            || recvSeqNumIndex.lastKnownSequenceNumber(1) != UNK_SESSION;
     }
 
     public void onClose()
@@ -854,11 +871,11 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         return "Framer";
     }
 
-    void schedule(final Continuation continuation)
+    void schedule(final Transaction transaction)
     {
-        if (continuation.attempt() < 0)
+        if (transaction.attempt() != CONTINUE)
         {
-            retryManager.schedule(continuation);
+            retryManager.schedule(transaction);
         }
     }
 }

@@ -39,16 +39,21 @@ public final class ResetSessionIdsCommand implements AdminCommand
 
     public void awaitResponse(final IdleStrategy idleStrategy)
     {
-        while (!done && error == null)
+        while (!isDone() && error == null)
         {
             idleStrategy.idle();
         }
         idleStrategy.reset();
 
-        if (!done)
+        if (!isDone())
         {
             LangUtil.rethrowUnchecked(error);
         }
+    }
+
+    boolean isDone()
+    {
+        return done;
     }
 
     void onError(final Exception error)

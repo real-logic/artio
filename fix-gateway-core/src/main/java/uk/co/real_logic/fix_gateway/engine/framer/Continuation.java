@@ -17,5 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 interface Continuation
 {
+    long COMPLETE = 1;
+
     long attempt();
 }

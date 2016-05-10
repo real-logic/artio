@@ -22,15 +22,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 public class RetryManager
 {
-    private final Long2ObjectHashMap<Transaction> correlationIdToRetry = new Long2ObjectHashMap<>();
-    private List<Continuation> continuations = new ArrayList<>();
+    private final Long2ObjectHashMap<Transaction> correlationIdToTransactions = new Long2ObjectHashMap<>();
+    private List<Transaction> polledTransactions = new ArrayList<>();
 
     public Action retry(final long correlationId)
     {
-        final Transaction transaction = correlationIdToRetry.get(correlationId);
+        final Transaction transaction = correlationIdToTransactions.get(correlationId);
         if (transaction == null)
         {
             return null;
@@ -41,7 +42,7 @@ public class RetryManager
 
     public Action firstAttempt(final long correlationId, final Transaction transaction)
     {
-        correlationIdToRetry.put(correlationId, transaction);
+        correlationIdToTransactions.put(correlationId, transaction);
 
         return attempt(correlationId, transaction);
     }
@@ -51,18 +52,18 @@ public class RetryManager
         final Action action = transaction.attempt();
         if (action != ABORT)
         {
-            correlationIdToRetry.remove(correlationId);
+            correlationIdToTransactions.remove(correlationId);
         }
         return action;
     }
 
-    public void schedule(final Continuation continuation)
+    public void schedule(final Transaction transaction)
     {
-        continuations.add(continuation);
+        polledTransactions.add(transaction);
     }
 
     public int attemptSteps()
     {
-        return continuations.removeIf(step -> step.attempt() >= 0) ? 1 : 0;
+        return polledTransactions.removeIf(step -> step.attempt() == CONTINUE) ? 1 : 0;
     }
 }

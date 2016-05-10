@@ -468,7 +468,8 @@ class ReceiverEndPoint
 
     private void disconnectEndpoint(final DisconnectReason reason)
     {
-        framer.schedule(() -> publication.saveDisconnect(libraryId, connectionId, reason));
+        framer.schedule(
+            new Transaction(() -> publication.saveDisconnect(libraryId, connectionId, reason)));
 
         sessionIds.onDisconnect(sessionId);
         if (selectionKey != null)
