@@ -26,7 +26,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 public class RetryManager
 {
     private final Long2ObjectHashMap<Transaction> correlationIdToRetry = new Long2ObjectHashMap<>();
-    private List<Step> steps = new ArrayList<>();
+    private List<Continuation> continuations = new ArrayList<>();
 
     public Action retry(final long correlationId)
     {
@@ -56,13 +56,13 @@ public class RetryManager
         return action;
     }
 
-    public void schedule(final Step step)
+    public void schedule(final Continuation continuation)
     {
-        steps.add(step);
+        continuations.add(continuation);
     }
 
     public int attemptSteps()
     {
-        return steps.removeIf(step -> step.attempt() >= 0) ? 1 : 0;
+        return continuations.removeIf(step -> step.attempt() >= 0) ? 1 : 0;
     }
 }

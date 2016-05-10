@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-interface Step
+interface Continuation
 {
     long attempt();
 }

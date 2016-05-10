@@ -79,9 +79,9 @@ public class ReceiverEndPointTest
         when(mockSessionIdStrategy.onLogon(any())).thenReturn(compositeKey);
         doAnswer(inv ->
         {
-            ((Step) inv.getArguments()[0]).attempt();
+            ((Continuation) inv.getArguments()[0]).attempt();
             return null;
-        }).when(framer).schedule(any(Step.class));
+        }).when(framer).schedule(any(Continuation.class));
     }
 
     @Test

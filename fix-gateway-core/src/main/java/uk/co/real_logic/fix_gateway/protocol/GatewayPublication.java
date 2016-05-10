@@ -137,7 +137,7 @@ public class GatewayPublication extends ClaimablePublication
     {
         return saveLogon(
             libraryId, connectionId, sessionId,
-            SessionInfo.UNKNOWN_SESSION, SessionInfo.UNKNOWN_SESSION,
+            SessionInfo.UNK_SESSION, SessionInfo.UNK_SESSION,
             null, null, null, null, null, null, LogonStatus.NEW);
     }
 
@@ -524,7 +524,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveLibraryConnect(final int libraryId)
+    public long saveLibraryConnect(final int libraryId, final long correlationId)
     {
         final long position = claim(LIBRARY_CONNECT_LENGTH);
         if (position == BACK_PRESSURED)
@@ -546,7 +546,8 @@ public class GatewayPublication extends ClaimablePublication
 
         libraryConnect
             .wrap(buffer, offset)
-            .libraryId(libraryId);
+            .libraryId(libraryId)
+            .correlationId(correlationId);
 
         bufferClaim.commit();
 

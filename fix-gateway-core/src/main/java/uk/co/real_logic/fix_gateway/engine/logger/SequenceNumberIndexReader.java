@@ -24,7 +24,7 @@ import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.OUT_OF_SPACE;
-import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNKNOWN_SESSION;
+import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
@@ -54,7 +54,7 @@ public class SequenceNumberIndexReader
             position = sectorFramer.claim(position, RECORD_SIZE);
             if (position == OUT_OF_SPACE)
             {
-                return UNKNOWN_SESSION;
+                return UNK_SESSION;
             }
 
             lastKnownDecoder.wrap(inMemoryBuffer, position, BLOCK_LENGTH, SCHEMA_VERSION);

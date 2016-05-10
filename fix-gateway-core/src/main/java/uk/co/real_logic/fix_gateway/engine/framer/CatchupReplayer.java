@@ -22,24 +22,62 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
-import uk.co.real_logic.fix_gateway.protocol.ClaimablePublication;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
-class CatchupReplayer implements FragmentHandler
+import static io.aeron.Publication.BACK_PRESSURED;
+import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.MISSING_MESSAGES;
+import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
+
+class CatchupReplayer implements FragmentHandler, Continuation
 {
     private static final int FRAME_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + FixMessageEncoder.bodyHeaderLength();
+
+    private enum State
+    {
+        REPLAYING,
+        SEND_MISSING,
+        SEND_OK
+    }
+
     private final FixMessageEncoder messageEncoder = new FixMessageEncoder();
     private final BufferClaim bufferClaim = new BufferClaim();
-    private final ClaimablePublication publication;
+    private final ReplayQuery inboundMessages;
+    private final GatewayPublication inboundPublication;
     private final ErrorHandler errorHandler;
-    private int libraryId;
+    private final long correlationId;
+    private final int libraryId;
+    private final int expectedNumberOfMessages;
+    private final int lastReceivedSeqNum;
+    private final int replayFromSequenceNumber;
+    private final long sessionId;
 
-    CatchupReplayer(final ClaimablePublication publication, final ErrorHandler errorHandler)
+    private int replayedMessages = 0;
+    private State state = State.REPLAYING;
+
+    CatchupReplayer(
+        final ReplayQuery inboundMessages,
+        final GatewayPublication inboundPublication,
+        final ErrorHandler errorHandler,
+        final long correlationId,
+        final int libraryId,
+        final int expectedNumberOfMessages,
+        final int lastReceivedSeqNum,
+        final int replayFromSequenceNumber,
+        final long sessionId)
     {
-        this.publication = publication;
+        this.inboundMessages = inboundMessages;
+        this.inboundPublication = inboundPublication;
         this.errorHandler = errorHandler;
+        this.correlationId = correlationId;
+        this.libraryId = libraryId;
+        this.expectedNumberOfMessages = expectedNumberOfMessages;
+        this.lastReceivedSeqNum = lastReceivedSeqNum;
+        this.replayFromSequenceNumber = replayFromSequenceNumber;
+        this.sessionId = sessionId;
     }
 
     public void onFragment(
@@ -48,7 +86,7 @@ class CatchupReplayer implements FragmentHandler
         final int length,
         final Header header)
     {
-        if (publication.claim(length, bufferClaim) > 0)
+        if (inboundPublication.claim(length, bufferClaim) > 0)
         {
             final MutableDirectBuffer destBuffer = bufferClaim.buffer();
             final int destOffset = bufferClaim.offset();
@@ -62,16 +100,78 @@ class CatchupReplayer implements FragmentHandler
             DebugLogger.log("Resending: %s\n", destBuffer, destOffset + FRAME_LENGTH, length - FRAME_LENGTH);
 
             bufferClaim.commit();
-        }
-        else
-        {
-            errorHandler.onError(new IllegalStateException(
-                "Failed to claim buffer space when trying to resend " + srcBuffer.getStringUtf8(srcOffset, length)));
+            replayedMessages++;
         }
     }
 
-    void libraryId(final int libraryId)
+    public long attempt()
     {
-        this.libraryId = libraryId;
+        switch (state)
+        {
+            case REPLAYING:
+            {
+                // adding 1 to convert to inclusive numbering
+                final int beginSeqNo = replayFromSequenceNumber + 1 + replayedMessages;
+                final int numberOfMessages =
+                    inboundMessages.query(
+                        this,
+                        sessionId,
+                        beginSeqNo,
+                        lastReceivedSeqNum);
+
+                if (replayedMessages < expectedNumberOfMessages)
+                {
+                    if (numberOfMessages == 0)
+                    {
+                        state = State.SEND_MISSING;
+                        return sendMissingMessages();
+                    }
+                    else
+                    {
+                        return BACK_PRESSURED;
+                    }
+                }
+                else
+                {
+                    state = State.SEND_OK;
+                    return sendOk();
+                }
+            }
+
+            case SEND_MISSING:
+            {
+                return sendMissingMessages();
+            }
+
+            case SEND_OK:
+            {
+                return sendOk();
+            }
+
+            // Javac required fall-through case that should never be reached
+            default:
+            {
+                return 1;
+            }
+        }
+    }
+
+    private long sendOk()
+    {
+        return inboundPublication.saveRequestSessionReply(OK, correlationId);
+    }
+
+    private long sendMissingMessages()
+    {
+        final long position = inboundPublication.saveRequestSessionReply(MISSING_MESSAGES, correlationId);
+        if (position > 0)
+        {
+            errorHandler.onError(new IllegalStateException(String.format(
+                "Failed to read correct number of messages for %d, expected %d, read %d",
+                correlationId,
+                expectedNumberOfMessages,
+                replayedMessages)));
+        }
+        return position;
     }
 }

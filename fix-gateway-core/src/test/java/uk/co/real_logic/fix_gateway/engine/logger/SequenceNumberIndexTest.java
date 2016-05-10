@@ -77,7 +77,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         indexFixMessage();
 
-        assertLastKnownSequenceNumberIs(SESSION_ID_2, SessionInfo.UNKNOWN_SESSION);
+        assertLastKnownSequenceNumberIs(SESSION_ID_2, SessionInfo.UNK_SESSION);
     }
 
     @Test
@@ -246,7 +246,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private void assertUnknownSession()
     {
-        assertLastKnownSequenceNumberIs(SESSION_ID, SessionInfo.UNKNOWN_SESSION);
+        assertLastKnownSequenceNumberIs(SESSION_ID, SessionInfo.UNK_SESSION);
     }
 
     private void indexFixMessage()

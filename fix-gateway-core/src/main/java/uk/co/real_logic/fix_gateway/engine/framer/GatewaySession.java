@@ -187,7 +187,7 @@ class GatewaySession implements SessionInfo
 
     private int adjustLastSequenceNumber(final int lastSequenceNumber)
     {
-        return (lastSequenceNumber == UNKNOWN_SESSION) ? 0 : lastSequenceNumber;
+        return (lastSequenceNumber == UNK_SESSION) ? 0 : lastSequenceNumber;
     }
 
     public String toString()

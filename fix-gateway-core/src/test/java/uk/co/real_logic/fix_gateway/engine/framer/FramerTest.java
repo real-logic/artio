@@ -304,7 +304,7 @@ public class FramerTest
 
     private void connectLibrary()
     {
-        framer.onLibraryConnect(LIBRARY_ID, 1);
+        framer.onLibraryConnect(LIBRARY_ID, CORR_ID, 1);
     }
 
     private void initiateConnection() throws Exception

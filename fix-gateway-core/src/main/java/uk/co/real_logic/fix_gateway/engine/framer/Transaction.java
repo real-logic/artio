@@ -26,26 +26,26 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 class Transaction
 {
-    private final List<Step> stepList;
+    private final List<Continuation> continuationList;
 
     private int index = 0;
 
-    Transaction(final Step... steps)
+    Transaction(final Continuation... continuations)
     {
-        this(Arrays.asList(steps));
+        this(Arrays.asList(continuations));
     }
 
-    Transaction(final List<Step> stepList)
+    Transaction(final List<Continuation> continuationList)
     {
-        this.stepList = stepList;
+        this.continuationList = continuationList;
     }
 
     Action attempt()
     {
-        for (final int size = stepList.size(); index < size; index++)
+        for (final int size = continuationList.size(); index < size; index++)
         {
-            final Step step = stepList.get(index);
-            final Action action = Pressure.apply(step.attempt());
+            final Continuation continuation = continuationList.get(index);
+            final Action action = Pressure.apply(continuation.attempt());
 
             if (action == BREAK)
             {

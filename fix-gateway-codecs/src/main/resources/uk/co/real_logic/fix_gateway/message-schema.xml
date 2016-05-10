@@ -195,6 +195,7 @@
     <sbe:message name="LibraryConnect" id="17"
                  description="Notify an engine that a new library has connected">
         <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="correlationId" id="2" type="CorrelationId"/>
     </sbe:message>
     <sbe:message name="ReleaseSession" id="29"
                  description="releases a session from the library's control to the gateway">

@@ -23,7 +23,7 @@ public interface SessionInfo
     /**
      * The used to identify a session that hasn't yet been identified
      */
-    int UNKNOWN_SESSION = -1;
+    int UNK_SESSION = -1;
 
     /**
      * Get the identification number of the connection in question.
@@ -40,7 +40,7 @@ public interface SessionInfo
     String address();
 
     /**
-     * Get the identification number of the session in question or {@link #UNKNOWN_SESSION}
+     * Get the identification number of the session in question or {@link #UNK_SESSION}
      * if the session hasn't completed its logon yet.
      *
      * @return the session id.

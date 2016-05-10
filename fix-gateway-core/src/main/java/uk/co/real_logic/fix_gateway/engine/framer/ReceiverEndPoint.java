@@ -360,7 +360,7 @@ class ReceiverEndPoint
     {
         if (resetSequenceNumbers)
         {
-            return SessionInfo.UNKNOWN_SESSION;
+            return SessionInfo.UNK_SESSION;
         }
 
         return sequenceNumberIndexReader.lastKnownSequenceNumber(sessionId);

@@ -138,7 +138,7 @@ public final class FixLibrary extends GatewayProcess
     {
         try
         {
-            if (outboundPublication.saveLibraryConnect(libraryId) == BACK_PRESSURED)
+            if (outboundPublication.saveLibraryConnect(libraryId, ++currentCorrelationId) == BACK_PRESSURED)
             {
                 return connectError("BackPressured upon connection");
             }
@@ -627,7 +627,7 @@ public final class FixLibrary extends GatewayProcess
         private int acceptorSequenceNumber(int lastSequenceNumber, final SessionState state)
         {
             if (!configuration.acceptorSequenceNumbersResetUponReconnect() &&
-                lastSequenceNumber != SessionInfo.UNKNOWN_SESSION)
+                lastSequenceNumber != SessionInfo.UNK_SESSION)
             {
                 return lastSequenceNumber;
             }
@@ -824,7 +824,7 @@ public final class FixLibrary extends GatewayProcess
             return sessionConfiguration.initialSequenceNumber();
         }
 
-        if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != SessionInfo.UNKNOWN_SESSION)
+        if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != SessionInfo.UNK_SESSION)
         {
             return lastSequenceNumber + 1;
         }

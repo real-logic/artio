@@ -42,7 +42,7 @@ public interface EngineProtocolHandler
 
     Action onApplicationHeartbeat(final int libraryId);
 
-    Action onLibraryConnect(final int libraryId, final int aeronSessionId);
+    Action onLibraryConnect(final int libraryId, final long correlationId, final int aeronSessionId);
 
     Action onReleaseSession(
         final int libraryId,
