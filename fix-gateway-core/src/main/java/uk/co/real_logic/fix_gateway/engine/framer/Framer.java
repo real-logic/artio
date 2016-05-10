@@ -337,6 +337,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                     null);
 
                 final String address = channel.getRemoteAddress().toString();
+                // In this case the save connect is simply logged for posterities sake
+                // So in the back-pressure we should just drop it
                 if (inboundPublication.saveConnect(connectionId, address) == BACK_PRESSURED)
                 {
                     errorHandler.onError(new IllegalStateException(
