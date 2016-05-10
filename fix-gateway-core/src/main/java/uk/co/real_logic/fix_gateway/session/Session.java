@@ -839,7 +839,7 @@ public class Session implements AutoCloseable
         this.password = password;
     }
 
-    Action onInvalidMessage(
+    public Action onInvalidMessage(
         final int refSeqNum,
         final int refTagId,
         final char[] refMsgType,
