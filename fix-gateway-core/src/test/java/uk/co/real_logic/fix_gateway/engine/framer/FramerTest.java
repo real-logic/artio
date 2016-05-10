@@ -30,10 +30,7 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
-import uk.co.real_logic.fix_gateway.messages.GatewayError;
-import uk.co.real_logic.fix_gateway.messages.LogonStatus;
-import uk.co.real_logic.fix_gateway.messages.SessionState;
+import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -44,6 +41,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.TimeUnit;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -69,6 +67,7 @@ public class FramerTest
     private static final int LIBRARY_ID = 3;
     private static final int REPLY_TIMEOUT_IN_MS = 10;
     private static final int HEARTBEAT_INTERVAL_IN_S = 10;
+    private static final long HEARTBEAT_INTERVAL_IN_MS = TimeUnit.SECONDS.toMillis(HEARTBEAT_INTERVAL_IN_S);
     private static final int CORR_ID = 1;
     private static final long POSITION = 1024;
 
@@ -80,7 +79,7 @@ public class FramerTest
     private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
     private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
     private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
-    private GatewayPublication mockGatewayPublication = mock(GatewayPublication.class);
+    private GatewayPublication inboundPublication = mock(GatewayPublication.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private Header header = mock(Header.class);
     private FakeEpochClock mockClock = new FakeEpochClock();
@@ -105,7 +104,7 @@ public class FramerTest
     @SuppressWarnings("unchecked")
     public void setUp() throws IOException
     {
-        when(mockConnectionHandler.inboundPublication(any())).thenReturn(mockGatewayPublication);
+        when(mockConnectionHandler.inboundPublication(any())).thenReturn(inboundPublication);
 
         server = ServerSocketChannel.open().bind(TEST_ADDRESS);
         server.configureBlocking(false);
@@ -244,7 +243,7 @@ public class FramerTest
 
     private void verifyErrorPublished(final GatewayError error)
     {
-        verify(mockGatewayPublication).saveError(eq(error), eq(LIBRARY_ID), anyString());
+        verify(inboundPublication).saveError(eq(error), eq(LIBRARY_ID), anyString());
     }
 
     @Test
@@ -341,6 +340,37 @@ public class FramerTest
         verifyLogonSaved(times(2), LogonStatus.LIBRARY_NOTIFICATION);
     }
 
+    @Test
+    public void shouldAcquireInitiatedClientsUponReleased() throws Exception
+    {
+        initiateConnection();
+
+        releaseConnection(CONTINUE);
+
+        verifySessionsAcquired(ACTIVE);
+    }
+
+    @Test
+    public void shouldRetryAcquiringInitiatedClientsUponReleasedWhenBackPressured() throws Exception
+    {
+        initiateConnection();
+
+        when(inboundPublication.saveReleaseSessionReply(SessionReplyStatus.OK, CORR_ID))
+            .thenReturn(BACK_PRESSURED, POSITION);
+
+        releaseConnection(ABORT);
+
+        releaseConnection(CONTINUE);
+
+        verifySessionsAcquired(ACTIVE);
+    }
+
+    private void releaseConnection(final Action expectedResult)
+    {
+        assertEquals(expectedResult, framer.onReleaseSession(
+            LIBRARY_ID, connectionId.getValue(), CORR_ID, ACTIVE, HEARTBEAT_INTERVAL_IN_MS, 0, 0, "", "", header));
+    }
+
     private Action onLibraryConnect()
     {
         return framer.onLibraryConnect(LIBRARY_ID, CORR_ID, 1);
@@ -355,7 +385,7 @@ public class FramerTest
 
     private void backPressureFirstSaveAttempts()
     {
-        when(mockGatewayPublication.saveManageConnection(
+        when(inboundPublication.saveManageConnection(
             anyLong(),
             anyString(),
             eq(LIBRARY_ID),
@@ -370,7 +400,7 @@ public class FramerTest
 
     private void backpressureSaveLogon()
     {
-        when(mockGatewayPublication.saveLogon(
+        when(inboundPublication.saveLogon(
             eq(LIBRARY_ID), anyLong(), anyLong(),
             anyInt(), anyInt(),
             any(), any(), any(), any(),
@@ -440,7 +470,7 @@ public class FramerTest
 
     private void notifyLibraryOfConnection(final VerificationMode times)
     {
-        verify(mockGatewayPublication, times).saveManageConnection(
+        verify(inboundPublication, times).saveManageConnection(
             eq(connectionId.getValue()),
             anyString(),
             eq(LIBRARY_ID),
@@ -454,7 +484,7 @@ public class FramerTest
 
     private void verifyLogonSaved(final VerificationMode times, final LogonStatus status)
     {
-        verify(mockGatewayPublication, times).saveLogon(
+        verify(inboundPublication, times).saveLogon(
             eq(LIBRARY_ID), eq(connectionId.getValue()), anyLong(),
             anyInt(), anyInt(),
             any(), any(), any(), any(),

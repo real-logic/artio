@@ -637,7 +637,11 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         }
 
         final Action action = Pressure.apply(inboundPublication.saveReleaseSessionReply(OK, correlationId));
-        if (action != ABORT)
+        if (action == ABORT)
+        {
+            libraryInfo.addSession(session);
+        }
+        else
         {
             gatewaySessions.acquire(
                 session,
