@@ -96,7 +96,7 @@ public class InitiatorSession extends Session
         if (state() == SessionState.CONNECTED && id() != UNKNOWN)
         {
             state(SessionState.SENT_LOGON);
-            proxy.logon((int) (heartbeatIntervalInMs() / 1000), newSentSeqNum(), username(), password());
+            proxy.logon((int) (heartbeatIntervalInMs() / 1000), incNewSentSeqNum(), username(), password());
             actions++;
         }
         return actions + super.poll(time);

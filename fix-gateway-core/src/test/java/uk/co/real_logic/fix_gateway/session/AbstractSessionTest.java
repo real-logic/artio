@@ -17,11 +17,13 @@ package uk.co.real_logic.fix_gateway.session;
 
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Test;
+import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
+import static io.aeron.Publication.BACK_PRESSURED;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -36,22 +38,25 @@ import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 
 public abstract class AbstractSessionTest
 {
-    public static final long TWO_MINUTES = MINUTES.toMillis(2);
-    public static final long SENDING_TIME_WINDOW = 2000;
-    public static final long CONNECTION_ID = 3L;
     public static final long SESSION_ID = 2L;
-    public static final int HEARTBEAT_INTERVAL = 2;
-    public static final byte[] MSG_TYPE_BYTES = "D".getBytes(US_ASCII);
-    public static final CompositeKey SESSION_KEY = mock(CompositeKey.class);
-    public static final int LIBRARY_ID = 4;
 
-    protected SessionProxy mockProxy = mock(SessionProxy.class);
-    protected GatewayPublication mockPublication = mock(GatewayPublication.class);
-    protected FakeEpochClock fakeClock = new FakeEpochClock();
-    protected AtomicCounter mockReceivedMsgSeqNo = mock(AtomicCounter.class);
-    protected AtomicCounter mockSentMsgSeqNo = mock(AtomicCounter.class);
+    static final long TWO_MINUTES = MINUTES.toMillis(2);
+    static final long SENDING_TIME_WINDOW = 2000;
+    static final long CONNECTION_ID = 3L;
+    static final int HEARTBEAT_INTERVAL = 2;
+    static final CompositeKey SESSION_KEY = mock(CompositeKey.class);
+    static final int LIBRARY_ID = 4;
 
-    public void verifyNoFurtherMessages()
+    private static final byte[] MSG_TYPE_BYTES = "D".getBytes(US_ASCII);
+    private static final long POSITION = 1024;
+
+    SessionProxy mockProxy = mock(SessionProxy.class);
+    GatewayPublication mockPublication = mock(GatewayPublication.class);
+    FakeEpochClock fakeClock = new FakeEpochClock();
+    AtomicCounter mockReceivedMsgSeqNo = mock(AtomicCounter.class);
+    AtomicCounter mockSentMsgSeqNo = mock(AtomicCounter.class);
+
+    void verifyNoFurtherMessages()
     {
         verifyNoMoreInteractions(mockProxy);
     }
@@ -67,7 +72,7 @@ public abstract class AbstractSessionTest
         verifyDisconnect();
     }
 
-    protected void shouldDisconnectIfMissingSequenceNumber(final int msgSeqNo)
+    void shouldDisconnectIfMissingSequenceNumber(final int msgSeqNo)
     {
         onLogon(1);
 
@@ -140,17 +145,28 @@ public abstract class AbstractSessionTest
         final int heartbeatInterval = 1;
         session().onLogon(heartbeatInterval, 1, SESSION_ID, null, fakeClock.time(), UNKNOWN, null, null, false);
 
-        heartbeatSentAfterInterval(heartbeatInterval, 2);
+        heartbeatSentAfterInterval(heartbeatInterval, 2, false);
     }
 
     @Test
     public void shouldSendHeartbeatAfterInterval()
     {
+        shouldSendHeartbeatAfterInterval(false);
+    }
+
+    @Test
+    public void shouldSendHeartbeatAfterIntervalWhenBackPressured()
+    {
+        shouldSendHeartbeatAfterInterval(true);
+    }
+
+    private void shouldSendHeartbeatAfterInterval(final boolean backPressured)
+    {
         readyForLogon();
 
         onLogon(1);
 
-        heartbeatSentAfterInterval(1, 2);
+        heartbeatSentAfterInterval(1, 2, backPressured);
     }
 
     @Test
@@ -158,9 +174,19 @@ public abstract class AbstractSessionTest
     {
         shouldSendHeartbeatAfterInterval();
 
-        heartbeatSentAfterInterval(2, 3);
+        heartbeatSentAfterInterval(2, 3, false);
 
-        heartbeatSentAfterInterval(3, 4);
+        heartbeatSentAfterInterval(3, 4, false);
+    }
+
+    @Test
+    public void shouldSendHeartbeatsAfterIntervalRepeatedlyWhenBackPressured()
+    {
+        shouldSendHeartbeatAfterInterval(true);
+
+        heartbeatSentAfterInterval(2, 3, true);
+
+        heartbeatSentAfterInterval(3, 4, true);
     }
 
     @Test
@@ -297,17 +323,39 @@ public abstract class AbstractSessionTest
     @Test
     public void shouldSendTestRequestUponTimeout()
     {
+        shouldSendTestRequestUponTimeout(false);
+    }
+
+    private void shouldSendTestRequestUponTimeout(final boolean backPressured)
+    {
         givenActive();
+        session().lastSentMsgSeqNum(5);
         session().lastReceivedMsgSeqNum(9);
 
         onMessage(10);
 
         twoHeartBeatIntervalsPass();
 
+        if (backPressured)
+        {
+            when(mockProxy.testRequest(7, TEST_REQ_ID)).thenReturn(BACK_PRESSURED, POSITION);
+        }
+
         poll();
 
-        verify(mockProxy).testRequest(anyInt(), eq(TEST_REQ_ID));
+        if (backPressured)
+        {
+            poll();
+        }
+
+        verify(mockProxy, retry(backPressured)).testRequest(7, TEST_REQ_ID);
         assertEquals(AWAITING_RESEND, session().state());
+    }
+
+    @Test
+    public void shouldSendTestRequestUponTimeoutWhenBackPressured()
+    {
+        shouldSendTestRequestUponTimeout(true);
     }
 
     @Test
@@ -369,19 +417,38 @@ public abstract class AbstractSessionTest
         verifyDisconnect();
     }
 
-    private void heartbeatSentAfterInterval(final int heartbeatInterval,
-                                            final int msgSeqNo)
+    private void heartbeatSentAfterInterval(
+        final int heartbeatInterval,
+        final int recvMsgSeqNo,
+        final boolean backPressured)
     {
+        if (backPressured)
+        {
+            when(mockProxy.heartbeat(anyInt())).thenReturn(BACK_PRESSURED, POSITION);
+        }
+
+        final int sentMsgSeqNo = session().lastSentMsgSeqNum() + 1;
+
         fakeClock.advanceSeconds(heartbeatInterval);
 
-        onMessage(msgSeqNo);
+        onMessage(recvMsgSeqNo);
 
         fakeClock.advanceSeconds(1);
 
         poll();
 
-        verify(mockProxy).heartbeat(anyInt());
+        if (backPressured)
+        {
+            poll();
+        }
+
+        verify(mockProxy, retry(backPressured)).heartbeat(sentMsgSeqNo);
         reset(mockProxy);
+    }
+
+    private VerificationMode retry(final boolean backPressured)
+    {
+        return times(backPressured ? 2 : 1);
     }
 
     public void verifyDisconnect()
