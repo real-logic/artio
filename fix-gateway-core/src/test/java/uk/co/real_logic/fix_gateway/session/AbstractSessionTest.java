@@ -374,6 +374,25 @@ public abstract class AbstractSessionTest
     }
 
     @Test
+    public void shouldLogoutAndDisconnectUponTimeoutWhenBackPressured()
+    {
+        shouldSendTestRequestUponTimeout();
+
+        twoHeartBeatIntervalsPass();
+
+        when(mockProxy.requestDisconnect(CONNECTION_ID)).thenReturn(BACK_PRESSURED, POSITION);
+
+        poll();
+
+        assertState(DISCONNECTING);
+
+        poll();
+
+        verify(mockProxy, times(2)).requestDisconnect(CONNECTION_ID);
+        assertState(DISCONNECTED);
+    }
+
+    @Test
     public void shouldSuppressTimeoutWhenMessageReceived()
     {
         givenActive();

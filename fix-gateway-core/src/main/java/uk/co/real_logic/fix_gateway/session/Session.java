@@ -303,8 +303,7 @@ public class Session implements AutoCloseable
         if (state() != DISCONNECTED)
         {
             position = proxy.requestDisconnect(connectionId);
-            // TODO: additional state
-            state(DISCONNECTED);
+            state(position < 0 ? DISCONNECTING : DISCONNECTED);
         }
         return position;
     }
@@ -406,8 +405,14 @@ public class Session implements AutoCloseable
      */
     public int poll(final long time)
     {
-        int actions = 0;
+        if (state() == DISCONNECTING)
+        {
+            requestDisconnect();
 
+            return 1;
+        }
+
+        int actions = 0;
         if (isActive() && time >= nextRequiredHeartbeatTimeInMs)
         {
             // Drop when back pressured: retried on duty cycle
