@@ -29,8 +29,7 @@ import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
 import java.util.stream.Stream;
 
-import static io.aeron.Publication.BACK_PRESSURED;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.fix_gateway.builder.Validation.isValidMsgType;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
@@ -333,19 +332,9 @@ public class SessionParser
             }
             else
             {
-                return requestDisconnect(session);
+                return session.onRequestDisconnect();
             }
         }
-    }
-
-    private Action requestDisconnect(final Session session)
-    {
-        final long position = session.requestDisconnect();
-        if (position == BACK_PRESSURED)
-        {
-            return ABORT;
-        }
-        return CONTINUE;
     }
 
     private boolean validateHeader(final HeaderDecoder header)
@@ -394,9 +383,9 @@ public class SessionParser
                 msgTypeLength,
                 decoder.rejectReason());
 
-            if (action != BREAK && requestDisconnect)
+            if (action == CONTINUE && requestDisconnect)
             {
-                return requestDisconnect(session);
+                return session.onRequestDisconnect();
             }
 
             return action;
@@ -404,7 +393,7 @@ public class SessionParser
 
         if (requestDisconnect)
         {
-            return requestDisconnect(session);
+            return session.onRequestDisconnect();
         }
 
         return CONTINUE;

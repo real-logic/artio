@@ -21,6 +21,7 @@ import org.agrona.Verify;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
@@ -319,8 +320,12 @@ public class Session implements AutoCloseable
         long position = NO_OPERATION;
         if (state() != DISCONNECTED)
         {
-            sendLogout();
-            position = requestDisconnect();
+            position = sendLogout();
+            // TODO: add intermediate state
+            if (position >= 0)
+            {
+                position = requestDisconnect();
+            }
         }
         return position;
     }
@@ -432,6 +437,12 @@ public class Session implements AutoCloseable
     }
 
     // ---------- Event Handlers & Logic ----------
+
+
+    Action onRequestDisconnect()
+    {
+        return Pressure.apply(requestDisconnect());
+    }
 
     public void onDisconnect()
     {
@@ -749,9 +760,9 @@ public class Session implements AutoCloseable
         state(AWAITING_LOGOUT);
     }
 
-    private void sendLogout()
+    private long sendLogout()
     {
-        proxy.logout(newSentSeqNum());
+        return proxy.logout(newSentSeqNum());
     }
 
     // ---------- Setters ----------
