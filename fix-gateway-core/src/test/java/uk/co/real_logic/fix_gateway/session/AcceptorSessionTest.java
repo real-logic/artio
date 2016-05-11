@@ -110,12 +110,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
         verifyDisconnect();
     }
 
-    @Test
-    public void shouldDisconnectIfMissingSequenceNumber()
-    {
-        shouldDisconnectIfMissingSequenceNumber(2);
-    }
-
     protected void readyForLogon()
     {
         // Deliberately blank

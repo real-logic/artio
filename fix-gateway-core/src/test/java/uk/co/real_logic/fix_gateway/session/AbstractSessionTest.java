@@ -72,13 +72,16 @@ public abstract class AbstractSessionTest
         verifyDisconnect();
     }
 
-    void shouldDisconnectIfMissingSequenceNumber(final int msgSeqNo)
+    @Test
+    public void shouldDisconnectIfMissingSequenceNumber()
     {
         onLogon(1);
 
+        final int sentMsgSeqNum = session().lastSentMsgSeqNum();
+
         onMessage(MISSING_INT);
 
-        verify(mockProxy).receivedMessageWithoutSequenceNumber(msgSeqNo);
+        verify(mockProxy).receivedMessageWithoutSequenceNumber(sentMsgSeqNum + 1);
         verifyDisconnect();
     }
 
