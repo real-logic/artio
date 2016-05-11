@@ -284,12 +284,15 @@ public class Session implements AutoCloseable
     /**
      * Sends a logout message and puts the session into the awaiting logout state.
      *
+     * @return the position of the sent message
+     *
      * @see Session#logoutAndDisconnect()
      */
-    public void startLogout()
+    public long startLogout()
     {
-        sendLogout();
-        awaitLogout();
+        final long position = sendLogout();
+        state(position < 0 ? LOGGING_OUT : AWAITING_LOGOUT);
+        return position;
     }
 
     /**
@@ -405,9 +408,18 @@ public class Session implements AutoCloseable
      */
     public int poll(final long time)
     {
-        if (state() == DISCONNECTING)
+        final SessionState state = state();
+
+        if (state == DISCONNECTING)
         {
             requestDisconnect();
+
+            return 1;
+        }
+
+        if (state == LOGGING_OUT)
+        {
+            startLogout();
 
             return 1;
         }
