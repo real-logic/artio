@@ -82,7 +82,7 @@ public abstract class AbstractSessionTest
 
         final int nextMsgSeqNum = nextMsgSeqNum();
 
-        onMessage(MISSING_INT);
+        assertEquals(CONTINUE, onMessage(MISSING_INT));
 
         receivedMessageWithoutSequenceNumber(nextMsgSeqNum, 1);
         verifyDisconnect(1);
