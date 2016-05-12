@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Test;
 import org.mockito.verification.VerificationMode;
@@ -24,6 +25,8 @@ import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 import static io.aeron.Publication.BACK_PRESSURED;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
@@ -77,12 +80,40 @@ public abstract class AbstractSessionTest
     {
         onLogon(1);
 
-        final int sentMsgSeqNum = session().lastSentMsgSeqNum();
+        final int nextMsgSeqNum = nextMsgSeqNum();
 
         onMessage(MISSING_INT);
 
-        verify(mockProxy).receivedMessageWithoutSequenceNumber(sentMsgSeqNum + 1);
+        receivedMessageWithoutSequenceNumber(nextMsgSeqNum, 1);
         verifyDisconnect(1);
+    }
+
+    @Test
+    public void shouldDisconnectIfMissingSequenceNumberWhenBackPressured()
+    {
+        onLogon(1);
+
+        final int nextMsgSeqNum = nextMsgSeqNum();
+
+        when(mockProxy.receivedMessageWithoutSequenceNumber(nextMsgSeqNum))
+            .thenReturn(BACK_PRESSURED, POSITION);
+
+        assertEquals(ABORT, onMessage(MISSING_INT));
+
+        assertEquals(CONTINUE, onMessage(MISSING_INT));
+
+        receivedMessageWithoutSequenceNumber(nextMsgSeqNum, 2);
+        verifyDisconnect(1);
+    }
+
+    private int nextMsgSeqNum()
+    {
+        return session().lastSentMsgSeqNum() + 1;
+    }
+
+    private void receivedMessageWithoutSequenceNumber(final int sentMsgSeqNum, final int times)
+    {
+        verify(mockProxy, times(times)).receivedMessageWithoutSequenceNumber(sentMsgSeqNum);
     }
 
     @Test
@@ -470,7 +501,7 @@ public abstract class AbstractSessionTest
             when(mockProxy.heartbeat(anyInt())).thenReturn(BACK_PRESSURED, POSITION);
         }
 
-        final int sentMsgSeqNo = session().lastSentMsgSeqNum() + 1;
+        final int sentMsgSeqNo = nextMsgSeqNum();
 
         fakeClock.advanceSeconds(heartbeatInterval);
 
@@ -536,9 +567,9 @@ public abstract class AbstractSessionTest
         session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID, SESSION_KEY, fakeClock.time(), UNKNOWN, null, null, false);
     }
 
-    protected void onMessage(final int msgSeqNo)
+    protected Action onMessage(final int msgSeqNo)
     {
-        session().onMessage(msgSeqNo, MSG_TYPE_BYTES, sendingTime(), UNKNOWN, false);
+        return session().onMessage(msgSeqNo, MSG_TYPE_BYTES, sendingTime(), UNKNOWN, false);
     }
 
     protected long sendingTime()

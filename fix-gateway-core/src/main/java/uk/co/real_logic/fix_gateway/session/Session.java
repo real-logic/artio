@@ -32,6 +32,7 @@ import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
@@ -519,13 +520,20 @@ public class Session implements AutoCloseable
         if (state() == SessionState.CONNECTED)
         {
             // Disconnect if the first message isn't a logon message
-            requestDisconnect();
+            return Pressure.apply(requestDisconnect());
         }
         else
         {
             if (msgSeqNo == MISSING_INT)
             {
-                proxy.receivedMessageWithoutSequenceNumber(incNewSentSeqNum());
+                final int sentSeqNum = newSentSeqNum();
+                final long position = proxy.receivedMessageWithoutSequenceNumber(sentSeqNum);
+                if (position < 0)
+                {
+                    return ABORT;
+                }
+
+                lastSentMsgSeqNum(sentSeqNum);
                 requestDisconnect();
                 return CONTINUE;
             }
@@ -813,11 +821,6 @@ public class Session implements AutoCloseable
     private void incNextHeartbeatTime()
     {
         nextRequiredHeartbeatTimeInMs = time() + sendingHeartbeatIntervalInMs;
-    }
-
-    private void awaitLogout()
-    {
-        state(AWAITING_LOGOUT);
     }
 
     private long sendLogout()
