@@ -118,6 +118,7 @@ public class Session implements AutoCloseable
     private String password;
     private String connectedHost;
     private int connectedPort;
+    private boolean incorrectBeginString = false;
 
     public Session(
         final int heartbeatIntervalInS,
@@ -412,6 +413,17 @@ public class Session implements AutoCloseable
 
         if (state == DISCONNECTING)
         {
+            if (incorrectBeginString)
+            {
+                final int sentMsgSeqNum = newSentSeqNum();
+                final long position = proxy.incorrectBeginStringLogout(sentMsgSeqNum);
+                if (position < 0)
+                {
+                    return 1;
+                }
+                lastSentMsgSeqNum(sentMsgSeqNum);
+            }
+
             requestDisconnect();
 
             return 1;
@@ -780,7 +792,18 @@ public class Session implements AutoCloseable
         {
             if (!isLogon)
             {
-                proxy.incorrectBeginStringLogout(incNewSentSeqNum());
+                final int sentMsgSeqNum = newSentSeqNum();
+                final long position = proxy.incorrectBeginStringLogout(sentMsgSeqNum);
+                if (position < 0)
+                {
+                    incorrectBeginString = true;
+                    state(DISCONNECTING);
+                    return isValid;
+                }
+                else
+                {
+                    lastSentMsgSeqNum(sentMsgSeqNum);
+                }
             }
             requestDisconnect();
         }

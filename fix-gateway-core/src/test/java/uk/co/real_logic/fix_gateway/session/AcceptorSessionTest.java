@@ -70,7 +70,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     {
         onMessage(1);
 
-        verifyDisconnect();
+        verifyDisconnect(1);
         verifyNoFurtherMessages();
     }
 
@@ -95,7 +95,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
         verifySendingTimeProblem();
         verifyLogout();
-        verifyDisconnect();
+        verifyDisconnect(1);
     }
 
     @Test
@@ -107,7 +107,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
         verifySendingTimeProblem();
         verifyLogout();
-        verifyDisconnect();
+        verifyDisconnect(1);
     }
 
     protected void readyForLogon()

@@ -69,7 +69,7 @@ public abstract class AbstractSessionTest
 
         onMessage(1);
         verify(mockProxy).lowSequenceNumberLogout(1, 3, 1);
-        verifyDisconnect();
+        verifyDisconnect(1);
     }
 
     @Test
@@ -82,7 +82,7 @@ public abstract class AbstractSessionTest
         onMessage(MISSING_INT);
 
         verify(mockProxy).receivedMessageWithoutSequenceNumber(sentMsgSeqNum + 1);
-        verifyDisconnect();
+        verifyDisconnect(1);
     }
 
     @Test
@@ -200,7 +200,7 @@ public abstract class AbstractSessionTest
         onLogout();
 
         verifyLogout();
-        verifyDisconnect();
+        verifyDisconnect(1);
     }
 
     @Test
@@ -210,7 +210,7 @@ public abstract class AbstractSessionTest
 
         onLogout();
 
-        verifyDisconnect();
+        verifyDisconnect(1);
     }
 
     @Test
@@ -255,7 +255,7 @@ public abstract class AbstractSessionTest
         session().onSequenceReset(1, 4, true, false);
 
         verify(mockProxy).lowSequenceNumberLogout(anyInt(), eq(3), eq(1));
-        verifyDisconnect();
+        verifyDisconnect(1);
     }
 
     @Test
@@ -370,7 +370,7 @@ public abstract class AbstractSessionTest
 
         poll();
 
-        verifyDisconnect();
+        verifyDisconnect(1);
     }
 
     @Test
@@ -380,7 +380,7 @@ public abstract class AbstractSessionTest
 
         twoHeartBeatIntervalsPass();
 
-        when(mockProxy.requestDisconnect(CONNECTION_ID)).thenReturn(BACK_PRESSURED, POSITION);
+        backpressureDisconnect();
 
         poll();
 
@@ -388,8 +388,7 @@ public abstract class AbstractSessionTest
 
         poll();
 
-        verify(mockProxy, times(2)).requestDisconnect(CONNECTION_ID);
-        assertState(DISCONNECTED);
+        verifyDisconnect(2);
     }
 
     @Test
@@ -428,15 +427,37 @@ public abstract class AbstractSessionTest
     public void shouldDisconnectIfBeginStringIsInvalidAtLogon()
     {
         onBeginString(true);
-        verifyDisconnect();
+        verifyDisconnect(1);
     }
 
     @Test
     public void shouldDisconnectIfBeginStringIsInvalid()
     {
         onBeginString(false);
-        verify(mockProxy).incorrectBeginStringLogout(anyInt());
-        verifyDisconnect();
+        incorrectBeginStringLogout(1);
+        verifyDisconnect(1);
+    }
+
+    @Test
+    public void shouldDisconnectIfBeginStringIsInvalidWhenBackPressured()
+    {
+        when(mockProxy.incorrectBeginStringLogout(1)).thenReturn(BACK_PRESSURED, POSITION);
+        backpressureDisconnect();
+
+        onBeginString(false);
+
+        assertState(DISCONNECTING);
+
+        poll();
+        poll();
+
+        incorrectBeginStringLogout(2);
+        verifyDisconnect(2);
+    }
+
+    private void incorrectBeginStringLogout(final int times)
+    {
+        verify(mockProxy, times(times)).incorrectBeginStringLogout(1);
     }
 
     private void heartbeatSentAfterInterval(
@@ -473,9 +494,9 @@ public abstract class AbstractSessionTest
         return times(backPressured ? 2 : 1);
     }
 
-    public void verifyDisconnect()
+    public void verifyDisconnect(final int times)
     {
-        verify(mockProxy).requestDisconnect(CONNECTION_ID);
+        verify(mockProxy, times(times)).requestDisconnect(CONNECTION_ID);
         assertState(DISCONNECTED);
     }
 
@@ -483,6 +504,11 @@ public abstract class AbstractSessionTest
     {
         verifyLogout();
         awaitingLogout();
+    }
+
+    private void backpressureDisconnect()
+    {
+        when(mockProxy.requestDisconnect(CONNECTION_ID)).thenReturn(BACK_PRESSURED, POSITION);
     }
 
     protected void givenActive()
