@@ -15,10 +15,16 @@
  */
 package uk.co.real_logic.fix_gateway.session;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.junit.Test;
 
+import static io.aeron.Publication.BACK_PRESSURED;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.SENDINGTIME_ACCURACY_PROBLEM;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
@@ -79,11 +85,36 @@ public class AcceptorSessionTest extends AbstractSessionTest
     @Test
     public void shouldDisconnectIfInvalidSendingTimeAtLogon()
     {
+        logonWithInvalidSendingTime(CONTINUE);
+
+        verifySendingTimeAccuracyProblem(1);
+    }
+
+    @Test
+    public void shouldDisconnectIfInvalidSendingTimeAtLogonWhenBackPressured()
+    {
+        when(mockProxy.rejectWhilstNotLoggedOn(anyInt(), any())).thenReturn(BACK_PRESSURED, POSITION);
+
+        logonWithInvalidSendingTime(ABORT);
+
+        logonWithInvalidSendingTime(CONTINUE);
+
+        verifySendingTimeAccuracyProblem(2);
+    }
+
+    private void verifySendingTimeAccuracyProblem(final int times)
+    {
+        verify(mockProxy, times(times)).rejectWhilstNotLoggedOn(1, SENDINGTIME_ACCURACY_PROBLEM);
+    }
+
+    private void logonWithInvalidSendingTime(final Action expectedAction)
+    {
         fakeClock.advanceMilliSeconds(2 * SENDING_TIME_WINDOW);
 
-        session().onLogon(HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1, UNKNOWN, null, null, false);
+        final Action action = session().onLogon(
+            HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1, UNKNOWN, null, null, false);
 
-        verify(mockProxy).rejectWhilstNotLoggedOn(1, SENDINGTIME_ACCURACY_PROBLEM);
+        assertEquals(expectedAction, action);
     }
 
     @Test

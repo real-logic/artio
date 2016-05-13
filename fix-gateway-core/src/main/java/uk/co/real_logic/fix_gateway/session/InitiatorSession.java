@@ -74,7 +74,8 @@ public class InitiatorSession extends Session
             state(SessionState.ACTIVE);
             this.sessionKey = sessionKey;
             proxy.setupSession(sessionId, sessionKey);
-            if (CODEC_VALIDATION_DISABLED || (validateHeartbeat(heartbeatInterval) && validateSendingTime(sendingTime)))
+            if (CODEC_VALIDATION_DISABLED || (validateHeartbeat(heartbeatInterval) == null &&
+                validateSendingTime(sendingTime) == null))
             {
                 id(sessionId);
                 heartbeatIntervalInS(heartbeatInterval);

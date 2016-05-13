@@ -51,7 +51,7 @@ public abstract class AbstractSessionTest
     static final int LIBRARY_ID = 4;
 
     private static final byte[] MSG_TYPE_BYTES = "D".getBytes(US_ASCII);
-    private static final long POSITION = 1024;
+    static final long POSITION = 1024;
 
     SessionProxy mockProxy = mock(SessionProxy.class);
     GatewayPublication mockPublication = mock(GatewayPublication.class);

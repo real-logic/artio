@@ -119,7 +119,9 @@ public class Session implements AutoCloseable
     private String password;
     private String connectedHost;
     private int connectedPort;
+
     private boolean incorrectBeginString = false;
+    private boolean resendSaveLogon = false;
 
     public Session(
         final int heartbeatIntervalInS,
@@ -631,30 +633,61 @@ public class Session implements AutoCloseable
 
         if (state() == SessionState.CONNECTED)
         {
-            if (!validateHeartbeat(heartbeatInterval) || !validateSendingTime(sendingTime))
+            resendSaveLogon = true;
+            Action action = validateHeartbeat(heartbeatInterval);
+            if (action != null)
             {
-                return CONTINUE;
+                return action;
+            }
+
+            action = validateSendingTime(sendingTime);
+            if (action != null)
+            {
+                return action;
             }
 
             final int expectedSeqNo = expectedReceivedSeqNum();
             if (expectedSeqNo == msgSeqNo)
             {
+                action = replyToLogon(heartbeatInterval);
+                if (action == ABORT)
+                {
+                    return ABORT;
+                }
+
                 heartbeatIntervalInS(heartbeatInterval);
                 state(SessionState.ACTIVE);
                 username(username);
                 password(password);
-                replyToLogon(heartbeatInterval);
             }
             else if (expectedSeqNo < msgSeqNo)
             {
+                action = replyToLogon(heartbeatInterval);
+                if (action == ABORT)
+                {
+                    return ABORT;
+                }
                 state(SessionState.AWAITING_RESEND);
-                replyToLogon(heartbeatInterval);
             }
-            publication.saveLogon(libraryId, connectionId, sessionId);
         }
-        onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
 
-        return CONTINUE;
+        if (resendSaveLogon)
+        {
+            final Action action = saveLogon(sessionId);
+            if (action == ABORT)
+            {
+                return ABORT;
+            }
+            resendSaveLogon = false;
+        }
+
+        // Back pressure at this point won't re-run the above block if its completed because of the state change
+        return onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+    }
+
+    private Action saveLogon(final long sessionId)
+    {
+        return Pressure.apply(publication.saveLogon(libraryId, connectionId, sessionId));
     }
 
     public void setupSession(final long sessionId, final CompositeKey sessionKey)
@@ -664,41 +697,49 @@ public class Session implements AutoCloseable
         proxy.setupSession(sessionId, sessionKey);
     }
 
-    private void replyToLogon(int heartbeatInterval)
+    private Action replyToLogon(int heartbeatInterval)
     {
-        proxy.logon(heartbeatInterval, incNewSentSeqNum(), null, null);
+        return checkPosition(proxy.logon(heartbeatInterval, newSentSeqNum(), null, null));
     }
 
-    protected boolean validateSendingTime(final long sendingTime)
+    Action validateSendingTime(final long sendingTime)
     {
         if (CODEC_VALIDATION_DISABLED && sendingTime == MISSING_LONG)
         {
-            return true;
+            return null;
         }
 
         final long time = time();
-        final boolean isValid = sendingTime < (time + sendingTimeWindowInMs) && sendingTime > (time - sendingTimeWindowInMs);
-        if (!isValid)
+        if ((sendingTime < (time + sendingTimeWindowInMs) && sendingTime > (time - sendingTimeWindowInMs)))
         {
-            proxy.rejectWhilstNotLoggedOn(incNewSentSeqNum(), SENDINGTIME_ACCURACY_PROBLEM);
-            requestDisconnect();
+            return null;
         }
 
-        return isValid;
+        return checkPositionAndDisconnect(
+            proxy.rejectWhilstNotLoggedOn(newSentSeqNum(), SENDINGTIME_ACCURACY_PROBLEM));
     }
 
-    protected boolean validateHeartbeat(int heartbeatInterval)
+    Action validateHeartbeat(int heartbeatInterval)
     {
         if (heartbeatInterval < 0)
         {
-            proxy.negativeHeartbeatLogout(incNewSentSeqNum());
-            requestDisconnect();
-            return false;
+            return checkPositionAndDisconnect(
+                proxy.negativeHeartbeatLogout(newSentSeqNum()));
         }
         else
         {
-            return true;
+            return null;
         }
+    }
+
+    private Action checkPositionAndDisconnect(final long position)
+    {
+        final Action action = checkPosition(position);
+        if (action != ABORT)
+        {
+            requestDisconnect();
+        }
+        return action;
     }
 
     Action onLogout(
