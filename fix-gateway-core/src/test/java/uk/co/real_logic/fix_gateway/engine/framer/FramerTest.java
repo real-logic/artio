@@ -243,7 +243,7 @@ public class FramerTest
 
     private void verifyErrorPublished(final GatewayError error)
     {
-        verify(inboundPublication).saveError(eq(error), eq(LIBRARY_ID), anyString());
+        verify(inboundPublication).saveError(eq(error), eq(LIBRARY_ID), anyLong(), anyString());
     }
 
     @Test
@@ -393,7 +393,8 @@ public class FramerTest
             anyInt(),
             anyInt(),
             any(),
-            anyInt()))
+            anyInt(),
+            anyLong()))
             .thenReturn(BACK_PRESSURED, POSITION);
         backpressureSaveLogon();
     }
@@ -478,7 +479,8 @@ public class FramerTest
             anyInt(),
             anyInt(),
             any(),
-            anyInt());
+            anyInt(),
+            anyLong());
         verifyLogonSaved(times, LogonStatus.NEW);
     }
 

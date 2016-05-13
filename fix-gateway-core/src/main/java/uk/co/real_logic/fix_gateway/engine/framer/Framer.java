@@ -377,7 +377,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final LibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
         {
-            saveError(GatewayError.UNKNOWN_LIBRARY, libraryId);
+            saveError(GatewayError.UNKNOWN_LIBRARY, libraryId, correlationId);
 
             return CONTINUE;
         }
@@ -394,7 +394,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             }
             catch (final Exception e)
             {
-                saveError(UNABLE_TO_CONNECT, libraryId, e);
+                saveError(UNABLE_TO_CONNECT, libraryId, correlationId, e);
 
                 return CONTINUE;
             }
@@ -406,7 +406,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             final long sessionId = sessionIds.onLogon(sessionKey);
             if (sessionId == SessionIds.DUPLICATE_SESSION)
             {
-                saveError(DUPLICATE_SESSION, libraryId);
+                saveError(DUPLICATE_SESSION, libraryId, correlationId);
 
                 return CONTINUE;
             }
@@ -426,7 +426,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             final Transaction transaction = new Transaction(
                 () -> inboundPublication.saveManageConnection(
                     connectionId, address.toString(), libraryId, INITIATOR,
-                    lastSentSequenceNumber, lastReceivedSequenceNumber, CONNECTED, heartbeatIntervalInS),
+                    lastSentSequenceNumber, lastReceivedSequenceNumber, CONNECTED, heartbeatIntervalInS, correlationId),
                 () -> inboundPublication.saveLogon(
                     libraryId, connectionId, sessionId,
                     lastSentSequenceNumber, lastReceivedSequenceNumber,
@@ -438,22 +438,22 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         }
         catch (final Exception e)
         {
-            saveError(EXCEPTION, libraryId, e);
+            saveError(EXCEPTION, libraryId, correlationId, e);
         }
 
         return CONTINUE;
     }
 
-    private void saveError(final GatewayError error, final int libraryId)
+    private void saveError(final GatewayError error, final int libraryId, final long replyToId)
     {
-        final long position = inboundPublication.saveError(error, libraryId, "");
+        final long position = inboundPublication.saveError(error, libraryId, replyToId, "");
         pressuredError(error, libraryId, null, position);
     }
 
-    private void saveError(final GatewayError error, final int libraryId, final Exception e)
+    private void saveError(final GatewayError error, final int libraryId, final long replyToId, final Exception e)
     {
         final String message = e.getMessage();
-        final long position = inboundPublication.saveError(error, libraryId, message == null ? "" : message);
+        final long position = inboundPublication.saveError(error, libraryId, replyToId, message == null ? "" : message);
         pressuredError(error, libraryId, message, position);
     }
 
@@ -572,7 +572,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
         if (idToLibrary.containsKey(libraryId))
         {
-            saveError(DUPLICATE_LIBRARY_ID, libraryId);
+            saveError(DUPLICATE_LIBRARY_ID, libraryId, correlationId);
 
             return CONTINUE;
         }
@@ -690,7 +690,6 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         gatewaySession.handoverManagementTo(libraryId);
         libraryInfo.addSession(gatewaySession);
 
-        // TODO: ensure all or none of these messages get through.
         final List<Continuation> continuations = new ArrayList<>();
         continuations.add(() -> inboundPublication.saveManageConnection(
             connectionId,
@@ -700,7 +699,8 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             lastSentSeqNum,
             lastRecvSeqNum,
             sessionState,
-            gatewaySession.heartbeatIntervalInS()));
+            gatewaySession.heartbeatIntervalInS(),
+            correlationId));
 
         continuations.add(() ->
             saveLogon(libraryId, gatewaySession, lastSentSeqNum, lastRecvSeqNum, LogonStatus.NEW));

@@ -324,7 +324,7 @@ class ReceiverEndPoint
             sessionId = sessionIds.onLogon(compositeKey);
             if (sessionId == DUPLICATE_SESSION)
             {
-                publication.saveError(GatewayError.DUPLICATE_SESSION, libraryId,
+                publication.saveError(GatewayError.DUPLICATE_SESSION, libraryId, 0,
                     connectionId + ": Duplicate Session: " + compositeKey);
                 close(LOCAL_DISCONNECT);
             }

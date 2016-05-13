@@ -152,7 +152,8 @@
         <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
         <field name="sessionState" id="6" type="SessionState"/>
         <field name="heartbeatIntervalInS" id="7" type="int32"/>
-        <data name="address" id="8" type="varDataEncoding"/>
+        <field name="replyToId" id="8" type="CorrelationId"/>
+        <data name="address" id="9" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="ResetSessionIds" id="36" description="All session ids have been reset">
     </sbe:message>
@@ -190,9 +191,10 @@
         <field name="connection" id="24" type="ConnectionId"/>
     </sbe:message>
     <sbe:message name="Error" id="13" description="An error has occurred">
-        <field name="type" id="25" type="GatewayError"/>
-        <field name="libraryId" id="19" type="LibraryId"/>
-        <data name="message" id="26" type="varDataEncoding"/>
+        <field name="type" id="1" type="GatewayError"/>
+        <field name="libraryId" id="2" type="LibraryId"/>
+        <field name="replyToId" id="3" type="CorrelationId"/>
+        <data name="message" id="4" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="ApplicationHeartbeat" id="16"
                  description="A heartbeat message sent within the application protocol">u

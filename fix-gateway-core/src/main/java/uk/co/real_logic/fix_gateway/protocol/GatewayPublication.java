@@ -218,7 +218,8 @@ public class GatewayPublication extends ClaimablePublication
                                      final int lastSentSequenceNumber,
                                      final int lastReceivedSequenceNumber,
                                      final SessionState sessionState,
-                                     final int heartbeatIntervalInS)
+                                     final int heartbeatIntervalInS,
+                                     final long replyToId)
     {
         final byte[] addressBytes = bytes(address);
 
@@ -250,6 +251,7 @@ public class GatewayPublication extends ClaimablePublication
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .sessionState(sessionState)
             .heartbeatIntervalInS(heartbeatIntervalInS)
+            .replyToId(replyToId)
             .putAddress(addressBytes, 0, addressBytes.length);
 
         bufferClaim.commit();
@@ -457,7 +459,11 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveError(final GatewayError errorType, final int libraryId, final String message)
+    public long saveError(
+        final GatewayError errorType,
+        final int libraryId,
+        final long replyToId,
+        final String message)
     {
         final byte[] messageBytes = bytes(message);
         final int length = header.encodedLength() + ErrorEncoder.BLOCK_LENGTH + ErrorDecoder.messageHeaderLength() +
@@ -484,6 +490,7 @@ public class GatewayPublication extends ClaimablePublication
             .wrap(buffer, offset)
             .type(errorType)
             .libraryId(libraryId)
+            .replyToId(replyToId)
             .putMessage(messageBytes, 0, messageBytes.length);
 
         bufferClaim.commit();

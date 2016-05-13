@@ -140,6 +140,7 @@ public class LibraryProtocolSubscription implements ControlledFragmentHandler
         return handler.onError(
             error.type(),
             error.libraryId(),
+            error.replyToId(),
             error.message()
         );
     }
@@ -169,7 +170,8 @@ public class LibraryProtocolSubscription implements ControlledFragmentHandler
             addressOffset,
             manageConnection.addressLength(),
             manageConnection.sessionState(),
-            manageConnection.heartbeatIntervalInS());
+            manageConnection.heartbeatIntervalInS(),
+            manageConnection.replyToId());
     }
 
     private Action onLogon(

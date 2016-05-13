@@ -44,6 +44,7 @@ import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
@@ -95,6 +96,7 @@ public final class FixLibrary extends GatewayProcess
 
     // The state consists of a connection id if an operation is happening, or the status if its done.
     private final Long2ObjectHashMap<Object> correlationIdToState = new Long2ObjectHashMap<>();
+    private final Long2ObjectHashMap<Reply<?>> correlationIdToReply = new Long2ObjectHashMap<>();
 
     /** Correlation Id is initialised to a random number to reduce the chance of correlation id collision. */
     private long currentCorrelationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
@@ -214,7 +216,29 @@ public final class FixLibrary extends GatewayProcess
         final long timeInMs = clock.time();
         return inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit) +
                pollSessions(timeInMs) +
-               livenessDetector.poll(timeInMs);
+               livenessDetector.poll(timeInMs) +
+               checkReplies(timeInMs);
+    }
+
+    private int checkReplies(final long timeInMs)
+    {
+        if (correlationIdToReply.isEmpty())
+        {
+            return 0;
+        }
+
+        int count = 0;
+        final Iterator<Reply<?>> iterator = correlationIdToReply.values().iterator();
+        while (iterator.hasNext())
+        {
+            final Reply<?> reply = iterator.next();
+            if (reply.checkTimeout(timeInMs))
+            {
+                iterator.remove();
+                count++;
+            }
+        }
+        return count;
     }
 
     /**
@@ -298,6 +322,7 @@ public final class FixLibrary extends GatewayProcess
                 final String host = hosts.get(i);
                 final int port = ports.get(i);
 
+                final long correlationId = ++currentCorrelationId;
                 outboundPublication.saveInitiateConnection(
                     libraryId,
                     host,
@@ -311,7 +336,7 @@ public final class FixLibrary extends GatewayProcess
                     configuration.username(),
                     configuration.password(),
                     this.configuration.defaultHeartbeatIntervalInS(),
-                    ++currentCorrelationId);
+                    correlationId);
 
                 awaitReply(() -> incomingSession == null && errorType == null);
 
@@ -336,6 +361,76 @@ public final class FixLibrary extends GatewayProcess
             sessionConfiguration = null;
             errorType = null;
             incomingSession = null;
+        }
+    }
+
+    // Prototype of non-blocking variant of the initiate session command
+    public Reply<Session> initiate2(final SessionConfiguration configuration)
+    {
+        requireNonNull(configuration, "configuration");
+
+        return new InitiateSessionReply(latestReplyArrivalTime(), configuration);
+    }
+
+    private class InitiateSessionReply extends Reply<Session>
+    {
+        private final SessionConfiguration configuration;
+
+        private int i = 0;
+
+        InitiateSessionReply(
+            final long latestReplyArrivalTime,
+            final SessionConfiguration configuration)
+        {
+            super(latestReplyArrivalTime);
+            this.configuration = configuration;
+            sendMessage();
+        }
+
+        private void sendMessage()
+        {
+            final List<String> hosts = configuration.hosts();
+            final List<Integer> ports = configuration.ports();
+            final int size = hosts.size();
+            if (i >= size)
+            {
+                onError(new FixGatewayException("Unable to connect to any of the addresses specified"));
+                return;
+            }
+
+            final String host = hosts.get(i);
+            final int port = ports.get(i);
+            final long correlationId = ++currentCorrelationId;
+
+            correlationIdToReply.put(correlationId, this);
+
+            outboundPublication.saveInitiateConnection(
+                libraryId,
+                host,
+                port,
+                configuration.senderCompId(),
+                configuration.senderSubId(),
+                configuration.senderLocationId(),
+                configuration.targetCompId(),
+                configuration.sequenceNumberType(),
+                configuration.initialSequenceNumber(),
+                configuration.username(),
+                configuration.password(),
+                FixLibrary.this.configuration.defaultHeartbeatIntervalInS(),
+                correlationId);
+        }
+
+        void onError(final GatewayError errorType, final String errorMessage)
+        {
+            if (errorType == UNABLE_TO_CONNECT)
+            {
+                i++;
+                sendMessage();
+            }
+            else
+            {
+                onError(new FixGatewayException(String.format("%s: %s", errorType, errorMessage)));
+            }
         }
     }
 
@@ -547,7 +642,8 @@ public final class FixLibrary extends GatewayProcess
             final int addressOffset,
             final int addressLength,
             final SessionState state,
-            final int heartbeatIntervalInS)
+            final int heartbeatIntervalInS,
+            final long replyToId)
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
@@ -557,7 +653,15 @@ public final class FixLibrary extends GatewayProcess
                     final Session session = initiateSession(
                         connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state);
                     newSession(connectionId, session);
-                    incomingSession = session;
+                    final InitiateSessionReply reply = (InitiateSessionReply) correlationIdToReply.remove(replyToId);
+                    if (reply == null)
+                    {
+                        incomingSession = session;
+                    }
+                    else
+                    {
+                        reply.onComplete(session);
+                    }
                 }
                 else
                 {
@@ -682,12 +786,21 @@ public final class FixLibrary extends GatewayProcess
             return CONTINUE;
         }
 
-        public Action onError(final GatewayError errorType, final int libraryId, final String message)
+        public Action onError(
+            final GatewayError errorType, final int libraryId, final long replyToId, final String message)
         {
             if (libraryId == FixLibrary.this.libraryId)
             {
-                FixLibrary.this.errorType = errorType;
-                FixLibrary.this.errorMessage = message;
+                final Reply<?> reply = correlationIdToReply.remove(replyToId);
+                if (reply != null)
+                {
+                    reply.onError(errorType, errorMessage);
+                }
+                else
+                {
+                    FixLibrary.this.errorType = errorType;
+                    FixLibrary.this.errorMessage = message;
+                }
             }
 
             return configuration.gatewayErrorHandler().onError(errorType, libraryId, message);

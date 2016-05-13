@@ -30,7 +30,9 @@ public interface LibraryProtocolHandler
         final DirectBuffer buffer,
         final int addressOffset,
         final int addressLength,
-        final SessionState state, final int heartbeatIntervalInS);
+        final SessionState state,
+        final int heartbeatIntervalInS,
+        final long replyToId);
 
     Action onLogon(
         final int libraryId,
@@ -45,7 +47,11 @@ public interface LibraryProtocolHandler
         final String username,
         final String password);
 
-    Action onError(final GatewayError errorType, final int libraryId, final String message);
+    Action onError(
+        final GatewayError errorType,
+        final int libraryId,
+        final long replyToId,
+        final String message);
 
     Action onApplicationHeartbeat(final int libraryId);
 
