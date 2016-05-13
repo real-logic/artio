@@ -586,12 +586,13 @@ public class Session implements AutoCloseable
             else if (expectedSeqNo < msgSeqNo)
             {
                 state(AWAITING_RESEND);
-                proxy.resendRequest(incNewSentSeqNum(), expectedSeqNo, 0);
+                return checkPosition(
+                    proxy.resendRequest(newSentSeqNum(), expectedSeqNo, 0));
             }
             else if (expectedSeqNo > msgSeqNo && !isPossDupOrResend)
             {
-                proxy.lowSequenceNumberLogout(incNewSentSeqNum(), expectedSeqNo, msgSeqNo);
-                requestDisconnect();
+                return checkPositionAndDisconnect(
+                    proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedSeqNo, msgSeqNo));
             }
         }
 
@@ -785,11 +786,20 @@ public class Session implements AutoCloseable
     {
         if (msgSeqNo != MISSING_INT)
         {
-            proxy.heartbeat(testReqId, testReqIdLength, incNewSentSeqNum());
+            final int sentSeqNum = newSentSeqNum();
+            final long position = proxy.heartbeat(testReqId, testReqIdLength, sentSeqNum);
+            if (position < 0)
+            {
+                return ABORT;
+            }
+            else
+            {
+                lastSentMsgSeqNum(sentSeqNum);
+            }
         }
-        onMessage(msgSeqNo, TestRequestDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
 
-        return CONTINUE;
+        return onMessage(
+            msgSeqNo, TestRequestDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }
 
     Action onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean gapFillFlag, final boolean possDupFlag)
@@ -956,13 +966,7 @@ public class Session implements AutoCloseable
         return lastReceivedMsgSeqNum + 1;
     }
 
-    // TODO: remove this method in order to force updates only when message successfully written
-    protected int incNewSentSeqNum()
-    {
-        return lastSentMsgSeqNum(newSentSeqNum());
-    }
-
-    private int newSentSeqNum()
+    int newSentSeqNum()
     {
         return lastSentMsgSeqNum + 1;
     }
