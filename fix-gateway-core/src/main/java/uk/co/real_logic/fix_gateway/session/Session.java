@@ -546,18 +546,16 @@ public class Session implements AutoCloseable
                 {
                     if (origSendingTime == UNKNOWN)
                     {
-                        proxy.reject(
-                            incNewSentSeqNum(),
+                        return checkPosition(proxy.reject(
+                            newSentSeqNum(),
                             msgSeqNo,
                             msgType,
                             msgTypeLength,
-                            REQUIRED_TAG_MISSING);
-                        return CONTINUE;
+                            REQUIRED_TAG_MISSING));
                     }
                     else if (origSendingTime > sendingTime)
                     {
-                        rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
-                        return CONTINUE;
+                        return rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
                     }
                 }
 
@@ -590,14 +588,27 @@ public class Session implements AutoCloseable
         return CONTINUE;
     }
 
-    private void rejectDueToSendingTime(final int msgSeqNo, final byte[] msgType, final int msgTypeLength)
+    private Action checkPosition(final long position)
     {
-        proxy.reject(
-            incNewSentSeqNum(),
+        if (position < 0)
+        {
+            return ABORT;
+        }
+        else
+        {
+            lastSentMsgSeqNum(newSentSeqNum());
+            return CONTINUE;
+        }
+    }
+
+    private Action rejectDueToSendingTime(final int msgSeqNo, final byte[] msgType, final int msgTypeLength)
+    {
+        return checkPosition(proxy.reject(
+            newSentSeqNum(),
             msgSeqNo,
             msgType,
             msgTypeLength,
-            SENDINGTIME_ACCURACY_PROBLEM);
+            SENDINGTIME_ACCURACY_PROBLEM));
     }
 
     private void incNextReceivedInboundMessageTime(final long time)
@@ -926,20 +937,23 @@ public class Session implements AutoCloseable
         final int refMsgTypeLength,
         final int rejectReason)
     {
-        incReceivedSeqNum();
-
-        proxy.reject(
-            incNewSentSeqNum(),
+        final Action action = checkPosition(proxy.reject(
+            newSentSeqNum(),
             refSeqNum,
             refTagId,
             refMsgType,
             refMsgTypeLength,
-            rejectReason);
+            rejectReason));
 
-        return CONTINUE;
+        if (action != ABORT)
+        {
+            incReceivedSeqNum();
+        }
+
+        return action;
     }
 
-    protected Action onHeartbeat(
+    Action onHeartbeat(
         final int msgSeqNum,
         final char[] testReqID,
         final int testReqIDLength,
@@ -951,21 +965,17 @@ public class Session implements AutoCloseable
         {
             state(ACTIVE);
         }
-        onMessage(msgSeqNum, HeartbeatDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
-
-        return CONTINUE;
+        return onMessage(msgSeqNum, HeartbeatDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }
 
     Action onInvalidMessageType(final int msgSeqNum, final char[] msgType, final int msgTypeLength)
     {
-        proxy.reject(
-            incNewSentSeqNum(),
+        return checkPosition(proxy.reject(
+            newSentSeqNum(),
             msgSeqNum,
             msgType,
             msgTypeLength,
-            INVALID_MSGTYPE.representation());
-
-        return CONTINUE;
+            INVALID_MSGTYPE.representation()));
     }
 
     public String toString()
