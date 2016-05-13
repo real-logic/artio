@@ -72,7 +72,7 @@ public abstract class AbstractSessionTest
 
         onMessage(1);
         verify(mockProxy).lowSequenceNumberLogout(1, 3, 1);
-        verifyDisconnect(1);
+        verifyDisconnect(times(1));
     }
 
     @Test
@@ -85,7 +85,7 @@ public abstract class AbstractSessionTest
         assertEquals(CONTINUE, onMessage(MISSING_INT));
 
         receivedMessageWithoutSequenceNumber(nextMsgSeqNum, 1);
-        verifyDisconnect(1);
+        verifyDisconnect(times(1));
     }
 
     @Test
@@ -103,7 +103,7 @@ public abstract class AbstractSessionTest
         assertEquals(CONTINUE, onMessage(MISSING_INT));
 
         receivedMessageWithoutSequenceNumber(nextMsgSeqNum, 2);
-        verifyDisconnect(1);
+        verifyDisconnect(times(1));
     }
 
     private int nextMsgSeqNum()
@@ -230,8 +230,34 @@ public abstract class AbstractSessionTest
 
         onLogout();
 
-        verifyLogout();
-        verifyDisconnect(1);
+        verifyLogout(1, times(1));
+        verifyDisconnect(times(1));
+    }
+
+    @Test
+    public void shouldReplyToValidLogoutWhenBackPressured()
+    {
+        givenActive();
+
+        backPressureLogout();
+
+        onLogout();
+
+        poll();
+
+        poll();
+
+        poll();
+
+        verifyLogout(1, times(2));
+        verifyDisconnect(times(2));
+    }
+
+    private void backPressureLogout()
+    {
+        when(mockProxy.logout(anyInt())).thenReturn(BACK_PRESSURED, POSITION);
+
+        backpressureDisconnect();
     }
 
     @Test
@@ -241,7 +267,7 @@ public abstract class AbstractSessionTest
 
         onLogout();
 
-        verifyDisconnect(1);
+        verifyDisconnect(times(1));
     }
 
     @Test
@@ -286,7 +312,7 @@ public abstract class AbstractSessionTest
         session().onSequenceReset(1, 4, true, false);
 
         verify(mockProxy).lowSequenceNumberLogout(anyInt(), eq(3), eq(1));
-        verifyDisconnect(1);
+        verifyDisconnect(times(1));
     }
 
     @Test
@@ -401,7 +427,7 @@ public abstract class AbstractSessionTest
 
         poll();
 
-        verifyDisconnect(1);
+        verifyDisconnect(times(1));
     }
 
     @Test
@@ -419,7 +445,7 @@ public abstract class AbstractSessionTest
 
         poll();
 
-        verifyDisconnect(2);
+        verifyDisconnect(times(2));
     }
 
     @Test
@@ -458,7 +484,7 @@ public abstract class AbstractSessionTest
     public void shouldDisconnectIfBeginStringIsInvalidAtLogon()
     {
         onBeginString(true);
-        verifyDisconnect(1);
+        verifyDisconnect(times(1));
     }
 
     @Test
@@ -466,7 +492,7 @@ public abstract class AbstractSessionTest
     {
         onBeginString(false);
         incorrectBeginStringLogout(1);
-        verifyDisconnect(1);
+        verifyDisconnect(times(1));
     }
 
     @Test
@@ -483,7 +509,7 @@ public abstract class AbstractSessionTest
         poll();
 
         incorrectBeginStringLogout(2);
-        verifyDisconnect(2);
+        verifyDisconnect(times(2));
     }
 
     private void incorrectBeginStringLogout(final int times)
@@ -525,16 +551,10 @@ public abstract class AbstractSessionTest
         return times(backPressured ? 2 : 1);
     }
 
-    public void verifyDisconnect(final int times)
+    public void verifyDisconnect(final VerificationMode times)
     {
-        verify(mockProxy, times(times)).requestDisconnect(CONNECTION_ID);
+        verify(mockProxy, times).requestDisconnect(CONNECTION_ID);
         assertState(DISCONNECTED);
-    }
-
-    public void verifyLogoutStarted()
-    {
-        verifyLogout();
-        awaitingLogout();
     }
 
     private void backpressureDisconnect()
@@ -547,14 +567,9 @@ public abstract class AbstractSessionTest
         session().state(ACTIVE);
     }
 
-    public void awaitingLogout()
+    public void verifyLogout(final int msgSeqNo, final VerificationMode times)
     {
-        assertState(AWAITING_LOGOUT);
-    }
-
-    public void verifyLogout()
-    {
-        verify(mockProxy).logout(anyInt());
+        verify(mockProxy, times).logout(msgSeqNo);
     }
 
     public void assertState(final SessionState state)
@@ -579,7 +594,7 @@ public abstract class AbstractSessionTest
 
     protected void onLogout()
     {
-        session().onLogout(1, sendingTime(), UNKNOWN, false);
+        assertEquals(CONTINUE, session().onLogout(1, sendingTime(), UNKNOWN, false));
     }
 
     protected void verifySendingTimeProblem()

@@ -33,6 +33,7 @@ import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
@@ -328,8 +329,11 @@ public class Session implements AutoCloseable
         if (state() != DISCONNECTED)
         {
             position = sendLogout();
-            // TODO: add intermediate state
-            if (position >= 0)
+            if (position < 0)
+            {
+                state(LOGGING_OUT_AND_DISCONNECTING);
+            }
+            else
             {
                 position = requestDisconnect();
             }
@@ -439,6 +443,15 @@ public class Session implements AutoCloseable
             return 1;
         }
 
+        if (state == LOGGING_OUT_AND_DISCONNECTING)
+        {
+            final long position = sendLogout();
+
+            state(position < 0 ? LOGGING_OUT_AND_DISCONNECTING : DISCONNECTING);
+
+            return 1;
+        }
+
         int actions = 0;
         if (isActive() && time >= nextRequiredHeartbeatTimeInMs)
         {
@@ -529,15 +542,7 @@ public class Session implements AutoCloseable
             if (msgSeqNo == MISSING_INT)
             {
                 final int sentSeqNum = newSentSeqNum();
-                final long position = proxy.receivedMessageWithoutSequenceNumber(sentSeqNum);
-                if (position < 0)
-                {
-                    return ABORT;
-                }
-
-                lastSentMsgSeqNum(sentSeqNum);
-                requestDisconnect();
-                return CONTINUE;
+                return checkPositionAndDisconnect(proxy.receivedMessageWithoutSequenceNumber(sentSeqNum));
             }
 
             final long time = time();
@@ -563,9 +568,12 @@ public class Session implements AutoCloseable
 
                 if ((sendingTime < time - sendingTimeWindowInMs) || (sendingTime > time + sendingTimeWindowInMs))
                 {
-                    rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
-                    logoutAndDisconnect();
-                    return CONTINUE;
+                    final Action action = rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
+                    if (action != BREAK)
+                    {
+                        logoutAndDisconnect();
+                    }
+                    return action;
                 }
             }
 
@@ -748,7 +756,13 @@ public class Session implements AutoCloseable
         final long origSendingTime,
         final boolean isPossDupOrResend)
     {
-        onMessage(msgSeqNo, LogoutDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+        final Action action = onMessage(
+            msgSeqNo, LogoutDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+        if (action == ABORT)
+        {
+            return ABORT;
+        }
+
         if (state() == AWAITING_LOGOUT)
         {
             requestDisconnect();
@@ -877,7 +891,13 @@ public class Session implements AutoCloseable
 
     private long sendLogout()
     {
-        return proxy.logout(incNewSentSeqNum());
+        final int sentSeqNum = newSentSeqNum();
+        final long position = proxy.logout(sentSeqNum);
+        if (position >= 0)
+        {
+            lastSentMsgSeqNum(sentSeqNum);
+        }
+        return position;
     }
 
     // ---------- Setters ----------

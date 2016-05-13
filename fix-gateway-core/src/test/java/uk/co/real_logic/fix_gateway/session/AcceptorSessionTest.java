@@ -76,7 +76,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     {
         onMessage(1);
 
-        verifyDisconnect(1);
+        verifyDisconnect(times(1));
         verifyNoFurtherMessages();
     }
 
@@ -125,8 +125,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
         messageWithWeirdTime(sendingTime() + TWO_MINUTES);
 
         verifySendingTimeProblem();
-        verifyLogout();
-        verifyDisconnect(1);
+        verifyLogout(3, times(1));
+        verifyDisconnect(times(1));
     }
 
     @Test
@@ -137,8 +137,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
         messageWithWeirdTime(sendingTime() - TWO_MINUTES);
 
         verifySendingTimeProblem();
-        verifyLogout();
-        verifyDisconnect(1);
+        verifyLogout(3, times(1));
+        verifyDisconnect(times(1));
     }
 
     protected void readyForLogon()

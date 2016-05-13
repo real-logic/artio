@@ -74,14 +74,16 @@
                         description="Login had too high a sequence number and a resend or gap fill is required.">4</validValue>
             <validValue name="LOGGING_OUT"
                         description="Session is trying to send logout, will retry sending until not backpressured">5</validValue>
+            <validValue name="LOGGING_OUT_AND_DISCONNECTING"
+                        description="Session is trying to send logout and the disconnect, will retry sending until not backpressured">6</validValue>
             <validValue name="AWAITING_LOGOUT"
-                        description="Linger between logout request and a logout acknowledgement. You can do resend processing at this point, but no other messages.">6</validValue>
+                        description="Linger between logout request and a logout acknowledgement. You can do resend processing at this point, but no other messages.">7</validValue>
             <validValue name="DISCONNECTING"
-                        description="Session is trying to disconnect, will retry disconnecting until not backpressured">7</validValue>
+                        description="Session is trying to disconnect, will retry disconnecting until not backpressured">8</validValue>
             <validValue name="DISCONNECTED"
-                        description="Session has been disconnected and can't send messages.">8</validValue>
+                        description="Session has been disconnected and can't send messages.">9</validValue>
             <validValue name="DISABLED"
-                        description="DISCONNECTED and unable to reconnect.">9</validValue>
+                        description="DISCONNECTED and unable to reconnect.">10</validValue>
         </enum>
         <enum name="SequenceNumberType" encodingType="uint8">
             <validValue name="TRANSIENT">0</validValue>
