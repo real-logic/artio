@@ -211,15 +211,17 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveManageConnection(final long connectionId,
-                                     final String address,
-                                     final int libraryId,
-                                     final ConnectionType type,
-                                     final int lastSentSequenceNumber,
-                                     final int lastReceivedSequenceNumber,
-                                     final SessionState sessionState,
-                                     final int heartbeatIntervalInS,
-                                     final long replyToId)
+    public long saveManageConnection(
+        final long connectionId,
+        final long sessionId,
+        final String address,
+        final int libraryId,
+        final ConnectionType type,
+        final int lastSentSequenceNumber,
+        final int lastReceivedSequenceNumber,
+        final SessionState sessionState,
+        final int heartbeatIntervalInS,
+        final long replyToId)
     {
         final byte[] addressBytes = bytes(address);
 
@@ -245,6 +247,7 @@ public class GatewayPublication extends ClaimablePublication
         manageConnection
             .wrap(buffer, offset)
             .connection(connectionId)
+            .session(sessionId)
             .libraryId(libraryId)
             .type(type)
             .lastSentSequenceNumber(lastSentSequenceNumber)

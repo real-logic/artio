@@ -56,6 +56,7 @@ public class MessageDumperTest
             "    Template: 'ManageConnection',\n" +
             "    libraryId: 4,\n" +
             "    connection: 1,\n" +
+            "    session: 0,\n" +
             "    type: 'ACCEPTOR',\n" +
             "    lastSentSequenceNumber: 3,\n" +
             "    lastReceivedSequenceNumber: 2,\n" +

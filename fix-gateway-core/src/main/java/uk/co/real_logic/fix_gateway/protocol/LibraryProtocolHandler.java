@@ -24,6 +24,7 @@ public interface LibraryProtocolHandler
     Action onManageConnection(
         final int libraryId,
         final long connectionId,
+        final long sessionId,
         final ConnectionType type,
         final int lastSequenceNumber,
         final int lastReceivedSequenceNumber,

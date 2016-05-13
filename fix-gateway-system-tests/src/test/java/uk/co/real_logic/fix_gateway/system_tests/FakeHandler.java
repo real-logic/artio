@@ -28,6 +28,8 @@ import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 
+import static org.junit.Assert.assertNotEquals;
+
 public class FakeHandler implements SessionHandler, SessionAcquireHandler, SessionExistsHandler, SentPositionHandler
 {
 
@@ -78,6 +80,7 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
 
     public SessionHandler onSessionAcquired(final Session session)
     {
+        assertNotEquals(Session.UNKNOWN, session.id());
         connectionIdToSession.put(session.connectionId(), session);
         this.latestSession = session;
         return this;

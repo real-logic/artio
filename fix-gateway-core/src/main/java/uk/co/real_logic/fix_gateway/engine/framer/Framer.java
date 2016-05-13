@@ -425,7 +425,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
             final Transaction transaction = new Transaction(
                 () -> inboundPublication.saveManageConnection(
-                    connectionId, address.toString(), libraryId, INITIATOR,
+                    connectionId, sessionId, address.toString(), libraryId, INITIATOR,
                     lastSentSequenceNumber, lastReceivedSequenceNumber, CONNECTED, heartbeatIntervalInS, correlationId),
                 () -> inboundPublication.saveLogon(
                     libraryId, connectionId, sessionId,
@@ -693,7 +693,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final List<Continuation> continuations = new ArrayList<>();
         continuations.add(() -> inboundPublication.saveManageConnection(
             connectionId,
-            gatewaySession.address(),
+            sessionId, gatewaySession.address(),
             libraryId,
             gatewaySession.connectionType(),
             lastSentSeqNum,

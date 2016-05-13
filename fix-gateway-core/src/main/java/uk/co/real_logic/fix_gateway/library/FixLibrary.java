@@ -432,6 +432,12 @@ public final class FixLibrary extends GatewayProcess
                 onError(new FixGatewayException(String.format("%s: %s", errorType, errorMessage)));
             }
         }
+
+        void onComplete(final Session result)
+        {
+            result.address(configuration.hosts().get(i), configuration.ports().get(i));
+            super.onComplete(result);
+        }
     }
 
     /**
@@ -635,6 +641,7 @@ public final class FixLibrary extends GatewayProcess
         public Action onManageConnection(
             final int libraryId,
             final long connectionId,
+            final long sessionId,
             final ConnectionType type,
             final int lastSentSequenceNumber,
             final int lastReceivedSequenceNumber,
@@ -652,7 +659,7 @@ public final class FixLibrary extends GatewayProcess
                     DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
                     final Session session = initiateSession(
                         connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state);
-                    newSession(connectionId, session);
+                    newSession(connectionId, sessionId, session);
                     final InitiateSessionReply reply = (InitiateSessionReply) correlationIdToReply.remove(replyToId);
                     if (reply == null)
                     {
@@ -669,7 +676,7 @@ public final class FixLibrary extends GatewayProcess
                     asciiBuffer.wrap(buffer);
                     final String address = asciiBuffer.getAscii(addressOffset, addressLength);
                     final Session session = acceptSession(connectionId, address, state, heartbeatIntervalInS);
-                    newSession(connectionId, session);
+                    newSession(connectionId, sessionId, session);
                 }
             }
 
@@ -873,8 +880,9 @@ public final class FixLibrary extends GatewayProcess
         }
     }
 
-    private void newSession(final long connectionId, final Session session)
+    private void newSession(final long connectionId, final long sessionId, final Session session)
     {
+        session.id(sessionId);
         final AuthenticationStrategy authenticationStrategy = configuration.authenticationStrategy();
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(

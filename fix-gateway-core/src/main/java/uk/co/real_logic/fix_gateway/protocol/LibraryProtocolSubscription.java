@@ -163,6 +163,7 @@ public class LibraryProtocolSubscription implements ControlledFragmentHandler
         return handler.onManageConnection(
             manageConnection.libraryId(),
             manageConnection.connection(),
+            manageConnection.session(),
             manageConnection.type(),
             manageConnection.lastSentSequenceNumber(),
             manageConnection.lastReceivedSequenceNumber(),

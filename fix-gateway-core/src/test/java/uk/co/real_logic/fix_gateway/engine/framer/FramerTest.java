@@ -387,6 +387,7 @@ public class FramerTest
     {
         when(inboundPublication.saveManageConnection(
             anyLong(),
+            anyLong(),
             anyString(),
             eq(LIBRARY_ID),
             eq(INITIATOR),
@@ -473,6 +474,7 @@ public class FramerTest
     {
         verify(inboundPublication, times).saveManageConnection(
             eq(connectionId.getValue()),
+            anyLong(),
             anyString(),
             eq(LIBRARY_ID),
             eq(INITIATOR),

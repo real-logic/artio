@@ -147,6 +147,7 @@
     <sbe:message name="ManageConnection" id="10" description="Here's a connection to manage">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connection" id="2" type="ConnectionId"/>
+        <field name="session" id="10" type="FixSessionId"/>
         <field name="type" id="3" type="ConnectionType"/>
         <field name="lastSentSequenceNumber" id="4" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
