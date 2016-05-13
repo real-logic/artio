@@ -796,59 +796,66 @@ public class Session implements AutoCloseable
     {
         if (!gapFillFlag)
         {
-            applySequenceReset(msgSeqNo, newSeqNo);
+            return applySequenceReset(msgSeqNo, newSeqNo);
         }
         else if (newSeqNo > msgSeqNo)
         {
-            gapFill(msgSeqNo, newSeqNo, possDupFlag);
+            return gapFill(msgSeqNo, newSeqNo, possDupFlag);
         }
         else
         {
-            applySequenceReset(msgSeqNo, newSeqNo);
+            return applySequenceReset(msgSeqNo, newSeqNo);
         }
-
-        return CONTINUE;
     }
 
-    private void applySequenceReset(final int receivedMsgSeqNo, final int newSeqNo)
+    private Action applySequenceReset(final int receivedMsgSeqNo, final int newSeqNo)
     {
         final int expectedMsgSeqNo = expectedReceivedSeqNum();
+
         if (newSeqNo > expectedMsgSeqNo)
         {
             lastReceivedMsgSeqNum(newSeqNo - 1);
         }
         else if (newSeqNo < expectedMsgSeqNo)
         {
-            proxy.reject(
-                incNewSentSeqNum(),
+            return checkPosition(proxy.reject(
+                newSentSeqNum(),
                 receivedMsgSeqNo,
                 NEW_SEQ_NO,
                 SequenceResetDecoder.MESSAGE_TYPE_BYTES,
                 SequenceResetDecoder.MESSAGE_TYPE_BYTES.length,
-                RejectReason.VALUE_IS_INCORRECT);
+                RejectReason.VALUE_IS_INCORRECT));
         }
+
+        return CONTINUE;
     }
 
-    private void gapFill(final int receivedMsgSeqNo, final int newSeqNo, final boolean possDupFlag)
+    private Action gapFill(final int receivedMsgSeqNo, final int newSeqNo, final boolean possDupFlag)
     {
         final int expectedMsgSeqNo = expectedReceivedSeqNum();
         if (receivedMsgSeqNo > expectedMsgSeqNo)
         {
-            proxy.resendRequest(incNewSentSeqNum(), expectedMsgSeqNo, 0);
-            lastReceivedMsgSeqNum(newSeqNo - 1);
+            final Action action = checkPosition(proxy.resendRequest(newSentSeqNum(), expectedMsgSeqNo, 0));
+            if (action != BREAK)
+            {
+                lastReceivedMsgSeqNum(newSeqNo - 1);
+            }
+            return action;
         }
         else if (receivedMsgSeqNo < expectedMsgSeqNo)
         {
             if (!possDupFlag)
             {
-                proxy.lowSequenceNumberLogout(incNewSentSeqNum(), expectedMsgSeqNo, receivedMsgSeqNo);
-                requestDisconnect();
+                return checkPositionAndDisconnect(
+                    proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedMsgSeqNo, receivedMsgSeqNo));
             }
         }
         else
         {
             lastReceivedMsgSeqNum(newSeqNo - 1);
         }
+
+        return CONTINUE;
     }
 
     Action onReject(final int msgSeqNo,

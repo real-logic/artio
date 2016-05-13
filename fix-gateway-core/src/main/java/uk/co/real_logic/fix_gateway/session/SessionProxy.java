@@ -193,14 +193,16 @@ public class SessionProxy
         return send(logout.encode(string, 0), LogoutDecoder.MESSAGE_TYPE, logout);
     }
 
-    public void lowSequenceNumberLogout(final int msgSeqNo, final int expectedSeqNo, final int receivedSeqNo)
+    public long lowSequenceNumberLogout(final int msgSeqNo, final int expectedSeqNo, final int receivedSeqNo)
     {
         lowSequenceNumber
             .with(expectedSeqNo)
             .with(receivedSeqNo);
 
-        logout(msgSeqNo, lowSequenceNumber.value(), lowSequenceNumber.length());
+        final long position = logout(msgSeqNo, lowSequenceNumber.value(), lowSequenceNumber.length());
         lowSequenceNumber.clear();
+
+        return position;
     }
 
     public long incorrectBeginStringLogout(final int msgSeqNo)
