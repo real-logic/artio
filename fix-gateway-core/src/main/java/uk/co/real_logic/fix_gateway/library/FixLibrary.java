@@ -615,8 +615,7 @@ public final class FixLibrary extends GatewayProcess
 
     /**
      * Request a session be acquired from the Gateway. This is the non-blocking version
-     * of {@link this#acquireSession(long)}. It returns an id that can be used to
-     * inspect {@link this#pollRequestStatus(long)}.
+     * of {@link this#acquireSession(long)}. It returns a {@link Reply} object.
      *
      * @param sessionId the id of the session to acquire.
      * @param lastReceivedSequenceNumber the last received message sequence number
@@ -625,8 +624,8 @@ public final class FixLibrary extends GatewayProcess
      *                                   <code>lastReceivedMessageSequenceNumber + 1</code>
      *                                   to the latest message sequence number.
      *                                   If you don't care about message replay then
-     *                                   use {@link this#acquireSession(long)}
-     * @return the correlation id corresponding to this request.
+     *                                   use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
+     * @return the reply object representing the result of the request.
      */
     public Reply<SessionReplyStatus> requestSession2(final long sessionId, final int lastReceivedSequenceNumber)
     {
