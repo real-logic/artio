@@ -153,7 +153,7 @@ public final class SystemTestUtil
         return reply;
     }
 
-    public static void awaitReply(final FixLibrary library, final Reply<Session> reply)
+    public static void awaitReply(final FixLibrary library, final Reply<?> reply)
     {
         while (reply.isExecuting())
         {
@@ -161,6 +161,14 @@ public final class SystemTestUtil
             ADMIN_IDLE_STRATEGY.idle();
         }
         ADMIN_IDLE_STRATEGY.reset();
+    }
+
+    public static SessionReplyStatus releaseToGateway(
+        final FixLibrary library, final Session session)
+    {
+        final Reply<SessionReplyStatus> reply = library.releaseToGateway2(session);
+        awaitReply(library, reply);
+        return reply.resultIfPresent();
     }
 
     public static FixEngine launchInitiatingGateway(final int initAeronPort)

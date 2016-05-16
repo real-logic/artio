@@ -492,6 +492,56 @@ public final class FixLibrary extends GatewayProcess
         return replyStatus;
     }
 
+    public Reply<SessionReplyStatus> releaseToGateway2(final Session session)
+    {
+        requireNonNull(session, "session");
+
+        return new ReleaseToGatewayReply(latestReplyArrivalTime(), session);
+    }
+
+    private class ReleaseToGatewayReply extends Reply<SessionReplyStatus>
+    {
+        private final Session session;
+
+        ReleaseToGatewayReply(final long latestReplyArrivalTime, final Session session)
+        {
+            super(latestReplyArrivalTime);
+            this.session = session;
+            sendMessage();
+        }
+
+        private void sendMessage()
+        {
+            final long correlationId = ++currentCorrelationId;
+            correlationIdToReply.put(correlationId, this);
+            outboundPublication.saveReleaseSession(
+                libraryId,
+                session.connectionId(),
+                correlationId,
+                session.state(),
+                session.heartbeatIntervalInMs(),
+                session.lastSentMsgSeqNum(),
+                session.lastReceivedMsgSeqNum(),
+                session.username(),
+                session.password());
+        }
+
+        void onComplete(final SessionReplyStatus result)
+        {
+            if (result == SessionReplyStatus.OK)
+            {
+                sessions.remove(session);
+                session.disable();
+            }
+
+            super.onComplete(result);
+        }
+
+        void onError(final GatewayError errorType, final String errorMessage)
+        {
+        }
+    }
+
     /**
      * Accquire control of a session. If this session is being managed by
      * the gateway then your {@link SessionAcquireHandler} will receive a callback
@@ -839,7 +889,12 @@ public final class FixLibrary extends GatewayProcess
 
         public Action onReleaseSessionReply(final long correlationId, final SessionReplyStatus status)
         {
-            if (FixLibrary.this.currentCorrelationId == correlationId)
+            final ReleaseToGatewayReply reply = (ReleaseToGatewayReply) correlationIdToReply.remove(correlationId);
+            if (reply != null)
+            {
+                reply.onComplete(status);
+            }
+            else if (FixLibrary.this.currentCorrelationId == correlationId)
             {
                 FixLibrary.this.replyStatus = status;
             }

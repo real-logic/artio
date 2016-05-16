@@ -233,7 +233,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final long connectionId = session.connectionId();
 
-        final SessionReplyStatus status = library.releaseToGateway(session);
+        final SessionReplyStatus status = releaseToGateway(library, session);
 
         assertEquals(SessionReplyStatus.OK, status);
         assertEquals(SessionState.DISABLED, session.state());
@@ -267,7 +267,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final long sessionId = session.id();
 
-        library.releaseToGateway(session);
+        releaseToGateway(library, session);
 
         final SessionReplyStatus status = library.acquireSession(sessionId);
         assertEquals(SessionReplyStatus.OK, status);
@@ -330,7 +330,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final int lastReceivedMsgSeqNum = session.lastReceivedMsgSeqNum();
         final List<FixMessage> messages = otfAcceptor.messages();
 
-        library.releaseToGateway(session);
+        releaseToGateway(library, session);
 
         messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
 
