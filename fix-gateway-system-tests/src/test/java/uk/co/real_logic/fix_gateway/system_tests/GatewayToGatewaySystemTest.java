@@ -164,6 +164,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
             assertConnected(session2);
             sessionLogsOn(library2, acceptingLibrary, session2);
+            // TODO: fix test, sometimes fails due to acquiring the wrong session
             final Session acceptingSession2 = SystemTestUtil.acquireSession(acceptingHandler, acceptingLibrary);
 
             sendTestRequest(acceptingSession2);
