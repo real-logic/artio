@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
+import uk.co.real_logic.fix_gateway.library.Reply;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
@@ -75,7 +76,21 @@ public final class MessageApiExamples
                     .targetCompId(TARGET_COMP_ID)
                     .build();
 
-                final Session session = library.initiate(sessionConfig);
+                final Reply<Session> reply = library.initiate(sessionConfig);
+
+                while (reply.isExecuting())
+                {
+                    library.poll(1);
+                }
+
+                if (!reply.hasCompleted())
+                {
+                    System.err.println(
+                        "Unable to initiate the session, " + reply.state() + " " + reply.error());
+                    System.exit(-1);
+                }
+
+                final Session session = reply.resultIfPresent();
 
                 // Specific encoders are generated for each type of message
                 // from the same dictionary as the decoders.

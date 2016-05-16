@@ -58,7 +58,6 @@ import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
-import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
 /**
@@ -94,18 +93,13 @@ public final class FixLibrary extends GatewayProcess
     private final IdleStrategy idleStrategy;
     private final SentPositionHandler sentPositionHandler;
 
-    // The state consists of a connection id if an operation is happening, or the status if its done.
-    private final Long2ObjectHashMap<Object> correlationIdToState = new Long2ObjectHashMap<>();
     private final Long2ObjectHashMap<Reply<?>> correlationIdToReply = new Long2ObjectHashMap<>();
 
     /** Correlation Id is initialised to a random number to reduce the chance of correlation id collision. */
     private long currentCorrelationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
 
-    private Session incomingSession;
-    private SessionConfiguration sessionConfiguration;
     private GatewayError errorType;
     private String errorMessage;
-    private SessionReplyStatus replyStatus;
 
     private FixLibrary(final LibraryConfiguration configuration)
     {
@@ -288,83 +282,6 @@ public final class FixLibrary extends GatewayProcess
     }
 
     /**
-     * Initiate a FIX session with a FIX acceptor. This method blocks and returns only once the Session
-     * object has connected to the acceptor.
-     *
-     * @param configuration the configuration to use for the session.
-     * @return the session object for the session that you've initiated.
-     * @throws IllegalStateException
-     *         if you're trying to initiate two sessions at the same time or if there's a timeout talking to
-     *         the FixEngine.
-     *         This probably indicates that there's a problem in your code or that your engine isn't running.
-     * @throws FixGatewayException
-     *         if you're unable to connect to the accepting gateway.
-     *         This probably indicates a configuration problem related to the external gateway.
-     */
-    public Session initiate(final SessionConfiguration configuration)
-    {
-        requireNonNull(configuration, "configuration");
-
-        if (sessionConfiguration != null || incomingSession != null || errorType != null)
-        {
-            return concurrentError();
-        }
-
-        sessionConfiguration = configuration;
-
-        try
-        {
-            final List<String> hosts = configuration.hosts();
-            final List<Integer> ports = configuration.ports();
-            final int size = hosts.size();
-            for (int i = 0; i < size; i++)
-            {
-                final String host = hosts.get(i);
-                final int port = ports.get(i);
-
-                final long correlationId = ++currentCorrelationId;
-                outboundPublication.saveInitiateConnection(
-                    libraryId,
-                    host,
-                    port,
-                    configuration.senderCompId(),
-                    configuration.senderSubId(),
-                    configuration.senderLocationId(),
-                    configuration.targetCompId(),
-                    configuration.sequenceNumberType(),
-                    configuration.initialSequenceNumber(),
-                    configuration.username(),
-                    configuration.password(),
-                    this.configuration.defaultHeartbeatIntervalInS(),
-                    correlationId);
-
-                awaitReply(() -> incomingSession == null && errorType == null);
-
-                if (incomingSession != null)
-                {
-                    final Session session = incomingSession;
-                    session.address(host, port);
-                    return session;
-                }
-                else if (errorType != UNABLE_TO_CONNECT)
-                {
-                    throw new FixGatewayException(String.format("%s: %s", errorType, errorMessage));
-                }
-
-                errorType = null;
-            }
-
-            throw new FixGatewayException("Unable to connect to any of the addresses specified");
-        }
-        finally
-        {
-            sessionConfiguration = null;
-            errorType = null;
-            incomingSession = null;
-        }
-    }
-
-    /**
      * Initiate a FIX session with a FIX acceptor. This method returns a reply object
      * wrapping the Session itself.
      *
@@ -378,7 +295,7 @@ public final class FixLibrary extends GatewayProcess
      *         if you're unable to connect to the accepting gateway.
      *         This probably indicates a configuration problem related to the external gateway.
      */
-    public Reply<Session> initiate2(final SessionConfiguration configuration)
+    public Reply<Session> initiate(final SessionConfiguration configuration)
     {
         requireNonNull(configuration, "configuration");
 
@@ -455,54 +372,15 @@ public final class FixLibrary extends GatewayProcess
 
     /**
      * Release this session object to the gateway to manage. If the release
-     * operation has successfully completed then it will return {@link SessionReplyStatus#OK}
-     *
-     * @param session the session to release
-     * @return the result of this operation.
-     */
-    public SessionReplyStatus releaseToGateway(final Session session)
-    {
-        requireNonNull(session, "session");
-        if (replyStatus != null)
-        {
-            return concurrentError();
-        }
-
-        outboundPublication.saveReleaseSession(
-            libraryId,
-            session.connectionId(),
-            ++currentCorrelationId,
-            session.state(),
-            session.heartbeatIntervalInMs(),
-            session.lastSentMsgSeqNum(),
-            session.lastReceivedMsgSeqNum(),
-            session.username(),
-            session.password());
-
-        awaitReply(() -> replyStatus == null);
-
-        final SessionReplyStatus replyStatus = this.replyStatus;
-        this.replyStatus = null;
-        if (replyStatus == SessionReplyStatus.OK)
-        {
-            sessions.remove(session);
-            session.disable();
-        }
-
-        return replyStatus;
-    }
-
-    /**
-     * Release this session object to the gateway to manage. If the release
      * operation has successfully completed then it will return {@link SessionReplyStatus#OK}.
      *
-     * Similar to {@link this#initiate2(SessionConfiguration)} this is a non-blocking operation that
+     * Similar to {@link this#initiate(SessionConfiguration)} this is a non-blocking operation that
      * returns a reply object that indicates what has happened to its result.
      *
      * @param session the session to release
      * @return the result of this operation.
      */
-    public Reply<SessionReplyStatus> releaseToGateway2(final Session session)
+    public Reply<SessionReplyStatus> releaseToGateway(final Session session)
     {
         requireNonNull(session, "session");
 
@@ -553,69 +431,17 @@ public final class FixLibrary extends GatewayProcess
     }
 
     /**
-     * Accquire control of a session. If this session is being managed by
+     * Request a session be acquired from the Gateway. It returns a {@link Reply} object.
+     *
+     * If this session is being managed by
      * the gateway then your {@link SessionAcquireHandler} will receive a callback
-     * and this method will return {@link SessionReplyStatus#OK}.
+     * and the reply will be {@link SessionReplyStatus#OK}.
      *
      * If another library has acquired the session then this method will return
      * {@link SessionReplyStatus#OTHER_SESSION_OWNER}. If the connection id refers
      * to an unknown session then the method returns {@link SessionReplyStatus#UNKNOWN_SESSION}.
      * If this library instance is unknown to the gateway, for example if its heartbeating
      * mechanism has timed out due to {@link this#poll(int)} not being called often enough.
-     *
-     * Equivalent to calling {@link this#requestSession(long, int)} and then waiting for the
-     * reply.
-     *
-     * @param sessionId the id of the session to acquire.
-     * @param lastReceivedSequenceNumber the last received message sequence number
-     *                                   that you know about. You will get a stream
-     *                                   of messages replayed to you from
-     *                                   <code>lastReceivedMessageSequenceNumber + 1</code>
-     *                                   to the latest message sequence number.
-     *                                   If you don't care about message replay then
-     *                                   use {@link this#acquireSession(long)}
-     * @return the result of this operation.
-     */
-    public SessionReplyStatus acquireSession(final long sessionId, final int lastReceivedSequenceNumber)
-    {
-        final long correlationId = requestSession(sessionId, lastReceivedSequenceNumber);
-
-        awaitReply(() -> requestSessionAwaitingReply(correlationId));
-
-        return pollRequestStatus(correlationId);
-    }
-
-    /**
-     * Request a session be acquired from the Gateway. This is the non-blocking version
-     * of {@link this#acquireSession(long)}. It returns an id that can be used to
-     * inspect {@link this#pollRequestStatus(long)}.
-     *
-     * @param sessionId the id of the session to acquire.
-     * @param lastReceivedSequenceNumber the last received message sequence number
-     *                                   that you know about. You will get a stream
-     *                                   of messages replayed to you from
-     *                                   <code>lastReceivedMessageSequenceNumber + 1</code>
-     *                                   to the latest message sequence number.
-     *                                   If you don't care about message replay then
-     *                                   use {@link this#acquireSession(long)}
-     * @return the correlation id corresponding to this request.
-     */
-    public long requestSession(final long sessionId, final int lastReceivedSequenceNumber)
-    {
-        if (correlationIdToState.get(sessionId) != null)
-        {
-            return concurrentError();
-        }
-
-        final long correlationId = ++this.currentCorrelationId;
-        correlationIdToState.put(correlationId, Long.valueOf(sessionId));
-        outboundPublication.saveRequestSession(libraryId, sessionId, correlationId, lastReceivedSequenceNumber);
-        return correlationId;
-    }
-
-    /**
-     * Request a session be acquired from the Gateway. This is the non-blocking version
-     * of {@link this#acquireSession(long)}. It returns a {@link Reply} object.
      *
      * @param sessionId the id of the session to acquire.
      * @param lastReceivedSequenceNumber the last received message sequence number
@@ -627,7 +453,7 @@ public final class FixLibrary extends GatewayProcess
      *                                   use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
      * @return the reply object representing the result of the request.
      */
-    public Reply<SessionReplyStatus> requestSession2(final long sessionId, final int lastReceivedSequenceNumber)
+    public Reply<SessionReplyStatus> requestSession(final long sessionId, final int lastReceivedSequenceNumber)
     {
         return new RequestSessionReply(latestReplyArrivalTime(), sessionId, lastReceivedSequenceNumber);
     }
@@ -659,43 +485,7 @@ public final class FixLibrary extends GatewayProcess
         }
     }
 
-    /**
-     * Poll the status of a request to acquire a session. The correlation id
-     * used should have been returned by {@link this#requestSession(long, int)}.
-     *
-     * @param correlationId the identifier of the request message that was sent to the gateway.
-     * @return the status of the reply, or <code>null</code> if there was no reply.
-     */
-    public SessionReplyStatus pollRequestStatus(final long correlationId)
-    {
-        if (requestSessionAwaitingReply(correlationId))
-        {
-            return null;
-        }
-        else
-        {
-            return (SessionReplyStatus) correlationIdToState.remove(correlationId);
-        }
-    }
-
-    /**
-     * Variant of {@link this#acquireSession(long)} (long, String, SessionState)} that doesn't
-     * replay any messages.
-     *
-     * @param connectionId the id of the connection to acquire.
-     * @return the result of this operation.
-     */
-    public SessionReplyStatus acquireSession(final long connectionId)
-    {
-        return acquireSession(connectionId, NO_MESSAGE_REPLAY);
-    }
-
     // ------------- End Public API -------------
-
-    private <T> T concurrentError()
-    {
-        throw new IllegalStateException("You can't perform this operation concurrently");
-    }
 
     private void awaitReply(final BooleanSupplier notReady)
     {
@@ -727,11 +517,6 @@ public final class FixLibrary extends GatewayProcess
                 "Failed to receive a reply from the engine within %dms, are you sure its running?",
                 this.configuration.replyTimeoutInMs()));
         }
-    }
-
-    private boolean requestSessionAwaitingReply(final long correlationId)
-    {
-        return correlationIdToState.get(correlationId) instanceof Long;
     }
 
     private int pollSessions(final long timeInMs)
@@ -781,13 +566,9 @@ public final class FixLibrary extends GatewayProcess
                         isInitiator ? (InitiateSessionReply) correlationIdToReply.remove(replyToId) : null;
                     final Session session = initiateSession(
                         connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state,
-                        isInitiator ? reply.configuration : FixLibrary.this.sessionConfiguration);
+                        isInitiator ? reply.configuration : null);
                     newSession(connectionId, sessionId, session);
-                    if (!isInitiator)
-                    {
-                        incomingSession = session;
-                    }
-                    else
+                    if (isInitiator)
                     {
                         reply.onComplete(session);
                     }
@@ -952,10 +733,6 @@ public final class FixLibrary extends GatewayProcess
             {
                 reply.onComplete(status);
             }
-            else if (FixLibrary.this.currentCorrelationId == correlationId)
-            {
-                FixLibrary.this.replyStatus = status;
-            }
 
             return CONTINUE;
         }
@@ -966,25 +743,6 @@ public final class FixLibrary extends GatewayProcess
             if (reply != null)
             {
                 reply.onComplete(status);
-            }
-            else
-            {
-                final Object state = correlationIdToState.get(correlationId);
-                if (state instanceof Long)
-                {
-                    if (status == MISSING_MESSAGES)
-                    {
-                        // Ensure session not left in a bad state as a result of missing messages.
-                        final long sessionId = (long) state;
-
-                        final SessionSubscriber subscriber = connectionIdToSession.get(sessionId);
-                        if (subscriber != null)
-                        {
-                            subscriber.startCatchup(0);
-                        }
-                    }
-                    correlationIdToState.put(correlationId, status);
-                }
             }
 
             return CONTINUE;

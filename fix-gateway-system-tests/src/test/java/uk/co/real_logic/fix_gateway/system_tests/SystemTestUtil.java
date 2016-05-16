@@ -147,7 +147,7 @@ public final class SystemTestUtil
             .targetCompId(acceptorId)
             .build();
 
-        final Reply<Session> reply = library.initiate2(config);
+        final Reply<Session> reply = library.initiate(config);
 
         awaitReply(library, reply);
 
@@ -167,7 +167,7 @@ public final class SystemTestUtil
     public static SessionReplyStatus releaseToGateway(
         final FixLibrary library, final Session session)
     {
-        final Reply<SessionReplyStatus> reply = library.releaseToGateway2(session);
+        final Reply<SessionReplyStatus> reply = library.releaseToGateway(session);
         awaitReply(library, reply);
         return reply.resultIfPresent();
     }
@@ -350,7 +350,7 @@ public final class SystemTestUtil
                                                     final long sessionId,
                                                     final int lastReceivedMsgSeqNum)
     {
-        final Reply<SessionReplyStatus> reply = library.requestSession2(sessionId, lastReceivedMsgSeqNum);
+        final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, lastReceivedMsgSeqNum);
         awaitReply(library, reply);
         return reply.resultIfPresent();
     }

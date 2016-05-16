@@ -19,13 +19,9 @@ import org.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.library.FixLibrary;
-import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
-import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.library.SessionHandler;
+import uk.co.real_logic.fix_gateway.library.*;
 import uk.co.real_logic.fix_gateway.session.Session;
 
-import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.server.SampleServer.*;
 
@@ -59,13 +55,21 @@ public final class SampleClient
                 .aeronChannel(aeronChannel)))
             {
                 final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
-                final Session session = library.initiate(sessionConfig);
+                final Reply<Session> reply = library.initiate(sessionConfig);
 
-                while (session.state() != ACTIVE)
+                while (reply.isExecuting())
                 {
                     idleStrategy.idle(library.poll(1));
                 }
 
+                if (!reply.hasCompleted())
+                {
+                    System.err.println(
+                        "Unable to initiate the session, " + reply.state() + " " + reply.error());
+                    System.exit(-1);
+                }
+
+                final Session session = reply.resultIfPresent();
                 final TestRequestEncoder testRequest = new TestRequestEncoder();
                 testRequest.testReqID("Hello World");
 

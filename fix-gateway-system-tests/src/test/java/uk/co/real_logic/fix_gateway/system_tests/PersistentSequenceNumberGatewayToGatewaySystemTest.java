@@ -103,7 +103,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             .initialSequenceNumber(initialSequenceNumber)
             .build();
 
-        final Reply<Session> reply = initiatingLibrary.initiate2(config);
+        final Reply<Session> reply = initiatingLibrary.initiate(config);
         awaitReply(initiatingLibrary, reply);
         initiatingSession = reply.resultIfPresent();
 

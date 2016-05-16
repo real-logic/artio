@@ -45,7 +45,7 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
                                 final String username,
                                 final String password)
     {
-        final Reply<SessionReplyStatus> reply = library.requestSession2(sessionId, NO_MESSAGE_REPLAY);
+        final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, NO_MESSAGE_REPLAY);
         requests.add(new RequestInfo(
             sessionId, reply, senderCompId, senderSubId, senderLocationId, targetCompId, username, password));
     }
