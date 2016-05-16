@@ -38,8 +38,7 @@ import java.util.Arrays;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
@@ -82,7 +81,9 @@ public final class SystemTestUtil
         final TestRequestEncoder testRequest = new TestRequestEncoder();
         testRequest.testReqID(HI_ID);
 
-        return session.send(testRequest);
+        final long position = session.send(testRequest);
+        assertThat(position, greaterThan(0L));
+        return position;
     }
 
     public static void assertReceivedTestRequest(
