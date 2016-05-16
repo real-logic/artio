@@ -160,7 +160,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         try (final FixLibrary library2 = newInitiatingLibrary(initAeronPort, initiatingSessionHandler2, 2))
         {
             acceptingHandler.clearConnections();
-            final Session session2 = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID);
+            final Session session2 = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID).resultIfPresent();
 
             assertConnected(session2);
             sessionLogsOn(library2, acceptingLibrary, session2);

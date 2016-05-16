@@ -108,7 +108,7 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void connectSessions()
     {
-        initiatingSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        initiatingSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID).resultIfPresent();
 
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);

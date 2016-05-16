@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
+import uk.co.real_logic.fix_gateway.library.Reply;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -132,7 +133,7 @@ public final class SystemTestUtil
         return hasProperty("senderCompID", equalTo(senderCompId));
     }
 
-    public static Session initiate(
+    public static Reply<Session> initiate(
         final FixLibrary library,
         final int port,
         final String initiatorId,
@@ -145,7 +146,21 @@ public final class SystemTestUtil
             .targetCompId(acceptorId)
             .build();
 
-        return library.initiate(config);
+        final Reply<Session> reply = library.initiate2(config);
+
+        awaitReply(library, reply);
+
+        return reply;
+    }
+
+    public static void awaitReply(final FixLibrary library, final Reply<Session> reply)
+    {
+        while (reply.isExecuting())
+        {
+            library.poll(1);
+            ADMIN_IDLE_STRATEGY.idle();
+        }
+        ADMIN_IDLE_STRATEGY.reset();
     }
 
     public static FixEngine launchInitiatingGateway(final int initAeronPort)
@@ -277,6 +292,7 @@ public final class SystemTestUtil
 
     public static void assertConnected(final Session session)
     {
+        assertNotNull("Session is null", session);
         assertTrue("Session has failed to connect", session.isConnected());
     }
 

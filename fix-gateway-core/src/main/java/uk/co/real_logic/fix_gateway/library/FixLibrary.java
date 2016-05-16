@@ -364,7 +364,20 @@ public final class FixLibrary extends GatewayProcess
         }
     }
 
-    // Prototype of non-blocking variant of the initiate session command
+    /**
+     * Initiate a FIX session with a FIX acceptor. This method returns a reply object
+     * wrapping the Session itself.
+     *
+     * @param configuration the configuration to use for the session.
+     * @return the session object for the session that you've initiated. It can return the following errors:
+     *         {@link IllegalStateException}
+     *         if you're trying to initiate two sessions at the same time or if there's a timeout talking to
+     *         the {@link uk.co.real_logic.fix_gateway.engine.FixEngine}.
+     *         This probably indicates that there's a problem in your code or that your engine isn't running.
+     *         {@link FixGatewayException}
+     *         if you're unable to connect to the accepting gateway.
+     *         This probably indicates a configuration problem related to the external gateway.
+     */
     public Reply<Session> initiate2(final SessionConfiguration configuration)
     {
         requireNonNull(configuration, "configuration");
@@ -657,10 +670,11 @@ public final class FixLibrary extends GatewayProcess
                 if (type == INITIATOR)
                 {
                     DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
-                    final Session session = initiateSession(
-                        connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state);
-                    newSession(connectionId, sessionId, session);
                     final InitiateSessionReply reply = (InitiateSessionReply) correlationIdToReply.remove(replyToId);
+                    final Session session = initiateSession(
+                        connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state,
+                        reply == null ? FixLibrary.this.sessionConfiguration : reply.configuration);
+                    newSession(connectionId, sessionId, session);
                     if (reply == null)
                     {
                         incomingSession = session;
@@ -894,17 +908,17 @@ public final class FixLibrary extends GatewayProcess
         sessions.add(session);
     }
 
-    private Session initiateSession(final long connectionId,
-                                    final int lastSequenceNumber,
-                                    final int lastReceivedSequenceNumber,
-                                    final SessionState state)
+    private Session initiateSession(
+        final long connectionId,
+        final int lastSequenceNumber,
+        final int lastReceivedSequenceNumber,
+        final SessionState state,
+        final SessionConfiguration sessionConfiguration)
     {
         final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
         final GatewayPublication publication = outboundLibraryStreams.gatewayPublication(idleStrategy);
 
         final SessionProxy sessionProxy = sessionProxy(connectionId);
-        // First time we're initiated
-        // TODO: should we even have this special casing?
         if (sessionConfiguration != null)
         {
             final CompositeKey key = sessionIdStrategy.onLogon(
@@ -925,15 +939,14 @@ public final class FixLibrary extends GatewayProcess
             fixCounters.sentMsgSeqNo(connectionId),
             libraryId,
             configuration.sessionBufferSize(),
-            initiatorInitialSequenceNumber(lastSequenceNumber),
+            initiatorInitialSequenceNumber(sessionConfiguration, lastSequenceNumber),
             state)
-            .lastReceivedMsgSeqNum(initiatorInitialSequenceNumber(lastReceivedSequenceNumber) - 1);
+            .lastReceivedMsgSeqNum(initiatorInitialSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
     }
 
     private int initiatorInitialSequenceNumber(
-        final int lastSequenceNumber)
+        final SessionConfiguration sessionConfiguration, final int lastSequenceNumber)
     {
-        // TODO: send appropriate configuration around
         if (sessionConfiguration == null)
         {
             return 1;

@@ -19,6 +19,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.library.Reply;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.session.Session;
 
@@ -58,11 +59,13 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
             .targetCompId(ACCEPTOR_ID)
             .build();
 
-        final Session initiatedSession = initiatingLibrary.initiate(config);
+        final Reply<Session> reply = initiatingLibrary.initiate2(config);
+        awaitReply(initiatingLibrary, reply);
 
-        assertConnected(initiatedSession);
-        assertEquals("localhost", initiatedSession.connectedHost());
-        assertEquals(port, initiatedSession.connectedPort());
+        final Session session = reply.resultIfPresent();
+        assertConnected(session);
+        assertEquals("localhost", session.connectedHost());
+        assertEquals(port, session.connectedPort());
     }
 
 }

@@ -22,7 +22,9 @@ import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
+import uk.co.real_logic.fix_gateway.library.Reply;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
+import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.io.File;
 import java.io.IOException;
@@ -101,7 +103,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             .initialSequenceNumber(initialSequenceNumber)
             .build();
 
-        initiatingSession = initiatingLibrary.initiate(config);
+        final Reply<Session> reply = initiatingLibrary.initiate2(config);
+        awaitReply(initiatingLibrary, reply);
+        initiatingSession = reply.resultIfPresent();
 
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);

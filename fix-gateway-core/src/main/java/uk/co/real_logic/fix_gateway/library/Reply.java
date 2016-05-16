@@ -17,13 +17,25 @@ package uk.co.real_logic.fix_gateway.library;
 
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 
+/**
+ * Represents a reply from an asynchronous method. Methods can complete successfully, in error
+ * or they can timeout.
+ *
+ * This class isn't threadsafe and should be used on the same thread as the FixLibrary instance.
+ *
+ * @param <T> the return type of the method in question.
+ */
 public abstract class Reply<T>
 {
-    private enum State
+    public enum State
     {
+        /** The operation is currently being executed and its result is unknown. */
         EXECUTING,
+        /** The operation has timed out without a result. */
         TIMED_OUT,
+        /** The operation has completed with an error. */
         ERRORED,
+        /** The operation has completed successfully. */
         COMPLETED
     }
 
@@ -31,7 +43,7 @@ public abstract class Reply<T>
 
     private Exception error;
     private T result;
-    private State state;
+    private State state = State.EXECUTING;
 
     Reply(final long latestReplyArrivalTime)
     {
@@ -58,16 +70,31 @@ public abstract class Reply<T>
         return state == State.COMPLETED;
     }
 
+    /**
+     * Gets the error iff <code>hasErrored() == true</code> or null otherwise.
+     *
+     * @return the error iff <code>hasErrored() == true</code> or null otherwise.
+     */
     public Exception error()
     {
         return error;
     }
 
+    /**
+     * Gets the result if the operation has completed successfully or null.
+     *
+     * @return the result if the operation has completed successfully or null.
+     */
     public T resultIfPresent()
     {
         return result;
     }
 
+    /**
+     * Gets the current state of the Reply.
+     *
+     * @return the current state of the Reply.
+     */
     public State state()
     {
         return state;

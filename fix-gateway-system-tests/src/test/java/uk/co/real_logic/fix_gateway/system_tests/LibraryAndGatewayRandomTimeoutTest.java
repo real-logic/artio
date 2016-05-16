@@ -25,11 +25,16 @@ import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
+import uk.co.real_logic.fix_gateway.library.Reply;
+import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.io.File;
 
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
+import static uk.co.real_logic.fix_gateway.library.Reply.State.ERRORED;
+import static uk.co.real_logic.fix_gateway.library.Reply.State.TIMED_OUT;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class LibraryAndGatewayRandomTimeoutTest
@@ -49,7 +54,7 @@ public class LibraryAndGatewayRandomTimeoutTest
         mediaDriver = launchMediaDriver();
     }
 
-    @Test(expected = FixGatewayException.class)
+    @Test
     public void libraryShouldRefuseConnectionWhenTheresNoAcceptor()
     {
         launchEngine();
@@ -57,7 +62,7 @@ public class LibraryAndGatewayRandomTimeoutTest
 
         assertTrue("Library not connected", initiatingLibrary.isConnected());
 
-        initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        initiateResultsInError();
     }
 
     @Test(expected = IllegalStateException.class)
@@ -66,14 +71,22 @@ public class LibraryAndGatewayRandomTimeoutTest
         launchLibrary();
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void libraryShouldRefuseConnectionWhenEngineClosed()
     {
         launchEngine();
         launchLibrary();
         initiatingEngine.close();
 
-        initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        assertEquals(TIMED_OUT, reply.state());
+    }
+
+    private void initiateResultsInError()
+    {
+        final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        assertEquals(ERRORED, reply.state());
+        assertThat(reply.error(), instanceOf(FixGatewayException.class));
     }
 
     private void launchLibrary()
