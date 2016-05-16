@@ -492,6 +492,16 @@ public final class FixLibrary extends GatewayProcess
         return replyStatus;
     }
 
+    /**
+     * Release this session object to the gateway to manage. If the release
+     * operation has successfully completed then it will return {@link SessionReplyStatus#OK}.
+     *
+     * Similar to {@link this#initiate2(SessionConfiguration)} this is a non-blocking operation that
+     * returns a reply object that indicates what has happened to its result.
+     *
+     * @param session the session to release
+     * @return the result of this operation.
+     */
     public Reply<SessionReplyStatus> releaseToGateway2(final Session session)
     {
         requireNonNull(session, "session");
@@ -601,6 +611,53 @@ public final class FixLibrary extends GatewayProcess
         correlationIdToState.put(correlationId, Long.valueOf(sessionId));
         outboundPublication.saveRequestSession(libraryId, sessionId, correlationId, lastReceivedSequenceNumber);
         return correlationId;
+    }
+
+    /**
+     * Request a session be acquired from the Gateway. This is the non-blocking version
+     * of {@link this#acquireSession(long)}. It returns an id that can be used to
+     * inspect {@link this#pollRequestStatus(long)}.
+     *
+     * @param sessionId the id of the session to acquire.
+     * @param lastReceivedSequenceNumber the last received message sequence number
+     *                                   that you know about. You will get a stream
+     *                                   of messages replayed to you from
+     *                                   <code>lastReceivedMessageSequenceNumber + 1</code>
+     *                                   to the latest message sequence number.
+     *                                   If you don't care about message replay then
+     *                                   use {@link this#acquireSession(long)}
+     * @return the correlation id corresponding to this request.
+     */
+    public Reply<SessionReplyStatus> requestSession2(final long sessionId, final int lastReceivedSequenceNumber)
+    {
+        return new RequestSessionReply(latestReplyArrivalTime(), sessionId, lastReceivedSequenceNumber);
+    }
+
+    private class RequestSessionReply extends Reply<SessionReplyStatus>
+    {
+        private final long sessionId;
+        private final int lastReceivedSequenceNumber;
+
+        RequestSessionReply(final long latestReplyArrivalTime,
+                            final long sessionId,
+                            final int lastReceivedSequenceNumber)
+        {
+            super(latestReplyArrivalTime);
+            this.sessionId = sessionId;
+            this.lastReceivedSequenceNumber = lastReceivedSequenceNumber;
+            sendMessage();
+        }
+
+        private void sendMessage()
+        {
+            final long correlationId = ++currentCorrelationId;
+            correlationIdToReply.put(correlationId, this);
+            outboundPublication.saveRequestSession(libraryId, sessionId, correlationId, lastReceivedSequenceNumber);
+        }
+
+        void onError(final GatewayError errorType, final String errorMessage)
+        {
+        }
     }
 
     /**
@@ -720,12 +777,14 @@ public final class FixLibrary extends GatewayProcess
                 if (type == INITIATOR)
                 {
                     DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
-                    final InitiateSessionReply reply = (InitiateSessionReply) correlationIdToReply.remove(replyToId);
+                    final boolean isInitiator = correlationIdToReply.get(replyToId) instanceof InitiateSessionReply;
+                    final InitiateSessionReply reply =
+                        isInitiator ? (InitiateSessionReply) correlationIdToReply.remove(replyToId) : null;
                     final Session session = initiateSession(
                         connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state,
-                        reply == null ? FixLibrary.this.sessionConfiguration : reply.configuration);
+                        isInitiator ? reply.configuration : FixLibrary.this.sessionConfiguration);
                     newSession(connectionId, sessionId, session);
-                    if (reply == null)
+                    if (!isInitiator)
                     {
                         incomingSession = session;
                     }
@@ -904,21 +963,29 @@ public final class FixLibrary extends GatewayProcess
 
         public Action onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
         {
-            final Object state = correlationIdToState.get(correlationId);
-            if (state instanceof Long)
+            final RequestSessionReply reply = (RequestSessionReply) correlationIdToReply.remove(correlationId);
+            if (reply != null)
             {
-                if (status == MISSING_MESSAGES)
+                reply.onComplete(status);
+            }
+            else
+            {
+                final Object state = correlationIdToState.get(correlationId);
+                if (state instanceof Long)
                 {
-                    // Ensure session not left in a bad state as a result of missing messages.
-                    final long sessionId = (long) state;
-
-                    final SessionSubscriber subscriber = connectionIdToSession.get(sessionId);
-                    if (subscriber != null)
+                    if (status == MISSING_MESSAGES)
                     {
-                        subscriber.startCatchup(0);
+                        // Ensure session not left in a bad state as a result of missing messages.
+                        final long sessionId = (long) state;
+
+                        final SessionSubscriber subscriber = connectionIdToSession.get(sessionId);
+                        if (subscriber != null)
+                        {
+                            subscriber.startCatchup(0);
+                        }
                     }
+                    correlationIdToState.put(correlationId, status);
                 }
-                correlationIdToState.put(correlationId, status);
             }
 
             return CONTINUE;

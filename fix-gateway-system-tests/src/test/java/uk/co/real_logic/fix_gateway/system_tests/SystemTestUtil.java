@@ -42,6 +42,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 
@@ -260,7 +261,7 @@ public final class SystemTestUtil
             library.poll(1);
         }
         final long sessionId = sessionHandler.latestSessionId();
-        final SessionReplyStatus reply = library.acquireSession(sessionId);
+        final SessionReplyStatus reply = acquireSession(library, sessionId, NO_MESSAGE_REPLAY);
         assertEquals(SessionReplyStatus.OK, reply);
         final Session session = sessionHandler.latestSession();
         sessionHandler.resetSession();
@@ -343,5 +344,14 @@ public final class SystemTestUtil
                 .filter(message -> HI_ID.equals(message.get(Constants.TEST_REQ_ID)))
                 .isPresent();
         });
+    }
+
+    public static SessionReplyStatus acquireSession(final FixLibrary library,
+                                                    final long sessionId,
+                                                    final int lastReceivedMsgSeqNum)
+    {
+        final Reply<SessionReplyStatus> reply = library.requestSession2(sessionId, lastReceivedMsgSeqNum);
+        awaitReply(library, reply);
+        return reply.resultIfPresent();
     }
 }

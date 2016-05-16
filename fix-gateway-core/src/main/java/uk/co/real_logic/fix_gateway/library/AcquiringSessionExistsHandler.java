@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,15 +45,15 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
                                 final String username,
                                 final String password)
     {
-        final long correlationId = library.requestSession(sessionId, NO_MESSAGE_REPLAY);
+        final Reply<SessionReplyStatus> reply = library.requestSession2(sessionId, NO_MESSAGE_REPLAY);
         requests.add(new RequestInfo(
-            sessionId, correlationId, senderCompId, senderSubId, senderLocationId, targetCompId, username, password));
+            sessionId, reply, senderCompId, senderSubId, senderLocationId, targetCompId, username, password));
     }
 
     public static final class RequestInfo
     {
         private final long connectionId;
-        private final long correlationId;
+        private final Reply<SessionReplyStatus> reply;
         private final String senderCompId;
         private final String senderSubId;
         private final String senderLocationId;
@@ -60,7 +62,7 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
         private final String password;
 
         private RequestInfo(final long connectionId,
-                           final long correlationId,
+                           final Reply<SessionReplyStatus> reply,
                            final String senderCompId,
                            final String senderSubId,
                            final String senderLocationId,
@@ -69,7 +71,7 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
                            final String password)
         {
             this.connectionId = connectionId;
-            this.correlationId = correlationId;
+            this.reply = reply;
             this.senderCompId = senderCompId;
             this.senderSubId = senderSubId;
             this.senderLocationId = senderLocationId;
@@ -78,9 +80,9 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
             this.password = password;
         }
 
-        public long correlationId()
+        public Reply<SessionReplyStatus> reply()
         {
-            return correlationId;
+            return reply;
         }
 
         public long connectionId()

@@ -34,6 +34,7 @@ import static uk.co.real_logic.fix_gateway.CommonMatchers.hasConnectionId;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
+import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -165,7 +166,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             assertConnected(session2);
             sessionLogsOn(library2, acceptingLibrary, session2);
             // TODO: fix test, sometimes fails due to acquiring the wrong session
-            final Session acceptingSession2 = SystemTestUtil.acquireSession(acceptingHandler, acceptingLibrary);
+            final Session acceptingSession2 = acquireSession(acceptingHandler, acceptingLibrary);
 
             sendTestRequest(acceptingSession2);
             assertReceivedTestRequest(library2, acceptingLibrary, initiatingOtfAcceptor2);
@@ -269,7 +270,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         releaseToGateway(library, session);
 
-        final SessionReplyStatus status = library.acquireSession(sessionId);
+        final SessionReplyStatus status = acquireSession(library, sessionId, NO_MESSAGE_REPLAY);
         assertEquals(SessionReplyStatus.OK, status);
 
         assertThat(engine.gatewaySessions(ADMIN_IDLE_STRATEGY), hasSize(0));
@@ -334,7 +335,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
 
-        final SessionReplyStatus status = library.acquireSession(sessionId, lastReceivedMsgSeqNum);
+        final SessionReplyStatus status = acquireSession(library, sessionId, lastReceivedMsgSeqNum);
         assertEquals(SessionReplyStatus.OK, status);
 
         messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
@@ -350,7 +351,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldNotBeAbleToAcquireSessionsThatDontExist()
     {
-        final SessionReplyStatus status = initiatingLibrary.acquireSession(42);
+        final SessionReplyStatus status = acquireSession(initiatingLibrary, 42, NO_MESSAGE_REPLAY);
 
         assertEquals(SessionReplyStatus.UNKNOWN_SESSION, status);
     }
