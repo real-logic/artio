@@ -75,7 +75,6 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
  *
  * Manual disable: * -> DISABLED
  */
-// TODO: apply back-pressure from failed message sends to on* methods
 public class Session implements AutoCloseable
 {
     public static final long UNKNOWN = -1;
