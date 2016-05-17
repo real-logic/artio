@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -eu
+
+java -cp fix-gateway-system-tests-*-benchmarks.jar uk.creal_logic.fix_gateway.timing.HistogramLogReader 
