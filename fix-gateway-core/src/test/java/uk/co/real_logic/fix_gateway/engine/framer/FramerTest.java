@@ -21,7 +21,6 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.QueuedPipe;
-import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -146,9 +145,8 @@ public class FramerTest
             gatewaySessions,
             replayQuery,
             mock(ErrorHandler.class),
-            mock(GatewayPublication.class),
-            mock(AtomicCounter.class),
-            mock(AtomicCounter.class));
+            mock(GatewayPublication.class)
+        );
     }
 
     @After

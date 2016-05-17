@@ -21,13 +21,11 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
-import org.agrona.LangUtil;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.QueuedPipe;
-import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.ReliefValve;
@@ -87,18 +85,6 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final ReliefValve sendOutboundMessagesFunc = this::sendOutboundMessages;
-    private final ReliefValve pollEndpointsFunc = () ->
-    {
-        try
-        {
-            return pollEndPoints();
-        }
-        catch (final IOException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-            return 0;
-        }
-    };
 
     private final PositionSender positionSender;
     private final EpochClock clock;
@@ -134,8 +120,6 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final ReplayQuery inboundMessages;
     private final ErrorHandler errorHandler;
     private final GatewayPublication outboundPublication;
-    private final AtomicCounter failedCatchupSpins;
-    private final AtomicCounter failedResetSessionIdSpins;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
@@ -156,9 +140,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         final GatewaySessions gatewaySessions,
         final ReplayQuery inboundMessages,
         final ErrorHandler errorHandler,
-        final GatewayPublication outboundPublication,
-        final AtomicCounter failedCatchupSpins,
-        final AtomicCounter failedResetSessionIdSpins)
+        final GatewayPublication outboundPublication)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
@@ -172,8 +154,6 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         this.errorHandler = errorHandler;
         this.outboundPublication = outboundPublication;
         this.outboundSlowSubscription = outboundSlowSubscription;
-        this.failedCatchupSpins = failedCatchupSpins;
-        this.failedResetSessionIdSpins = failedResetSessionIdSpins;
         this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
         this.senderEndPoints = new SenderEndPoints(inboundPublication);
         this.sessionIdStrategy = sessionIdStrategy;

@@ -207,9 +207,8 @@ public final class FixEngine extends GatewayProcess
             gatewaySessions,
             logger.inboundReplayQuery(),
             errorHandler,
-            outboundLibraryStreams.gatewayPublication(idleStrategy),
-            fixCounters.failedCatchupSpins(),
-            fixCounters.failedResetSessionIdSpins());
+            outboundLibraryStreams.gatewayPublication(idleStrategy)
+        );
         framerRunner = new AgentRunner(idleStrategy, errorHandler, null, framer);
     }
 
