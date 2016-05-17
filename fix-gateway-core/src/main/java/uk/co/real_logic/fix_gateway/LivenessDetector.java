@@ -26,6 +26,9 @@ import static uk.co.real_logic.fix_gateway.LivenessDetector.LivenessState.*;
  */
 public final class LivenessDetector
 {
+
+    public static final int SEND_INTERVAL_FRACTION = 4;
+
     public enum LivenessState
     {
         AWAITING_CONNECT,
@@ -72,7 +75,7 @@ public final class LivenessDetector
         this.libraryId = libraryId;
         this.replyTimeoutInMs = replyTimeoutInMs;
         this.state = state;
-        this.sendIntervalInMs = replyTimeoutInMs / 4;
+        this.sendIntervalInMs = replyTimeoutInMs / SEND_INTERVAL_FRACTION;
     }
 
     public boolean isConnected()
@@ -118,6 +121,7 @@ public final class LivenessDetector
         if (publication.saveApplicationHeartbeat(libraryId) >= 0)
         {
             nextSendTimeInMs = timeInMs + sendIntervalInMs;
+            System.out.println("HEARTBEAT from " + this);
         }
     }
 }
