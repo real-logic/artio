@@ -115,7 +115,9 @@ public final class LivenessDetector
 
     public void heartbeat(final long timeInMs)
     {
-        nextSendTimeInMs = timeInMs + sendIntervalInMs;
-        publication.saveApplicationHeartbeat(libraryId);
+        if (publication.saveApplicationHeartbeat(libraryId) >= 0)
+        {
+            nextSendTimeInMs = timeInMs + sendIntervalInMs;
+        }
     }
 }
