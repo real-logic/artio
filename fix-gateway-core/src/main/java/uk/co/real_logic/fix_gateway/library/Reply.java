@@ -114,12 +114,24 @@ public abstract class Reply<T>
 
     abstract void onError(final GatewayError errorType, final String errorMessage);
 
-    boolean checkTimeout(final long time)
+    /**
+     * Poll the reply's duty cycle.
+     *
+     * @param timeInMs current time in milliseconds
+     *
+     * @return true if this reply should be removed from the lookup map.
+     */
+    boolean poll(final long timeInMs)
     {
-        if (time >= latestReplyArrivalTime)
+        if (timeInMs >= latestReplyArrivalTime)
         {
             state = State.TIMED_OUT;
             return true;
+        }
+
+        if (!isExecuting())
+        {
+            return false;
         }
 
         return false;
