@@ -130,6 +130,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
     private final GatewaySessions gatewaySessions;
+    /** Null if inbound messages are not logged */
     private final ReplayQuery inboundMessages;
     private final ErrorHandler errorHandler;
     private final GatewayPublication outboundPublication;
@@ -872,7 +873,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
 
     public void onClose()
     {
-        inboundMessages.close();
+        close(inboundMessages);
         receiverEndPoints.close();
         senderEndPoints.close();
         close(selector);

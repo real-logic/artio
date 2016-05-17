@@ -110,6 +110,12 @@ class CatchupReplayer implements FragmentHandler, Continuation
         {
             case REPLAYING:
             {
+                if (notLoggingInboundMessages())
+                {
+                    state = State.SEND_MISSING;
+                    return sendMissingMessages();
+                }
+
                 // adding 1 to convert to inclusive numbering
                 final int beginSeqNo = replayFromSequenceNumber + 1 + replayedMessages;
                 final int numberOfMessages =
@@ -154,6 +160,11 @@ class CatchupReplayer implements FragmentHandler, Continuation
                 return 1;
             }
         }
+    }
+
+    private boolean notLoggingInboundMessages()
+    {
+        return inboundMessages == null;
     }
 
     static long sendOk(

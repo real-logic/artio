@@ -27,7 +27,6 @@ import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;
 
 public class Streams
 {
-    public static final int UNKNOWN_TEMPLATE = -1;
 
     private final int streamId;
     private final NanoClock nanoClock;

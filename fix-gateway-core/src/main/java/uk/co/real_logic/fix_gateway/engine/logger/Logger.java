@@ -254,6 +254,11 @@ public class Logger implements AutoCloseable
 
     public ReplayQuery inboundReplayQuery()
     {
+        if (!configuration.logInboundMessages())
+        {
+            return null;
+        }
+
         final String logFileDir = configuration.logFileDir();
         final ArchiveReader archiveReader = archiveReader(logFileDir, inboundLibraryStreams.subscription());
         return newReplayQuery(logFileDir, archiveReader);
