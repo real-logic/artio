@@ -84,8 +84,14 @@ class GatewaySession implements SessionInfo
     void handoverManagementTo(final int libraryId)
     {
         receiverEndPoint.libraryId(libraryId);
+        receiverEndPoint.pause();
         senderEndPoint.libraryId(libraryId);
         manage(null, null);
+    }
+
+    void play()
+    {
+        receiverEndPoint.play();
     }
 
     int poll(final long time)

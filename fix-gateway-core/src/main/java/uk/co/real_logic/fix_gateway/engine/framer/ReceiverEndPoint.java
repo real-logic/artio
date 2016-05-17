@@ -91,6 +91,7 @@ class ReceiverEndPoint
     private int usedBufferData = 0;
     private boolean hasDisconnected = false;
     private SelectionKey selectionKey;
+    private boolean isPaused = false;
 
     ReceiverEndPoint(
         final SocketChannel channel,
@@ -133,11 +134,10 @@ class ReceiverEndPoint
 
     public int pollForData()
     {
-        if (hasDisconnected())
+        if (isPaused || hasDisconnected())
         {
             return 0;
         }
-
 
         try
         {
@@ -502,5 +502,15 @@ class ReceiverEndPoint
     public void gatewaySession(final GatewaySession gatewaySession)
     {
         this.gatewaySession = gatewaySession;
+    }
+
+    void pause()
+    {
+        isPaused = true;
+    }
+
+    void play()
+    {
+        isPaused = false;
     }
 }

@@ -121,7 +121,6 @@ public final class LivenessDetector
         if (publication.saveApplicationHeartbeat(libraryId) >= 0)
         {
             nextSendTimeInMs = timeInMs + sendIntervalInMs;
-            System.out.println("HEARTBEAT from " + this);
         }
     }
 }

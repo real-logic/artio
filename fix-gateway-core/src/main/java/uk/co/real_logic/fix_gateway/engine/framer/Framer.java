@@ -706,7 +706,13 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
             saveLogon(libraryId, gatewaySession, lastSentSeqNum, lastRecvSeqNum, LogonStatus.NEW));
 
         catchupSession(
-            continuations, libraryId, connectionId, correlationId, replayFromSequenceNumber, session, lastRecvSeqNum);
+            continuations,
+            libraryId,
+            connectionId,
+            correlationId,
+            replayFromSequenceNumber,
+            gatewaySession,
+            lastRecvSeqNum);
 
         return retryManager.firstAttempt(correlationId, new Transaction(continuations));
     }
@@ -741,17 +747,19 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
         return COMPLETE;
     }
 
-    private void catchupSession(final List<Continuation> continuations,
-                                   final int libraryId,
-                                   final long connectionId,
-                                   final long correlationId,
-                                   final int replayFromSequenceNumber,
-                                   final Session session,
-                                   final int lastReceivedSeqNum)
+    private void catchupSession(
+        final List<Continuation> continuations,
+        final int libraryId,
+        final long connectionId,
+        final long correlationId,
+        final int replayFromSequenceNumber,
+        final GatewaySession session,
+        final int lastReceivedSeqNum)
     {
+
         if (replayFromSequenceNumber != NO_MESSAGE_REPLAY)
         {
-            final long sessionId = session.id();
+            final long sessionId = session.sessionId();
             if (sessionId == Session.UNKNOWN)
             {
                 continuations.add(() ->
@@ -781,12 +789,12 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
                     expectedNumberOfMessages,
                     lastReceivedSeqNum,
                     replayFromSequenceNumber,
-                    sessionId));
+                    session));
         }
         else
         {
             continuations.add(() ->
-                inboundPublication.saveRequestSessionReply(OK, correlationId));
+                CatchupReplayer.sendOk(inboundPublication, correlationId, session));
         }
     }
 

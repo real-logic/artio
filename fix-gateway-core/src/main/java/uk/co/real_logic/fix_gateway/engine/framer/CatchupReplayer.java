@@ -53,7 +53,7 @@ class CatchupReplayer implements FragmentHandler, Continuation
     private final int expectedNumberOfMessages;
     private final int lastReceivedSeqNum;
     private final int replayFromSequenceNumber;
-    private final long sessionId;
+    private final GatewaySession session;
 
     private int replayedMessages = 0;
     private State state = State.REPLAYING;
@@ -67,7 +67,7 @@ class CatchupReplayer implements FragmentHandler, Continuation
         final int expectedNumberOfMessages,
         final int lastReceivedSeqNum,
         final int replayFromSequenceNumber,
-        final long sessionId)
+        final GatewaySession session)
     {
         this.inboundMessages = inboundMessages;
         this.inboundPublication = inboundPublication;
@@ -77,7 +77,7 @@ class CatchupReplayer implements FragmentHandler, Continuation
         this.expectedNumberOfMessages = expectedNumberOfMessages;
         this.lastReceivedSeqNum = lastReceivedSeqNum;
         this.replayFromSequenceNumber = replayFromSequenceNumber;
-        this.sessionId = sessionId;
+        this.session = session;
     }
 
     public void onFragment(
@@ -115,7 +115,7 @@ class CatchupReplayer implements FragmentHandler, Continuation
                 final int numberOfMessages =
                     inboundMessages.query(
                         this,
-                        sessionId,
+                        session.sessionId(),
                         beginSeqNo,
                         lastReceivedSeqNum);
 
@@ -134,7 +134,7 @@ class CatchupReplayer implements FragmentHandler, Continuation
                 else
                 {
                     state = State.SEND_OK;
-                    return sendOk();
+                    return sendOk(inboundPublication, correlationId, session);
                 }
             }
 
@@ -145,7 +145,7 @@ class CatchupReplayer implements FragmentHandler, Continuation
 
             case SEND_OK:
             {
-                return sendOk();
+                return sendOk(inboundPublication, correlationId, session);
             }
 
             // Javac required fall-through case that should never be reached
@@ -156,9 +156,17 @@ class CatchupReplayer implements FragmentHandler, Continuation
         }
     }
 
-    private long sendOk()
+    static long sendOk(
+        final GatewayPublication publication,
+        final long correlationId,
+        final GatewaySession session)
     {
-        return inboundPublication.saveRequestSessionReply(OK, correlationId);
+        final long position = publication.saveRequestSessionReply(OK, correlationId);
+        if (position >= 0)
+        {
+            session.play();
+        }
+        return position;
     }
 
     private long sendMissingMessages()
