@@ -209,13 +209,23 @@ public final class SystemTestUtil
         final String acceptorId,
         final String initiatorId)
     {
+        return acceptingConfig(port, countersSuffix, acceptorId, initiatorId, ACCEPTOR_LOGS);
+    }
+
+    public static EngineConfiguration acceptingConfig(
+        final int port,
+        final String countersSuffix,
+        final String acceptorId,
+        final String initiatorId,
+        final String acceptorLogs)
+    {
         final EngineConfiguration configuration = new EngineConfiguration();
         setupAuthentication(acceptorId, initiatorId, configuration);
         return configuration
             .bindTo("localhost", port)
             .aeronChannel("aeron:ipc")
             .monitoringFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + countersSuffix)
-            .logFileDir(ACCEPTOR_LOGS);
+            .logFileDir(acceptorLogs);
     }
 
     public static LibraryConfiguration acceptingLibraryConfig(
