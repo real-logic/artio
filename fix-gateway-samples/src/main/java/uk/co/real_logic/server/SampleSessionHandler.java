@@ -47,7 +47,7 @@ public class SampleSessionHandler implements SessionHandler
         final long position)
     {
         string.wrap(buffer);
-        System.out.printf("%d -> %s\n", connectionId, printer.toString(string, offset, length, messageType));
+        System.out.printf("%d -> %s\n", sessionId, printer.toString(string, offset, length, messageType));
 
         return Action.CONTINUE;
     }

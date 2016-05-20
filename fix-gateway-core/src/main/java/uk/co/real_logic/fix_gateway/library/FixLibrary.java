@@ -31,10 +31,7 @@ import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
-import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
-import uk.co.real_logic.fix_gateway.protocol.LibraryProtocolHandler;
-import uk.co.real_logic.fix_gateway.protocol.LibraryProtocolSubscription;
-import uk.co.real_logic.fix_gateway.protocol.SessionSubscription;
+import uk.co.real_logic.fix_gateway.protocol.*;
 import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
 import uk.co.real_logic.fix_gateway.timing.Timer;
@@ -566,9 +563,9 @@ public final class FixLibrary extends GatewayProcess
 
     private final FixLibraryProtocolHandler processProtocolHandler = new FixLibraryProtocolHandler();
     private final ControlledFragmentHandler outboundSubscription =
-        SessionSubscription.of(processProtocolHandler, new LibraryProtocolSubscription(processProtocolHandler));
+        ProtocolSubscription.of(processProtocolHandler, new LibraryProtocolSubscription(processProtocolHandler));
 
-    private class FixLibraryProtocolHandler implements LibraryProtocolHandler, SessionHandler
+    private class FixLibraryProtocolHandler implements LibraryProtocolHandler, ProtocolHandler
     {
         private int sessionId;
         private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();

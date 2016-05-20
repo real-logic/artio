@@ -32,12 +32,8 @@ import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.fix_gateway.library.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
-import uk.co.real_logic.fix_gateway.protocol.EngineProtocolHandler;
-import uk.co.real_logic.fix_gateway.protocol.EngineProtocolSubscription;
-import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
-import uk.co.real_logic.fix_gateway.protocol.SessionSubscription;
+import uk.co.real_logic.fix_gateway.protocol.*;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -78,7 +74,7 @@ import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
  */
-public class Framer implements Agent, EngineProtocolHandler, SessionHandler
+public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
 {
 
     private final RetryManager retryManager = new RetryManager();
@@ -92,7 +88,7 @@ public class Framer implements Agent, EngineProtocolHandler, SessionHandler
     private final Timer sendTimer;
 
     private final ControlledFragmentHandler outboundSubscription =
-        SessionSubscription.of(this, new EngineProtocolSubscription(this));
+        ProtocolSubscription.of(this, new EngineProtocolSubscription(this));
 
     private final boolean hasBindAddress;
     private final Selector selector;

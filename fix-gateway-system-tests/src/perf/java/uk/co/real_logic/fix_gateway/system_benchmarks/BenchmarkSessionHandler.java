@@ -21,7 +21,6 @@ import uk.co.real_logic.fix_gateway.builder.Printer;
 import uk.co.real_logic.fix_gateway.decoder.PrinterImpl;
 import uk.co.real_logic.fix_gateway.library.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
-import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -44,16 +43,6 @@ public final class BenchmarkSessionHandler implements SessionHandler
         return Action.CONTINUE;
     }
 
-    public void onLogon(
-        final int libraryId,
-        final long connectionId,
-        final long sessionId,
-        final int lastSentSequenceNumber,
-        final int lastReceivedSequenceNumber)
-    {
-        System.out.printf("%d logged on with sessionId=%d\n", connectionId, sessionId);
-    }
-
     public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         System.out.printf("%d disconnected\n", connectionId);
@@ -61,8 +50,4 @@ public final class BenchmarkSessionHandler implements SessionHandler
         return Action.CONTINUE;
     }
 
-    public void onError(final GatewayError errorType, final int libraryId, final String message)
-    {
-        System.err.printf("%s error for %d: %s\n", errorType, libraryId, message);
-    }
 }

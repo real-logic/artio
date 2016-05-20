@@ -19,7 +19,6 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.library.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.DisconnectDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
@@ -28,7 +27,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.protocol.GatewayPublication.FRAME_SIZE;
 
-public final class SessionSubscription implements ControlledFragmentHandler
+public final class ProtocolSubscription implements ControlledFragmentHandler
 {
 
     private static final Action UNKNOWN_TEMPLATE = null;
@@ -37,17 +36,17 @@ public final class SessionSubscription implements ControlledFragmentHandler
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
 
-    private final SessionHandler sessionHandler;
+    private final ProtocolHandler protocolHandler;
     private final Action defaultAction;
 
-    public static SessionSubscription of(final SessionHandler sessionHandler)
+    public static ProtocolSubscription of(final ProtocolHandler protocolHandler)
     {
-        return new SessionSubscription(sessionHandler, CONTINUE);
+        return new ProtocolSubscription(protocolHandler, CONTINUE);
     }
 
-    public static ControlledFragmentHandler of(final SessionHandler sessionHandler, final ControlledFragmentHandler other)
+    public static ControlledFragmentHandler of(final ProtocolHandler protocolHandler, final ControlledFragmentHandler other)
     {
-        final SessionSubscription subscription = new SessionSubscription(sessionHandler, UNKNOWN_TEMPLATE);
+        final ProtocolSubscription subscription = new ProtocolSubscription(protocolHandler, UNKNOWN_TEMPLATE);
         return (buffer, offset, length, header) ->
         {
             final Action action = subscription.onFragment(buffer, offset, length, header);
@@ -61,10 +60,10 @@ public final class SessionSubscription implements ControlledFragmentHandler
         };
     }
 
-    private SessionSubscription(final SessionHandler sessionHandler,
-                                final Action defaultAction)
+    private ProtocolSubscription(final ProtocolHandler protocolHandler,
+                                 final Action defaultAction)
     {
-        this.sessionHandler = sessionHandler;
+        this.protocolHandler = protocolHandler;
         this.defaultAction = defaultAction;
     }
 
@@ -98,7 +97,7 @@ public final class SessionSubscription implements ControlledFragmentHandler
         disconnect.wrap(buffer, offset, blockLength, version);
         final long connectionId = disconnect.connection();
         DebugLogger.log("FixSubscription Disconnect: %d\n", connectionId);
-        return sessionHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
+        return protocolHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
     }
 
     private Action onFixMessage(
@@ -108,7 +107,7 @@ public final class SessionSubscription implements ControlledFragmentHandler
         final int messageLength = messageFrame.bodyLength();
         if (messageFrame.status() == OK)
         {
-            return sessionHandler.onMessage(
+            return protocolHandler.onMessage(
                 buffer,
                 offset + FRAME_SIZE,
                 messageLength,

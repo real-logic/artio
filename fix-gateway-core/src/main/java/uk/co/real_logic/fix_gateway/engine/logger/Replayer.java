@@ -27,12 +27,12 @@ import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
-import uk.co.real_logic.fix_gateway.library.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
-import uk.co.real_logic.fix_gateway.protocol.SessionSubscription;
+import uk.co.real_logic.fix_gateway.protocol.ProtocolHandler;
+import uk.co.real_logic.fix_gateway.protocol.ProtocolSubscription;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -50,7 +50,7 @@ import static uk.co.real_logic.fix_gateway.engine.logger.PossDupFinder.NO_ENTRY;
  * relevant messages to resend.
  */
 // TODO: apply back-pressure from failed message sends to on* methods
-public class Replayer implements SessionHandler, ControlledFragmentHandler, Agent
+public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Agent
 {
     public static final int MESSAGE_FRAME_BLOCK_LENGTH =
         MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
@@ -76,7 +76,7 @@ public class Replayer implements SessionHandler, ControlledFragmentHandler, Agen
 
     private final PossDupFinder possDupFinder = new PossDupFinder();
     private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
-    private final SessionSubscription sessionSubscription = SessionSubscription.of(this);
+    private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
 
     private int currentMessageOffset;
     private int currentMessageLength;
@@ -325,7 +325,7 @@ public class Replayer implements SessionHandler, ControlledFragmentHandler, Agen
 
     public int doWork() throws Exception
     {
-        return subscription.controlledPoll(sessionSubscription, POLL_LIMIT);
+        return subscription.controlledPoll(protocolSubscription, POLL_LIMIT);
     }
 
     public void onClose()
