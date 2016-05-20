@@ -224,8 +224,13 @@ public final class SystemTestUtil
         return configuration
             .bindTo("localhost", port)
             .aeronChannel("aeron:ipc")
-            .monitoringFile(IoUtil.tmpDirName() + "fix-acceptor" + File.separator + countersSuffix)
+            .monitoringFile(acceptorMonitoringFile(countersSuffix))
             .logFileDir(acceptorLogs);
+    }
+
+    public static String acceptorMonitoringFile(final String countersSuffix)
+    {
+        return IoUtil.tmpDirName() + "fix-acceptor" + File.separator + countersSuffix;
     }
 
     public static LibraryConfiguration acceptingLibraryConfig(

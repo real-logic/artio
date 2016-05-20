@@ -23,6 +23,10 @@ import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.Reply;
+import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
+import uk.co.real_logic.fix_gateway.library.SessionConfiguration.Builder;
+import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.util.List;
 import java.util.stream.IntStream;
@@ -38,7 +42,7 @@ public class ClusteredGatewaySystemTest
 {
     private static final int CLUSTER_SIZE = 3;
 
-    private int port = unusedPort();
+    private List<Integer> ports;
     private int initAeronPort = unusedPort();
 
     private MediaDriver mediaDriver;
@@ -55,17 +59,27 @@ public class ClusteredGatewaySystemTest
     private FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
     private FakeHandler initiatingHandler = new FakeHandler(initiatingOtfAcceptor);
 
+    private Session initiatingSession;
+    private Session acceptingSession;
+
     @Before
     public void setUp()
     {
         mediaDriver = launchMediaDriver();
+        ports = IntStream
+            .range(0, CLUSTER_SIZE)
+            .mapToObj(i -> unusedPort())
+            .collect(toList());
+
+        // TODO: disconnect TCP connections when failing the machine
         acceptingEngineCluster = IntStream
             .range(0, CLUSTER_SIZE)
-            .mapToObj(i -> {
+            .mapToObj(i ->
+            {
                 final String acceptorLogs = ACCEPTOR_LOGS + i;
                 delete(acceptorLogs);
                 return FixEngine.launch(acceptingConfig(
-                    port, "engineCounters" + i, ACCEPTOR_ID, INITIATOR_ID, acceptorLogs));
+                    ports.get(i), "engineCounters" + i, ACCEPTOR_ID, INITIATOR_ID, acceptorLogs));
             })
             .collect(toList());
 
@@ -73,6 +87,44 @@ public class ClusteredGatewaySystemTest
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
         initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingHandler, 1);
     }
+
+    @Test
+    public void shouldExchangeMessagesInCluster()
+    {
+        final Builder builder = SessionConfiguration.builder();
+        ports.forEach(port -> builder.address("localhost", port));
+
+        final SessionConfiguration config = builder
+            .credentials("bob", "Uv1aegoh")
+            .senderCompId(INITIATOR_ID)
+            .targetCompId(ACCEPTOR_ID)
+            .build();
+
+        final Reply<Session> reply = initiatingLibrary.initiate(config);
+
+        awaitReply(initiatingLibrary, reply);
+
+        initiatingSession = reply.resultIfPresent();
+
+        assertConnected(initiatingSession);
+        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
+        acceptingSession = acquireSession(acceptingHandler, acceptingLibrary);
+
+        sendTestRequest(initiatingSession);
+
+        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+    }
+
+    @Test
+    public void shouldExchangeMessagesAfterPartitionHeals()
+    {
+
+    }
+
+    // crash? engine process
+    // initiator connect to wrong node in cluster
+    // library connect to wrong node in cluster
+    // partition TCP but not cluster,
 
     @After
     public void tearDown()
@@ -84,18 +136,6 @@ public class ClusteredGatewaySystemTest
         acceptingEngineCluster.forEach(CloseHelper::close);
 
         close(mediaDriver);
-    }
-
-    @Test
-    public void shouldExchangeMessagesInCluster()
-    {
-
-    }
-
-    @Test
-    public void shouldExchangeMessagesAfterPartion()
-    {
-
     }
 
 }
