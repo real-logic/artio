@@ -373,4 +373,5 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             assertEquals(1, handler2.latestSessionId());
         }
     }
+
 }

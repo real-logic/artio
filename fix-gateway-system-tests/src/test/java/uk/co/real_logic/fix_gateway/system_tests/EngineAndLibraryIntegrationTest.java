@@ -89,6 +89,18 @@ public class EngineAndLibraryIntegrationTest
         assertHasLibraries(matchesLibrary(DEFAULT_LIBRARY_ID));
     }
 
+    @Test(expected = FixGatewayException.class)
+    public void librariesShouldNotBeAbleToConnectUntilTheyHaveTimedOut()
+    {
+        library = connectLibrary();
+
+        awaitLibraryConnect(library);
+
+        library.close();
+
+        library = connectLibrary();
+    }
+
     @Test
     public void engineDetectsLibraryDisconnect()
     {
