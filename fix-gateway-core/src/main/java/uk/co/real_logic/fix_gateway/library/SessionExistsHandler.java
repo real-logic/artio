@@ -29,20 +29,20 @@ public interface SessionExistsHandler
     /**
      * @param library the library object that this callback is associated with
      * @param sessionId the identifying number of the session that now exists.
-     * @param senderCompId
-     * @param senderSubId
-     * @param senderLocationId
-     * @param targetCompId
+     * @param acceptorCompId
+     * @param acceptorSubId
+     * @param acceptorLocationId
+     * @param initiatorCompId
      * @param username
      * @param password
      */
     void onSessionExists(
         final FixLibrary library,
         final long sessionId,
-        final String senderCompId,
-        final String senderSubId,
-        final String senderLocationId,
-        final String targetCompId,
+        final String acceptorCompId,
+        final String acceptorSubId,
+        final String acceptorLocationId,
+        final String initiatorCompId,
         final String username,
         final String password);
 }

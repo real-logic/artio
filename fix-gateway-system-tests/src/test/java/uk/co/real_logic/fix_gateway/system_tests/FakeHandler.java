@@ -41,6 +41,8 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
     private Session latestSession;
     private boolean hasDisconnected = false;
     private long sentPosition;
+    private String lastAcceptorCompId;
+    private String lastInitiatorCompId;
 
     public FakeHandler(final FakeOtfAcceptor acceptor)
     {
@@ -126,13 +128,25 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
 
     public void onSessionExists(final FixLibrary library,
                                 final long sessionId,
-                                final String senderCompId,
-                                final String senderSubId,
-                                final String senderLocationId,
-                                final String targetCompId,
+                                final String acceptorCompId,
+                                final String acceptorSubId,
+                                final String acceptorLocationId,
+                                final String initiatorCompId,
                                 final String username,
                                 final String password)
     {
+        this.lastAcceptorCompId = acceptorCompId;
+        this.lastInitiatorCompId = initiatorCompId;
         sessionIds.add(sessionId);
+    }
+
+    public String lastAcceptorCompId()
+    {
+        return lastAcceptorCompId;
+    }
+
+    public String lastInitiatorCompId()
+    {
+        return lastInitiatorCompId;
     }
 }

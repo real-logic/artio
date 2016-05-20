@@ -38,16 +38,16 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
 
     public void onSessionExists(final FixLibrary library,
                                 final long sessionId,
-                                final String senderCompId,
-                                final String senderSubId,
-                                final String senderLocationId,
-                                final String targetCompId,
+                                final String acceptorCompId,
+                                final String acceptorSubId,
+                                final String acceptorLocationId,
+                                final String initiatorCompId,
                                 final String username,
                                 final String password)
     {
         final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, NO_MESSAGE_REPLAY);
         requests.add(new RequestInfo(
-            sessionId, reply, senderCompId, senderSubId, senderLocationId, targetCompId, username, password));
+            sessionId, reply, acceptorCompId, acceptorSubId, acceptorLocationId, initiatorCompId, username, password));
     }
 
     public static final class RequestInfo

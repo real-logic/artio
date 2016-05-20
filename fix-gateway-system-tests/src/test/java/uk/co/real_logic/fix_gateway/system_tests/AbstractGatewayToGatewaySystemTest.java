@@ -112,6 +112,8 @@ public class AbstractGatewayToGatewaySystemTest
 
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
+        assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
+        assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
     }
 
     protected void assertMessageResent()

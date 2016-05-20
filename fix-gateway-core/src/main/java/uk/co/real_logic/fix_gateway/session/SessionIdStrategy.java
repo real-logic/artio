@@ -34,6 +34,8 @@ import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
  * Implementations should define their own composite session key type, which must provide correct value based
  * equals/hashcode implementation. Strategy should be stateless.
  *
+ * In all cases sender and target are defined from your own perspective of the connection.
+ *
  * @see SenderAndTargetSessionIdStrategy
  * @see SenderTargetAndSubSessionIdStrategy
  */
