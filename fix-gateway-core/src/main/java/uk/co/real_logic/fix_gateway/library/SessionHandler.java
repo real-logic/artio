@@ -30,11 +30,10 @@ public interface SessionHandler
         final int offset,
         final int length,
         final int libraryId,
-        final long connectionId,
         final long sessionId,
         final int messageType,
         final long timestamp,
         final long position);
 
-    Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason);
+    Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason);
 }

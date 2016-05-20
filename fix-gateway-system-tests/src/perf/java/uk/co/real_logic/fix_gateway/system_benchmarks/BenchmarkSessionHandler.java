@@ -29,13 +29,15 @@ public final class BenchmarkSessionHandler implements SessionHandler
     private final AsciiBuffer flyweight = new MutableAsciiBuffer();
     private final Printer printer = new PrinterImpl();
 
-    public Action onMessage(final DirectBuffer buffer,
-                                                      final int offset,
-                                                      final int length,
-                                                      final int libraryId,
-                                                      final long connectionId,
-                                                      final long sessionId,
-                                                      final int messageType, final long timestamp, final long position)
+    public Action onMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final int libraryId,
+        final long sessionId,
+        final int messageType,
+        final long timestamp,
+        final long position)
     {
         //flyweight.wrap(buffer);
         //System.out.printf("Received Message: ");
@@ -43,9 +45,9 @@ public final class BenchmarkSessionHandler implements SessionHandler
         return Action.CONTINUE;
     }
 
-    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
     {
-        System.out.printf("%d disconnected\n", connectionId);
+        System.out.printf("%d disconnected\n", sessionId);
 
         return Action.CONTINUE;
     }

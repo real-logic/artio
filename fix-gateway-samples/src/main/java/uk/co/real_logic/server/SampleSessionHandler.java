@@ -40,7 +40,6 @@ public class SampleSessionHandler implements SessionHandler
         final int offset,
         final int length,
         final int libraryId,
-        final long connectionId,
         final long sessionId,
         final int messageType,
         final long timestamp,
@@ -52,9 +51,9 @@ public class SampleSessionHandler implements SessionHandler
         return Action.CONTINUE;
     }
 
-    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
     {
-        System.out.printf("%d Disconnected: %s\n", connectionId, reason);
+        System.out.printf("%d Disconnected: %s\n", sessionId, reason);
         return Action.CONTINUE;
     }
 }

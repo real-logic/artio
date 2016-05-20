@@ -711,7 +711,7 @@ public final class FixLibrary extends GatewayProcess
                 DebugLogger.log("Library Disconnect %d, %s\n", connectionId, reason);
                 if (subscriber != null)
                 {
-                    final Action action = subscriber.onDisconnect(libraryId, connectionId, reason);
+                    final Action action = subscriber.onDisconnect(libraryId, reason);
                     if (action != ABORT)
                     {
                         final Session session = subscriber.session();

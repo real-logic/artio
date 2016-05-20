@@ -74,7 +74,7 @@ class SessionSubscriber implements AutoCloseable
                 if (session.isConnected())
                 {
                     return handler.onMessage(
-                        buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
+                        buffer, offset, length, libraryId, sessionId, messageType, timestamp, position);
                 }
 
                 return action;
@@ -83,7 +83,7 @@ class SessionSubscriber implements AutoCloseable
             {
                 remainingCatchupCount--;
                 return handler.onMessage(
-                    buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
+                    buffer, offset, length, libraryId, sessionId, messageType, timestamp, position);
             }
         }
         finally
@@ -92,10 +92,10 @@ class SessionSubscriber implements AutoCloseable
         }
     }
 
-    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final DisconnectReason reason)
     {
         session.onDisconnect();
-        return handler.onDisconnect(libraryId, connectionId, reason);
+        return handler.onDisconnect(libraryId, session.id(), reason);
     }
 
     public void onLogon(

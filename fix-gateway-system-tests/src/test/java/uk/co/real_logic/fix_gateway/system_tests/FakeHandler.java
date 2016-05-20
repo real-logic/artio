@@ -39,7 +39,6 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
     private final Deque<Long> sessionIds = new ArrayDeque<>();
 
     private Session latestSession;
-    private long connectionId = -1;
     private boolean hasDisconnected = false;
     private long sentPosition;
 
@@ -54,34 +53,27 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
         final int offset,
         final int length,
         final int libraryId,
-        final long connectionId,
         final long sessionId,
         final int messageType,
         final long timestamp,
         final long position)
     {
         parser.onMessage(buffer, offset, length);
-        acceptor.forSession(connectionIdToSession.get(connectionId));
+        acceptor.forSession(connectionIdToSession.get(sessionId));
         return Action.CONTINUE;
     }
 
-    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
     {
-        this.connectionId = connectionId;
-        connectionIdToSession.remove(connectionId);
+        connectionIdToSession.remove(sessionId);
         hasDisconnected = true;
         return Action.CONTINUE;
-    }
-
-    public long connectionId()
-    {
-        return connectionId;
     }
 
     public SessionHandler onSessionAcquired(final Session session)
     {
         assertNotEquals(Session.UNKNOWN, session.id());
-        connectionIdToSession.put(session.connectionId(), session);
+        connectionIdToSession.put(session.id(), session);
         this.latestSession = session;
         return this;
     }

@@ -42,7 +42,6 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
         final int offset,
         final int length,
         final int libraryId,
-        final long connectionId,
         final long sessionId,
         final int messageType,
         final long timestamp,
@@ -56,7 +55,7 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
         return CONTINUE;
     }
 
-    public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
     {
         return CONTINUE;
     }
