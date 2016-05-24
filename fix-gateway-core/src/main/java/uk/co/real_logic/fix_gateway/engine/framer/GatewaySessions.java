@@ -165,7 +165,7 @@ public class GatewaySessions
         return null;
     }
 
-    static GatewaySession removeSession(final long sessionId, final List<GatewaySession> sessions)
+    private static GatewaySession removeSession(final long sessionId, final List<GatewaySession> sessions)
     {
         for (int i = 0, size = sessions.size(); i < size; i++)
         {

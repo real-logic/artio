@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
 
 /**
@@ -101,11 +102,13 @@ public class ConnectionHandler
         final int libraryId,
         final Framer framer) throws IOException
     {
+        final SocketAddress remoteAddress = channel.getRemoteAddress();
         return new SenderEndPoint(
             connectionId,
             libraryId,
             channel,
-            fixCounters.bytesInBuffer(connectionId, channel.getRemoteAddress()),
+            fixCounters.bytesInBuffer(connectionId, remoteAddress),
+            fixCounters.invalidLibraryAttempts(connectionId, remoteAddress),
             errorHandler,
             framer,
             configuration.senderMaxBytesInBuffer());

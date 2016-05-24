@@ -465,7 +465,7 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
     {
         final long now = outboundTimer.recordSince(timestamp);
 
-        senderEndPoints.onMessage(connectionId, buffer, offset, length);
+        senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length);
 
         sendTimer.recordSince(now);
 

@@ -124,8 +124,6 @@ public class FramerTest
 
         when(mockReceiverEndPoint.libraryId()).thenReturn(LIBRARY_ID);
 
-        when(mockSenderEndPoint.libraryId()).thenReturn(LIBRARY_ID);
-
         when(outboundSubscription.getImage(anyInt())).thenReturn(image);
 
         framer = new Framer(

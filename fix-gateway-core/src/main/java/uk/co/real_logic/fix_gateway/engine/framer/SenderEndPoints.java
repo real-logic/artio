@@ -53,12 +53,12 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     }
 
     public void onMessage(
-        final long connectionId, final DirectBuffer buffer, final int offset, final int length)
+        final int libraryId, final long connectionId, final DirectBuffer buffer, final int offset, final int length)
     {
         final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            endPoint.onNormalFramedMessage(buffer, offset, length);
+            endPoint.onNormalFramedMessage(libraryId, buffer, offset, length);
         }
     }
 

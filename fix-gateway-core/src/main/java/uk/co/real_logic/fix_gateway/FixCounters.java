@@ -67,6 +67,11 @@ public class FixCounters implements AutoCloseable
         return newCounter("Quarantined bytes for " + address + " id = " + connectionId);
     }
 
+    public AtomicCounter invalidLibraryAttempts(final long connectionId, final SocketAddress address)
+    {
+        return newCounter("Invalid Library Attempts for " + address + " id = " + connectionId);
+    }
+
     public AtomicCounter sentMsgSeqNo(final long connectionId)
     {
         return newCounter("Last Sent MsgSeqNo for " + connectionId);

@@ -41,6 +41,7 @@ class SenderEndPoint implements AutoCloseable
     private final long connectionId;
     private final SocketChannel channel;
     private final AtomicCounter bytesInBuffer;
+    private final AtomicCounter invalidLibraryAttempts;
     private final ErrorHandler errorHandler;
     private final Framer framer;
     private final int maxBytesInBuffer;
@@ -52,6 +53,7 @@ class SenderEndPoint implements AutoCloseable
         final int libraryId,
         final SocketChannel channel,
         final AtomicCounter bytesInBuffer,
+        final AtomicCounter invalidLibraryAttempts,
         final ErrorHandler errorHandler,
         final Framer framer,
         final int maxBytesInBuffer)
@@ -60,16 +62,24 @@ class SenderEndPoint implements AutoCloseable
         this.libraryId = libraryId;
         this.channel = channel;
         this.bytesInBuffer = bytesInBuffer;
+        this.invalidLibraryAttempts = invalidLibraryAttempts;
         this.errorHandler = errorHandler;
         this.framer = framer;
         this.maxBytesInBuffer = maxBytesInBuffer;
     }
 
     void onNormalFramedMessage(
+        final int libraryId,
         final DirectBuffer directBuffer,
         final int offset,
         final int length)
     {
+        if (libraryId != this.libraryId)
+        {
+            invalidLibraryAttempts.increment();
+            return;
+        }
+
         if (isSlowConsumer())
         {
             final long bytesInBuffer = this.bytesInBuffer.getWeak() + length;
@@ -140,11 +150,6 @@ class SenderEndPoint implements AutoCloseable
         this.libraryId = libraryId;
     }
 
-    public int libraryId()
-    {
-        return libraryId;
-    }
-
     public void close()
     {
         bytesInBuffer.close();
@@ -156,6 +161,13 @@ class SenderEndPoint implements AutoCloseable
         final int offset,
         final int length)
     {
+        final int libraryId = fixMessage.libraryId();
+        if (libraryId != this.libraryId)
+        {
+            invalidLibraryAttempts.increment();
+            return CONTINUE;
+        }
+
         if (!isSlowConsumer())
         {
             return CONTINUE;
