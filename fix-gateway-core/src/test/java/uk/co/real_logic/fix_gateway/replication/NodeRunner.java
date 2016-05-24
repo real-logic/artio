@@ -107,14 +107,16 @@ class NodeRunner implements AutoCloseable
 
     private SendChannelEndpointSupplier newSendChannelEndpointSupplier()
     {
-        return (udpChannel, context) ->
-            new DebugSendChannelEndpoint(udpChannel, context, outboundLossGenerator, outboundLossGenerator);
+        return (udpChannel, statusIndicator, context) ->
+            new DebugSendChannelEndpoint(
+                udpChannel, statusIndicator, context, outboundLossGenerator, outboundLossGenerator);
     }
 
     private ReceiveChannelEndpointSupplier newReceiveChannelEndpointSupplier()
     {
-        return (udpChannel, dispatcher, context) ->
-            new DebugReceiveChannelEndpoint(udpChannel, dispatcher, context, inboundLossGenerator, inboundLossGenerator);
+        return (udpChannel, dispatcher, statusIndicator, context) ->
+            new DebugReceiveChannelEndpoint(
+                udpChannel, dispatcher, statusIndicator, context, inboundLossGenerator, inboundLossGenerator);
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)
