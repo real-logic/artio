@@ -30,6 +30,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -40,9 +41,12 @@ import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 
 import static io.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
@@ -141,6 +145,32 @@ public class LoggerTest
         writeAndArchiveBuffer();
 
         assertReadsInitialValue(HEADER_LENGTH);
+    }
+
+    @Ignore
+    @Test
+    public void shouldNotReadDataThatHasBeenCorrupted() throws IOException
+    {
+        writeAndArchiveBuffer();
+
+        corruptLogFile();
+
+        final long position = readTo((long) HEADER_LENGTH);
+
+        assertNothingRead(position, CORRUPT_LOG);
+    }
+
+    // TODO: updating checksums when you patch
+
+    private void corruptLogFile() throws IOException
+    {
+        final File file = logFiles().get(0);
+        try (final RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw"))
+        {
+            randomAccessFile.seek(HEADER_LENGTH);
+            randomAccessFile.write(new byte[SIZE]);
+            randomAccessFile.getFD().sync();
+        }
     }
 
     @Test
@@ -352,10 +382,14 @@ public class LoggerTest
 
     private void removeLogFiles()
     {
-        logger
+        logFiles().forEach(File::delete);
+    }
+
+    private List<File> logFiles()
+    {
+        return logger
             .directoryDescriptor()
-            .listLogFiles(new StreamIdentifier(CHANNEL, STREAM_ID))
-            .forEach(File::delete);
+            .listLogFiles(new StreamIdentifier(CHANNEL, STREAM_ID));
     }
 
     private void assertNothingRead(final long position, final long expectedReason)

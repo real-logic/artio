@@ -32,6 +32,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.function.IntFunction;
+import java.util.zip.CRC32;
 
 import static io.aeron.driver.Configuration.termBufferLength;
 import static io.aeron.logbuffer.LogBufferDescriptor.computePosition;
@@ -47,6 +48,7 @@ public class Archiver implements Agent, FileBlockHandler
     private final Int2ObjectCache<SessionArchiver> sessionIdToArchive;
     private final StreamIdentifier streamId;
     private final LogDirectoryDescriptor directoryDescriptor;
+    private final CRC32 checksum = new CRC32();
 
     private DataHeaderFlyweight header = new DataHeaderFlyweight();
     private Subscription subscription;
@@ -115,10 +117,11 @@ public class Archiver implements Agent, FileBlockHandler
         return archive.archivedPosition();
     }
 
-    public boolean patch(final int aeronSessionId,
-                         final DirectBuffer bodyBuffer,
-                         final int bodyOffset,
-                         final int bodyLength)
+    public boolean patch(
+        final int aeronSessionId,
+        final DirectBuffer bodyBuffer,
+        final int bodyOffset,
+        final int bodyLength)
     {
         return session(aeronSessionId).patch(bodyBuffer, bodyOffset, bodyLength);
     }
@@ -231,7 +234,7 @@ public class Archiver implements Agent, FileBlockHandler
                 }
 
                 writeToFile(
-                    bodyBuffer, readOffset, bodyLength, termWriteOffset, patchTermLogChannel, patchTermLogFile);
+                    bodyBuffer, readOffset, bodyLength, termWriteOffset, patchTermLogChannel, patchTermLogFile, header);
 
                 close(patchTermLogChannel);
 
@@ -275,14 +278,20 @@ public class Archiver implements Agent, FileBlockHandler
             final int bodyLength,
             int termWriteOffset,
             final FileChannel patchTermLogChannel,
-            final RandomAccessFile patchTermLogFile) throws IOException
+            final RandomAccessFile patchTermLogFile,
+            final DataHeaderFlyweight header) throws IOException
         {
+            checksum.reset();
+
             final ByteBuffer byteBuffer = bodyBuffer.byteBuffer();
             if (byteBuffer != null)
             {
                 byteBuffer
                     .limit(readOffset + bodyLength)
                     .position(readOffset);
+
+                checksum.update(byteBuffer);
+                writeChecksum(header);
 
                 while (byteBuffer.remaining() > 0)
                 {
@@ -292,9 +301,16 @@ public class Archiver implements Agent, FileBlockHandler
             else
             {
                 final byte[] bytes = bodyBuffer.byteArray();
+                checksum.update(bytes, readOffset, bodyLength);
+                writeChecksum(header);
                 patchTermLogFile.seek(termWriteOffset);
                 patchTermLogFile.write(bytes, readOffset, bodyLength);
             }
+        }
+
+        private void writeChecksum(final DataHeaderFlyweight header)
+        {
+            header.reservedValue((int) checksum.getValue());
         }
 
         private void close(final FileChannel patchTermLogChannel) throws IOException

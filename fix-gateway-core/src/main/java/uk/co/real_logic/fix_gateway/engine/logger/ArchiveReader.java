@@ -53,6 +53,11 @@ public class ArchiveReader implements AutoCloseable
      */
     public static final long NO_MESSAGE = -3;
 
+    /**
+     * Cannot read this fragment - a fragment has failed its match its checksum.
+     */
+    public static final long CORRUPT_LOG = -4;
+
     private final Int2ObjectHashMap<SessionReader> aeronSessionIdToReader;
     private final ExistingBufferFactory archiveBufferFactory;
     private final ArchiveMetaData metaData;
