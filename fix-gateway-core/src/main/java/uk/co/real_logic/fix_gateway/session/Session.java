@@ -32,9 +32,8 @@ import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_ENABLED;
@@ -392,16 +391,38 @@ public class Session implements AutoCloseable
 
     /**
      * Reset the sequence number, so that the specified sequence number will be the sequence
-     * number of the next message.
+     * number of the next message. This sends a sequence reset message and can thus only be
+     * used to increase the sequence number of the session.
+     *
+     * If you want to reset the sequence number back to 1 you should use
+     * {@link #resetSequenceNumbers()}.
      *
      * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
      *                                      sent.
      * @return the position in the stream that corresponds to the end of this message.
      */
-    public long sequenceReset(final int nextSentMessageSequenceNumber)
+    public long sendSequenceReset(final int nextSentMessageSequenceNumber)
     {
         final long position = proxy.sequenceReset(lastSentMsgSeqNum, nextSentMessageSequenceNumber);
-        lastSentMsgSeqNum = nextSentMessageSequenceNumber - 1;
+        lastSentMsgSeqNum(nextSentMessageSequenceNumber - 1, position);
+        return position;
+    }
+
+    /**
+     * Resets both the receiver and sender sequence numbers of this session. This is equivalent to
+     * sending a Logon message with ResetSeqNum flag set to Y.
+     *
+     * If you want to send a sequence reset message then you should use {@link #sendSequenceReset(int)}.
+     *
+     * @return the position in the stream that corresponds to the end of this message.
+     */
+    public long resetSequenceNumbers()
+    {
+        final int sentSeqNum = 1;
+        final int heartbeatIntervalInS = (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs);
+        final long position = proxy.logon(
+            heartbeatIntervalInS, sentSeqNum, username(), password(), true);
+        lastSentMsgSeqNum(sentSeqNum, position);
         return position;
     }
 
@@ -501,7 +522,6 @@ public class Session implements AutoCloseable
     }
 
     // ---------- Event Handlers & Logic ----------
-
 
     Action onRequestDisconnect()
     {
@@ -635,7 +655,8 @@ public class Session implements AutoCloseable
         final long origSendingTime,
         final String username,
         final String password,
-        final boolean isPossDupOrResend)
+        final boolean isPossDupOrResend,
+        final boolean resetSeqNumFlag)
     {
         setupSession(sessionId, sessionKey);
 
@@ -663,10 +684,7 @@ public class Session implements AutoCloseable
                     return ABORT;
                 }
 
-                heartbeatIntervalInS(heartbeatInterval);
-                state(SessionState.ACTIVE);
-                username(username);
-                password(password);
+                setLogonState(heartbeatInterval, username, password);
             }
             else if (expectedSeqNo < msgSeqNo)
             {
@@ -675,7 +693,17 @@ public class Session implements AutoCloseable
                 {
                     return ABORT;
                 }
+
                 state(SessionState.AWAITING_RESEND);
+            }
+        }
+
+        if (resetSeqNumFlag)
+        {
+            final Action action = resetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password);
+            if (action != null)
+            {
+                return action;
             }
         }
 
@@ -693,6 +721,42 @@ public class Session implements AutoCloseable
         return onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }
 
+    Action resetSeqNumLogon(
+        final int heartbeatInterval,
+        final int msgSeqNo,
+        final String username,
+        final String password)
+    {
+        if (lastSentMsgSeqNum() == 1)
+        {
+            // You've received a reply to a resetSeqNumFlag = Y message
+            return CONTINUE;
+        }
+
+        final int newSeqNum = 1;
+        final long position = proxy.logon(heartbeatInterval, newSeqNum, null, null, true);
+        if (position < 0)
+        {
+            return ABORT;
+        }
+        else
+        {
+            resendSaveLogon = true;
+            lastSentMsgSeqNum(newSeqNum);
+            lastReceivedMsgSeqNum(msgSeqNo - 1); // onMessage will check and increment this
+            setLogonState(heartbeatInterval, username, password);
+        }
+        return null;
+    }
+
+    private void setLogonState(final int heartbeatInterval, final String username, final String password)
+    {
+        heartbeatIntervalInS(heartbeatInterval);
+        state(ACTIVE);
+        username(username);
+        password(password);
+    }
+
     private Action saveLogon(final long sessionId)
     {
         return Pressure.apply(publication.saveLogon(libraryId, connectionId, sessionId));
@@ -707,7 +771,7 @@ public class Session implements AutoCloseable
 
     private Action replyToLogon(int heartbeatInterval)
     {
-        return checkPosition(proxy.logon(heartbeatInterval, newSentSeqNum(), null, null));
+        return checkPosition(proxy.logon(heartbeatInterval, newSentSeqNum(), null, null, false));
     }
 
     Action validateSendingTime(final long sendingTime)

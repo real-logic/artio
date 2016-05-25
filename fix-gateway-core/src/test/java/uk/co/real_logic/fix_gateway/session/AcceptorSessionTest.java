@@ -112,7 +112,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
         fakeClock.advanceMilliSeconds(2 * SENDING_TIME_WINDOW);
 
         final Action action = session().onLogon(
-            HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1, UNKNOWN, null, null, false);
+            HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1, UNKNOWN, null, null, false, false);
 
         assertEquals(expectedAction, action);
     }
@@ -153,7 +153,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
     private void verifyLogon()
     {
-        verify(mockProxy).logon(HEARTBEAT_INTERVAL, 1, null, null);
+        verify(mockProxy).logon(HEARTBEAT_INTERVAL, 1, null, null, false);
     }
 
     private void verifySessionSetup()

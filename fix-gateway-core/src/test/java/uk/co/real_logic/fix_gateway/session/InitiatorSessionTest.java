@@ -100,7 +100,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
     private void verifyLogon()
     {
-        verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1, null, null);
+        verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1, null, null, false);
     }
 
     protected void readyForLogon()

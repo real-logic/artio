@@ -327,7 +327,8 @@ public class SessionParser
                     origSendingTime,
                     username,
                     password,
-                    isPossDup(header)
+                    isPossDup(header),
+                    resetSeqNumFlag(logon)
                 );
             }
             else
@@ -335,6 +336,11 @@ public class SessionParser
                 return session.onRequestDisconnect();
             }
         }
+    }
+
+    private boolean resetSeqNumFlag(final LogonDecoder logon)
+    {
+        return logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
     }
 
     private boolean validateHeader(final HeaderDecoder header)

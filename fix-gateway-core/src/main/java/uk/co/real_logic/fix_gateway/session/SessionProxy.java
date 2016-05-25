@@ -143,12 +143,19 @@ public class SessionProxy
         return gatewayPublication.saveRequestDisconnect(libraryId, connectionId);
     }
 
-    public long logon(final int heartbeatInterval, final int msgSeqNo, final String username, final String password)
+    public long logon(
+        final int heartbeatIntervalInS,
+        final int msgSeqNo,
+        final String username,
+        final String password,
+        final boolean resetSeqNumFlag)
     {
         final HeaderEncoder header = logon.header();
         setupHeader(header, msgSeqNo);
 
-        logon.heartBtInt(heartbeatInterval);
+        logon
+            .heartBtInt(heartbeatIntervalInS)
+            .resetSeqNumFlag(resetSeqNumFlag);
 
         if (!nullOrEmpty(username))
         {

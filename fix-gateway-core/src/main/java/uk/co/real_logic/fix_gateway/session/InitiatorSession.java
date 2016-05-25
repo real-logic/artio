@@ -67,7 +67,8 @@ public class InitiatorSession extends Session
         final long origSendingTime,
         final String username,
         final String password,
-        final boolean isPossDupOrResend)
+        final boolean isPossDupOrResend,
+        final boolean resetSeqNumFlag)
     {
         if (msgSeqNo == expectedReceivedSeqNum() && state() == SessionState.SENT_LOGON)
         {
@@ -85,6 +86,17 @@ public class InitiatorSession extends Session
         }
         else
         {
+            if (resetSeqNumFlag)
+            {
+                proxy.setupSession(sessionId, sessionKey);
+
+                final Action action = resetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password);
+                if (action != null)
+                {
+                    return action;
+                }
+            }
+
             onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
         }
 
@@ -99,7 +111,7 @@ public class InitiatorSession extends Session
             state(SessionState.SENT_LOGON);
             final int heartbeatIntervalInS = (int) (heartbeatIntervalInMs() / 1000);
             final int sentSeqNum = newSentSeqNum();
-            final long position = proxy.logon(heartbeatIntervalInS, sentSeqNum, username(), password());
+            final long position = proxy.logon(heartbeatIntervalInS, sentSeqNum, username(), password(), false);
             if (position >= 0)
             {
                 lastSentMsgSeqNum(sentSeqNum);

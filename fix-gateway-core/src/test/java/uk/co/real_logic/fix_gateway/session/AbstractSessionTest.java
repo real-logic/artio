@@ -123,8 +123,7 @@ public abstract class AbstractSessionTest
 
         final int heartbeatInterval = -1;
 
-        session().onLogon(
-            heartbeatInterval, 1, SESSION_ID, SESSION_KEY, fakeClock.time(), UNKNOWN, null, null, false);
+        onLogon(heartbeatInterval, 1, false);
 
         verify(mockProxy).negativeHeartbeatLogout(1);
     }
@@ -165,7 +164,7 @@ public abstract class AbstractSessionTest
 
         assertThat(session().lastSentMsgSeqNum(), lessThanOrEqualTo(1));
 
-        session().sequenceReset(newSeqNo);
+        session().sendSequenceReset(newSeqNo);
 
         verify(mockProxy).sequenceReset(anyInt(), eq(newSeqNo));
         assertEquals(newSeqNo - 1, session().lastSentMsgSeqNum());
@@ -177,7 +176,7 @@ public abstract class AbstractSessionTest
         readyForLogon();
 
         final int heartbeatInterval = 1;
-        session().onLogon(heartbeatInterval, 1, SESSION_ID, null, fakeClock.time(), UNKNOWN, null, null, false);
+        onLogon(heartbeatInterval, 1, false);
 
         heartbeatSentAfterInterval(heartbeatInterval, 2, false);
     }
@@ -512,6 +511,56 @@ public abstract class AbstractSessionTest
         verifyDisconnect(times(2));
     }
 
+    @Test
+    public void shouldStartLogonBasedSequenceNumberReset()
+    {
+        sequenceNumbersAreTwo();
+
+        session().resetSequenceNumbers();
+
+        verifySetsSequenceNumberToOne();
+    }
+
+    @Test
+    public void shouldComplyWithLogonBasedSequenceNumberReset()
+    {
+        sequenceNumbersAreTwo();
+
+        onLogon(HEARTBEAT_INTERVAL, 1, true);
+
+        verifySetupSession();
+        verifySetsSequenceNumberToOne();
+    }
+
+    @Test
+    public void shouldTerminateLogonBasedSequenceNumberReset()
+    {
+        shouldStartLogonBasedSequenceNumberReset();
+
+        onLogon(HEARTBEAT_INTERVAL, 1, true);
+
+        verifySetupSession();
+        verifyNoFurtherMessages();
+    }
+
+    private void verifySetupSession()
+    {
+        verify(mockProxy).setupSession(anyLong(), any());
+    }
+
+    private void verifySetsSequenceNumberToOne()
+    {
+        verify(mockProxy).logon(anyInt(), eq(1), anyString(), anyString(), eq(true));
+        assertEquals(1, session().lastSentMsgSeqNum());
+        verifyNoFurtherMessages();
+    }
+
+    private void sequenceNumbersAreTwo()
+    {
+        givenActive();
+        session().lastReceivedMsgSeqNum(2).lastSentMsgSeqNum(2);
+    }
+
     private void incorrectBeginStringLogout(final int times)
     {
         verify(mockProxy, times(times)).incorrectBeginStringLogout(1);
@@ -579,7 +628,24 @@ public abstract class AbstractSessionTest
 
     public void onLogon(final int msgSeqNo)
     {
-        session().onLogon(HEARTBEAT_INTERVAL, msgSeqNo, SESSION_ID, SESSION_KEY, fakeClock.time(), UNKNOWN, null, null, false);
+        onLogon(HEARTBEAT_INTERVAL, msgSeqNo, false);
+    }
+
+    private void onLogon(final int heartbeatInterval, final int msgSeqNo, final boolean resetSeqNumFlag)
+    {
+        final String username = null;
+        final String password = null;
+        session().onLogon(
+            heartbeatInterval,
+            msgSeqNo,
+            SESSION_ID,
+            SESSION_KEY,
+            fakeClock.time(),
+            UNKNOWN,
+            username,
+            password,
+            false,
+            resetSeqNumFlag);
     }
 
     protected Action onMessage(final int msgSeqNo)
