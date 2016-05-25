@@ -21,6 +21,8 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.fix_gateway.decoder.LogonDecoder.MESSAGE_TYPE_BYTES;
 
@@ -70,31 +72,36 @@ public class InitiatorSession extends Session
         final boolean isPossDupOrResend,
         final boolean resetSeqNumFlag)
     {
+        if (resendSaveLogon)
+        {
+            return saveLogonMessage(sessionId);
+        }
+
         if (resetSeqNumFlag)
         {
             proxy.setupSession(sessionId, sessionKey);
 
-            final Action action = resetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password);
+            Action action = resetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password);
             if (action != null)
             {
                 return action;
             }
 
-            return onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+            action = acceptLogon(
+                heartbeatInterval, msgSeqNo, sessionId, sessionKey, sendingTime, origSendingTime, isPossDupOrResend);
+            if (action != null)
+            {
+                return action;
+            }
         }
 
         if (msgSeqNo == expectedReceivedSeqNum() && state() == SessionState.SENT_LOGON)
         {
-            state(SessionState.ACTIVE);
-            this.sessionKey = sessionKey;
-            proxy.setupSession(sessionId, sessionKey);
-            if (CODEC_VALIDATION_DISABLED || (validateHeartbeat(heartbeatInterval) == null &&
-                validateSendingTime(sendingTime) == null))
+            final Action action = acceptLogon(
+                heartbeatInterval, msgSeqNo, sessionId, sessionKey, sendingTime, origSendingTime, isPossDupOrResend);
+            if (action != null)
             {
-                id(sessionId);
-                heartbeatIntervalInS(heartbeatInterval);
-                onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
-                publication.saveLogon(libraryId, connectionId, sessionId);
+                return action;
             }
         }
         else
@@ -103,6 +110,49 @@ public class InitiatorSession extends Session
         }
 
         return Action.CONTINUE;
+    }
+
+    private Action acceptLogon(final int heartbeatInterval,
+                               final int msgSeqNo,
+                               final long sessionId,
+                               final CompositeKey sessionKey,
+                               final long sendingTime,
+                               final long origSendingTime,
+                               final boolean isPossDupOrResend)
+    {
+        state(SessionState.ACTIVE);
+        this.sessionKey = sessionKey;
+        proxy.setupSession(sessionId, sessionKey);
+        if (CODEC_VALIDATION_DISABLED || (validateHeartbeat(heartbeatInterval) == null &&
+            validateSendingTime(sendingTime) == null))
+        {
+            id(sessionId);
+            heartbeatIntervalInS(heartbeatInterval);
+            final Action action =
+                onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+            if (action == ABORT)
+            {
+                return ABORT;
+            }
+
+            return saveLogonMessage(sessionId);
+        }
+        return null;
+    }
+
+    private Action saveLogonMessage(final long sessionId)
+    {
+        final long position = publication.saveLogon(libraryId, connectionId, sessionId);
+        if (position < 0)
+        {
+            resendSaveLogon = true;
+            return ABORT;
+        }
+        else
+        {
+            resendSaveLogon = false;
+            return CONTINUE;
+        }
     }
 
     public int poll(final long time)

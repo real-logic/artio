@@ -16,10 +16,15 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import org.junit.Test;
+import org.mockito.verification.VerificationMode;
 
+import static io.aeron.Publication.BACK_PRESSURED;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
@@ -40,7 +45,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
     {
         session.state(SENT_LOGON);
 
-        onLogon(1);
+        assertEquals(CONTINUE, onLogon(1));
 
         assertState(ACTIVE);
         verify(mockProxy).setupSession(SESSION_ID, SESSION_KEY);
@@ -76,9 +81,24 @@ public class InitiatorSessionTest extends AbstractSessionTest
     {
         session.state(SENT_LOGON);
 
-        onLogon(1);
+        assertEquals(CONTINUE, onLogon(1));
 
-        verifySavesLogonMessage();
+        verifySavesLogonMessage(times(1));
+    }
+
+    @Test
+    public void shouldNotifyGatewayWhenLoggedInWhenBackPressured()
+    {
+        session.state(SENT_LOGON);
+
+        when(mockPublication.saveLogon(anyInt(), anyLong(), anyLong()))
+            .thenReturn(BACK_PRESSURED, POSITION);
+
+        assertEquals(ABORT, onLogon(1));
+
+        assertEquals(CONTINUE, onLogon(1));
+
+        verifySavesLogonMessage(times(2));
     }
 
     @Test
@@ -86,16 +106,16 @@ public class InitiatorSessionTest extends AbstractSessionTest
     {
         session.state(SENT_LOGON);
 
-        onLogon(1);
+        assertEquals(CONTINUE, onLogon(1));
 
-        onLogon(2);
+        assertEquals(CONTINUE, onLogon(2));
 
-        verifySavesLogonMessage();
+        verifySavesLogonMessage(times(1));
     }
 
-    private void verifySavesLogonMessage()
+    private void verifySavesLogonMessage(final VerificationMode verificationMode)
     {
-        verify(mockPublication, times(1)).saveLogon(LIBRARY_ID, CONNECTION_ID, SESSION_ID);
+        verify(mockPublication, verificationMode).saveLogon(LIBRARY_ID, CONNECTION_ID, SESSION_ID);
     }
 
     private void verifyLogon()

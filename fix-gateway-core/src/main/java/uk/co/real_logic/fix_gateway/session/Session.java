@@ -120,7 +120,7 @@ public class Session implements AutoCloseable
     private int connectedPort;
 
     private boolean incorrectBeginString = false;
-    private boolean resendSaveLogon = false;
+    boolean resendSaveLogon = false;
 
     public Session(
         final int heartbeatIntervalInS,
@@ -707,18 +707,27 @@ public class Session implements AutoCloseable
             }
         }
 
-        if (resendSaveLogon)
+        if (checkResendSaveLogon(sessionId))
         {
-            final Action action = saveLogon(sessionId);
-            if (action == ABORT)
-            {
-                return ABORT;
-            }
-            resendSaveLogon = false;
+            return ABORT;
         }
 
         // Back pressure at this point won't re-run the above block if its completed because of the state change
         return onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+    }
+
+    private boolean checkResendSaveLogon(final long sessionId)
+    {
+        if (resendSaveLogon)
+        {
+            final long position = publication.saveLogon(libraryId, connectionId, sessionId);
+            if (position < 0)
+            {
+                return true;
+            }
+            resendSaveLogon = false;
+        }
+        return false;
     }
 
     Action resetSeqNumLogon(

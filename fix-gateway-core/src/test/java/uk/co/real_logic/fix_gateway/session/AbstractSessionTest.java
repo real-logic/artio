@@ -545,7 +545,7 @@ public abstract class AbstractSessionTest
 
     private void verifySetupSession()
     {
-        verify(mockProxy).setupSession(anyLong(), any());
+        verify(mockProxy, atLeastOnce()).setupSession(anyLong(), any());
     }
 
     private void verifySetsSequenceNumberToOne()
