@@ -18,11 +18,11 @@ package uk.co.real_logic.fix_gateway.session;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
+import static uk.co.real_logic.fix_gateway.decoder.LogonDecoder.MESSAGE_TYPE_BYTES;
 
 // TODO: apply back-pressure from failed message sends to on* methods
 public class InitiatorSession extends Session
@@ -70,6 +70,19 @@ public class InitiatorSession extends Session
         final boolean isPossDupOrResend,
         final boolean resetSeqNumFlag)
     {
+        if (resetSeqNumFlag)
+        {
+            proxy.setupSession(sessionId, sessionKey);
+
+            final Action action = resetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password);
+            if (action != null)
+            {
+                return action;
+            }
+
+            return onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+        }
+
         if (msgSeqNo == expectedReceivedSeqNum() && state() == SessionState.SENT_LOGON)
         {
             state(SessionState.ACTIVE);
@@ -80,24 +93,13 @@ public class InitiatorSession extends Session
             {
                 id(sessionId);
                 heartbeatIntervalInS(heartbeatInterval);
-                onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+                onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
                 publication.saveLogon(libraryId, connectionId, sessionId);
             }
         }
         else
         {
-            if (resetSeqNumFlag)
-            {
-                proxy.setupSession(sessionId, sessionKey);
-
-                final Action action = resetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password);
-                if (action != null)
-                {
-                    return action;
-                }
-            }
-
-            onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+            return onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
         }
 
         return Action.CONTINUE;

@@ -626,16 +626,16 @@ public abstract class AbstractSessionTest
         assertEquals(state, session().state());
     }
 
-    public void onLogon(final int msgSeqNo)
+    public Action onLogon(final int msgSeqNo)
     {
-        onLogon(HEARTBEAT_INTERVAL, msgSeqNo, false);
+        return onLogon(HEARTBEAT_INTERVAL, msgSeqNo, false);
     }
 
-    private void onLogon(final int heartbeatInterval, final int msgSeqNo, final boolean resetSeqNumFlag)
+    private Action onLogon(final int heartbeatInterval, final int msgSeqNo, final boolean resetSeqNumFlag)
     {
         final String username = null;
         final String password = null;
-        session().onLogon(
+        return session().onLogon(
             heartbeatInterval,
             msgSeqNo,
             SESSION_ID,
