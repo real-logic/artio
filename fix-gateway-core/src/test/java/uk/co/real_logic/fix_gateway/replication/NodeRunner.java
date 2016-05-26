@@ -26,6 +26,7 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
@@ -41,7 +42,7 @@ import static uk.co.real_logic.fix_gateway.replication.RaftNodeConfiguration.DEF
 class NodeRunner implements AutoCloseable
 {
     private static final long TIMEOUT_IN_MS = 1000;
-    private static final String AERON_CHANNEL = "aeron:udp?group=224.0.1.1:40456";
+    private static final String AERON_CHANNEL = TestFixtures.clusteredAeronChannel();
 
     private final SwitchableLossGenerator outboundLossGenerator = new SwitchableLossGenerator();
     private final SwitchableLossGenerator inboundLossGenerator = new SwitchableLossGenerator();

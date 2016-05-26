@@ -21,6 +21,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.Reply;
@@ -33,16 +34,17 @@ import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
 import static org.agrona.CloseHelper.close;
-import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
+import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 @Ignore
 public class ClusteredGatewaySystemTest
 {
     private static final int CLUSTER_SIZE = 3;
+    private static final String CLUSTER_AERON_CHANNEL = clusteredAeronChannel();
 
-    private List<Integer> ports;
+    private List<Integer> tcpPorts;
+    private List<Integer> libraryPorts;
     private int libraryAeronPort = unusedPort();
 
     private MediaDriver mediaDriver;
@@ -59,6 +61,7 @@ public class ClusteredGatewaySystemTest
     private FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
     private FakeHandler initiatingHandler = new FakeHandler(initiatingOtfAcceptor);
 
+    private int leader;
     private Session initiatingSession;
     private Session acceptingSession;
 
@@ -66,10 +69,8 @@ public class ClusteredGatewaySystemTest
     public void setUp()
     {
         mediaDriver = launchMediaDriver();
-        ports = IntStream
-            .range(0, CLUSTER_SIZE)
-            .mapToObj(i -> unusedPort())
-            .collect(toList());
+        tcpPorts = allocatePorts();
+        libraryPorts = allocatePorts();
 
         // TODO: be able to disconnect TCP connections when failing the machine
         acceptingEngineCluster = IntStream
@@ -78,21 +79,55 @@ public class ClusteredGatewaySystemTest
             {
                 final String acceptorLogs = ACCEPTOR_LOGS + i;
                 delete(acceptorLogs);
-                return FixEngine.launch(acceptingConfig(
-                    ports.get(i), "engineCounters" + i, ACCEPTOR_ID, INITIATOR_ID, acceptorLogs));
+                final EngineConfiguration configuration = new EngineConfiguration();
+
+                setupAuthentication(ACCEPTOR_ID, INITIATOR_ID, configuration);
+
+                configuration
+                    .bindTo("localhost", tcpPorts.get(i))
+                    .libraryAeronChannel(libraryChannel(i))
+                    .monitoringFile(acceptorMonitoringFile("engineCounters" + i))
+                    .logFileDir(acceptorLogs)
+                    .clusterAeronChannel(CLUSTER_AERON_CHANNEL);
+
+                return FixEngine.launch(configuration);
             })
             .collect(toList());
 
+        leader = findLeader();
+
+        acceptingLibrary = FixLibrary.connect(
+            acceptingLibraryConfig(
+                acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", libraryChannel(leader)));
+
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
-        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
+    }
+
+    private String libraryChannel(final int i)
+    {
+        return "udp://localhost:" + libraryPorts.get(i);
+    }
+
+    private int findLeader()
+    {
+        // TODO
+        return 0;
+    }
+
+    private List<Integer> allocatePorts()
+    {
+        return IntStream
+            .range(0, CLUSTER_SIZE)
+            .mapToObj(i -> unusedPort())
+            .collect(toList());
     }
 
     @Test
     public void shouldExchangeMessagesInCluster()
     {
         final Builder builder = SessionConfiguration.builder();
-        ports.forEach(port -> builder.address("localhost", port));
+        tcpPorts.forEach(port -> builder.address("localhost", port));
 
         final SessionConfiguration config = builder
             .credentials("bob", "Uv1aegoh")
@@ -113,6 +148,8 @@ public class ClusteredGatewaySystemTest
         sendTestRequest(initiatingSession);
 
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+
+        // TODO: assert other nodes have stored the data.
     }
 
     @Test

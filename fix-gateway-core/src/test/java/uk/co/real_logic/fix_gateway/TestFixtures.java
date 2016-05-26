@@ -22,7 +22,7 @@ import java.io.File;
 
 import static io.aeron.driver.ThreadingMode.SHARED;
 
-public class TestFixtures
+public final class TestFixtures
 {
     private static final int LOW_PORT = 9999;
     private static final int HIGH_PORT = 99999;
@@ -61,5 +61,10 @@ public class TestFixtures
         {
             IoUtil.delete(new File(mediaDriver.aeronDirectoryName()), false);
         }
+    }
+
+    public static String clusteredAeronChannel()
+    {
+        return "aeron:udp?group=224.0.1.1:" + unusedPort();
     }
 }

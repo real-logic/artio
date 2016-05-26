@@ -29,14 +29,13 @@ public class ConsistentPublication
     /**
      * May not yet be the leader, or the leader may not yet be ready to send
      */
-    public static final long CANT_PUBLISH = -3;
+    public static final long CANT_PUBLISH = -1005;
 
     private final Publication dataPublication;
     private final RaftNode raftNode;
 
     public ConsistentPublication(final Publication dataPublication, final RaftNode raftNode)
     {
-
         this.dataPublication = dataPublication;
         this.raftNode = raftNode;
     }

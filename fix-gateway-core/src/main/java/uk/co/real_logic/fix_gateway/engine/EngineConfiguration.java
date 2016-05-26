@@ -497,6 +497,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return noLogonDisconnectTimeoutInMs;
     }
 
+    public String clusterAeronChannel()
+    {
+        return clusterAeronChannel;
+    }
+
+    public boolean isClustered()
+    {
+        return clusterAeronChannel() != null;
+    }
+
     /**
      * {@inheritDoc}
      */

@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.util.List;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.CommonMatchers.hasConnectionId;
@@ -362,7 +363,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FakeOtfAcceptor otfAcceptor2 = new FakeOtfAcceptor();
         final FakeHandler handler2 = new FakeHandler(otfAcceptor2);
         try (final FixLibrary library2 = FixLibrary.connect(
-            acceptingLibraryConfig(handler2, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor-2")
+            acceptingLibraryConfig(handler2, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor-2", IPC_CHANNEL)
                 .libraryId(2)))
         {
             while (!handler2.hasSession())

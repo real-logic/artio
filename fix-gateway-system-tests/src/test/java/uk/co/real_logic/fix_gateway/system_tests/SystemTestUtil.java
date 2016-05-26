@@ -237,7 +237,8 @@ public final class SystemTestUtil
         final FakeHandler sessionHandler,
         final String acceptorId,
         final String initiatorId,
-        final String monitorDir)
+        final String monitorDir,
+        final String libraryAeronChannel)
     {
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
         setupAuthentication(acceptorId, initiatorId, libraryConfiguration);
@@ -246,13 +247,13 @@ public final class SystemTestUtil
             .sessionExistsHandler(sessionHandler)
             .sessionAcquireHandler(sessionHandler)
             .sentPositionHandler(sessionHandler)
-            .libraryAeronChannel(IPC_CHANNEL)
+            .libraryAeronChannel(libraryAeronChannel)
             .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "accLibraryCounters");
 
         return libraryConfiguration;
     }
 
-    private static void setupAuthentication(
+    static void setupAuthentication(
         final String acceptorId,
         final String initiatorId,
         final CommonConfiguration configuration)
@@ -311,7 +312,7 @@ public final class SystemTestUtil
     public static FixLibrary newAcceptingLibrary(final FakeHandler sessionHandler)
     {
         return FixLibrary.connect(
-            acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor"));
+            acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", IPC_CHANNEL));
     }
 
     public static void assertConnected(final Session session)

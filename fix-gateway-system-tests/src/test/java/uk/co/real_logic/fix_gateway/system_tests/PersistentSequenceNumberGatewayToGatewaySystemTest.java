@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import java.io.File;
 import java.io.IOException;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
@@ -78,7 +79,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         initiatingEngine = launchInitiatingGatewayWithSameLogs(libraryAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig =
-            acceptingLibraryConfig(acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor");
+            acceptingLibraryConfig(acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", IPC_CHANNEL);
         acceptingLibraryConfig.acceptorSequenceNumbersResetUponReconnect(false);
         acceptingLibrary = FixLibrary.connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
