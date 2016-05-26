@@ -40,11 +40,11 @@ public class CandidateTest
 
     private RaftPublication controlPublication = mock(RaftPublication.class);
     private Subscription controlSubscription = mock(Subscription.class);
-    private RaftNode raftNode = mock(RaftNode.class);
+    private ClusterNode clusterNode = mock(ClusterNode.class);
     private TermState termState = new TermState();
 
     private Candidate candidate = new Candidate(
-        ID, DATA_SESSION_ID, raftNode, CLUSTER_SIZE, VOTE_TIMEOUT, termState, new QuorumAcknowledgementStrategy());
+        ID, DATA_SESSION_ID, clusterNode, CLUSTER_SIZE, VOTE_TIMEOUT, termState, new QuorumAcknowledgementStrategy());
 
     @Before
     public void setUp()
@@ -62,7 +62,7 @@ public class CandidateTest
         candidate.onReplyVote(ID_4, ID, OLD_LEADERSHIP_TERM, FOR);
         candidate.onReplyVote(ID_5, ID, OLD_LEADERSHIP_TERM, FOR);
 
-        neverTransitionsToLeader(raftNode);
+        neverTransitionsToLeader(clusterNode);
     }
 
     @Test
@@ -73,7 +73,7 @@ public class CandidateTest
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, AGAINST);
         candidate.onReplyVote(ID_5, ID, NEW_LEADERSHIP_TERM, AGAINST);
 
-        neverTransitionsToLeader(raftNode);
+        neverTransitionsToLeader(clusterNode);
     }
 
     @Test
@@ -86,7 +86,7 @@ public class CandidateTest
         candidate.onReplyVote(ID_4, otherCandidate, NEW_LEADERSHIP_TERM, FOR);
         candidate.onReplyVote(ID_5, otherCandidate, NEW_LEADERSHIP_TERM, FOR);
 
-        neverTransitionsToLeader(raftNode);
+        neverTransitionsToLeader(clusterNode);
     }
 
     @Test
@@ -97,7 +97,7 @@ public class CandidateTest
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR);
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR);
 
-        neverTransitionsToLeader(raftNode);
+        neverTransitionsToLeader(clusterNode);
     }
 
     @Test
@@ -110,8 +110,8 @@ public class CandidateTest
         requestsVote(NEW_LEADERSHIP_TERM);
         requestsVote(NEW_LEADERSHIP_TERM + 1);
 
-        neverTransitionsToLeader(raftNode);
-        neverTransitionsToFollower(raftNode);
+        neverTransitionsToLeader(clusterNode);
+        neverTransitionsToFollower(clusterNode);
     }
 
     private void requestsVote(final int term)

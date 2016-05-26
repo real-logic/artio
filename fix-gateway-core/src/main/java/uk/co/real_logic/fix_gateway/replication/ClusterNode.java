@@ -15,17 +15,18 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import io.aeron.Publication;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
 /**
  * .
  */
-public class RaftNode
+public class ClusterNode extends ClusterableNode
 {
     private static final int HEARTBEAT_TO_TIMEOUT_RATIO = 5;
 
-    private final ConsistentPublication publication;
+    private final ClusteredPublication publication;
     private final short nodeId;
     private final TermState termState = new TermState();
     private final Leader leader;
@@ -35,97 +36,16 @@ public class RaftNode
 
     private Role currentRole;
 
-    private abstract class NodeState
-    {
-        void transitionToLeader(final Candidate candidate, final long timeInMs)
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        void transitionToCandidate(final Follower follower, final long timeInMs)
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        void transitionToCandidate(final Candidate candidate, final long timeInMs)
-        {
-            throw new UnsupportedOperationException();
-        }
-    }
-
-    private final NodeState leaderState = new NodeState()
-    {
-        void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
-        {
-            DebugLogger.log("%d: L -> Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
-
-            leader.closeStreams();
-
-            transport.injectFollowerSubscriptions(follower);
-
-            currentRole = follower.votedFor(votedFor)
-                                  .follow(timeInMs);
-        }
-    };
-
-    private final NodeState followerState = new NodeState()
-    {
-        void transitionToCandidate(final Follower follower, final long timeInMs)
-        {
-            DebugLogger.log("%d: F -> Candidate @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
-
-            follower.closeStreams();
-
-            currentRole = candidate.startNewElection(timeInMs);
-        }
-    };
-
-    private final NodeState candidateState = new NodeState()
-    {
-        void transitionToLeader(final Candidate candidate, long timeInMs)
-        {
-            DebugLogger.log("%d: C -> Leader @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
-
-            candidate.closeStreams();
-
-            transport.injectLeaderSubscriptions(leader);
-
-            currentRole = leader.getsElected(timeInMs);
-        }
-
-        void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
-        {
-            DebugLogger.log("%d: C -> Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
-
-            candidate.closeStreams();
-
-            transport.injectFollowerSubscriptions(follower);
-
-            currentRole = follower.votedFor(votedFor)
-                                  .follow(timeInMs);
-        }
-    };
-
-    public RaftNode(final RaftNodeConfiguration configuration, final long timeInMs)
+    public ClusterNode(final ClusterNodeConfiguration configuration, final long timeInMs)
     {
         configuration.conclude();
 
         this.nodeId = configuration.nodeId();
         this.transport = configuration.raftTransport();
+        final Publication dataPublication = transport.leaderPublication();
+        this.publication = new ClusteredPublication(dataPublication, this);
 
-        this.publication = new ConsistentPublication(transport.leaderPublication(), this);
-
-        final int ourSessionId = publication.sessionId();
+        final int ourSessionId = dataPublication.sessionId();
         final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
         final long heartbeatTimeInMs = timeoutIntervalInMs / HEARTBEAT_TO_TIMEOUT_RATIO;
         final int clusterSize = configuration.otherNodes().size() + 1;
@@ -167,6 +87,87 @@ public class RaftNode
 
         startAsFollower(timeInMs);
     }
+
+    private abstract class NodeState
+    {
+        void transitionToLeader(final Candidate candidate, final long timeInMs)
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        void transitionToCandidate(final Follower follower, final long timeInMs)
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        void transitionToCandidate(final Candidate candidate, final long timeInMs)
+        {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private final NodeState leaderState = new NodeState()
+    {
+        void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
+        {
+            DebugLogger.log("%d: L -> Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+
+            leader.closeStreams();
+
+            transport.injectFollowerSubscriptions(follower);
+
+            currentRole = follower.votedFor(votedFor)
+                .follow(timeInMs);
+        }
+    };
+
+    private final NodeState followerState = new NodeState()
+    {
+        void transitionToCandidate(final Follower follower, final long timeInMs)
+        {
+            DebugLogger.log("%d: F -> Candidate @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+
+            follower.closeStreams();
+
+            currentRole = candidate.startNewElection(timeInMs);
+        }
+    };
+
+    private final NodeState candidateState = new NodeState()
+    {
+        void transitionToLeader(final Candidate candidate, long timeInMs)
+        {
+            DebugLogger.log("%d: C -> Leader @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+
+            candidate.closeStreams();
+
+            transport.injectLeaderSubscriptions(leader);
+
+            currentRole = leader.getsElected(timeInMs);
+        }
+
+        void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
+        {
+            DebugLogger.log("%d: C -> Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+
+            candidate.closeStreams();
+
+            transport.injectFollowerSubscriptions(follower);
+
+            currentRole = follower.votedFor(votedFor)
+                .follow(timeInMs);
+        }
+    };
 
     public long commitPosition()
     {
@@ -246,7 +247,7 @@ public class RaftNode
         return termState;
     }
 
-    public ConsistentPublication publication()
+    public ClusteredPublication publication()
     {
         return publication;
     }

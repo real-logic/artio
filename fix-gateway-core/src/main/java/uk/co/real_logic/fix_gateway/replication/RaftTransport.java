@@ -21,9 +21,9 @@ import uk.co.real_logic.fix_gateway.ReliefValve;
 
 public class RaftTransport
 {
-    private final RaftNodeConfiguration configuration;
+    private final ClusterNodeConfiguration configuration;
 
-    public RaftTransport(final RaftNodeConfiguration configuration)
+    public RaftTransport(final ClusterNodeConfiguration configuration)
     {
         this.configuration = configuration;
     }

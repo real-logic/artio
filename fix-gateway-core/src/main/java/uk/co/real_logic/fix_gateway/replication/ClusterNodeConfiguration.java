@@ -25,24 +25,22 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 
-/**
- * .
- */
-public class RaftNodeConfiguration
+public class ClusterNodeConfiguration
 {
     public static final int DEFAULT_MAX_CLAIM_ATTEMPTS = 100_000;
     public static final int DEFAULT_CONTROL_STREAM_ID = 1;
     public static final int DEFAULT_DATA_STREAM_ID = 2;
     public static final int DEFAULT_ACKNOWLEDGEMENT_STREAM_ID = 3;
 
+    private short nodeId;
+    private IntHashSet otherNodes;
+    private long timeoutIntervalInMs;
+
     private Aeron aeron;
     private StreamIdentifier controlStream;
     private StreamIdentifier dataStream;
     private StreamIdentifier acknowledgementStream;
     private IdleStrategy idleStrategy;
-    private short nodeId;
-    private IntHashSet otherNodes;
-    private long timeoutIntervalInMs;
     private AcknowledgementStrategy acknowledgementStrategy;
     private FragmentHandler fragmentHandler;
     private int maxClaimAttempts = DEFAULT_MAX_CLAIM_ATTEMPTS;
@@ -58,7 +56,7 @@ public class RaftNodeConfiguration
      * @param channel the aeron channel to use for all the streams
      * @return this
      */
-    public RaftNodeConfiguration aeronChannel(final String channel)
+    public ClusterNodeConfiguration aeronChannel(final String channel)
     {
         controlStream(new StreamIdentifier(channel, DEFAULT_CONTROL_STREAM_ID));
         dataStream(new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID));
@@ -66,91 +64,91 @@ public class RaftNodeConfiguration
         return this;
     }
 
-    public RaftNodeConfiguration controlStream(final StreamIdentifier controlStream)
+    public ClusterNodeConfiguration controlStream(final StreamIdentifier controlStream)
     {
         this.controlStream = controlStream;
         return this;
     }
 
-    public RaftNodeConfiguration dataStream(final StreamIdentifier dataStream)
+    public ClusterNodeConfiguration dataStream(final StreamIdentifier dataStream)
     {
         this.dataStream = dataStream;
         return this;
     }
 
-    public RaftNodeConfiguration acknowledgementStream(final StreamIdentifier acknowledgementStream)
+    public ClusterNodeConfiguration acknowledgementStream(final StreamIdentifier acknowledgementStream)
     {
         this.acknowledgementStream = acknowledgementStream;
         return this;
     }
 
-    public RaftNodeConfiguration nodeId(final short nodeId)
+    public ClusterNodeConfiguration nodeId(final short nodeId)
     {
         this.nodeId = nodeId;
         return this;
     }
 
-    public RaftNodeConfiguration otherNodes(final IntHashSet otherNodes)
+    public ClusterNodeConfiguration otherNodes(final IntHashSet otherNodes)
     {
         this.otherNodes = otherNodes;
         return this;
     }
 
-    public RaftNodeConfiguration timeoutIntervalInMs(final long timeoutIntervalInMs)
+    public ClusterNodeConfiguration timeoutIntervalInMs(final long timeoutIntervalInMs)
     {
         this.timeoutIntervalInMs = timeoutIntervalInMs;
         return this;
     }
 
-    public RaftNodeConfiguration acknowledgementStrategy(final AcknowledgementStrategy acknowledgementStrategy)
+    public ClusterNodeConfiguration acknowledgementStrategy(final AcknowledgementStrategy acknowledgementStrategy)
     {
         this.acknowledgementStrategy = acknowledgementStrategy;
         return this;
     }
 
-    public RaftNodeConfiguration fragmentHandler(final FragmentHandler fragmentHandler)
+    public ClusterNodeConfiguration fragmentHandler(final FragmentHandler fragmentHandler)
     {
         this.fragmentHandler = fragmentHandler;
         return this;
     }
 
-    public RaftNodeConfiguration aeron(final Aeron aeron)
+    public ClusterNodeConfiguration aeron(final Aeron aeron)
     {
         this.aeron = aeron;
         return this;
     }
 
-    public RaftNodeConfiguration idleStrategy(final IdleStrategy idleStrategy)
+    public ClusterNodeConfiguration idleStrategy(final IdleStrategy idleStrategy)
     {
         this.idleStrategy = idleStrategy;
         return this;
     }
 
-    public RaftNodeConfiguration maxClaimAttempts(final int maxClaimAttempts)
+    public ClusterNodeConfiguration maxClaimAttempts(final int maxClaimAttempts)
     {
         this.maxClaimAttempts = maxClaimAttempts;
         return this;
     }
 
-    public RaftNodeConfiguration failCounter(final AtomicCounter failCounter)
+    public ClusterNodeConfiguration failCounter(final AtomicCounter failCounter)
     {
         this.failCounter = failCounter;
         return this;
     }
 
-    public RaftNodeConfiguration archiveReader(final ArchiveReader archiveReader)
+    public ClusterNodeConfiguration archiveReader(final ArchiveReader archiveReader)
     {
         this.archiveReader = archiveReader;
         return this;
     }
 
-    public RaftNodeConfiguration archiver(final Archiver archiver)
+    public ClusterNodeConfiguration archiver(final Archiver archiver)
     {
         this.archiver = archiver;
         return this;
     }
 
-    public RaftNodeConfiguration raftTransport(final RaftTransport raftTransport)
+    public ClusterNodeConfiguration raftTransport(final RaftTransport raftTransport)
     {
         this.raftTransport = raftTransport;
         return this;

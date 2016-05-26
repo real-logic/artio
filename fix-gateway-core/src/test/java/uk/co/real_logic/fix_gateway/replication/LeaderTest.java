@@ -43,7 +43,7 @@ public class LeaderTest
     private static final short FOLLOWER_ID = 4;
 
     private RaftPublication controlPublication = mock(RaftPublication.class);
-    private RaftNode raftNode = mock(RaftNode.class);
+    private ClusterNode clusterNode = mock(ClusterNode.class);
     private Subscription acknowledgementSubscription = mock(Subscription.class);
     private Subscription dataSubscription = mock(Subscription.class);
     private Image leaderDataImage = mock(Image.class);
@@ -59,7 +59,7 @@ public class LeaderTest
         ID,
         new EntireClusterAcknowledgementStrategy(),
         new IntHashSet(40, -1),
-        raftNode,
+        clusterNode,
         mock(FragmentHandler.class),
         0,
         HEARTBEAT_INTERVAL_IN_MS,

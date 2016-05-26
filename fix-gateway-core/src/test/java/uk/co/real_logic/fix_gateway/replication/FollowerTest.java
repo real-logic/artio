@@ -56,7 +56,7 @@ public class FollowerTest
     private FragmentHandler handler = mock(FragmentHandler.class);
     private SessionArchiver leaderArchiver = mock(SessionArchiver.class);
     private Subscription controlSubscription = mock(Subscription.class);
-    private RaftNode raftNode = mock(RaftNode.class);
+    private ClusterNode clusterNode = mock(ClusterNode.class);
     private ArchiveReader archiveReader = mock(ArchiveReader.class);
     private ArchiveReader.SessionReader sessionReader = mock(ArchiveReader.SessionReader.class);
     private Archiver archiver = mock(Archiver.class);
@@ -69,7 +69,7 @@ public class FollowerTest
     private Follower follower = new Follower(
         ID,
         handler,
-        raftNode,
+        clusterNode,
         0,
         VOTE_TIMEOUT,
         termState,

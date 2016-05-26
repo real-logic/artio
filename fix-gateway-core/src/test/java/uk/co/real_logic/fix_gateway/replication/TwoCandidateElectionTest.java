@@ -39,9 +39,9 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
     {
         termState3.leaderSessionId(DATA_SESSION_ID);
 
-        node1 = candidate((short) 1, raftNode1, termState1);
-        node2 = candidate((short) 2, raftNode2, termState2);
-        node3 = follower((short) 3, raftNode3, mock(FragmentHandler.class), termState3);
+        node1 = candidate((short) 1, clusterNode1, termState1);
+        node2 = candidate((short) 2, clusterNode2, termState2);
+        node3 = follower((short) 3, clusterNode3, mock(FragmentHandler.class), termState3);
     }
 
     @Test
@@ -57,7 +57,7 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
 
         runElection();
 
-        electionResultsAre(raftNode2, raftNode1);
+        electionResultsAre(clusterNode2, clusterNode1);
     }
 
     @Test
@@ -78,7 +78,7 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
 
         runElection();
 
-        electionResultsAre(raftNode2, raftNode1);
+        electionResultsAre(clusterNode2, clusterNode1);
     }
 
     @Test
@@ -93,7 +93,7 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
 
         runElection();
 
-        electionResultsAre(raftNode1, raftNode2);
+        electionResultsAre(clusterNode1, clusterNode2);
     }
 
     @Test
@@ -104,14 +104,14 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
         electCandidateWithCorrectTerm();
     }
 
-    private void electionResultsAre(final RaftNode leader, final RaftNode follower)
+    private void electionResultsAre(final ClusterNode leader, final ClusterNode follower)
     {
         transitionsToLeader(leader);
         staysLeader(leader);
 
         staysFollower(follower);
 
-        staysFollower(raftNode3);
+        staysFollower(clusterNode3);
     }
 
     private void runElection()
@@ -119,10 +119,11 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
         run(node1, node2, node3);
     }
 
-    private Candidate candidate(final short id, final RaftNode raftNode, final TermState termState)
+    private Candidate candidate(final short id, final ClusterNode clusterNode, final TermState termState)
     {
-        return new Candidate(id, DATA_SESSION_ID, raftNode, CLUSTER_SIZE, TIMEOUT, termState, new QuorumAcknowledgementStrategy())
+        final QuorumAcknowledgementStrategy ackStrategy = new QuorumAcknowledgementStrategy();
+        return new Candidate(id, DATA_SESSION_ID, clusterNode, CLUSTER_SIZE, TIMEOUT, termState, ackStrategy)
                     .controlSubscription(controlSubscription())
-                    .controlPublication(raftPublication(RaftNodeConfiguration.DEFAULT_CONTROL_STREAM_ID));
+                    .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID));
     }
 }

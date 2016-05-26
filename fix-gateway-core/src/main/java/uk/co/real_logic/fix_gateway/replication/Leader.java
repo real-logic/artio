@@ -45,7 +45,7 @@ public class Leader implements Role, RaftHandler
     private final short nodeId;
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final RaftSubscription raftSubscription;
-    private final RaftNode raftNode;
+    private final ClusterNode clusterNode;
     private final FragmentHandler handler;
     private final long heartbeatIntervalInMs;
     private final ArchiveReader archiveReader;
@@ -84,7 +84,7 @@ public class Leader implements Role, RaftHandler
         final short nodeId,
         final AcknowledgementStrategy acknowledgementStrategy,
         final IntHashSet followers,
-        final RaftNode raftNode,
+        final ClusterNode clusterNode,
         final FragmentHandler handler,
         final long timeInMs,
         final long heartbeatIntervalInMs,
@@ -95,7 +95,7 @@ public class Leader implements Role, RaftHandler
     {
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
-        this.raftNode = raftNode;
+        this.clusterNode = clusterNode;
         this.handler = handler;
         this.termState = termState;
         this.ourSessionId = ourSessionId;
@@ -310,7 +310,7 @@ public class Leader implements Role, RaftHandler
             .lastAppliedPosition(lastAppliedPosition)
             .receivedPosition(lastAppliedPosition);
 
-        raftNode.transitionToFollower(this, votedFor, timeInMs);
+        clusterNode.transitionToFollower(this, votedFor, timeInMs);
     }
 
     public Leader getsElected(final long timeInMs)

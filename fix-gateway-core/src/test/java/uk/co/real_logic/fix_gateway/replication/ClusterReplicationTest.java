@@ -205,30 +205,30 @@ public class ClusterReplicationTest
 
     private void assertBecomesCandidate(final NodeRunner ... nodes)
     {
-        assertBecomes(RaftNode::isCandidate, allNodes, nodes);
+        assertBecomes(ClusterNode::isCandidate, allNodes, nodes);
     }
 
     private void assertBecomesFollower(final NodeRunner ... nodes)
     {
-        assertBecomes(RaftNode::isFollower, allNodes, nodes);
+        assertBecomes(ClusterNode::isFollower, allNodes, nodes);
     }
 
     private void assertBecomes(
-        final Predicate<RaftNode> predicate,
+        final Predicate<ClusterNode> predicate,
         final NodeRunner[] toPoll,
         final NodeRunner... nodes)
     {
-        final RaftNode[] raftNodes = getRaftNodes(nodes);
-        while (!allMatch(raftNodes, predicate))
+        final ClusterNode[] clusterNodes = getRaftNodes(nodes);
+        while (!allMatch(clusterNodes, predicate))
         {
             poll(toPoll);
         }
-        assertTrue(allMatch(raftNodes, predicate));
+        assertTrue(allMatch(clusterNodes, predicate));
     }
 
-    private RaftNode[] getRaftNodes(final NodeRunner[] nodes)
+    private ClusterNode[] getRaftNodes(final NodeRunner[] nodes)
     {
-        return Stream.of(nodes).map(NodeRunner::raftNode).toArray(RaftNode[]::new);
+        return Stream.of(nodes).map(NodeRunner::raftNode).toArray(ClusterNode[]::new);
     }
 
     private static <T> boolean allMatch(final T[] values, final Predicate<T> predicate)
@@ -297,7 +297,7 @@ public class ClusterReplicationTest
 
     private void assertIsFollower(final NodeRunner follower)
     {
-        final RaftNode node = follower.raftNode();
+        final ClusterNode node = follower.raftNode();
         assertTrue(node.nodeId() + " no longer follower", node.isFollower());
     }
 
@@ -308,7 +308,7 @@ public class ClusterReplicationTest
 
     private long sendMessageTo(final NodeRunner leader)
     {
-        final ConsistentPublication publication = leader.raftNode().publication();
+        final ClusterablePublication publication = leader.raftNode().publication();
 
         long position = 0;
         while (position <= 0)

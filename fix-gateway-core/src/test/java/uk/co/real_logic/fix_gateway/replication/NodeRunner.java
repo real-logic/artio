@@ -37,7 +37,7 @@ import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
-import static uk.co.real_logic.fix_gateway.replication.RaftNodeConfiguration.DEFAULT_DATA_STREAM_ID;
+import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
 
 class NodeRunner implements AutoCloseable
 {
@@ -49,7 +49,7 @@ class NodeRunner implements AutoCloseable
 
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
-    private final RaftNode raftNode;
+    private final ClusterNode clusterNode;
     private final int nodeId;
 
     private long replicatedPosition = -1;
@@ -88,7 +88,7 @@ class NodeRunner implements AutoCloseable
         final Archiver archiver = new Archiver(
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
 
-        final RaftNodeConfiguration configuration = new RaftNodeConfiguration()
+        final ClusterNodeConfiguration configuration = new ClusterNodeConfiguration()
             .nodeId((short) nodeId)
             .aeron(aeron)
             .otherNodes(otherNodeIds)
@@ -103,7 +103,7 @@ class NodeRunner implements AutoCloseable
             .archiver(archiver)
             .archiveReader(archiveReader);
 
-        raftNode = new RaftNode(configuration, System.currentTimeMillis());
+        clusterNode = new ClusterNode(configuration, System.currentTimeMillis());
     }
 
     private SendChannelEndpointSupplier newSendChannelEndpointSupplier()
@@ -122,7 +122,7 @@ class NodeRunner implements AutoCloseable
 
     public int poll(final int fragmentLimit, final long timeInMs)
     {
-        return raftNode.poll(fragmentLimit, timeInMs);
+        return clusterNode.poll(fragmentLimit, timeInMs);
     }
 
     public void dropFrames(final boolean dropFrames)
@@ -140,12 +140,12 @@ class NodeRunner implements AutoCloseable
 
     public boolean isLeader()
     {
-        return raftNode.isLeader();
+        return clusterNode.isLeader();
     }
 
-    public RaftNode raftNode()
+    public ClusterNode raftNode()
     {
-        return raftNode;
+        return clusterNode;
     }
 
     public long replicatedPosition()

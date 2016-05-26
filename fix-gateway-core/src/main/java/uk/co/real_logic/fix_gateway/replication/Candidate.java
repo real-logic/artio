@@ -34,7 +34,7 @@ public class Candidate implements Role, RaftHandler
     private final TermState termState;
     private final short nodeId;
     private final int sessionId;
-    private final RaftNode raftNode;
+    private final ClusterNode clusterNode;
     private final int clusterSize;
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final IntHashSet votesFor;
@@ -48,7 +48,7 @@ public class Candidate implements Role, RaftHandler
 
     public Candidate(final short nodeId,
                      final int sessionId,
-                     final RaftNode raftNode,
+                     final ClusterNode clusterNode,
                      final int clusterSize,
                      final long voteTimeout,
                      final TermState termState,
@@ -56,7 +56,7 @@ public class Candidate implements Role, RaftHandler
     {
         this.nodeId = nodeId;
         this.sessionId = sessionId;
-        this.raftNode = raftNode;
+        this.clusterNode = clusterNode;
         this.clusterSize = clusterSize;
         this.acknowledgementStrategy = acknowledgementStrategy;
         this.voteTimeout = new RandomTimeout(voteTimeout, 0L);
@@ -142,7 +142,7 @@ public class Candidate implements Role, RaftHandler
                     .leadershipTerm(leaderShipTerm)
                     .leaderSessionId(sessionId);
 
-                raftNode.transitionToLeader(timeInMs);
+                clusterNode.transitionToLeader(timeInMs);
 
                 return Action.BREAK;
             }
@@ -193,7 +193,7 @@ public class Candidate implements Role, RaftHandler
             .leaderSessionId(leaderSessionId)
             .leadershipTerm(leaderShipTerm);
 
-        raftNode.transitionToFollower(this, votedFor, timeInMs);
+        clusterNode.transitionToFollower(this, votedFor, timeInMs);
     }
 
     public Action onResend(

@@ -26,41 +26,41 @@ import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasFluentProperty
 
 public final class ReplicationAsserts
 {
-    public static void transitionsToCandidate(final RaftNode raftNode)
+    public static void transitionsToCandidate(final ClusterNode clusterNode)
     {
-        verify(raftNode).transitionToCandidate(anyLong());
+        verify(clusterNode).transitionToCandidate(anyLong());
     }
 
-    public static void neverTransitionsToCandidate(final RaftNode raftNode)
+    public static void neverTransitionsToCandidate(final ClusterNode clusterNode)
     {
-        verify(raftNode, never()).transitionToCandidate(anyLong());
+        verify(clusterNode, never()).transitionToCandidate(anyLong());
     }
 
-    public static void neverTransitionsToFollower(final RaftNode raftNode)
+    public static void neverTransitionsToFollower(final ClusterNode clusterNode)
     {
-        verify(raftNode, never()).transitionToFollower(any(Leader.class), anyShort(), anyLong());
+        verify(clusterNode, never()).transitionToFollower(any(Leader.class), anyShort(), anyLong());
     }
 
-    public static void transitionsToLeader(final RaftNode raftNode)
+    public static void transitionsToLeader(final ClusterNode clusterNode)
     {
-        verify(raftNode).transitionToLeader(anyLong());
+        verify(clusterNode).transitionToLeader(anyLong());
     }
 
-    public static void neverTransitionsToLeader(final RaftNode raftNode)
+    public static void neverTransitionsToLeader(final ClusterNode clusterNode)
     {
-        verify(raftNode, never()).transitionToLeader(anyLong());
+        verify(clusterNode, never()).transitionToLeader(anyLong());
     }
 
-    public static void staysFollower(final RaftNode raftNode)
+    public static void staysFollower(final ClusterNode clusterNode)
     {
-        neverTransitionsToCandidate(raftNode);
-        neverTransitionsToLeader(raftNode);
+        neverTransitionsToCandidate(clusterNode);
+        neverTransitionsToLeader(clusterNode);
     }
 
-    public static void staysLeader(final RaftNode raftNode)
+    public static void staysLeader(final ClusterNode clusterNode)
     {
-        neverTransitionsToCandidate(raftNode);
-        neverTransitionsToFollower(raftNode);
+        neverTransitionsToCandidate(clusterNode);
+        neverTransitionsToFollower(clusterNode);
     }
 
     public static Matcher<TermState> hasLeaderSessionId(final int leaderSessionId)

@@ -56,7 +56,7 @@ public class ScenariosTest
     private static final short FOLLOWER_1_ID = 4;
     private static final short FOLLOWER_2_ID = 5;
 
-    private final RaftNode raftNode = mock(RaftNode.class);
+    private final ClusterNode clusterNode = mock(ClusterNode.class);
     private final RaftPublication controlPublication = mock(RaftPublication.class);
     private final RaftPublication acknowledgementPublication = mock(RaftPublication.class);
     private final Subscription controlSubscription = mock(Subscription.class);
@@ -242,7 +242,7 @@ public class ScenariosTest
             ID,
             new EntireClusterAcknowledgementStrategy(),
             new IntHashSet(40, -1),
-            raftNode,
+            clusterNode,
             mock(FragmentHandler.class),
             0,
             HEARTBEAT_INTERVAL_IN_MS,
@@ -269,7 +269,7 @@ public class ScenariosTest
         final Follower follower = new Follower(
             ID,
             fragmentHandler,
-            raftNode,
+            clusterNode,
             TIME,
             TIMEOUT_IN_MS,
             termState,
@@ -293,7 +293,7 @@ public class ScenariosTest
             .commitPosition(POSITION);
 
         final Candidate candidate = new Candidate(
-            ID, SESSION_ID, raftNode, CLUSTER_SIZE, TIMEOUT_IN_MS, termState, new QuorumAcknowledgementStrategy());
+            ID, SESSION_ID, clusterNode, CLUSTER_SIZE, TIMEOUT_IN_MS, termState, new QuorumAcknowledgementStrategy());
 
         candidate
             .controlPublication(controlPublication)
@@ -319,7 +319,7 @@ public class ScenariosTest
         return namedEffect(
             (st) ->
             {
-                final RaftNode node = verify(st.raftNode, atLeastOnce());
+                final ClusterNode node = verify(st.clusterNode, atLeastOnce());
                 if (st.role instanceof Leader)
                 {
                     final Leader leader = (Leader)st.role;
@@ -331,8 +331,8 @@ public class ScenariosTest
                     node.transitionToFollower(eq(candidate), eq((short)votedFor), anyLong());
                 }
 
-                ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
-                ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
+                ReplicationAsserts.neverTransitionsToCandidate(st.clusterNode);
+                ReplicationAsserts.neverTransitionsToLeader(st.clusterNode);
             }, name);
     }
 
@@ -340,10 +340,10 @@ public class ScenariosTest
         namedEffect(
             (st) ->
             {
-                ReplicationAsserts.transitionsToCandidate(st.raftNode);
+                ReplicationAsserts.transitionsToCandidate(st.clusterNode);
 
-                ReplicationAsserts.neverTransitionsToFollower(st.raftNode);
-                ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
+                ReplicationAsserts.neverTransitionsToFollower(st.clusterNode);
+                ReplicationAsserts.neverTransitionsToLeader(st.clusterNode);
             },
             "transitionsToCandidate");
 
@@ -351,10 +351,10 @@ public class ScenariosTest
         namedEffect(
             (st) ->
             {
-                ReplicationAsserts.transitionsToLeader(st.raftNode);
+                ReplicationAsserts.transitionsToLeader(st.clusterNode);
 
-                ReplicationAsserts.neverTransitionsToFollower(st.raftNode);
-                ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
+                ReplicationAsserts.neverTransitionsToFollower(st.clusterNode);
+                ReplicationAsserts.neverTransitionsToCandidate(st.clusterNode);
             },
             "transitionsToLeader");
 
@@ -362,9 +362,9 @@ public class ScenariosTest
         namedEffect(
             (st) ->
             {
-                ReplicationAsserts.neverTransitionsToFollower(st.raftNode);
-                ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
-                ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
+                ReplicationAsserts.neverTransitionsToFollower(st.clusterNode);
+                ReplicationAsserts.neverTransitionsToLeader(st.clusterNode);
+                ReplicationAsserts.neverTransitionsToCandidate(st.clusterNode);
             }, "neverTransitions");
 
     public static Effect requestsVote =
@@ -372,9 +372,9 @@ public class ScenariosTest
             (st) ->
             {
                 st.requestsVote(LEADERSHIP_TERM);
-                ReplicationAsserts.neverTransitionsToFollower(st.raftNode);
-                ReplicationAsserts.neverTransitionsToCandidate(st.raftNode);
-                ReplicationAsserts.neverTransitionsToLeader(st.raftNode);
+                ReplicationAsserts.neverTransitionsToFollower(st.clusterNode);
+                ReplicationAsserts.neverTransitionsToCandidate(st.clusterNode);
+                ReplicationAsserts.neverTransitionsToLeader(st.clusterNode);
             }, "requestsVote");
 
     public static Stimulus oldTermLeaderHeartbeat =

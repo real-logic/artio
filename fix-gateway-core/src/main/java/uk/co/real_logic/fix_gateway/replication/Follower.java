@@ -40,7 +40,7 @@ public class Follower implements Role, RaftHandler
 
     private final short nodeId;
     private final FragmentHandler handler;
-    private final RaftNode raftNode;
+    private final ClusterNode clusterNode;
     private final TermState termState;
     private final ArchiveReader archiveReader;
     private final Archiver archiver;
@@ -62,7 +62,7 @@ public class Follower implements Role, RaftHandler
     public Follower(
         final short nodeId,
         final FragmentHandler handler,
-        final RaftNode raftNode,
+        final ClusterNode clusterNode,
         final long timeInMs,
         final long replyTimeoutInMs,
         final TermState termState,
@@ -71,7 +71,7 @@ public class Follower implements Role, RaftHandler
     {
         this.nodeId = nodeId;
         this.handler = handler;
-        this.raftNode = raftNode;
+        this.clusterNode = clusterNode;
         this.termState = termState;
         this.archiveReader = archiveReader;
         this.archiver = archiver;
@@ -102,7 +102,7 @@ public class Follower implements Role, RaftHandler
                 .leadershipTerm(leaderShipTerm)
                 .noLeader();
 
-            raftNode.transitionToCandidate(timeInMs);
+            clusterNode.transitionToCandidate(timeInMs);
 
             return 1;
         }

@@ -51,9 +51,9 @@ public class AbstractReplicationTest
     protected static final long TIME = 0L;
     protected static final int DATA_SESSION_ID = 43;
 
-    protected RaftNode raftNode1 = mock(RaftNode.class);
-    protected RaftNode raftNode2 = mock(RaftNode.class);
-    protected RaftNode raftNode3 = mock(RaftNode.class);
+    protected ClusterNode clusterNode1 = mock(ClusterNode.class);
+    protected ClusterNode clusterNode2 = mock(ClusterNode.class);
+    protected ClusterNode clusterNode3 = mock(ClusterNode.class);
 
     protected TermState termState1 = new TermState();
     protected TermState termState2 = new TermState();
@@ -64,17 +64,17 @@ public class AbstractReplicationTest
 
     protected Subscription controlSubscription()
     {
-        return aeron.addSubscription(IPC, RaftNodeConfiguration.DEFAULT_CONTROL_STREAM_ID);
+        return aeron.addSubscription(IPC, ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID);
     }
 
     protected Subscription acknowledgementSubscription()
     {
-        return aeron.addSubscription(IPC, RaftNodeConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID);
+        return aeron.addSubscription(IPC, ClusterNodeConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID);
     }
 
     protected Subscription dataSubscription()
     {
-        return aeron.addSubscription(IPC, RaftNodeConfiguration.DEFAULT_DATA_STREAM_ID);
+        return aeron.addSubscription(IPC, ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID);
     }
 
     protected RaftPublication raftPublication(final int streamId)
@@ -89,7 +89,7 @@ public class AbstractReplicationTest
 
     protected Publication dataPublication()
     {
-        return aeron.addPublication(IPC, RaftNodeConfiguration.DEFAULT_DATA_STREAM_ID);
+        return aeron.addPublication(IPC, ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID);
     }
 
     @Before
@@ -131,7 +131,7 @@ public class AbstractReplicationTest
 
     protected Follower follower(
         final short id,
-        final RaftNode raftNode,
+        final ClusterNode clusterNode,
         final FragmentHandler handler,
         final TermState termState)
     {
@@ -150,15 +150,15 @@ public class AbstractReplicationTest
         return new Follower(
             id,
             handler,
-            raftNode,
+            clusterNode,
             0,
             TIMEOUT,
             termState,
             archiveReader,
             archiver)
             .controlSubscription(controlSubscription())
-            .acknowledgementPublication(raftPublication(RaftNodeConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID))
-            .controlPublication(raftPublication(RaftNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
+            .acknowledgementPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID))
+            .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
             .follow(0);
     }
 

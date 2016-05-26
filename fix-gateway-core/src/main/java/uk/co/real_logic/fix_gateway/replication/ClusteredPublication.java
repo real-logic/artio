@@ -18,31 +18,25 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Publication;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.DirectBuffer;
-import org.agrona.concurrent.IdleStrategy;
 
 /**
- * A Consistent Publication is a publication that support the raft protocol and allows
+ * A Clustered Publication is a publication that support the raft protocol and allows
  * for publication of messages if you're the leader of the cluster.
  */
-public class ConsistentPublication
+public class ClusteredPublication extends ClusterablePublication
 {
-    /**
-     * May not yet be the leader, or the leader may not yet be ready to send
-     */
-    public static final long CANT_PUBLISH = -1005;
-
     private final Publication dataPublication;
-    private final RaftNode raftNode;
+    private final ClusterNode clusterNode;
 
-    public ConsistentPublication(final Publication dataPublication, final RaftNode raftNode)
+    public ClusteredPublication(final Publication dataPublication, final ClusterNode clusterNode)
     {
         this.dataPublication = dataPublication;
-        this.raftNode = raftNode;
+        this.clusterNode = clusterNode;
     }
 
     public long offer(final DirectBuffer buffer, final int offset, final int length)
     {
-        if (!raftNode.isPublishable())
+        if (!clusterNode.isPublishable())
         {
             return CANT_PUBLISH;
         }
@@ -52,7 +46,7 @@ public class ConsistentPublication
 
     public long tryClaim(final int length, final BufferClaim bufferClaim)
     {
-        if (!raftNode.isPublishable())
+        if (!clusterNode.isPublishable())
         {
             return CANT_PUBLISH;
         }
@@ -60,26 +54,8 @@ public class ConsistentPublication
         return dataPublication.tryClaim(length, bufferClaim);
     }
 
-    public long send(
-        final DirectBuffer buffer, final int offset, final int length, final IdleStrategy idleStrategy)
-    {
-        final long position = offer(buffer, offset, length);
-
-        while (position < commitPosition())
-        {
-            idleStrategy.idle();
-        }
-
-        return position;
-    }
-
     public long commitPosition()
     {
-        return raftNode.commitPosition();
-    }
-
-    public int sessionId()
-    {
-        return dataPublication.sessionId();
+        return clusterNode.commitPosition();
     }
 }

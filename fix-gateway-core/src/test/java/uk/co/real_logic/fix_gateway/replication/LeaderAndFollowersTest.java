@@ -94,7 +94,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             LEADER_ID,
             new EntireClusterAcknowledgementStrategy(),
             followers,
-            raftNode1,
+            clusterNode1,
             leaderHandler,
             0,
             HEARTBEAT_INTERVAL,
@@ -102,13 +102,13 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             leaderSessionId,
             archiveReader,
             archiver)
-            .controlPublication(raftPublication(RaftNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
+            .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
             .controlSubscription(controlSubscription())
             .acknowledgementSubscription(acknowledgementSubscription())
             .dataSubscription(dataSubscription());
 
-        follower1 = follower(FOLLOWER_1_ID, raftNode2, follower1Handler, termState2);
-        follower2 = follower(FOLLOWER_2_ID, raftNode3, mock(FragmentHandler.class), termState3);
+        follower1 = follower(FOLLOWER_1_ID, clusterNode2, follower1Handler, termState2);
+        follower2 = follower(FOLLOWER_2_ID, clusterNode3, mock(FragmentHandler.class), termState3);
     }
 
     @Test
@@ -200,8 +200,8 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         follower1.poll(FRAGMENT_LIMIT, afterTimeout);
         follower2.poll(FRAGMENT_LIMIT, afterTimeout);
 
-        ReplicationAsserts.transitionsToCandidate(raftNode2);
-        ReplicationAsserts.transitionsToCandidate(raftNode3);
+        ReplicationAsserts.transitionsToCandidate(clusterNode2);
+        ReplicationAsserts.transitionsToCandidate(clusterNode3);
     }
 
     @Test
@@ -213,7 +213,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
-        ReplicationAsserts.staysFollower(raftNode2);
+        ReplicationAsserts.staysFollower(clusterNode2);
     }
 
     @Test
@@ -223,7 +223,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
-        ReplicationAsserts.staysFollower(raftNode2);
+        ReplicationAsserts.staysFollower(clusterNode2);
     }
 
     @Test
