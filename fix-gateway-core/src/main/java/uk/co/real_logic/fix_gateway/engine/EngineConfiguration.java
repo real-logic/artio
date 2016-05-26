@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import org.agrona.CloseHelper;
+import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -110,6 +111,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile receivedSequenceNumberIndex;
     private MappedFile sessionIdBuffer;
     private String clusterAeronChannel = null;
+    private short nodeId;
+    private IntHashSet otherNodes = new IntHashSet(-1);
+    private long clusterTimeoutIntervalInMs;
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
@@ -382,6 +386,45 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Sets the node id for this node in the cluster.
+     *
+     * @param nodeId the node id for this node in the cluster.
+     * @return this
+     */
+    public EngineConfiguration nodeId(final short nodeId)
+    {
+        this.nodeId = nodeId;
+        return this;
+    }
+
+    /**
+     * Adds the specified node ids of the other nodes in this cluster.
+     *
+     * @param otherNodes the ids to be added
+     * @return this
+     */
+    public EngineConfiguration addOtherNodes(final int ... otherNodes)
+    {
+        for (int otherNode : otherNodes)
+        {
+            this.otherNodes.add(otherNode);
+        }
+        return this;
+    }
+
+    /**
+     * Set the timeout interval on the cluster in milliseconds.
+     *
+     * @param clusterTimeoutIntervalInMs the timeout interval on the cluster in milliseconds.
+     * @return this
+     */
+    public EngineConfiguration clusterTimeoutIntervalInMs(final long clusterTimeoutIntervalInMs)
+    {
+        this.clusterTimeoutIntervalInMs = clusterTimeoutIntervalInMs;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -505,6 +548,21 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public boolean isClustered()
     {
         return clusterAeronChannel() != null;
+    }
+
+    public short nodeId()
+    {
+        return nodeId;
+    }
+
+    public IntHashSet otherNodes()
+    {
+        return otherNodes;
+    }
+
+    public long clusterTimeoutIntervalInMs()
+    {
+        return clusterTimeoutIntervalInMs;
     }
 
     /**

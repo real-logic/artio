@@ -23,12 +23,12 @@ import org.agrona.DirectBuffer;
  * A Clustered Publication is a publication that support the raft protocol and allows
  * for publication of messages if you're the leader of the cluster.
  */
-public class ClusteredPublication extends ClusterablePublication
+public class ClusterPublication extends ClusterablePublication
 {
     private final Publication dataPublication;
     private final ClusterNode clusterNode;
 
-    public ClusteredPublication(final Publication dataPublication, final ClusterNode clusterNode)
+    public ClusterPublication(final Publication dataPublication, final ClusterNode clusterNode)
     {
         this.dataPublication = dataPublication;
         this.clusterNode = clusterNode;

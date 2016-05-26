@@ -26,7 +26,7 @@ public class ClusterNode extends ClusterableNode
 {
     private static final int HEARTBEAT_TO_TIMEOUT_RATIO = 5;
 
-    private final ClusteredPublication publication;
+    private final ClusterPublication publication;
     private final short nodeId;
     private final TermState termState = new TermState();
     private final Leader leader;
@@ -43,7 +43,7 @@ public class ClusterNode extends ClusterableNode
         this.nodeId = configuration.nodeId();
         this.transport = configuration.raftTransport();
         final Publication dataPublication = transport.leaderPublication();
-        this.publication = new ClusteredPublication(dataPublication, this);
+        this.publication = new ClusterPublication(dataPublication, this);
 
         final int ourSessionId = dataPublication.sessionId();
         final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
@@ -247,7 +247,7 @@ public class ClusterNode extends ClusterableNode
         return termState;
     }
 
-    public ClusteredPublication publication()
+    public ClusterPublication publication()
     {
         return publication;
     }
