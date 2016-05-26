@@ -302,7 +302,7 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
                 final GatewaySession session = setupConnection(
                         channel, connectionId, UNKNOWN, null, GATEWAY_LIBRARY_ID, ACCEPTOR, resetSequenceNumbers);
 
-                session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeout());
+                session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
 
                 gatewaySessions.acquire(
                     session,

@@ -109,6 +109,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile sentSequenceNumberIndex;
     private MappedFile receivedSequenceNumberIndex;
     private MappedFile sessionIdBuffer;
+    private String clusterAeronChannel = null;
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
@@ -128,7 +129,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         getInteger(SESSION_ID_BUFFER_SIZE_PROP, DEFAULT_SESSION_ID_BUFFER_SIZE);
     private int senderMaxBytesInBuffer =
         getInteger(SENDER_MAX_BYTES_IN_BUFFER_PROP, DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
-    private int noLogonDisconnectTimeout =
+    private int noLogonDisconnectTimeoutInMs =
         getInteger(NO_LOGON_DISCONNECT_TIMEOUT_PROP, DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT);
 
     /**
@@ -357,9 +358,27 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    public EngineConfiguration noLogonDisconnectTimeout(final int noLogonDisconnectTimeout)
+    /**
+     * Set the timeout in milliseconds for TCP connections which don't send a logon message.
+     *
+     * @param noLogonDisconnectTimeout the timeout in milliseconds for TCP connections which don't send a logon message
+     * @return this
+     */
+    public EngineConfiguration noLogonDisconnectTimeoutInMs(final int noLogonDisconnectTimeout)
     {
-        this.noLogonDisconnectTimeout = noLogonDisconnectTimeout;
+        this.noLogonDisconnectTimeoutInMs = noLogonDisconnectTimeout;
+        return this;
+    }
+
+    /**
+     * Sets the aeron channel to use for clustered communications.
+     *
+     * @param clusterAeronChannel the aeron channel to use for clustered communications.
+     * @return this
+     */
+    public EngineConfiguration clusterAeronChannel(final String clusterAeronChannel)
+    {
+        this.clusterAeronChannel = clusterAeronChannel;
         return this;
     }
 
@@ -473,9 +492,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return senderMaxBytesInBuffer;
     }
 
-    public int noLogonDisconnectTimeout()
+    public int noLogonDisconnectTimeoutInMs()
     {
-        return noLogonDisconnectTimeout;
+        return noLogonDisconnectTimeoutInMs;
     }
 
     /**
