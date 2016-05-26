@@ -33,7 +33,7 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 public class AbstractGatewayToGatewaySystemTest
 {
     protected int port = unusedPort();
-    protected int initAeronPort = unusedPort();
+    protected int libraryAeronPort = unusedPort();
 
     protected MediaDriver mediaDriver;
     protected FixEngine acceptingEngine;

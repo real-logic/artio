@@ -122,7 +122,7 @@ public class CommonConfiguration
     private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
     private int monitoringBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROPERTY, DEFAULT_MONITORING_BUFFER_LENGTH);
     private String monitoringFile = null;
-    private String aeronChannel = null;
+    private String libraryAeronChannel = null;
     private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
     private Aeron.Context aeronContext = new Aeron.Context();
     private int errorSlotSize = DEFAULT_ERROR_SLOT_SIZE;
@@ -315,9 +315,9 @@ public class CommonConfiguration
      * @param aeronChannel the channel used by aeron connections.
      * @return this
      */
-    public CommonConfiguration aeronChannel(final String aeronChannel)
+    public CommonConfiguration libraryAeronChannel(final String aeronChannel)
     {
-        this.aeronChannel = aeronChannel;
+        this.libraryAeronChannel = aeronChannel;
         return this;
     }
 
@@ -446,9 +446,9 @@ public class CommonConfiguration
         return monitoringFile;
     }
 
-    public String aeronChannel()
+    public String libraryAeronChannel()
     {
-        return aeronChannel;
+        return libraryAeronChannel;
     }
 
     public long replyTimeoutInMs()
@@ -514,9 +514,9 @@ public class CommonConfiguration
 
     protected void conclude(final String fixSuffix)
     {
-        if (aeronChannel() == null)
+        if (libraryAeronChannel() == null)
         {
-            throw new IllegalArgumentException("Missing required configuration: aeron channel");
+            throw new IllegalArgumentException("Missing required configuration: library aeron channel");
         }
 
         if (monitoringFile() == null)

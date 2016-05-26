@@ -43,7 +43,7 @@ public class ClusteredGatewaySystemTest
     private static final int CLUSTER_SIZE = 3;
 
     private List<Integer> ports;
-    private int initAeronPort = unusedPort();
+    private int libraryAeronPort = unusedPort();
 
     private MediaDriver mediaDriver;
 
@@ -71,7 +71,7 @@ public class ClusteredGatewaySystemTest
             .mapToObj(i -> unusedPort())
             .collect(toList());
 
-        // TODO: disconnect TCP connections when failing the machine
+        // TODO: be able to disconnect TCP connections when failing the machine
         acceptingEngineCluster = IntStream
             .range(0, CLUSTER_SIZE)
             .mapToObj(i ->
@@ -83,9 +83,9 @@ public class ClusteredGatewaySystemTest
             })
             .collect(toList());
 
-        initiatingEngine = launchInitiatingGateway(initAeronPort);
+        initiatingEngine = launchInitiatingGateway(libraryAeronPort);
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
-        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingHandler, 1);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
     }
 
     @Test

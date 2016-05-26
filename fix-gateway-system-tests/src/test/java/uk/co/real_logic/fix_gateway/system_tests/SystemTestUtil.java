@@ -172,24 +172,24 @@ public final class SystemTestUtil
         return reply.resultIfPresent();
     }
 
-    public static FixEngine launchInitiatingGateway(final int initAeronPort)
+    public static FixEngine launchInitiatingGateway(final int libraryAeronPort)
     {
         delete(CLIENT_LOGS);
-        return launchInitiatingGatewayWithSameLogs(initAeronPort);
+        return launchInitiatingGatewayWithSameLogs(libraryAeronPort);
     }
 
-    public static FixEngine launchInitiatingGatewayWithSameLogs(final int initAeronPort)
+    public static FixEngine launchInitiatingGatewayWithSameLogs(final int libraryAeronPort)
     {
-        final EngineConfiguration initiatingConfig = initiatingConfig(initAeronPort, "engineCounters");
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, "engineCounters");
         return FixEngine.launch(initiatingConfig);
     }
 
     public static EngineConfiguration initiatingConfig(
-        final int initAeronPort,
+        final int libraryAeronPort,
         final String countersSuffix)
     {
         return new EngineConfiguration()
-            .aeronChannel("udp://localhost:" + initAeronPort)
+            .libraryAeronChannel("udp://localhost:" + libraryAeronPort)
             .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + countersSuffix)
             .logFileDir(CLIENT_LOGS);
     }
@@ -204,16 +204,16 @@ public final class SystemTestUtil
     }
 
     public static EngineConfiguration acceptingConfig(
-        final int port,
+        final int libraryAeronPort,
         final String countersSuffix,
         final String acceptorId,
         final String initiatorId)
     {
-        return acceptingConfig(port, countersSuffix, acceptorId, initiatorId, ACCEPTOR_LOGS);
+        return acceptingConfig(libraryAeronPort, countersSuffix, acceptorId, initiatorId, ACCEPTOR_LOGS);
     }
 
     public static EngineConfiguration acceptingConfig(
-        final int port,
+        final int libraryAeronPort,
         final String countersSuffix,
         final String acceptorId,
         final String initiatorId,
@@ -222,8 +222,8 @@ public final class SystemTestUtil
         final EngineConfiguration configuration = new EngineConfiguration();
         setupAuthentication(acceptorId, initiatorId, configuration);
         return configuration
-            .bindTo("localhost", port)
-            .aeronChannel("aeron:ipc")
+            .bindTo("localhost", libraryAeronPort)
+            .libraryAeronChannel("aeron:ipc")
             .monitoringFile(acceptorMonitoringFile(countersSuffix))
             .logFileDir(acceptorLogs);
     }
@@ -246,7 +246,7 @@ public final class SystemTestUtil
             .sessionExistsHandler(sessionHandler)
             .sessionAcquireHandler(sessionHandler)
             .sentPositionHandler(sessionHandler)
-            .aeronChannel(IPC_CHANNEL)
+            .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "accLibraryCounters");
 
         return libraryConfiguration;
@@ -295,7 +295,7 @@ public final class SystemTestUtil
     }
 
     public static FixLibrary newInitiatingLibrary(
-        final int initAeronPort,
+        final int libraryAeronPort,
         final FakeHandler sessionHandler,
         final int libraryId)
     {
@@ -304,7 +304,7 @@ public final class SystemTestUtil
                 .libraryId(libraryId)
                 .sessionAcquireHandler(sessionHandler)
                 .sentPositionHandler(sessionHandler)
-                .aeronChannel("udp://localhost:" + initAeronPort)
+                .libraryAeronChannel("udp://localhost:" + libraryAeronPort)
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters-" + libraryId));
     }
 
@@ -361,9 +361,10 @@ public final class SystemTestUtil
         });
     }
 
-    public static SessionReplyStatus acquireSession(final FixLibrary library,
-                                                    final long sessionId,
-                                                    final int lastReceivedMsgSeqNum)
+    public static SessionReplyStatus acquireSession(
+        final FixLibrary library,
+        final long sessionId,
+        final int lastReceivedMsgSeqNum)
     {
         final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, lastReceivedMsgSeqNum);
         awaitReply(library, reply);

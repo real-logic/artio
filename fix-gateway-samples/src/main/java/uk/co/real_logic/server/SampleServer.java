@@ -56,7 +56,7 @@ public final class SampleServer
         final String aeronChannel = "udp://localhost:10000";
         final EngineConfiguration configuration = new EngineConfiguration()
             .bindTo("localhost", 9999)
-            .aeronChannel(aeronChannel);
+            .libraryAeronChannel(aeronChannel);
         configuration.authenticationStrategy(authenticationStrategy);
 
         cleanupOldLogFileDir(configuration);
@@ -74,7 +74,7 @@ public final class SampleServer
                 // that receives messages for new sessions
                 .sessionAcquireHandler(SampleServer::onConnect)
                 .sessionExistsHandler(new AcquiringSessionExistsHandler())
-                .aeronChannel(aeronChannel)))
+                .libraryAeronChannel(aeronChannel)))
             {
                 final AtomicBoolean running = new AtomicBoolean(true);
                 SigInt.register(() -> running.set(false));

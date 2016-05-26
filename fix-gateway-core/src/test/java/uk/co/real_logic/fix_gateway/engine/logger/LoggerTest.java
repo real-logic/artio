@@ -118,7 +118,7 @@ public class LoggerTest
 
         configuration = new EngineConfiguration()
             .logInboundMessages(false)
-            .aeronChannel(CHANNEL);
+            .libraryAeronChannel(CHANNEL);
 
         final File dir = new File(configuration.logFileDir());
         if (dir.exists())

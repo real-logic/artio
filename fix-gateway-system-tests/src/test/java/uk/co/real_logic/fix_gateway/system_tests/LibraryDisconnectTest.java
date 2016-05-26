@@ -36,10 +36,10 @@ public class LibraryDisconnectTest extends AbstractGatewayToGatewaySystemTest
         acceptingEngine = FixEngine.launch(
             acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID)
               .replyTimeoutInMs(600));
-        initiatingEngine = launchInitiatingGateway(initAeronPort);
+        initiatingEngine = launchInitiatingGateway(libraryAeronPort);
 
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
-        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingHandler, 1);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
 
         wireSessions();
     }

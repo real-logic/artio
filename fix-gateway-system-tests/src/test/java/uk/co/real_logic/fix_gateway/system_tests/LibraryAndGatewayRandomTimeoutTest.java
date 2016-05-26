@@ -95,7 +95,7 @@ public class LibraryAndGatewayRandomTimeoutTest
             new LibraryConfiguration()
                 .replyTimeoutInMs(5000)
                 .sessionAcquireHandler(initiatingSessionHandler)
-                .aeronChannel("udp://localhost:" + aeronPort)
+                .libraryAeronChannel("udp://localhost:" + aeronPort)
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters"));
     }
 

@@ -51,10 +51,10 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
         acceptingEngine = FixEngine.launch(config);
-        initiatingEngine = launchInitiatingGateway(initAeronPort);
+        initiatingEngine = launchInitiatingGateway(libraryAeronPort);
 
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
-        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingHandler, 1);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
 
         connectSessions();
     }
@@ -158,7 +158,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final FakeOtfAcceptor initiatingOtfAcceptor2 = new FakeOtfAcceptor();
         final FakeHandler initiatingSessionHandler2 = new FakeHandler(initiatingOtfAcceptor2);
-        try (final FixLibrary library2 = newInitiatingLibrary(initAeronPort, initiatingSessionHandler2, 2))
+        try (final FixLibrary library2 = newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2, 2))
         {
             acceptingHandler.clearConnections();
             final Session session2 = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID).resultIfPresent();

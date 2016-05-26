@@ -481,9 +481,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * {@inheritDoc}
      */
-    public EngineConfiguration aeronChannel(final String aeronChannel)
+    public EngineConfiguration libraryAeronChannel(final String aeronChannel)
     {
-        super.aeronChannel(aeronChannel);
+        super.libraryAeronChannel(aeronChannel);
         return this;
     }
 

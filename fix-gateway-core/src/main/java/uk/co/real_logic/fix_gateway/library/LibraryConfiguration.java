@@ -186,9 +186,9 @@ public final class LibraryConfiguration extends CommonConfiguration
     /**
      * {@inheritDoc}
      */
-    public LibraryConfiguration aeronChannel(final String aeronChannel)
+    public LibraryConfiguration libraryAeronChannel(final String aeronChannel)
     {
-        super.aeronChannel(aeronChannel);
+        super.libraryAeronChannel(aeronChannel);
         return this;
     }
 

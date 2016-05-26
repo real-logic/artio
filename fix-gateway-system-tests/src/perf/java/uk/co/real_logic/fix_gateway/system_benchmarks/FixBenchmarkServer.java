@@ -76,7 +76,7 @@ public final class FixBenchmarkServer
         setupAuthentication(configuration);
         return configuration
             .bindTo("localhost", BenchmarkConfiguration.PORT)
-            .aeronChannel(AERON_CHANNEL)
+            .libraryAeronChannel(AERON_CHANNEL)
             .logFileDir(acceptorLogs)
             .logInboundMessages(LOG_INBOUND_MESSAGES)
             .logOutboundMessages(LOG_OUTBOUND_MESSAGES)
@@ -88,7 +88,7 @@ public final class FixBenchmarkServer
         final LibraryConfiguration configuration = new LibraryConfiguration();
         setupAuthentication(configuration);
         return configuration
-            .aeronChannel(AERON_CHANNEL)
+            .libraryAeronChannel(AERON_CHANNEL)
             .sessionAcquireHandler(session -> new BenchmarkSessionHandler())
             .sessionExistsHandler(new AcquiringSessionExistsHandler());
     }

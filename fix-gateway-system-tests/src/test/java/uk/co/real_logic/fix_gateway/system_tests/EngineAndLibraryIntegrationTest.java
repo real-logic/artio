@@ -223,7 +223,7 @@ public class EngineAndLibraryIntegrationTest
             .libraryId(libraryId)
             .authenticationStrategy(authenticationStrategy)
             .messageValidationStrategy(validationStrategy)
-            .aeronChannel(IPC_CHANNEL)
+            .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(monitoringFile)
             .replyTimeoutInMs(TIMEOUT_IN_MS);
 

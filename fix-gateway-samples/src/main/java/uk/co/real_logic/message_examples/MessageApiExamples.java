@@ -46,7 +46,7 @@ public final class MessageApiExamples
     {
         // Static configuration lasts the duration of a FIX-Gateway instance
         final EngineConfiguration configuration = new EngineConfiguration()
-            .aeronChannel(AERON_CHANNEL);
+            .libraryAeronChannel(AERON_CHANNEL);
 
         final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(TARGET_COMP_ID)
             .and(new SenderCompIdValidationStrategy(asList(SENDER_COMP_ID)));
@@ -60,7 +60,7 @@ public final class MessageApiExamples
         {
             final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
             libraryConfiguration
-                .aeronChannel(AERON_CHANNEL)
+                .libraryAeronChannel(AERON_CHANNEL)
                 .messageValidationStrategy(validationStrategy)
                 .authenticationStrategy(authenticationStrategy);
 

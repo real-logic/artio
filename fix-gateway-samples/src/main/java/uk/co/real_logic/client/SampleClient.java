@@ -34,7 +34,7 @@ public final class SampleClient
         // Static configuration lasts the duration of a FIX-Gateway instance
         final String aeronChannel = "udp://localhost:10002";
         final EngineConfiguration configuration = new EngineConfiguration()
-            .aeronChannel(aeronChannel)
+            .libraryAeronChannel(aeronChannel)
             .bindTo("localhost", 10001);
 
         cleanupOldLogFileDir(configuration);
@@ -52,7 +52,7 @@ public final class SampleClient
 
             try (final FixLibrary library = FixLibrary.connect(new LibraryConfiguration()
                 .sessionAcquireHandler(SampleClient::onConnect)
-                .aeronChannel(aeronChannel)))
+                .libraryAeronChannel(aeronChannel)))
             {
                 final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
                 final Reply<Session> reply = library.initiate(sessionConfig);

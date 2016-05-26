@@ -75,13 +75,13 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
         config.acceptorSequenceNumbersResetUponReconnect(false);
         acceptingEngine = FixEngine.launch(config);
-        initiatingEngine = launchInitiatingGatewayWithSameLogs(initAeronPort);
+        initiatingEngine = launchInitiatingGatewayWithSameLogs(libraryAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig =
             acceptingLibraryConfig(acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor");
         acceptingLibraryConfig.acceptorSequenceNumbersResetUponReconnect(false);
         acceptingLibrary = FixLibrary.connect(acceptingLibraryConfig);
-        initiatingLibrary = newInitiatingLibrary(initAeronPort, initiatingHandler, 1);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
 
         if (reset)
         {
