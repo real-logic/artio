@@ -16,8 +16,12 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Publication;
+import org.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * .
@@ -48,13 +52,21 @@ public class ClusterNode extends ClusterableNode
         final int ourSessionId = dataPublication.sessionId();
         final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
         final long heartbeatTimeInMs = timeoutIntervalInMs / HEARTBEAT_TO_TIMEOUT_RATIO;
-        final int clusterSize = configuration.otherNodes().size() + 1;
+        final IntHashSet otherNodes = configuration.otherNodes();
+        final int clusterSize = otherNodes.size() + 1;
         final ArchiveReader archiveReader = configuration.archiveReader();
+        final AcknowledgementStrategy acknowledgementStrategy = configuration.acknowledgementStrategy();
+        final Archiver archiver = configuration.archiver();
+
+        requireNonNull(otherNodes, "otherNodes");
+        requireNonNull(acknowledgementStrategy, "acknowledgementStrategy");
+        requireNonNull(archiveReader, "archiveReader");
+        requireNonNull(archiver, "archiver");
 
         leader = new Leader(
             nodeId,
-            configuration.acknowledgementStrategy(),
-            configuration.otherNodes(),
+            acknowledgementStrategy,
+            otherNodes,
             this,
             configuration.fragmentHandler(),
             timeInMs,
@@ -62,7 +74,7 @@ public class ClusterNode extends ClusterableNode
             termState,
             ourSessionId,
             archiveReader,
-            configuration.archiver());
+            archiver);
 
         candidate = new Candidate(
             nodeId,
@@ -71,7 +83,7 @@ public class ClusterNode extends ClusterableNode
             clusterSize,
             timeoutIntervalInMs,
             termState,
-            configuration.acknowledgementStrategy());
+            acknowledgementStrategy);
 
         follower = new Follower(
             nodeId,
@@ -81,7 +93,7 @@ public class ClusterNode extends ClusterableNode
             timeoutIntervalInMs,
             termState,
             archiveReader,
-            configuration.archiver());
+            archiver);
 
         transport.initialiseRoles(leader, candidate, follower);
 

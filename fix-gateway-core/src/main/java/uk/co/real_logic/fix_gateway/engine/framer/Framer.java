@@ -34,6 +34,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.*;
+import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -102,6 +103,7 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
     private final Subscription outboundSlowSubscription;
     private final Subscription replaySubscription;
     private final GatewayPublication inboundPublication;
+    private final ClusterableNode clusterableNode;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
     private final QueuedPipe<AdminCommand> adminCommands;
@@ -136,7 +138,8 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
         final GatewaySessions gatewaySessions,
         final ReplayQuery inboundMessages,
         final ErrorHandler errorHandler,
-        final GatewayPublication outboundPublication)
+        final GatewayPublication outboundPublication,
+        final ClusterableNode clusterableNode)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
@@ -151,6 +154,7 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
         this.outboundPublication = outboundPublication;
         this.outboundSlowSubscription = outboundSlowSubscription;
         this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
+        this.clusterableNode = clusterableNode;
         this.senderEndPoints = new SenderEndPoints(inboundPublication);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;

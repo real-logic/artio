@@ -63,12 +63,16 @@ public class RaftTransport
 
     private Publication publication(final StreamIdentifier id)
     {
-        return configuration.aeron().addPublication(id.channel(), id.streamId());
+        return configuration
+            .aeron()
+            .addPublication(id.channel(), id.streamId());
     }
 
     private Subscription subscription(final StreamIdentifier id)
     {
-        return configuration.aeron().addSubscription(id.channel(), id.streamId());
+        return configuration
+            .aeron()
+            .addSubscription(id.channel(), id.streamId());
     }
 
     private RaftPublication raftPublication(final StreamIdentifier id)

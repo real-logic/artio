@@ -25,6 +25,10 @@ import uk.co.real_logic.fix_gateway.engine.framer.*;
 import uk.co.real_logic.fix_gateway.engine.logger.Logger;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexWriter;
+import uk.co.real_logic.fix_gateway.replication.ClusterNode;
+import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;
+import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
+import uk.co.real_logic.fix_gateway.replication.SoloNode;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.timing.EngineTimers;
 
@@ -55,6 +59,7 @@ public final class FixEngine extends GatewayProcess
 
     private AgentRunner framerRunner;
     private Logger logger;
+    private ClusterableNode clusterableNode;
 
     /**
      * Launch the engine. This method starts up the engine threads and then returns.
@@ -140,9 +145,40 @@ public final class FixEngine extends GatewayProcess
         this.configuration = configuration;
 
         newLogger(configuration);
-        initFramer(configuration, fixCounters);
         logger.init();
+        initClustering(configuration);
+        initFramer(configuration, fixCounters);
         initMonitoringAgent(timers.all(), configuration);
+    }
+
+    private void initClustering(final EngineConfiguration configuration)
+    {
+        if (configuration.isClustered())
+        {
+            if (!configuration.logInboundMessages() || !configuration.logOutboundMessages())
+            {
+                throw new IllegalArgumentException(
+                    "If you are enabling clustering, then you must enable both inbound and outbound logging");
+            }
+
+            final ClusterNodeConfiguration clusterNodeConfiguration = new ClusterNodeConfiguration()
+                .nodeId(configuration.nodeId())
+                .otherNodes(configuration.otherNodes())
+                .timeoutIntervalInMs(configuration.clusterTimeoutIntervalInMs())
+                .idleStrategy(configuration.framerIdleStrategy())
+                .archiver(logger.inboundArchiver())
+                .archiveReader(logger.inboundArchiveReader())
+                .failCounter(fixCounters.failedInboundPublications())
+                .maxClaimAttempts(configuration.inboundMaxClaimAttempts())
+                .aeronChannel(configuration.clusterAeronChannel())
+                .aeron(aeron);
+
+            clusterableNode = new ClusterNode(clusterNodeConfiguration, System.currentTimeMillis());
+        }
+        else
+        {
+            clusterableNode = new SoloNode(aeron, configuration.libraryAeronChannel());
+        }
     }
 
     private void newLogger(final EngineConfiguration configuration)
@@ -207,7 +243,8 @@ public final class FixEngine extends GatewayProcess
             gatewaySessions,
             logger.inboundReplayQuery(),
             errorHandler,
-            outboundLibraryStreams.gatewayPublication(idleStrategy)
+            outboundLibraryStreams.gatewayPublication(idleStrategy),
+            clusterableNode
         );
         framerRunner = new AgentRunner(idleStrategy, errorHandler, null, framer);
     }

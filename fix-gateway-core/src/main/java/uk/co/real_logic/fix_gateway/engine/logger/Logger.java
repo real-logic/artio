@@ -53,6 +53,8 @@ public class Logger implements AutoCloseable
     private AgentRunner loggingRunner;
     private ArchiveReader outboundArchiveReader;
     private ArchiveReader inboundArchiveReader;
+    private Archiver inboundArchiver;
+    private Archiver outboundArchiver;
 
     public Logger(
         final EngineConfiguration configuration,
@@ -171,14 +173,14 @@ public class Logger implements AutoCloseable
         if (configuration.logInboundMessages())
         {
             final Subscription inboundSubscription = inboundLibraryStreams.subscription();
-            addArchiver(cacheNumSets, cacheSetSize, inboundSubscription);
+            inboundArchiver = addArchiver(cacheNumSets, cacheSetSize, inboundSubscription);
             inboundArchiveReader = archiveReader(logFileDir, inboundSubscription);
         }
 
         if (configuration.logOutboundMessages())
         {
             final Subscription outboundSubscription = outboundLibraryStreams.subscription();
-            addArchiver(cacheNumSets, cacheSetSize, outboundSubscription);
+            outboundArchiver = addArchiver(cacheNumSets, cacheSetSize, outboundSubscription);
             outboundArchiveReader = archiveReader(logFileDir, outboundSubscription);
         }
     }
@@ -197,9 +199,9 @@ public class Logger implements AutoCloseable
         return new AgentRunner(configuration.loggerIdleStrategy(), errorHandler, null, loggingAgent);
     }
 
-    private void addArchiver(final int cacheNumSets,
-                             final int cacheSetSize,
-                             final Subscription subscription)
+    private Archiver addArchiver(final int cacheNumSets,
+                                 final int cacheSetSize,
+                                 final Subscription subscription)
     {
         final Archiver archiver = new Archiver(
             LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
@@ -208,6 +210,7 @@ public class Logger implements AutoCloseable
             new StreamIdentifier(subscription))
             .subscription(subscription);
         archivers.add(archiver);
+        return archiver;
     }
 
     public List<Archiver> archivers()
@@ -218,6 +221,21 @@ public class Logger implements AutoCloseable
     public ArchiveReader outboundArchiveReader()
     {
         return outboundArchiveReader;
+    }
+
+    public ArchiveReader inboundArchiveReader()
+    {
+        return inboundArchiveReader;
+    }
+
+    public Archiver outboundArchiver()
+    {
+        return outboundArchiver;
+    }
+
+    public Archiver inboundArchiver()
+    {
+        return inboundArchiver;
     }
 
     public LogDirectoryDescriptor directoryDescriptor()

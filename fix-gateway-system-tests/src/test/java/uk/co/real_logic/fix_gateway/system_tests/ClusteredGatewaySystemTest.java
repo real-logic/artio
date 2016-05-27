@@ -170,7 +170,10 @@ public class ClusteredGatewaySystemTest
         close(initiatingLibrary);
 
         close(initiatingEngine);
-        acceptingEngineCluster.forEach(CloseHelper::close);
+        if (acceptingEngineCluster != null)
+        {
+            acceptingEngineCluster.forEach(CloseHelper::close);
+        }
 
         close(mediaDriver);
     }

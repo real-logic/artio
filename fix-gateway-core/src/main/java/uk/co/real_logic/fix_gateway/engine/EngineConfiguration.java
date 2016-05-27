@@ -94,6 +94,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_SESSION_ID_BUFFER_SIZE = 4 * 1024 * 1024;
     public static final int DEFAULT_SENDER_MAX_BYTES_IN_BUFFER = 1024 * 1024;
     public static final int DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT = (int) SECONDS.toMillis(30);
+    public static final int DEFAULT_CLUSTER_TIMEOUT_IN_MS = 300;
 
     private String host = null;
     private int port;
@@ -113,7 +114,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private String clusterAeronChannel = null;
     private short nodeId;
     private IntHashSet otherNodes = new IntHashSet(-1);
-    private long clusterTimeoutIntervalInMs;
+    private long clusterTimeoutIntervalInMs = DEFAULT_CLUSTER_TIMEOUT_IN_MS;
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);

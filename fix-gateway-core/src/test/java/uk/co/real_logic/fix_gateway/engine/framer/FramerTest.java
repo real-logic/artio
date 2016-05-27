@@ -31,6 +31,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.timing.Timer;
@@ -90,6 +91,7 @@ public class FramerTest
     private GatewaySession gatewaySession = mock(GatewaySession.class);
     private Subscription outboundSubscription = mock(Subscription.class);
     private Image image = mock(Image.class);
+    private ClusterableNode clusterableNode = mock(ClusterableNode.class);
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
@@ -143,8 +145,8 @@ public class FramerTest
             gatewaySessions,
             replayQuery,
             mock(ErrorHandler.class),
-            mock(GatewayPublication.class)
-        );
+            mock(GatewayPublication.class),
+            clusterableNode);
     }
 
     @After
