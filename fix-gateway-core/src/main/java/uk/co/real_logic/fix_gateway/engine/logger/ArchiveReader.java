@@ -15,7 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import io.aeron.logbuffer.*;
+import io.aeron.logbuffer.BlockHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import io.aeron.logbuffer.Header;
+import io.aeron.logbuffer.LogBufferDescriptor;
 import org.agrona.IoUtil;
 import org.agrona.collections.Int2ObjectCache;
 import org.agrona.collections.Int2ObjectHashMap;
@@ -28,6 +32,8 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.function.IntFunction;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static java.lang.Integer.numberOfTrailingZeros;
 
@@ -203,8 +209,11 @@ public class ArchiveReader implements AutoCloseable
                 return NO_MESSAGE;
             }
 
-            handler.onFragment(buffer, termOffset, frameLength - HEADER_LENGTH, header);
-            // TODO: return
+            final Action action = handler.onFragment(buffer, termOffset, frameLength - HEADER_LENGTH, header);
+            if (action == ABORT)
+            {
+                return position;
+            }
 
             return position + frameLength;
         }
@@ -241,10 +250,18 @@ public class ArchiveReader implements AutoCloseable
                     return position;
                 }
 
-                handler.onFragment(buffer, termOffset, bodyLength, header);
-                // TODO: return
+                final Action action = handler.onFragment(buffer, termOffset, bodyLength, header);
+                if (action == ABORT)
+                {
+                    return position;
+                }
 
                 position += frameLength;
+
+                if (action == BREAK)
+                {
+                    return position;
+                }
             }
 
             return position;

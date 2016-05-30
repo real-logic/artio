@@ -36,6 +36,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentCaptor;
+import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
@@ -49,6 +50,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
 import static io.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
 import static io.aeron.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
@@ -215,19 +218,47 @@ public class LoggerTest
         shouldReadFragmentsUpToAPosition(30);
     }
 
+    @Test
+    public void shouldNotReadAfterAbort()
+    {
+        when(fragmentHandler.onFragment(any(), anyInt(), anyInt(), any()))
+            .thenReturn(ABORT);
+
+        readUpTo(0, HEADER_LENGTH, times(1));
+    }
+
+    @Test
+    public void shouldStopReadingAfterBreak()
+    {
+        when(fragmentHandler.onFragment(any(), anyInt(), anyInt(), any()))
+            .thenReturn(BREAK);
+
+        final long oneMessageIn = HEADER_LENGTH + SIZE + HEADER_LENGTH;
+
+        readUpTo(0, oneMessageIn, times(1));
+    }
+
     private void shouldReadFragmentsUpToAPosition(final int offsetIntoNextMessage)
+    {
+        final long twoMessagesIn = HEADER_LENGTH + lengthOfTwoMessages() + HEADER_LENGTH;
+
+        readUpTo(offsetIntoNextMessage, twoMessagesIn, times(2));
+    }
+
+    private void readUpTo(
+        final int offsetIntoNextMessage,
+        final long expectedPosition,
+        final VerificationMode times)
     {
         archiveBeyondEndOfTerm();
 
         final long begin = HEADER_LENGTH;
-        final int lengthOfTwoMessages = SIZE * 2 + HEADER_LENGTH;
-        final long end = begin + lengthOfTwoMessages + offsetIntoNextMessage;
+        final long end = begin + lengthOfTwoMessages() + offsetIntoNextMessage;
         final long res = archiveReader.readUpTo(publication.sessionId(), begin, end, fragmentHandler);
 
-        verify(fragmentHandler, times(2)).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
+        verify(fragmentHandler, times).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
 
-        final long twoMessagesIn = begin + lengthOfTwoMessages + HEADER_LENGTH;
-        assertEquals("Failed to return new position", twoMessagesIn, res);
+        assertEquals("Failed to return new position", expectedPosition, res);
     }
 
     @Test
@@ -368,6 +399,11 @@ public class LoggerTest
         writeAndArchiveBuffer();
 
         assertFalse("Patched the future", patchBuffer(TERM_LENGTH));
+    }
+
+    private int lengthOfTwoMessages()
+    {
+        return SIZE * 2 + HEADER_LENGTH;
     }
 
     private long readTo(final long position)
