@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -27,7 +26,6 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.function.LongFunction;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
 /**
@@ -58,25 +56,6 @@ public class ReplayQuery implements AutoCloseable
         this.archiveReader = archiveReader;
         this.requiredStreamId = requiredStreamId;
         sessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionQuery::close);
-    }
-
-    /**
-     *
-     * @param handler the handler to pass the messages to
-     * @param sessionId the FIX session id of the stream to replay.
-     * @param beginSeqNo sequence number to begin replay at (inclusive).
-     * @param endSeqNo sequence number to end replay at (inclusive).
-     * @return number of messages replayed
-     */
-    public int query(
-        final FragmentHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
-    {
-        // TODO: remove method and apply appropriate actions
-        return query((buffer, offset, length, header) ->
-        {
-            handler.onFragment(buffer, offset, length, header);
-            return CONTINUE;
-        }, sessionId, beginSeqNo, endSeqNo);
     }
 
     /**
@@ -145,7 +124,8 @@ public class ReplayQuery implements AutoCloseable
                 final int sequenceNumber = indexRecord.sequenceNumber();
                 if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo && streamId == requiredStreamId)
                 {
-                    if (sessionReader.read(position, handler) < 0)
+                    final long readTo = sessionReader.read(position, handler);
+                    if (readTo < 0 || readTo == position)
                     {
                         return count;
                     }

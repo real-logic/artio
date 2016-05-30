@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import io.aeron.logbuffer.BufferClaim;
-import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
@@ -28,10 +28,12 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 import static io.aeron.Publication.BACK_PRESSURED;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 
-class CatchupReplayer implements FragmentHandler, Continuation
+class CatchupReplayer implements ControlledFragmentHandler, Continuation
 {
     private static final int FRAME_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + FixMessageEncoder.bodyHeaderLength();
@@ -80,7 +82,7 @@ class CatchupReplayer implements FragmentHandler, Continuation
         this.session = session;
     }
 
-    public void onFragment(
+    public Action onFragment(
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int length,
@@ -101,6 +103,12 @@ class CatchupReplayer implements FragmentHandler, Continuation
 
             bufferClaim.commit();
             replayedMessages++;
+
+            return CONTINUE;
+        }
+        else
+        {
+            return ABORT;
         }
     }
 
