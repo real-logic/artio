@@ -23,4 +23,6 @@ public abstract class ClusterableNode
 
     // TODO: decide on stream id
     public abstract ClusterablePublication publication();
+
+    public abstract int poll(final int fragmentLimit, final long timeInMs);
 }

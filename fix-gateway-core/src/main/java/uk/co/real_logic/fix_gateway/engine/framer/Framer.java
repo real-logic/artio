@@ -43,6 +43,7 @@ import uk.co.real_logic.fix_gateway.timing.Timer;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -57,6 +58,7 @@ import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.net.StandardSocketOptions.*;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
@@ -77,6 +79,14 @@ import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
  */
 public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
 {
+
+    private static final ByteBuffer CONNECT_ERROR;
+    static
+    {
+        final byte[] errorBytes =
+            "This is not the cluster's leader node, please connect to the leader".getBytes(US_ASCII);
+        CONNECT_ERROR = ByteBuffer.wrap(errorBytes);
+    }
 
     private final RetryManager retryManager = new RetryManager();
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
@@ -103,7 +113,7 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
     private final Subscription outboundSlowSubscription;
     private final Subscription replaySubscription;
     private final GatewayPublication inboundPublication;
-    private final ClusterableNode clusterableNode;
+    private final ClusterableNode node;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
     private final QueuedPipe<AdminCommand> adminCommands;
@@ -139,7 +149,7 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
         final ReplayQuery inboundMessages,
         final ErrorHandler errorHandler,
         final GatewayPublication outboundPublication,
-        final ClusterableNode clusterableNode)
+        final ClusterableNode node)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
@@ -154,7 +164,7 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
         this.outboundPublication = outboundPublication;
         this.outboundSlowSubscription = outboundSlowSubscription;
         this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
-        this.clusterableNode = clusterableNode;
+        this.node = node;
         this.senderEndPoints = new SenderEndPoints(inboundPublication);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
@@ -195,14 +205,15 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
     public int doWork() throws Exception
     {
         final long timeInMs = clock.time();
-        return retryManager.attemptSteps() +
-               sendOutboundMessages() +
-               sendReplayMessages() +
-               pollEndPoints() +
-               pollNewConnections(timeInMs) +
-               pollLibraries(timeInMs) +
-               gatewaySessions.pollSessions(timeInMs) +
-               adminCommands.drain(onAdminCommand);
+        return node.poll(outboundLibraryFragmentLimit, timeInMs) +
+            retryManager.attemptSteps() +
+            sendOutboundMessages() +
+            sendReplayMessages() +
+            pollEndPoints() +
+            pollNewConnections(timeInMs) +
+            pollLibraries(timeInMs) +
+            gatewaySessions.pollSessions(timeInMs) +
+            adminCommands.drain(onAdminCommand);
     }
 
     private int sendReplayMessages()
@@ -301,29 +312,45 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
                 it.next();
 
                 final SocketChannel channel = listeningChannel.accept();
-                final long connectionId = this.nextConnectionId++;
-                final boolean resetSequenceNumbers = configuration.acceptorSequenceNumbersResetUponReconnect();
-                final GatewaySession session = setupConnection(
+
+                if (node.isLeader())
+                {
+                    final long connectionId = this.nextConnectionId++;
+                    final boolean resetSequenceNumbers = configuration.acceptorSequenceNumbersResetUponReconnect();
+                    final GatewaySession session = setupConnection(
                         channel, connectionId, UNKNOWN, null, GATEWAY_LIBRARY_ID, ACCEPTOR, resetSequenceNumbers);
 
-                session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
+                    session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
 
-                gatewaySessions.acquire(
-                    session,
-                    CONNECTED,
-                    configuration.defaultHeartbeatIntervalInS(),
-                    UNK_SESSION,
-                    UNK_SESSION,
-                    null,
-                    null);
+                    gatewaySessions.acquire(
+                        session,
+                        CONNECTED,
+                        configuration.defaultHeartbeatIntervalInS(),
+                        UNK_SESSION,
+                        UNK_SESSION,
+                        null,
+                        null);
 
-                final String address = channel.getRemoteAddress().toString();
-                // In this case the save connect is simply logged for posterities sake
-                // So in the back-pressure we should just drop it
-                if (inboundPublication.saveConnect(connectionId, address) == BACK_PRESSURED)
+                    final String address = channel.getRemoteAddress().toString();
+                    // In this case the save connect is simply logged for posterities sake
+                    // So in the back-pressure we should just drop it
+                    if (inboundPublication.saveConnect(connectionId, address) == BACK_PRESSURED)
+                    {
+                        errorHandler.onError(new IllegalStateException(
+                            "Failed to log connect from " + address + " due to backpressure"));
+                    }
+                }
+                else
                 {
+                    final String address = channel.getRemoteAddress().toString();
                     errorHandler.onError(new IllegalStateException(
-                        "Failed to log connect from " + address + " due to backpressure"));
+                        String.format("Attempted connection from %s whilst follower", address)));
+
+                    // NB: channel is still blocking at this point, so will be placed in buffer
+                    // NB: Writing error message is best effort, possible that other end closes
+                    // Before receipt.
+                    channel.write(CONNECT_ERROR);
+                    channel.close();
                 }
 
                 it.remove();

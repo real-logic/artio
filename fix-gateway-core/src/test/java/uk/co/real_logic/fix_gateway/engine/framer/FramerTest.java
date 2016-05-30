@@ -91,7 +91,7 @@ public class FramerTest
     private GatewaySession gatewaySession = mock(GatewaySession.class);
     private Subscription outboundSubscription = mock(Subscription.class);
     private Image image = mock(Image.class);
-    private ClusterableNode clusterableNode = mock(ClusterableNode.class);
+    private ClusterableNode node = mock(ClusterableNode.class);
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
@@ -100,6 +100,7 @@ public class FramerTest
     private Framer framer;
 
     private ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);
+    private ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     @Before
     @SuppressWarnings("unchecked")
@@ -128,6 +129,8 @@ public class FramerTest
 
         when(outboundSubscription.getImage(anyInt())).thenReturn(image);
 
+        isLeader(true);
+
         framer = new Framer(
             mockClock,
             mock(Timer.class),
@@ -144,9 +147,14 @@ public class FramerTest
             receivedSequenceNumberIndex,
             gatewaySessions,
             replayQuery,
-            mock(ErrorHandler.class),
+            errorHandler,
             mock(GatewayPublication.class),
-            clusterableNode);
+            node);
+    }
+
+    private void isLeader(final boolean value)
+    {
+        when(node.isLeader()).thenReturn(value);
     }
 
     @After
@@ -237,11 +245,6 @@ public class FramerTest
         initiateConnection();
 
         verifyErrorPublished(UNABLE_TO_CONNECT);
-    }
-
-    private void verifyErrorPublished(final GatewayError error)
-    {
-        verify(inboundPublication).saveError(eq(error), eq(LIBRARY_ID), anyLong(), anyString());
     }
 
     @Test
@@ -361,6 +364,44 @@ public class FramerTest
         releaseConnection(CONTINUE);
 
         verifySessionsAcquired(ACTIVE);
+    }
+
+    @Test
+    public void shouldDisconnectConnectionsToFollowers() throws Exception
+    {
+        isLeader(false);
+
+        openSocket();
+
+        framer.doWork();
+
+        verifyClientDisconnected();
+        verify(errorHandler).onError(any(IllegalStateException.class));
+    }
+
+    private void verifyClientDisconnected()
+    {
+        final int bytesToSend = 1;
+        final ByteBuffer buffer = ByteBuffer.allocate(bytesToSend);
+        while (true)
+        {
+            try
+            {
+                if (client.write(buffer) < bytesToSend)
+                {
+                    return;
+                }
+            }
+            catch (IOException e)
+            {
+                return;
+            }
+        }
+    }
+
+    private void verifyErrorPublished(final GatewayError error)
+    {
+        verify(inboundPublication).saveError(eq(error), eq(LIBRARY_ID), anyLong(), anyString());
     }
 
     private void releaseConnection(final Action expectedResult)

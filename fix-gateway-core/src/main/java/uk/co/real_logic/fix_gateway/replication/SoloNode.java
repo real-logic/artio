@@ -42,4 +42,9 @@ public class SoloNode extends ClusterableNode
     {
         return new SoloPublication(aeron.addPublication(aeronChannel, 1));
     }
+
+    public int poll(final int fragmentLimit, final long timeInMs)
+    {
+        return 0;
+    }
 }
