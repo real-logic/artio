@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import io.aeron.logbuffer.BlockHandler;
-import io.aeron.logbuffer.FragmentHandler;
-import io.aeron.logbuffer.Header;
-import io.aeron.logbuffer.LogBufferDescriptor;
+import io.aeron.logbuffer.*;
 import org.agrona.IoUtil;
 import org.agrona.collections.Int2ObjectCache;
 import org.agrona.collections.Int2ObjectHashMap;
@@ -95,7 +92,7 @@ public class ArchiveReader implements AutoCloseable
      * @param handler the handler to pass the data into
      * @return the position after the end of this message. If there's another message, then this is its start.
      */
-    public long read(final int aeronSessionId, final long position, final FragmentHandler handler)
+    public long read(final int aeronSessionId, final long position, final ControlledFragmentHandler handler)
     {
         final SessionReader sessionReader = session(aeronSessionId);
         if (sessionReader == null)
@@ -116,7 +113,7 @@ public class ArchiveReader implements AutoCloseable
      * @return the position after the end of this message. If there's another message, then this is its start.
      */
     public long readUpTo(
-        final int aeronSessionId, final long beginPosition, final long endPosition, final FragmentHandler handler)
+        final int aeronSessionId, final long beginPosition, final long endPosition, final ControlledFragmentHandler handler)
     {
         final SessionReader sessionReader = session(aeronSessionId);
         if (sessionReader == null)
@@ -192,7 +189,7 @@ public class ArchiveReader implements AutoCloseable
          * @param handler the handler to pass the data into
          * @return the position after the end of this message. If there's another message, then this is its start.
          */
-        public long read(final long position, final FragmentHandler handler)
+        public long read(final long position, final ControlledFragmentHandler handler)
         {
             final int termOffset = scan(position);
             if (termOffset == UNKNOWN_TERM)
@@ -207,6 +204,7 @@ public class ArchiveReader implements AutoCloseable
             }
 
             handler.onFragment(buffer, termOffset, frameLength - HEADER_LENGTH, header);
+            // TODO: return
 
             return position + frameLength;
         }
@@ -219,7 +217,7 @@ public class ArchiveReader implements AutoCloseable
          * @param handler the handler to pass the data into
          * @return the position after the end of this message. If there's another message, then this is its start.
          */
-        public long readUpTo(final long beginPosition, final long endPosition, final FragmentHandler handler)
+        public long readUpTo(final long beginPosition, final long endPosition, final ControlledFragmentHandler handler)
         {
             long position = beginPosition;
             while (position >= 0)
@@ -244,6 +242,7 @@ public class ArchiveReader implements AutoCloseable
                 }
 
                 handler.onFragment(buffer, termOffset, bodyLength, header);
+                // TODO: return
 
                 position += frameLength;
             }

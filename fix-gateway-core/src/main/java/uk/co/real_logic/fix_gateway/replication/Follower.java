@@ -16,8 +16,8 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Subscription;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
@@ -39,7 +39,7 @@ public class Follower implements Role, RaftHandler
     private final RaftSubscription raftSubscription;
 
     private final short nodeId;
-    private final FragmentHandler handler;
+    private final ControlledFragmentHandler handler;
     private final ClusterNode clusterNode;
     private final TermState termState;
     private final ArchiveReader archiveReader;
@@ -61,7 +61,7 @@ public class Follower implements Role, RaftHandler
 
     public Follower(
         final short nodeId,
-        final FragmentHandler handler,
+        final ControlledFragmentHandler handler,
         final ClusterNode clusterNode,
         final long timeInMs,
         final long replyTimeoutInMs,

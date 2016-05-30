@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
@@ -25,9 +26,9 @@ import org.agrona.DirectBuffer;
  * Extends {@link FragmentHandler} so that it can be easily used to replay/catchup
  * a Stream.
  */
-public interface Index extends FragmentHandler, AutoCloseable
+public interface Index extends ControlledFragmentHandler, AutoCloseable
 {
-    default void onFragment(DirectBuffer buffer, int offset, int length, Header header)
+    default Action onFragment(DirectBuffer buffer, int offset, int length, Header header)
     {
         indexRecord(
             buffer,
@@ -36,6 +37,8 @@ public interface Index extends FragmentHandler, AutoCloseable
             header.streamId(),
             header.sessionId(),
             header.position());
+
+        return Action.CONTINUE;
     }
 
     /**

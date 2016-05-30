@@ -33,6 +33,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
 import static io.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
 import static io.aeron.driver.ThreadingMode.SHARED;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
@@ -97,6 +98,7 @@ class NodeRunner implements AutoCloseable
             {
                 replicatedPosition = offset + length;
                 DebugLogger.log("%d: position %d\n", nodeId, replicatedPosition);
+                return CONTINUE;
             })
             .failCounter(mock(AtomicCounter.class))
             .aeronChannel(AERON_CHANNEL)

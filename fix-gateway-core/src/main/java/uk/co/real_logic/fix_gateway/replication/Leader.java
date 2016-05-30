@@ -18,8 +18,8 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BlockHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
@@ -46,7 +46,7 @@ public class Leader implements Role, RaftHandler
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final RaftSubscription raftSubscription;
     private final ClusterNode clusterNode;
-    private final FragmentHandler handler;
+    private final ControlledFragmentHandler handler;
     private final long heartbeatIntervalInMs;
     private final ArchiveReader archiveReader;
     private final Archiver archiver;
@@ -85,7 +85,7 @@ public class Leader implements Role, RaftHandler
         final AcknowledgementStrategy acknowledgementStrategy,
         final IntHashSet followers,
         final ClusterNode clusterNode,
-        final FragmentHandler handler,
+        final ControlledFragmentHandler handler,
         final long timeInMs,
         final long heartbeatIntervalInMs,
         final TermState termState,

@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.function.LongFunction;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
 
 /**
@@ -70,18 +71,28 @@ public class ReplayQuery implements AutoCloseable
     public int query(
         final FragmentHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
     {
-        return sessionToIndex
-            .computeIfAbsent(sessionId, newSessionQuery)
-            .query(handler, beginSeqNo, endSeqNo);
+        // TODO: remove method and apply appropriate actions
+        return query((buffer, offset, length, header) ->
+        {
+            handler.onFragment(buffer, offset, length, header);
+            return CONTINUE;
+        }, sessionId, beginSeqNo, endSeqNo);
     }
 
-    // TODO: apply back pressure
+    /**
+     *
+     * @param handler the handler to pass the messages to
+     * @param sessionId the FIX session id of the stream to replay.
+     * @param beginSeqNo sequence number to begin replay at (inclusive).
+     * @param endSeqNo sequence number to end replay at (inclusive).
+     * @return number of messages replayed
+     */
     public int query(
         final ControlledFragmentHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
     {
         return sessionToIndex
             .computeIfAbsent(sessionId, newSessionQuery)
-            .query(handler::onFragment, beginSeqNo, endSeqNo);
+            .query(handler, beginSeqNo, endSeqNo);
     }
 
     public void close()
@@ -102,7 +113,7 @@ public class ReplayQuery implements AutoCloseable
 
         // TODO: potential optimisation of jumping straight to the beginSeqNo offset
         // Needs thinking about out of order sequence numbers due to duplicates and resends
-        private int query(final FragmentHandler handler, final int beginSeqNo, final int endSeqNo)
+        private int query(final ControlledFragmentHandler handler, final int beginSeqNo, final int endSeqNo)
         {
             messageFrameHeader.wrap(buffer, 0);
             int index = messageFrameHeader.encodedLength();

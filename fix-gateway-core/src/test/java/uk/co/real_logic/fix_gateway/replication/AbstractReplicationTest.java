@@ -19,7 +19,7 @@ import io.aeron.Aeron;
 import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.driver.MediaDriver;
-import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
@@ -132,7 +132,7 @@ public class AbstractReplicationTest
     protected Follower follower(
         final short id,
         final ClusterNode clusterNode,
-        final FragmentHandler handler,
+        final ControlledFragmentHandler handler,
         final TermState termState)
     {
         final ArchiveMetaData metaData = archiveMetaData(id);

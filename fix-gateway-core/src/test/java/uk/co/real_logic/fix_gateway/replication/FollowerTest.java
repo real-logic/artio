@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Subscription;
-import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -53,7 +53,7 @@ public class FollowerTest
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
     private RaftPublication acknowledgementPublication = mock(RaftPublication.class);
     private RaftPublication controlPublication = mock(RaftPublication.class);
-    private FragmentHandler handler = mock(FragmentHandler.class);
+    private ControlledFragmentHandler handler = mock(ControlledFragmentHandler.class);
     private SessionArchiver leaderArchiver = mock(SessionArchiver.class);
     private Subscription controlSubscription = mock(Subscription.class);
     private ClusterNode clusterNode = mock(ClusterNode.class);
@@ -338,7 +338,7 @@ public class FollowerTest
                 (inv) ->
                 {
                     final Object[] arguments = inv.getArguments();
-                    final FragmentHandler handler = (FragmentHandler)arguments[2];
+                    final ControlledFragmentHandler handler = (ControlledFragmentHandler)arguments[2];
                     handler.onFragment(buffer, 0, LENGTH, mock(Header.class));
 
                     return LENGTH + HEADER_LENGTH;

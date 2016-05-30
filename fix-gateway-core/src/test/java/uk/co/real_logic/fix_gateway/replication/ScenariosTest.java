@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Image;
 import io.aeron.Subscription;
-import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.collections.IntHashSet;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,7 +66,7 @@ public class ScenariosTest
     private final ArchiveReader archiveReader = mock(ArchiveReader.class);
     private final ArchiveReader.SessionReader sessionReader = mock(ArchiveReader.SessionReader.class);
     private final TermState termState = new TermState();
-    private final FragmentHandler fragmentHandler = mock(FragmentHandler.class);
+    private final ControlledFragmentHandler fragmentHandler = mock(ControlledFragmentHandler.class);
     private final Archiver.SessionArchiver leaderArchiver = mock(Archiver.SessionArchiver.class);
     private final Archiver archiver = mock(Archiver.class);
 
@@ -243,7 +243,7 @@ public class ScenariosTest
             new EntireClusterAcknowledgementStrategy(),
             new IntHashSet(40, -1),
             clusterNode,
-            mock(FragmentHandler.class),
+            mock(ControlledFragmentHandler.class),
             0,
             HEARTBEAT_INTERVAL_IN_MS,
             termState,

@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Aeron;
-import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
@@ -42,7 +42,7 @@ public class ClusterNodeConfiguration
     private StreamIdentifier acknowledgementStream;
     private IdleStrategy idleStrategy;
     private AcknowledgementStrategy acknowledgementStrategy;
-    private FragmentHandler fragmentHandler;
+    private ControlledFragmentHandler fragmentHandler;
     private int maxClaimAttempts = DEFAULT_MAX_CLAIM_ATTEMPTS;
     private AtomicCounter failCounter;
     private ArchiveReader archiveReader;
@@ -106,7 +106,7 @@ public class ClusterNodeConfiguration
         return this;
     }
 
-    public ClusterNodeConfiguration fragmentHandler(final FragmentHandler fragmentHandler)
+    public ClusterNodeConfiguration fragmentHandler(final ControlledFragmentHandler fragmentHandler)
     {
         this.fragmentHandler = fragmentHandler;
         return this;
@@ -189,7 +189,7 @@ public class ClusterNodeConfiguration
         return acknowledgementStrategy;
     }
 
-    public FragmentHandler fragmentHandler()
+    public ControlledFragmentHandler fragmentHandler()
     {
         return fragmentHandler;
     }

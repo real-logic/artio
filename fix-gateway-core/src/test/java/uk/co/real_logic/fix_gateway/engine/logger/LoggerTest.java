@@ -19,7 +19,7 @@ import io.aeron.Aeron;
 import io.aeron.Publication;
 import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.BlockHandler;
-import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.protocol.DataHeaderFlyweight;
 import io.aeron.protocol.HeaderFlyweight;
 import org.agrona.CloseHelper;
@@ -87,7 +87,7 @@ public class LoggerTest
     }
 
     private final BlockHandler blockHandler = mock(BlockHandler.class);
-    private final FragmentHandler fragmentHandler = mock(FragmentHandler.class);
+    private final ControlledFragmentHandler fragmentHandler = mock(ControlledFragmentHandler.class);
     private final ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
     private final ArgumentCaptor<Integer> offsetCaptor = ArgumentCaptor.forClass(Integer.class);
 

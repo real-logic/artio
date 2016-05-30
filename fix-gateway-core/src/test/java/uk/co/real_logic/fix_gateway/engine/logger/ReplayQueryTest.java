@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.ErrorHandler;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,7 +33,7 @@ public class ReplayQueryTest extends AbstractLogTest
 {
     private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024);
     private ExistingBufferFactory mockBufferFactory = mock(ExistingBufferFactory.class);
-    private FragmentHandler mockHandler = mock(FragmentHandler.class);
+    private ControlledFragmentHandler mockHandler = mock(ControlledFragmentHandler.class);
     private ArchiveReader mockReader = mock(ArchiveReader.class);
     private ArchiveReader.SessionReader mockSessionReader = mock(ArchiveReader.SessionReader.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
@@ -62,7 +62,7 @@ public class ReplayQueryTest extends AbstractLogTest
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
 
         when(mockReader.session(anyInt())).thenReturn(mockSessionReader);
-        when(mockSessionReader.read(anyLong(), any(FragmentHandler.class)))
+        when(mockSessionReader.read(anyLong(), any(ControlledFragmentHandler.class)))
             .thenReturn(100L, (long) UNKNOWN_SESSION);
 
         bufferContainsMessage(true);
