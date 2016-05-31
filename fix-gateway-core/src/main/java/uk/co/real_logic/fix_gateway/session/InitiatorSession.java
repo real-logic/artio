@@ -26,7 +26,6 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.fix_gateway.decoder.LogonDecoder.MESSAGE_TYPE_BYTES;
 
-// TODO: apply back-pressure from failed message sends to on* methods
 public class InitiatorSession extends Session
 {
     public InitiatorSession(
