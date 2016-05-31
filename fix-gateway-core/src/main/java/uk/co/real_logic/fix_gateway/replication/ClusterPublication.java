@@ -32,7 +32,7 @@ public class ClusterPublication extends ClusterablePublication
     {
         this.dataPublication = dataPublication;
         this.clusterNode = clusterNode;
-        this.reservedValue = ReservedValue.ofStreamId(streamId);
+        this.reservedValue = ReservedValue.ofClusterStreamId(streamId);
     }
 
     public long tryClaim(final int length, final BufferClaim bufferClaim)

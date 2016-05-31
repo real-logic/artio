@@ -28,7 +28,7 @@ public class ReservedValueTest
         final int checksum = 0xFFFF;
         final long reservedValue = ReservedValue.of(streamId, checksum);
 
-        assertEquals(streamId, ReservedValue.streamId(reservedValue));
+        assertEquals(streamId, ReservedValue.clusterStreamId(reservedValue));
         assertEquals(checksum, ReservedValue.checksum(reservedValue));
     }
 
@@ -37,9 +37,9 @@ public class ReservedValueTest
     {
         final int streamId = 0xFFFF;
         final int checksum = 0;
-        final long reservedValue = ReservedValue.ofStreamId(streamId);
+        final long reservedValue = ReservedValue.ofClusterStreamId(streamId);
 
-        assertEquals(streamId, ReservedValue.streamId(reservedValue));
+        assertEquals(streamId, ReservedValue.clusterStreamId(reservedValue));
         assertEquals(checksum, ReservedValue.checksum(reservedValue));
     }
 
@@ -50,7 +50,7 @@ public class ReservedValueTest
         final int checksum = 0xFFFF;
         final long reservedValue = ReservedValue.ofChecksum(checksum);
 
-        assertEquals(streamId, ReservedValue.streamId(reservedValue));
+        assertEquals(streamId, ReservedValue.clusterStreamId(reservedValue));
         assertEquals(checksum, ReservedValue.checksum(reservedValue));
     }
 }

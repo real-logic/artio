@@ -25,6 +25,7 @@ import org.agrona.collections.Int2ObjectCache;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
+import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
@@ -113,13 +114,18 @@ public class ArchiveReader implements AutoCloseable
      * Reads a message out of the log archive.
      *
      * @param aeronSessionId the session to read from
+     * @param reservedValueFilter bitmask for the non-checksum reserved value, or 0 if you don't want to filter.
      * @param beginPosition the log position to start reading at
      * @param endPosition the last start position of a message to stop reading at (NB: can read up to a fragment beyond)
      * @param handler the handler to pass the data into
      * @return the position after the end of this message. If there's another message, then this is its start.
      */
     public long readUpTo(
-        final int aeronSessionId, final long beginPosition, final long endPosition, final ControlledFragmentHandler handler)
+        final int reservedValueFilter,
+        final int aeronSessionId,
+        final long beginPosition,
+        final long endPosition,
+        final ControlledFragmentHandler handler)
     {
         final SessionReader sessionReader = session(aeronSessionId);
         if (sessionReader == null)
@@ -127,7 +133,7 @@ public class ArchiveReader implements AutoCloseable
             return UNKNOWN_SESSION;
         }
 
-        return sessionReader.readUpTo(beginPosition, endPosition, handler);
+        return sessionReader.readUpTo(reservedValueFilter, beginPosition, endPosition, handler);
     }
 
     /**
@@ -221,12 +227,17 @@ public class ArchiveReader implements AutoCloseable
         /**
          * Reads a message out of this session's log archive.
          *
+         * @param reservedValueFilter bitmask for the non-checksum reserved value, or 0 if you don't want to filter.
          * @param beginPosition the log position to start reading at
          * @param endPosition the last start position of a message to stop reading at (NB: can read up to a fragment beyond)
          * @param handler the handler to pass the data into
          * @return the position after the end of this message. If there's another message, then this is its start.
          */
-        public long readUpTo(final long beginPosition, final long endPosition, final ControlledFragmentHandler handler)
+        public long readUpTo(
+            final int reservedValueFilter,
+            final long beginPosition,
+            final long endPosition,
+            final ControlledFragmentHandler handler)
         {
             long position = beginPosition;
             while (position >= 0)
@@ -250,17 +261,25 @@ public class ArchiveReader implements AutoCloseable
                     return position;
                 }
 
-                final Action action = handler.onFragment(buffer, termOffset, bodyLength, header);
-                if (action == ABORT)
+                final int reservedValue = ReservedValue.clusterStreamId(header.reservedValue());
+                if ((reservedValue & reservedValueFilter) == reservedValueFilter)
                 {
-                    return position;
+                    final Action action = handler.onFragment(buffer, termOffset, bodyLength, header);
+                    if (action == ABORT)
+                    {
+                        return position;
+                    }
+
+                    position += frameLength;
+
+                    if (action == BREAK)
+                    {
+                        return position;
+                    }
                 }
-
-                position += frameLength;
-
-                if (action == BREAK)
+                else
                 {
-                    return position;
+                    position += frameLength;
                 }
             }
 

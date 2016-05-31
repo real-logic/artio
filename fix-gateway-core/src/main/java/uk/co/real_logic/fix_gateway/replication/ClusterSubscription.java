@@ -23,6 +23,7 @@ class ClusterSubscription extends ClusterableSubscription
 {
     private final ArchiveReader archiveReader;
     private final ClusterNode node;
+    private final int clusterStreamId;
 
     private ArchiveReader.SessionReader ourArchiveReader;
     private Role role;
@@ -32,11 +33,13 @@ class ClusterSubscription extends ClusterableSubscription
     ClusterSubscription(
         final ArchiveReader archiveReader,
         final Role role,
-        final ClusterNode node)
+        final ClusterNode node,
+        final int clusterStreamId)
     {
         this.archiveReader = archiveReader;
         this.role = role;
         this.node = node;
+        this.clusterStreamId = clusterStreamId;
     }
 
     void onRoleChange(final Role role, final int leaderSessionId)
@@ -55,7 +58,11 @@ class ClusterSubscription extends ClusterableSubscription
             if (commitPosition > oldAppliedPosition)
             {
                 final long readUpTo = archiveReader.readUpTo(
-                    leaderSessionId, oldAppliedPosition, commitPosition, handler);
+                    clusterStreamId,
+                    leaderSessionId,
+                    oldAppliedPosition,
+                    commitPosition,
+                    handler);
                 if (readUpTo != ArchiveReader.UNKNOWN_SESSION)
                 {
                     this.lastAppliedPosition = readUpTo;

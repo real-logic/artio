@@ -281,14 +281,14 @@ public class ClusterNode extends ClusterableNode
         return termState;
     }
 
-    public ClusterPublication publication(final int streamId)
+    public ClusterPublication publication(final int clusterStreamId)
     {
-        return new ClusterPublication(dataPublication, this, streamId);
+        return new ClusterPublication(dataPublication, this, clusterStreamId);
     }
 
-    public ClusterableSubscription subscription(final int streamId)
+    public ClusterableSubscription subscription(final int clusterStreamId)
     {
-        final ClusterSubscription subscription = new ClusterSubscription(archiveReader, currentRole, this);
+        final ClusterSubscription subscription = new ClusterSubscription(archiveReader, currentRole, this, clusterStreamId);
         subscriptions.add(subscription);
         return subscription;
     }

@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Publication;
 import io.aeron.Subscription;
+import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
@@ -57,12 +58,13 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     private ControlledFragmentHandler leaderHandler = mock(ControlledFragmentHandler.class);
     private ControlledFragmentHandler follower1Handler = mock(ControlledFragmentHandler.class);
 
+    private int leaderSessionId;
+    private ClusterPublication publication;
     private Leader leader;
     private ClusterSubscription leaderSubscription;
     private Follower follower1;
     private ClusterSubscription follower1Subscription;
     private Follower follower2;
-    private Publication dataPublication;
 
     @Before
     public void setUp()
@@ -73,8 +75,11 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         followers.add(2);
         followers.add(3);
 
-        dataPublication = dataPublication();
-        final int leaderSessionId = dataPublication.sessionId();
+        final Publication dataPublication = dataPublication();
+        final ClusterNode leaderNode = mock(ClusterNode.class);
+        when(leaderNode.isPublishable()).thenReturn(true);
+        publication = new ClusterPublication(dataPublication, leaderNode, 1);
+        leaderSessionId = dataPublication.sessionId();
 
         termState1.leaderSessionId(leaderSessionId);
         termState2.leaderSessionId(leaderSessionId);
@@ -112,11 +117,11 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         follower2 = follower(FOLLOWER_2_ID, clusterNode3, termState3);
 
         leaderSubscription =
-            new ClusterSubscription(archiveReader, leader, mock(ClusterNode.class));
+            new ClusterSubscription(archiveReader, leader, leaderNode, 1);
         leaderSubscription.onRoleChange(leader, leaderSessionId);
 
         follower1Subscription = new ClusterSubscription(
-            followerArchiveReader(subscription, FOLLOWER_1_ID), follower1, mock(ClusterNode.class));
+            followerArchiveReader(subscription, FOLLOWER_1_ID), follower1, mock(ClusterNode.class), 1);
         follower1Subscription.onRoleChange(follower1, leaderSessionId);
     }
 
@@ -252,7 +257,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         final int readMessages = controlSubscription().controlledPoll(new RaftSubscription(raftHandler), 10);
         assertEquals(0, readMessages);
         verify(raftHandler, never())
-            .onConcensusHeartbeat(anyShort(), anyInt(), anyLong(), eq(dataPublication.sessionId()));
+            .onConcensusHeartbeat(anyShort(), anyInt(), anyLong(), eq(leaderSessionId));
     }
 
     private int roundtripABuffer()
@@ -293,8 +298,12 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
     private int offerBuffer()
     {
-        final long position = dataPublication.offer(buffer);
+        final BufferClaim claim = new BufferClaim();
+        final long position = publication.tryClaim(buffer.capacity(), claim);
         assertThat(position, greaterThan(0L));
+        claim.buffer().putBytes(claim.offset(), buffer, 0, buffer.capacity());
+        claim.commit();
+
         return (int) position;
     }
 

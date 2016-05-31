@@ -22,9 +22,9 @@ public final class ReservedValue
 {
     private static final int BITS_IN_INT = 32;
 
-    public static long ofStreamId(final int streamId)
+    public static long ofClusterStreamId(final int clusterStreamId)
     {
-        return streamId & 0xFFFFFFFFL;
+        return clusterStreamId & 0xFFFFFFFFL;
     }
 
     public static long ofChecksum(final int checksum)
@@ -32,12 +32,12 @@ public final class ReservedValue
         return ((long)checksum) << BITS_IN_INT;
     }
 
-    public static long of(final int streamId, final int checksum)
+    public static long of(final int clusterStreamId, final int checksum)
     {
-        return ofChecksum(checksum) | ofStreamId(streamId);
+        return ofChecksum(checksum) | ofClusterStreamId(clusterStreamId);
     }
 
-    public static int streamId(final long reservedValue)
+    public static int clusterStreamId(final long reservedValue)
     {
         return (int) reservedValue;
     }
