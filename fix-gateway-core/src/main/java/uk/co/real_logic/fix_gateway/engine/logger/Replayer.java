@@ -38,6 +38,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.nio.charset.StandardCharsets;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static uk.co.real_logic.fix_gateway.engine.logger.PossDupFinder.NO_ENTRY;
@@ -49,7 +50,6 @@ import static uk.co.real_logic.fix_gateway.engine.logger.PossDupFinder.NO_ENTRY;
  * Resend Request messages and searches the log, using the replay index to find
  * relevant messages to resend.
  */
-// TODO: apply back-pressure from failed message sends to on* methods
 public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Agent
 {
     public static final int MESSAGE_FRAME_BLOCK_LENGTH =
@@ -182,8 +182,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         {
             if (!claimBuffer(messageLength))
             {
-                onIllegalState("[%s] unable to resend", message());
-                return CONTINUE;
+                return ABORT;
             }
 
             try
@@ -232,6 +231,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         {
             if (publication.tryClaim(newLength, claim) > 0)
             {
+                idleStrategy.reset();
                 return true;
             }
 
@@ -297,14 +297,6 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final int beforeChecksum = bodyLengthClaimOffset + newBodyLength + POSS_DUP_FIELD.length;
         final int checksum = mutableAsciiFlyweight.computeChecksum(messageClaimOffset, beforeChecksum);
         mutableAsciiFlyweight.putNatural(beforeChecksum + CHECKSUM_TAG_SIZE, 3, checksum);
-    }
-
-    private int updateBodyLength(int srcOffset, int claimOffset)
-    {
-        final int newBodyLength = possDupFinder.bodyLength() + POSS_DUP_FIELD.length;
-        final int bodyLengthOffset = srcToClaim(possDupFinder.bodyLengthOffset(), srcOffset, claimOffset);
-        mutableAsciiFlyweight.putNatural(bodyLengthOffset, possDupFinder.lengthOfBodyLength(), newBodyLength);
-        return newBodyLength;
     }
 
     private void setPossDupFlag(
