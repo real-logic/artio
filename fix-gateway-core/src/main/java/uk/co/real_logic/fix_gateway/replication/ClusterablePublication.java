@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.logbuffer.BufferClaim;
-import org.agrona.DirectBuffer;
 
 
 public abstract class ClusterablePublication
@@ -29,8 +28,6 @@ public abstract class ClusterablePublication
     public ClusterablePublication()
     {
     }
-
-    public abstract long offer(final DirectBuffer buffer, final int offset, final int length);
 
     public abstract long tryClaim(final int length, final BufferClaim bufferClaim);
 

@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Publication;
 import io.aeron.logbuffer.BufferClaim;
-import org.agrona.DirectBuffer;
 
 /**
  * A Clustered Publication is a publication that support the raft protocol and allows
@@ -32,16 +31,6 @@ public class ClusterPublication extends ClusterablePublication
     {
         this.dataPublication = dataPublication;
         this.clusterNode = clusterNode;
-    }
-
-    public long offer(final DirectBuffer buffer, final int offset, final int length)
-    {
-        if (!clusterNode.isPublishable())
-        {
-            return CANT_PUBLISH;
-        }
-
-        return dataPublication.offer(buffer, offset, length);
     }
 
     public long tryClaim(final int length, final BufferClaim bufferClaim)

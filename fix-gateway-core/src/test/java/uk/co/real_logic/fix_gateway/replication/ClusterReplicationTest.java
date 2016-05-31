@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.*;
 import org.junit.rules.Timeout;
@@ -38,6 +39,7 @@ public class ClusterReplicationTest
     private static final int BUFFER_SIZE = 16;
     private static final int POSITION_AFTER_MESSAGE = BUFFER_SIZE + HEADER_LENGTH;
 
+    private BufferClaim bufferClaim = new BufferClaim();
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
 
     private final NodeRunner node1 = new NodeRunner(1, 2, 3);
@@ -310,14 +312,21 @@ public class ClusterReplicationTest
     {
         final ClusterablePublication publication = leader.raftNode().publication();
 
-        long position = 0;
-        while (position <= 0)
+        long position;
+        while (true)
         {
-            position = publication.offer(buffer, 0, BUFFER_SIZE);
+            position = publication.tryClaim(BUFFER_SIZE, bufferClaim);
+            if (position > 0)
+            {
+                bufferClaim
+                    .buffer()
+                    .putBytes(bufferClaim.offset(), buffer, 0, BUFFER_SIZE);
+                bufferClaim.commit();
+                return position;
+            }
             pause();
             pollAll();
         }
-        return position;
     }
 
     private void pause()

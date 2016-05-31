@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Publication;
 import io.aeron.logbuffer.BufferClaim;
-import org.agrona.DirectBuffer;
 
 public class SoloPublication extends ClusterablePublication
 {
@@ -26,11 +25,6 @@ public class SoloPublication extends ClusterablePublication
     public SoloPublication(final Publication dataPublication)
     {
         this.dataPublication = dataPublication;
-    }
-
-    public long offer(final DirectBuffer buffer, final int offset, final int length)
-    {
-        return dataPublication.offer(buffer, offset, length);
     }
 
     public long tryClaim(final int length, final BufferClaim bufferClaim)
