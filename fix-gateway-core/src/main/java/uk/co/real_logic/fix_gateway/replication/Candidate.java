@@ -244,4 +244,9 @@ public class Candidate implements Role, RaftHandler
     {
         return termState.commitPosition();
     }
+
+    public long canCommitPosition()
+    {
+        return termState.commitPosition();
+    }
 }

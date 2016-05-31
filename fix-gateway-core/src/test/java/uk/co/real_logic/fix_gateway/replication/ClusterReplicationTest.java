@@ -297,12 +297,6 @@ public class ClusterReplicationTest
         assertEquals("1 and 3 disagree on leader", leaderSessionId, state3.leaderSessionId());
     }
 
-    private void assertIsFollower(final NodeRunner follower)
-    {
-        final ClusterNode node = follower.raftNode();
-        assertTrue(node.nodeId() + " no longer follower", node.isFollower());
-    }
-
     private boolean notReceivedMessage(final NodeRunner node)
     {
         return node.replicatedPosition() < POSITION_AFTER_MESSAGE;
@@ -310,7 +304,7 @@ public class ClusterReplicationTest
 
     private long sendMessageTo(final NodeRunner leader)
     {
-        final ClusterablePublication publication = leader.raftNode().publication();
+        final ClusterablePublication publication = leader.raftNode().publication(1);
 
         long position;
         while (true)

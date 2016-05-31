@@ -26,11 +26,13 @@ public class ClusterPublication extends ClusterablePublication
 {
     private final Publication dataPublication;
     private final ClusterNode clusterNode;
+    private final long reservedValue;
 
-    public ClusterPublication(final Publication dataPublication, final ClusterNode clusterNode)
+    public ClusterPublication(final Publication dataPublication, final ClusterNode clusterNode, final int streamId)
     {
         this.dataPublication = dataPublication;
         this.clusterNode = clusterNode;
+        this.reservedValue = ReservedValue.ofStreamId(streamId);
     }
 
     public long tryClaim(final int length, final BufferClaim bufferClaim)
@@ -40,7 +42,12 @@ public class ClusterPublication extends ClusterablePublication
             return CANT_PUBLISH;
         }
 
-        return dataPublication.tryClaim(length, bufferClaim);
+        final long position = dataPublication.tryClaim(length, bufferClaim);
+        if (position > 0)
+        {
+            bufferClaim.reservedValue(reservedValue);
+        }
+        return position;
     }
 
     public long commitPosition()

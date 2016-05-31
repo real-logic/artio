@@ -15,11 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.*;
 
 /**
@@ -41,7 +39,7 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
 
         node1 = candidate((short) 1, clusterNode1, termState1);
         node2 = candidate((short) 2, clusterNode2, termState2);
-        node3 = follower((short) 3, clusterNode3, mock(ControlledFragmentHandler.class), termState3);
+        node3 = follower((short) 3, clusterNode3, termState3);
     }
 
     @Test

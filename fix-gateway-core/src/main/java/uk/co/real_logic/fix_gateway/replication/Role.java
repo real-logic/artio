@@ -35,5 +35,7 @@ interface Role
 
     long commitPosition();
 
+    long canCommitPosition();
+
     void closeStreams();
 }

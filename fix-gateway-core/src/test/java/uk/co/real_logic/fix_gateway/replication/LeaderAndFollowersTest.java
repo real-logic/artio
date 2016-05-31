@@ -58,7 +58,9 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     private ControlledFragmentHandler follower1Handler = mock(ControlledFragmentHandler.class);
 
     private Leader leader;
+    private ClusterSubscription leaderSubscription;
     private Follower follower1;
+    private ClusterSubscription follower1Subscription;
     private Follower follower2;
     private Publication dataPublication;
 
@@ -95,7 +97,6 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             new EntireClusterAcknowledgementStrategy(),
             followers,
             clusterNode1,
-            leaderHandler,
             0,
             HEARTBEAT_INTERVAL,
             termState1,
@@ -107,8 +108,16 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             .acknowledgementSubscription(acknowledgementSubscription())
             .dataSubscription(dataSubscription());
 
-        follower1 = follower(FOLLOWER_1_ID, clusterNode2, follower1Handler, termState2);
-        follower2 = follower(FOLLOWER_2_ID, clusterNode3, mock(ControlledFragmentHandler.class), termState3);
+        follower1 = follower(FOLLOWER_1_ID, clusterNode2, termState2);
+        follower2 = follower(FOLLOWER_2_ID, clusterNode3, termState3);
+
+        leaderSubscription =
+            new ClusterSubscription(archiveReader, leader, mock(ClusterNode.class));
+        leaderSubscription.onRoleChange(leader, leaderSessionId);
+
+        follower1Subscription = new ClusterSubscription(
+            followerArchiveReader(subscription, FOLLOWER_1_ID), follower1, mock(ClusterNode.class));
+        follower1Subscription.onRoleChange(follower1, leaderSessionId);
     }
 
     @Test
@@ -116,7 +125,9 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     {
         offerBuffer();
 
-        pollLeader(0);
+        poll(leader);
+
+        pollLeaderSubscription();
 
         leaderNeverCommitted();
     }
@@ -135,6 +146,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         final int position = roundtripABuffer();
 
         poll(follower1, 1);
+        pollFollower1();
 
         verify(follower1Handler).onFragment(any(), eq(HEADER_LENGTH), eq(position - HEADER_LENGTH), any());
     }
@@ -150,6 +162,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         final int position2 = roundtripABuffer();
         pollLeader(1);
+        pollLeaderSubscription();
         leaderCommitted(position1, position2 - position1, secondValue);
     }
 
@@ -171,7 +184,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     {
         offerBuffer();
 
-        poll(follower1);
+        pollFollower1();
 
         pollLeader(1);
         leaderNeverCommitted();
@@ -182,13 +195,14 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     {
         final int position = offerBuffer();
 
-        poll(follower1);
+        pollFollower1();
 
         pollLeader(1);
         leaderNeverCommitted();
 
         poll(follower2);
         pollLeader(1);
+        pollLeaderSubscription();
 
         leaderCommitted(0, position);
     }
@@ -245,16 +259,28 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     {
         final int position = offerBuffer();
 
-        poll(follower1);
+        pollFollower1();
         poll(follower2);
 
         pollLeader(2);
+        pollLeaderSubscription();
         return position;
+    }
+
+    private void pollFollower1()
+    {
+        poll(follower1);
+        follower1Subscription.controlledPoll(follower1Handler, FRAGMENT_LIMIT);
     }
 
     private void pollLeader(int toRead)
     {
         poll(leader, toRead);
+    }
+
+    private int pollLeaderSubscription()
+    {
+        return leaderSubscription.controlledPoll(leaderHandler, FRAGMENT_LIMIT);
     }
 
     private void poll(final Role role, int toRead)

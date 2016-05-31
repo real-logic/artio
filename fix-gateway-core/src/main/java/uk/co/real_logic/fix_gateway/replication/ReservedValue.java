@@ -15,25 +15,35 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Subscription;
-import io.aeron.logbuffer.ControlledFragmentHandler;
-
-public class SoloSubscription extends ClusterableSubscription
+/**
+ * 8 byte reserved word is used with the
+ */
+public final class ReservedValue
 {
-    private final Subscription subscription;
+    private static final int BITS_IN_INT = 32;
 
-    public SoloSubscription(final Subscription subscription)
+    public static long ofStreamId(final int streamId)
     {
-        this.subscription = subscription;
+        return streamId & 0xFFFFFFFFL;
     }
 
-    public int controlledPoll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit)
+    public static long ofChecksum(final int checksum)
     {
-        return subscription.controlledPoll(fragmentHandler, fragmentLimit);
+        return ((long)checksum) << BITS_IN_INT;
     }
 
-    public void close()
+    public static long of(final int streamId, final int checksum)
     {
-        subscription.close();
+        return ofChecksum(checksum) | ofStreamId(streamId);
+    }
+
+    public static int streamId(final long reservedValue)
+    {
+        return (int) reservedValue;
+    }
+
+    public static int checksum(final long reservedValue)
+    {
+        return (int) (reservedValue >> BITS_IN_INT);
     }
 }

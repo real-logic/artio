@@ -21,8 +21,9 @@ public abstract class ClusterableNode
 
     public abstract boolean isPublishable();
 
-    // TODO: decide on stream id
-    public abstract ClusterablePublication publication();
-
     public abstract int poll(final int fragmentLimit, final long timeInMs);
+
+    public abstract ClusterablePublication publication(final int streamId);
+
+    public abstract ClusterableSubscription subscription(final int streamId);
 }

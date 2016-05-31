@@ -243,7 +243,6 @@ public class ScenariosTest
             new EntireClusterAcknowledgementStrategy(),
             new IntHashSet(40, -1),
             clusterNode,
-            mock(ControlledFragmentHandler.class),
             0,
             HEARTBEAT_INTERVAL_IN_MS,
             termState,
@@ -268,12 +267,10 @@ public class ScenariosTest
 
         final Follower follower = new Follower(
             ID,
-            fragmentHandler,
             clusterNode,
             TIME,
             TIMEOUT_IN_MS,
             termState,
-            archiveReader,
             archiver);
 
         follower

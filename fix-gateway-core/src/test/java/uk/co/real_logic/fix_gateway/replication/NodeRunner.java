@@ -21,6 +21,7 @@ import io.aeron.driver.ReceiveChannelEndpointSupplier;
 import io.aeron.driver.SendChannelEndpointSupplier;
 import io.aeron.driver.ext.DebugReceiveChannelEndpoint;
 import io.aeron.driver.ext.DebugSendChannelEndpoint;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.CloseHelper;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.YieldingIdleStrategy;
@@ -52,12 +53,20 @@ class NodeRunner implements AutoCloseable
     private final Aeron aeron;
     private final ClusterNode clusterNode;
     private final int nodeId;
+    private final ControlledFragmentHandler handler;
+    private final ClusterableSubscription subscription;
 
     private long replicatedPosition = -1;
 
     NodeRunner(final int nodeId, final int... otherNodes)
     {
         this.nodeId = nodeId;
+        this.handler = (buffer, offset, length, header) ->
+        {
+            replicatedPosition = offset + length;
+            DebugLogger.log("%d: position %d\n", nodeId, replicatedPosition);
+            return CONTINUE;
+        };
 
         final int termBufferLength = 1024 * 1024;
         final MediaDriver.Context context = new MediaDriver.Context();
@@ -94,18 +103,13 @@ class NodeRunner implements AutoCloseable
             .aeron(aeron)
             .otherNodes(otherNodeIds)
             .timeoutIntervalInMs(TIMEOUT_IN_MS)
-            .fragmentHandler((buffer, offset, length, header) ->
-            {
-                replicatedPosition = offset + length;
-                DebugLogger.log("%d: position %d\n", nodeId, replicatedPosition);
-                return CONTINUE;
-            })
             .failCounter(mock(AtomicCounter.class))
             .aeronChannel(AERON_CHANNEL)
             .archiver(archiver)
             .archiveReader(archiveReader);
 
         clusterNode = new ClusterNode(configuration, System.currentTimeMillis());
+        subscription = clusterNode.subscription(1);
     }
 
     private SendChannelEndpointSupplier newSendChannelEndpointSupplier()
@@ -124,7 +128,7 @@ class NodeRunner implements AutoCloseable
 
     public int poll(final int fragmentLimit, final long timeInMs)
     {
-        return clusterNode.poll(fragmentLimit, timeInMs);
+        return clusterNode.poll(fragmentLimit, timeInMs) + subscription.controlledPoll(handler, fragmentLimit);
     }
 
     public void dropFrames(final boolean dropFrames)

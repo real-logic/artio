@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BlockHandler;
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.collections.IntHashSet;
 import org.junit.Before;
 import org.junit.Test;
@@ -60,7 +59,6 @@ public class LeaderTest
         new EntireClusterAcknowledgementStrategy(),
         new IntHashSet(40, -1),
         clusterNode,
-        mock(ControlledFragmentHandler.class),
         0,
         HEARTBEAT_INTERVAL_IN_MS,
         termState,

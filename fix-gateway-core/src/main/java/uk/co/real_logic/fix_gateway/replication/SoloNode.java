@@ -38,9 +38,14 @@ public class SoloNode extends ClusterableNode
         return true;
     }
 
-    public SoloPublication publication()
+    public SoloPublication publication(final int streamId)
     {
-        return new SoloPublication(aeron.addPublication(aeronChannel, 1));
+        return new SoloPublication(aeron.addPublication(aeronChannel, streamId));
+    }
+
+    public SoloSubscription subscription(final int streamId)
+    {
+        return new SoloSubscription(aeron.addSubscription(aeronChannel, streamId));
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)

@@ -16,18 +16,14 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Subscription;
-import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.Header;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.OngoingStubbing;
-import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 
-import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
@@ -53,12 +49,9 @@ public class FollowerTest
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
     private RaftPublication acknowledgementPublication = mock(RaftPublication.class);
     private RaftPublication controlPublication = mock(RaftPublication.class);
-    private ControlledFragmentHandler handler = mock(ControlledFragmentHandler.class);
     private SessionArchiver leaderArchiver = mock(SessionArchiver.class);
     private Subscription controlSubscription = mock(Subscription.class);
     private ClusterNode clusterNode = mock(ClusterNode.class);
-    private ArchiveReader archiveReader = mock(ArchiveReader.class);
-    private ArchiveReader.SessionReader sessionReader = mock(ArchiveReader.SessionReader.class);
     private Archiver archiver = mock(Archiver.class);
 
     private final TermState termState = new TermState()
@@ -68,12 +61,10 @@ public class FollowerTest
 
     private Follower follower = new Follower(
         ID,
-        handler,
         clusterNode,
         0,
         VOTE_TIMEOUT,
         termState,
-        archiveReader,
         archiver);
 
     @Before
@@ -84,7 +75,6 @@ public class FollowerTest
             .acknowledgementPublication(acknowledgementPublication)
             .controlSubscription(controlSubscription);
 
-        when(archiveReader.session(SESSION_ID_4)).thenReturn(sessionReader);
         when(archiver.session(SESSION_ID_4)).thenReturn(leaderArchiver);
 
         follower.follow(0);
@@ -117,50 +107,6 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldCommitDataWithAck()
-    {
-        dataToBeCommitted();
-
-        receivesHeartbeat();
-
-        poll();
-
-        dataCommitted();
-    }
-
-    @Test
-    public void shouldNotCommitDataWithoutAck()
-    {
-        dataToBeCommitted();
-
-        poll();
-
-        noDataCommitted();
-    }
-
-    @Test
-    public void shouldNotCommitDataWithoutData()
-    {
-        receivesHeartbeat();
-
-        poll();
-
-        noDataCommitted();
-    }
-
-    @Test
-    public void shouldCommitDataReceivedAfterAck()
-    {
-        receivesHeartbeat();
-
-        dataToBeCommitted();
-
-        poll();
-
-        dataCommitted();
-    }
-
-    @Test
     public void shouldNotifyMissingLogEntries()
     {
         dataToBeCommitted(POSITION + LENGTH);
@@ -168,20 +114,6 @@ public class FollowerTest
         poll();
 
         notifyMissingLogEntries();
-    }
-
-    @Test
-    public void shouldCommitResentLogEntries()
-    {
-        receivesHeartbeat();
-
-        poll();
-
-        receivesResend();
-
-        poll();
-
-        dataCommitted();
     }
 
     @Test
@@ -196,64 +128,6 @@ public class FollowerTest
         poll();
 
         acknowledgeLogEntries();
-    }
-
-    @Test
-    public void shouldNotCommitResentLogEntriesWithGap()
-    {
-        receivesHeartbeat();
-
-        poll();
-
-        receivesResendFrom(POSITION + LENGTH, SESSION_ID_4, NEW_LEADERSHIP_TERM);
-
-        poll();
-
-        noDataCommitted();
-    }
-
-    @Test
-    public void shouldNotCommitResentLogEntriesFromWrongLeader()
-    {
-        receivesHeartbeat();
-
-        poll();
-
-        receivesResendFrom(POSITION, SESSION_ID_5, NEW_LEADERSHIP_TERM);
-
-        poll();
-
-        noDataCommitted();
-    }
-
-    @Test
-    public void shouldNotCommitResentLogEntriesFromOldTerm()
-    {
-        receivesHeartbeat();
-
-        poll();
-
-        receivesResendFrom(POSITION, SESSION_ID_4, OLD_LEADERSHIP_TERM);
-
-        poll();
-
-        noDataCommitted();
-    }
-
-    @Test
-    public void shouldCommitMoreDataAfterResend()
-    {
-        shouldCommitResentLogEntries();
-
-        final long endOfResendPosition = POSITION + LENGTH;
-
-        dataToBeCommitted(endOfResendPosition);
-
-        receivesHeartbeat(endOfResendPosition + LENGTH);
-
-        poll();
-
-        dataCommitted();
     }
 
     private void onHeartbeat()
@@ -303,8 +177,6 @@ public class FollowerTest
 
                 return 1;
             });
-
-        dataInArchive(position);
     }
 
     private OngoingStubbing<Integer> whenControlPolled()
@@ -312,42 +184,11 @@ public class FollowerTest
         return when(controlSubscription.controlledPoll(any(), anyInt()));
     }
 
-    private void dataCommitted()
-    {
-        verify(handler, atLeastOnce()).onFragment(any(), eq(0), eq(LENGTH), any());
-    }
-
-    private void dataToBeCommitted()
-    {
-        dataToBeCommitted(POSITION);
-    }
-
     private void dataToBeCommitted(final long position)
     {
         when(leaderArchiver.poll()).thenReturn(LENGTH);
 
         when(leaderArchiver.archivedPosition()).thenReturn(position);
-
-        dataInArchive(position);
-    }
-
-    private void dataInArchive(final long position)
-    {
-        when(sessionReader.readUpTo(
-            eq(position + HEADER_LENGTH), eq((long)LENGTH), any())).then(
-                (inv) ->
-                {
-                    final Object[] arguments = inv.getArguments();
-                    final ControlledFragmentHandler handler = (ControlledFragmentHandler)arguments[2];
-                    handler.onFragment(buffer, 0, LENGTH, mock(Header.class));
-
-                    return LENGTH + HEADER_LENGTH;
-                });
-    }
-
-    private void noDataCommitted()
-    {
-        verify(handler, never()).onFragment(any(), anyInt(), anyInt(), any());
     }
 
     private void poll()

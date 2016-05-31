@@ -19,7 +19,6 @@ import io.aeron.Aeron;
 import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.driver.MediaDriver;
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
@@ -132,14 +131,11 @@ public class AbstractReplicationTest
     protected Follower follower(
         final short id,
         final ClusterNode clusterNode,
-        final ControlledFragmentHandler handler,
         final TermState termState)
     {
         final ArchiveMetaData metaData = archiveMetaData(id);
         final Subscription subscription = dataSubscription();
         final StreamIdentifier streamId = new StreamIdentifier(subscription);
-        final ArchiveReader archiveReader = new ArchiveReader(
-            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, streamId);
         final Archiver archiver = new Archiver(
             metaData,
             DEFAULT_LOGGER_CACHE_NUM_SETS,
@@ -149,17 +145,23 @@ public class AbstractReplicationTest
 
         return new Follower(
             id,
-            handler,
             clusterNode,
             0,
             TIMEOUT,
             termState,
-            archiveReader,
             archiver)
             .controlSubscription(controlSubscription())
             .acknowledgementPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID))
             .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
             .follow(0);
+    }
+
+    protected ArchiveReader followerArchiveReader(final Subscription subscription, final short id)
+    {
+        final ArchiveMetaData metaData = archiveMetaData(id);
+        final StreamIdentifier streamId = new StreamIdentifier(subscription);
+        return new ArchiveReader(
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, streamId);
     }
 
     public static ArchiveMetaData archiveMetaData(final short nodeId)

@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BlockHandler;
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
@@ -46,7 +45,6 @@ public class Leader implements Role, RaftHandler
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final RaftSubscription raftSubscription;
     private final ClusterNode clusterNode;
-    private final ControlledFragmentHandler handler;
     private final long heartbeatIntervalInMs;
     private final ArchiveReader archiveReader;
     private final Archiver archiver;
@@ -85,7 +83,6 @@ public class Leader implements Role, RaftHandler
         final AcknowledgementStrategy acknowledgementStrategy,
         final IntHashSet followers,
         final ClusterNode clusterNode,
-        final ControlledFragmentHandler handler,
         final long timeInMs,
         final long heartbeatIntervalInMs,
         final TermState termState,
@@ -96,7 +93,6 @@ public class Leader implements Role, RaftHandler
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
         this.clusterNode = clusterNode;
-        this.handler = handler;
         this.termState = termState;
         this.ourSessionId = ourSessionId;
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
@@ -125,22 +121,10 @@ public class Leader implements Role, RaftHandler
 
             heartbeat();
 
-            applyUnappliedFragments();
-
             return delta;
         }
 
         return 0;
-    }
-
-    private void applyUnappliedFragments()
-    {
-        final long readUpTo = archiveReader.readUpTo(
-            ourSessionId, lastAppliedPosition, commitPosition, handler);
-        if (readUpTo != ArchiveReader.UNKNOWN_SESSION)
-        {
-            lastAppliedPosition = readUpTo;
-        }
     }
 
     private void setupArchival()
@@ -322,11 +306,7 @@ public class Leader implements Role, RaftHandler
         lastAppliedPosition = Math.max(DataHeaderFlyweight.HEADER_LENGTH, termState.lastAppliedPosition());
         heartbeat();
 
-        if (commitPosition > lastAppliedPosition)
-        {
-            setupArchival();
-            applyUnappliedFragments();
-        }
+        setupArchival();
 
         return this;
     }
@@ -357,6 +337,11 @@ public class Leader implements Role, RaftHandler
     }
 
     public long commitPosition()
+    {
+        return commitPosition;
+    }
+
+    public long canCommitPosition()
     {
         return commitPosition;
     }

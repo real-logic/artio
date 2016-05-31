@@ -16,17 +16,14 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Subscription;
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
-import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
@@ -39,17 +36,14 @@ public class Follower implements Role, RaftHandler
     private final RaftSubscription raftSubscription;
 
     private final short nodeId;
-    private final ControlledFragmentHandler handler;
     private final ClusterNode clusterNode;
     private final TermState termState;
-    private final ArchiveReader archiveReader;
     private final Archiver archiver;
     private final RandomTimeout replyTimeout;
 
     private RaftPublication acknowledgementPublication;
     private RaftPublication controlPublication;
     private SessionArchiver leaderArchiver;
-    private ArchiveReader.SessionReader leaderArchiveReader;
     private Subscription controlSubscription;
     private long receivedPosition;
     private long commitPosition;
@@ -61,19 +55,15 @@ public class Follower implements Role, RaftHandler
 
     public Follower(
         final short nodeId,
-        final ControlledFragmentHandler handler,
         final ClusterNode clusterNode,
         final long timeInMs,
         final long replyTimeoutInMs,
         final TermState termState,
-        final ArchiveReader archiveReader,
         final Archiver archiver)
     {
         this.nodeId = nodeId;
-        this.handler = handler;
         this.clusterNode = clusterNode;
         this.termState = termState;
-        this.archiveReader = archiveReader;
         this.archiver = archiver;
         replyTimeout = new RandomTimeout(replyTimeoutInMs, timeInMs);
         raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));
@@ -138,7 +128,7 @@ public class Follower implements Role, RaftHandler
             onReplyKeepAlive(timeInMs);
         }
 
-        return bytesRead + attemptToCommitData();
+        return bytesRead;
     }
 
     private boolean checkLeaderArchiver()
@@ -160,36 +150,6 @@ public class Follower implements Role, RaftHandler
     private void saveMessageAcknowledgement(final AcknowledgementStatus status)
     {
         acknowledgementPublication.saveMessageAcknowledgement(receivedPosition, nodeId, status);
-    }
-
-    private int attemptToCommitData()
-    {
-        // see readData()
-        if (leaderArchiveReader == null)
-        {
-            leaderArchiveReader = archiveReader.session(termState.leaderSessionId());
-            if (leaderArchiveReader == null)
-            {
-                return 0;
-            }
-        }
-
-        final long canCommitUpToPosition = Math.min(commitPosition, receivedPosition);
-        final int committableBytes = (int) (canCommitUpToPosition - lastAppliedPosition);
-        if (committableBytes > 0)
-        {
-            final int readBytes = (int) leaderArchiveReader.readUpTo(
-                lastAppliedPosition + HEADER_LENGTH, committableBytes, handler);
-
-            if (readBytes < committableBytes)
-            {
-                System.err.printf("Wanted to read %d, but only read %d%n", committableBytes, readBytes);
-            }
-
-            return readBytes;
-        }
-
-        return 0;
     }
 
     public void closeStreams()
@@ -334,12 +294,10 @@ public class Follower implements Role, RaftHandler
         {
             final int sessionId = termState.leaderSessionId();
             leaderArchiver = archiver.session(sessionId);
-            leaderArchiveReader = archiveReader.session(sessionId);
         }
         else
         {
             leaderArchiver = null;
-            leaderArchiveReader = null;
         }
     }
 
@@ -370,5 +328,10 @@ public class Follower implements Role, RaftHandler
     public long commitPosition()
     {
         return commitPosition;
+    }
+
+    public long canCommitPosition()
+    {
+        return Math.min(commitPosition, receivedPosition);
     }
 }

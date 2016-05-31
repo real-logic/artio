@@ -21,6 +21,9 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -30,31 +33,32 @@ public class ClusterNode extends ClusterableNode
 {
     private static final int HEARTBEAT_TO_TIMEOUT_RATIO = 5;
 
-    private final ClusterPublication publication;
+    private final Publication dataPublication;
     private final short nodeId;
     private final TermState termState = new TermState();
     private final Leader leader;
     private final Candidate candidate;
     private final Follower follower;
     private final RaftTransport transport;
+    private final ArchiveReader archiveReader;
 
     private Role currentRole;
+    private List<ClusterSubscription> subscriptions = new ArrayList<>();
 
     public ClusterNode(final ClusterNodeConfiguration configuration, final long timeInMs)
     {
         configuration.conclude();
 
-        this.nodeId = configuration.nodeId();
-        this.transport = configuration.raftTransport();
-        final Publication dataPublication = transport.leaderPublication();
-        this.publication = new ClusterPublication(dataPublication, this);
+        nodeId = configuration.nodeId();
+        transport = configuration.raftTransport();
+        dataPublication = transport.leaderPublication();
+        archiveReader = configuration.archiveReader();
 
         final int ourSessionId = dataPublication.sessionId();
         final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
         final long heartbeatTimeInMs = timeoutIntervalInMs / HEARTBEAT_TO_TIMEOUT_RATIO;
         final IntHashSet otherNodes = configuration.otherNodes();
         final int clusterSize = otherNodes.size() + 1;
-        final ArchiveReader archiveReader = configuration.archiveReader();
         final AcknowledgementStrategy acknowledgementStrategy = configuration.acknowledgementStrategy();
         final Archiver archiver = configuration.archiver();
 
@@ -68,7 +72,6 @@ public class ClusterNode extends ClusterableNode
             acknowledgementStrategy,
             otherNodes,
             this,
-            configuration.fragmentHandler(),
             timeInMs,
             heartbeatTimeInMs,
             termState,
@@ -87,12 +90,10 @@ public class ClusterNode extends ClusterableNode
 
         follower = new Follower(
             nodeId,
-            configuration.fragmentHandler(),
             this,
             timeInMs,
             timeoutIntervalInMs,
             termState,
-            archiveReader,
             archiver);
 
         transport.initialiseRoles(leader, candidate, follower);
@@ -140,6 +141,8 @@ public class ClusterNode extends ClusterableNode
 
             currentRole = follower.votedFor(votedFor)
                 .follow(timeInMs);
+
+            onTransition();
         }
     };
 
@@ -152,6 +155,8 @@ public class ClusterNode extends ClusterableNode
             follower.closeStreams();
 
             currentRole = candidate.startNewElection(timeInMs);
+
+            onTransition();
         }
     };
 
@@ -166,6 +171,8 @@ public class ClusterNode extends ClusterableNode
             transport.injectLeaderSubscriptions(leader);
 
             currentRole = leader.getsElected(timeInMs);
+
+            onTransition();
         }
 
         void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
@@ -178,6 +185,8 @@ public class ClusterNode extends ClusterableNode
 
             currentRole = follower.votedFor(votedFor)
                 .follow(timeInMs);
+
+            onTransition();
         }
     };
 
@@ -211,6 +220,19 @@ public class ClusterNode extends ClusterableNode
     void transitionToCandidate(final long timeInMs)
     {
         followerState.transitionToCandidate(follower, timeInMs);
+    }
+
+    private void onTransition()
+    {
+        final Role currentRole = this.currentRole;
+        final int leaderSessionId = this.termState.leaderSessionId();
+        final List<ClusterSubscription> subscriptions = this.subscriptions;
+
+        for (int i = 0, size = subscriptions.size(); i < size; i++)
+        {
+            final ClusterSubscription subscription = subscriptions.get(i);
+            subscription.onRoleChange(currentRole, leaderSessionId);
+        }
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)
@@ -259,8 +281,20 @@ public class ClusterNode extends ClusterableNode
         return termState;
     }
 
-    public ClusterPublication publication()
+    public ClusterPublication publication(final int streamId)
     {
-        return publication;
+        return new ClusterPublication(dataPublication, this, streamId);
+    }
+
+    public ClusterableSubscription subscription(final int streamId)
+    {
+        final ClusterSubscription subscription = new ClusterSubscription(archiveReader, currentRole, this);
+        subscriptions.add(subscription);
+        return subscription;
+    }
+
+    public void close(final ClusterSubscription subscription)
+    {
+        subscriptions.remove(subscription);
     }
 }
