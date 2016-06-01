@@ -117,7 +117,7 @@ public class LoggerTest
         mediaDriver = launchMediaDriver(TERM_LENGTH);
         aeron = Aeron.connect(new Aeron.Context());
         final Streams outboundStreams = new Streams(
-            CHANNEL, aeron, mock(AtomicCounter.class), STREAM_ID, mock(NanoClock.class), 12000);
+            aeron, mock(AtomicCounter.class), STREAM_ID, mock(NanoClock.class), 12000);
 
         configuration = new EngineConfiguration()
             .logInboundMessages(false)

@@ -17,8 +17,10 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.logbuffer.BufferClaim;
 
+import java.io.Closeable;
 
-public abstract class ClusterablePublication
+
+public abstract class ClusterablePublication implements Closeable
 {
     /**
      * May not yet be the leader, or the leader may not yet be ready to send
@@ -32,4 +34,9 @@ public abstract class ClusterablePublication
     public abstract long tryClaim(final int length, final BufferClaim bufferClaim);
 
     public abstract long commitPosition();
+
+    public abstract void close();
+
+    public abstract int id();
+
 }
