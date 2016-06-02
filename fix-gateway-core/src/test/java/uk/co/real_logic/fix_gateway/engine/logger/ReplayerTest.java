@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import io.aeron.Subscription;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.IdleStrategy;
 import org.junit.Before;
@@ -24,6 +23,7 @@ import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static org.junit.Assert.assertNotEquals;
@@ -38,16 +38,17 @@ public class ReplayerTest extends AbstractLogTest
     public static final int MAX_CLAIM_ATTEMPTS = 100;
 
     private ReplayQuery replayQuery = mock(ReplayQuery.class);
-    private Subscription subscription = mock(Subscription.class);
+    private ClusterableSubscription subscription = mock(ClusterableSubscription.class);
     private IdleStrategy idleStrategy = mock(IdleStrategy.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     private Replayer replayer = new Replayer(
-        subscription, replayQuery, publication, claim, idleStrategy, errorHandler, MAX_CLAIM_ATTEMPTS);
+        replayQuery, publication, claim, idleStrategy, errorHandler, MAX_CLAIM_ATTEMPTS);
 
     @Before
     public void setUp()
     {
+        replayer.subscription(subscription);
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
     }
 

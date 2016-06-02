@@ -15,25 +15,25 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Subscription;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 
+// TODO: replication agent should copy another stream onto the cluster
 public class ReplicationAgent implements Agent
 {
     public static final int CONTROL_LIMIT = 10;
 
-    private final Subscription dataSubscription;
+    //private final Subscription dataSubscription;
     //private final Subscription controlSubscription;
     private final FragmentHandler onDataMessageFunc = this::onDataMessage;
 
     public ReplicationAgent(
         final Streams streams)
     {
-        dataSubscription = streams.subscription();
+        //dataSubscription = streams.subscription();
         //controlSubscription = replicatedStream.controlSubscription();
     }
 
@@ -49,7 +49,7 @@ public class ReplicationAgent implements Agent
 
     public void onClose()
     {
-        dataSubscription.close();
+        //dataSubscription.close();
         //controlSubscription.close();
     }
 

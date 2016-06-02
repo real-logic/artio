@@ -19,7 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
-class ClusterSubscription extends ClusterableSubscription
+public class ClusterSubscription extends ClusterableSubscription
 {
     private final ArchiveReader archiveReader;
     private final ClusterNode node;
@@ -30,7 +30,7 @@ class ClusterSubscription extends ClusterableSubscription
     private int leaderSessionId;
     private long lastAppliedPosition = DataHeaderFlyweight.HEADER_LENGTH;
 
-    ClusterSubscription(
+    public ClusterSubscription(
         final ArchiveReader archiveReader,
         final Role role,
         final ClusterNode node,
@@ -99,5 +99,10 @@ class ClusterSubscription extends ClusterableSubscription
         {
             ourArchiveReader.close();
         }
+    }
+
+    public void forEachPosition(final PositionHandler handler)
+    {
+        // TODO: implement updating the position
     }
 }

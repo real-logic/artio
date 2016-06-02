@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
-import io.aeron.Publication;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
@@ -25,6 +24,7 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -72,7 +72,7 @@ public class GatewayPublication extends ClaimablePublication
     private final NanoClock nanoClock;
 
     public GatewayPublication(
-        final Publication dataPublication,
+        final ClusterablePublication dataPublication,
         final AtomicCounter fails,
         final IdleStrategy idleStrategy,
         final NanoClock nanoClock,
@@ -785,14 +785,9 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public int streamId()
+    public int id()
     {
-        return dataPublication.streamId();
-    }
-
-    public int sessionId()
-    {
-        return dataPublication.sessionId();
+        return dataPublication.id();
     }
 
     private byte[] bytes(final String host)

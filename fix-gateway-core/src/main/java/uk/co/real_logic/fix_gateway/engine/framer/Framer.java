@@ -35,6 +35,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.*;
 import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
+import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -109,8 +110,8 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
 
     private final EngineConfiguration configuration;
     private final ConnectionHandler connectionHandler;
-    private final Subscription outboundDataSubscription;
-    private final Subscription outboundSlowSubscription;
+    private final ClusterableSubscription outboundDataSubscription;
+    private final ClusterableSubscription outboundSlowSubscription;
     private final Subscription replaySubscription;
     private final GatewayPublication inboundPublication;
     private final ClusterableNode node;
@@ -137,8 +138,8 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
         final Timer sendTimer,
         final EngineConfiguration configuration,
         final ConnectionHandler connectionHandler,
-        final Subscription outboundLibrarySubscription,
-        final Subscription outboundSlowSubscription,
+        final ClusterableSubscription outboundLibrarySubscription,
+        final ClusterableSubscription outboundSlowSubscription,
         final Subscription replaySubscription,
         final QueuedPipe<AdminCommand> adminCommands,
         final SessionIdStrategy sessionIdStrategy,
@@ -230,7 +231,7 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
 
         if (newMessagesRead > 0)
         {
-            outboundDataSubscription.forEachImage(positionSender);
+            outboundDataSubscription.forEachPosition(positionSender);
         }
 
         return messagesRead;
@@ -256,9 +257,10 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
 
     private void acquireLibrarySessions(final LibraryInfo library)
     {
-        final long position = outboundDataSubscription.getImage(library.aeronSessionId()).position();
+        // TODO: re-add indexing
+        /*final long position = outboundDataSubscription.getImage(library.aeronSessionId()).position();
         sentSequenceNumberIndex.awaitingIndexingUpTo(
-            library.aeronSessionId(), position, idleStrategy);
+            library.aeronSessionId(), position, idleStrategy);*/
 
         for (final GatewaySession session : library.gatewaySessions())
         {

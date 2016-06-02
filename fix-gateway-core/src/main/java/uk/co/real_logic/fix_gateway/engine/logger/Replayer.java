@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.Publication;
-import io.aeron.Subscription;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
@@ -33,6 +32,7 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.protocol.ProtocolHandler;
 import uk.co.real_logic.fix_gateway.protocol.ProtocolSubscription;
+import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -66,7 +66,6 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     // Used in when updating the poss dup field
     private final MutableAsciiBuffer mutableAsciiFlyweight = new MutableAsciiBuffer();
 
-    private final Subscription subscription;
     private final ReplayQuery replayQuery;
     private final Publication publication;
     private final BufferClaim claim;
@@ -78,11 +77,11 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
     private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
 
+    private ClusterableSubscription subscription;
     private int currentMessageOffset;
     private int currentMessageLength;
 
     public Replayer(
-        final Subscription subscription,
         final ReplayQuery replayQuery,
         final Publication publication,
         final BufferClaim claim,
@@ -90,7 +89,6 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final ErrorHandler errorHandler,
         final int maxClaimAttempts)
     {
-        this.subscription = subscription;
         this.replayQuery = replayQuery;
         this.publication = publication;
         this.claim = claim;
@@ -317,7 +315,17 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
     public int doWork() throws Exception
     {
+        if (subscription == null)
+        {
+            return 0;
+        }
+
         return subscription.controlledPoll(protocolSubscription, POLL_LIMIT);
+    }
+
+    public void subscription(final ClusterableSubscription subscription)
+    {
+        this.subscription = subscription;
     }
 
     public void onClose()

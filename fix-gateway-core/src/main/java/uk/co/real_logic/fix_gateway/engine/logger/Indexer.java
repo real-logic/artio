@@ -15,37 +15,43 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import io.aeron.Subscription;
-import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
+import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
 import java.util.List;
+
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 /**
  * Incrementally builds indexes by polling a subscription.
  */
-public class Indexer implements Agent, FragmentHandler
+public class Indexer implements Agent, ControlledFragmentHandler
 {
     private static final int LIMIT = 10;
 
     private final List<Index> indices;
-    private final Subscription subscription;
     private final ArchiveReader archiveReader;
+    private ClusterableSubscription subscription;
 
     public Indexer(
-        final List<Index> indices, final Subscription subscription, final ArchiveReader archiveReader)
+        final List<Index> indices, final ArchiveReader archiveReader)
     {
         this.indices = indices;
-        this.subscription = subscription;
         this.archiveReader = archiveReader;
         catchIndexUp();
     }
 
     public int doWork() throws Exception
     {
-        return subscription.poll(this, LIMIT);
+        if (subscription == null)
+        {
+            return 0;
+        }
+
+        return subscription.controlledPoll(this, LIMIT);
     }
 
     private void catchIndexUp()
@@ -66,7 +72,7 @@ public class Indexer implements Agent, FragmentHandler
         }
     }
 
-    public void onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         final int streamId = header.streamId();
         final int aeronSessionId = header.sessionId();
@@ -75,6 +81,13 @@ public class Indexer implements Agent, FragmentHandler
         {
             index.indexRecord(buffer, offset, length, streamId, aeronSessionId, position);
         }
+
+        return CONTINUE;
+    }
+
+    public void subscription(final ClusterableSubscription subscription)
+    {
+        this.subscription = subscription;
     }
 
     public void onClose()

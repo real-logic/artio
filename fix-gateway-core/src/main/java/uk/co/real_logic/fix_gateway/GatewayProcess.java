@@ -19,7 +19,6 @@ import io.aeron.Aeron;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.*;
 import org.agrona.concurrent.errors.DistinctErrorLog;
-import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.timing.HistogramLogWriter;
 import uk.co.real_logic.fix_gateway.timing.Timer;
 
@@ -44,15 +43,12 @@ public class GatewayProcess implements AutoCloseable
     protected ErrorHandler errorHandler;
     protected DistinctErrorLog distinctErrorLog;
     protected Aeron aeron;
-    protected Streams inboundLibraryStreams;
-    protected Streams outboundLibraryStreams;
     protected AgentRunner monitoringRunner;
 
     protected void init(final CommonConfiguration configuration)
     {
         initMonitoring(configuration);
         initAeron(configuration);
-        initStreams(configuration);
     }
 
     private void initMonitoring(final CommonConfiguration configuration)
@@ -69,19 +65,6 @@ public class GatewayProcess implements AutoCloseable
                 throwable.printStackTrace();
             }
         };
-    }
-
-    private void initStreams(final CommonConfiguration configuration)
-    {
-        final String libraryChannel = configuration.libraryAeronChannel();
-        final NanoClock nanoClock = new SystemNanoClock();
-
-        inboundLibraryStreams = new Streams(
-            libraryChannel, aeron, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
-            configuration.inboundMaxClaimAttempts());
-        outboundLibraryStreams = new Streams(
-            libraryChannel, aeron, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
-            configuration.outboundMaxClaimAttempts());
     }
 
     private void initAeron(final CommonConfiguration configuration)

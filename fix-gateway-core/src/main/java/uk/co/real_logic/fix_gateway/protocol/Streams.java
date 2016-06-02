@@ -15,13 +15,13 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
-import io.aeron.Aeron;
-import io.aeron.Publication;
-import io.aeron.Subscription;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.ReliefValve;
+import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
+import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
+import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
 import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;
 
@@ -29,21 +29,18 @@ public class Streams
 {
     private final int streamId;
     private final NanoClock nanoClock;
-    private final String channel;
-    private final Aeron aeron;
+    private final ClusterableNode node;
     private final AtomicCounter failedPublications;
     private final int maxClaimAttempts;
 
     public Streams(
-        final String channel,
-        final Aeron aeron,
+        final ClusterableNode node,
         final AtomicCounter failedPublications,
         final int streamId,
         final NanoClock nanoClock,
         final int maxClaimAttempts)
     {
-        this.channel = channel;
-        this.aeron = aeron;
+        this.node = node;
         this.failedPublications = failedPublications;
         this.streamId = streamId;
         this.nanoClock = nanoClock;
@@ -66,13 +63,13 @@ public class Streams
             reliefValve);
     }
 
-    public Publication dataPublication()
+    public ClusterablePublication dataPublication()
     {
-        return aeron.addPublication(channel, streamId);
+        return node.publication(streamId);
     }
 
-    public Subscription subscription()
+    public ClusterableSubscription subscription()
     {
-        return aeron.addSubscription(channel, streamId);
+        return node.subscription(streamId);
     }
 }

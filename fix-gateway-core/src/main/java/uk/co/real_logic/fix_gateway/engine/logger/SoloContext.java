@@ -15,16 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import io.aeron.Aeron;
 import io.aeron.Publication;
-import io.aeron.Subscription;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
-import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.AgentRunner;
-import org.agrona.concurrent.CompositeAgent;
+import org.agrona.concurrent.*;
+import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
+import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
+import uk.co.real_logic.fix_gateway.replication.SoloNode;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.util.ArrayList;
@@ -35,19 +36,17 @@ import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 
-/**
- * Top level entry point for the whole logging module.
- */
-public class Logger implements AutoCloseable
+public class SoloContext extends Context
 {
     private final EngineConfiguration configuration;
-    private final Streams inboundLibraryStreams;
-    private final Streams outboundLibraryStreams;
     private final Publication replayPublication;
     private final ErrorHandler errorHandler;
     private final SequenceNumberIndexWriter sentSequenceNumberIndex;
     private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
+    private final FixCounters fixCounters;
     private final List<Archiver> archivers = new ArrayList<>();
+    private final StreamIdentifier inboundStreamId;
+    private final StreamIdentifier outboundStreamId;
 
     private LogDirectoryDescriptor directoryDescriptor;
     private AgentRunner loggingRunner;
@@ -55,29 +54,46 @@ public class Logger implements AutoCloseable
     private ArchiveReader inboundArchiveReader;
     private Archiver inboundArchiver;
     private Archiver outboundArchiver;
+    private Aeron aeron;
+    private SoloNode node;
+    private Streams inboundLibraryStreams;
+    private Streams outboundLibraryStreams;
 
-    public Logger(
+    SoloContext(
         final EngineConfiguration configuration,
-        final Streams inboundLibraryStreams,
-        final Streams outboundLibraryStreams,
         final ErrorHandler errorHandler,
         final Publication replayPublication,
         final SequenceNumberIndexWriter sentSequenceNumberIndexWriter,
-        final SequenceNumberIndexWriter receivedSequenceNumberIndex)
+        final SequenceNumberIndexWriter receivedSequenceNumberIndex,
+        final FixCounters fixCounters,
+        final Aeron aeron)
     {
         this.configuration = configuration;
-        this.inboundLibraryStreams = inboundLibraryStreams;
-        this.outboundLibraryStreams = outboundLibraryStreams;
         this.replayPublication = replayPublication;
         this.errorHandler = errorHandler;
         this.sentSequenceNumberIndex = sentSequenceNumberIndexWriter;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
+        this.fixCounters = fixCounters;
+        this.aeron = aeron;
+
+        final String channel = configuration.libraryAeronChannel();
+        this.inboundStreamId = new StreamIdentifier(channel, INBOUND_LIBRARY_STREAM);
+        this.outboundStreamId = new StreamIdentifier(channel, OUTBOUND_LIBRARY_STREAM);
     }
 
-    public void init()
+    public SoloContext init()
     {
+        initNode();
+        initStreams();
         initArchival();
         initIndexers();
+
+        return this;
+    }
+
+    private void initNode()
+    {
+        node = new SoloNode(aeron, configuration.libraryAeronChannel());
     }
 
     public void initIndexers()
@@ -87,31 +103,35 @@ public class Logger implements AutoCloseable
             final int cacheSetSize = configuration.loggerCacheSetSize();
             final int cacheNumSets = configuration.loggerCacheNumSets();
             final String logFileDir = configuration.logFileDir();
-
             final Indexer outboundIndexer = new Indexer(
                 asList(
                     newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM),
                     sentSequenceNumberIndex),
-                outboundLibraryStreams.subscription(),
                 outboundArchiveReader);
 
             final Indexer inboundIndexer = new Indexer(
                 asList(
                     newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM),
                     receivedSequenceNumberIndex),
-                inboundLibraryStreams.subscription(),
                 inboundArchiveReader);
 
             final ReplayQuery replayQuery =
                 newReplayQuery(logFileDir, outboundArchiveReader);
             final Replayer replayer = new Replayer(
-                inboundLibraryStreams.subscription(),
                 replayQuery,
                 replayPublication,
                 new BufferClaim(),
                 configuration.loggerIdleStrategy(),
                 errorHandler,
                 configuration.outboundMaxClaimAttempts());
+
+            inboundArchiver.subscription(
+                aeron.addSubscription(inboundStreamId.channel(), inboundStreamId.streamId()));
+            outboundArchiver.subscription(
+                aeron.addSubscription(outboundStreamId.channel(), outboundStreamId.streamId()));
+            inboundIndexer.subscription(inboundLibraryStreams.subscription());
+            outboundIndexer.subscription(outboundLibraryStreams.subscription());
+            replayer.subscription(inboundLibraryStreams.subscription());
 
             final List<Agent> agents = new ArrayList<>(archivers);
             agents.add(outboundIndexer);
@@ -124,17 +144,20 @@ public class Logger implements AutoCloseable
         }
         else
         {
-            final GapFiller gapFiller = new GapFiller(
+            // TODO: this wasn't wired up properly to begin with
+            // replayPublication
+            /*final GapFiller gapFiller = new GapFiller(
                 inboundLibraryStreams.subscription(),
                 outboundLibraryStreams.gatewayPublication(configuration.loggerIdleStrategy()));
-            loggingRunner = newRunner(gapFiller);
+            loggingRunner = newRunner(gapFiller);*/
         }
     }
 
-    private ReplayIndex newReplayIndex(final int cacheSetSize,
-                                       final int cacheNumSets,
-                                       final String logFileDir,
-                                       final int streamId)
+    private ReplayIndex newReplayIndex(
+        final int cacheSetSize,
+        final int cacheNumSets,
+        final String logFileDir,
+        final int streamId)
     {
         return new ReplayIndex(
             logFileDir,
@@ -172,26 +195,35 @@ public class Logger implements AutoCloseable
 
         if (configuration.logInboundMessages())
         {
-            final Subscription inboundSubscription = inboundLibraryStreams.subscription();
-            inboundArchiver = addArchiver(cacheNumSets, cacheSetSize, inboundSubscription);
-            inboundArchiveReader = archiveReader(logFileDir, inboundSubscription);
+            inboundArchiver = addArchiver(cacheNumSets, cacheSetSize, inboundStreamId);
+            inboundArchiveReader = archiveReader(logFileDir, inboundStreamId);
         }
 
         if (configuration.logOutboundMessages())
         {
-            final Subscription outboundSubscription = outboundLibraryStreams.subscription();
-            outboundArchiver = addArchiver(cacheNumSets, cacheSetSize, outboundSubscription);
-            outboundArchiveReader = archiveReader(logFileDir, outboundSubscription);
+            outboundArchiver = addArchiver(cacheNumSets, cacheSetSize, outboundStreamId);
+            outboundArchiveReader = archiveReader(logFileDir, outboundStreamId);
         }
     }
 
-    private ArchiveReader archiveReader(final String logFileDir, final Subscription subscription)
+    private void initStreams()
+    {
+        final NanoClock nanoClock = new SystemNanoClock();
+        inboundLibraryStreams = new Streams(
+            node, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
+            configuration.inboundMaxClaimAttempts());
+        outboundLibraryStreams = new Streams(
+            node, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
+            configuration.outboundMaxClaimAttempts());
+    }
+
+    private ArchiveReader archiveReader(final String logFileDir, final StreamIdentifier streamId)
     {
         return new ArchiveReader(
             LoggerUtil.newArchiveMetaData(logFileDir),
             configuration.loggerCacheNumSets(),
             configuration.loggerCacheSetSize(),
-            new StreamIdentifier(subscription));
+            streamId);
     }
 
     private AgentRunner newRunner(final Agent loggingAgent)
@@ -199,18 +231,46 @@ public class Logger implements AutoCloseable
         return new AgentRunner(configuration.loggerIdleStrategy(), errorHandler, null, loggingAgent);
     }
 
-    private Archiver addArchiver(final int cacheNumSets,
-                                 final int cacheSetSize,
-                                 final Subscription subscription)
+    private Archiver addArchiver(
+        final int cacheNumSets,
+        final int cacheSetSize,
+        final StreamIdentifier streamId)
     {
         final Archiver archiver = new Archiver(
             LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
             cacheNumSets,
             cacheSetSize,
-            new StreamIdentifier(subscription))
-            .subscription(subscription);
+            streamId);
         archivers.add(archiver);
         return archiver;
+    }
+
+    public Streams outboundLibraryStreams()
+    {
+        return outboundLibraryStreams;
+    }
+
+    public Streams inboundLibraryStreams()
+    {
+        return inboundLibraryStreams;
+    }
+
+    public ClusterableNode node()
+    {
+        return node;
+    }
+
+    public ReplayQuery inboundReplayQuery()
+    {
+        if (!configuration.logInboundMessages())
+        {
+            return null;
+        }
+
+        final String logFileDir = configuration.logFileDir();
+        final ArchiveReader archiveReader =
+            archiveReader(logFileDir, inboundStreamId);
+        return newReplayQuery(logFileDir, archiveReader);
     }
 
     public List<Archiver> archivers()
@@ -268,17 +328,5 @@ public class Logger implements AutoCloseable
         CloseHelper.close(outboundArchiveReader);
         sentSequenceNumberIndex.close();
         receivedSequenceNumberIndex.close();
-    }
-
-    public ReplayQuery inboundReplayQuery()
-    {
-        if (!configuration.logInboundMessages())
-        {
-            return null;
-        }
-
-        final String logFileDir = configuration.logFileDir();
-        final ArchiveReader archiveReader = archiveReader(logFileDir, inboundLibraryStreams.subscription());
-        return newReplayQuery(logFileDir, archiveReader);
     }
 }

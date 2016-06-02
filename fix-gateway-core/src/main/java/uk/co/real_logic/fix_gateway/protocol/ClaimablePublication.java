@@ -15,12 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
-import io.aeron.Publication;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
+import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.Publication.NOT_CONNECTED;
@@ -37,7 +37,7 @@ public class ClaimablePublication implements AutoCloseable
     protected final long maxClaimAttempts;
     protected final ReliefValve reliefValve;
     protected final BufferClaim bufferClaim;
-    protected final Publication dataPublication;
+    protected final ClusterablePublication dataPublication;
     protected final IdleStrategy idleStrategy;
     protected final AtomicCounter fails;
 
@@ -46,7 +46,7 @@ public class ClaimablePublication implements AutoCloseable
         final IdleStrategy idleStrategy,
         final AtomicCounter fails,
         final ReliefValve reliefValve,
-        final Publication dataPublication)
+        final ClusterablePublication dataPublication)
     {
         this.maxClaimAttempts = maxClaimAttempts;
         this.idleStrategy = idleStrategy;

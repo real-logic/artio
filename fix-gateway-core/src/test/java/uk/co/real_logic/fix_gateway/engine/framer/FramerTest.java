@@ -32,6 +32,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
+import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.timing.Timer;
@@ -89,7 +90,7 @@ public class FramerTest
     private SessionIds sessionIds = mock(SessionIds.class);
     private GatewaySessions gatewaySessions = mock(GatewaySessions.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
-    private Subscription outboundSubscription = mock(Subscription.class);
+    private ClusterableSubscription outboundSubscription = mock(ClusterableSubscription.class);
     private Image image = mock(Image.class);
     private ClusterableNode node = mock(ClusterableNode.class);
 
@@ -127,7 +128,7 @@ public class FramerTest
 
         when(mockReceiverEndPoint.libraryId()).thenReturn(LIBRARY_ID);
 
-        when(outboundSubscription.getImage(anyInt())).thenReturn(image);
+        //when(outboundSubscription.getImage(anyInt())).thenReturn(image);
 
         isLeader(true);
 
@@ -138,7 +139,7 @@ public class FramerTest
             engineConfiguration,
             mockConnectionHandler,
             outboundSubscription,
-            mock(Subscription.class),
+            mock(ClusterableSubscription.class),
             mock(Subscription.class),
             mock(QueuedPipe.class),
             mockSessionIdStrategy,

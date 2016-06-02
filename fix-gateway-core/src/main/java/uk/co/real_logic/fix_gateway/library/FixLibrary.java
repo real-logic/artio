@@ -15,23 +15,19 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
-import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.collections.Long2ObjectHashMap;
-import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.SystemEpochClock;
+import org.agrona.concurrent.*;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.FixGatewayException;
-import uk.co.real_logic.fix_gateway.GatewayProcess;
-import uk.co.real_logic.fix_gateway.LivenessDetector;
+import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.*;
+import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
+import uk.co.real_logic.fix_gateway.replication.SoloNode;
 import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
 import uk.co.real_logic.fix_gateway.timing.Timer;
@@ -72,7 +68,7 @@ public final class FixLibrary extends GatewayProcess
 {
     public static final int NO_MESSAGE_REPLAY = -1;
 
-    private final Subscription inboundSubscription;
+    private final ClusterableSubscription inboundSubscription;
     private final GatewayPublication outboundPublication;
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
@@ -96,12 +92,16 @@ public final class FixLibrary extends GatewayProcess
 
     private GatewayError errorType;
     private String errorMessage;
+    private SoloNode soloNode;
+    private Streams inboundLibraryStreams;
+    private Streams outboundLibraryStreams;
 
     private FixLibrary(final LibraryConfiguration configuration)
     {
         configuration.conclude();
 
         init(configuration);
+        initStreams(configuration);
 
         final LibraryTimers timers = new LibraryTimers();
         sessionTimer = timers.sessionTimer();
@@ -116,7 +116,7 @@ public final class FixLibrary extends GatewayProcess
 
         inboundSubscription = inboundLibraryStreams.subscription();
         outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy);
-        processProtocolHandler.sessionId = outboundPublication.sessionId();
+        processProtocolHandler.sessionId = outboundPublication.id();
 
         clock = new SystemEpochClock();
         livenessDetector = LivenessDetector.forLibrary(
@@ -124,6 +124,20 @@ public final class FixLibrary extends GatewayProcess
             configuration.libraryId(),
             configuration.replyTimeoutInMs());
         sessionExistsHandler = configuration.sessionExistsHandler();
+    }
+
+    private void initStreams(final CommonConfiguration configuration)
+    {
+        final String libraryChannel = configuration.libraryAeronChannel();
+        final NanoClock nanoClock = new SystemNanoClock();
+        soloNode = new SoloNode(aeron, libraryChannel);
+
+        inboundLibraryStreams = new Streams(
+            soloNode, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
+            configuration.inboundMaxClaimAttempts());
+        outboundLibraryStreams = new Streams(
+            soloNode, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
+            configuration.outboundMaxClaimAttempts());
     }
 
     private FixLibrary connect()

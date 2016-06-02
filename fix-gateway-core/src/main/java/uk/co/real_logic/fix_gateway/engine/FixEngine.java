@@ -22,13 +22,10 @@ import org.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.engine.framer.*;
-import uk.co.real_logic.fix_gateway.engine.logger.Logger;
+import uk.co.real_logic.fix_gateway.engine.logger.Context;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexWriter;
-import uk.co.real_logic.fix_gateway.replication.ClusterNode;
-import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;
-import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
-import uk.co.real_logic.fix_gateway.replication.SoloNode;
+import uk.co.real_logic.fix_gateway.protocol.Streams;
+import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.timing.EngineTimers;
 
@@ -58,8 +55,7 @@ public final class FixEngine extends GatewayProcess
     private final EngineConfiguration configuration;
 
     private AgentRunner framerRunner;
-    private Logger logger;
-    private ClusterableNode clusterableNode;
+    private Context context;
 
     /**
      * Launch the engine. This method starts up the engine threads and then returns.
@@ -144,58 +140,14 @@ public final class FixEngine extends GatewayProcess
         init(configuration);
         this.configuration = configuration;
 
-        newLogger(configuration);
-        logger.init();
-        initClustering(configuration);
-        initFramer(configuration, fixCounters);
-        initMonitoringAgent(timers.all(), configuration);
-    }
-
-    private void initClustering(final EngineConfiguration configuration)
-    {
-        if (configuration.isClustered())
-        {
-            if (!configuration.logInboundMessages() || !configuration.logOutboundMessages())
-            {
-                throw new IllegalArgumentException(
-                    "If you are enabling clustering, then you must enable both inbound and outbound logging");
-            }
-
-            final ClusterNodeConfiguration clusterNodeConfiguration = new ClusterNodeConfiguration()
-                .nodeId(configuration.nodeId())
-                .otherNodes(configuration.otherNodes())
-                .timeoutIntervalInMs(configuration.clusterTimeoutIntervalInMs())
-                .idleStrategy(configuration.framerIdleStrategy())
-                .archiver(logger.inboundArchiver())
-                .archiveReader(logger.inboundArchiveReader())
-                .failCounter(fixCounters.failedInboundPublications())
-                .maxClaimAttempts(configuration.inboundMaxClaimAttempts())
-                .aeronChannel(configuration.clusterAeronChannel())
-                .aeron(aeron);
-
-            clusterableNode = new ClusterNode(clusterNodeConfiguration, System.currentTimeMillis());
-        }
-        else
-        {
-            clusterableNode = new SoloNode(aeron, configuration.libraryAeronChannel());
-        }
-    }
-
-    private void newLogger(final EngineConfiguration configuration)
-    {
-        final SequenceNumberIndexWriter sentSequenceNumberIndexWriter = new SequenceNumberIndexWriter(
-            configuration.sentSequenceNumberBuffer(), configuration.sentSequenceNumberIndex(), errorHandler);
-        final SequenceNumberIndexWriter receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
-            configuration.receivedSequenceNumberBuffer(), configuration.receivedSequenceNumberIndex(), errorHandler);
-        logger = new Logger(
+        context = Context.of(
             configuration,
-            inboundLibraryStreams,
-            outboundLibraryStreams,
             errorHandler,
             replayPublication(),
-            sentSequenceNumberIndexWriter,
-            receivedSequenceNumberIndex
-        );
+            fixCounters,
+            aeron);
+        initFramer(configuration, fixCounters);
+        initMonitoringAgent(timers.all(), configuration);
     }
 
     private Publication replayPublication()
@@ -208,7 +160,9 @@ public final class FixEngine extends GatewayProcess
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
         final SessionIds sessionIds = new SessionIds(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
-        final Subscription librarySubscription = outboundLibraryStreams.subscription();
+        final Streams outboundLibraryStreams = context.outboundLibraryStreams();
+        final ClusterableSubscription librarySubscription = outboundLibraryStreams.subscription();
+        final Streams inboundLibraryStreams = context.inboundLibraryStreams();
 
         final ConnectionHandler handler = new ConnectionHandler(
             configuration,
@@ -241,10 +195,10 @@ public final class FixEngine extends GatewayProcess
             new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer()),
             new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer()),
             gatewaySessions,
-            logger.inboundReplayQuery(),
+            context.inboundReplayQuery(),
             errorHandler,
             outboundLibraryStreams.gatewayPublication(idleStrategy),
-            clusterableNode
+            context.node()
         );
         framerRunner = new AgentRunner(idleStrategy, errorHandler, null, framer);
     }
@@ -257,7 +211,7 @@ public final class FixEngine extends GatewayProcess
     private FixEngine launch()
     {
         startOnThread(framerRunner);
-        logger.start();
+        context.start();
         start();
         return this;
     }
@@ -268,7 +222,7 @@ public final class FixEngine extends GatewayProcess
     public synchronized void close()
     {
         framerRunner.close();
-        logger.close();
+        context.close();
         configuration.close();
         super.close();
     }

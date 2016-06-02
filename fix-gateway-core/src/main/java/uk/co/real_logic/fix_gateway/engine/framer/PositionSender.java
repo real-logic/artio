@@ -15,12 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import io.aeron.Image;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
-import java.util.function.Consumer;
-
-class PositionSender implements Consumer<Image>
+class PositionSender implements ClusterableSubscription.PositionHandler
 {
     private final GatewayPublication publication;
 
@@ -29,9 +27,9 @@ class PositionSender implements Consumer<Image>
         this.publication = publication;
     }
 
-    public void accept(final Image image)
+    public void onNewPosition(final int id, final long position)
     {
         // Willingly drop the position message in case of back pressure
-        publication.saveNewSentPosition(image.sessionId(), image.position());
+        publication.saveNewSentPosition(id, position);
     }
 }

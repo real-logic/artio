@@ -15,12 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import io.aeron.Subscription;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.mock;
@@ -30,7 +30,7 @@ public class GapFillerTest extends AbstractLogTest
 {
 
     private GatewayPublication publication = mock(GatewayPublication.class);
-    private Subscription subscription = mock(Subscription.class);
+    private ClusterableSubscription subscription = mock(ClusterableSubscription.class);
     private GapFiller gapFiller = new GapFiller(subscription, publication);
 
     @Test

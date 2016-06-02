@@ -39,9 +39,9 @@ import static io.aeron.logbuffer.LogBufferDescriptor.computePosition;
 
 public class Archiver implements Agent, FileBlockHandler
 {
-    public static final long UNKNOWN_POSITION = -1;
-
     private static final int POLL_LENGTH = termBufferLength();
+
+    public static final long UNKNOWN_POSITION = -1;
 
     private final IntFunction<SessionArchiver> newSessionArchiver = this::newSessionArchiver;
     private final ArchiveMetaData metaData;
@@ -65,6 +65,22 @@ public class Archiver implements Agent, FileBlockHandler
         sessionIdToArchive = new Int2ObjectCache<>(cacheNumSets, cacheSetSize, SessionArchiver::close);
     }
 
+    public Archiver subscription(final Subscription subscription)
+    {
+        this.subscription = subscription;
+        return this;
+    }
+
+    public int doWork()
+    {
+        if (subscription == null)
+        {
+            return 0;
+        }
+
+        return (int) subscription.filePoll(this, POLL_LENGTH);
+    }
+
     private SessionArchiver newSessionArchiver(final int sessionId)
     {
         final Image image = subscription.getImage(sessionId);
@@ -77,17 +93,6 @@ public class Archiver implements Agent, FileBlockHandler
         final int termBufferLength = image.termBufferLength();
         metaData.write(streamId, sessionId, initialTermId, termBufferLength);
         return new SessionArchiver(sessionId, image);
-    }
-
-    public Archiver subscription(final Subscription subscription)
-    {
-        this.subscription = subscription;
-        return this;
-    }
-
-    public int doWork()
-    {
-        return (int) subscription.filePoll(this, POLL_LENGTH);
     }
 
     public String roleName()

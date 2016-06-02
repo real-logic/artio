@@ -16,16 +16,20 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Publication;
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.messages.*;
-import uk.co.real_logic.fix_gateway.protocol.ClaimablePublication;
 
-public class RaftPublication extends ClaimablePublication
+import static io.aeron.Publication.BACK_PRESSURED;
+import static io.aeron.Publication.NOT_CONNECTED;
+
+public class RaftPublication
 {
+    private static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int MESSAGE_ACKNOWLEDGEMENT_LENGTH = HEADER_LENGTH + MessageAcknowledgementEncoder.BLOCK_LENGTH;
     private static final int REQUEST_VOTE_LENGTH = HEADER_LENGTH + RequestVoteEncoder.BLOCK_LENGTH;
     private static final int REPLY_VOTE_LENGTH = HEADER_LENGTH + ReplyVoteEncoder.BLOCK_LENGTH;
@@ -33,11 +37,20 @@ public class RaftPublication extends ClaimablePublication
     private static final int RESEND_BLOCK_LENGTH =
         HEADER_LENGTH + ResendEncoder.BLOCK_LENGTH + ResendDecoder.bodyHeaderLength();
 
+    protected final MessageHeaderEncoder header = new MessageHeaderEncoder();
+
+    private final BufferClaim bufferClaim = new BufferClaim();
     private final MessageAcknowledgementEncoder messageAcknowledgement = new MessageAcknowledgementEncoder();
     private final RequestVoteEncoder requestVote = new RequestVoteEncoder();
     private final ReplyVoteEncoder replyVote = new ReplyVoteEncoder();
     private final ConcensusHeartbeatEncoder concensusHeart = new ConcensusHeartbeatEncoder();
     private final ResendEncoder resend = new ResendEncoder();
+
+    private final long maxClaimAttempts;
+    private final ReliefValve reliefValve;
+    private final Publication dataPublication;
+    private final IdleStrategy idleStrategy;
+    private final AtomicCounter fails;
 
     public RaftPublication(
         final int maxClaimAttempts,
@@ -46,7 +59,11 @@ public class RaftPublication extends ClaimablePublication
         final ReliefValve reliefValve,
         final Publication dataPublication)
     {
-        super(maxClaimAttempts, idleStrategy, fails, reliefValve, dataPublication);
+        this.maxClaimAttempts = maxClaimAttempts;
+        this.idleStrategy = idleStrategy;
+        this.fails = fails;
+        this.reliefValve = reliefValve;
+        this.dataPublication = dataPublication;
     }
 
     public long saveMessageAcknowledgement(final long newAckedPosition,
@@ -199,5 +216,51 @@ public class RaftPublication extends ClaimablePublication
         bufferClaim.commit();
 
         return pos;
+    }
+
+    protected long claim(final int framedLength)
+    {
+        return claim(framedLength, bufferClaim);
+    }
+
+    public long claim(final int framedLength, final BufferClaim bufferClaim)
+    {
+        long position = 0;
+        long i = 0;
+        do
+        {
+            position = dataPublication.tryClaim(framedLength, bufferClaim);
+
+            if (position > 0L)
+            {
+                return position;
+            }
+            else if (position == BACK_PRESSURED)
+            {
+                idleStrategy.idle(reliefValve.vent());
+            }
+            else
+            {
+                idleStrategy.idle();
+            }
+
+            fails.increment();
+            i++;
+        } while (i <= maxClaimAttempts);
+
+        if (position == NOT_CONNECTED)
+        {
+            throw new IllegalStateException(
+                "Unable to send publish message, probably a missing an engine or library instance");
+        }
+        else
+        {
+            return position;
+        }
+    }
+
+    public void close()
+    {
+        dataPublication.close();
     }
 }

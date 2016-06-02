@@ -25,9 +25,7 @@ import io.aeron.protocol.HeaderFlyweight;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.IoUtil;
-import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.UnsafeBuffer;
-import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -37,8 +35,6 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
-import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
@@ -65,10 +61,11 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.*;
 
 @RunWith(Parameterized.class)
-public class LoggerTest
+public class ArchiverTest
 {
 
     public static final int SIZE = 2 * 1024;
@@ -96,17 +93,16 @@ public class LoggerTest
 
     private final UnsafeBuffer buffer;
 
-    private EngineConfiguration configuration;
+    private LogDirectoryDescriptor logDirectoryDescriptor;
     private MediaDriver mediaDriver;
     private Aeron aeron;
-    private Logger logger;
     private Archiver archiver;
     private ArchiveReader archiveReader;
     private Publication publication;
 
     private int work = 0;
 
-    public LoggerTest(final UnsafeBuffer buffer)
+    public ArchiverTest(final UnsafeBuffer buffer)
     {
         this.buffer = buffer;
     }
@@ -116,30 +112,24 @@ public class LoggerTest
     {
         mediaDriver = launchMediaDriver(TERM_LENGTH);
         aeron = Aeron.connect(new Aeron.Context());
-        final Streams outboundStreams = new Streams(
-            CHANNEL, aeron, mock(AtomicCounter.class), STREAM_ID, mock(NanoClock.class), 12000);
 
-        configuration = new EngineConfiguration()
-            .logInboundMessages(false)
-            .libraryAeronChannel(CHANNEL);
-
-        final File dir = new File(configuration.logFileDir());
-        if (dir.exists())
+        final File logFileDir = new File(DEFAULT_LOG_FILE_DIR);
+        if (logFileDir.exists())
         {
-            IoUtil.delete(dir, false);
+            IoUtil.delete(logFileDir, false);
         }
 
-        configuration.conclude();
 
-        logger = new Logger(
-            configuration, null, outboundStreams, Throwable::printStackTrace, null,
-            mock(SequenceNumberIndexWriter.class), mock(SequenceNumberIndexWriter.class)
-        );
+        final StreamIdentifier dataStream = new StreamIdentifier(CHANNEL, STREAM_ID);
+        logDirectoryDescriptor = new LogDirectoryDescriptor(DEFAULT_LOG_FILE_DIR);
+        final ArchiveMetaData metaData = new ArchiveMetaData(logDirectoryDescriptor);
+        archiveReader = new ArchiveReader(
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
+        archiver = new Archiver(
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
 
-        logger.initArchival();
-        archiver = logger.archivers().get(0);
-        archiveReader = logger.outboundArchiveReader();
-        publication = outboundStreams.dataPublication();
+        publication = aeron.addPublication(CHANNEL, STREAM_ID);
+        archiver.subscription(aeron.addSubscription(CHANNEL, STREAM_ID));
     }
 
     @Test
@@ -423,9 +413,7 @@ public class LoggerTest
 
     private List<File> logFiles()
     {
-        return logger
-            .directoryDescriptor()
-            .listLogFiles(new StreamIdentifier(CHANNEL, STREAM_ID));
+        return logDirectoryDescriptor.listLogFiles(new StreamIdentifier(CHANNEL, STREAM_ID));
     }
 
     private void assertNothingRead(final long position, final long expectedReason)
@@ -564,8 +552,8 @@ public class LoggerTest
     @After
     public void tearDown()
     {
-        CloseHelper.close(logger);
-        CloseHelper.close(configuration);
+        CloseHelper.close(archiveReader);
+        archiver.onClose();
         CloseHelper.close(aeron);
         CloseHelper.close(mediaDriver);
         cleanupDirectory(mediaDriver);
