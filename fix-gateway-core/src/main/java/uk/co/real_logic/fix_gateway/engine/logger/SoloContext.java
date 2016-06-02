@@ -42,12 +42,10 @@ import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;
 public class SoloContext extends EngineContext
 {
     private final Publication replayPublication;
-    private final ErrorHandler errorHandler;
     private final List<Archiver> archivers = new ArrayList<>();
     private final StreamIdentifier inboundStreamId;
     private final StreamIdentifier outboundStreamId;
 
-    private AgentRunner loggingRunner;
     private ArchiveReader outboundArchiveReader;
     private ArchiveReader inboundArchiveReader;
     private Archiver inboundArchiver;
@@ -63,7 +61,6 @@ public class SoloContext extends EngineContext
     {
         super(configuration, errorHandler, fixCounters, aeron);
         this.replayPublication = replayPublication;
-        this.errorHandler = errorHandler;
 
         final String channel = configuration.libraryAeronChannel();
         this.inboundStreamId = new StreamIdentifier(channel, INBOUND_LIBRARY_STREAM);
@@ -100,7 +97,7 @@ public class SoloContext extends EngineContext
                 inboundArchiveReader);
 
             final ReplayQuery replayQuery =
-                newReplayQuery(logFileDir, outboundArchiveReader);
+                newReplayQuery(outboundArchiveReader);
             final Replayer replayer = new Replayer(
                 replayQuery,
                 replayPublication,
@@ -143,81 +140,24 @@ public class SoloContext extends EngineContext
         }
     }
 
-    private ReplayIndex newReplayIndex(
-        final int cacheSetSize,
-        final int cacheNumSets,
-        final String logFileDir,
-        final int streamId)
-    {
-        return new ReplayIndex(
-            logFileDir,
-            streamId,
-            configuration.indexFileSize(),
-            cacheNumSets,
-            cacheSetSize,
-            LoggerUtil::map,
-            ReplayIndex.replayBuffer(logFileDir, streamId),
-            errorHandler);
-    }
-
-    private ReplayQuery newReplayQuery(final String logFileDir,
-                                       final ArchiveReader archiveReader)
-    {
-        final int cacheSetSize = configuration.loggerCacheSetSize();
-        final int cacheNumSets = configuration.loggerCacheNumSets();
-        final int streamId = archiveReader.fullStreamId().streamId();
-        return new ReplayQuery(
-            logFileDir,
-            cacheNumSets,
-            cacheSetSize,
-            LoggerUtil::mapExistingFile,
-            archiveReader,
-            streamId);
-    }
-
     public void initArchival()
     {
-        final int cacheNumSets = configuration.loggerCacheNumSets();
-        final int cacheSetSize = configuration.loggerCacheSetSize();
-        final String logFileDir = configuration.logFileDir();
-
         if (configuration.logInboundMessages())
         {
-            inboundArchiver = addArchiver(cacheNumSets, cacheSetSize, inboundStreamId);
-            inboundArchiveReader = archiveReader(logFileDir, inboundStreamId);
+            inboundArchiver = addArchiver(inboundStreamId);
+            inboundArchiveReader = archiveReader(inboundStreamId);
         }
 
         if (configuration.logOutboundMessages())
         {
-            outboundArchiver = addArchiver(cacheNumSets, cacheSetSize, outboundStreamId);
-            outboundArchiveReader = archiveReader(logFileDir, outboundStreamId);
+            outboundArchiver = addArchiver(outboundStreamId);
+            outboundArchiveReader = archiveReader(outboundStreamId);
         }
     }
 
-    private ArchiveReader archiveReader(final String logFileDir, final StreamIdentifier streamId)
+    private Archiver addArchiver(final StreamIdentifier streamId)
     {
-        return new ArchiveReader(
-            LoggerUtil.newArchiveMetaData(logFileDir),
-            configuration.loggerCacheNumSets(),
-            configuration.loggerCacheSetSize(),
-            streamId);
-    }
-
-    private AgentRunner newRunner(final Agent loggingAgent)
-    {
-        return new AgentRunner(configuration.loggerIdleStrategy(), errorHandler, null, loggingAgent);
-    }
-
-    private Archiver addArchiver(
-        final int cacheNumSets,
-        final int cacheSetSize,
-        final StreamIdentifier streamId)
-    {
-        final Archiver archiver = new Archiver(
-            LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
-            cacheNumSets,
-            cacheSetSize,
-            streamId);
+        final Archiver archiver = archiver(streamId);
         archivers.add(archiver);
         return archiver;
     }
@@ -246,8 +186,8 @@ public class SoloContext extends EngineContext
 
         final String logFileDir = configuration.logFileDir();
         final ArchiveReader archiveReader =
-            archiveReader(logFileDir, inboundStreamId);
-        return newReplayQuery(logFileDir, archiveReader);
+            archiveReader(inboundStreamId);
+        return newReplayQuery(archiveReader);
     }
 
     public void start()

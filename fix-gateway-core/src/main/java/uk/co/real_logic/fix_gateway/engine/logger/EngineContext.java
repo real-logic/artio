@@ -18,12 +18,15 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import io.aeron.Aeron;
 import io.aeron.Publication;
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
+import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
@@ -31,6 +34,7 @@ import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREA
 public abstract class EngineContext implements AutoCloseable
 {
     protected final EngineConfiguration configuration;
+    protected final ErrorHandler errorHandler;
     protected final FixCounters fixCounters;
     protected final Aeron aeron;
     protected final SequenceNumberIndexWriter sentSequenceNumberIndex;
@@ -38,6 +42,7 @@ public abstract class EngineContext implements AutoCloseable
 
     protected Streams inboundLibraryStreams;
     protected Streams outboundLibraryStreams;
+    protected AgentRunner loggingRunner;
 
     public static EngineContext of(
         final EngineConfiguration configuration,
@@ -74,10 +79,12 @@ public abstract class EngineContext implements AutoCloseable
 
     public EngineContext(
         final EngineConfiguration configuration,
-        final ErrorHandler errorHandler, final FixCounters fixCounters,
+        final ErrorHandler errorHandler,
+        final FixCounters fixCounters,
         final Aeron aeron)
     {
         this.configuration = configuration;
+        this.errorHandler = errorHandler;
         this.fixCounters = fixCounters;
         this.aeron = aeron;
 
@@ -85,18 +92,6 @@ public abstract class EngineContext implements AutoCloseable
             configuration.sentSequenceNumberBuffer(), configuration.sentSequenceNumberIndex(), errorHandler);
         receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
             configuration.receivedSequenceNumberBuffer(), configuration.receivedSequenceNumberIndex(), errorHandler);
-    }
-
-    public abstract ReplayQuery inboundReplayQuery();
-
-    public abstract ClusterableNode node();
-
-    public abstract void start();
-
-    public void close()
-    {
-        sentSequenceNumberIndex.close();
-        receivedSequenceNumberIndex.close();
     }
 
     protected void initStreams(final ClusterableNode node)
@@ -110,7 +105,76 @@ public abstract class EngineContext implements AutoCloseable
             configuration.outboundMaxClaimAttempts());
     }
 
+    protected ReplayIndex newReplayIndex(
+        final int cacheSetSize,
+        final int cacheNumSets,
+        final String logFileDir,
+        final int streamId)
+    {
+        return new ReplayIndex(
+            logFileDir,
+            streamId,
+            configuration.indexFileSize(),
+            cacheNumSets,
+            cacheSetSize,
+            LoggerUtil::map,
+            ReplayIndex.replayBuffer(logFileDir, streamId),
+            errorHandler);
+    }
+
+    protected ReplayQuery newReplayQuery(final ArchiveReader archiveReader)
+    {
+        final String logFileDir = configuration.logFileDir();
+        final int cacheSetSize = configuration.loggerCacheSetSize();
+        final int cacheNumSets = configuration.loggerCacheNumSets();
+        final int streamId = archiveReader.fullStreamId().streamId();
+        return new ReplayQuery(
+            logFileDir,
+            cacheNumSets,
+            cacheSetSize,
+            LoggerUtil::mapExistingFile,
+            archiveReader,
+            streamId);
+    }
+
+    public void close()
+    {
+        sentSequenceNumberIndex.close();
+        receivedSequenceNumberIndex.close();
+    }
+
+    protected ArchiveReader archiveReader(final StreamIdentifier streamId)
+    {
+        return new ArchiveReader(
+            LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
+            configuration.loggerCacheNumSets(),
+            configuration.loggerCacheSetSize(),
+            streamId);
+    }
+
+    protected AgentRunner newRunner(final Agent loggingAgent)
+    {
+        return new AgentRunner(configuration.loggerIdleStrategy(), errorHandler, null, loggingAgent);
+    }
+
+    protected Archiver archiver(final StreamIdentifier streamId)
+    {
+        final int cacheNumSets = configuration.loggerCacheNumSets();
+        final int cacheSetSize = configuration.loggerCacheSetSize();
+        return new Archiver(
+            LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
+            cacheNumSets,
+            cacheSetSize,
+            streamId);
+    }
+
     public abstract Streams outboundLibraryStreams();
 
     public abstract Streams inboundLibraryStreams();
+
+    public abstract ReplayQuery inboundReplayQuery();
+
+    public abstract ClusterableNode node();
+
+    public abstract void start();
 }

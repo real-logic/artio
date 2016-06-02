@@ -17,7 +17,9 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.Aeron;
 import io.aeron.Publication;
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
@@ -26,30 +28,35 @@ import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;
 import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
+import static java.util.Arrays.asList;
+import static org.agrona.concurrent.AgentRunner.startOnThread;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
 
-// TODO: finish cluster context
 public class ClusterContext extends EngineContext
 {
-    private ClusterNode node;
+    private final StreamIdentifier dataStream;
+    private final ClusterNode node;
 
     public ClusterContext(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
-        final Publication replayPublication, // TODO: use
+        final Publication replayPublication,
         final FixCounters fixCounters,
         final Aeron aeron)
     {
         super(configuration, errorHandler, fixCounters, aeron);
 
         final String channel = configuration.clusterAeronChannel();
-        final StreamIdentifier dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
+        dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
+
         final int cacheNumSets = configuration.loggerCacheNumSets();
         final int cacheSetSize = configuration.loggerCacheSetSize();
-        final ArchiveReader archiveReader = new ArchiveReader(
-            LoggerUtil.newArchiveMetaData(configuration.logFileDir()), cacheNumSets, cacheSetSize, dataStream);
+        final String logFileDir = configuration.logFileDir();
+
+        final ArchiveReader archiveReader = archiveReader(dataStream);
         final Archiver archiver = new Archiver(
-            LoggerUtil.newArchiveMetaData(configuration.logFileDir()), cacheNumSets, cacheSetSize, dataStream);
+            LoggerUtil.newArchiveMetaData(logFileDir), cacheNumSets, cacheSetSize, dataStream);
 
         final ClusterNodeConfiguration clusterNodeConfiguration = new ClusterNodeConfiguration()
             .nodeId(configuration.nodeId())
@@ -66,11 +73,35 @@ public class ClusterContext extends EngineContext
         node = new ClusterNode(clusterNodeConfiguration, System.currentTimeMillis());
 
         initStreams(node);
+
+        final Indexer indexer = new Indexer(
+            asList(
+                newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM),
+                // TODO: distinguish between indices
+                sentSequenceNumberIndex,
+                receivedSequenceNumberIndex),
+            archiveReader);
+
+        final ReplayQuery replayQuery =
+            newReplayQuery(archiveReader /*outboundArchiveReader*/);
+        final Replayer replayer = new Replayer(
+            replayQuery,
+            replayPublication,
+            new BufferClaim(),
+            configuration.loggerIdleStrategy(),
+            errorHandler,
+            configuration.outboundMaxClaimAttempts());
+
+        indexer.subscription(inboundLibraryStreams.subscription());
+        replayer.subscription(inboundLibraryStreams.subscription());
+
+        loggingRunner = newRunner(new CompositeAgent(indexer, replayer));
     }
 
     public ReplayQuery inboundReplayQuery()
     {
-        return null;
+        final ArchiveReader archiveReader = archiveReader(dataStream); // TODO: inbound
+        return newReplayQuery(archiveReader);
     }
 
     public ClusterableNode node()
@@ -80,7 +111,7 @@ public class ClusterContext extends EngineContext
 
     public void start()
     {
-
+        startOnThread(loggingRunner);
     }
 
     public Streams outboundLibraryStreams()
@@ -95,6 +126,7 @@ public class ClusterContext extends EngineContext
 
     public void close()
     {
-
+        loggingRunner.close();
+        super.close();
     }
 }
