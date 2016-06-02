@@ -51,7 +51,6 @@ public class SoloContext extends Context
     private final StreamIdentifier inboundStreamId;
     private final StreamIdentifier outboundStreamId;
 
-    private LogDirectoryDescriptor directoryDescriptor;
     private AgentRunner loggingRunner;
     private ArchiveReader outboundArchiveReader;
     private ArchiveReader inboundArchiveReader;
@@ -200,8 +199,6 @@ public class SoloContext extends Context
         final int cacheSetSize = configuration.loggerCacheSetSize();
         final String logFileDir = configuration.logFileDir();
 
-        directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
-
         if (configuration.logInboundMessages())
         {
             inboundArchiver = addArchiver(cacheNumSets, cacheSetSize, inboundStreamId);
@@ -280,36 +277,6 @@ public class SoloContext extends Context
         final ArchiveReader archiveReader =
             archiveReader(logFileDir, inboundStreamId);
         return newReplayQuery(logFileDir, archiveReader);
-    }
-
-    public List<Archiver> archivers()
-    {
-        return archivers;
-    }
-
-    public ArchiveReader outboundArchiveReader()
-    {
-        return outboundArchiveReader;
-    }
-
-    public ArchiveReader inboundArchiveReader()
-    {
-        return inboundArchiveReader;
-    }
-
-    public Archiver outboundArchiver()
-    {
-        return outboundArchiver;
-    }
-
-    public Archiver inboundArchiver()
-    {
-        return inboundArchiver;
-    }
-
-    public LogDirectoryDescriptor directoryDescriptor()
-    {
-        return directoryDescriptor;
     }
 
     public void start()
