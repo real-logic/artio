@@ -23,12 +23,9 @@ import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
 
-/**
- * Top level entry point for the whole logging module.
- */
-public abstract class Context implements AutoCloseable
+public abstract class EngineContext implements AutoCloseable
 {
-    public static Context of(
+    public static EngineContext of(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
         final Publication replayPublication,

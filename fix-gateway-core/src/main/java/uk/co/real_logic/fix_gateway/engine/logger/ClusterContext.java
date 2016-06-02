@@ -25,7 +25,7 @@ import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;
 import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
 
 // TODO: finish cluster context
-public class ClusterContext extends Context
+public class ClusterContext extends EngineContext
 {
     private final EngineConfiguration configuration;
     private final ErrorHandler errorHandler;

@@ -39,7 +39,7 @@ import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;
 
-public class SoloContext extends Context
+public class SoloContext extends EngineContext
 {
     private final EngineConfiguration configuration;
     private final Publication replayPublication;
