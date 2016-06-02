@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import org.agrona.CloseHelper;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.status.CountersManager;
 
@@ -26,6 +27,8 @@ public class FixCounters implements AutoCloseable
     private final AtomicCounter failedInboundPublications;
     private final AtomicCounter failedOutboundPublications;
     private final AtomicCounter failedReplayPublications;
+
+    private AtomicCounter failedRaftPublications = null;
 
     public FixCounters(final CountersManager countersManager)
     {
@@ -48,6 +51,16 @@ public class FixCounters implements AutoCloseable
     public AtomicCounter failedReplayPublications()
     {
         return failedReplayPublications;
+    }
+
+    public AtomicCounter failedRaftPublications()
+    {
+        if (failedRaftPublications == null)
+        {
+            failedRaftPublications = countersManager.newCounter("Failed offer to raft publication");
+        }
+
+        return failedRaftPublications;
     }
 
     public AtomicCounter messagesRead(final long connectionId, final SocketAddress address)
@@ -85,6 +98,7 @@ public class FixCounters implements AutoCloseable
         failedInboundPublications.close();
         failedOutboundPublications.close();
         failedReplayPublications.close();
+        CloseHelper.close(failedRaftPublications);
     }
 
 }

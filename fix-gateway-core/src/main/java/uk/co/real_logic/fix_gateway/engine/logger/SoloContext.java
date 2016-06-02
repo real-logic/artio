@@ -41,12 +41,8 @@ import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;
 
 public class SoloContext extends EngineContext
 {
-    private final EngineConfiguration configuration;
     private final Publication replayPublication;
     private final ErrorHandler errorHandler;
-    private final SequenceNumberIndexWriter sentSequenceNumberIndex;
-    private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
-    private final FixCounters fixCounters;
     private final List<Archiver> archivers = new ArrayList<>();
     private final StreamIdentifier inboundStreamId;
     private final StreamIdentifier outboundStreamId;
@@ -56,41 +52,27 @@ public class SoloContext extends EngineContext
     private ArchiveReader inboundArchiveReader;
     private Archiver inboundArchiver;
     private Archiver outboundArchiver;
-    private Aeron aeron;
     private SoloNode node;
-    private Streams inboundLibraryStreams;
-    private Streams outboundLibraryStreams;
 
     SoloContext(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
         final Publication replayPublication,
-        final SequenceNumberIndexWriter sentSequenceNumberIndexWriter,
-        final SequenceNumberIndexWriter receivedSequenceNumberIndex,
         final FixCounters fixCounters,
         final Aeron aeron)
     {
-        this.configuration = configuration;
+        super(configuration, errorHandler, fixCounters, aeron);
         this.replayPublication = replayPublication;
         this.errorHandler = errorHandler;
-        this.sentSequenceNumberIndex = sentSequenceNumberIndexWriter;
-        this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
-        this.fixCounters = fixCounters;
-        this.aeron = aeron;
 
         final String channel = configuration.libraryAeronChannel();
         this.inboundStreamId = new StreamIdentifier(channel, INBOUND_LIBRARY_STREAM);
         this.outboundStreamId = new StreamIdentifier(channel, OUTBOUND_LIBRARY_STREAM);
-    }
 
-    public SoloContext init()
-    {
         initNode();
-        initStreams();
+        initStreams(node);
         initArchival();
         initIndexers();
-
-        return this;
     }
 
     private void initNode()
@@ -212,17 +194,6 @@ public class SoloContext extends EngineContext
         }
     }
 
-    private void initStreams()
-    {
-        final NanoClock nanoClock = new SystemNanoClock();
-        inboundLibraryStreams = new Streams(
-            node, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
-            configuration.inboundMaxClaimAttempts());
-        outboundLibraryStreams = new Streams(
-            node, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
-            configuration.outboundMaxClaimAttempts());
-    }
-
     private ArchiveReader archiveReader(final String logFileDir, final StreamIdentifier streamId)
     {
         return new ArchiveReader(
@@ -300,9 +271,9 @@ public class SoloContext extends EngineContext
             archivers.forEach(Archiver::onClose);
         }
 
+        super.close();
+
         CloseHelper.close(inboundArchiveReader);
         CloseHelper.close(outboundArchiveReader);
-        sentSequenceNumberIndex.close();
-        receivedSequenceNumberIndex.close();
     }
 }

@@ -18,55 +18,54 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import io.aeron.Aeron;
 import io.aeron.Publication;
 import org.agrona.ErrorHandler;
+import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.ClusterNode;
 import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;
 import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
+import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
+
+import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
 
 // TODO: finish cluster context
 public class ClusterContext extends EngineContext
 {
-    private final EngineConfiguration configuration;
-    private final ErrorHandler errorHandler;
-    private final Publication replayPublication;
-    private final SequenceNumberIndexWriter sentSequenceNumberIndexWriter;
-    private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
-    private final Aeron aeron;
-
     private ClusterNode node;
 
     public ClusterContext(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
-        final Publication replayPublication,
-        final SequenceNumberIndexWriter sentSequenceNumberIndexWriter,
-        final SequenceNumberIndexWriter receivedSequenceNumberIndex,
+        final Publication replayPublication, // TODO: use
+        final FixCounters fixCounters,
         final Aeron aeron)
     {
-        this.configuration = configuration;
-        this.errorHandler = errorHandler;
-        this.replayPublication = replayPublication;
-        this.sentSequenceNumberIndexWriter = sentSequenceNumberIndexWriter;
-        this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
-        this.aeron = aeron;
-    }
+        super(configuration, errorHandler, fixCounters, aeron);
 
-    public void init()
-    {
+        final String channel = configuration.clusterAeronChannel();
+        final StreamIdentifier dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
+        final int cacheNumSets = configuration.loggerCacheNumSets();
+        final int cacheSetSize = configuration.loggerCacheSetSize();
+        final ArchiveReader archiveReader = new ArchiveReader(
+            LoggerUtil.newArchiveMetaData(configuration.logFileDir()), cacheNumSets, cacheSetSize, dataStream);
+        final Archiver archiver = new Archiver(
+            LoggerUtil.newArchiveMetaData(configuration.logFileDir()), cacheNumSets, cacheSetSize, dataStream);
+
         final ClusterNodeConfiguration clusterNodeConfiguration = new ClusterNodeConfiguration()
             .nodeId(configuration.nodeId())
             .otherNodes(configuration.otherNodes())
             .timeoutIntervalInMs(configuration.clusterTimeoutIntervalInMs())
             .idleStrategy(configuration.framerIdleStrategy())
-            .archiver(null) // TODO
-            .archiveReader(null)
-            .failCounter(null)
+            .archiver(archiver)
+            .archiveReader(archiveReader)
+            .failCounter(fixCounters.failedRaftPublications())
             .maxClaimAttempts(configuration.inboundMaxClaimAttempts())
-            .aeronChannel(configuration.clusterAeronChannel())
+            .aeronChannel(channel)
             .aeron(aeron);
 
         node = new ClusterNode(clusterNodeConfiguration, System.currentTimeMillis());
+
+        initStreams(node);
     }
 
     public ReplayQuery inboundReplayQuery()
@@ -76,7 +75,7 @@ public class ClusterContext extends EngineContext
 
     public ClusterableNode node()
     {
-        return null;
+        return node;
     }
 
     public void start()
@@ -84,18 +83,18 @@ public class ClusterContext extends EngineContext
 
     }
 
-    public void close()
-    {
-
-    }
-
     public Streams outboundLibraryStreams()
     {
-        return null;
+        return outboundLibraryStreams;
     }
 
     public Streams inboundLibraryStreams()
     {
-        return null;
+        return inboundLibraryStreams;
+    }
+
+    public void close()
+    {
+
     }
 }

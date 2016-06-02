@@ -18,13 +18,27 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import io.aeron.Aeron;
 import io.aeron.Publication;
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.NanoClock;
+import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
 
+import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+
 public abstract class EngineContext implements AutoCloseable
 {
+    protected final EngineConfiguration configuration;
+    protected final FixCounters fixCounters;
+    protected final Aeron aeron;
+    protected final SequenceNumberIndexWriter sentSequenceNumberIndex;
+    protected final SequenceNumberIndexWriter receivedSequenceNumberIndex;
+
+    protected Streams inboundLibraryStreams;
+    protected Streams outboundLibraryStreams;
+
     public static EngineContext of(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
@@ -32,11 +46,6 @@ public abstract class EngineContext implements AutoCloseable
         final FixCounters fixCounters,
         final Aeron aeron)
     {
-        final SequenceNumberIndexWriter sentSequenceNumberIndexWriter = new SequenceNumberIndexWriter(
-            configuration.sentSequenceNumberBuffer(), configuration.sentSequenceNumberIndex(), errorHandler);
-        final SequenceNumberIndexWriter receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
-            configuration.receivedSequenceNumberBuffer(), configuration.receivedSequenceNumberIndex(), errorHandler);
-
         if (configuration.isClustered())
         {
             if (!configuration.logInboundMessages() || !configuration.logOutboundMessages())
@@ -45,7 +54,12 @@ public abstract class EngineContext implements AutoCloseable
                     "If you are enabling clustering, then you must enable both inbound and outbound logging");
             }
 
-            return null;
+            return new ClusterContext(
+                configuration,
+                errorHandler,
+                replayPublication,
+                fixCounters,
+                aeron);
         }
         else
         {
@@ -53,11 +67,24 @@ public abstract class EngineContext implements AutoCloseable
                 configuration,
                 errorHandler,
                 replayPublication,
-                sentSequenceNumberIndexWriter,
-                receivedSequenceNumberIndex,
                 fixCounters,
-                aeron).init();
+                aeron);
         }
+    }
+
+    public EngineContext(
+        final EngineConfiguration configuration,
+        final ErrorHandler errorHandler, final FixCounters fixCounters,
+        final Aeron aeron)
+    {
+        this.configuration = configuration;
+        this.fixCounters = fixCounters;
+        this.aeron = aeron;
+
+        sentSequenceNumberIndex = new SequenceNumberIndexWriter(
+            configuration.sentSequenceNumberBuffer(), configuration.sentSequenceNumberIndex(), errorHandler);
+        receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
+            configuration.receivedSequenceNumberBuffer(), configuration.receivedSequenceNumberIndex(), errorHandler);
     }
 
     public abstract ReplayQuery inboundReplayQuery();
@@ -66,7 +93,22 @@ public abstract class EngineContext implements AutoCloseable
 
     public abstract void start();
 
-    public abstract void close();
+    public void close()
+    {
+        sentSequenceNumberIndex.close();
+        receivedSequenceNumberIndex.close();
+    }
+
+    protected void initStreams(final ClusterableNode node)
+    {
+        final NanoClock nanoClock = new SystemNanoClock();
+        inboundLibraryStreams = new Streams(
+            node, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
+            configuration.inboundMaxClaimAttempts());
+        outboundLibraryStreams = new Streams(
+            node, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
+            configuration.outboundMaxClaimAttempts());
+    }
 
     public abstract Streams outboundLibraryStreams();
 
