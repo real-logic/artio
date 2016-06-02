@@ -25,16 +25,14 @@ public class FixCounters implements AutoCloseable
     private final CountersManager countersManager;
     private final AtomicCounter failedInboundPublications;
     private final AtomicCounter failedOutboundPublications;
-    private final AtomicCounter failedCatchupSpins;
-    private final AtomicCounter failedResetSessionIdSpins;
+    private final AtomicCounter failedReplayPublications;
 
     public FixCounters(final CountersManager countersManager)
     {
         this.countersManager = countersManager;
         failedInboundPublications = countersManager.newCounter("Failed offer to inbound publication");
         failedOutboundPublications = countersManager.newCounter("Failed offer to outbound publication");
-        failedCatchupSpins = countersManager.newCounter("Failed spins when trying to catchup");
-        failedResetSessionIdSpins = countersManager.newCounter("Failed spins when trying to reset session ids");
+        failedReplayPublications = countersManager.newCounter("Failed offer to replay publication");
     }
 
     public AtomicCounter failedInboundPublications()
@@ -47,14 +45,9 @@ public class FixCounters implements AutoCloseable
         return failedOutboundPublications;
     }
 
-    public AtomicCounter failedCatchupSpins()
+    public AtomicCounter failedReplayPublications()
     {
-        return failedCatchupSpins;
-    }
-
-    public AtomicCounter failedResetSessionIdSpins()
-    {
-        return failedResetSessionIdSpins;
+        return failedReplayPublications;
     }
 
     public AtomicCounter messagesRead(final long connectionId, final SocketAddress address)
@@ -91,8 +84,7 @@ public class FixCounters implements AutoCloseable
     {
         failedInboundPublications.close();
         failedOutboundPublications.close();
-        failedCatchupSpins.close();
-        failedResetSessionIdSpins.close();
+        failedReplayPublications.close();
     }
 
 }

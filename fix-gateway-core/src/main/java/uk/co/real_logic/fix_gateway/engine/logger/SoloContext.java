@@ -23,9 +23,11 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
 import uk.co.real_logic.fix_gateway.replication.SoloNode;
+import uk.co.real_logic.fix_gateway.replication.SoloPublication;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.util.ArrayList;
@@ -35,6 +37,7 @@ import static java.util.Arrays.asList;
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;
 
 public class SoloContext extends Context
 {
@@ -144,12 +147,18 @@ public class SoloContext extends Context
         }
         else
         {
-            // TODO: this wasn't wired up properly to begin with
-            // replayPublication
-            /*final GapFiller gapFiller = new GapFiller(
+            final GatewayPublication replayGatewayPublication =
+                new GatewayPublication(
+                    new SoloPublication(replayPublication),
+                    fixCounters.failedReplayPublications(),
+                    configuration.loggerIdleStrategy(),
+                    new SystemNanoClock(),
+                    configuration.outboundMaxClaimAttempts(),
+                    NO_RELIEF_VALVE);
+            final GapFiller gapFiller = new GapFiller(
                 inboundLibraryStreams.subscription(),
-                outboundLibraryStreams.gatewayPublication(configuration.loggerIdleStrategy()));
-            loggingRunner = newRunner(gapFiller);*/
+                replayGatewayPublication);
+            loggingRunner = newRunner(gapFiller);
         }
     }
 
