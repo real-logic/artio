@@ -34,6 +34,7 @@ public class LibraryProtocolSubscription implements ControlledFragmentHandler
     private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
     private final CatchupDecoder catchup = new CatchupDecoder();
     private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
+    private final NotLeaderDecoder libraryConnect = new NotLeaderDecoder();
 
     private final LibraryProtocolHandler handler;
 
@@ -91,9 +92,27 @@ public class LibraryProtocolSubscription implements ControlledFragmentHandler
             {
                 return onCatchup(buffer, offset, blockLength, version);
             }
+
+            case NotLeaderDecoder.TEMPLATE_ID:
+            {
+                return onNotLeader(buffer, offset, blockLength, version);
+            }
         }
 
         return CONTINUE;
+    }
+
+    private Action onNotLeader(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version)
+    {
+        libraryConnect.wrap(buffer, offset, blockLength, version);
+        return handler.onNotLeader(
+            libraryConnect.correlationId(),
+            libraryConnect.libraryId()
+        );
     }
 
     private Action onCatchup(final DirectBuffer buffer, final int offset, final int blockLength, final int version)

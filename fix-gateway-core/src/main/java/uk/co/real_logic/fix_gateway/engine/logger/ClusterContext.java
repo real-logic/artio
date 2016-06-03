@@ -17,10 +17,12 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.Aeron;
 import io.aeron.Publication;
+import io.aeron.Subscription;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.LibraryForwarder;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.ClusterNode;
 import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;
@@ -72,6 +74,13 @@ public class ClusterContext extends EngineContext
         final Archiver archiver = new Archiver(
             LoggerUtil.newArchiveMetaData(logFileDir), cacheNumSets, cacheSetSize, dataStream);
 
+        final String libraryAeronChannel = configuration.libraryAeronChannel();
+        final Subscription outboundSubscription = aeron.addSubscription(
+            libraryAeronChannel, OUTBOUND_LIBRARY_STREAM);
+        final Publication inboundPublication = aeron.addPublication(
+            libraryAeronChannel, INBOUND_LIBRARY_STREAM);
+        final LibraryForwarder libraryForwarder = new LibraryForwarder(inboundPublication);
+
         final ClusterNodeConfiguration clusterNodeConfiguration = new ClusterNodeConfiguration()
             .nodeId(configuration.nodeId())
             .otherNodes(configuration.otherNodes())
@@ -81,6 +90,8 @@ public class ClusterContext extends EngineContext
             .archiveReader(dataArchiveReader)
             .failCounter(fixCounters.failedRaftPublications())
             .maxClaimAttempts(configuration.inboundMaxClaimAttempts())
+            .copyFrom(outboundSubscription, libraryForwarder)
+            .copyTo(inboundPublication)
             .aeronChannel(channel)
             .aeron(aeron);
 

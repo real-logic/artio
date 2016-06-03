@@ -95,7 +95,7 @@ public class ClusteredGatewaySystemTest
             })
             .collect(toList());
 
-        for (leader = 0; leader < CLUSTER_SIZE; leader++)
+        for (leader = 0; leader < CLUSTER_SIZE; leader = (leader + 1) % CLUSTER_SIZE)
         {
             try
             {
@@ -108,9 +108,10 @@ public class ClusteredGatewaySystemTest
             catch (final IllegalStateException e)
             {
                 // Connection fails, try next member of the cluster
-                continue;
             }
         }
+
+        System.out.println("Connected");
 
         assertNotNull("Unable to connect to any cluster members", acceptingLibrary);
 
@@ -118,9 +119,9 @@ public class ClusteredGatewaySystemTest
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
     }
 
-    private String libraryChannel(final int i)
+    private String libraryChannel(final int id)
     {
-        return "udp://localhost:" + libraryPorts.get(i);
+        return "udp://localhost:" + libraryPorts.get(id);
     }
 
     private List<Integer> allocatePorts()

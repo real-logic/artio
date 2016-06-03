@@ -41,6 +41,8 @@ public class ClusterNode extends ClusterableNode
     private final Follower follower;
     private final RaftTransport transport;
     private final ArchiveReader archiveReader;
+    private final InboundPipe inboundPipe;
+    private final OutboundPipe outboundPipe;
 
     private Role currentRole;
     private List<ClusterSubscription> subscriptions = new ArrayList<>();
@@ -99,6 +101,9 @@ public class ClusterNode extends ClusterableNode
         transport.initialiseRoles(leader, candidate, follower);
 
         startAsFollower(timeInMs);
+
+        inboundPipe = new InboundPipe(configuration.copyFromSubscription(), configuration.nonLeaderHandler(), this);
+        outboundPipe = new OutboundPipe(configuration.copyToPublication(), this);
     }
 
     private abstract class NodeState
@@ -248,7 +253,9 @@ public class ClusterNode extends ClusterableNode
 
         return commandCount +
                role.readData() +
-               role.checkConditions(timeInMs);
+               role.checkConditions(timeInMs) +
+               inboundPipe.poll(fragmentLimit) +
+               outboundPipe.poll(fragmentLimit);
     }
 
     public boolean isLeader()

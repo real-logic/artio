@@ -62,5 +62,7 @@ public interface LibraryProtocolHandler
 
     Action onCatchup(int libraryId, long connectionId, final int messageCount);
 
-    Action onNewSentPosition(final int sessionId, long position);
+    Action onNewSentPosition(final int sessionId, final long position);
+
+    Action onNotLeader(final long correlationId, final int libraryId);
 }

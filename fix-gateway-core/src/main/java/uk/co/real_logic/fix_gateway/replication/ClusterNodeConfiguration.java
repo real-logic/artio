@@ -16,6 +16,9 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Aeron;
+import io.aeron.Publication;
+import io.aeron.Subscription;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
@@ -46,6 +49,9 @@ public class ClusterNodeConfiguration
     private ArchiveReader archiveReader;
     private Archiver archiver;
     private RaftTransport raftTransport = new RaftTransport(this);
+    private Subscription copyFromSubscription;
+    private ControlledFragmentHandler nonLeaderHandler;
+    private Publication copyToPublication;
 
     /**
      * Sets the control, data and acknowledge streams to all this aeron
@@ -227,5 +233,34 @@ public class ClusterNodeConfiguration
         {
             acknowledgementStrategy(new QuorumAcknowledgementStrategy());
         }
+    }
+
+    public ClusterNodeConfiguration copyFrom(
+        final Subscription subscription, final ControlledFragmentHandler nonLeaderHandler)
+    {
+        copyFromSubscription = subscription;
+        this.nonLeaderHandler = nonLeaderHandler;
+        return this;
+    }
+
+    public ClusterNodeConfiguration copyTo(final Publication publication)
+    {
+        copyToPublication = publication;
+        return this;
+    }
+
+    public Publication copyToPublication()
+    {
+        return copyToPublication;
+    }
+
+    public Subscription copyFromSubscription()
+    {
+        return copyFromSubscription;
+    }
+
+    public ControlledFragmentHandler nonLeaderHandler()
+    {
+        return nonLeaderHandler;
     }
 }

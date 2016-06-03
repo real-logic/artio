@@ -95,6 +95,7 @@ public final class FixLibrary extends GatewayProcess
     private SoloNode soloNode;
     private Streams inboundLibraryStreams;
     private Streams outboundLibraryStreams;
+    private long notLeaderCorrelationId;
 
     private FixLibrary(final LibraryConfiguration configuration)
     {
@@ -144,7 +145,8 @@ public final class FixLibrary extends GatewayProcess
     {
         try
         {
-            if (outboundPublication.saveLibraryConnect(libraryId, ++currentCorrelationId) == BACK_PRESSURED)
+            final long correlationId = ++currentCorrelationId;
+            if (outboundPublication.saveLibraryConnect(libraryId, correlationId) == BACK_PRESSURED)
             {
                 return connectError("BackPressured upon connection");
             }
@@ -157,6 +159,12 @@ public final class FixLibrary extends GatewayProcess
                 checkTime(latestReplyArrivalTime);
 
                 idleStrategy.idle(workCount);
+
+                if (notLeaderCorrelationId == correlationId)
+                {
+                    System.out.println("Woo");
+                    throw new IllegalStateException("node was not the leader");
+                }
             }
 
             if (errorType != null)
@@ -811,6 +819,15 @@ public final class FixLibrary extends GatewayProcess
                 return sentPositionHandler.onSendCompleted(position);
             }
 
+            return CONTINUE;
+        }
+
+        public Action onNotLeader(final long correlationId, final int libraryId)
+        {
+            if (FixLibrary.this.libraryId == libraryId)
+            {
+                notLeaderCorrelationId = correlationId;
+            }
             return CONTINUE;
         }
     }
