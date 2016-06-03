@@ -22,7 +22,6 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.engine.LibraryForwarder;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.ClusterNode;
 import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;
@@ -79,7 +78,7 @@ public class ClusterContext extends EngineContext
             libraryAeronChannel, OUTBOUND_LIBRARY_STREAM);
         final Publication inboundPublication = aeron.addPublication(
             libraryAeronChannel, INBOUND_LIBRARY_STREAM);
-        final LibraryForwarder libraryForwarder = new LibraryForwarder(inboundPublication);
+        //final LibraryForwarder libraryForwarder = new LibraryForwarder(inboundPublication);
 
         final ClusterNodeConfiguration clusterNodeConfiguration = new ClusterNodeConfiguration()
             .nodeId(configuration.nodeId())
@@ -90,7 +89,8 @@ public class ClusterContext extends EngineContext
             .archiveReader(dataArchiveReader)
             .failCounter(fixCounters.failedRaftPublications())
             .maxClaimAttempts(configuration.inboundMaxClaimAttempts())
-            .copyFrom(outboundSubscription, libraryForwarder)
+            // TODO: decide if this is necessary at all
+            //.copyFrom(outboundSubscription, libraryForwarder)
             .copyTo(inboundPublication)
             .aeronChannel(channel)
             .aeron(aeron);
