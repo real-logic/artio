@@ -34,6 +34,7 @@ import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
 import static org.agrona.CloseHelper.close;
+import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -94,11 +95,24 @@ public class ClusteredGatewaySystemTest
             })
             .collect(toList());
 
-        leader = findLeader();
+        for (leader = 0; leader < CLUSTER_SIZE; leader++)
+        {
+            try
+            {
+                acceptingLibrary = FixLibrary.connect(
+                    acceptingLibraryConfig(
+                        acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", libraryChannel(leader)));
 
-        acceptingLibrary = FixLibrary.connect(
-            acceptingLibraryConfig(
-                acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", libraryChannel(leader)));
+                break;
+            }
+            catch (final IllegalStateException e)
+            {
+                // Connection fails, try next member of the cluster
+                continue;
+            }
+        }
+
+        assertNotNull("Unable to connect to any cluster members", acceptingLibrary);
 
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
@@ -107,12 +121,6 @@ public class ClusteredGatewaySystemTest
     private String libraryChannel(final int i)
     {
         return "udp://localhost:" + libraryPorts.get(i);
-    }
-
-    private int findLeader()
-    {
-        // TODO
-        return 0;
     }
 
     private List<Integer> allocatePorts()
