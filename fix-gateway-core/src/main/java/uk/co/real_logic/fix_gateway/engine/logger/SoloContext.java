@@ -34,7 +34,6 @@ import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.util.Arrays.asList;
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
@@ -47,12 +46,12 @@ public class SoloContext extends EngineContext
     private final List<Archiver> archivers = new ArrayList<>();
     private final StreamIdentifier inboundStreamId;
     private final StreamIdentifier outboundStreamId;
+    private final SoloNode node;
 
     private ArchiveReader outboundArchiveReader;
     private ArchiveReader inboundArchiveReader;
     private Archiver inboundArchiver;
     private Archiver outboundArchiver;
-    private SoloNode node;
 
     SoloContext(
         final EngineConfiguration configuration,
@@ -68,48 +67,33 @@ public class SoloContext extends EngineContext
         this.inboundStreamId = new StreamIdentifier(channel, INBOUND_LIBRARY_STREAM);
         this.outboundStreamId = new StreamIdentifier(channel, OUTBOUND_LIBRARY_STREAM);
 
-        initNode();
-        initStreams(node);
-        initArchival();
-        initIndexers();
+        node = initNode();
+        newStreams(node);
+        newArchival();
+        newLoggingRunner();
     }
 
-    private void initNode()
+    private SoloNode initNode()
     {
-        node = new SoloNode(aeron, configuration.libraryAeronChannel());
+        return new SoloNode(aeron, configuration.libraryAeronChannel());
     }
 
-    public void initIndexers()
+    public void newLoggingRunner()
     {
         if (configuration.logOutboundMessages())
         {
-            final int cacheSetSize = configuration.loggerCacheSetSize();
-            final int cacheNumSets = configuration.loggerCacheNumSets();
-            final String logFileDir = configuration.logFileDir();
-            final Indexer outboundIndexer = new Indexer(
-                asList(
-                    newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM),
-                    sentSequenceNumberIndex),
-                outboundArchiveReader);
+            newIndexers(inboundArchiveReader, outboundArchiveReader);
 
-            final Indexer inboundIndexer = new Indexer(
-                asList(
-                    newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM),
-                    receivedSequenceNumberIndex),
-                inboundArchiveReader);
-
-            final Replayer replayer = replayer(replayPublication, outboundArchiveReader);
+            final Replayer replayer = newReplayer(replayPublication, outboundArchiveReader);
 
             inboundArchiver.subscription(
                 aeron.addSubscription(inboundStreamId.channel(), inboundStreamId.streamId()));
             outboundArchiver.subscription(
                 aeron.addSubscription(outboundStreamId.channel(), outboundStreamId.streamId()));
-            inboundIndexer.subscription(inboundLibraryStreams.subscription());
-            outboundIndexer.subscription(outboundLibraryStreams.subscription());
 
             final List<Agent> agents = new ArrayList<>(archivers);
-            agents.add(outboundIndexer);
             agents.add(inboundIndexer);
+            agents.add(outboundIndexer);
             agents.add(replayer);
 
             final Agent loggingAgent = new CompositeAgent(agents);
@@ -133,7 +117,7 @@ public class SoloContext extends EngineContext
         }
     }
 
-    public void initArchival()
+    public void newArchival()
     {
         if (configuration.logInboundMessages())
         {

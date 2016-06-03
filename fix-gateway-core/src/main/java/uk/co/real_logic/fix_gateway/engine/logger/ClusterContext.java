@@ -27,7 +27,6 @@ import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;
 import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
-import static java.util.Arrays.asList;
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
@@ -51,6 +50,20 @@ public class ClusterContext extends EngineContext
         final String channel = configuration.clusterAeronChannel();
         dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
 
+        node = node(configuration, fixCounters, aeron, channel);
+        newStreams(node);
+        newIndexers(inboundArchiveReader(), outboundArchiveReader());
+        final Replayer replayer = newReplayer(replayPublication, outboundArchiveReader());
+
+        loggingRunner = newRunner(new CompositeAgent(inboundIndexer, outboundIndexer, replayer));
+    }
+
+    private ClusterNode node(
+        final EngineConfiguration configuration,
+        final FixCounters fixCounters,
+        final Aeron aeron,
+        final String channel)
+    {
         final int cacheNumSets = configuration.loggerCacheNumSets();
         final int cacheSetSize = configuration.loggerCacheSetSize();
         final String logFileDir = configuration.logFileDir();
@@ -71,32 +84,22 @@ public class ClusterContext extends EngineContext
             .aeronChannel(channel)
             .aeron(aeron);
 
-        node = new ClusterNode(clusterNodeConfiguration, System.currentTimeMillis());
+        return new ClusterNode(clusterNodeConfiguration, System.currentTimeMillis());
+    }
 
-        initStreams(node);
+    private ArchiveReader outboundArchiveReader()
+    {
+        return archiveReader(dataStream, OUTBOUND_LIBRARY_STREAM);
+    }
 
-        final Indexer indexer = new Indexer(
-            asList(
-                newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM),
-                newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM),
-                sentSequenceNumberIndex,
-                receivedSequenceNumberIndex),
-            dataArchiveReader);
-
-        final Replayer replayer = replayer(
-            replayPublication, archiveReader(dataStream, OUTBOUND_LIBRARY_STREAM));
-
-        // TODO: outbound as well
-        indexer.subscription(inboundLibraryStreams.subscription());
-        replayer.subscription(inboundLibraryStreams.subscription());
-
-        loggingRunner = newRunner(new CompositeAgent(indexer, replayer));
+    private ArchiveReader inboundArchiveReader()
+    {
+        return archiveReader(dataStream, INBOUND_LIBRARY_STREAM);
     }
 
     public ReplayQuery inboundReplayQuery()
     {
-        final ArchiveReader archiveReader = archiveReader(dataStream, INBOUND_LIBRARY_STREAM);
-        return newReplayQuery(archiveReader);
+        return newReplayQuery(inboundArchiveReader());
     }
 
     public ClusterableNode node()

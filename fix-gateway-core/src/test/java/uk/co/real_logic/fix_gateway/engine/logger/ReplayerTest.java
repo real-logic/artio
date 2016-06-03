@@ -43,12 +43,11 @@ public class ReplayerTest extends AbstractLogTest
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     private Replayer replayer = new Replayer(
-        replayQuery, publication, claim, idleStrategy, errorHandler, MAX_CLAIM_ATTEMPTS);
+        replayQuery, publication, claim, idleStrategy, errorHandler, MAX_CLAIM_ATTEMPTS, subscription);
 
     @Before
     public void setUp()
     {
-        replayer.subscription(subscription);
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
     }
 

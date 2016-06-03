@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
+import static java.util.Arrays.asList;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 
@@ -43,6 +44,8 @@ public abstract class EngineContext implements AutoCloseable
 
     protected Streams inboundLibraryStreams;
     protected Streams outboundLibraryStreams;
+    protected Indexer inboundIndexer;
+    protected Indexer outboundIndexer;
     protected AgentRunner loggingRunner;
 
     public static EngineContext of(
@@ -101,7 +104,7 @@ public abstract class EngineContext implements AutoCloseable
             INBOUND_LIBRARY_STREAM);
     }
 
-    protected void initStreams(final ClusterableNode node)
+    protected void newStreams(final ClusterableNode node)
     {
         final NanoClock nanoClock = new SystemNanoClock();
         inboundLibraryStreams = new Streams(
@@ -175,7 +178,7 @@ public abstract class EngineContext implements AutoCloseable
             streamId);
     }
 
-    protected Replayer replayer(final Publication replayPublication, final ArchiveReader archiveReader)
+    protected Replayer newReplayer(final Publication replayPublication, final ArchiveReader archiveReader)
     {
         final ReplayQuery replayQuery =
             newReplayQuery(archiveReader);
@@ -185,9 +188,30 @@ public abstract class EngineContext implements AutoCloseable
             new BufferClaim(),
             configuration.loggerIdleStrategy(),
             errorHandler,
-            configuration.outboundMaxClaimAttempts());
-        replayer.subscription(inboundLibraryStreams.subscription());
+            configuration.outboundMaxClaimAttempts(),
+            inboundLibraryStreams.subscription());
         return replayer;
+    }
+
+    protected void newIndexers(final ArchiveReader inboundArchiveReader, final ArchiveReader outboundArchiveReader)
+    {
+        final int cacheSetSize = configuration.loggerCacheSetSize();
+        final int cacheNumSets = configuration.loggerCacheNumSets();
+        final String logFileDir = configuration.logFileDir();
+
+        inboundIndexer = new Indexer(
+            asList(
+                newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM),
+                receivedSequenceNumberIndex),
+            inboundArchiveReader,
+            inboundLibraryStreams.subscription());
+
+        outboundIndexer = new Indexer(
+            asList(
+                newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM),
+                sentSequenceNumberIndex),
+            outboundArchiveReader,
+            outboundLibraryStreams.subscription());
     }
 
     public abstract Streams outboundLibraryStreams();

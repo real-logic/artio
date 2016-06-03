@@ -35,23 +35,19 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
     private final List<Index> indices;
     private final ArchiveReader archiveReader;
-    private ClusterableSubscription subscription;
+    private final ClusterableSubscription subscription;
 
     public Indexer(
-        final List<Index> indices, final ArchiveReader archiveReader)
+        final List<Index> indices, final ArchiveReader archiveReader, final ClusterableSubscription subscription)
     {
         this.indices = indices;
         this.archiveReader = archiveReader;
+        this.subscription = subscription;
         catchIndexUp();
     }
 
     public int doWork() throws Exception
     {
-        if (subscription == null)
-        {
-            return 0;
-        }
-
         return subscription.controlledPoll(this, LIMIT);
     }
 
@@ -59,7 +55,6 @@ public class Indexer implements Agent, ControlledFragmentHandler
     {
         for (final Index index : indices)
         {
-            // TODO: add stream id for catchup
             index.readLastPosition((aeronSessionId, position) ->
             {
                 final ArchiveReader.SessionReader sessionReader = archiveReader.session(aeronSessionId);
@@ -85,11 +80,6 @@ public class Indexer implements Agent, ControlledFragmentHandler
         }
 
         return CONTINUE;
-    }
-
-    public void subscription(final ClusterableSubscription subscription)
-    {
-        this.subscription = subscription;
     }
 
     public void onClose()

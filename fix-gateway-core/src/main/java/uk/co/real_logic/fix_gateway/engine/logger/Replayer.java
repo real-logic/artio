@@ -66,18 +66,18 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     // Used in when updating the poss dup field
     private final MutableAsciiBuffer mutableAsciiFlyweight = new MutableAsciiBuffer();
 
+    private final PossDupFinder possDupFinder = new PossDupFinder();
+    private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
+    private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
+
     private final ReplayQuery replayQuery;
     private final Publication publication;
     private final BufferClaim claim;
     private final IdleStrategy idleStrategy;
     private final ErrorHandler errorHandler;
     private final int maxClaimAttempts;
+    private final ClusterableSubscription subscription;
 
-    private final PossDupFinder possDupFinder = new PossDupFinder();
-    private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
-    private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
-
-    private ClusterableSubscription subscription;
     private int currentMessageOffset;
     private int currentMessageLength;
 
@@ -87,7 +87,8 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final BufferClaim claim,
         final IdleStrategy idleStrategy,
         final ErrorHandler errorHandler,
-        final int maxClaimAttempts)
+        final int maxClaimAttempts,
+        final ClusterableSubscription subscription)
     {
         this.replayQuery = replayQuery;
         this.publication = publication;
@@ -95,6 +96,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         this.idleStrategy = idleStrategy;
         this.errorHandler = errorHandler;
         this.maxClaimAttempts = maxClaimAttempts;
+        this.subscription = subscription;
     }
 
     public Action onMessage(
@@ -315,17 +317,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
     public int doWork() throws Exception
     {
-        if (subscription == null)
-        {
-            return 0;
-        }
-
         return subscription.controlledPoll(protocolSubscription, POLL_LIMIT);
-    }
-
-    public void subscription(final ClusterableSubscription subscription)
-    {
-        this.subscription = subscription;
     }
 
     public void onClose()

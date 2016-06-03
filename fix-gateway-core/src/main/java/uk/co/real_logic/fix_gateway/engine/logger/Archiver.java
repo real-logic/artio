@@ -138,7 +138,7 @@ public class Archiver implements Agent, FileBlockHandler
 
     public void onClose()
     {
-        subscription.close();
+        CloseHelper.close(subscription);
         sessionIdToArchive.clear();
         metaData.close();
     }
