@@ -44,6 +44,7 @@ import static org.agrona.CloseHelper.close;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
@@ -209,6 +210,7 @@ public class SlowConsumerTest
         close(library);
         close(engine);
         close(mediaDriver);
+        cleanupDirectory(mediaDriver);
         close(socket);
     }
 }

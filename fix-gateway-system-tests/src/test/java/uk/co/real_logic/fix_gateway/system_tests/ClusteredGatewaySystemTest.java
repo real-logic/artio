@@ -176,6 +176,7 @@ public class ClusteredGatewaySystemTest
         }
 
         close(mediaDriver);
+        cleanupDirectory(mediaDriver);
     }
 
 }

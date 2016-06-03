@@ -58,6 +58,7 @@ public class ClusterSubscription extends ClusterableSubscription
 
     public int controlledPoll(final ControlledFragmentHandler handler, final int fragmentLimit)
     {
+        // TODO: significant optimisation of trying to read data out of memory
         // TODO: decide whether to flow control commit position based upon applied position
         if (validateReader())
         {
