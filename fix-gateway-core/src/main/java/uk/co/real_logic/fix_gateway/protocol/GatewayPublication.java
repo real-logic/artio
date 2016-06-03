@@ -68,6 +68,7 @@ public class GatewayPublication extends ClaimablePublication
     private final CatchupEncoder catchup = new CatchupEncoder();
     private final NewSentPositionEncoder newSentPosition = new NewSentPositionEncoder();
     private final ResetSessionIdsEncoder resetSessionIds = new ResetSessionIdsEncoder();
+    private final NotLeaderEncoder notLeader = new NotLeaderEncoder();
 
     private final NanoClock nanoClock;
 
@@ -744,6 +745,39 @@ public class GatewayPublication extends ClaimablePublication
             .libraryId(libraryId)
             .connection(connectionId)
             .messageCount(messageCount);
+
+        bufferClaim.commit();
+
+        logSbeMessage(buffer, bufferClaim.offset());
+
+        return position;
+    }
+
+    public long saveNotLeader(
+        final int libraryId, final long correlationId)
+    {
+        final long position = claim(NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH);
+        if (position == BACK_PRESSURED)
+        {
+            return BACK_PRESSURED;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(notLeader.sbeBlockLength())
+            .templateId(notLeader.sbeTemplateId())
+            .schemaId(notLeader.sbeSchemaId())
+            .version(notLeader.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        notLeader
+            .wrap(buffer, offset)
+            .libraryId(libraryId)
+            .correlationId(correlationId);
 
         bufferClaim.commit();
 
