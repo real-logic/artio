@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.Aeron;
 import io.aeron.Publication;
-import io.aeron.logbuffer.BufferClaim;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.FixCounters;
@@ -31,7 +30,9 @@ import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import static java.util.Arrays.asList;
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
+import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 public class ClusterContext extends EngineContext
 {
@@ -54,7 +55,7 @@ public class ClusterContext extends EngineContext
         final int cacheSetSize = configuration.loggerCacheSetSize();
         final String logFileDir = configuration.logFileDir();
 
-        final ArchiveReader archiveReader = archiveReader(dataStream);
+        final ArchiveReader dataArchiveReader = archiveReader(dataStream, NO_FILTER);
         final Archiver archiver = new Archiver(
             LoggerUtil.newArchiveMetaData(logFileDir), cacheNumSets, cacheSetSize, dataStream);
 
@@ -64,7 +65,7 @@ public class ClusterContext extends EngineContext
             .timeoutIntervalInMs(configuration.clusterTimeoutIntervalInMs())
             .idleStrategy(configuration.framerIdleStrategy())
             .archiver(archiver)
-            .archiveReader(archiveReader)
+            .archiveReader(dataArchiveReader)
             .failCounter(fixCounters.failedRaftPublications())
             .maxClaimAttempts(configuration.inboundMaxClaimAttempts())
             .aeronChannel(channel)
@@ -77,20 +78,15 @@ public class ClusterContext extends EngineContext
         final Indexer indexer = new Indexer(
             asList(
                 newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM),
+                newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM),
                 sentSequenceNumberIndex,
                 receivedSequenceNumberIndex),
-            archiveReader);
+            dataArchiveReader);
 
-        final ReplayQuery replayQuery =
-            newReplayQuery(archiveReader /*outboundArchiveReader*/);
-        final Replayer replayer = new Replayer(
-            replayQuery,
-            replayPublication,
-            new BufferClaim(),
-            configuration.loggerIdleStrategy(),
-            errorHandler,
-            configuration.outboundMaxClaimAttempts());
+        final Replayer replayer = replayer(
+            replayPublication, archiveReader(dataStream, OUTBOUND_LIBRARY_STREAM));
 
+        // TODO: outbound as well
         indexer.subscription(inboundLibraryStreams.subscription());
         replayer.subscription(inboundLibraryStreams.subscription());
 
@@ -99,7 +95,7 @@ public class ClusterContext extends EngineContext
 
     public ReplayQuery inboundReplayQuery()
     {
-        final ArchiveReader archiveReader = archiveReader(dataStream); // TODO: inbound
+        final ArchiveReader archiveReader = archiveReader(dataStream, INBOUND_LIBRARY_STREAM);
         return newReplayQuery(archiveReader);
     }
 

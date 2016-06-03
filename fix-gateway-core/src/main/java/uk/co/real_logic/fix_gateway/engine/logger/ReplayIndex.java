@@ -92,6 +92,11 @@ public class ReplayIndex implements Index
                             final int aeronSessionId,
                             final long endPosition)
     {
+        if (streamId != requiredStreamId)
+        {
+            return;
+        }
+
         int offset = srcOffset;
         frameHeaderDecoder.wrap(srcBuffer, offset);
         if (frameHeaderDecoder.templateId() == FixMessageEncoder.TEMPLATE_ID)

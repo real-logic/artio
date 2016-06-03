@@ -17,10 +17,11 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.Aeron;
 import io.aeron.Publication;
-import io.aeron.logbuffer.BufferClaim;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
-import org.agrona.concurrent.*;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.CompositeAgent;
+import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
@@ -38,6 +39,7 @@ import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;
+import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 public class SoloContext extends EngineContext
 {
@@ -96,15 +98,7 @@ public class SoloContext extends EngineContext
                     receivedSequenceNumberIndex),
                 inboundArchiveReader);
 
-            final ReplayQuery replayQuery =
-                newReplayQuery(outboundArchiveReader);
-            final Replayer replayer = new Replayer(
-                replayQuery,
-                replayPublication,
-                new BufferClaim(),
-                configuration.loggerIdleStrategy(),
-                errorHandler,
-                configuration.outboundMaxClaimAttempts());
+            final Replayer replayer = replayer(replayPublication, outboundArchiveReader);
 
             inboundArchiver.subscription(
                 aeron.addSubscription(inboundStreamId.channel(), inboundStreamId.streamId()));
@@ -112,7 +106,6 @@ public class SoloContext extends EngineContext
                 aeron.addSubscription(outboundStreamId.channel(), outboundStreamId.streamId()));
             inboundIndexer.subscription(inboundLibraryStreams.subscription());
             outboundIndexer.subscription(outboundLibraryStreams.subscription());
-            replayer.subscription(inboundLibraryStreams.subscription());
 
             final List<Agent> agents = new ArrayList<>(archivers);
             agents.add(outboundIndexer);
@@ -145,13 +138,13 @@ public class SoloContext extends EngineContext
         if (configuration.logInboundMessages())
         {
             inboundArchiver = addArchiver(inboundStreamId);
-            inboundArchiveReader = archiveReader(inboundStreamId);
+            inboundArchiveReader = archiveReader(inboundStreamId, NO_FILTER);
         }
 
         if (configuration.logOutboundMessages())
         {
             outboundArchiver = addArchiver(outboundStreamId);
-            outboundArchiveReader = archiveReader(outboundStreamId);
+            outboundArchiveReader = archiveReader(outboundStreamId, NO_FILTER);
         }
     }
 
@@ -184,9 +177,8 @@ public class SoloContext extends EngineContext
             return null;
         }
 
-        final String logFileDir = configuration.logFileDir();
         final ArchiveReader archiveReader =
-            archiveReader(inboundStreamId);
+            archiveReader(inboundStreamId, NO_FILTER);
         return newReplayQuery(archiveReader);
     }
 

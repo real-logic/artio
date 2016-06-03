@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.Aeron;
 import io.aeron.Publication;
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
@@ -149,7 +150,7 @@ public abstract class EngineContext implements AutoCloseable
         receivedSequenceNumberIndex.close();
     }
 
-    protected ArchiveReader archiveReader(final StreamIdentifier streamId)
+    protected ArchiveReader archiveReader(final StreamIdentifier streamId, final int reservedValueFilter)
     {
         return new ArchiveReader(
             LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
@@ -172,6 +173,21 @@ public abstract class EngineContext implements AutoCloseable
             cacheNumSets,
             cacheSetSize,
             streamId);
+    }
+
+    protected Replayer replayer(final Publication replayPublication, final ArchiveReader archiveReader)
+    {
+        final ReplayQuery replayQuery =
+            newReplayQuery(archiveReader);
+        final Replayer replayer = new Replayer(
+            replayQuery,
+            replayPublication,
+            new BufferClaim(),
+            configuration.loggerIdleStrategy(),
+            errorHandler,
+            configuration.outboundMaxClaimAttempts());
+        replayer.subscription(inboundLibraryStreams.subscription());
+        return replayer;
     }
 
     public abstract Streams outboundLibraryStreams();
