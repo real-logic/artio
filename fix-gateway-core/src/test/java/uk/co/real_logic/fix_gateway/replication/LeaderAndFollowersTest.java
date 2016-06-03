@@ -52,6 +52,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     private static final short LEADER_ID = (short) 1;
     private static final short FOLLOWER_1_ID = (short) 2;
     private static final short FOLLOWER_2_ID = (short) 3;
+    private static final int CLUSTER_STREAM_ID = 1;
 
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
 
@@ -117,11 +118,11 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         follower2 = follower(FOLLOWER_2_ID, clusterNode3, termState3);
 
         leaderSubscription =
-            new ClusterSubscription(archiveReader, leader, leaderNode, 1);
+            new ClusterSubscription(archiveReader, leader, leaderNode, CLUSTER_STREAM_ID);
         leaderSubscription.onRoleChange(leader, leaderSessionId);
 
         follower1Subscription = new ClusterSubscription(
-            followerArchiveReader(subscription, FOLLOWER_1_ID), follower1, mock(ClusterNode.class), 1);
+            followerArchiveReader(subscription, FOLLOWER_1_ID), follower1, mock(ClusterNode.class), CLUSTER_STREAM_ID);
         follower1Subscription.onRoleChange(follower1, leaderSessionId);
     }
 

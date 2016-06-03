@@ -19,6 +19,8 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
+import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.NO_FILTER;
+
 public class ClusterSubscription extends ClusterableSubscription
 {
     private final ArchiveReader archiveReader;
@@ -36,6 +38,12 @@ public class ClusterSubscription extends ClusterableSubscription
         final ClusterNode node,
         final int clusterStreamId)
     {
+        // We use clusterStreamId as a reserved value filter
+        if (clusterStreamId == NO_FILTER)
+        {
+            throw new IllegalArgumentException("ClusterStreamId must not be 0");
+        }
+
         this.archiveReader = archiveReader;
         this.role = role;
         this.node = node;
