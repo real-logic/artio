@@ -111,8 +111,6 @@ public class ClusteredGatewaySystemTest
             }
         }
 
-        System.out.println("Connected");
-
         assertNotNull("Unable to connect to any cluster members", acceptingLibrary);
 
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);

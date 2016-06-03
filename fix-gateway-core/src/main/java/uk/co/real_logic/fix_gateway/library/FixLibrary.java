@@ -162,7 +162,6 @@ public final class FixLibrary extends GatewayProcess
 
                 if (notLeaderCorrelationId == correlationId)
                 {
-                    System.out.println("Woo");
                     throw new IllegalStateException("node was not the leader");
                 }
             }
