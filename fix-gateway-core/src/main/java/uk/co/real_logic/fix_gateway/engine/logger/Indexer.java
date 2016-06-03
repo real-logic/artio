@@ -20,6 +20,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
+import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 
 import java.util.List;
 
@@ -58,6 +59,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
     {
         for (final Index index : indices)
         {
+            // TODO: add stream id for catchup
             index.readLastPosition((aeronSessionId, position) ->
             {
                 final ArchiveReader.SessionReader sessionReader = archiveReader.session(aeronSessionId);
@@ -74,7 +76,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
     public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        final int streamId = header.streamId();
+        final int streamId = ReservedValue.streamId(header);
         final int aeronSessionId = header.sessionId();
         final long position = header.position();
         for (final Index index : indices)

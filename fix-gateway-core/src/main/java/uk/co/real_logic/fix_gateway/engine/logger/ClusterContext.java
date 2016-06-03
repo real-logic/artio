@@ -77,7 +77,6 @@ public class ClusterContext extends EngineContext
         final Indexer indexer = new Indexer(
             asList(
                 newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM),
-                // TODO: distinguish between indices
                 sentSequenceNumberIndex,
                 receivedSequenceNumberIndex),
             archiveReader);

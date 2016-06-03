@@ -89,9 +89,15 @@ public abstract class EngineContext implements AutoCloseable
         this.aeron = aeron;
 
         sentSequenceNumberIndex = new SequenceNumberIndexWriter(
-            configuration.sentSequenceNumberBuffer(), configuration.sentSequenceNumberIndex(), errorHandler);
+            configuration.sentSequenceNumberBuffer(),
+            configuration.sentSequenceNumberIndex(),
+            errorHandler,
+            OUTBOUND_LIBRARY_STREAM);
         receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
-            configuration.receivedSequenceNumberBuffer(), configuration.receivedSequenceNumberIndex(), errorHandler);
+            configuration.receivedSequenceNumberBuffer(),
+            configuration.receivedSequenceNumberIndex(),
+            errorHandler,
+            INBOUND_LIBRARY_STREAM);
     }
 
     protected void initStreams(final ClusterableNode node)

@@ -35,6 +35,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
@@ -244,7 +245,7 @@ public class ArchiverTest
 
         final long begin = HEADER_LENGTH;
         final long end = begin + lengthOfTwoMessages() + offsetIntoNextMessage;
-        final long res = archiveReader.readUpTo(NO_FILTER, publication.sessionId(), begin, end, fragmentHandler);
+        final long res = archiveReader.readUpTo(ReservedValue.NO_FILTER, publication.sessionId(), begin, end, fragmentHandler);
 
         verify(fragmentHandler, times).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
 

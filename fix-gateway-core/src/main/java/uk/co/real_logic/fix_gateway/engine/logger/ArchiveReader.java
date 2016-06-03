@@ -40,7 +40,6 @@ import static java.lang.Integer.numberOfTrailingZeros;
 
 public class ArchiveReader implements AutoCloseable
 {
-    public static final int NO_FILTER = 0;
 
     private final IntFunction<SessionReader> newSessionReader = this::newSessionReader;
 

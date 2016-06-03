@@ -231,7 +231,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private SequenceNumberIndexWriter newWriter(final AtomicBuffer inMemoryBuffer)
     {
         final MappedFile indexFile = newIndexFile();
-        return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler);
+        return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID);
     }
 
     private MappedFile newIndexFile()

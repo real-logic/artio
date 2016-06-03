@@ -15,11 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import io.aeron.logbuffer.Header;
+
 /**
  * 8 byte reserved word is used with the
  */
 public final class ReservedValue
 {
+    public static final int NO_FILTER = 0;
+
     private static final int BITS_IN_INT = 32;
 
     public static long ofClusterStreamId(final int clusterStreamId)
@@ -29,7 +33,7 @@ public final class ReservedValue
 
     public static long ofChecksum(final int checksum)
     {
-        return ((long)checksum) << BITS_IN_INT;
+        return ((long) checksum) << BITS_IN_INT;
     }
 
     public static long of(final int clusterStreamId, final int checksum)
@@ -40,6 +44,18 @@ public final class ReservedValue
     public static int clusterStreamId(final long reservedValue)
     {
         return (int) reservedValue;
+    }
+
+    public static int streamId(final Header header)
+    {
+        final long reservedValue = header.reservedValue();
+        final int clusterStreamId = clusterStreamId(reservedValue);
+        if (clusterStreamId == NO_FILTER)
+        {
+            return header.streamId();
+        }
+
+        return clusterStreamId;
     }
 
     public static int checksum(final long reservedValue)

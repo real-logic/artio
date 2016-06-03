@@ -19,7 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.protocol.DataHeaderFlyweight;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
-import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.NO_FILTER;
+import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 public class ClusterSubscription extends ClusterableSubscription
 {

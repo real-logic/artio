@@ -59,6 +59,7 @@ public class SequenceNumberIndexWriter implements Index
     private final File writablePath;
     private final File passingPlacePath;
     private final int fileCapacity;
+    private final int streamId;
     private final int positionTableOffset;
     private final IndexedPositionWriter positions;
 
@@ -69,13 +70,14 @@ public class SequenceNumberIndexWriter implements Index
     public SequenceNumberIndexWriter(
         final AtomicBuffer inMemoryBuffer,
         final MappedFile indexFile,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final int streamId)
     {
         this.inMemoryBuffer = inMemoryBuffer;
         this.indexFile = indexFile;
         this.errorHandler = errorHandler;
-
-        fileCapacity = indexFile.buffer().capacity();
+        this.streamId = streamId;
+        this.fileCapacity = indexFile.buffer().capacity();
 
         final String indexFilePath = indexFile.file().getAbsolutePath();
         indexPath = indexFile.file();
@@ -109,6 +111,11 @@ public class SequenceNumberIndexWriter implements Index
         final int aeronSessionId,
         final long endPosition)
     {
+        if (streamId != this.streamId)
+        {
+            return;
+        }
+
         int offset = srcOffset;
         frameHeaderDecoder.wrap(buffer, offset);
         switch (frameHeaderDecoder.templateId())
