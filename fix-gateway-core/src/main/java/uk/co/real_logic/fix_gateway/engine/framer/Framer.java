@@ -224,17 +224,22 @@ public class Framer implements Agent, EngineProtocolHandler, ProtocolHandler
 
     private int sendOutboundMessages()
     {
-        final int newMessagesRead =
-            outboundDataSubscription.controlledPoll(outboundSubscription, outboundLibraryFragmentLimit);
-        final int messagesRead = newMessagesRead +
-            outboundSlowSubscription.controlledPoll(senderEndPoints, outboundLibraryFragmentLimit);
-
-        if (newMessagesRead > 0)
+        if (node.isLeader())
         {
-            outboundDataSubscription.forEachPosition(positionSender);
+            final int newMessagesRead =
+                outboundDataSubscription.controlledPoll(outboundSubscription, outboundLibraryFragmentLimit);
+            final int messagesRead = newMessagesRead +
+                outboundSlowSubscription.controlledPoll(senderEndPoints, outboundLibraryFragmentLimit);
+
+            if (newMessagesRead > 0)
+            {
+                outboundDataSubscription.forEachPosition(positionSender);
+            }
+
+            return messagesRead;
         }
 
-        return messagesRead;
+        return 0;
     }
 
     private int pollLibraries(final long timeInMs)

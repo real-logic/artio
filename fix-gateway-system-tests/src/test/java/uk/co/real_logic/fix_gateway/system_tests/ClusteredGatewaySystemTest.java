@@ -74,26 +74,36 @@ public class ClusteredGatewaySystemTest
         libraryPorts = allocatePorts();
 
         // TODO: be able to disconnect TCP connections when failing the machine
-        acceptingEngineCluster = IntStream
-            .range(0, CLUSTER_SIZE)
-            .mapToObj(i ->
+        acceptingEngineCluster = ids()
+            .mapToObj(ourId ->
             {
-                final String acceptorLogs = ACCEPTOR_LOGS + i;
+                final String acceptorLogs = ACCEPTOR_LOGS + ourId;
                 delete(acceptorLogs);
                 final EngineConfiguration configuration = new EngineConfiguration();
 
                 setupAuthentication(ACCEPTOR_ID, INITIATOR_ID, configuration);
 
                 configuration
-                    .bindTo("localhost", tcpPorts.get(i))
-                    .libraryAeronChannel(libraryChannel(i))
-                    .monitoringFile(acceptorMonitoringFile("engineCounters" + i))
+                    .bindTo("localhost", tcpPorts.get(ourId))
+                    .libraryAeronChannel(libraryChannel(ourId))
+                    .monitoringFile(acceptorMonitoringFile("engineCounters" + ourId))
                     .logFileDir(acceptorLogs)
-                    .clusterAeronChannel(CLUSTER_AERON_CHANNEL);
+                    .clusterAeronChannel(CLUSTER_AERON_CHANNEL)
+                    .nodeId((short) ourId)
+                    .addOtherNodes(ids().filter(id -> id != ourId).toArray());
 
                 return FixEngine.launch(configuration);
             })
             .collect(toList());
+
+        try
+        {
+            Thread.sleep(10_000);
+        }
+        catch (InterruptedException e)
+        {
+            e.printStackTrace();
+        }
 
         for (leader = 0; leader < CLUSTER_SIZE; leader = (leader + 1) % CLUSTER_SIZE)
         {
@@ -117,6 +127,11 @@ public class ClusteredGatewaySystemTest
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
     }
 
+    private IntStream ids()
+    {
+        return IntStream.range(0, CLUSTER_SIZE);
+    }
+
     private String libraryChannel(final int id)
     {
         return "udp://localhost:" + libraryPorts.get(id);
@@ -124,8 +139,7 @@ public class ClusteredGatewaySystemTest
 
     private List<Integer> allocatePorts()
     {
-        return IntStream
-            .range(0, CLUSTER_SIZE)
+        return ids()
             .mapToObj(i -> unusedPort())
             .collect(toList());
     }
