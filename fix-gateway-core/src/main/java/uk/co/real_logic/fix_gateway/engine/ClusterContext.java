@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.engine.logger;
+package uk.co.real_logic.fix_gateway.engine;
 
 import io.aeron.Aeron;
 import io.aeron.Publication;
@@ -21,7 +21,7 @@ import io.aeron.Subscription;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.FixCounters;
-import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.ClusterNode;
 import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;

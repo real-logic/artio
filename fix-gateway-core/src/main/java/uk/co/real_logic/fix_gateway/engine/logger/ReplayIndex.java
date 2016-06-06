@@ -41,7 +41,7 @@ public class ReplayIndex implements Index
         return new File(String.format(logFileDir + File.separator + "replay-index-%d-%d", fixSessionId, streamId));
     }
 
-    static UnsafeBuffer replayBuffer(final String logFileDir, final int streamId)
+    public static UnsafeBuffer replayBuffer(final String logFileDir, final int streamId)
     {
         final String pathname = logFileDir + File.separator + "replay-positions-"  + streamId;
         return new UnsafeBuffer(LoggerUtil.map(new File(pathname), REPLAY_BUFFER_SIZE));
