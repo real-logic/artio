@@ -93,7 +93,7 @@ public class DebugRaftHandler implements RaftHandler
         );
     }
 
-    public Action onConcensusHeartbeat(
+    public Action onConsensusHeartbeat(
         final short nodeId, final int leaderShipTerm, final long position, final int leaderSessionId)
     {
         DebugLogger.log(
@@ -105,7 +105,7 @@ public class DebugRaftHandler implements RaftHandler
             leaderSessionId
         );
 
-        return delegateHandler.onConcensusHeartbeat(
+        return delegateHandler.onConsensusHeartbeat(
             nodeId, leaderShipTerm, position, leaderSessionId
         );
     }

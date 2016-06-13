@@ -26,6 +26,8 @@ import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.*;
@@ -52,7 +54,8 @@ public class LeaderTest
     private SessionArchiver sessionArchiver = mock(SessionArchiver.class);
     private TermState termState = new TermState()
         .leadershipTerm(LEADERSHIP_TERM)
-        .commitPosition(POSITION);
+        .consensusPosition(POSITION);
+    private AtomicLong commitPosition = new AtomicLong(0);
 
     private Leader leader = new Leader(
         ID,
@@ -64,7 +67,8 @@ public class LeaderTest
         termState,
         LEADER_SESSION_ID,
         archiveReader,
-        archiver);
+        archiver,
+        commitPosition);
 
     @Before
     public void setUp()

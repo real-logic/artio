@@ -23,6 +23,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.Objects.requireNonNull;
 
@@ -43,6 +44,7 @@ public class ClusterNode extends ClusterableNode
     private final ArchiveReader archiveReader;
     private final InboundPipe inboundPipe;
     private final OutboundPipe outboundPipe;
+    private final AtomicLong commitPosition = new AtomicLong(0);
 
     private Role currentRole;
     private List<ClusterSubscription> subscriptions = new ArrayList<>();
@@ -79,7 +81,8 @@ public class ClusterNode extends ClusterableNode
             termState,
             ourSessionId,
             archiveReader,
-            archiver);
+            archiver,
+            commitPosition);
 
         candidate = new Candidate(
             nodeId,
@@ -96,7 +99,8 @@ public class ClusterNode extends ClusterableNode
             timeInMs,
             timeoutIntervalInMs,
             termState,
-            archiver);
+            archiver,
+            commitPosition);
 
         transport.initialiseRoles(leader, candidate, follower);
 
@@ -147,7 +151,7 @@ public class ClusterNode extends ClusterableNode
             currentRole = follower.votedFor(votedFor)
                 .follow(timeInMs);
 
-            onTransition();
+            onNewLeader();
         }
     };
 
@@ -160,8 +164,6 @@ public class ClusterNode extends ClusterableNode
             follower.closeStreams();
 
             currentRole = candidate.startNewElection(timeInMs);
-
-            onTransition();
         }
     };
 
@@ -177,7 +179,7 @@ public class ClusterNode extends ClusterableNode
 
             currentRole = leader.getsElected(timeInMs);
 
-            onTransition();
+            onNewLeader();
         }
 
         void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
@@ -190,14 +192,12 @@ public class ClusterNode extends ClusterableNode
 
             currentRole = follower.votedFor(votedFor)
                 .follow(timeInMs);
-
-            onTransition();
         }
     };
 
     public long commitPosition()
     {
-        return currentRole.commitPosition();
+        return commitPosition.get();
     }
 
     private void startAsFollower(final long timeInMs)
@@ -227,16 +227,15 @@ public class ClusterNode extends ClusterableNode
         followerState.transitionToCandidate(follower, timeInMs);
     }
 
-    private void onTransition()
+    void onNewLeader()
     {
-        final Role currentRole = this.currentRole;
         final int leaderSessionId = this.termState.leaderSessionId();
         final List<ClusterSubscription> subscriptions = this.subscriptions;
 
         for (int i = 0, size = subscriptions.size(); i < size; i++)
         {
             final ClusterSubscription subscription = subscriptions.get(i);
-            subscription.onRoleChange(currentRole, leaderSessionId);
+            subscription.onNewLeader(leaderSessionId);
         }
     }
 
@@ -295,7 +294,8 @@ public class ClusterNode extends ClusterableNode
 
     public ClusterableSubscription subscription(final int clusterStreamId)
     {
-        final ClusterSubscription subscription = new ClusterSubscription(archiveReader, currentRole, this, clusterStreamId);
+        final ClusterSubscription subscription = new ClusterSubscription(
+            this, transport.dataSubscription(), clusterStreamId, commitPosition);
         subscriptions.add(subscription);
         return subscription;
     }

@@ -86,7 +86,7 @@ public class RaftSubscription implements ControlledFragmentHandler
             case ConcensusHeartbeatDecoder.TEMPLATE_ID:
             {
                 concensusHeartbeat.wrap(buffer, offset, blockLength, version);
-                return handler.onConcensusHeartbeat(
+                return handler.onConsensusHeartbeat(
                     concensusHeartbeat.nodeId(),
                     concensusHeartbeat.leaderShipTerm(),
                     concensusHeartbeat.position(),

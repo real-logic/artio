@@ -121,7 +121,7 @@ public class CandidateTest
 
     private void startElection()
     {
-        termState.leadershipTerm(OLD_LEADERSHIP_TERM).commitPosition(POSITION);
+        termState.leadershipTerm(OLD_LEADERSHIP_TERM).consensusPosition(POSITION);
         candidate.startNewElection(0L);
     }
 }

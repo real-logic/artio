@@ -161,7 +161,7 @@ public class Candidate implements Role, RaftHandler
         return candidateId == nodeId && leaderShipTerm == this.leaderShipTerm && vote == FOR;
     }
 
-    public Action onConcensusHeartbeat(
+    public Action onConsensusHeartbeat(
         short nodeId,
         final int leaderShipTerm,
         final long position,
@@ -211,7 +211,7 @@ public class Candidate implements Role, RaftHandler
 
     public Candidate startNewElection(final long timeInMs)
     {
-        this.position = termState.commitPosition();
+        this.position = termState.consensusPosition();
         this.leaderShipTerm = termState.leadershipTerm();
 
         DebugLogger.log("%d: startNewElection @ %d in %d\n", nodeId, timeInMs, leaderShipTerm);
@@ -242,11 +242,11 @@ public class Candidate implements Role, RaftHandler
 
     public long commitPosition()
     {
-        return termState.commitPosition();
+        return termState.consensusPosition();
     }
 
     public long canCommitPosition()
     {
-        return termState.commitPosition();
+        return termState.consensusPosition();
     }
 }

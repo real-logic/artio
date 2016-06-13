@@ -24,6 +24,8 @@ import org.mockito.stubbing.OngoingStubbing;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
@@ -53,6 +55,7 @@ public class FollowerTest
     private Subscription controlSubscription = mock(Subscription.class);
     private ClusterNode clusterNode = mock(ClusterNode.class);
     private Archiver archiver = mock(Archiver.class);
+    private AtomicLong position = mock(AtomicLong.class);
 
     private final TermState termState = new TermState()
         .allPositions(POSITION)
@@ -65,7 +68,8 @@ public class FollowerTest
         0,
         VOTE_TIMEOUT,
         termState,
-        archiver);
+        archiver,
+        position);
 
     @Before
     public void setUp()
@@ -132,7 +136,7 @@ public class FollowerTest
 
     private void onHeartbeat()
     {
-        follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION, SESSION_ID_4);
+        follower.onConsensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION, SESSION_ID_4);
     }
 
     private void notifyMissingLogEntries()
@@ -151,7 +155,7 @@ public class FollowerTest
         whenControlPolled().then(
             (inv) ->
             {
-                follower.onConcensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, position, SESSION_ID_4);
+                follower.onConsensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, position, SESSION_ID_4);
 
                 return 1;
             });

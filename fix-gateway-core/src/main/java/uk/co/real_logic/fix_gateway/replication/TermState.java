@@ -33,7 +33,7 @@ public class TermState
     private long lastAppliedPosition;
 
     /** The position within the current leadership term that we can commit up to. */
-    private long commitPosition;
+    private long consensusPosition;
 
     public TermState leaderSessionId(int leadershipSessionId)
     {
@@ -66,9 +66,9 @@ public class TermState
         return this;
     }
 
-    public TermState commitPosition(long commitPosition)
+    public TermState consensusPosition(long commitPosition)
     {
-        this.commitPosition = commitPosition;
+        this.consensusPosition = commitPosition;
         return this;
     }
 
@@ -76,7 +76,7 @@ public class TermState
     {
         receivedPosition(position);
         lastAppliedPosition(position);
-        commitPosition(position);
+        consensusPosition(position);
         return this;
     }
 
@@ -105,9 +105,9 @@ public class TermState
         return lastAppliedPosition;
     }
 
-    public long commitPosition()
+    public long consensusPosition()
     {
-        return commitPosition;
+        return consensusPosition;
     }
 
     public TermState reset()
@@ -128,7 +128,7 @@ public class TermState
             ", leadershipTerm=" + leadershipTerm +
             ", receivedPosition=" + receivedPosition +
             ", lastAppliedPosition=" + lastAppliedPosition +
-            ", commitPosition=" + commitPosition +
+            ", commitPosition=" + consensusPosition +
             '}';
     }
 }

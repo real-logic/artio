@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -69,6 +70,7 @@ public class ScenariosTest
     private final ControlledFragmentHandler fragmentHandler = mock(ControlledFragmentHandler.class);
     private final Archiver.SessionArchiver leaderArchiver = mock(Archiver.SessionArchiver.class);
     private final Archiver archiver = mock(Archiver.class);
+    private final AtomicLong commitPosition = new AtomicLong(0);
 
     private final RoleFixture roleFixture;
     private final Stimulus stimulus;
@@ -201,7 +203,7 @@ public class ScenariosTest
             {
                 assertThat(termState, hasLeaderSessionId(sessionId));
                 assertThat(termState, hasLeadershipTerm(NEW_TERM));
-                assertThat(termState, hasCommitPosition(POSITION));
+                assertThat(termState, hasConsensusPosition(POSITION));
             }, "hasNewLeader");
     }
 
@@ -222,7 +224,7 @@ public class ScenariosTest
             {
                 assertThat(termState, noLeaderMatcher());
                 assertThat(termState, hasLeadershipTerm(leadershipTerm));
-                assertThat(termState, hasCommitPosition(POSITION));
+                assertThat(termState, hasConsensusPosition(POSITION));
             }, "hasNoLeader");
     }
 
@@ -236,7 +238,7 @@ public class ScenariosTest
     {
         termState
             .leadershipTerm(LEADERSHIP_TERM)
-            .commitPosition(POSITION);
+            .consensusPosition(POSITION);
 
         final Leader leader = new Leader(
             ID,
@@ -247,7 +249,9 @@ public class ScenariosTest
             HEARTBEAT_INTERVAL_IN_MS,
             termState,
             SESSION_ID,
-            archiveReader, archiver);
+            archiveReader,
+            archiver,
+            commitPosition);
 
         leader
             .controlPublication(controlPublication)
@@ -271,7 +275,8 @@ public class ScenariosTest
             TIME,
             TIMEOUT_IN_MS,
             termState,
-            archiver);
+            archiver,
+            commitPosition);
 
         follower
             .controlPublication(controlPublication)
@@ -287,7 +292,7 @@ public class ScenariosTest
         termState
             .noLeader()
             .leadershipTerm(OLD_LEADERSHIP_TERM)
-            .commitPosition(POSITION);
+            .consensusPosition(POSITION);
 
         final Candidate candidate = new Candidate(
             ID, SESSION_ID, clusterNode, CLUSTER_SIZE, TIMEOUT_IN_MS, termState, new QuorumAcknowledgementStrategy());
@@ -390,7 +395,7 @@ public class ScenariosTest
         final String name)
     {
         return namedStimulus(
-            (st) -> st.raftHandler.onConcensusHeartbeat(leaderId, leaderShipTerm, POSITION, dataSessionId), name);
+            (st) -> st.raftHandler.onConsensusHeartbeat(leaderId, leaderShipTerm, POSITION, dataSessionId), name);
     }
 
     private static Stimulus timesOut =
@@ -403,7 +408,7 @@ public class ScenariosTest
                 when(st.controlSubscription.controlledPoll(any(), anyInt())).thenAnswer(
                     (inv) ->
                     {
-                        st.raftHandler.onConcensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
+                        st.raftHandler.onConsensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
 
                         return 1;
                     });
@@ -424,7 +429,7 @@ public class ScenariosTest
 
     private static void heartbeat(final ScenariosTest st)
     {
-        st.raftHandler.onConcensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
+        st.raftHandler.onConsensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
     }
 
     private static Stimulus startElection = namedStimulus(

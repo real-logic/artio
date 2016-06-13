@@ -15,103 +15,124 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import io.aeron.Image;
+import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.protocol.DataHeaderFlyweight;
-import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import io.aeron.logbuffer.Header;
+import org.agrona.CloseHelper;
+import org.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.messages.ConcensusHeartbeatDecoder;
+import uk.co.real_logic.sbe.ir.generated.MessageHeaderDecoder;
 
+import java.util.concurrent.atomic.AtomicLong;
+
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 public class ClusterSubscription extends ClusterableSubscription
 {
-    private final ArchiveReader archiveReader;
-    private final ClusterNode node;
-    private final int clusterStreamId;
+    private static final int NO_LEADER = -1;
 
-    private ArchiveReader.SessionReader ourArchiveReader;
-    private Role role;
-    private int leaderSessionId;
-    private long lastAppliedPosition = DataHeaderFlyweight.HEADER_LENGTH;
+    private final MessageFilter messageFilter;
+    private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
+    private final Subscription subscription;
+    private final ClusterNode clusterNode;
+
+    private Image image;
+    private int leaderSessionId = NO_LEADER;
 
     public ClusterSubscription(
-        final ArchiveReader archiveReader,
-        final Role role,
-        final ClusterNode node,
-        final int clusterStreamId)
+        final ClusterNode clusterNode,
+        final Subscription subscription,
+        final int clusterStreamId,
+        final AtomicLong position)
     {
+        this.clusterNode = clusterNode;
         // We use clusterStreamId as a reserved value filter
         if (clusterStreamId == NO_FILTER)
         {
             throw new IllegalArgumentException("ClusterStreamId must not be 0");
         }
 
-        this.archiveReader = archiveReader;
-        this.role = role;
-        this.node = node;
-        this.clusterStreamId = clusterStreamId;
+        this.subscription = subscription;
+        messageFilter = new MessageFilter(clusterStreamId, position);
     }
 
-    void onRoleChange(final Role role, final int leaderSessionId)
+    public int controlledPoll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit)
     {
-        this.role = role;
-        this.leaderSessionId = leaderSessionId;
-    }
-
-    public int controlledPoll(final ControlledFragmentHandler handler, final int fragmentLimit)
-    {
-        // TODO: significant optimisation of trying to read data out of memory
-        // TODO: decide whether to flow control commit position based upon applied position
-        if (validateReader())
+        if (image == null)
         {
-            final long commitPosition = role.commitPosition();
-            final long oldAppliedPosition = this.lastAppliedPosition;
-            if (commitPosition > oldAppliedPosition)
+            if (leaderSessionId != NO_LEADER)
             {
-                final long readUpTo = archiveReader.readUpTo(
-                    clusterStreamId,
-                    leaderSessionId,
-                    oldAppliedPosition,
-                    commitPosition,
-                    handler);
-                if (readUpTo != ArchiveReader.UNKNOWN_SESSION)
-                {
-                    this.lastAppliedPosition = readUpTo;
-                }
-
-                // TODO: return number of fragments read
-                return (int) (readUpTo - oldAppliedPosition);
+                updateImage();
             }
 
-            return 0;
-        }
-
-        return 0;
-    }
-
-    private boolean validateReader()
-    {
-        if (ourArchiveReader == null)
-        {
-            ourArchiveReader = archiveReader.session(leaderSessionId);
-            if (ourArchiveReader == null)
+            if (image == null)
             {
-                return false;
+                return 0;
             }
         }
 
-        return true;
+        messageFilter.fragmentHandler = fragmentHandler;
+        return image.controlledPoll(messageFilter, fragmentLimit);
+    }
+
+    private void updateImage()
+    {
+        image = subscription.getImage(leaderSessionId);
     }
 
     public void close()
     {
-        node.close(this);
-        if (ourArchiveReader != null)
-        {
-            ourArchiveReader.close();
-        }
+        // TODO: thread-safety
+        clusterNode.close(this);
+        CloseHelper.close(subscription);
     }
 
     public void forEachPosition(final PositionHandler handler)
     {
-        // TODO: implement updating the position
+        // TODO: remove this method.
+    }
+
+    // TODO: update all subscriptions once per duty cycle
+    // TODO: thread-safety
+    public void onNewLeader(final int leaderSessionId)
+    {
+        this.leaderSessionId = leaderSessionId;
+        updateImage();
+    }
+
+    private final class MessageFilter implements ControlledFragmentHandler
+    {
+        private ControlledFragmentHandler fragmentHandler;
+        private final int clusterStreamId;
+        private final AtomicLong commitPosition;
+
+        private MessageFilter(final int clusterStreamId, final AtomicLong commitPosition)
+        {
+            this.clusterStreamId = clusterStreamId;
+            this.commitPosition = commitPosition;
+        }
+
+        public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
+        {
+            if (header.position() > commitPosition.get())
+            {
+                return ABORT;
+            }
+
+            final int clusterStreamId = ReservedValue.clusterStreamId(header);
+            if (this.clusterStreamId == clusterStreamId)
+            {
+                messageHeader.wrap(buffer, offset);
+                if (messageHeader.templateId() != ConcensusHeartbeatDecoder.TEMPLATE_ID)
+                {
+                    return fragmentHandler.onFragment(buffer, offset, length, header);
+                }
+            }
+
+            return CONTINUE;
+        }
     }
 }

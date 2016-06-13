@@ -80,9 +80,9 @@ public final class ReplicationAsserts
         return hasFluentProperty("leadershipTerm", leadershipTerm);
     }
 
-    public static Matcher<TermState> hasCommitPosition(final long commitPosition)
+    public static Matcher<TermState> hasConsensusPosition(final long commitPosition)
     {
-        return hasFluentProperty("commitPosition", commitPosition);
+        return hasFluentProperty("consensusPosition", commitPosition);
     }
 
     public static Matcher<TermState> hasLastAppliedPosition(final long lastAppliedPosition)
@@ -92,7 +92,7 @@ public final class ReplicationAsserts
 
     public static Matcher<TermState> hasPositions(final long position)
     {
-        return allOf(hasCommitPosition(position), hasLastAppliedPosition(position));
+        return allOf(hasConsensusPosition(position), hasLastAppliedPosition(position));
     }
 
 }

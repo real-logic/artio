@@ -108,22 +108,23 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             termState1,
             leaderSessionId,
             archiveReader,
-            archiver)
+            archiver,
+            commitPosition1)
             .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
             .controlSubscription(controlSubscription())
             .acknowledgementSubscription(acknowledgementSubscription())
             .dataSubscription(dataSubscription());
 
-        follower1 = follower(FOLLOWER_1_ID, clusterNode2, termState2);
-        follower2 = follower(FOLLOWER_2_ID, clusterNode3, termState3);
+        follower1 = follower(FOLLOWER_1_ID, clusterNode2, termState2, commitPosition2);
+        follower2 = follower(FOLLOWER_2_ID, clusterNode3, termState3, commitPosition3);
 
         leaderSubscription =
-            new ClusterSubscription(archiveReader, leader, leaderNode, CLUSTER_STREAM_ID);
-        leaderSubscription.onRoleChange(leader, leaderSessionId);
+            new ClusterSubscription(leaderNode, dataSubscription(), CLUSTER_STREAM_ID, commitPosition1);
+        leaderSubscription.onNewLeader(leaderSessionId);
 
         follower1Subscription = new ClusterSubscription(
-            followerArchiveReader(subscription, FOLLOWER_1_ID), follower1, mock(ClusterNode.class), CLUSTER_STREAM_ID);
-        follower1Subscription.onRoleChange(follower1, leaderSessionId);
+            mock(ClusterNode.class), dataSubscription(), CLUSTER_STREAM_ID, commitPosition2);
+        follower1Subscription.onNewLeader(leaderSessionId);
     }
 
     @Test
@@ -258,7 +259,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         final int readMessages = controlSubscription().controlledPoll(new RaftSubscription(raftHandler), 10);
         assertEquals(0, readMessages);
         verify(raftHandler, never())
-            .onConcensusHeartbeat(anyShort(), anyInt(), anyLong(), eq(leaderSessionId));
+            .onConsensusHeartbeat(anyShort(), anyInt(), anyLong(), eq(leaderSessionId));
     }
 
     private int roundtripABuffer()

@@ -32,6 +32,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.LogDirectoryDescriptor;
 
 import java.io.File;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.agrona.CloseHelper.close;
 import static org.mockito.Mockito.mock;
@@ -57,6 +58,10 @@ public class AbstractReplicationTest
     protected TermState termState1 = new TermState();
     protected TermState termState2 = new TermState();
     protected TermState termState3 = new TermState();
+
+    protected AtomicLong commitPosition1 = new AtomicLong(0);
+    protected AtomicLong commitPosition2 = new AtomicLong(0);
+    protected AtomicLong commitPosition3 = new AtomicLong(0);
 
     protected MediaDriver mediaDriver;
     protected Aeron aeron;
@@ -131,7 +136,8 @@ public class AbstractReplicationTest
     protected Follower follower(
         final short id,
         final ClusterNode clusterNode,
-        final TermState termState)
+        final TermState termState,
+        final AtomicLong commitPosition)
     {
         final ArchiveMetaData metaData = archiveMetaData(id);
         final Subscription subscription = dataSubscription();
@@ -149,7 +155,8 @@ public class AbstractReplicationTest
             0,
             TIMEOUT,
             termState,
-            archiver)
+            archiver,
+            commitPosition)
             .controlSubscription(controlSubscription())
             .acknowledgementPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID))
             .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))

@@ -15,23 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-/**
- * Replication role determines your actions.
- */
-interface Role
+// TODO: extract common archiver functionality from leader and follower
+public class RaftArchiver
 {
-    default int poll(final int fragmentLimit, final long timeInMs)
-    {
-        return pollCommands(fragmentLimit, timeInMs) +
-               readData() +
-               checkConditions(timeInMs);
-    }
-
-    int pollCommands(final int fragmentLimit, final long timeInMs);
-
-    int readData();
-
-    int checkConditions(final long timeInMs);
-
-    void closeStreams();
 }

@@ -24,6 +24,8 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
@@ -39,6 +41,7 @@ public class Follower implements Role, RaftHandler
     private final ClusterNode clusterNode;
     private final TermState termState;
     private final Archiver archiver;
+    private final AtomicLong commitPosition;
     private final RandomTimeout replyTimeout;
 
     private RaftPublication acknowledgementPublication;
@@ -46,8 +49,7 @@ public class Follower implements Role, RaftHandler
     private SessionArchiver leaderArchiver;
     private Subscription controlSubscription;
     private long receivedPosition;
-    private long commitPosition;
-    private long lastAppliedPosition;
+    private long consensusPosition;
 
     private short votedFor = NO_ONE;
     private int leaderShipTerm;
@@ -59,12 +61,14 @@ public class Follower implements Role, RaftHandler
         final long timeInMs,
         final long replyTimeoutInMs,
         final TermState termState,
-        final Archiver archiver)
+        final Archiver archiver,
+        final AtomicLong commitPosition)
     {
         this.nodeId = nodeId;
         this.clusterNode = clusterNode;
         this.termState = termState;
         this.archiver = archiver;
+        this.commitPosition = commitPosition;
         replyTimeout = new RandomTimeout(replyTimeoutInMs, timeInMs);
         raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));
     }
@@ -87,8 +91,7 @@ public class Follower implements Role, RaftHandler
         {
             termState
                 .receivedPosition(receivedPosition)
-                .lastAppliedPosition(lastAppliedPosition)
-                .commitPosition(commitPosition)
+                .consensusPosition(consensusPosition)
                 .leadershipTerm(leaderShipTerm)
                 .noLeader();
 
@@ -211,10 +214,10 @@ public class Follower implements Role, RaftHandler
         return Action.CONTINUE;
     }
 
-    public Action onConcensusHeartbeat(final short leaderNodeId,
-                                     final int leaderShipTerm,
-                                     final long position,
-                                     final int leaderSessionId)
+    public Action onConsensusHeartbeat(final short leaderNodeId,
+                                       final int leaderShipTerm,
+                                       final long position,
+                                       final int leaderSessionId)
     {
         if (leaderNodeId != this.nodeId &&
             leaderShipTerm > this.leaderShipTerm)
@@ -222,8 +225,7 @@ public class Follower implements Role, RaftHandler
             termState
                 .leadershipTerm(leaderShipTerm)
                 .receivedPosition(receivedPosition)
-                .lastAppliedPosition(lastAppliedPosition)
-                .commitPosition(position)
+                .consensusPosition(position)
                 .leaderSessionId(leaderSessionId);
 
             if (leaderSessionId != termState.leaderSessionId())
@@ -234,20 +236,22 @@ public class Follower implements Role, RaftHandler
             follow(this.timeInMs);
         }
 
-        if (position > commitPosition)
+        if (position > consensusPosition)
         {
-            commitPosition = position;
+            consensusPosition = position;
+            commitPosition.set(Math.min(consensusPosition, receivedPosition));
         }
 
         return Action.CONTINUE;
     }
 
-    public Action onResend(final int leaderSessionId,
-                         final int leaderShipTerm,
-                         final long startPosition,
-                         final DirectBuffer bodyBuffer,
-                         final int bodyOffset,
-                         final int bodyLength)
+    public Action onResend(
+        final int leaderSessionId,
+        final int leaderShipTerm,
+        final long startPosition,
+        final DirectBuffer bodyBuffer,
+        final int bodyOffset,
+        final int bodyLength)
     {
         if (isValidPosition(leaderSessionId, leaderShipTerm, startPosition))
         {
@@ -283,8 +287,7 @@ public class Follower implements Role, RaftHandler
     {
         leaderShipTerm = termState.leadershipTerm();
         receivedPosition = termState.receivedPosition();
-        lastAppliedPosition = termState.lastAppliedPosition();
-        commitPosition = termState.commitPosition();
+        consensusPosition = termState.consensusPosition();
         checkLeaderChange();
     }
 
@@ -294,6 +297,7 @@ public class Follower implements Role, RaftHandler
         {
             final int sessionId = termState.leaderSessionId();
             leaderArchiver = archiver.session(sessionId);
+            clusterNode.onNewLeader();
         }
         else
         {
@@ -323,15 +327,5 @@ public class Follower implements Role, RaftHandler
     {
         this.votedFor = votedFor;
         return this;
-    }
-
-    public long commitPosition()
-    {
-        return commitPosition;
-    }
-
-    public long canCommitPosition()
-    {
-        return Math.min(commitPosition, receivedPosition);
     }
 }

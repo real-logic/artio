@@ -52,13 +52,18 @@ public class RaftTransport
     {
         leader
             .acknowledgementSubscription(subscription(configuration.acknowledgementStream()))
-            .dataSubscription(subscription(configuration.dataStream()));
+            .dataSubscription(dataSubscription());
+    }
+
+    public Subscription dataSubscription()
+    {
+        return subscription(configuration.dataStream());
     }
 
     public void injectFollowerSubscriptions(final Follower follower)
     {
         configuration.archiver()
-                     .subscription(subscription(configuration.dataStream()));
+                     .subscription(dataSubscription());
     }
 
     private Publication publication(final StreamIdentifier id)

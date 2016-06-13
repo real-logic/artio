@@ -30,6 +30,8 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 
@@ -67,7 +69,7 @@ public class Leader implements Role, RaftHandler
      */
     private long archivedPosition = 0;
     /** Position in the log that has been committed to disk, commitPosition >= lastAppliedPosition */
-    private long commitPosition = 0;
+    private final AtomicLong commitPosition;
     // TODO: re-think invariants given initial state of lastAppliedPosition
     /** Position in the log that has been applied to the state machine*/
     private long lastAppliedPosition = DataHeaderFlyweight.HEADER_LENGTH;
@@ -88,7 +90,8 @@ public class Leader implements Role, RaftHandler
         final TermState termState,
         final int ourSessionId,
         final ArchiveReader archiveReader,
-        final Archiver archiver)
+        final Archiver archiver,
+        final AtomicLong commitPosition)
     {
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
@@ -98,6 +101,7 @@ public class Leader implements Role, RaftHandler
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         this.archiveReader = archiveReader;
         this.archiver = archiver;
+        this.commitPosition = commitPosition;
 
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
         updateHeartbeatInterval(timeInMs);
@@ -114,10 +118,10 @@ public class Leader implements Role, RaftHandler
         }
 
         final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
-        final int delta = (int) (newPosition - commitPosition);
+        final int delta = (int) (newPosition - commitPosition.get());
         if (delta > 0)
         {
-            commitPosition = newPosition;
+            commitPosition.set(newPosition);
 
             heartbeat();
 
@@ -173,7 +177,7 @@ public class Leader implements Role, RaftHandler
 
     private void heartbeat()
     {
-        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition, ourSessionId);
+        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition.get(), ourSessionId);
         updateHeartbeatInterval(timeInMs);
     }
 
@@ -232,7 +236,7 @@ public class Leader implements Role, RaftHandler
         // Ignore requests from yourself
         if (candidateId != this.nodeId)
         {
-            if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= commitPosition)
+            if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= commitPosition.get())
             {
                 controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.FOR);
 
@@ -269,10 +273,10 @@ public class Leader implements Role, RaftHandler
         return Action.CONTINUE;
     }
 
-    public Action onConcensusHeartbeat(final short nodeId,
-                                     final int leaderShipTerm,
-                                     final long position,
-                                     final int leaderSessionId)
+    public Action onConsensusHeartbeat(final short nodeId,
+                                       final int leaderShipTerm,
+                                       final long position,
+                                       final int leaderSessionId)
     {
         if (nodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
         {
@@ -290,7 +294,7 @@ public class Leader implements Role, RaftHandler
     {
         termState
             .leadershipTerm(leaderShipTerm)
-            .commitPosition(commitPosition)
+            .consensusPosition(commitPosition.get())
             .lastAppliedPosition(lastAppliedPosition)
             .receivedPosition(lastAppliedPosition);
 
@@ -302,7 +306,7 @@ public class Leader implements Role, RaftHandler
         this.timeInMs = timeInMs;
 
         leaderShipTerm = termState.leadershipTerm();
-        commitPosition = termState.commitPosition();
+        commitPosition.set(termState.consensusPosition());
         lastAppliedPosition = Math.max(DataHeaderFlyweight.HEADER_LENGTH, termState.lastAppliedPosition());
         heartbeat();
 
@@ -334,16 +338,6 @@ public class Leader implements Role, RaftHandler
     {
         this.controlSubscription = controlSubscription;
         return this;
-    }
-
-    public long commitPosition()
-    {
-        return commitPosition;
-    }
-
-    public long canCommitPosition()
-    {
-        return commitPosition;
     }
 
     private class ResendHandler implements BlockHandler

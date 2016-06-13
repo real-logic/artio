@@ -31,7 +31,7 @@ public interface RaftHandler
     Action onReplyVote(
         final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote);
 
-    Action onConcensusHeartbeat(
+    Action onConsensusHeartbeat(
         final short nodeId, final int leaderShipTerm, final long position, final int leaderSessionId);
 
     Action onResend(

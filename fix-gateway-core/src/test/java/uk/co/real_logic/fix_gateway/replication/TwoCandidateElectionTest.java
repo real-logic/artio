@@ -39,7 +39,7 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
 
         node1 = candidate((short) 1, clusterNode1, termState1);
         node2 = candidate((short) 2, clusterNode2, termState2);
-        node3 = follower((short) 3, clusterNode3, termState3);
+        node3 = follower((short) 3, clusterNode3, termState3, commitPosition3);
     }
 
     @Test
@@ -61,7 +61,7 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
     @Test
     public void shouldElectCandidateWithCorrectTerm()
     {
-        termState3.leadershipTerm(2).commitPosition(32);
+        termState3.leadershipTerm(2).consensusPosition(32);
         node3.follow(TIME);
 
         electCandidateWithCorrectTerm();
