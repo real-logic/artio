@@ -582,11 +582,11 @@ public final class FixLibrary extends GatewayProcess
         return correlationId;
     }
 
-    private final FixLibraryProtocolHandler processProtocolHandler = new FixLibraryProtocolHandler();
+    private final FixLibraryEndPointHandler processProtocolHandler = new FixLibraryEndPointHandler();
     private final ControlledFragmentHandler outboundSubscription =
         ProtocolSubscription.of(processProtocolHandler, new LibraryProtocolSubscription(processProtocolHandler));
 
-    private class FixLibraryProtocolHandler implements LibraryProtocolHandler, ProtocolHandler
+    private class FixLibraryEndPointHandler implements LibraryEndPointHandler, ProtocolHandler
     {
         private int sessionId;
         private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();

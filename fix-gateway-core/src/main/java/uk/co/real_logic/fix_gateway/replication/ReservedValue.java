@@ -46,10 +46,15 @@ public final class ReservedValue
         return (int) reservedValue;
     }
 
-    public static int streamId(final Header header)
+    public static int clusterStreamId(final Header header)
     {
         final long reservedValue = header.reservedValue();
-        final int clusterStreamId = clusterStreamId(reservedValue);
+        return clusterStreamId(reservedValue);
+    }
+
+    public static int streamId(final Header header)
+    {
+        final int clusterStreamId = clusterStreamId(header);
         if (clusterStreamId == NO_FILTER)
         {
             return header.streamId();

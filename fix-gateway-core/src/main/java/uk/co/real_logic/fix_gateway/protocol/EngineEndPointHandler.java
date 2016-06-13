@@ -20,8 +20,10 @@ import io.aeron.logbuffer.Header;
 import uk.co.real_logic.fix_gateway.messages.SequenceNumberType;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 
-public interface EngineProtocolHandler
+public interface EngineEndPointHandler
 {
+    Action onLibraryConnect(final int libraryId, final long correlationId, final int aeronSessionId);
+
     Action onInitiateConnection(
         final int libraryId,
         final int port,
@@ -41,8 +43,6 @@ public interface EngineProtocolHandler
     Action onRequestDisconnect(final int libraryId, final long connectionId);
 
     Action onApplicationHeartbeat(final int libraryId);
-
-    Action onLibraryConnect(final int libraryId, final long correlationId, final int aeronSessionId);
 
     Action onReleaseSession(
         final int libraryId,

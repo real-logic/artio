@@ -36,9 +36,9 @@ public class LibraryProtocolSubscription implements ControlledFragmentHandler
     private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
     private final NotLeaderDecoder libraryConnect = new NotLeaderDecoder();
 
-    private final LibraryProtocolHandler handler;
+    private final LibraryEndPointHandler handler;
 
-    public LibraryProtocolSubscription(final LibraryProtocolHandler handler)
+    public LibraryProtocolSubscription(final LibraryEndPointHandler handler)
     {
         this.handler = handler;
     }

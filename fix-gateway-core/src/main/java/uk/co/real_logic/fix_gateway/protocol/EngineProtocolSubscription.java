@@ -32,9 +32,9 @@ public class EngineProtocolSubscription implements ControlledFragmentHandler
     private final ReleaseSessionDecoder releaseSession = new ReleaseSessionDecoder();
     private final RequestSessionDecoder requestSession = new RequestSessionDecoder();
 
-    private final EngineProtocolHandler handler;
+    private final EngineEndPointHandler handler;
 
-    public EngineProtocolSubscription(final EngineProtocolHandler handler)
+    public EngineProtocolSubscription(final EngineEndPointHandler handler)
     {
         this.handler = handler;
     }

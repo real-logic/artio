@@ -19,7 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
-public interface LibraryProtocolHandler
+public interface LibraryEndPointHandler
 {
     Action onManageConnection(
         final int libraryId,
