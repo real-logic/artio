@@ -226,7 +226,7 @@ project(':fix-gateway-core') {
 
         compile "io.aeron:aeron-client:${aeronVersion}"
         compile "io.aeron:aeron-driver:${aeronVersion}"
-        compile 'org.hdrhistogram:HdrHistogram:2.1.8'
+        compile 'org.hdrhistogram:HdrHistogram:2.1.9'
     }
 
     run {
