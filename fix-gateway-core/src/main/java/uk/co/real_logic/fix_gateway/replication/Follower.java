@@ -199,6 +199,8 @@ public class Follower implements Role, RaftHandler
                                        final long position,
                                        final int leaderSessionId)
     {
+        consensusPosition.set(position);
+
         if (leaderNodeId != this.nodeId &&
             leaderShipTerm > this.leaderShipTerm)
         {
@@ -207,19 +209,12 @@ public class Follower implements Role, RaftHandler
                 .receivedPosition(receivedPosition)
                 .leaderSessionId(leaderSessionId);
 
-            consensusPosition.set(position);
-
             if (leaderSessionId != termState.leaderSessionId())
             {
                 checkLeaderChange();
             }
 
             follow(this.timeInMs);
-        }
-
-        if (position > consensusPosition.get())
-        {
-            consensusPosition.set(position);
         }
 
         return Action.CONTINUE;
