@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 public class TermState
 {
     /** the aeron session id of the current leader */
@@ -33,7 +35,7 @@ public class TermState
     private long lastAppliedPosition;
 
     /** The position within the current leadership term that we can commit up to. */
-    private long consensusPosition;
+    private final AtomicLong consensusPosition = new AtomicLong(0);
 
     public TermState leaderSessionId(int leadershipSessionId)
     {
@@ -66,13 +68,13 @@ public class TermState
         return this;
     }
 
-    public TermState consensusPosition(long commitPosition)
+    public TermState consensusPosition(final long consensusPosition)
     {
-        this.consensusPosition = commitPosition;
+        consensusPosition().set(consensusPosition);
         return this;
     }
 
-    public TermState allPositions(long position)
+    public TermState allPositions(final long position)
     {
         receivedPosition(position);
         lastAppliedPosition(position);
@@ -105,7 +107,7 @@ public class TermState
         return lastAppliedPosition;
     }
 
-    public long consensusPosition()
+    public AtomicLong consensusPosition()
     {
         return consensusPosition;
     }
@@ -128,7 +130,7 @@ public class TermState
             ", leadershipTerm=" + leadershipTerm +
             ", receivedPosition=" + receivedPosition +
             ", lastAppliedPosition=" + lastAppliedPosition +
-            ", commitPosition=" + consensusPosition +
+            ", consensusPosition=" + consensusPosition +
             '}';
     }
 }

@@ -22,7 +22,6 @@ import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.Objects.requireNonNull;
 
@@ -44,7 +43,6 @@ public class ClusterNode extends ClusterableNode
     private final RaftTransport transport;
     private final InboundPipe inboundPipe;
     private final OutboundPipe outboundPipe;
-    private final AtomicLong commitPosition = new AtomicLong(0);
     private final AtomicInteger leaderSessionId = new AtomicInteger(NO_LEADER);
 
     private Role currentRole;
@@ -81,8 +79,8 @@ public class ClusterNode extends ClusterableNode
             termState,
             ourSessionId,
             archiveReader,
-            archiver,
-            commitPosition);
+            archiver
+        );
 
         candidate = new Candidate(
             nodeId,
@@ -99,8 +97,8 @@ public class ClusterNode extends ClusterableNode
             timeInMs,
             timeoutIntervalInMs,
             termState,
-            archiver,
-            commitPosition);
+            archiver
+        );
 
         transport.initialiseRoles(leader, candidate, follower);
 
@@ -195,9 +193,10 @@ public class ClusterNode extends ClusterableNode
         }
     };
 
+    // TODO: figure out if I really need to expose this property
     public long commitPosition()
     {
-        return commitPosition.get();
+        return termState.consensusPosition().get();
     }
 
     private void startAsFollower(final long timeInMs)
@@ -288,6 +287,6 @@ public class ClusterNode extends ClusterableNode
     public ClusterableSubscription subscription(final int clusterStreamId)
     {
         return new ClusterSubscription(
-            transport.dataSubscription(), clusterStreamId, commitPosition, leaderSessionId);
+            transport.dataSubscription(), clusterStreamId, termState.consensusPosition(), leaderSessionId);
     }
 }

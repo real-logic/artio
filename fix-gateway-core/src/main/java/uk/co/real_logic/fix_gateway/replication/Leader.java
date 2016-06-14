@@ -69,7 +69,7 @@ public class Leader implements Role, RaftHandler
      */
     private long archivedPosition = 0;
     /** Position in the log that has been committed to disk, commitPosition >= lastAppliedPosition */
-    private final AtomicLong commitPosition;
+    private final AtomicLong consensusPosition;
     // TODO: re-think invariants given initial state of lastAppliedPosition
     /** Position in the log that has been applied to the state machine*/
     private long lastAppliedPosition = DataHeaderFlyweight.HEADER_LENGTH;
@@ -90,8 +90,7 @@ public class Leader implements Role, RaftHandler
         final TermState termState,
         final int ourSessionId,
         final ArchiveReader archiveReader,
-        final Archiver archiver,
-        final AtomicLong commitPosition)
+        final Archiver archiver)
     {
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
@@ -101,7 +100,7 @@ public class Leader implements Role, RaftHandler
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         this.archiveReader = archiveReader;
         this.archiver = archiver;
-        this.commitPosition = commitPosition;
+        this.consensusPosition = termState.consensusPosition();
 
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
         updateHeartbeatInterval(timeInMs);
@@ -118,10 +117,10 @@ public class Leader implements Role, RaftHandler
         }
 
         final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
-        final int delta = (int) (newPosition - commitPosition.get());
+        final int delta = (int) (newPosition - consensusPosition.get());
         if (delta > 0)
         {
-            commitPosition.set(newPosition);
+            consensusPosition.set(newPosition);
 
             heartbeat();
 
@@ -177,7 +176,7 @@ public class Leader implements Role, RaftHandler
 
     private void heartbeat()
     {
-        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, commitPosition.get(), ourSessionId);
+        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, consensusPosition.get(), ourSessionId);
         updateHeartbeatInterval(timeInMs);
     }
 
@@ -236,7 +235,7 @@ public class Leader implements Role, RaftHandler
         // Ignore requests from yourself
         if (candidateId != this.nodeId)
         {
-            if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= commitPosition.get())
+            if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= consensusPosition.get())
             {
                 controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.FOR);
 
@@ -294,7 +293,6 @@ public class Leader implements Role, RaftHandler
     {
         termState
             .leadershipTerm(leaderShipTerm)
-            .consensusPosition(commitPosition.get())
             .lastAppliedPosition(lastAppliedPosition)
             .receivedPosition(lastAppliedPosition);
 
@@ -306,7 +304,6 @@ public class Leader implements Role, RaftHandler
         this.timeInMs = timeInMs;
 
         leaderShipTerm = termState.leadershipTerm();
-        commitPosition.set(termState.consensusPosition());
         lastAppliedPosition = Math.max(DataHeaderFlyweight.HEADER_LENGTH, termState.lastAppliedPosition());
         heartbeat();
 

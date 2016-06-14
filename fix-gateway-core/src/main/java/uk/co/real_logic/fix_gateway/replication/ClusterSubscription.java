@@ -45,7 +45,7 @@ public class ClusterSubscription extends ClusterableSubscription
     public ClusterSubscription(
         final Subscription subscription,
         final int clusterStreamId,
-        final AtomicLong position,
+        final AtomicLong consensusPosition,
         final AtomicInteger leaderSessionId)
     {
         this.leaderSessionId = leaderSessionId;
@@ -56,7 +56,7 @@ public class ClusterSubscription extends ClusterableSubscription
         }
 
         this.subscription = subscription;
-        messageFilter = new MessageFilter(clusterStreamId, position);
+        messageFilter = new MessageFilter(clusterStreamId, consensusPosition);
     }
 
     public int controlledPoll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit)
@@ -105,17 +105,17 @@ public class ClusterSubscription extends ClusterableSubscription
     {
         private ControlledFragmentHandler fragmentHandler;
         private final int clusterStreamId;
-        private final AtomicLong commitPosition;
+        private final AtomicLong consensusPosition;
 
-        private MessageFilter(final int clusterStreamId, final AtomicLong commitPosition)
+        private MessageFilter(final int clusterStreamId, final AtomicLong consensusPosition)
         {
             this.clusterStreamId = clusterStreamId;
-            this.commitPosition = commitPosition;
+            this.consensusPosition = consensusPosition;
         }
 
         public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
         {
-            if (header.position() > commitPosition.get())
+            if (header.position() > consensusPosition.get())
             {
                 return ABORT;
             }

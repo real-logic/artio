@@ -39,7 +39,7 @@ public class Follower implements Role, RaftHandler
     private final short nodeId;
     private final ClusterNode clusterNode;
     private final TermState termState;
-    private final AtomicLong commitPosition;
+    private final AtomicLong consensusPosition;
     private final RandomTimeout replyTimeout;
     private final RaftArchiver raftArchiver;
 
@@ -48,7 +48,6 @@ public class Follower implements Role, RaftHandler
 
     private Subscription controlSubscription;
     private long receivedPosition;
-    private long consensusPosition;
 
     private short votedFor = NO_ONE;
     private int leaderShipTerm;
@@ -60,14 +59,13 @@ public class Follower implements Role, RaftHandler
         final long timeInMs,
         final long replyTimeoutInMs,
         final TermState termState,
-        final Archiver archiver,
-        final AtomicLong commitPosition)
+        final Archiver archiver)
     {
         this.nodeId = nodeId;
         this.clusterNode = clusterNode;
         this.termState = termState;
-        raftArchiver = new RaftArchiver(archiver, termState);
-        this.commitPosition = commitPosition;
+        this.raftArchiver = new RaftArchiver(archiver, termState);
+        this.consensusPosition = termState.consensusPosition();
         replyTimeout = new RandomTimeout(replyTimeoutInMs, timeInMs);
         raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));
     }
@@ -90,7 +88,6 @@ public class Follower implements Role, RaftHandler
         {
             termState
                 .receivedPosition(receivedPosition)
-                .consensusPosition(consensusPosition)
                 .leadershipTerm(leaderShipTerm)
                 .noLeader();
 
@@ -208,8 +205,9 @@ public class Follower implements Role, RaftHandler
             termState
                 .leadershipTerm(leaderShipTerm)
                 .receivedPosition(receivedPosition)
-                .consensusPosition(position)
                 .leaderSessionId(leaderSessionId);
+
+            consensusPosition.set(position);
 
             if (leaderSessionId != termState.leaderSessionId())
             {
@@ -219,10 +217,9 @@ public class Follower implements Role, RaftHandler
             follow(this.timeInMs);
         }
 
-        if (position > consensusPosition)
+        if (position > consensusPosition.get())
         {
-            consensusPosition = position;
-            commitPosition.set(consensusPosition);
+            consensusPosition.set(position);
         }
 
         return Action.CONTINUE;
@@ -270,7 +267,6 @@ public class Follower implements Role, RaftHandler
     {
         leaderShipTerm = termState.leadershipTerm();
         receivedPosition = termState.receivedPosition();
-        consensusPosition = termState.consensusPosition();
         checkLeaderChange();
     }
 

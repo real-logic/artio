@@ -82,7 +82,8 @@ public final class ReplicationAsserts
 
     public static Matcher<TermState> hasConsensusPosition(final long commitPosition)
     {
-        return hasFluentProperty("consensusPosition", commitPosition);
+        return hasFluentProperty("consensusPosition",
+            hasFluentProperty("get", commitPosition));
     }
 
     public static Matcher<TermState> hasLastAppliedPosition(final long lastAppliedPosition)

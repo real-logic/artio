@@ -67,8 +67,8 @@ public class LeaderTest
         termState,
         LEADER_SESSION_ID,
         archiveReader,
-        archiver,
-        commitPosition);
+        archiver
+    );
 
     @Before
     public void setUp()

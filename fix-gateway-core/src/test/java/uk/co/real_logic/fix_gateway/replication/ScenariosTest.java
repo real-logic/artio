@@ -250,8 +250,8 @@ public class ScenariosTest
             termState,
             SESSION_ID,
             archiveReader,
-            archiver,
-            commitPosition);
+            archiver
+        );
 
         leader
             .controlPublication(controlPublication)
@@ -275,8 +275,8 @@ public class ScenariosTest
             TIME,
             TIMEOUT_IN_MS,
             termState,
-            archiver,
-            commitPosition);
+            archiver
+        );
 
         follower
             .controlPublication(controlPublication)

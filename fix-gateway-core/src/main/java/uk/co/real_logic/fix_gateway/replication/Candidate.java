@@ -23,6 +23,8 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
@@ -39,11 +41,11 @@ public class Candidate implements Role, RaftHandler
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final IntHashSet votesFor;
     private final RandomTimeout voteTimeout;
+    private final AtomicLong consensusPosition;
 
     private RaftPublication controlPublication;
     private Subscription controlSubscription;
     private int leaderShipTerm;
-    private long position;
     private long timeInMs;
 
     public Candidate(final short nodeId,
@@ -61,6 +63,7 @@ public class Candidate implements Role, RaftHandler
         this.acknowledgementStrategy = acknowledgementStrategy;
         this.voteTimeout = new RandomTimeout(voteTimeout, 0L);
         this.termState = termState;
+        this.consensusPosition = termState.consensusPosition();
         votesFor = new IntHashSet(2 * clusterSize, -1);
         raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));
     }
@@ -106,11 +109,11 @@ public class Candidate implements Role, RaftHandler
     public Action onRequestVote(
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, long lastAckedPosition)
     {
-        if (leaderShipTerm > this.leaderShipTerm && lastAckedPosition >= this.position)
+        if (leaderShipTerm > this.leaderShipTerm && lastAckedPosition >= consensusPosition.get())
         {
             replyVote(candidateId, leaderShipTerm, FOR);
 
-            transitionToFollower(leaderShipTerm, candidateId, this.position, candidateSessionId);
+            transitionToFollower(leaderShipTerm, candidateId, consensusPosition.get(), candidateSessionId);
 
             return Action.BREAK;
         }
@@ -169,7 +172,7 @@ public class Candidate implements Role, RaftHandler
     {
         if (nodeId != this.nodeId)
         {
-            final boolean hasHigherPosition = position >= this.position;
+            final boolean hasHigherPosition = position >= this.consensusPosition.get();
             DebugLogger.log("%d: New Leader %s%n", this.nodeId, hasHigherPosition);
             if (hasHigherPosition)
             {
@@ -211,7 +214,6 @@ public class Candidate implements Role, RaftHandler
 
     public Candidate startNewElection(final long timeInMs)
     {
-        this.position = termState.consensusPosition();
         this.leaderShipTerm = termState.leadershipTerm();
 
         DebugLogger.log("%d: startNewElection @ %d in %d\n", nodeId, timeInMs, leaderShipTerm);
@@ -225,7 +227,7 @@ public class Candidate implements Role, RaftHandler
         voteTimeout.onKeepAlive(timeInMs);
         leaderShipTerm++;
         countVote(nodeId); // Vote for yourself
-        controlPublication.saveRequestVote(nodeId, sessionId, position, leaderShipTerm);
+        controlPublication.saveRequestVote(nodeId, sessionId, consensusPosition.get(), leaderShipTerm);
     }
 
     public Candidate controlPublication(final RaftPublication controlPublication)
@@ -240,13 +242,4 @@ public class Candidate implements Role, RaftHandler
         return this;
     }
 
-    public long commitPosition()
-    {
-        return termState.consensusPosition();
-    }
-
-    public long canCommitPosition()
-    {
-        return termState.consensusPosition();
-    }
 }

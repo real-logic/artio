@@ -68,8 +68,8 @@ public class FollowerTest
         0,
         VOTE_TIMEOUT,
         termState,
-        archiver,
-        position);
+        archiver
+    );
 
     @Before
     public void setUp()

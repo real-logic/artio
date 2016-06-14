@@ -110,24 +110,26 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             termState1,
             leaderSessionId,
             archiveReader,
-            archiver,
-            commitPosition1)
+            archiver
+        )
             .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
             .controlSubscription(controlSubscription())
             .acknowledgementSubscription(acknowledgementSubscription())
             .dataSubscription(dataSubscription());
 
-        follower1 = follower(FOLLOWER_1_ID, clusterNode2, termState2, commitPosition2);
-        follower2 = follower(FOLLOWER_2_ID, clusterNode3, termState3, commitPosition3);
+        follower1 = follower(FOLLOWER_1_ID, clusterNode2, termState2);
+        follower2 = follower(FOLLOWER_2_ID, clusterNode3, termState3);
 
-        leaderSubscription =
-            new ClusterSubscription(
-                dataSubscription(), CLUSTER_STREAM_ID, commitPosition1, new AtomicInteger(leaderSessionId));
+        leaderSubscription = new ClusterSubscription(
+            dataSubscription(),
+            CLUSTER_STREAM_ID,
+            termState1.consensusPosition(),
+            new AtomicInteger(leaderSessionId));
 
         follower1Subscription = new ClusterSubscription(
             dataSubscription(),
             CLUSTER_STREAM_ID,
-            commitPosition2,
+            termState2.consensusPosition(),
             new AtomicInteger(leaderSessionId));
     }
 
