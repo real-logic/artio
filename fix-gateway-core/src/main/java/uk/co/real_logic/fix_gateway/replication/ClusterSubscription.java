@@ -40,7 +40,8 @@ public class ClusterSubscription extends ClusterableSubscription
     private final ClusterNode clusterNode;
 
     private Image image;
-    private int leaderSessionId = NO_LEADER;
+
+    private volatile int leaderSessionId = NO_LEADER;
 
     public ClusterSubscription(
         final ClusterNode clusterNode,
@@ -61,14 +62,11 @@ public class ClusterSubscription extends ClusterableSubscription
 
     public int controlledPoll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit)
     {
-        if (image == null)
+        if (imageNeedsUpdate())
         {
-            if (leaderSessionId != NO_LEADER)
-            {
-                updateImage();
-            }
+            updateImage();
 
-            if (image == null)
+            if (imageNeedsUpdate())
             {
                 return 0;
             }
@@ -76,11 +74,6 @@ public class ClusterSubscription extends ClusterableSubscription
 
         messageFilter.fragmentHandler = fragmentHandler;
         return image.controlledPoll(messageFilter, fragmentLimit);
-    }
-
-    private void updateImage()
-    {
-        image = subscription.getImage(leaderSessionId);
     }
 
     public void close()
@@ -96,13 +89,26 @@ public class ClusterSubscription extends ClusterableSubscription
     }
 
     // TODO: update all subscriptions once per duty cycle
-    // TODO: thread-safety
     public void onNewLeader(final int leaderSessionId)
     {
         this.leaderSessionId = leaderSessionId;
-        updateImage();
     }
 
+    private boolean imageNeedsUpdate()
+    {
+        final Image image = this.image;
+        return image == null || leaderSessionId != image.sessionId();
+    }
+
+    private void updateImage()
+    {
+        if (leaderSessionId != NO_LEADER)
+        {
+            image = subscription.getImage(leaderSessionId);
+        }
+    }
+
+    // TODO: fix thread-safety bug, what if commitPosition refers to a different leader?
     private final class MessageFilter implements ControlledFragmentHandler
     {
         private ControlledFragmentHandler fragmentHandler;
