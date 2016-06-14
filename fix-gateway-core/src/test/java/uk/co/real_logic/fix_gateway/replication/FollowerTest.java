@@ -24,8 +24,6 @@ import org.mockito.stubbing.OngoingStubbing;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
@@ -55,7 +53,6 @@ public class FollowerTest
     private Subscription controlSubscription = mock(Subscription.class);
     private ClusterNode clusterNode = mock(ClusterNode.class);
     private Archiver archiver = mock(Archiver.class);
-    private AtomicLong position = mock(AtomicLong.class);
 
     private final TermState termState = new TermState()
         .allPositions(POSITION)
