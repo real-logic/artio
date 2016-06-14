@@ -30,6 +30,8 @@ import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
@@ -119,12 +121,14 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         follower2 = follower(FOLLOWER_2_ID, clusterNode3, termState3, commitPosition3);
 
         leaderSubscription =
-            new ClusterSubscription(leaderNode, dataSubscription(), CLUSTER_STREAM_ID, commitPosition1);
-        leaderSubscription.onNewLeader(leaderSessionId);
+            new ClusterSubscription(
+                dataSubscription(), CLUSTER_STREAM_ID, commitPosition1, new AtomicInteger(leaderSessionId));
 
         follower1Subscription = new ClusterSubscription(
-            mock(ClusterNode.class), dataSubscription(), CLUSTER_STREAM_ID, commitPosition2);
-        follower1Subscription.onNewLeader(leaderSessionId);
+            dataSubscription(),
+            CLUSTER_STREAM_ID,
+            commitPosition2,
+            new AtomicInteger(leaderSessionId));
     }
 
     @Test

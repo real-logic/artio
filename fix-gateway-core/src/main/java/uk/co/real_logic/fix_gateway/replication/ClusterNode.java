@@ -21,8 +21,7 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.Objects.requireNonNull;
@@ -34,6 +33,8 @@ public class ClusterNode extends ClusterableNode
 {
     private static final int HEARTBEAT_TO_TIMEOUT_RATIO = 5;
 
+    static final int NO_LEADER = -1;
+
     private final Publication dataPublication;
     private final short nodeId;
     private final TermState termState = new TermState();
@@ -41,13 +42,12 @@ public class ClusterNode extends ClusterableNode
     private final Candidate candidate;
     private final Follower follower;
     private final RaftTransport transport;
-    private final ArchiveReader archiveReader;
     private final InboundPipe inboundPipe;
     private final OutboundPipe outboundPipe;
     private final AtomicLong commitPosition = new AtomicLong(0);
+    private final AtomicInteger leaderSessionId = new AtomicInteger(NO_LEADER);
 
     private Role currentRole;
-    private List<ClusterSubscription> subscriptions = new ArrayList<>();
 
     public ClusterNode(final ClusterNodeConfiguration configuration, final long timeInMs)
     {
@@ -56,8 +56,8 @@ public class ClusterNode extends ClusterableNode
         nodeId = configuration.nodeId();
         transport = configuration.raftTransport();
         dataPublication = transport.leaderPublication();
-        archiveReader = configuration.archiveReader();
 
+        final ArchiveReader archiveReader = configuration.archiveReader();
         final int ourSessionId = dataPublication.sessionId();
         final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
         final long heartbeatTimeInMs = timeoutIntervalInMs / HEARTBEAT_TO_TIMEOUT_RATIO;
@@ -229,14 +229,7 @@ public class ClusterNode extends ClusterableNode
 
     void onNewLeader()
     {
-        final int leaderSessionId = this.termState.leaderSessionId();
-        final List<ClusterSubscription> subscriptions = this.subscriptions;
-
-        for (int i = 0, size = subscriptions.size(); i < size; i++)
-        {
-            final ClusterSubscription subscription = subscriptions.get(i);
-            subscription.onNewLeader(leaderSessionId);
-        }
+        leaderSessionId.set(this.termState.leaderSessionId());
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)
@@ -294,14 +287,7 @@ public class ClusterNode extends ClusterableNode
 
     public ClusterableSubscription subscription(final int clusterStreamId)
     {
-        final ClusterSubscription subscription = new ClusterSubscription(
-            this, transport.dataSubscription(), clusterStreamId, commitPosition);
-        subscriptions.add(subscription);
-        return subscription;
-    }
-
-    public void close(final ClusterSubscription subscription)
-    {
-        subscriptions.remove(subscription);
+        return new ClusterSubscription(
+            transport.dataSubscription(), clusterStreamId, commitPosition, leaderSessionId);
     }
 }

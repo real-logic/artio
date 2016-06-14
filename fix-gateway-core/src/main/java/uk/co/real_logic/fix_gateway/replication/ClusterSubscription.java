@@ -24,32 +24,31 @@ import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.ConcensusHeartbeatDecoder;
 import uk.co.real_logic.sbe.ir.generated.MessageHeaderDecoder;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.fix_gateway.replication.ClusterNode.NO_LEADER;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 public class ClusterSubscription extends ClusterableSubscription
 {
-    private static final int NO_LEADER = -1;
 
     private final MessageFilter messageFilter;
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final Subscription subscription;
-    private final ClusterNode clusterNode;
+    private final AtomicInteger leaderSessionId;
 
     private Image image;
 
-    private volatile int leaderSessionId = NO_LEADER;
-
     public ClusterSubscription(
-        final ClusterNode clusterNode,
         final Subscription subscription,
         final int clusterStreamId,
-        final AtomicLong position)
+        final AtomicLong position,
+        final AtomicInteger leaderSessionId)
     {
-        this.clusterNode = clusterNode;
+        this.leaderSessionId = leaderSessionId;
         // We use clusterStreamId as a reserved value filter
         if (clusterStreamId == NO_FILTER)
         {
@@ -78,8 +77,6 @@ public class ClusterSubscription extends ClusterableSubscription
 
     public void close()
     {
-        // TODO: thread-safety
-        clusterNode.close(this);
         CloseHelper.close(subscription);
     }
 
@@ -88,20 +85,15 @@ public class ClusterSubscription extends ClusterableSubscription
         // TODO: remove this method.
     }
 
-    // TODO: update all subscriptions once per duty cycle
-    public void onNewLeader(final int leaderSessionId)
-    {
-        this.leaderSessionId = leaderSessionId;
-    }
-
     private boolean imageNeedsUpdate()
     {
         final Image image = this.image;
-        return image == null || leaderSessionId != image.sessionId();
+        return image == null || leaderSessionId.get() != image.sessionId();
     }
 
     private void updateImage()
     {
+        final int leaderSessionId = this.leaderSessionId.get();
         if (leaderSessionId != NO_LEADER)
         {
             image = subscription.getImage(leaderSessionId);
