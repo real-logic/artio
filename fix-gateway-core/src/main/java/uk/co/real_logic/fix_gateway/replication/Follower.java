@@ -222,7 +222,7 @@ public class Follower implements Role, RaftHandler
         if (position > consensusPosition)
         {
             consensusPosition = position;
-            commitPosition.set(Math.min(consensusPosition, receivedPosition));
+            commitPosition.set(consensusPosition);
         }
 
         return Action.CONTINUE;
