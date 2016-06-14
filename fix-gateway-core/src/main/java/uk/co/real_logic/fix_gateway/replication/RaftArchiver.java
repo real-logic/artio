@@ -15,7 +15,63 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import org.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
+
 // TODO: extract common archiver functionality from leader and follower
 public class RaftArchiver
 {
+
+    private final Archiver archiver;
+    private final TermState termState;
+
+    private Archiver.SessionArchiver leaderArchiver;
+
+    public RaftArchiver(final Archiver archiver, final TermState termState)
+    {
+        this.archiver = archiver;
+        this.termState = termState;
+    }
+
+    boolean checkLeaderArchiver()
+    {
+        // Leader may not have written anything onto its data stream when it becomes the leader
+        // Most of the time this will be false
+        if (leaderArchiver == null)
+        {
+            leaderArchiver = archiver.session(termState.leaderSessionId());
+            termState.leaderSessionId(termState.leaderSessionId());
+            if (leaderArchiver == null)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    long archivedPosition()
+    {
+        return leaderArchiver.archivedPosition();
+    }
+
+    int poll()
+    {
+        return leaderArchiver.poll();
+    }
+
+    void patch(final DirectBuffer bodyBuffer, final int bodyOffset, final int bodyLength)
+    {
+        leaderArchiver.patch(bodyBuffer, bodyOffset, bodyLength);
+    }
+
+    void onLeader()
+    {
+        final int sessionId = termState.leaderSessionId();
+        leaderArchiver = archiver.session(sessionId);
+    }
+
+    void onNoLeader()
+    {
+        leaderArchiver = null;
+    }
 }

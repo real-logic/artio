@@ -20,7 +20,6 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
-import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
@@ -40,13 +39,13 @@ public class Follower implements Role, RaftHandler
     private final short nodeId;
     private final ClusterNode clusterNode;
     private final TermState termState;
-    private final Archiver archiver;
     private final AtomicLong commitPosition;
     private final RandomTimeout replyTimeout;
+    private final RaftArchiver raftArchiver;
 
     private RaftPublication acknowledgementPublication;
     private RaftPublication controlPublication;
-    private SessionArchiver leaderArchiver;
+
     private Subscription controlSubscription;
     private long receivedPosition;
     private long consensusPosition;
@@ -67,7 +66,7 @@ public class Follower implements Role, RaftHandler
         this.nodeId = nodeId;
         this.clusterNode = clusterNode;
         this.termState = termState;
-        this.archiver = archiver;
+        raftArchiver = new RaftArchiver(archiver, termState);
         this.commitPosition = commitPosition;
         replyTimeout = new RandomTimeout(replyTimeoutInMs, timeInMs);
         raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));
@@ -105,12 +104,12 @@ public class Follower implements Role, RaftHandler
 
     public int readData()
     {
-        if (checkLeaderArchiver())
+        if (raftArchiver.checkLeaderArchiver())
         {
             return 0;
         }
 
-        final long imagePosition = leaderArchiver.archivedPosition();
+        final long imagePosition = raftArchiver.archivedPosition();
         if (imagePosition < receivedPosition)
         {
             // TODO: theoretically not possible, but maybe have a sanity check?
@@ -123,7 +122,7 @@ public class Follower implements Role, RaftHandler
             return 1;
         }
 
-        final int bytesRead = leaderArchiver.poll();
+        final int bytesRead = raftArchiver.poll();
         if (bytesRead > 0)
         {
             receivedPosition += bytesRead;
@@ -132,22 +131,6 @@ public class Follower implements Role, RaftHandler
         }
 
         return bytesRead;
-    }
-
-    private boolean checkLeaderArchiver()
-    {
-        // Leader may not have written anything onto its data stream when it becomes the leader
-        // Most of the time this will be false
-        if (leaderArchiver == null)
-        {
-            leaderArchiver = archiver.session(termState.leaderSessionId());
-            termState.leaderSessionId(termState.leaderSessionId());
-            if (leaderArchiver == null)
-            {
-                return true;
-            }
-        }
-        return false;
     }
 
     private void saveMessageAcknowledgement(final AcknowledgementStatus status)
@@ -255,9 +238,9 @@ public class Follower implements Role, RaftHandler
     {
         if (isValidPosition(leaderSessionId, leaderShipTerm, startPosition))
         {
-            if (!checkLeaderArchiver())
+            if (!raftArchiver.checkLeaderArchiver())
             {
-                leaderArchiver.patch(bodyBuffer, bodyOffset, bodyLength);
+                raftArchiver.patch(bodyBuffer, bodyOffset, bodyLength);
                 receivedPosition += bodyLength;
                 onReplyKeepAlive(timeInMs);
                 saveMessageAcknowledgement(OK);
@@ -295,17 +278,16 @@ public class Follower implements Role, RaftHandler
     {
         if (termState.hasLeader())
         {
-            final int sessionId = termState.leaderSessionId();
-            leaderArchiver = archiver.session(sessionId);
+            raftArchiver.onLeader();
             clusterNode.onNewLeader();
         }
         else
         {
-            leaderArchiver = null;
+            raftArchiver.onNoLeader();
         }
     }
 
-    public Follower acknowledgementPublication(final RaftPublication acknowledgementPublication)
+    Follower acknowledgementPublication(final RaftPublication acknowledgementPublication)
     {
         this.acknowledgementPublication = acknowledgementPublication;
         return this;
@@ -323,7 +305,7 @@ public class Follower implements Role, RaftHandler
         return this;
     }
 
-    public Follower votedFor(final short votedFor)
+    Follower votedFor(final short votedFor)
     {
         this.votedFor = votedFor;
         return this;
