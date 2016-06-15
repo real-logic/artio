@@ -19,16 +19,14 @@ import io.aeron.Subscription;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
-// TODO: extract common archiver functionality from leader and follower
-public class RaftArchiver
+class RaftArchiver
 {
-
     private final Archiver archiver;
     private final TermState termState;
 
     private Archiver.SessionArchiver leaderArchiver;
 
-    public RaftArchiver(final Archiver archiver, final TermState termState)
+    RaftArchiver(final Archiver archiver, final TermState termState)
     {
         this.archiver = archiver;
         this.termState = termState;
