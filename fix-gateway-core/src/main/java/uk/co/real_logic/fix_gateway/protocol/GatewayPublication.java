@@ -754,9 +754,10 @@ public class GatewayPublication extends ClaimablePublication
     }
 
     public long saveNotLeader(
-        final int libraryId, final long correlationId)
+        final int libraryId, final long correlationId, final DirectBuffer channel)
     {
-        final long position = claim(NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH);
+        final int channelLength = channel == null ? 0 : channel.capacity();
+        final long position = claim(NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH + channelLength);
         if (position == BACK_PRESSURED)
         {
             return BACK_PRESSURED;
@@ -778,6 +779,11 @@ public class GatewayPublication extends ClaimablePublication
             .wrap(buffer, offset)
             .libraryId(libraryId)
             .correlationId(correlationId);
+
+        if (channel != null)
+        {
+            notLeader.putLibraryChannel(channel, 0, channelLength);
+        }
 
         bufferClaim.commit();
 

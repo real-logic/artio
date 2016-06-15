@@ -138,13 +138,15 @@ public final class FixEngine extends GatewayProcess
     {
         init(configuration);
         this.configuration = configuration;
+        final EngineDescriptorStore engineDescriptorStore = new EngineDescriptorStore();
 
         context = EngineContext.of(
             configuration,
             errorHandler,
             replayPublication(),
             fixCounters,
-            aeron);
+            aeron,
+            engineDescriptorStore);
         initFramer(configuration, fixCounters);
         initMonitoringAgent(timers.all(), configuration);
     }

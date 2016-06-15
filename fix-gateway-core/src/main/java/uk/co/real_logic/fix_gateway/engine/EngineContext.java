@@ -53,7 +53,8 @@ public abstract class EngineContext implements AutoCloseable
         final ErrorHandler errorHandler,
         final Publication replayPublication,
         final FixCounters fixCounters,
-        final Aeron aeron)
+        final Aeron aeron,
+        final EngineDescriptorStore engineDescriptorStore)
     {
         if (configuration.isClustered())
         {
@@ -68,7 +69,8 @@ public abstract class EngineContext implements AutoCloseable
                 errorHandler,
                 replayPublication,
                 fixCounters,
-                aeron);
+                aeron,
+                engineDescriptorStore);
         }
         else
         {

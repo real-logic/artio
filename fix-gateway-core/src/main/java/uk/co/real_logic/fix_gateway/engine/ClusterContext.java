@@ -33,24 +33,25 @@ import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREA
 import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
-public class ClusterContext extends EngineContext
+class ClusterContext extends EngineContext
 {
     private final StreamIdentifier dataStream;
     private final ClusterAgent node;
 
-    public ClusterContext(
+    ClusterContext(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
         final Publication replayPublication,
         final FixCounters fixCounters,
-        final Aeron aeron)
+        final Aeron aeron,
+        final EngineDescriptorStore engineDescriptorStore)
     {
         super(configuration, errorHandler, fixCounters, aeron);
 
         final String channel = configuration.clusterAeronChannel();
         dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
 
-        node = node(configuration, fixCounters, aeron, channel);
+        node = node(configuration, fixCounters, aeron, channel, engineDescriptorStore);
         newStreams(node.clusterStreams());
         newIndexers(inboundArchiveReader(), outboundArchiveReader());
         final Replayer replayer = newReplayer(replayPublication, outboundArchiveReader());
@@ -62,7 +63,8 @@ public class ClusterContext extends EngineContext
         final EngineConfiguration configuration,
         final FixCounters fixCounters,
         final Aeron aeron,
-        final String channel)
+        final String channel,
+        final EngineDescriptorStore engineDescriptorStore)
     {
         final int cacheNumSets = configuration.loggerCacheNumSets();
         final int cacheSetSize = configuration.loggerCacheSetSize();
@@ -92,7 +94,9 @@ public class ClusterContext extends EngineContext
             //.copyFrom(outboundSubscription, libraryForwarder)
             .copyTo(inboundPublication)
             .aeronChannel(channel)
-            .aeron(aeron);
+            .aeron(aeron)
+            .nodeState(EngineDescriptorFactory.make(configuration.libraryAeronChannel()))
+            .nodeStateHandler(engineDescriptorStore);
 
         return new ClusterAgent(clusterNodeConfiguration, System.currentTimeMillis());
     }

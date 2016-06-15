@@ -251,6 +251,7 @@
     <sbe:message name="NotLeader" id="37" description="Let a library know that you aren't the leader">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="correlationId" id="2" type="CorrelationId"/>
+        <data name="libraryChannel" id="3" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="EngineDescriptor" id="38" description="">
         <data name="libraryChannel" id="1" type="varDataEncoding"/>
