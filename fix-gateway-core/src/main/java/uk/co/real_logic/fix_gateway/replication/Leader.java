@@ -62,9 +62,8 @@ public class Leader implements Role, RaftHandler
      */
     private final AtomicLong consensusPosition;
     private final RaftArchiver raftArchiver;
-    // TODO: re-think invariants given initial state of lastAppliedPosition
     /** Position in the log that has been applied to the state machine*/
-    private long lastAppliedPosition = DataHeaderFlyweight.HEADER_LENGTH;
+    private long lastAppliedPosition;
 
     private long nextHeartbeatTimeInMs;
     private int leaderShipTerm;
