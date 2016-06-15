@@ -19,8 +19,10 @@ import io.aeron.Aeron;
 import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.driver.MediaDriver;
+import org.agrona.DirectBuffer;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.NoOpIdleStrategy;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
@@ -49,6 +51,9 @@ public class AbstractReplicationTest
     protected static final int CLUSTER_SIZE = 3;
     protected static final long TIME = 0L;
     protected static final int DATA_SESSION_ID = 43;
+    protected static final DirectBuffer NODE_STATE_BUFFER = new UnsafeBuffer(new byte[1]);
+
+    protected NodeStateHandler nodeStateHandler = mock(NodeStateHandler.class);
 
     protected ClusterAgent clusterNode1 = mock(ClusterAgent.class);
     protected ClusterAgent clusterNode2 = mock(ClusterAgent.class);
@@ -149,7 +154,9 @@ public class AbstractReplicationTest
             0,
             TIMEOUT,
             termState,
-            new RaftArchiver(termState.leaderSessionId(), archiver))
+            new RaftArchiver(termState.leaderSessionId(), archiver),
+            NODE_STATE_BUFFER,
+            nodeStateHandler)
             .controlSubscription(controlSubscription())
             .acknowledgementPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID))
             .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))

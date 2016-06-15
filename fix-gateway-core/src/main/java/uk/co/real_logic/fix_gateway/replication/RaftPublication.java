@@ -26,13 +26,14 @@ import uk.co.real_logic.fix_gateway.messages.*;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.Publication.NOT_CONNECTED;
+import static uk.co.real_logic.fix_gateway.messages.ReplyVoteEncoder.nodeStateHeaderLength;
 
 public class RaftPublication
 {
     private static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int MESSAGE_ACKNOWLEDGEMENT_LENGTH = HEADER_LENGTH + MessageAcknowledgementEncoder.BLOCK_LENGTH;
     private static final int REQUEST_VOTE_LENGTH = HEADER_LENGTH + RequestVoteEncoder.BLOCK_LENGTH;
-    private static final int REPLY_VOTE_LENGTH = HEADER_LENGTH + ReplyVoteEncoder.BLOCK_LENGTH;
+    private static final int REPLY_VOTE_LENGTH = HEADER_LENGTH + ReplyVoteEncoder.BLOCK_LENGTH + nodeStateHeaderLength();
     private static final int CONCENSUS_HEARTBEAT_LENGTH = HEADER_LENGTH + ConcensusHeartbeatEncoder.BLOCK_LENGTH;
     private static final int RESEND_BLOCK_LENGTH =
         HEADER_LENGTH + ResendEncoder.BLOCK_LENGTH + ResendDecoder.bodyHeaderLength();
@@ -124,11 +125,15 @@ public class RaftPublication
         return position;
     }
 
-    public long saveReplyVote(final short senderNodeId, final short candidateId,
-                              final int leaderShipTerm,
-                              final Vote vote)
+    public long saveReplyVote(
+        final short senderNodeId,
+        final short candidateId,
+        final int leaderShipTerm,
+        final Vote vote,
+        final DirectBuffer nodeState)
     {
-        final long position = claim(REPLY_VOTE_LENGTH);
+        final int nodeStateLength = nodeState.capacity();
+        final long position = claim(REPLY_VOTE_LENGTH + nodeStateLength);
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -147,7 +152,8 @@ public class RaftPublication
             .senderNodeId(senderNodeId)
             .candidateId(candidateId)
             .leaderShipTerm(leaderShipTerm)
-            .vote(vote);
+            .vote(vote)
+            .putNodeState(nodeState, 0, nodeStateLength);
 
         bufferClaim.commit();
 

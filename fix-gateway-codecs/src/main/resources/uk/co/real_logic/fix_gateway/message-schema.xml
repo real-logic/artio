@@ -17,6 +17,10 @@
             <type name="length" primitiveType="uint16"/>
             <type name="varData" primitiveType="uint8" length="0"/>
         </composite>
+        <composite name="groupSizeEncoding" description="Repeating group dimensions">
+            <type name="blockLength" primitiveType="uint16"/>
+            <type name="numInGroup" primitiveType="uint8" semanticType="NumInGroup"/>
+        </composite>
     </types>
     <types>
         <type name="FixSessionId" primitiveType="int64"/>
@@ -248,6 +252,9 @@
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="correlationId" id="2" type="CorrelationId"/>
     </sbe:message>
+    <sbe:message name="EngineDescriptor" id="38" description="">
+        <data name="libraryChannel" id="1" type="varDataEncoding"/>
+    </sbe:message>
 
     <!-- EXCEPTION STORAGE DATA STRUCTURES -->
     <sbe:message name="ExceptionEntry" id="14" description="">
@@ -319,10 +326,11 @@
         <field name="leaderShipTerm" id="59" type="int32"/>
     </sbe:message>
     <sbe:message name="ReplyVote" id="22" description="">
-        <field name="senderNodeId" id="65" type="int16"/>
-        <field name="candidateId" id="62" type="int16"/>
-        <field name="leaderShipTerm" id="60" type="int32"/>
-        <field name="vote" id="61" type="Vote"/>
+        <field name="senderNodeId" id="1" type="int16"/>
+        <field name="candidateId" id="2" type="int16"/>
+        <field name="leaderShipTerm" id="3" type="int32"/>
+        <field name="vote" id="4" type="Vote"/>
+        <data name="nodeState" id="5" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="ConcensusHeartbeat" id="21" description="">
         <field name="nodeId" id="57" type="int16"/>
@@ -342,6 +350,13 @@
         <field name="initialPosition" id="74" type="int64"/>
         <field name="initialStreamPosition" id="72" type="int64"/>
         <field name="finalStreamPosition" id="73" type="int64"/>
+    </sbe:message>
+    <sbe:message name="ClusterState" id="39" description="Queryable Message for exchanging cluster state">
+        <field name="leaderNodeId" id="1" type="int16"/>
+        <group name="nodes" id="2" dimensionType="groupSizeEncoding">
+            <field name="nodeId" id="10" type="int16"/>
+            <data name="payload" id="11" type="varDataEncoding"/>
+        </group>
     </sbe:message>
 
 </sbe:messageSchema>

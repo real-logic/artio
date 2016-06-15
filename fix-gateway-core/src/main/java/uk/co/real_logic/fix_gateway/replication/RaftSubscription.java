@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import org.agrona.ExpandableArrayBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -33,6 +34,7 @@ public class RaftSubscription implements ControlledFragmentHandler
     private final ReplyVoteDecoder replyVote = new ReplyVoteDecoder();
     private final ConcensusHeartbeatDecoder concensusHeartbeat = new ConcensusHeartbeatDecoder();
     private final ResendDecoder resend = new ResendDecoder();
+    private final ExpandableArrayBuffer nodeStateBuffer = new ExpandableArrayBuffer();
 
     private final RaftHandler handler;
 
@@ -75,11 +77,16 @@ public class RaftSubscription implements ControlledFragmentHandler
             case ReplyVoteDecoder.TEMPLATE_ID:
             {
                 replyVote.wrap(buffer, offset, blockLength, version);
+                final int nodeStateLength = replyVote.nodeStateLength();
+                nodeStateBuffer.checkLimit(nodeStateLength);
+                replyVote.getNodeState(nodeStateBuffer, 0, nodeStateLength);
                 return handler.onReplyVote(
                     replyVote.senderNodeId(),
                     replyVote.candidateId(),
                     replyVote.leaderShipTerm(),
-                    replyVote.vote()
+                    replyVote.vote(),
+                    nodeStateBuffer,
+                    nodeStateLength
                 );
             }
 

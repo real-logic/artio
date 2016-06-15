@@ -60,6 +60,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
     private ControlledFragmentHandler leaderHandler = mock(ControlledFragmentHandler.class);
     private ControlledFragmentHandler follower1Handler = mock(ControlledFragmentHandler.class);
+    private NodeStateHandler nodeStateHandler = mock(NodeStateHandler.class);
 
     private int leaderSessionId;
     private ClusterPublication publication;
@@ -110,7 +111,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             termState1,
             leaderSessionId,
             archiveReader,
-            new RaftArchiver(new AtomicInteger(leaderSessionId), archiver))
+            new RaftArchiver(new AtomicInteger(leaderSessionId), archiver), NODE_STATE_BUFFER, nodeStateHandler)
             .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
             .controlSubscription(controlSubscription())
             .acknowledgementSubscription(acknowledgementSubscription())

@@ -39,6 +39,8 @@ public class Follower implements Role, RaftHandler
     private final ClusterAgent clusterNode;
     private final TermState termState;
     private final AtomicLong consensusPosition;
+    private final DirectBuffer nodeState;
+    private final NodeStateHandler nodeStateHandler;
     private final RandomTimeout replyTimeout;
     private final RaftArchiver raftArchiver;
 
@@ -58,13 +60,17 @@ public class Follower implements Role, RaftHandler
         final long timeInMs,
         final long replyTimeoutInMs,
         final TermState termState,
-        final RaftArchiver raftArchiver)
+        final RaftArchiver raftArchiver,
+        final DirectBuffer nodeState,
+        final NodeStateHandler nodeStateHandler)
     {
         this.nodeId = nodeId;
         this.clusterNode = clusterNode;
         this.termState = termState;
         this.raftArchiver = raftArchiver;
         this.consensusPosition = termState.consensusPosition();
+        this.nodeState = nodeState;
+        this.nodeStateHandler = nodeStateHandler;
         replyTimeout = new RandomTimeout(replyTimeoutInMs, timeInMs);
         raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));
     }
@@ -159,13 +165,13 @@ public class Follower implements Role, RaftHandler
             if (canVoteFor(candidateId) && safeToVote(leaderShipTerm, candidatePosition))
             {
                 votedFor = candidateId;
-                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR);
+                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR, nodeState);
                 DebugLogger.log("%d: vote for %d in %d%n", nodeId, candidateId, leaderShipTerm);
                 onReplyKeepAlive(timeInMs);
             }
             else
             {
-                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST);
+                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST, nodeState);
                 DebugLogger.log("%d: vote against %d in %d%n", nodeId, candidateId, leaderShipTerm);
             }
         }
@@ -187,7 +193,11 @@ public class Follower implements Role, RaftHandler
     }
 
     public Action onReplyVote(
-        final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
+        final short senderNodeId,
+        final short candidateId,
+        final int leaderShipTerm,
+        final Vote vote,
+        final DirectBuffer nodeStateBuffer, final int nodeStateLength)
     {
         // not interested in this message
         return Action.CONTINUE;

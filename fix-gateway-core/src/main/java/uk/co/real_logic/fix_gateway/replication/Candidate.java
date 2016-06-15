@@ -32,6 +32,8 @@ import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
 public class Candidate implements Role, RaftHandler
 {
     private final RaftSubscription raftSubscription;
+    private final DirectBuffer nodeState;
+    private final NodeStateHandler nodeStateHandler;
 
     private final TermState termState;
     private final short nodeId;
@@ -54,7 +56,9 @@ public class Candidate implements Role, RaftHandler
                      final int clusterSize,
                      final long voteTimeout,
                      final TermState termState,
-                     final AcknowledgementStrategy acknowledgementStrategy)
+                     final AcknowledgementStrategy acknowledgementStrategy,
+                     final DirectBuffer nodeState,
+                     final NodeStateHandler nodeStateHandler)
     {
         this.nodeId = nodeId;
         this.sessionId = sessionId;
@@ -66,6 +70,8 @@ public class Candidate implements Role, RaftHandler
         this.consensusPosition = termState.consensusPosition();
         votesFor = new IntHashSet(2 * clusterSize, -1);
         raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));
+        this.nodeState = nodeState;
+        this.nodeStateHandler = nodeStateHandler;
     }
 
     public int checkConditions(final long timeInMs)
@@ -127,17 +133,24 @@ public class Candidate implements Role, RaftHandler
 
     private long replyVote(final short candidateId, final int leaderShipTerm, final Vote vote)
     {
-        return controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, vote);
+        return controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, vote, nodeState);
     }
 
     public Action onReplyVote(
-        final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
+        final short senderNodeId,
+        final short candidateId,
+        final int leaderShipTerm,
+        final Vote vote,
+        final DirectBuffer nodeStateBuffer,
+        final int nodeStateLength)
     {
         DebugLogger.log("%d: Received vote from %d about %d in %d%n", nodeId, senderNodeId, candidateId, leaderShipTerm);
 
         if (shouldCountVote(candidateId, leaderShipTerm, vote) && countVote(senderNodeId))
         {
             voteTimeout.onKeepAlive(timeInMs);
+
+            nodeStateHandler.onNewNodeState(senderNodeId, nodeStateBuffer, nodeStateLength);
 
             if (acknowledgementStrategy.isElected(votesFor.size(), clusterSize))
             {

@@ -23,7 +23,10 @@ import io.aeron.driver.ext.DebugReceiveChannelEndpoint;
 import io.aeron.driver.ext.DebugSendChannelEndpoint;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.CloseHelper;
+import org.agrona.DirectBuffer;
+import org.agrona.collections.Int2IntHashMap;
 import org.agrona.collections.IntHashSet;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -35,6 +38,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import static io.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
 import static io.aeron.driver.ThreadingMode.SHARED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static org.agrona.BitUtil.SIZE_OF_SHORT;
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
@@ -49,6 +53,7 @@ class NodeRunner implements AutoCloseable
     private final SwitchableLossGenerator outboundLossGenerator = new SwitchableLossGenerator();
     private final SwitchableLossGenerator inboundLossGenerator = new SwitchableLossGenerator();
 
+    private final Int2IntHashMap nodeIdToId = new Int2IntHashMap(-1);
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
     private final ClusterAgent clusterNode;
@@ -97,6 +102,8 @@ class NodeRunner implements AutoCloseable
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
         final Archiver archiver = new Archiver(
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
+        final UnsafeBuffer nodeState = new UnsafeBuffer(new byte[SIZE_OF_SHORT]);
+        nodeState.putShort(0, (short) nodeId);
 
         final ClusterNodeConfiguration configuration = new ClusterNodeConfiguration()
             .nodeId((short) nodeId)
@@ -106,10 +113,20 @@ class NodeRunner implements AutoCloseable
             .failCounter(mock(AtomicCounter.class))
             .aeronChannel(AERON_CHANNEL)
             .archiver(archiver)
-            .archiveReader(archiveReader);
+            .archiveReader(archiveReader)
+            .nodeState(nodeState)
+            .nodeStateHandler(this::saveNodeState);
 
         clusterNode = new ClusterAgent(configuration, System.currentTimeMillis());
         subscription = clusterNode.clusterStreams().subscription(1);
+    }
+
+    private void saveNodeState(final short id, final DirectBuffer nodeStateBuffer, final int nodeStateLength)
+    {
+        if (nodeStateLength == SIZE_OF_SHORT)
+        {
+            nodeIdToId.put(id, nodeStateBuffer.getShort(0));
+        }
     }
 
     private SendChannelEndpointSupplier newSendChannelEndpointSupplier()
@@ -162,6 +179,11 @@ class NodeRunner implements AutoCloseable
     public int leaderSessionId()
     {
         return raftNode().termState().leaderSessionId().get();
+    }
+
+    public Int2IntHashMap nodeIdToId()
+    {
+        return nodeIdToId;
     }
 
     public void close()

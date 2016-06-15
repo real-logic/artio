@@ -19,6 +19,7 @@ import io.aeron.Aeron;
 import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
@@ -52,6 +53,8 @@ public class ClusterNodeConfiguration
     private Subscription copyFromSubscription;
     private ControlledFragmentHandler nonLeaderHandler;
     private Publication copyToPublication;
+    private DirectBuffer nodeState;
+    private NodeStateHandler nodeStateHandler;
 
     /**
      * Sets the control, data and acknowledge streams to all this aeron
@@ -152,6 +155,18 @@ public class ClusterNodeConfiguration
         return this;
     }
 
+    public ClusterNodeConfiguration nodeState(final DirectBuffer nodeState)
+    {
+        this.nodeState = nodeState;
+        return this;
+    }
+
+    public ClusterNodeConfiguration nodeStateHandler(final NodeStateHandler nodeStateHandler)
+    {
+        this.nodeStateHandler = nodeStateHandler;
+        return this;
+    }
+
     public StreamIdentifier controlStream()
     {
         return controlStream;
@@ -220,6 +235,16 @@ public class ClusterNodeConfiguration
     public RaftTransport raftTransport()
     {
         return raftTransport;
+    }
+
+    public DirectBuffer nodeState()
+    {
+        return nodeState;
+    }
+
+    public NodeStateHandler nodeStateHandler()
+    {
+        return nodeStateHandler;
     }
 
     public void conclude()

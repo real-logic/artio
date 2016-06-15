@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Publication;
+import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
@@ -59,6 +60,8 @@ public class ClusterAgent
         final AcknowledgementStrategy acknowledgementStrategy = configuration.acknowledgementStrategy();
         final Archiver archiver = configuration.archiver();
         final RaftArchiver raftArchiver = new RaftArchiver(termState.leaderSessionId(), archiver);
+        final DirectBuffer nodeState = configuration.nodeState();
+        final NodeStateHandler nodeStateHandler = configuration.nodeStateHandler();
 
         requireNonNull(otherNodes, "otherNodes");
         requireNonNull(acknowledgementStrategy, "acknowledgementStrategy");
@@ -75,7 +78,9 @@ public class ClusterAgent
             termState,
             ourSessionId,
             archiveReader,
-            raftArchiver
+            raftArchiver,
+            nodeState,
+            nodeStateHandler
         );
 
         candidate = new Candidate(
@@ -85,7 +90,9 @@ public class ClusterAgent
             clusterSize,
             timeoutIntervalInMs,
             termState,
-            acknowledgementStrategy);
+            acknowledgementStrategy,
+            nodeState,
+            nodeStateHandler);
 
         follower = new Follower(
             nodeId,
@@ -93,7 +100,9 @@ public class ClusterAgent
             timeInMs,
             timeoutIntervalInMs,
             termState,
-            raftArchiver
+            raftArchiver,
+            nodeState,
+            nodeStateHandler
         );
 
         transport.initialiseRoles(leader, candidate, follower);

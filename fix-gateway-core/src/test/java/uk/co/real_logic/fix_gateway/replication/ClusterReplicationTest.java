@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.logbuffer.BufferClaim;
+import org.agrona.collections.Int2IntHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import org.junit.Before;
@@ -30,8 +31,8 @@ import java.util.stream.Stream;
 
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.Matchers.hasEntry;
+import static org.junit.Assert.*;
 
 /**
  * Test simulated cluster.
@@ -69,6 +70,8 @@ public class ClusterReplicationTest
     public void shouldEstablishCluster()
     {
         checkClusterStable();
+
+        assertNodeStateReplicated();
     }
 
     @Test
@@ -201,6 +204,21 @@ public class ClusterReplicationTest
         assertBecomesFollower(follower);
 
         assertMessageReceived();
+    }
+
+    private void assertNodeStateReplicated()
+    {
+        final NodeRunner leader = leader();
+        final Int2IntHashMap nodeIdToId = leader.nodeIdToId();
+        final short leaderId = leader.raftNode().nodeId();
+
+        for (final int id : new int[]{1, 2, 3})
+        {
+            if (id != leaderId)
+            {
+                assertThat(nodeIdToId, hasEntry(id, id));
+            }
+        }
     }
 
     private NodeRunner aFollower()

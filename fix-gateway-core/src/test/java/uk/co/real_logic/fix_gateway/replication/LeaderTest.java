@@ -17,7 +17,9 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BlockHandler;
+import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.OngoingStubbing;
@@ -39,6 +41,7 @@ public class LeaderTest
     private static final long POSITION = 40L;
     private static final int HEARTBEAT_INTERVAL_IN_MS = 10;
     private static final short FOLLOWER_ID = 4;
+    private static final DirectBuffer NODE_STATE_BUFFER = new UnsafeBuffer(new byte[1]);
 
     private RaftPublication controlPublication = mock(RaftPublication.class);
     private ClusterAgent clusterNode = mock(ClusterAgent.class);
@@ -51,6 +54,7 @@ public class LeaderTest
     private TermState termState = new TermState()
         .leadershipTerm(LEADERSHIP_TERM)
         .consensusPosition(POSITION);
+    private NodeStateHandler nodeStateHandler = mock(NodeStateHandler.class);
 
     private Leader leader = new Leader(
         ID,
@@ -62,7 +66,9 @@ public class LeaderTest
         termState,
         LEADER_SESSION_ID,
         archiveReader,
-        new RaftArchiver(termState.leaderSessionId(), archiver));
+        new RaftArchiver(termState.leaderSessionId(), archiver),
+        NODE_STATE_BUFFER,
+        nodeStateHandler);
 
     @Before
     public void setUp()

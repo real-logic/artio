@@ -77,7 +77,11 @@ public class DebugRaftHandler implements RaftHandler
     }
 
     public Action onReplyVote(
-        final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
+        final short senderNodeId,
+        final short candidateId,
+        final int leaderShipTerm,
+        final Vote vote,
+        final DirectBuffer nodeStateBuffer, final int nodeStateLength)
     {
         DebugLogger.log(
             "%2$d: ReplyVote(senderNodeId=%3$d, candidateId=%4$d, leaderShipTerm=%5$d, %1$s)\n",
@@ -89,8 +93,8 @@ public class DebugRaftHandler implements RaftHandler
         );
 
         return delegateHandler.onReplyVote(
-            senderNodeId, candidateId, leaderShipTerm, vote
-        );
+            senderNodeId, candidateId, leaderShipTerm, vote,
+            nodeStateBuffer, nodeStateLength);
     }
 
     public Action onConsensusHeartbeat(

@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Subscription;
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
@@ -39,6 +40,7 @@ public class FollowerTest
     private static final long VOTE_TIMEOUT = 100;
     private static final int OLD_LEADERSHIP_TERM = 1;
     private static final int NEW_LEADERSHIP_TERM = OLD_LEADERSHIP_TERM + 1;
+    private static final DirectBuffer NODE_STATE_BUFFER = new UnsafeBuffer(new byte[1]);
 
     private static final short ID = 3;
     private static final short ID_4 = 4;
@@ -53,6 +55,7 @@ public class FollowerTest
     private Subscription controlSubscription = mock(Subscription.class);
     private ClusterAgent clusterNode = mock(ClusterAgent.class);
     private Archiver archiver = mock(Archiver.class);
+    private NodeStateHandler nodeStateHandler = mock(NodeStateHandler.class);
 
     private final TermState termState = new TermState()
         .allPositions(POSITION)
@@ -65,8 +68,9 @@ public class FollowerTest
         0,
         VOTE_TIMEOUT,
         termState,
-        new RaftArchiver(termState.leaderSessionId(), archiver)
-    );
+        new RaftArchiver(termState.leaderSessionId(), archiver),
+        NODE_STATE_BUFFER,
+        nodeStateHandler);
 
     @Before
     public void setUp()
@@ -86,13 +90,13 @@ public class FollowerTest
     {
         follower.onRequestVote(ID_4, SESSION_ID_4, NEW_LEADERSHIP_TERM, POSITION);
 
-        verify(controlPublication).saveReplyVote(eq(ID), eq(ID_4), anyInt(), eq(FOR));
+        verify(controlPublication).saveReplyVote(eq(ID), eq(ID_4), anyInt(), eq(FOR), eq(NODE_STATE_BUFFER));
 
         onHeartbeat();
 
         follower.onRequestVote(ID_5, SESSION_ID_5, NEW_LEADERSHIP_TERM, POSITION);
 
-        verify(controlPublication, never()).saveReplyVote(eq(ID), eq(ID_5), anyInt(), eq(FOR));
+        verify(controlPublication, never()).saveReplyVote(eq(ID), eq(ID_5), anyInt(), eq(FOR), eq(NODE_STATE_BUFFER));
     }
 
     @Test

@@ -62,6 +62,8 @@ public class Leader implements Role, RaftHandler
      */
     private final AtomicLong consensusPosition;
     private final RaftArchiver raftArchiver;
+    private final DirectBuffer nodeState;
+    private final NodeStateHandler nodeStateHandler;
     /** Position in the log that has been applied to the state machine*/
     private long lastAppliedPosition;
 
@@ -81,7 +83,9 @@ public class Leader implements Role, RaftHandler
         final TermState termState,
         final int ourSessionId,
         final ArchiveReader archiveReader,
-        final RaftArchiver raftArchiver)
+        final RaftArchiver raftArchiver,
+        final DirectBuffer nodeState,
+        final NodeStateHandler nodeStateHandler)
     {
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
@@ -92,6 +96,8 @@ public class Leader implements Role, RaftHandler
         this.archiveReader = archiveReader;
         this.consensusPosition = termState.consensusPosition();
         this.raftArchiver = raftArchiver;
+        this.nodeState = nodeState;
+        this.nodeStateHandler = nodeStateHandler;
 
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
         updateHeartbeatInterval(timeInMs);
@@ -216,7 +222,7 @@ public class Leader implements Role, RaftHandler
         {
             if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= consensusPosition.get())
             {
-                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.FOR);
+                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.FOR, nodeState);
 
                 termState.noLeader();
 
@@ -225,7 +231,7 @@ public class Leader implements Role, RaftHandler
             }
             else
             {
-                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.AGAINST);
+                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.AGAINST, nodeState);
             }
         }
 
@@ -233,9 +239,18 @@ public class Leader implements Role, RaftHandler
     }
 
     public Action onReplyVote(
-        final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote)
+        final short senderNodeId,
+        final short candidateId,
+        final int leaderShipTerm,
+        final Vote vote,
+        final DirectBuffer nodeStateBuffer,
+        final int nodeStateLength)
     {
-        // Ignore this message
+        if (candidateId == nodeId)
+        {
+            nodeStateHandler.onNewNodeState(senderNodeId, nodeStateBuffer, nodeStateLength);
+        }
+
         return Action.CONTINUE;
     }
 

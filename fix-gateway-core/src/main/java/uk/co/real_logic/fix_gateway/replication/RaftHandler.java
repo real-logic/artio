@@ -29,7 +29,12 @@ public interface RaftHandler
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long lastAckedPosition);
 
     Action onReplyVote(
-        final short senderNodeId, final short candidateId, final int leaderShipTerm, final Vote vote);
+        final short senderNodeId,
+        final short candidateId,
+        final int leaderShipTerm,
+        final Vote vote,
+        final DirectBuffer nodeStateBuffer,
+        final int nodeStateLength);
 
     Action onConsensusHeartbeat(
         final short nodeId, final int leaderShipTerm, final long position, final int leaderSessionId);

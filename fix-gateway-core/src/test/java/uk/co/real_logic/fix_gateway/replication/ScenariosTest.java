@@ -18,7 +18,9 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -26,7 +28,6 @@ import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -52,6 +53,8 @@ public class ScenariosTest
     private static final int CLUSTER_SIZE = 5;
     private static final short ID = 2;
     private static final short NEW_LEADER_ID = 3;
+    private static final DirectBuffer NODE_STATE_BUFFER = new UnsafeBuffer(new byte[1]);
+    private static final int NODE_STATE_LENGTH = 1;
 
     private static final short CANDIDATE_ID = 5;
     private static final short FOLLOWER_1_ID = 4;
@@ -70,7 +73,7 @@ public class ScenariosTest
     private final ControlledFragmentHandler fragmentHandler = mock(ControlledFragmentHandler.class);
     private final Archiver.SessionArchiver leaderArchiver = mock(Archiver.SessionArchiver.class);
     private final Archiver archiver = mock(Archiver.class);
-    private final AtomicLong commitPosition = new AtomicLong(0);
+    private final NodeStateHandler nodeStateHandler = mock(NodeStateHandler.class);
 
     private final RoleFixture roleFixture;
     private final Stimulus stimulus;
@@ -250,7 +253,9 @@ public class ScenariosTest
             termState,
             SESSION_ID,
             archiveReader,
-            new RaftArchiver(termState.leaderSessionId(), archiver));
+            new RaftArchiver(termState.leaderSessionId(), archiver),
+            NODE_STATE_BUFFER,
+            nodeStateHandler);
 
         leader
             .controlPublication(controlPublication)
@@ -274,8 +279,9 @@ public class ScenariosTest
             TIME,
             TIMEOUT_IN_MS,
             termState,
-            new RaftArchiver(termState.leaderSessionId(), archiver)
-        );
+            new RaftArchiver(termState.leaderSessionId(), archiver),
+            NODE_STATE_BUFFER,
+            nodeStateHandler);
 
         follower
             .controlPublication(controlPublication)
@@ -294,7 +300,13 @@ public class ScenariosTest
             .consensusPosition(POSITION);
 
         final Candidate candidate = new Candidate(
-            ID, SESSION_ID, clusterNode, CLUSTER_SIZE, TIMEOUT_IN_MS, termState, new QuorumAcknowledgementStrategy());
+            ID,
+            SESSION_ID,
+            clusterNode,
+            CLUSTER_SIZE,
+            TIMEOUT_IN_MS,
+            termState,
+            new QuorumAcknowledgementStrategy(), NODE_STATE_BUFFER, nodeStateHandler);
 
         candidate
             .controlPublication(controlPublication)
@@ -305,7 +317,8 @@ public class ScenariosTest
     }
 
     private static Effect voteForCandidate = namedEffect(st ->
-        verify(st.controlPublication).saveReplyVote(ID, CANDIDATE_ID, NEW_TERM, FOR), "voteForCandidate");
+        verify(st.controlPublication).saveReplyVote(ID, CANDIDATE_ID, NEW_TERM, FOR, NODE_STATE_BUFFER),
+        "voteForCandidate");
 
     private static Effect transitionsToFollower =
         transitionsToFollower(NO_ONE, "transitionsToFollower");
@@ -440,8 +453,10 @@ public class ScenariosTest
         namedStimulus(
             (st) ->
             {
-                st.raftHandler.onReplyVote(FOLLOWER_1_ID, ID, LEADERSHIP_TERM, FOR);
-                st.raftHandler.onReplyVote(FOLLOWER_2_ID, ID, LEADERSHIP_TERM, FOR);
+                st.raftHandler.onReplyVote(
+                    FOLLOWER_1_ID, ID, LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH);
+                st.raftHandler.onReplyVote(
+                    FOLLOWER_2_ID, ID, LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH);
             }, "onMajority");
 
     private static Stimulus lowerPositionRequestVote =
