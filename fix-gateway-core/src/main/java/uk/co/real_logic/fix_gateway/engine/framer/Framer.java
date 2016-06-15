@@ -206,8 +206,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     public int doWork() throws Exception
     {
         final long timeInMs = clock.time();
-        return node.poll(outboundLibraryFragmentLimit, timeInMs) +
-            retryManager.attemptSteps() +
+        return retryManager.attemptSteps() +
             sendOutboundMessages() +
             sendReplayMessages() +
             pollEndPoints() +

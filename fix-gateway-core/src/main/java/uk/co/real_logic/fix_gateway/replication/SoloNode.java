@@ -33,11 +33,6 @@ public class SoloNode extends ClusterableNode
         return true;
     }
 
-    public boolean isPublishable()
-    {
-        return true;
-    }
-
     public SoloPublication publication(final int clusterStreamId)
     {
         return new SoloPublication(aeron.addPublication(aeronChannel, clusterStreamId));

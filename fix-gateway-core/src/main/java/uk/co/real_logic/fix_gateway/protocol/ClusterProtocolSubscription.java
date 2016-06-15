@@ -57,7 +57,7 @@ public class ClusterProtocolSubscription implements ControlledFragmentHandler
             case FixMessageDecoder.TEMPLATE_ID:
             case DisconnectDecoder.TEMPLATE_ID:
             {
-                if (node.isPublishable())
+                if (node.isLeader())
                 {
                     final long position = publication.tryClaim(length, bufferClaim);
                     if (position < 0)
@@ -69,11 +69,6 @@ public class ClusterProtocolSubscription implements ControlledFragmentHandler
 
                     bufferClaim.commit();
                     return CONTINUE;
-                }
-                else if (node.isLeader())
-                {
-                    // Back pressure the stream until your archiver is setup
-                    return ABORT;
                 }
                 else
                 {

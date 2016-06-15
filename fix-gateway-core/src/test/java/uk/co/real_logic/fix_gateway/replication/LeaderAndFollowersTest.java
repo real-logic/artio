@@ -80,7 +80,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         final Publication dataPublication = dataPublication();
         final ClusterNode leaderNode = mock(ClusterNode.class);
-        when(leaderNode.isPublishable()).thenReturn(true);
+        when(leaderNode.isLeader()).thenReturn(true);
         publication = new ClusterPublication(dataPublication, leaderNode, 1);
         leaderSessionId = dataPublication.sessionId();
 

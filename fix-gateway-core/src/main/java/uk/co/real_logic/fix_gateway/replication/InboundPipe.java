@@ -47,11 +47,11 @@ public class InboundPipe implements ControlledFragmentHandler
     {
         if (subscription != null)
         {
-            if (node.isPublishable())
+            if (node.isLeader())
             {
                 return subscription.controlledPoll(this, fragmentLimit);
             }
-            else if (!node.isLeader())
+            else
             {
                 return subscription.controlledPoll(nonLeaderHandler, fragmentLimit);
             }

@@ -19,10 +19,6 @@ public abstract class ClusterableNode
 {
     public abstract boolean isLeader();
 
-    public abstract boolean isPublishable();
-
-    public abstract int poll(final int fragmentLimit, final long timeInMs);
-
     public abstract ClusterablePublication publication(final int clusterStreamId);
 
     public abstract ClusterableSubscription subscription(final int clusterStreamId);

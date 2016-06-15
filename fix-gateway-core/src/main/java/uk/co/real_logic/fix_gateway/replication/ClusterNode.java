@@ -255,11 +255,6 @@ public class ClusterNode extends ClusterableNode
         return currentRole == leader;
     }
 
-    public boolean isPublishable()
-    {
-        return isLeader();
-    }
-
     public boolean isCandidate()
     {
         return currentRole == candidate;

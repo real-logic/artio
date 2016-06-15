@@ -39,7 +39,7 @@ public class ClusterPublication extends ClusterablePublication
 
     public long tryClaim(final int length, final BufferClaim bufferClaim)
     {
-        if (!clusterNode.isPublishable())
+        if (!clusterNode.isLeader())
         {
             return CANT_PUBLISH;
         }
