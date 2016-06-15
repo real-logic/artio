@@ -351,7 +351,7 @@ public class ClusterReplicationTest
         final int fragmentLimit = 10;
         for (final NodeRunner node : nodes)
         {
-            node.poll(fragmentLimit, System.currentTimeMillis());
+            node.poll(fragmentLimit);
         }
         LockSupport.parkNanos(MILLISECONDS.toNanos(1));
     }

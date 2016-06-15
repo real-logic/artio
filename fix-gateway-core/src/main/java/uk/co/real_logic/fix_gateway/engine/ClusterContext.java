@@ -56,7 +56,7 @@ class ClusterContext extends EngineContext
         newIndexers(inboundArchiveReader(), outboundArchiveReader());
         final Replayer replayer = newReplayer(replayPublication, outboundArchiveReader());
 
-        loggingRunner = newRunner(new CompositeAgent(inboundIndexer, outboundIndexer, replayer));
+        loggingRunner = newRunner(new CompositeAgent(inboundIndexer, outboundIndexer, node, replayer));
     }
 
     private ClusterAgent node(

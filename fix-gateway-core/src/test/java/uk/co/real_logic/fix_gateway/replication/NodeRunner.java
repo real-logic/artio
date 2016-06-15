@@ -143,9 +143,9 @@ class NodeRunner implements AutoCloseable
                 udpChannel, dispatcher, statusIndicator, context, inboundLossGenerator, inboundLossGenerator);
     }
 
-    public int poll(final int fragmentLimit, final long timeInMs)
+    public int poll(final int fragmentLimit)
     {
-        return clusterNode.poll(fragmentLimit, timeInMs) + subscription.controlledPoll(handler, fragmentLimit);
+        return clusterNode.doWork() + subscription.controlledPoll(handler, fragmentLimit);
     }
 
     public void dropFrames(final boolean dropFrames)

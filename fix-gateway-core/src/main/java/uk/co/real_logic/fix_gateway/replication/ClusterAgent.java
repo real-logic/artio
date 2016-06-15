@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Publication;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
+import org.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
@@ -27,8 +28,9 @@ import static java.util.Objects.requireNonNull;
 /**
  * Agent that manages the clustering and archival.
  */
-public class ClusterAgent
+public class ClusterAgent implements Agent
 {
+    private static final int FRAGMENT_LIMIT = 5;
     private static final int HEARTBEAT_TO_TIMEOUT_RATIO = 5;
 
     private final short nodeId;
@@ -236,22 +238,22 @@ public class ClusterAgent
         //leaderSessionId.set(this.termState.leaderSessionId());
     }
 
-    public int poll(final int fragmentLimit, final long timeInMs)
+    public int doWork()
     {
+        final long timeInMs = System.currentTimeMillis();
         final Role role = currentRole;
-        final int commandCount = role.pollCommands(fragmentLimit, timeInMs);
+        final int commandCount = role.pollCommands(FRAGMENT_LIMIT, timeInMs);
 
         if (role != currentRole)
         {
-            final int remainingFragments = fragmentLimit - commandCount;
-            return commandCount + poll(remainingFragments, timeInMs);
+            return commandCount + doWork();
         }
 
         return commandCount +
-               role.readData() +
-               role.checkConditions(timeInMs) +
-               inboundPipe.poll(fragmentLimit) +
-               outboundPipe.poll(fragmentLimit);
+            role.readData() +
+            role.checkConditions(timeInMs) +
+            inboundPipe.poll(FRAGMENT_LIMIT) +
+            outboundPipe.poll(FRAGMENT_LIMIT);
     }
 
     public boolean isLeader()
@@ -282,5 +284,17 @@ public class ClusterAgent
     public ClusterStreams clusterStreams()
     {
         return clusterStreams;
+    }
+
+    public void onClose()
+    {
+        leader.closeStreams();
+        follower.closeStreams();
+        candidate.closeStreams();
+    }
+
+    public String roleName()
+    {
+        return "Cluster Agent";
     }
 }
