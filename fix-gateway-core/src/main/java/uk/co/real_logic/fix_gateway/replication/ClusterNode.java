@@ -63,6 +63,7 @@ public class ClusterNode extends ClusterableNode
         final int clusterSize = otherNodes.size() + 1;
         final AcknowledgementStrategy acknowledgementStrategy = configuration.acknowledgementStrategy();
         final Archiver archiver = configuration.archiver();
+        final RaftArchiver raftArchiver = new RaftArchiver(archiver, termState);
 
         requireNonNull(otherNodes, "otherNodes");
         requireNonNull(acknowledgementStrategy, "acknowledgementStrategy");
@@ -79,7 +80,7 @@ public class ClusterNode extends ClusterableNode
             termState,
             ourSessionId,
             archiveReader,
-            archiver
+            raftArchiver
         );
 
         candidate = new Candidate(
@@ -97,7 +98,7 @@ public class ClusterNode extends ClusterableNode
             timeInMs,
             timeoutIntervalInMs,
             termState,
-            archiver
+            raftArchiver
         );
 
         transport.initialiseRoles(leader, candidate, follower);
@@ -256,7 +257,7 @@ public class ClusterNode extends ClusterableNode
 
     public boolean isPublishable()
     {
-        return isLeader() && leader.canArchive();
+        return isLeader();
     }
 
     public boolean isCandidate()

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import io.aeron.Subscription;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
@@ -73,5 +74,10 @@ public class RaftArchiver
     void onNoLeader()
     {
         leaderArchiver = null;
+    }
+
+    void dataSubscription(final Subscription dataSubscription)
+    {
+        archiver.subscription(dataSubscription);
     }
 }

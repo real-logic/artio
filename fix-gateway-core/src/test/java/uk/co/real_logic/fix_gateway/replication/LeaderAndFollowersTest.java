@@ -110,8 +110,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             termState1,
             leaderSessionId,
             archiveReader,
-            archiver
-        )
+            new RaftArchiver(archiver, termState1))
             .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
             .controlSubscription(controlSubscription())
             .acknowledgementSubscription(acknowledgementSubscription())

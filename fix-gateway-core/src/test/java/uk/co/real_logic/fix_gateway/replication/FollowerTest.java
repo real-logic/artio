@@ -65,7 +65,7 @@ public class FollowerTest
         0,
         VOTE_TIMEOUT,
         termState,
-        archiver
+        new RaftArchiver(archiver, termState)
     );
 
     @Before

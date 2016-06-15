@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BlockHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
@@ -25,8 +24,6 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
-import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
-import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
@@ -49,7 +46,6 @@ public class Leader implements Role, RaftHandler
     private final ClusterNode clusterNode;
     private final long heartbeatIntervalInMs;
     private final ArchiveReader archiveReader;
-    private final Archiver archiver;
 
     // Counts of how many acknowledgements
     private final Long2LongHashMap nodeToPosition = new Long2LongHashMap(NO_SESSION_ID);
@@ -60,16 +56,12 @@ public class Leader implements Role, RaftHandler
     private Subscription acknowledgementSubscription;
     private Subscription dataSubscription;
     private Subscription controlSubscription;
-    private Image leaderDataImage;
-    private SessionArchiver ourArchiver;
 
-    /**
-     * Keeps track of the position of the local archiver, this may be ahead of the commit position to
-     * enable resends on acknowledged initial sequences on the log.
+    /** Position in the log that has been acknowledged by a majority of the cluster
+     * commitPosition >= lastAppliedPosition
      */
-    private long archivedPosition = 0;
-    /** Position in the log that has been committed to disk, commitPosition >= lastAppliedPosition */
     private final AtomicLong consensusPosition;
+    private final RaftArchiver raftArchiver;
     // TODO: re-think invariants given initial state of lastAppliedPosition
     /** Position in the log that has been applied to the state machine*/
     private long lastAppliedPosition = DataHeaderFlyweight.HEADER_LENGTH;
@@ -90,7 +82,7 @@ public class Leader implements Role, RaftHandler
         final TermState termState,
         final int ourSessionId,
         final ArchiveReader archiveReader,
-        final Archiver archiver)
+        final RaftArchiver raftArchiver)
     {
         this.nodeId = nodeId;
         this.acknowledgementStrategy = acknowledgementStrategy;
@@ -99,8 +91,8 @@ public class Leader implements Role, RaftHandler
         this.ourSessionId = ourSessionId;
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         this.archiveReader = archiveReader;
-        this.archiver = archiver;
         this.consensusPosition = termState.consensusPosition();
+        this.raftArchiver = raftArchiver;
 
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
         updateHeartbeatInterval(timeInMs);
@@ -109,13 +101,16 @@ public class Leader implements Role, RaftHandler
 
     public int readData()
     {
-        setupArchival();
-        if (canArchive())
+        if (raftArchiver.checkLeaderArchiver())
         {
-            archivedPosition += leaderDataImage.filePoll(ourArchiver, leaderDataImage.termBufferLength());
-            nodeToPosition.put(nodeId, archivedPosition);
+            return 0;
         }
 
+        raftArchiver.poll();
+
+        nodeToPosition.put(ourSessionId, raftArchiver.archivedPosition());
+
+        // TODO: checkConditions
         final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
         final int delta = (int) (newPosition - consensusPosition.get());
         if (delta > 0)
@@ -128,24 +123,6 @@ public class Leader implements Role, RaftHandler
         }
 
         return 0;
-    }
-
-    private void setupArchival()
-    {
-        if (leaderDataImage == null)
-        {
-            leaderDataImage = dataSubscription.getImage(ourSessionId);
-        }
-
-        if (ourArchiver == null)
-        {
-            ourArchiver = archiver.session(ourSessionId);
-        }
-    }
-
-    public boolean canArchive()
-    {
-        return leaderDataImage != null && ourArchiver != null;
     }
 
     public int checkConditions(final long timeInMs)
@@ -195,7 +172,7 @@ public class Leader implements Role, RaftHandler
 
         if (status == MISSING_LOG_ENTRIES)
         {
-            final int length = (int) (archivedPosition - position);
+            final int length = (int) (raftArchiver.archivedPosition() - position);
             this.position = position;
             if (validateReader())
             {
@@ -307,7 +284,7 @@ public class Leader implements Role, RaftHandler
         lastAppliedPosition = Math.max(DataHeaderFlyweight.HEADER_LENGTH, termState.lastAppliedPosition());
         heartbeat();
 
-        setupArchival();
+        raftArchiver.checkLeaderArchiver();
 
         return this;
     }
@@ -321,7 +298,7 @@ public class Leader implements Role, RaftHandler
     public Leader dataSubscription(final Subscription dataSubscription)
     {
         this.dataSubscription = dataSubscription;
-        archiver.subscription(dataSubscription);
+        raftArchiver.dataSubscription(dataSubscription);
         return this;
     }
 

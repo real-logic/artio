@@ -149,8 +149,7 @@ public class AbstractReplicationTest
             0,
             TIMEOUT,
             termState,
-            archiver
-        )
+            new RaftArchiver(archiver, termState))
             .controlSubscription(controlSubscription())
             .acknowledgementPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID))
             .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))

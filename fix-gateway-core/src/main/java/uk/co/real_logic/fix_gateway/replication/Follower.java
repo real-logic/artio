@@ -19,7 +19,6 @@ import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
@@ -59,12 +58,12 @@ public class Follower implements Role, RaftHandler
         final long timeInMs,
         final long replyTimeoutInMs,
         final TermState termState,
-        final Archiver archiver)
+        final RaftArchiver raftArchiver)
     {
         this.nodeId = nodeId;
         this.clusterNode = clusterNode;
         this.termState = termState;
-        this.raftArchiver = new RaftArchiver(archiver, termState);
+        this.raftArchiver = raftArchiver;
         this.consensusPosition = termState.consensusPosition();
         replyTimeout = new RandomTimeout(replyTimeoutInMs, timeInMs);
         raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));

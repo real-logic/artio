@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BlockHandler;
 import org.agrona.collections.IntHashSet;
@@ -25,8 +24,6 @@ import org.mockito.stubbing.OngoingStubbing;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
-
-import java.util.concurrent.atomic.AtomicLong;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
@@ -47,7 +44,6 @@ public class LeaderTest
     private ClusterNode clusterNode = mock(ClusterNode.class);
     private Subscription acknowledgementSubscription = mock(Subscription.class);
     private Subscription dataSubscription = mock(Subscription.class);
-    private Image leaderDataImage = mock(Image.class);
     private ArchiveReader archiveReader = mock(ArchiveReader.class);
     private ArchiveReader.SessionReader sessionReader = mock(ArchiveReader.SessionReader.class);
     private Archiver archiver = mock(Archiver.class);
@@ -55,7 +51,6 @@ public class LeaderTest
     private TermState termState = new TermState()
         .leadershipTerm(LEADERSHIP_TERM)
         .consensusPosition(POSITION);
-    private AtomicLong commitPosition = new AtomicLong(0);
 
     private Leader leader = new Leader(
         ID,
@@ -67,15 +62,14 @@ public class LeaderTest
         termState,
         LEADER_SESSION_ID,
         archiveReader,
-        archiver
-    );
+        new RaftArchiver(archiver, termState));
 
     @Before
     public void setUp()
     {
-        when(dataSubscription.getImage(LEADER_SESSION_ID)).thenReturn(leaderDataImage);
         when(archiver.session(LEADER_SESSION_ID)).thenReturn(sessionArchiver);
         when(archiveReader.session(LEADER_SESSION_ID)).thenReturn(sessionReader);
+        termState.leaderSessionId(LEADER_SESSION_ID);
 
         leader
             .controlPublication(controlPublication)
@@ -107,7 +101,8 @@ public class LeaderTest
     @Test
     public void shouldResendDataInResponseToMissingLogEntries()
     {
-        when(leaderDataImage.filePoll(any(), anyInt())).thenReturn((int) POSITION);
+        when(sessionArchiver.archivedPosition()).thenReturn(POSITION);
+
         leader.readData();
 
         final long followerPosition = 0;
