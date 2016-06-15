@@ -278,12 +278,8 @@ public class ClusterReplicationTest
 
     private void awaitLeadershipConcensus()
     {
-        final TermState state1 = node1.raftNode().termState();
-        final TermState state2 = node2.raftNode().termState();
-        final TermState state3 = node3.raftNode().termState();
-
-        while (!(state1.leaderSessionId() == state2.leaderSessionId() &&
-                 state1.leaderSessionId() == state3.leaderSessionId()))
+        while (!(node1.leaderSessionId() == node2.leaderSessionId() &&
+                 node1.leaderSessionId() == node3.leaderSessionId()))
         {
             pollAll();
         }
@@ -291,13 +287,9 @@ public class ClusterReplicationTest
 
     private void assertAllNodesSeeSameLeader()
     {
-        final TermState state1 = node1.raftNode().termState();
-        final TermState state2 = node2.raftNode().termState();
-        final TermState state3 = node3.raftNode().termState();
-
-        final int leaderSessionId = state1.leaderSessionId();
-        assertEquals("1 and 2 disagree on leader", leaderSessionId, state2.leaderSessionId());
-        assertEquals("1 and 3 disagree on leader", leaderSessionId, state3.leaderSessionId());
+        final int leaderSessionId = node1.leaderSessionId();
+        assertEquals("1 and 2 disagree on leader", leaderSessionId, node2.leaderSessionId());
+        assertEquals("1 and 3 disagree on leader", leaderSessionId, node3.leaderSessionId());
     }
 
     private boolean notReceivedMessage(final NodeRunner node)

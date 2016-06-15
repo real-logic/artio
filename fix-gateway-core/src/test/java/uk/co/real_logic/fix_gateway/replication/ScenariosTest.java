@@ -250,7 +250,7 @@ public class ScenariosTest
             termState,
             SESSION_ID,
             archiveReader,
-            new RaftArchiver(archiver, termState));
+            new RaftArchiver(termState.leaderSessionId(), archiver));
 
         leader
             .controlPublication(controlPublication)
@@ -274,7 +274,7 @@ public class ScenariosTest
             TIME,
             TIMEOUT_IN_MS,
             termState,
-            new RaftArchiver(archiver, termState)
+            new RaftArchiver(termState.leaderSessionId(), archiver)
         );
 
         follower

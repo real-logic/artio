@@ -81,8 +81,8 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         final Publication dataPublication = dataPublication();
         final ClusterAgent leaderNode = mock(ClusterAgent.class);
         when(leaderNode.isLeader()).thenReturn(true);
-        publication = new ClusterPublication(dataPublication, new AtomicInteger(leaderSessionId), leaderSessionId, 1);
         leaderSessionId = dataPublication.sessionId();
+        publication = new ClusterPublication(dataPublication, new AtomicInteger(leaderSessionId), leaderSessionId, 1);
 
         termState1.leaderSessionId(leaderSessionId);
         termState2.leaderSessionId(leaderSessionId);
@@ -110,7 +110,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             termState1,
             leaderSessionId,
             archiveReader,
-            new RaftArchiver(archiver, termState1))
+            new RaftArchiver(new AtomicInteger(leaderSessionId), archiver))
             .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
             .controlSubscription(controlSubscription())
             .acknowledgementSubscription(acknowledgementSubscription())

@@ -19,17 +19,19 @@ import io.aeron.Subscription;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 class RaftArchiver
 {
+    private final AtomicInteger leaderSessionId;
     private final Archiver archiver;
-    private final TermState termState;
 
     private Archiver.SessionArchiver leaderArchiver;
 
-    RaftArchiver(final Archiver archiver, final TermState termState)
+    RaftArchiver(final AtomicInteger leaderSessionId, final Archiver archiver)
     {
+        this.leaderSessionId = leaderSessionId;
         this.archiver = archiver;
-        this.termState = termState;
     }
 
     boolean checkLeaderArchiver()
@@ -38,14 +40,18 @@ class RaftArchiver
         // Most of the time this will be false
         if (leaderArchiver == null)
         {
-            leaderArchiver = archiver.session(termState.leaderSessionId());
-            termState.leaderSessionId(termState.leaderSessionId());
+            leaderArchiver = archiver.session(leaderSessionId());
             if (leaderArchiver == null)
             {
                 return true;
             }
         }
         return false;
+    }
+
+    private int leaderSessionId()
+    {
+        return leaderSessionId.get();
     }
 
     long archivedPosition()
@@ -65,8 +71,7 @@ class RaftArchiver
 
     void onLeader()
     {
-        final int sessionId = termState.leaderSessionId();
-        leaderArchiver = archiver.session(sessionId);
+        leaderArchiver = archiver.session(leaderSessionId());
     }
 
     void onNoLeader()

@@ -159,6 +159,11 @@ class NodeRunner implements AutoCloseable
         return replicatedPosition;
     }
 
+    public int leaderSessionId()
+    {
+        return raftNode().termState().leaderSessionId().get();
+    }
+
     public void close()
     {
         CloseHelper.close(aeron);

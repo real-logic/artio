@@ -21,8 +21,6 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -32,8 +30,6 @@ public class ClusterAgent
 {
     private static final int HEARTBEAT_TO_TIMEOUT_RATIO = 5;
 
-    static final int NO_LEADER = -1;
-
     private final short nodeId;
     private final TermState termState = new TermState();
     private final Leader leader;
@@ -42,7 +38,6 @@ public class ClusterAgent
     private final RaftTransport transport;
     private final InboundPipe inboundPipe;
     private final OutboundPipe outboundPipe;
-    private final AtomicInteger leaderSessionId = new AtomicInteger(NO_LEADER);
     private final ClusterStreams clusterStreams;
 
     private Role currentRole;
@@ -63,7 +58,7 @@ public class ClusterAgent
         final int clusterSize = otherNodes.size() + 1;
         final AcknowledgementStrategy acknowledgementStrategy = configuration.acknowledgementStrategy();
         final Archiver archiver = configuration.archiver();
-        final RaftArchiver raftArchiver = new RaftArchiver(archiver, termState);
+        final RaftArchiver raftArchiver = new RaftArchiver(termState.leaderSessionId(), archiver);
 
         requireNonNull(otherNodes, "otherNodes");
         requireNonNull(acknowledgementStrategy, "acknowledgementStrategy");
@@ -106,7 +101,7 @@ public class ClusterAgent
         startAsFollower(timeInMs);
 
         clusterStreams = new ClusterStreams(
-            transport, ourSessionId, leaderSessionId, termState.consensusPosition(), dataPublication);
+            transport, ourSessionId, termState.leaderSessionId(), termState.consensusPosition(), dataPublication);
 
         inboundPipe = new InboundPipe(
             configuration.copyFromSubscription(), configuration.nonLeaderHandler(), clusterStreams());
@@ -228,7 +223,8 @@ public class ClusterAgent
 
     void onNewLeader()
     {
-        leaderSessionId.set(this.termState.leaderSessionId());
+        // TODO: do we need this?
+        //leaderSessionId.set(this.termState.leaderSessionId());
     }
 
     public int poll(final int fragmentLimit, final long timeInMs)

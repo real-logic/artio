@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.hamcrest.Matcher;
-import org.hamcrest.Matchers;
 
 import static org.hamcrest.Matchers.allOf;
 import static org.mockito.Matchers.any;
@@ -65,9 +64,8 @@ public final class ReplicationAsserts
 
     public static Matcher<TermState> hasLeaderSessionId(final int leaderSessionId)
     {
-        return Matchers.allOf(
-            hasFluentProperty("hasLeader", true),
-            hasFluentProperty("leaderSessionId", leaderSessionId));
+        return hasFluentProperty("leaderSessionId",
+            hasFluentProperty("get", leaderSessionId));
     }
 
     public static Matcher<TermState> noLeaderMatcher()

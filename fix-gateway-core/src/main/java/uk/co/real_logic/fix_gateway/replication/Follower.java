@@ -208,7 +208,7 @@ public class Follower implements Role, RaftHandler
                 .receivedPosition(receivedPosition)
                 .leaderSessionId(leaderSessionId);
 
-            if (leaderSessionId != termState.leaderSessionId())
+            if (leaderSessionId != termState.leaderSessionId().get())
             {
                 checkLeaderChange();
             }
@@ -245,7 +245,7 @@ public class Follower implements Role, RaftHandler
         final int leaderSessionId, final int leaderShipTerm, final long position)
     {
         return position == receivedPosition
-            && leaderSessionId == termState.leaderSessionId()
+            && leaderSessionId == termState.leaderSessionId().get()
             && leaderShipTerm == this.leaderShipTerm;
     }
 

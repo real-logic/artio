@@ -15,15 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class TermState
 {
-    /** the aeron session id of the current leader */
-    private int leaderSessionId;
+    static final int NO_LEADER = 0;
 
-    /** flag to indicate whether the node knows about its leader */
-    private boolean hasLeader;
+    /** the aeron session id of the current leader */
+    private AtomicInteger leaderSessionId = new AtomicInteger(NO_LEADER);
 
     /** The raft leader's current term number */
     private int leadershipTerm;
@@ -39,14 +39,13 @@ public class TermState
 
     public TermState leaderSessionId(int leadershipSessionId)
     {
-        this.leaderSessionId = leadershipSessionId;
-        this.hasLeader = true;
+        this.leaderSessionId.set(leadershipSessionId);
         return this;
     }
 
     public TermState noLeader()
     {
-        this.hasLeader = false;
+        leaderSessionId.set(NO_LEADER);
         return this;
     }
 
@@ -82,14 +81,14 @@ public class TermState
         return this;
     }
 
-    public int leaderSessionId()
+    public AtomicInteger leaderSessionId()
     {
         return leaderSessionId;
     }
 
     public boolean hasLeader()
     {
-        return hasLeader;
+        return leaderSessionId.get() != NO_LEADER;
     }
 
     public int leadershipTerm()
@@ -126,7 +125,6 @@ public class TermState
     {
         return "TermState{" +
             "leaderSessionId=" + leaderSessionId +
-            ", hasLeader=" + hasLeader +
             ", leadershipTerm=" + leadershipTerm +
             ", receivedPosition=" + receivedPosition +
             ", lastAppliedPosition=" + lastAppliedPosition +

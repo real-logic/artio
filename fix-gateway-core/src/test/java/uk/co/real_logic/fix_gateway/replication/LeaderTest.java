@@ -62,7 +62,7 @@ public class LeaderTest
         termState,
         LEADER_SESSION_ID,
         archiveReader,
-        new RaftArchiver(archiver, termState));
+        new RaftArchiver(termState.leaderSessionId(), archiver));
 
     @Before
     public void setUp()
