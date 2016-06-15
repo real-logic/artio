@@ -299,7 +299,10 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     {
         while (toRead > 0)
         {
-            toRead -= poll(role);
+            if (poll(role) > 0)
+            {
+                toRead--;
+            }
         }
     }
 

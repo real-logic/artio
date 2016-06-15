@@ -69,7 +69,7 @@ public class Leader implements Role, RaftHandler
     private int leaderShipTerm;
     private long timeInMs;
 
-    private long position;
+    private long messageAcknowledgementPosition;
 
     public Leader(
         final short nodeId,
@@ -100,16 +100,23 @@ public class Leader implements Role, RaftHandler
 
     public int readData()
     {
+        final RaftArchiver raftArchiver = this.raftArchiver;
         if (raftArchiver.checkLeaderArchiver())
         {
             return 0;
         }
 
-        raftArchiver.poll();
+        final int bytesRead = raftArchiver.poll();
+        if (bytesRead > 0)
+        {
+            nodeToPosition.put(ourSessionId, raftArchiver.archivedPosition());
+        }
 
-        nodeToPosition.put(ourSessionId, raftArchiver.archivedPosition());
+        return bytesRead;
+    }
 
-        // TODO: checkConditions
+    public int checkConditions(final long timeInMs)
+    {
         final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
         final int delta = (int) (newPosition - consensusPosition.get());
         if (delta > 0)
@@ -118,14 +125,10 @@ public class Leader implements Role, RaftHandler
 
             heartbeat();
 
+            // Deliberately Suppress below heartbeat because there's no need to send two
             return delta;
         }
 
-        return 0;
-    }
-
-    public int checkConditions(final long timeInMs)
-    {
         if (timeInMs > nextHeartbeatTimeInMs)
         {
             heartbeat();
@@ -172,7 +175,7 @@ public class Leader implements Role, RaftHandler
         if (status == MISSING_LOG_ENTRIES)
         {
             final int length = (int) (raftArchiver.archivedPosition() - position);
-            this.position = position;
+            messageAcknowledgementPosition = position;
             if (validateReader())
             {
                 if (!ourArchiveReader.readBlock(position, length, resendHandler))
@@ -324,7 +327,7 @@ public class Leader implements Role, RaftHandler
 
     private void saveResend(final DirectBuffer buffer, final int offset, final int length)
     {
-        controlPublication.saveResend(ourSessionId, leaderShipTerm, position, buffer, offset, length);
+        controlPublication.saveResend(ourSessionId, leaderShipTerm, messageAcknowledgementPosition, buffer, offset, length);
     }
 
 }
