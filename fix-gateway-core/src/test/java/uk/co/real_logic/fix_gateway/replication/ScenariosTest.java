@@ -57,7 +57,7 @@ public class ScenariosTest
     private static final short FOLLOWER_1_ID = 4;
     private static final short FOLLOWER_2_ID = 5;
 
-    private final ClusterNode clusterNode = mock(ClusterNode.class);
+    private final ClusterAgent clusterNode = mock(ClusterAgent.class);
     private final RaftPublication controlPublication = mock(RaftPublication.class);
     private final RaftPublication acknowledgementPublication = mock(RaftPublication.class);
     private final Subscription controlSubscription = mock(Subscription.class);
@@ -320,7 +320,7 @@ public class ScenariosTest
         return namedEffect(
             (st) ->
             {
-                final ClusterNode node = verify(st.clusterNode, atLeastOnce());
+                final ClusterAgent node = verify(st.clusterNode, atLeastOnce());
                 if (st.role instanceof Leader)
                 {
                     final Leader leader = (Leader)st.role;

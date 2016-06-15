@@ -26,15 +26,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static java.util.Objects.requireNonNull;
 
 /**
- * .
+ * Agent that manages the clustering and archival.
  */
-public class ClusterNode extends ClusterableNode
+public class ClusterAgent
 {
     private static final int HEARTBEAT_TO_TIMEOUT_RATIO = 5;
 
     static final int NO_LEADER = -1;
 
-    private final Publication dataPublication;
     private final short nodeId;
     private final TermState termState = new TermState();
     private final Leader leader;
@@ -44,17 +43,18 @@ public class ClusterNode extends ClusterableNode
     private final InboundPipe inboundPipe;
     private final OutboundPipe outboundPipe;
     private final AtomicInteger leaderSessionId = new AtomicInteger(NO_LEADER);
+    private final ClusterStreams clusterStreams;
 
     private Role currentRole;
 
-    public ClusterNode(final ClusterNodeConfiguration configuration, final long timeInMs)
+    public ClusterAgent(final ClusterNodeConfiguration configuration, final long timeInMs)
     {
         configuration.conclude();
 
         nodeId = configuration.nodeId();
         transport = configuration.raftTransport();
-        dataPublication = transport.leaderPublication();
 
+        final Publication dataPublication = transport.leaderPublication();
         final ArchiveReader archiveReader = configuration.archiveReader();
         final int ourSessionId = dataPublication.sessionId();
         final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
@@ -105,8 +105,13 @@ public class ClusterNode extends ClusterableNode
 
         startAsFollower(timeInMs);
 
-        inboundPipe = new InboundPipe(configuration.copyFromSubscription(), configuration.nonLeaderHandler(), this);
-        outboundPipe = new OutboundPipe(configuration.copyToPublication(), this);
+        clusterStreams = new ClusterStreams(
+            transport, ourSessionId, leaderSessionId, termState.consensusPosition(), dataPublication);
+
+        inboundPipe = new InboundPipe(
+            configuration.copyFromSubscription(), configuration.nonLeaderHandler(), clusterStreams());
+        outboundPipe = new OutboundPipe(
+            configuration.copyToPublication(), clusterStreams());
     }
 
     private abstract class NodeState
@@ -194,12 +199,6 @@ public class ClusterNode extends ClusterableNode
         }
     };
 
-    // TODO: figure out if I really need to expose this property
-    public long commitPosition()
-    {
-        return termState.consensusPosition().get();
-    }
-
     private void startAsFollower(final long timeInMs)
     {
         transport.injectFollowerSubscriptions(follower);
@@ -275,14 +274,8 @@ public class ClusterNode extends ClusterableNode
         return termState;
     }
 
-    public ClusterPublication publication(final int clusterStreamId)
+    public ClusterStreams clusterStreams()
     {
-        return new ClusterPublication(dataPublication, this, clusterStreamId);
-    }
-
-    public ClusterableSubscription subscription(final int clusterStreamId)
-    {
-        return new ClusterSubscription(
-            transport.dataSubscription(), clusterStreamId, termState.consensusPosition(), leaderSessionId);
+        return clusterStreams;
     }
 }

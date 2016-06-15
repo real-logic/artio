@@ -29,19 +29,19 @@ public class OutboundPipe implements ControlledFragmentHandler
     private final BufferClaim bufferClaim = new BufferClaim();
 
     private final Publication publication;
-    private final ClusterNode node;
+    private final ClusterStreams streams;
     private final ClusterableSubscription subscription;
 
-    public OutboundPipe(final Publication publication, final ClusterNode node)
+    public OutboundPipe(final Publication publication, final ClusterStreams streams)
     {
         this.publication = publication;
-        this.node = node;
-        this.subscription = publication != null ? node.subscription(publication.streamId()) : null;
+        this.streams = streams;
+        this.subscription = publication != null ? streams.subscription(publication.streamId()) : null;
     }
 
     public int poll(final int fragmentLimit)
     {
-        if (publication != null && node.isLeader())
+        if (publication != null && streams.isLeader())
         {
             final int sent = subscription.controlledPoll(this, fragmentLimit);
             return sent;

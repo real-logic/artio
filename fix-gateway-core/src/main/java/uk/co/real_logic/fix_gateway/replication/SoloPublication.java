@@ -32,11 +32,6 @@ public class SoloPublication extends ClusterablePublication
         return dataPublication.tryClaim(length, bufferClaim);
     }
 
-    public long commitPosition()
-    {
-        return dataPublication.position();
-    }
-
     public void close()
     {
         dataPublication.close();

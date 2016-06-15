@@ -36,7 +36,7 @@ public class Follower implements Role, RaftHandler
     private final RaftSubscription raftSubscription;
 
     private final short nodeId;
-    private final ClusterNode clusterNode;
+    private final ClusterAgent clusterNode;
     private final TermState termState;
     private final AtomicLong consensusPosition;
     private final RandomTimeout replyTimeout;
@@ -54,7 +54,7 @@ public class Follower implements Role, RaftHandler
 
     public Follower(
         final short nodeId,
-        final ClusterNode clusterNode,
+        final ClusterAgent clusterNode,
         final long timeInMs,
         final long replyTimeoutInMs,
         final TermState termState,

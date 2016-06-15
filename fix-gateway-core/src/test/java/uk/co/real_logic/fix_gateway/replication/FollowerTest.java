@@ -51,7 +51,7 @@ public class FollowerTest
     private RaftPublication controlPublication = mock(RaftPublication.class);
     private SessionArchiver leaderArchiver = mock(SessionArchiver.class);
     private Subscription controlSubscription = mock(Subscription.class);
-    private ClusterNode clusterNode = mock(ClusterNode.class);
+    private ClusterAgent clusterNode = mock(ClusterAgent.class);
     private Archiver archiver = mock(Archiver.class);
 
     private final TermState termState = new TermState()

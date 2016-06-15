@@ -50,9 +50,9 @@ public class AbstractReplicationTest
     protected static final long TIME = 0L;
     protected static final int DATA_SESSION_ID = 43;
 
-    protected ClusterNode clusterNode1 = mock(ClusterNode.class);
-    protected ClusterNode clusterNode2 = mock(ClusterNode.class);
-    protected ClusterNode clusterNode3 = mock(ClusterNode.class);
+    protected ClusterAgent clusterNode1 = mock(ClusterAgent.class);
+    protected ClusterAgent clusterNode2 = mock(ClusterAgent.class);
+    protected ClusterAgent clusterNode3 = mock(ClusterAgent.class);
 
     protected TermState termState1 = new TermState();
     protected TermState termState2 = new TermState();
@@ -130,7 +130,7 @@ public class AbstractReplicationTest
 
     protected Follower follower(
         final short id,
-        final ClusterNode clusterNode,
+        final ClusterAgent clusterNode,
         final TermState termState)
     {
         final ArchiveMetaData metaData = archiveMetaData(id);

@@ -36,7 +36,7 @@ public class Candidate implements Role, RaftHandler
     private final TermState termState;
     private final short nodeId;
     private final int sessionId;
-    private final ClusterNode clusterNode;
+    private final ClusterAgent clusterNode;
     private final int clusterSize;
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final IntHashSet votesFor;
@@ -50,7 +50,7 @@ public class Candidate implements Role, RaftHandler
 
     public Candidate(final short nodeId,
                      final int sessionId,
-                     final ClusterNode clusterNode,
+                     final ClusterAgent clusterNode,
                      final int clusterSize,
                      final long voteTimeout,
                      final TermState termState,

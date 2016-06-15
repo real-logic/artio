@@ -22,7 +22,7 @@ import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.DisconnectDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
-import uk.co.real_logic.fix_gateway.replication.ClusterNode;
+import uk.co.real_logic.fix_gateway.replication.ClusterAgent;
 import uk.co.real_logic.fix_gateway.replication.ClusterPublication;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -34,12 +34,12 @@ public class ClusterProtocolSubscription implements ControlledFragmentHandler
     private final BufferClaim bufferClaim = new BufferClaim();
 
     private final ClusterPublication publication;
-    private final ClusterNode node;
+    private final ClusterAgent node;
     private final ControlledFragmentHandler other;
 
     public ClusterProtocolSubscription(
         final ClusterPublication publication,
-        final ClusterNode node,
+        final ClusterAgent node,
         final ControlledFragmentHandler other)
     {
         this.publication = publication;

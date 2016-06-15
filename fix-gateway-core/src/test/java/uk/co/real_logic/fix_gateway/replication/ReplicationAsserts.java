@@ -26,38 +26,38 @@ import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasFluentProperty
 
 public final class ReplicationAsserts
 {
-    public static void transitionsToCandidate(final ClusterNode clusterNode)
+    public static void transitionsToCandidate(final ClusterAgent clusterNode)
     {
         verify(clusterNode).transitionToCandidate(anyLong());
     }
 
-    public static void neverTransitionsToCandidate(final ClusterNode clusterNode)
+    public static void neverTransitionsToCandidate(final ClusterAgent clusterNode)
     {
         verify(clusterNode, never()).transitionToCandidate(anyLong());
     }
 
-    public static void neverTransitionsToFollower(final ClusterNode clusterNode)
+    public static void neverTransitionsToFollower(final ClusterAgent clusterNode)
     {
         verify(clusterNode, never()).transitionToFollower(any(Leader.class), anyShort(), anyLong());
     }
 
-    public static void transitionsToLeader(final ClusterNode clusterNode)
+    public static void transitionsToLeader(final ClusterAgent clusterNode)
     {
         verify(clusterNode).transitionToLeader(anyLong());
     }
 
-    public static void neverTransitionsToLeader(final ClusterNode clusterNode)
+    public static void neverTransitionsToLeader(final ClusterAgent clusterNode)
     {
         verify(clusterNode, never()).transitionToLeader(anyLong());
     }
 
-    public static void staysFollower(final ClusterNode clusterNode)
+    public static void staysFollower(final ClusterAgent clusterNode)
     {
         neverTransitionsToCandidate(clusterNode);
         neverTransitionsToLeader(clusterNode);
     }
 
-    public static void staysLeader(final ClusterNode clusterNode)
+    public static void staysLeader(final ClusterAgent clusterNode)
     {
         neverTransitionsToCandidate(clusterNode);
         neverTransitionsToFollower(clusterNode);

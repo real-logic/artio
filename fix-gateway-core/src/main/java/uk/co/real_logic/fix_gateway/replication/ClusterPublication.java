@@ -18,6 +18,8 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Publication;
 import io.aeron.logbuffer.BufferClaim;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * A Clustered Publication is a publication that support the raft protocol and allows
  * for publication of messages if you're the leader of the cluster.
@@ -25,21 +27,27 @@ import io.aeron.logbuffer.BufferClaim;
 public class ClusterPublication extends ClusterablePublication
 {
     private final Publication dataPublication;
-    private final ClusterNode clusterNode;
+    private final AtomicInteger leaderSessionId;
+    private final int ourSessionId;
     private final long reservedValue;
     private final int streamId;
 
-    public ClusterPublication(final Publication dataPublication, final ClusterNode clusterNode, final int streamId)
+    public ClusterPublication(
+        final Publication dataPublication,
+        final AtomicInteger leaderSessionId,
+        final int ourSessionId,
+        final int streamId)
     {
         this.dataPublication = dataPublication;
-        this.clusterNode = clusterNode;
+        this.leaderSessionId = leaderSessionId;
+        this.ourSessionId = ourSessionId;
         this.reservedValue = ReservedValue.ofClusterStreamId(streamId);
         this.streamId = streamId;
     }
 
     public long tryClaim(final int length, final BufferClaim bufferClaim)
     {
-        if (!clusterNode.isLeader())
+        if (!ClusterStreams.isLeader(ourSessionId, leaderSessionId))
         {
             return CANT_PUBLISH;
         }
@@ -50,11 +58,6 @@ public class ClusterPublication extends ClusterablePublication
             bufferClaim.reservedValue(reservedValue);
         }
         return position;
-    }
-
-    public long commitPosition()
-    {
-        return clusterNode.commitPosition();
     }
 
     public int id()

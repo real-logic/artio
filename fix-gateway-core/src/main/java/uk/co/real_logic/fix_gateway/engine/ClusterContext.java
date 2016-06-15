@@ -17,15 +17,14 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import io.aeron.Aeron;
 import io.aeron.Publication;
-import io.aeron.Subscription;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
-import uk.co.real_logic.fix_gateway.replication.ClusterNode;
+import uk.co.real_logic.fix_gateway.replication.ClusterAgent;
 import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;
-import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
+import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import static org.agrona.concurrent.AgentRunner.startOnThread;
@@ -37,7 +36,7 @@ import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 public class ClusterContext extends EngineContext
 {
     private final StreamIdentifier dataStream;
-    private final ClusterNode node;
+    private final ClusterAgent node;
 
     public ClusterContext(
         final EngineConfiguration configuration,
@@ -52,14 +51,14 @@ public class ClusterContext extends EngineContext
         dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
 
         node = node(configuration, fixCounters, aeron, channel);
-        newStreams(node);
+        newStreams(node.clusterStreams());
         newIndexers(inboundArchiveReader(), outboundArchiveReader());
         final Replayer replayer = newReplayer(replayPublication, outboundArchiveReader());
 
         loggingRunner = newRunner(new CompositeAgent(inboundIndexer, outboundIndexer, replayer));
     }
 
-    private ClusterNode node(
+    private ClusterAgent node(
         final EngineConfiguration configuration,
         final FixCounters fixCounters,
         final Aeron aeron,
@@ -74,8 +73,8 @@ public class ClusterContext extends EngineContext
             LoggerUtil.newArchiveMetaData(logFileDir), cacheNumSets, cacheSetSize, dataStream);
 
         final String libraryAeronChannel = configuration.libraryAeronChannel();
-        final Subscription outboundSubscription = aeron.addSubscription(
-            libraryAeronChannel, OUTBOUND_LIBRARY_STREAM);
+        /*final Subscription outboundSubscription = aeron.addSubscription(
+            libraryAeronChannel, OUTBOUND_LIBRARY_STREAM);*/
         final Publication inboundPublication = aeron.addPublication(
             libraryAeronChannel, INBOUND_LIBRARY_STREAM);
         //final LibraryForwarder libraryForwarder = new LibraryForwarder(inboundPublication);
@@ -95,7 +94,7 @@ public class ClusterContext extends EngineContext
             .aeronChannel(channel)
             .aeron(aeron);
 
-        return new ClusterNode(clusterNodeConfiguration, System.currentTimeMillis());
+        return new ClusterAgent(clusterNodeConfiguration, System.currentTimeMillis());
     }
 
     private ArchiveReader outboundArchiveReader()
@@ -113,9 +112,9 @@ public class ClusterContext extends EngineContext
         return newReplayQuery(inboundArchiveReader());
     }
 
-    public ClusterableNode node()
+    public ClusterableStreams streams()
     {
-        return node;
+        return node.clusterStreams();
     }
 
     public void start()

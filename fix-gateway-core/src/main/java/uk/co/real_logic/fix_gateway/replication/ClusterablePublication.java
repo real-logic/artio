@@ -33,8 +33,6 @@ public abstract class ClusterablePublication implements Closeable
 
     public abstract long tryClaim(final int length, final BufferClaim bufferClaim);
 
-    public abstract long commitPosition();
-
     public abstract void close();
 
     public abstract int id();

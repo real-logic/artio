@@ -79,9 +79,9 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         followers.add(3);
 
         final Publication dataPublication = dataPublication();
-        final ClusterNode leaderNode = mock(ClusterNode.class);
+        final ClusterAgent leaderNode = mock(ClusterAgent.class);
         when(leaderNode.isLeader()).thenReturn(true);
-        publication = new ClusterPublication(dataPublication, leaderNode, 1);
+        publication = new ClusterPublication(dataPublication, new AtomicInteger(leaderSessionId), leaderSessionId, 1);
         leaderSessionId = dataPublication.sessionId();
 
         termState1.leaderSessionId(leaderSessionId);

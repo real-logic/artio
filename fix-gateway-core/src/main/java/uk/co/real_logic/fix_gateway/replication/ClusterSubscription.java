@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.fix_gateway.replication.ClusterNode.NO_LEADER;
+import static uk.co.real_logic.fix_gateway.replication.ClusterAgent.NO_LEADER;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 public class ClusterSubscription extends ClusterableSubscription

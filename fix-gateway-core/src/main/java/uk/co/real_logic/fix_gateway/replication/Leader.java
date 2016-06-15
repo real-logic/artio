@@ -43,7 +43,7 @@ public class Leader implements Role, RaftHandler
     private final short nodeId;
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final RaftSubscription raftSubscription;
-    private final ClusterNode clusterNode;
+    private final ClusterAgent clusterNode;
     private final long heartbeatIntervalInMs;
     private final ArchiveReader archiveReader;
 
@@ -75,7 +75,7 @@ public class Leader implements Role, RaftHandler
         final short nodeId,
         final AcknowledgementStrategy acknowledgementStrategy,
         final IntHashSet followers,
-        final ClusterNode clusterNode,
+        final ClusterAgent clusterNode,
         final long timeInMs,
         final long heartbeatIntervalInMs,
         final TermState termState,

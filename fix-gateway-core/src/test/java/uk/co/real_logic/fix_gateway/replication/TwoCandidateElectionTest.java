@@ -102,7 +102,7 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
         electCandidateWithCorrectTerm();
     }
 
-    private void electionResultsAre(final ClusterNode leader, final ClusterNode follower)
+    private void electionResultsAre(final ClusterAgent leader, final ClusterAgent follower)
     {
         transitionsToLeader(leader);
         staysLeader(leader);
@@ -117,7 +117,7 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
         run(node1, node2, node3);
     }
 
-    private Candidate candidate(final short id, final ClusterNode clusterNode, final TermState termState)
+    private Candidate candidate(final short id, final ClusterAgent clusterNode, final TermState termState)
     {
         final QuorumAcknowledgementStrategy ackStrategy = new QuorumAcknowledgementStrategy();
         return new Candidate(id, DATA_SESSION_ID, clusterNode, CLUSTER_SIZE, TIMEOUT, termState, ackStrategy)

@@ -41,7 +41,7 @@ public class LeaderTest
     private static final short FOLLOWER_ID = 4;
 
     private RaftPublication controlPublication = mock(RaftPublication.class);
-    private ClusterNode clusterNode = mock(ClusterNode.class);
+    private ClusterAgent clusterNode = mock(ClusterAgent.class);
     private Subscription acknowledgementSubscription = mock(Subscription.class);
     private Subscription dataSubscription = mock(Subscription.class);
     private ArchiveReader archiveReader = mock(ArchiveReader.class);

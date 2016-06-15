@@ -30,24 +30,24 @@ public class InboundPipe implements ControlledFragmentHandler
 
     private final Subscription subscription;
     private final ControlledFragmentHandler nonLeaderHandler;
-    private final ClusterNode node;
+    private final ClusterStreams streams;
     private final ClusterPublication publication;
 
     public InboundPipe(final Subscription subscription,
                        final ControlledFragmentHandler nonLeaderHandler,
-                       final ClusterNode node)
+                       final ClusterStreams streams)
     {
         this.subscription = subscription;
         this.nonLeaderHandler = nonLeaderHandler;
-        this.node = node;
-        this.publication = subscription != null ? node.publication(subscription.streamId()) : null;
+        this.streams = streams;
+        this.publication = subscription != null ? streams.publication(subscription.streamId()) : null;
     }
 
     public int poll(final int fragmentLimit)
     {
         if (subscription != null)
         {
-            if (node.isLeader())
+            if (streams.isLeader())
             {
                 return subscription.controlledPoll(this, fragmentLimit);
             }

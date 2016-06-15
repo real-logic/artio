@@ -40,7 +40,7 @@ public class CandidateTest
 
     private RaftPublication controlPublication = mock(RaftPublication.class);
     private Subscription controlSubscription = mock(Subscription.class);
-    private ClusterNode clusterNode = mock(ClusterNode.class);
+    private ClusterAgent clusterNode = mock(ClusterAgent.class);
     private TermState termState = new TermState();
 
     private Candidate candidate = new Candidate(

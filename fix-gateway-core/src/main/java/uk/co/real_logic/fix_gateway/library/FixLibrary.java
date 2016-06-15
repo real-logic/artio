@@ -27,7 +27,7 @@ import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.*;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
-import uk.co.real_logic.fix_gateway.replication.SoloNode;
+import uk.co.real_logic.fix_gateway.replication.SoloStreams;
 import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
 import uk.co.real_logic.fix_gateway.timing.Timer;
@@ -92,7 +92,7 @@ public final class FixLibrary extends GatewayProcess
 
     private GatewayError errorType;
     private String errorMessage;
-    private SoloNode soloNode;
+    private SoloStreams soloNode;
     private Streams inboundLibraryStreams;
     private Streams outboundLibraryStreams;
     private long notLeaderCorrelationId;
@@ -131,7 +131,7 @@ public final class FixLibrary extends GatewayProcess
     {
         final String libraryChannel = configuration.libraryAeronChannel();
         final NanoClock nanoClock = new SystemNanoClock();
-        soloNode = new SoloNode(aeron, libraryChannel);
+        soloNode = new SoloStreams(aeron, libraryChannel);
 
         inboundLibraryStreams = new Streams(
             soloNode, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,

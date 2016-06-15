@@ -51,7 +51,7 @@ class NodeRunner implements AutoCloseable
 
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
-    private final ClusterNode clusterNode;
+    private final ClusterAgent clusterNode;
     private final int nodeId;
     private final ControlledFragmentHandler handler;
     private final ClusterableSubscription subscription;
@@ -108,8 +108,8 @@ class NodeRunner implements AutoCloseable
             .archiver(archiver)
             .archiveReader(archiveReader);
 
-        clusterNode = new ClusterNode(configuration, System.currentTimeMillis());
-        subscription = clusterNode.subscription(1);
+        clusterNode = new ClusterAgent(configuration, System.currentTimeMillis());
+        subscription = clusterNode.clusterStreams().subscription(1);
     }
 
     private SendChannelEndpointSupplier newSendChannelEndpointSupplier()
@@ -149,7 +149,7 @@ class NodeRunner implements AutoCloseable
         return clusterNode.isLeader();
     }
 
-    public ClusterNode raftNode()
+    public ClusterAgent raftNode()
     {
         return clusterNode;
     }

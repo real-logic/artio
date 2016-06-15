@@ -210,20 +210,20 @@ public class ClusterReplicationTest
 
     private void assertBecomesCandidate(final NodeRunner ... nodes)
     {
-        assertBecomes(ClusterNode::isCandidate, allNodes, nodes);
+        assertBecomes(ClusterAgent::isCandidate, allNodes, nodes);
     }
 
     private void assertBecomesFollower(final NodeRunner ... nodes)
     {
-        assertBecomes(ClusterNode::isFollower, allNodes, nodes);
+        assertBecomes(ClusterAgent::isFollower, allNodes, nodes);
     }
 
     private void assertBecomes(
-        final Predicate<ClusterNode> predicate,
+        final Predicate<ClusterAgent> predicate,
         final NodeRunner[] toPoll,
         final NodeRunner... nodes)
     {
-        final ClusterNode[] clusterNodes = getRaftNodes(nodes);
+        final ClusterAgent[] clusterNodes = getRaftNodes(nodes);
         while (!allMatch(clusterNodes, predicate))
         {
             poll(toPoll);
@@ -231,9 +231,9 @@ public class ClusterReplicationTest
         assertTrue(allMatch(clusterNodes, predicate));
     }
 
-    private ClusterNode[] getRaftNodes(final NodeRunner[] nodes)
+    private ClusterAgent[] getRaftNodes(final NodeRunner[] nodes)
     {
-        return Stream.of(nodes).map(NodeRunner::raftNode).toArray(ClusterNode[]::new);
+        return Stream.of(nodes).map(NodeRunner::raftNode).toArray(ClusterAgent[]::new);
     }
 
     private static <T> boolean allMatch(final T[] values, final Predicate<T> predicate)
@@ -307,7 +307,7 @@ public class ClusterReplicationTest
 
     private long sendMessageTo(final NodeRunner leader)
     {
-        final ClusterablePublication publication = leader.raftNode().publication(1);
+        final ClusterablePublication publication = leader.raftNode().clusterStreams().publication(1);
 
         long position;
         while (true)

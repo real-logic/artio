@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-public abstract class ClusterableNode
+public abstract class ClusterableStreams
 {
     public abstract boolean isLeader();
 

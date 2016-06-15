@@ -34,7 +34,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.*;
-import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
+import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -114,7 +114,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ClusterableSubscription outboundSlowSubscription;
     private final Subscription replaySubscription;
     private final GatewayPublication inboundPublication;
-    private final ClusterableNode node;
+    private final ClusterableStreams clusterableStreams;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
     private final QueuedPipe<AdminCommand> adminCommands;
@@ -150,7 +150,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final ReplayQuery inboundMessages,
         final ErrorHandler errorHandler,
         final GatewayPublication outboundPublication,
-        final ClusterableNode node)
+        final ClusterableStreams clusterableStreams)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
@@ -165,7 +165,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundPublication = outboundPublication;
         this.outboundSlowSubscription = outboundSlowSubscription;
         this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
-        this.node = node;
+        this.clusterableStreams = clusterableStreams;
         this.senderEndPoints = new SenderEndPoints(inboundPublication);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
@@ -223,7 +223,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int sendOutboundMessages()
     {
-        if (node.isLeader())
+        if (clusterableStreams.isLeader())
         {
             final int newMessagesRead =
                 outboundDataSubscription.controlledPoll(outboundSubscription, outboundLibraryFragmentLimit);
@@ -319,7 +319,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
                 final SocketChannel channel = listeningChannel.accept();
 
-                if (node.isLeader())
+                if (clusterableStreams.isLeader())
                 {
                     final long connectionId = this.nextConnectionId++;
                     final boolean resetSequenceNumbers = configuration.acceptorSequenceNumbersResetUponReconnect();

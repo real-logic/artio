@@ -26,7 +26,7 @@ import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
-import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
+import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import static java.util.Arrays.asList;
@@ -104,7 +104,7 @@ public abstract class EngineContext implements AutoCloseable
             INBOUND_LIBRARY_STREAM);
     }
 
-    protected void newStreams(final ClusterableNode node)
+    protected void newStreams(final ClusterableStreams node)
     {
         final NanoClock nanoClock = new SystemNanoClock();
         inboundLibraryStreams = new Streams(
@@ -220,7 +220,7 @@ public abstract class EngineContext implements AutoCloseable
 
     public abstract ReplayQuery inboundReplayQuery();
 
-    public abstract ClusterableNode node();
+    public abstract ClusterableStreams streams();
 
     public abstract void start();
 }

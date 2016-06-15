@@ -26,8 +26,8 @@ import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
-import uk.co.real_logic.fix_gateway.replication.ClusterableNode;
-import uk.co.real_logic.fix_gateway.replication.SoloNode;
+import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
+import uk.co.real_logic.fix_gateway.replication.SoloStreams;
 import uk.co.real_logic.fix_gateway.replication.SoloPublication;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
@@ -46,7 +46,7 @@ public class SoloContext extends EngineContext
     private final List<Archiver> archivers = new ArrayList<>();
     private final StreamIdentifier inboundStreamId;
     private final StreamIdentifier outboundStreamId;
-    private final SoloNode node;
+    private final SoloStreams node;
 
     private ArchiveReader outboundArchiveReader;
     private ArchiveReader inboundArchiveReader;
@@ -73,9 +73,9 @@ public class SoloContext extends EngineContext
         newLoggingRunner();
     }
 
-    private SoloNode initNode()
+    private SoloStreams initNode()
     {
-        return new SoloNode(aeron, configuration.libraryAeronChannel());
+        return new SoloStreams(aeron, configuration.libraryAeronChannel());
     }
 
     public void newLoggingRunner()
@@ -149,7 +149,7 @@ public class SoloContext extends EngineContext
         return inboundLibraryStreams;
     }
 
-    public ClusterableNode node()
+    public ClusterableStreams streams()
     {
         return node;
     }
