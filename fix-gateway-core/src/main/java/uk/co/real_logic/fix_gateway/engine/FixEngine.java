@@ -51,6 +51,7 @@ public final class FixEngine extends GatewayProcess
 
     private final EngineTimers timers = new EngineTimers();
     private final EngineConfiguration configuration;
+    private final EngineDescriptorStore engineDescriptorStore;
 
     private AgentRunner framerRunner;
     private EngineContext context;
@@ -137,7 +138,7 @@ public final class FixEngine extends GatewayProcess
     {
         init(configuration);
         this.configuration = configuration;
-        final EngineDescriptorStore engineDescriptorStore = new EngineDescriptorStore();
+        engineDescriptorStore = new EngineDescriptorStore();
 
         context = EngineContext.of(
             configuration,
@@ -203,7 +204,9 @@ public final class FixEngine extends GatewayProcess
             context.inboundReplayQuery(),
             errorHandler,
             outboundLibraryStreams.gatewayPublication(idleStrategy),
-            context.streams());
+            context.inboundLibraryPublication(),
+            context.streams(),
+            engineDescriptorStore);
         framerRunner = new AgentRunner(idleStrategy, errorHandler, null, framer);
     }
 

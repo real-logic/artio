@@ -64,5 +64,5 @@ public interface LibraryEndPointHandler
 
     Action onNewSentPosition(final int sessionId, final long position);
 
-    Action onNotLeader(final long correlationId, final int libraryId);
+    Action onNotLeader(final int libraryId, final String libraryChannel);
 }

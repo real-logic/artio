@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -149,7 +150,9 @@ public class FramerTest
             replayQuery,
             errorHandler,
             mock(GatewayPublication.class),
-            node);
+            mock(GatewayPublication.class),
+            node,
+            mock(EngineDescriptorStore.class));
     }
 
     private void isLeader(final boolean value)

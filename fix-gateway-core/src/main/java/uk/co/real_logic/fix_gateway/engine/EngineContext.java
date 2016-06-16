@@ -25,6 +25,7 @@ import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.*;
 
@@ -34,6 +35,7 @@ import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREA
 
 public abstract class EngineContext implements AutoCloseable
 {
+    protected final NanoClock nanoClock = new SystemNanoClock();
     protected final EngineConfiguration configuration;
     protected final ErrorHandler errorHandler;
     protected final FixCounters fixCounters;
@@ -107,7 +109,6 @@ public abstract class EngineContext implements AutoCloseable
 
     protected void newStreams(final ClusterableStreams node)
     {
-        final NanoClock nanoClock = new SystemNanoClock();
         inboundLibraryStreams = new Streams(
             node, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
             configuration.inboundMaxClaimAttempts());
@@ -228,4 +229,6 @@ public abstract class EngineContext implements AutoCloseable
     public abstract ClusterableStreams streams();
 
     public abstract void start();
+
+    public abstract GatewayPublication inboundLibraryPublication();
 }

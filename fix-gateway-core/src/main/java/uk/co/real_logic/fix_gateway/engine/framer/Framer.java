@@ -30,6 +30,7 @@ import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -153,7 +154,9 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final ReplayQuery inboundMessages,
         final ErrorHandler errorHandler,
         final GatewayPublication outboundPublication,
-        final ClusterableStreams clusterableStreams)
+        final GatewayPublication replyPublication,
+        final ClusterableStreams clusterableStreams,
+        final EngineDescriptorStore engineDescriptorStore)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
@@ -193,7 +196,9 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             outboundLibrarySubscriber = new SubscriptionSplitter(
                 clusterableStreams,
                 new EngineProtocolSubscription(this),
-                clusterableStreams.publication(OUTBOUND_LIBRARY_STREAM));
+                clusterableStreams.publication(OUTBOUND_LIBRARY_STREAM),
+                replyPublication,
+                engineDescriptorStore);
             outboundClusterSubscriber = ProtocolSubscription.of(this);
         }
 

@@ -110,8 +110,8 @@ public class LibraryProtocolSubscription implements ControlledFragmentHandler
     {
         libraryConnect.wrap(buffer, offset, blockLength, version);
         return handler.onNotLeader(
-            libraryConnect.correlationId(),
-            libraryConnect.libraryId()
+            libraryConnect.libraryId(),
+            libraryConnect.libraryChannel()
         );
     }
 

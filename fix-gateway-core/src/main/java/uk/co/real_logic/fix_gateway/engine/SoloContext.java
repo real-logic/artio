@@ -183,6 +183,11 @@ public class SoloContext extends EngineContext
         startOnThread(loggingRunner);
     }
 
+    public GatewayPublication inboundLibraryPublication()
+    {
+        return inboundLibraryStreams.gatewayPublication(configuration.framerIdleStrategy());
+    }
+
     public void close()
     {
         if (loggingRunner != null)

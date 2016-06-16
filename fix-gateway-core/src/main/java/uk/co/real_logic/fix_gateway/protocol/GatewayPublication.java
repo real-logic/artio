@@ -754,7 +754,7 @@ public class GatewayPublication extends ClaimablePublication
     }
 
     public long saveNotLeader(
-        final int libraryId, final long correlationId, final DirectBuffer channel)
+        final int libraryId, final DirectBuffer channel)
     {
         final int channelLength = channel == null ? 0 : channel.capacity();
         final long position = claim(NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH + channelLength);
@@ -777,8 +777,7 @@ public class GatewayPublication extends ClaimablePublication
 
         notLeader
             .wrap(buffer, offset)
-            .libraryId(libraryId)
-            .correlationId(correlationId);
+            .libraryId(libraryId);
 
         if (channel != null)
         {

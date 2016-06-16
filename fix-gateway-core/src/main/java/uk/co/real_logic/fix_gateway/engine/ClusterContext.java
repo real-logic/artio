@@ -20,7 +20,9 @@ import io.aeron.Publication;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.*;
 
@@ -33,6 +35,7 @@ import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 class ClusterContext extends EngineContext
 {
     private final SoloSubscription outboundLibrarySubscription;
+    private final Publication inboundPublication;
     private final StreamIdentifier dataStream;
     private final ClusterAgent node;
 
@@ -48,8 +51,10 @@ class ClusterContext extends EngineContext
 
         final String channel = configuration.clusterAeronChannel();
         dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
+        final String libraryAeronChannel = configuration.libraryAeronChannel();
+        inboundPublication = aeron.addPublication(libraryAeronChannel, INBOUND_LIBRARY_STREAM);
         outboundLibrarySubscription = new SoloSubscription(
-            aeron.addSubscription(configuration.libraryAeronChannel(), OUTBOUND_LIBRARY_STREAM));
+            aeron.addSubscription(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
         node = node(configuration, fixCounters, aeron, channel, engineDescriptorStore);
         newStreams(node.clusterStreams());
         newIndexers(inboundArchiveReader(), outboundArchiveReader());
@@ -73,11 +78,6 @@ class ClusterContext extends EngineContext
         final Archiver archiver = new Archiver(
             LoggerUtil.newArchiveMetaData(logFileDir), cacheNumSets, cacheSetSize, dataStream);
 
-        final String libraryAeronChannel = configuration.libraryAeronChannel();
-        final Publication inboundPublication = aeron.addPublication(
-            libraryAeronChannel, INBOUND_LIBRARY_STREAM);
-        //final LibraryForwarder libraryForwarder = new LibraryForwarder(inboundPublication);
-
         final ClusterNodeConfiguration clusterNodeConfiguration = new ClusterNodeConfiguration()
             .nodeId(configuration.nodeId())
             .otherNodes(configuration.otherNodes())
@@ -87,8 +87,6 @@ class ClusterContext extends EngineContext
             .archiveReader(dataArchiveReader)
             .failCounter(fixCounters.failedRaftPublications())
             .maxClaimAttempts(configuration.inboundMaxClaimAttempts())
-            // TODO: decide if this is necessary at all
-            //.copyFrom(outboundSubscription, libraryForwarder)
             .copyTo(inboundPublication)
             .aeronChannel(channel)
             .aeron(aeron)
@@ -121,6 +119,17 @@ class ClusterContext extends EngineContext
     public void start()
     {
         startOnThread(loggingRunner);
+    }
+
+    public GatewayPublication inboundLibraryPublication()
+    {
+        return new GatewayPublication(
+            new SoloPublication(inboundPublication),
+            fixCounters.failedInboundPublications(),
+            configuration.framerIdleStrategy(),
+            nanoClock,
+            configuration.inboundMaxClaimAttempts(),
+            ReliefValve.NO_RELIEF_VALVE);
     }
 
     public Streams outboundLibraryStreams()

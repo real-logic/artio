@@ -821,11 +821,11 @@ public final class FixLibrary extends GatewayProcess
             return CONTINUE;
         }
 
-        public Action onNotLeader(final long correlationId, final int libraryId)
+        public Action onNotLeader(final int libraryId, final String libraryChannel)
         {
             if (FixLibrary.this.libraryId == libraryId)
             {
-                notLeaderCorrelationId = correlationId;
+                // TODO
             }
             return CONTINUE;
         }

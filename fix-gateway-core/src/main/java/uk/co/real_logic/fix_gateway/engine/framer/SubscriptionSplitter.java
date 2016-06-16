@@ -19,10 +19,12 @@ import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.messages.DisconnectDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.protocol.EngineProtocolSubscription;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 
@@ -40,15 +42,21 @@ public class SubscriptionSplitter implements ControlledFragmentHandler
     private final ClusterableStreams clusterableStreams;
     private final EngineProtocolSubscription engineProtocolSubscription;
     private final ClusterablePublication clusterPublication;
+    private final GatewayPublication replyPublication;
+    private final EngineDescriptorStore engineDescriptorStore;
 
     public SubscriptionSplitter(
         final ClusterableStreams clusterableStreams,
         final EngineProtocolSubscription engineProtocolSubscription,
-        final ClusterablePublication clusterPublication)
+        final ClusterablePublication clusterPublication,
+        final GatewayPublication replyPublication,
+        final EngineDescriptorStore engineDescriptorStore)
     {
         this.clusterableStreams = clusterableStreams;
         this.engineProtocolSubscription = engineProtocolSubscription;
         this.clusterPublication = clusterPublication;
+        this.replyPublication = replyPublication;
+        this.engineDescriptorStore = engineDescriptorStore;
     }
 
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
@@ -82,7 +90,8 @@ public class SubscriptionSplitter implements ControlledFragmentHandler
         }
         else
         {
-            // TODO: reply not leader
+            // TODO: generically extract the library id
+            replyPublication.saveNotLeader(0, engineDescriptorStore.leaderLibraryChannel());
         }
 
         return CONTINUE;

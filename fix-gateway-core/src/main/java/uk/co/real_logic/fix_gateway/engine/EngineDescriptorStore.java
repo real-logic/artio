@@ -16,19 +16,19 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import org.agrona.DirectBuffer;
+import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.EngineDescriptorDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.replication.NodeStateHandler;
 
-import java.util.concurrent.ConcurrentHashMap;
-
 public class EngineDescriptorStore implements NodeStateHandler
 {
     // Thread-safe state
-    private final ConcurrentHashMap<Short, UnsafeBuffer> nodeIdToLibraryChannel = new ConcurrentHashMap<>();
+    private volatile UnsafeBuffer leaderLibraryChannel = null;
 
     // Single-threaded state only used on archiver thread.
+    private final Int2ObjectHashMap<UnsafeBuffer> nodeIdToLibraryChannel = new Int2ObjectHashMap<>();
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final EngineDescriptorDecoder engineDescriptor = new EngineDescriptorDecoder();
 
@@ -52,8 +52,8 @@ public class EngineDescriptorStore implements NodeStateHandler
         nodeIdToLibraryChannel.put(Short.valueOf(nodeId), libraryChannel);
     }
 
-    public DirectBuffer libraryChannel(final short nodeId)
+    public DirectBuffer leaderLibraryChannel()
     {
-        return nodeIdToLibraryChannel.get(Short.valueOf(nodeId));
+        return leaderLibraryChannel;
     }
 }
