@@ -39,7 +39,6 @@ public class ClusterAgent implements Agent
     private final Candidate candidate;
     private final Follower follower;
     private final RaftTransport transport;
-    private final InboundPipe inboundPipe;
     private final OutboundPipe outboundPipe;
     private final ClusterStreams clusterStreams;
 
@@ -114,8 +113,6 @@ public class ClusterAgent implements Agent
         clusterStreams = new ClusterStreams(
             transport, ourSessionId, termState.leaderSessionId(), termState.consensusPosition(), dataPublication);
 
-        inboundPipe = new InboundPipe(
-            configuration.copyFromSubscription(), configuration.nonLeaderHandler(), clusterStreams());
         outboundPipe = new OutboundPipe(
             configuration.copyToPublication(), clusterStreams());
     }
@@ -252,7 +249,6 @@ public class ClusterAgent implements Agent
         return commandCount +
             role.readData() +
             role.checkConditions(timeInMs) +
-            inboundPipe.poll(FRAGMENT_LIMIT) +
             outboundPipe.poll(FRAGMENT_LIMIT);
     }
 
