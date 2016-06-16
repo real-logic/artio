@@ -155,8 +155,14 @@ public class Leader implements Role, RaftHandler
 
     public void closeStreams()
     {
-        acknowledgementSubscription.close();
-        dataSubscription.close();
+        if (acknowledgementSubscription != null)
+        {
+            acknowledgementSubscription.close();
+        }
+        if (dataSubscription != null)
+        {
+            dataSubscription.close();
+        }
     }
 
     private void heartbeat()
