@@ -22,10 +22,7 @@ import org.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
-import uk.co.real_logic.fix_gateway.replication.ClusterAgent;
-import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;
-import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
-import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
+import uk.co.real_logic.fix_gateway.replication.*;
 
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
@@ -35,6 +32,7 @@ import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 class ClusterContext extends EngineContext
 {
+    private final SoloSubscription outboundLibrarySubscription;
     private final StreamIdentifier dataStream;
     private final ClusterAgent node;
 
@@ -50,7 +48,8 @@ class ClusterContext extends EngineContext
 
         final String channel = configuration.clusterAeronChannel();
         dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
-
+        outboundLibrarySubscription = new SoloSubscription(
+            aeron.addSubscription(configuration.libraryAeronChannel(), OUTBOUND_LIBRARY_STREAM));
         node = node(configuration, fixCounters, aeron, channel, engineDescriptorStore);
         newStreams(node.clusterStreams());
         newIndexers(inboundArchiveReader(), outboundArchiveReader());
@@ -75,8 +74,6 @@ class ClusterContext extends EngineContext
             LoggerUtil.newArchiveMetaData(logFileDir), cacheNumSets, cacheSetSize, dataStream);
 
         final String libraryAeronChannel = configuration.libraryAeronChannel();
-        /*final Subscription outboundSubscription = aeron.addSubscription(
-            libraryAeronChannel, OUTBOUND_LIBRARY_STREAM);*/
         final Publication inboundPublication = aeron.addPublication(
             libraryAeronChannel, INBOUND_LIBRARY_STREAM);
         //final LibraryForwarder libraryForwarder = new LibraryForwarder(inboundPublication);
@@ -134,6 +131,16 @@ class ClusterContext extends EngineContext
     public Streams inboundLibraryStreams()
     {
         return inboundLibraryStreams;
+    }
+
+    public ClusterableSubscription outboundLibrarySubscription()
+    {
+        return outboundLibrarySubscription;
+    }
+
+    public ClusterableSubscription outboundClusterSubscription()
+    {
+        return outboundLibraryStreams().subscription();
     }
 
     public void close()

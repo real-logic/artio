@@ -26,8 +26,7 @@ import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
-import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
-import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
+import uk.co.real_logic.fix_gateway.replication.*;
 
 import static java.util.Arrays.asList;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
@@ -219,6 +218,10 @@ public abstract class EngineContext implements AutoCloseable
     public abstract Streams outboundLibraryStreams();
 
     public abstract Streams inboundLibraryStreams();
+
+    public abstract ClusterableSubscription outboundClusterSubscription();
+
+    public abstract ClusterableSubscription outboundLibrarySubscription();
 
     public abstract ReplayQuery inboundReplayQuery();
 

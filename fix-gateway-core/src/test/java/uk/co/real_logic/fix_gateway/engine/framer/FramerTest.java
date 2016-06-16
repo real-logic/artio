@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
@@ -91,7 +90,6 @@ public class FramerTest
     private GatewaySessions gatewaySessions = mock(GatewaySessions.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
     private ClusterableSubscription outboundSubscription = mock(ClusterableSubscription.class);
-    private Image image = mock(Image.class);
     private ClusterableStreams node = mock(ClusterableStreams.class);
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
@@ -138,6 +136,7 @@ public class FramerTest
             mock(Timer.class),
             engineConfiguration,
             mockConnectionHandler,
+            mock(ClusterableSubscription.class),
             outboundSubscription,
             mock(ClusterableSubscription.class),
             mock(Subscription.class),

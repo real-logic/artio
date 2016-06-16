@@ -24,7 +24,6 @@ import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.engine.framer.*;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
-import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.timing.EngineTimers;
 
@@ -162,7 +161,6 @@ public final class FixEngine extends GatewayProcess
         final SessionIds sessionIds = new SessionIds(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Streams outboundLibraryStreams = context.outboundLibraryStreams();
-        final ClusterableSubscription librarySubscription = outboundLibraryStreams.subscription();
         final Streams inboundLibraryStreams = context.inboundLibraryStreams();
 
         final ConnectionHandler handler = new ConnectionHandler(
@@ -190,17 +188,22 @@ public final class FixEngine extends GatewayProcess
             clock,
             timers.outboundTimer(),
             timers.sendTimer(),
-            configuration, handler, librarySubscription,
-            outboundLibraryStreams.subscription(), replaySubscription(),
-            adminCommands, sessionIdStrategy, sessionIds,
+            configuration,
+            handler,
+            context.outboundClusterSubscription(),
+            context.outboundLibrarySubscription(),
+            context.outboundLibrarySubscription(),
+            replaySubscription(),
+            adminCommands,
+            sessionIdStrategy,
+            sessionIds,
             new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer()),
             new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer()),
             gatewaySessions,
             context.inboundReplayQuery(),
             errorHandler,
             outboundLibraryStreams.gatewayPublication(idleStrategy),
-            context.streams()
-        );
+            context.streams());
         framerRunner = new AgentRunner(idleStrategy, errorHandler, null, framer);
     }
 

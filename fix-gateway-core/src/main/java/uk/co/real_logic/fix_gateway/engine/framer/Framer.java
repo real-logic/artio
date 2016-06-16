@@ -62,6 +62,7 @@ import static java.net.StandardSocketOptions.*;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.fix_gateway.engine.framer.Continuation.COMPLETE;
@@ -99,8 +100,8 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Timer outboundTimer;
     private final Timer sendTimer;
 
-    private final ControlledFragmentHandler outboundSubscription =
-        ProtocolSubscription.of(this, new EngineProtocolSubscription(this));
+    private final ControlledFragmentHandler outboundLibrarySubscriber;
+    private final ControlledFragmentHandler outboundClusterSubscriber;
 
     private final boolean hasBindAddress;
     private final Selector selector;
@@ -110,7 +111,8 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private final EngineConfiguration configuration;
     private final ConnectionHandler connectionHandler;
-    private final ClusterableSubscription outboundDataSubscription;
+    private final ClusterableSubscription outboundClusterSubscription;
+    private final ClusterableSubscription outboundLibrarySubscription;
     private final ClusterableSubscription outboundSlowSubscription;
     private final Subscription replaySubscription;
     private final GatewayPublication inboundPublication;
@@ -138,6 +140,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Timer sendTimer,
         final EngineConfiguration configuration,
         final ConnectionHandler connectionHandler,
+        final ClusterableSubscription outboundClusterSubscription,
         final ClusterableSubscription outboundLibrarySubscription,
         final ClusterableSubscription outboundSlowSubscription,
         final Subscription replaySubscription,
@@ -157,13 +160,14 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.sendTimer = sendTimer;
         this.configuration = configuration;
         this.connectionHandler = connectionHandler;
-        this.outboundDataSubscription = outboundLibrarySubscription;
+        this.outboundClusterSubscription = outboundClusterSubscription;
+        this.outboundLibrarySubscription = outboundLibrarySubscription;
+        this.outboundSlowSubscription = outboundSlowSubscription;
         this.replaySubscription = replaySubscription;
         this.gatewaySessions = gatewaySessions;
         this.inboundMessages = inboundMessages;
         this.errorHandler = errorHandler;
         this.outboundPublication = outboundPublication;
-        this.outboundSlowSubscription = outboundSlowSubscription;
         this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
         this.clusterableStreams = clusterableStreams;
         this.senderEndPoints = new SenderEndPoints(inboundPublication);
@@ -178,6 +182,20 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.replayFragmentLimit = configuration.replayFragmentLimit();
         this.inboundBytesReceivedLimit = configuration.inboundBytesReceivedLimit();
         this.hasBindAddress = configuration.hasBindAddress();
+
+        if (outboundClusterSubscription == null)
+        {
+            outboundLibrarySubscriber = ProtocolSubscription.of(this, new EngineProtocolSubscription(this));
+            outboundClusterSubscriber = null;
+        }
+        else
+        {
+            outboundLibrarySubscriber = new SubscriptionSplitter(
+                clusterableStreams,
+                new EngineProtocolSubscription(this),
+                clusterableStreams.publication(OUTBOUND_LIBRARY_STREAM));
+            outboundClusterSubscriber = ProtocolSubscription.of(this);
+        }
 
         if (hasBindAddress)
         {
@@ -218,27 +236,31 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int sendReplayMessages()
     {
-        return replaySubscription.controlledPoll(outboundSubscription, replayFragmentLimit);
+        return replaySubscription.controlledPoll(outboundLibrarySubscriber, replayFragmentLimit);
     }
 
     private int sendOutboundMessages()
     {
-        if (clusterableStreams.isLeader())
-        {
-            final int newMessagesRead =
-                outboundDataSubscription.controlledPoll(outboundSubscription, outboundLibraryFragmentLimit);
-            final int messagesRead = newMessagesRead +
-                outboundSlowSubscription.controlledPoll(senderEndPoints, outboundLibraryFragmentLimit);
+        final int newMessagesRead =
+            outboundLibrarySubscription.controlledPoll(outboundLibrarySubscriber, outboundLibraryFragmentLimit);
+        final int messagesRead = newMessagesRead +
+            outboundSlowSubscription.controlledPoll(senderEndPoints, outboundLibraryFragmentLimit);
 
+        if (outboundClusterSubscription == null)
+        {
+            // TODO: remove this
             if (newMessagesRead > 0)
             {
-                outboundDataSubscription.forEachPosition(positionSender);
+                outboundLibrarySubscription.forEachPosition(positionSender);
             }
 
             return messagesRead;
         }
-
-        return 0;
+        else
+        {
+            return messagesRead +
+                outboundClusterSubscription.controlledPoll(outboundClusterSubscriber, outboundLibraryFragmentLimit);
+        }
     }
 
     private int pollLibraries(final long timeInMs)
