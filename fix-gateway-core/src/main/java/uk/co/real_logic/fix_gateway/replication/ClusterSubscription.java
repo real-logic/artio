@@ -24,13 +24,10 @@ import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.ConcensusHeartbeatDecoder;
 import uk.co.real_logic.sbe.ir.generated.MessageHeaderDecoder;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.fix_gateway.replication.TermState.NO_LEADER;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
+import static uk.co.real_logic.fix_gateway.replication.TermState.NO_LEADER;
 
 public class ClusterSubscription extends ClusterableSubscription
 {
@@ -38,17 +35,16 @@ public class ClusterSubscription extends ClusterableSubscription
     private final MessageFilter messageFilter;
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final Subscription subscription;
-    private final AtomicInteger leaderSessionId;
+    private final TermState termState;
 
     private Image image;
 
-    public ClusterSubscription(
+    ClusterSubscription(
         final Subscription subscription,
         final int clusterStreamId,
-        final AtomicLong consensusPosition,
-        final AtomicInteger leaderSessionId)
+        final TermState termState)
     {
-        this.leaderSessionId = leaderSessionId;
+        this.termState = termState;
         // We use clusterStreamId as a reserved value filter
         if (clusterStreamId == NO_FILTER)
         {
@@ -56,16 +52,17 @@ public class ClusterSubscription extends ClusterableSubscription
         }
 
         this.subscription = subscription;
-        messageFilter = new MessageFilter(clusterStreamId, consensusPosition);
+        messageFilter = new MessageFilter(clusterStreamId);
     }
 
     public int controlledPoll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit)
     {
-        if (imageNeedsUpdate())
+        final LeaderPosition leaderPosition = termState.leaderPosition();
+        if (imageNeedsUpdate(leaderPosition))
         {
-            updateImage();
+            onLeaderChanged(leaderPosition);
 
-            if (imageNeedsUpdate())
+            if (image == null)
             {
                 return 0;
             }
@@ -85,37 +82,36 @@ public class ClusterSubscription extends ClusterableSubscription
         // TODO: remove this method.
     }
 
-    private boolean imageNeedsUpdate()
+    private boolean imageNeedsUpdate(final LeaderPosition leaderPosition)
     {
         final Image image = this.image;
-        return image == null || leaderSessionId.get() != image.sessionId();
+        return image == null || leaderPosition.sessionId() != image.sessionId();
     }
 
-    private void updateImage()
+    private void onLeaderChanged(final LeaderPosition leaderPosition)
     {
-        final int leaderSessionId = this.leaderSessionId.get();
+        final int leaderSessionId = leaderPosition.sessionId();
         if (leaderSessionId != NO_LEADER)
         {
             image = subscription.getImage(leaderSessionId);
+            messageFilter.leaderPosition = leaderPosition;
         }
     }
 
-    // TODO: fix thread-safety bug, what if commitPosition refers to a different leader?
     private final class MessageFilter implements ControlledFragmentHandler
     {
         private ControlledFragmentHandler fragmentHandler;
         private final int clusterStreamId;
-        private final AtomicLong consensusPosition;
+        private LeaderPosition leaderPosition;
 
-        private MessageFilter(final int clusterStreamId, final AtomicLong consensusPosition)
+        private MessageFilter(final int clusterStreamId)
         {
             this.clusterStreamId = clusterStreamId;
-            this.consensusPosition = consensusPosition;
         }
 
         public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
         {
-            if (header.position() > consensusPosition.get())
+            if (header.position() > leaderPosition.consensusPosition())
             {
                 return ABORT;
             }

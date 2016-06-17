@@ -23,8 +23,6 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
@@ -43,7 +41,6 @@ public class Candidate implements Role, RaftHandler
     private final AcknowledgementStrategy acknowledgementStrategy;
     private final IntHashSet votesFor;
     private final RandomTimeout voteTimeout;
-    private final AtomicLong consensusPosition;
 
     private RaftPublication controlPublication;
     private Subscription controlSubscription;
@@ -67,7 +64,6 @@ public class Candidate implements Role, RaftHandler
         this.acknowledgementStrategy = acknowledgementStrategy;
         this.voteTimeout = new RandomTimeout(voteTimeout, 0L);
         this.termState = termState;
-        this.consensusPosition = termState.consensusPosition();
         votesFor = new IntHashSet(2 * clusterSize, -1);
         raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));
         this.nodeState = nodeState;
@@ -115,11 +111,11 @@ public class Candidate implements Role, RaftHandler
     public Action onRequestVote(
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, long lastAckedPosition)
     {
-        if (leaderShipTerm > this.leaderShipTerm && lastAckedPosition >= consensusPosition.get())
+        if (leaderShipTerm > this.leaderShipTerm && lastAckedPosition >= consensusPosition())
         {
             replyVote(candidateId, leaderShipTerm, FOR);
 
-            transitionToFollower(leaderShipTerm, candidateId, consensusPosition.get(), candidateSessionId);
+            transitionToFollower(leaderShipTerm, candidateId, consensusPosition(), candidateId, candidateSessionId);
 
             return Action.BREAK;
         }
@@ -129,6 +125,11 @@ public class Candidate implements Role, RaftHandler
         }
 
         return Action.CONTINUE;
+    }
+
+    private long consensusPosition()
+    {
+        return termState.leaderPosition().consensusPosition();
     }
 
     private long replyVote(final short candidateId, final int leaderShipTerm, final Vote vote)
@@ -155,8 +156,7 @@ public class Candidate implements Role, RaftHandler
             if (acknowledgementStrategy.isElected(votesFor.size(), clusterSize))
             {
                 termState
-                    .leadershipTerm(leaderShipTerm)
-                    .leaderSessionId(sessionId);
+                    .leadershipTerm(leaderShipTerm);
 
                 clusterNode.transitionToLeader(timeInMs);
 
@@ -185,11 +185,11 @@ public class Candidate implements Role, RaftHandler
     {
         if (nodeId != this.nodeId)
         {
-            final boolean hasHigherPosition = position >= this.consensusPosition.get();
+            final boolean hasHigherPosition = position >= consensusPosition();
             DebugLogger.log("%d: New Leader %s%n", this.nodeId, hasHigherPosition);
             if (hasHigherPosition)
             {
-                transitionToFollower(leaderShipTerm, NO_ONE, position, dataSessionId);
+                transitionToFollower(leaderShipTerm, NO_ONE, position, nodeId, dataSessionId);
 
                 return Action.BREAK;
             }
@@ -198,15 +198,17 @@ public class Candidate implements Role, RaftHandler
         return Action.CONTINUE;
     }
 
-    private void transitionToFollower(final int leaderShipTerm,
-                                      final short votedFor,
-                                      final long position,
-                                      final int leaderSessionId)
+    private void transitionToFollower(
+        final int leaderShipTerm,
+        final short votedFor,
+        final long position,
+        final short leaderNodeId,
+        final int leaderSessionId)
     {
         votesFor.clear();
         termState
             .allPositions(position)
-            .leaderSessionId(leaderSessionId)
+            .leaderPosition(new LeaderPosition(leaderNodeId, leaderSessionId))
             .leadershipTerm(leaderShipTerm);
 
         clusterNode.transitionToFollower(this, votedFor, timeInMs);
@@ -240,7 +242,7 @@ public class Candidate implements Role, RaftHandler
         voteTimeout.onKeepAlive(timeInMs);
         leaderShipTerm++;
         countVote(nodeId); // Vote for yourself
-        controlPublication.saveRequestVote(nodeId, sessionId, consensusPosition.get(), leaderShipTerm);
+        controlPublication.saveRequestVote(nodeId, sessionId, consensusPosition(), leaderShipTerm);
     }
 
     public Candidate controlPublication(final RaftPublication controlPublication)

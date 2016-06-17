@@ -27,8 +27,6 @@ import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 
@@ -60,7 +58,7 @@ public class Leader implements Role, RaftHandler
     /** Position in the log that has been acknowledged by a majority of the cluster
      * commitPosition >= lastAppliedPosition
      */
-    private final AtomicLong consensusPosition;
+    private final LeaderPosition leaderPosition;
     private final RaftArchiver raftArchiver;
     private final DirectBuffer nodeState;
     private final NodeStateHandler nodeStateHandler;
@@ -94,7 +92,7 @@ public class Leader implements Role, RaftHandler
         this.ourSessionId = ourSessionId;
         this.heartbeatIntervalInMs = heartbeatIntervalInMs;
         this.archiveReader = archiveReader;
-        this.consensusPosition = termState.consensusPosition();
+        this.leaderPosition = new LeaderPosition(nodeId, ourSessionId);
         this.raftArchiver = raftArchiver;
         this.nodeState = nodeState;
         this.nodeStateHandler = nodeStateHandler;
@@ -124,10 +122,10 @@ public class Leader implements Role, RaftHandler
     public int checkConditions(final long timeInMs)
     {
         final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
-        final int delta = (int) (newPosition - consensusPosition.get());
+        final int delta = (int) (newPosition - leaderPosition.consensusPosition());
         if (delta > 0)
         {
-            consensusPosition.set(newPosition);
+            leaderPosition.consensusPosition(newPosition);
 
             heartbeat();
 
@@ -167,7 +165,8 @@ public class Leader implements Role, RaftHandler
 
     private void heartbeat()
     {
-        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, consensusPosition.get(), ourSessionId);
+        final long consensusPosition = leaderPosition.consensusPosition();
+        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, consensusPosition, ourSessionId);
         updateHeartbeatInterval(timeInMs);
     }
 
@@ -226,7 +225,7 @@ public class Leader implements Role, RaftHandler
         // Ignore requests from yourself
         if (candidateId != this.nodeId)
         {
-            if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= consensusPosition.get())
+            if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= leaderPosition.consensusPosition())
             {
                 controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.FOR, nodeState);
 
@@ -304,6 +303,7 @@ public class Leader implements Role, RaftHandler
         this.timeInMs = timeInMs;
 
         leaderShipTerm = termState.leadershipTerm();
+        termState.leaderPosition(leaderPosition);
         lastAppliedPosition = Math.max(DataHeaderFlyweight.HEADER_LENGTH, termState.lastAppliedPosition());
         heartbeat();
 

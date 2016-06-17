@@ -83,11 +83,12 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         final ClusterAgent leaderNode = mock(ClusterAgent.class);
         when(leaderNode.isLeader()).thenReturn(true);
         leaderSessionId = dataPublication.sessionId();
-        publication = new ClusterPublication(dataPublication, new AtomicInteger(leaderSessionId), leaderSessionId, 1);
 
         termState1.leaderSessionId(leaderSessionId);
         termState2.leaderSessionId(leaderSessionId);
         termState3.leaderSessionId(leaderSessionId);
+
+        publication = new ClusterPublication(dataPublication, termState1, leaderSessionId, 1);
 
         final ArchiveMetaData metaData = archiveMetaData(LEADER_ID);
         final Subscription subscription = dataSubscription();
@@ -123,14 +124,12 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderSubscription = new ClusterSubscription(
             dataSubscription(),
             CLUSTER_STREAM_ID,
-            termState1.consensusPosition(),
-            new AtomicInteger(leaderSessionId));
+            termState1);
 
         follower1Subscription = new ClusterSubscription(
             dataSubscription(),
             CLUSTER_STREAM_ID,
-            termState2.consensusPosition(),
-            new AtomicInteger(leaderSessionId));
+            termState2);
     }
 
     @Test

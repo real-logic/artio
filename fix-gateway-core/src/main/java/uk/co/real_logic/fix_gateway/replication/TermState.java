@@ -37,6 +37,19 @@ public class TermState
     /** The position within the current leadership term that we can commit up to. */
     private final AtomicLong consensusPosition = new AtomicLong(0);
 
+    private volatile LeaderPosition leaderPosition;
+
+    public LeaderPosition leaderPosition()
+    {
+        return leaderPosition;
+    }
+
+    public TermState leaderPosition(final LeaderPosition leaderPosition)
+    {
+        this.leaderPosition = leaderPosition;
+        return this;
+    }
+
     public TermState leaderSessionId(int leadershipSessionId)
     {
         this.leaderSessionId.set(leadershipSessionId);
@@ -45,7 +58,7 @@ public class TermState
 
     public TermState noLeader()
     {
-        leaderSessionId.set(NO_LEADER);
+        leaderPosition = null;
         return this;
     }
 

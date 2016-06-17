@@ -17,9 +17,6 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Publication;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * Thread-safe constructor of clusterable streams
  */
@@ -27,42 +24,39 @@ public class ClusterStreams extends ClusterableStreams
 {
     private final RaftTransport transport;
     private final int ourSessionId;
-    private final AtomicInteger leaderSessionId;
-    private final AtomicLong consensusPosition;
     private final Publication dataPublication;
+    private final TermState termState;
 
     public ClusterStreams(
         final RaftTransport transport,
         final int ourSessionId,
-        final AtomicInteger leaderSessionId,
-        final AtomicLong consensusPosition,
-        final Publication dataPublication)
+        final Publication dataPublication,
+        final TermState termState)
     {
         this.transport = transport;
         this.ourSessionId = ourSessionId;
-        this.leaderSessionId = leaderSessionId;
-        this.consensusPosition = consensusPosition;
         this.dataPublication = dataPublication;
+        this.termState = termState;
     }
 
     public boolean isLeader()
     {
-        return isLeader(ourSessionId, leaderSessionId);
+        return isLeader(ourSessionId, termState);
     }
 
-    static boolean isLeader(final int ourSessionId, final AtomicInteger leaderSessionId)
+    static boolean isLeader(final int ourSessionId, final TermState termState)
     {
-        return leaderSessionId.get() == ourSessionId;
+        return termState.leaderPosition().sessionId() == ourSessionId;
     }
 
     public ClusterPublication publication(final int clusterStreamId)
     {
-        return new ClusterPublication(dataPublication, leaderSessionId, ourSessionId, clusterStreamId);
+        return new ClusterPublication(dataPublication, termState, ourSessionId, clusterStreamId);
     }
 
     public ClusterableSubscription subscription(final int clusterStreamId)
     {
         return new ClusterSubscription(
-            transport.dataSubscription(), clusterStreamId, consensusPosition, leaderSessionId);
+            transport.dataSubscription(), clusterStreamId, termState);
     }
 }

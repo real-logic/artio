@@ -111,7 +111,7 @@ public class ClusterAgent implements Agent
         startAsFollower(timeInMs);
 
         clusterStreams = new ClusterStreams(
-            transport, ourSessionId, termState.leaderSessionId(), termState.consensusPosition(), dataPublication);
+            transport, ourSessionId, dataPublication, termState);
 
         outboundPipe = new OutboundPipe(
             configuration.copyToPublication(), clusterStreams());
