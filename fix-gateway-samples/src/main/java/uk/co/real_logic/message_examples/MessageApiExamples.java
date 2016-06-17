@@ -30,6 +30,7 @@ import uk.co.real_logic.fix_gateway.validation.SenderCompIdValidationStrategy;
 import uk.co.real_logic.fix_gateway.validation.TargetCompIdValidationStrategy;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static uk.co.real_logic.fix_gateway.builder.OrdType.Market;
 import static uk.co.real_logic.fix_gateway.builder.Side.Sell;
 
@@ -60,7 +61,7 @@ public final class MessageApiExamples
         {
             final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
             libraryConfiguration
-                .libraryAeronChannel(AERON_CHANNEL)
+                .libraryAeronChannels(singletonList(AERON_CHANNEL))
                 .messageValidationStrategy(validationStrategy)
                 .authenticationStrategy(authenticationStrategy);
 

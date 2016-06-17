@@ -24,6 +24,7 @@ import org.junit.Test;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.Reply;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration.Builder;
@@ -62,7 +63,6 @@ public class ClusteredGatewaySystemTest
     private FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
     private FakeHandler initiatingHandler = new FakeHandler(initiatingOtfAcceptor);
 
-    private int leader;
     private Session initiatingSession;
     private Session acceptingSession;
 
@@ -96,33 +96,14 @@ public class ClusteredGatewaySystemTest
             })
             .collect(toList());
 
-        try
-        {
-            Thread.sleep(10_000);
-        }
-        catch (InterruptedException e)
-        {
-            e.printStackTrace();
-        }
+        final LibraryConfiguration configuration = acceptingLibraryConfig(
+            acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", null);
+        configuration.libraryAeronChannels(ids().mapToObj(this::libraryChannel).collect(toList()));
+        acceptingLibrary = FixLibrary.connect(configuration);
 
-        for (leader = 0; leader < CLUSTER_SIZE; leader = (leader + 1) % CLUSTER_SIZE)
-        {
-            try
-            {
-                acceptingLibrary = FixLibrary.connect(
-                    acceptingLibraryConfig(
-                        acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", libraryChannel(leader)));
-
-                break;
-            }
-            catch (final IllegalStateException e)
-            {
-                // Connection fails, try next member of the cluster
-            }
-        }
+        System.out.println(acceptingLibrary.currentAeronChannel());
 
         assertNotNull("Unable to connect to any cluster members", acceptingLibrary);
-
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
     }
@@ -161,6 +142,7 @@ public class ClusteredGatewaySystemTest
         awaitReply(initiatingLibrary, reply);
 
         initiatingSession = reply.resultIfPresent();
+        System.out.println(initiatingSession);
 
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);

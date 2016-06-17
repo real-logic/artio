@@ -19,6 +19,9 @@ import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 
@@ -49,6 +52,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private SessionExistsHandler sessionExistsHandler = DEFAULT_SESSION_EXISTS_HANDLER;
     private GatewayErrorHandler gatewayErrorHandler = DEFAULT_GATEWAY_ERROR_HANDLER;
     private SentPositionHandler sentPositionHandler = DEFAULT_SENT_POSITION_HANDLER;
+    private List<String> libraryAeronChannels = new ArrayList<>();
 
     /**
      * When a new session connects to the gateway you register a callback handler to find
@@ -186,9 +190,9 @@ public final class LibraryConfiguration extends CommonConfiguration
     /**
      * {@inheritDoc}
      */
-    public LibraryConfiguration libraryAeronChannel(final String aeronChannel)
+    public LibraryConfiguration libraryAeronChannels(final List<String> libraryAeronChannels)
     {
-        super.libraryAeronChannel(aeronChannel);
+        this.libraryAeronChannels = libraryAeronChannels;
         return this;
     }
 
@@ -204,10 +208,20 @@ public final class LibraryConfiguration extends CommonConfiguration
     void conclude()
     {
         super.conclude("library-" + libraryId());
+
+        if (libraryAeronChannels.isEmpty())
+        {
+            throw new IllegalArgumentException("You must specify at least one channel to connect to");
+        }
     }
 
     SessionExistsHandler sessionExistsHandler()
     {
         return sessionExistsHandler;
+    }
+
+    public List<String> libraryAeronChannels()
+    {
+        return libraryAeronChannels;
     }
 }

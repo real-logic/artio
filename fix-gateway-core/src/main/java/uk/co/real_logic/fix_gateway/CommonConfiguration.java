@@ -122,7 +122,6 @@ public class CommonConfiguration
     private SessionCustomisationStrategy sessionCustomisationStrategy = new NoSessionCustomisationStrategy();
     private int monitoringBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROPERTY, DEFAULT_MONITORING_BUFFER_LENGTH);
     private String monitoringFile = null;
-    private String libraryAeronChannel = null;
     private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
     private Aeron.Context aeronContext = new Aeron.Context();
     private int errorSlotSize = DEFAULT_ERROR_SLOT_SIZE;
@@ -310,18 +309,6 @@ public class CommonConfiguration
     }
 
     /**
-     * Sets the channel used by aeron connections.
-     *
-     * @param aeronChannel the channel used by aeron connections.
-     * @return this
-     */
-    public CommonConfiguration libraryAeronChannel(final String aeronChannel)
-    {
-        this.libraryAeronChannel = aeronChannel;
-        return this;
-    }
-
-    /**
      * Sets the reply timeout in milliseconds.
      * <p>
      * This is the timeout for control protocol messages between the FIX Gateway and FIX Library instances.
@@ -446,11 +433,6 @@ public class CommonConfiguration
         return monitoringFile;
     }
 
-    public String libraryAeronChannel()
-    {
-        return libraryAeronChannel;
-    }
-
     public long replyTimeoutInMs()
     {
         return replyTimeoutInMs;
@@ -514,11 +496,6 @@ public class CommonConfiguration
 
     protected void conclude(final String fixSuffix)
     {
-        if (libraryAeronChannel() == null)
-        {
-            throw new IllegalArgumentException("Missing required configuration: library aeron channel");
-        }
-
         if (monitoringFile() == null)
         {
             monitoringFile(getProperty(MONITORING_FILE_PROPERTY, String.format(DEFAULT_MONITORING_FILE, fixSuffix)));

@@ -40,6 +40,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
+import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
@@ -221,9 +222,9 @@ public class EngineAndLibraryIntegrationTest
         config
             .sessionAcquireHandler(sessionHandler)
             .libraryId(libraryId)
+            .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .authenticationStrategy(authenticationStrategy)
             .messageValidationStrategy(validationStrategy)
-            .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(monitoringFile)
             .replyTimeoutInMs(TIMEOUT_IN_MS);
 

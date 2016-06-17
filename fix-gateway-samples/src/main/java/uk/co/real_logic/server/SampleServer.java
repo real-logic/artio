@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.aeron.driver.ThreadingMode.SHARED;
+import static java.util.Collections.singletonList;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 
 public final class SampleServer
@@ -74,7 +75,7 @@ public final class SampleServer
                 // that receives messages for new sessions
                 .sessionAcquireHandler(SampleServer::onConnect)
                 .sessionExistsHandler(new AcquiringSessionExistsHandler())
-                .libraryAeronChannel(aeronChannel)))
+                .libraryAeronChannels(singletonList(aeronChannel))))
             {
                 final AtomicBoolean running = new AtomicBoolean(true);
                 SigInt.register(() -> running.set(false));

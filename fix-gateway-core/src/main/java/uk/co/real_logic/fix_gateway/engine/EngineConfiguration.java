@@ -136,6 +136,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         getInteger(SENDER_MAX_BYTES_IN_BUFFER_PROP, DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
     private int noLogonDisconnectTimeoutInMs =
         getInteger(NO_LOGON_DISCONNECT_TIMEOUT_PROP, DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT);
+    private String libraryAeronChannel = null;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -569,9 +570,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * {@inheritDoc}
      */
-    public EngineConfiguration libraryAeronChannel(final String aeronChannel)
+    public EngineConfiguration libraryAeronChannel(final String libraryAeronChannel)
     {
-        super.libraryAeronChannel(aeronChannel);
+        this.libraryAeronChannel = libraryAeronChannel;
         return this;
     }
 
@@ -605,6 +606,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration conclude()
     {
         super.conclude("engine");
+
+        if (libraryAeronChannel() == null)
+        {
+            throw new IllegalArgumentException("Missing required configuration: library aeron channel");
+        }
 
         if (sentSequenceNumberIndex() == null)
         {
@@ -644,5 +650,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         CloseHelper.close(sentSequenceNumberIndex());
         CloseHelper.close(receivedSequenceNumberIndex());
         CloseHelper.close(sessionIdBuffer());
+    }
+
+    public String libraryAeronChannel()
+    {
+        return libraryAeronChannel;
     }
 }

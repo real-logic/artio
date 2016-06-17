@@ -32,6 +32,7 @@ import uk.co.real_logic.fix_gateway.validation.TargetCompIdValidationStrategy;
 import java.io.File;
 import java.util.Arrays;
 
+import static java.util.Collections.singletonList;
 import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.*;
 
 public final class FixBenchmarkServer
@@ -88,7 +89,7 @@ public final class FixBenchmarkServer
         final LibraryConfiguration configuration = new LibraryConfiguration();
         setupAuthentication(configuration);
         return configuration
-            .libraryAeronChannel(AERON_CHANNEL)
+            .libraryAeronChannels(singletonList(AERON_CHANNEL))
             .sessionAcquireHandler(session -> new BenchmarkSessionHandler())
             .sessionExistsHandler(new AcquiringSessionExistsHandler());
     }

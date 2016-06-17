@@ -39,13 +39,16 @@ import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.locks.LockSupport;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
@@ -68,8 +71,8 @@ public final class FixLibrary extends GatewayProcess
 {
     public static final int NO_MESSAGE_REPLAY = -1;
 
-    private final ClusterableSubscription inboundSubscription;
-    private final GatewayPublication outboundPublication;
+    private static final long RECONNECT_BACKOFF_IN_NS = MILLISECONDS.toNanos(500);
+
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
     private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
@@ -79,7 +82,6 @@ public final class FixLibrary extends GatewayProcess
     private final SessionIdStrategy sessionIdStrategy;
     private final Timer sessionTimer;
     private final Timer receiveTimer;
-    private final LivenessDetector livenessDetector;
     private final SessionExistsHandler sessionExistsHandler;
     private final int libraryId;
     private final IdleStrategy idleStrategy;
@@ -92,17 +94,21 @@ public final class FixLibrary extends GatewayProcess
 
     private GatewayError errorType;
     private String errorMessage;
-    private SoloStreams soloNode;
+
+    // State changed upon connect/reconnect
+    private LivenessDetector livenessDetector;
+    private ClusterableSubscription inboundSubscription;
+    private GatewayPublication outboundPublication;
+    private String currentAeronChannel;
     private Streams inboundLibraryStreams;
     private Streams outboundLibraryStreams;
-    private long notLeaderCorrelationId;
 
     private FixLibrary(final LibraryConfiguration configuration)
     {
         configuration.conclude();
 
         init(configuration);
-        initStreams(configuration);
+        currentAeronChannel = configuration.libraryAeronChannels().get(0);
 
         final LibraryTimers timers = new LibraryTimers();
         sessionTimer = timers.sessionTimer();
@@ -112,26 +118,16 @@ public final class FixLibrary extends GatewayProcess
         this.configuration = configuration;
         this.sessionIdStrategy = configuration.sessionIdStrategy();
         this.libraryId = configuration.libraryId();
+        sessionExistsHandler = configuration.sessionExistsHandler();
         idleStrategy = configuration.libraryIdleStrategy();
         sentPositionHandler = configuration.sentPositionHandler();
-
-        inboundSubscription = inboundLibraryStreams.subscription();
-        outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy);
-        processProtocolHandler.sessionId = outboundPublication.id();
-
         clock = new SystemEpochClock();
-        livenessDetector = LivenessDetector.forLibrary(
-            outboundPublication,
-            configuration.libraryId(),
-            configuration.replyTimeoutInMs());
-        sessionExistsHandler = configuration.sessionExistsHandler();
     }
 
     private void initStreams(final CommonConfiguration configuration)
     {
-        final String libraryChannel = configuration.libraryAeronChannel();
         final NanoClock nanoClock = new SystemNanoClock();
-        soloNode = new SoloStreams(aeron, libraryChannel);
+        final SoloStreams soloNode = new SoloStreams(aeron, currentAeronChannel);
 
         inboundLibraryStreams = new Streams(
             soloNode, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
@@ -143,6 +139,21 @@ public final class FixLibrary extends GatewayProcess
 
     private FixLibrary connect()
     {
+        initStreams(configuration);
+        if (isReconnect())
+        {
+            inboundSubscription.close();
+            outboundPublication.close();
+        }
+        inboundSubscription = inboundLibraryStreams.subscription();
+        outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy);
+        processProtocolHandler.sessionId = outboundPublication.id();
+
+        livenessDetector = LivenessDetector.forLibrary(
+            outboundPublication,
+            configuration.libraryId(),
+            configuration.replyTimeoutInMs());
+
         try
         {
             final long correlationId = ++currentCorrelationId;
@@ -151,6 +162,7 @@ public final class FixLibrary extends GatewayProcess
                 return connectError("BackPressured upon connection");
             }
 
+            final String currentAeronChannel = this.currentAeronChannel;
             final long latestReplyArrivalTime = latestReplyArrivalTime();
             while (!livenessDetector.isConnected() && errorType == null)
             {
@@ -160,9 +172,9 @@ public final class FixLibrary extends GatewayProcess
 
                 idleStrategy.idle(workCount);
 
-                if (notLeaderCorrelationId == correlationId)
+                if (!Objects.equals(currentAeronChannel, this.currentAeronChannel))
                 {
-                    throw new IllegalStateException("node was not the leader");
+                    connect();
                 }
             }
 
@@ -190,6 +202,11 @@ public final class FixLibrary extends GatewayProcess
         }
 
         return this;
+    }
+
+    private boolean isReconnect()
+    {
+        return inboundSubscription != null;
     }
 
     private FixLibrary connectError(final String message)
@@ -823,9 +840,17 @@ public final class FixLibrary extends GatewayProcess
 
         public Action onNotLeader(final int libraryId, final String libraryChannel)
         {
-            if (FixLibrary.this.libraryId == libraryId)
+            if (libraryChannel.isEmpty())
             {
-                // TODO
+                // If the node doesn't know the leader then round-robin the existing behaviours
+                LockSupport.parkNanos(RECONNECT_BACKOFF_IN_NS);
+                final List<String> aeronChannels = configuration.libraryAeronChannels();
+                final int nextIndex = (aeronChannels.indexOf(currentAeronChannel) + 1) % aeronChannels.size();
+                currentAeronChannel = aeronChannels.get(nextIndex);
+            }
+            else
+            {
+                currentAeronChannel = libraryChannel;
             }
             return CONTINUE;
         }
@@ -945,5 +970,10 @@ public final class FixLibrary extends GatewayProcess
             new SystemEpochClock(),
             connectionId,
             libraryId);
+    }
+
+    public String currentAeronChannel()
+    {
+        return currentAeronChannel;
     }
 }

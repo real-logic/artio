@@ -22,6 +22,7 @@ import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.*;
 import uk.co.real_logic.fix_gateway.session.Session;
 
+import static java.util.Collections.singletonList;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.server.SampleServer.*;
 
@@ -52,7 +53,7 @@ public final class SampleClient
 
             try (final FixLibrary library = FixLibrary.connect(new LibraryConfiguration()
                 .sessionAcquireHandler(SampleClient::onConnect)
-                .libraryAeronChannel(aeronChannel)))
+                .libraryAeronChannels(singletonList(aeronChannel))))
             {
                 final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
                 final Reply<Session> reply = library.initiate(sessionConfig);

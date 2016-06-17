@@ -30,6 +30,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.io.File;
 
+import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
@@ -95,7 +96,7 @@ public class LibraryAndGatewayRandomTimeoutTest
             new LibraryConfiguration()
                 .replyTimeoutInMs(5000)
                 .sessionAcquireHandler(initiatingSessionHandler)
-                .libraryAeronChannel("udp://localhost:" + aeronPort)
+                .libraryAeronChannels(singletonList("udp://localhost:" + aeronPort))
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters"));
     }
 

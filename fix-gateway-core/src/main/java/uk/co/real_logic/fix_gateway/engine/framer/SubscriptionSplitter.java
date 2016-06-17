@@ -34,7 +34,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 /**
  * Splits the subscription out into messages that we deal with locally vs cluster
  */
-public class SubscriptionSplitter implements ControlledFragmentHandler
+class SubscriptionSplitter implements ControlledFragmentHandler
 {
     private final BufferClaim bufferClaim = new BufferClaim();
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
@@ -45,7 +45,7 @@ public class SubscriptionSplitter implements ControlledFragmentHandler
     private final GatewayPublication replyPublication;
     private final EngineDescriptorStore engineDescriptorStore;
 
-    public SubscriptionSplitter(
+    SubscriptionSplitter(
         final ClusterableStreams clusterableStreams,
         final EngineProtocolSubscription engineProtocolSubscription,
         final ClusterablePublication clusterPublication,

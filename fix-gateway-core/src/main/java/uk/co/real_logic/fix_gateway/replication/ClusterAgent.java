@@ -233,6 +233,8 @@ public class ClusterAgent implements Agent
     {
         // TODO: do we need this?
         //leaderSessionId.set(this.termState.leaderSessionId());
+        //System.out.println("New leader: " + termState.leaderSessionId());
+
     }
 
     public int doWork()

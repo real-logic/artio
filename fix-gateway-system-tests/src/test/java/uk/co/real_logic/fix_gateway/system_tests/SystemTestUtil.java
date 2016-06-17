@@ -38,6 +38,7 @@ import java.io.File;
 import java.util.Arrays;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
+import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
@@ -247,7 +248,7 @@ public final class SystemTestUtil
             .sessionExistsHandler(sessionHandler)
             .sessionAcquireHandler(sessionHandler)
             .sentPositionHandler(sessionHandler)
-            .libraryAeronChannel(libraryAeronChannel)
+            .libraryAeronChannels(singletonList(libraryAeronChannel))
             .monitoringFile(IoUtil.tmpDirName() + monitorDir + File.separator + "accLibraryCounters");
 
         return libraryConfiguration;
@@ -305,7 +306,7 @@ public final class SystemTestUtil
                 .libraryId(libraryId)
                 .sessionAcquireHandler(sessionHandler)
                 .sentPositionHandler(sessionHandler)
-                .libraryAeronChannel("udp://localhost:" + libraryAeronPort)
+                .libraryAeronChannels(singletonList("udp://localhost:" + libraryAeronPort))
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters-" + libraryId));
     }
 
