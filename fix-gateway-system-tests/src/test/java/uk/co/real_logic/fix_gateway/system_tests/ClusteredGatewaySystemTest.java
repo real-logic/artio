@@ -15,12 +15,14 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
+import io.aeron.CommonContext;
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -30,6 +32,7 @@ import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration.Builder;
 import uk.co.real_logic.fix_gateway.session.Session;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -45,11 +48,12 @@ public class ClusteredGatewaySystemTest
     private static final int CLUSTER_SIZE = 3;
     private static final String CLUSTER_AERON_CHANNEL = clusteredAeronChannel();
 
+    private int libraryAeronPort = unusedPort();
     private List<Integer> tcpPorts;
     private List<Integer> libraryPorts;
-    private int libraryAeronPort = unusedPort();
-
+    private List<String> libraryChannels = new ArrayList<>();
     private MediaDriver mediaDriver;
+    private List<MediaDriver> clusterMediaDrivers;
 
     private List<FixEngine> acceptingEngineCluster;
     private FixLibrary acceptingLibrary;
@@ -65,11 +69,19 @@ public class ClusteredGatewaySystemTest
 
     private Session initiatingSession;
     private Session acceptingSession;
+    private int leader;
 
     @Before
     public void setUp()
     {
         mediaDriver = launchMediaDriver();
+        clusterMediaDrivers = ids().mapToObj(id ->
+        {
+            final MediaDriver.Context context = mediaDriverContext(TERM_BUFFER_LENGTH);
+            context.aeronDirectoryName(aeronDirName(id));
+            return MediaDriver.launch(context);
+        }).collect(toList());
+
         tcpPorts = allocatePorts();
         libraryPorts = allocatePorts();
 
@@ -83,14 +95,18 @@ public class ClusteredGatewaySystemTest
 
                 setupAuthentication(ACCEPTOR_ID, INITIATOR_ID, configuration);
 
+                final String libraryChannel = libraryChannel(ourId);
+                libraryChannels.add(libraryChannel);
                 configuration
                     .bindTo("localhost", tcpPorts.get(ourId))
-                    .libraryAeronChannel(libraryChannel(ourId))
+                    .libraryAeronChannel(libraryChannel)
                     .monitoringFile(acceptorMonitoringFile("engineCounters" + ourId))
                     .logFileDir(acceptorLogs)
                     .clusterAeronChannel(CLUSTER_AERON_CHANNEL)
                     .nodeId((short) ourId)
                     .addOtherNodes(ids().filter(id -> id != ourId).toArray());
+
+                configuration.aeronContext().aeronDirectoryName(aeronDirName(ourId));
 
                 return FixEngine.launch(configuration);
             })
@@ -101,11 +117,16 @@ public class ClusteredGatewaySystemTest
         configuration.libraryAeronChannels(ids().mapToObj(this::libraryChannel).collect(toList()));
         acceptingLibrary = FixLibrary.connect(configuration);
 
-        System.out.println(acceptingLibrary.currentAeronChannel());
+        leader = libraryChannels.indexOf(acceptingLibrary.currentAeronChannel());
 
         assertNotNull("Unable to connect to any cluster members", acceptingLibrary);
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
+    }
+
+    private String aeronDirName(final int id)
+    {
+        return CommonContext.AERON_DIR_PROP_DEFAULT + id;
     }
 
     private IntStream ids()
@@ -115,7 +136,7 @@ public class ClusteredGatewaySystemTest
 
     private String libraryChannel(final int id)
     {
-        return "udp://localhost:" + libraryPorts.get(id);
+        return "aeron:udp?group=224.0.1.1:" + libraryPorts.get(id);
     }
 
     private List<Integer> allocatePorts()
@@ -129,7 +150,7 @@ public class ClusteredGatewaySystemTest
     public void shouldExchangeMessagesInCluster()
     {
         final Builder builder = SessionConfiguration.builder();
-        tcpPorts.forEach(port -> builder.address("localhost", port));
+        builder.address("localhost", tcpPorts.get(leader));
 
         final SessionConfiguration config = builder
             .credentials("bob", "Uv1aegoh")
@@ -142,7 +163,6 @@ public class ClusteredGatewaySystemTest
         awaitReply(initiatingLibrary, reply);
 
         initiatingSession = reply.resultIfPresent();
-        System.out.println(initiatingSession);
 
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
@@ -178,6 +198,8 @@ public class ClusteredGatewaySystemTest
             acceptingEngineCluster.forEach(CloseHelper::close);
         }
 
+        clusterMediaDrivers.forEach(CloseHelper::close);
+        clusterMediaDrivers.forEach(TestFixtures::cleanupDirectory);
         close(mediaDriver);
         cleanupDirectory(mediaDriver);
     }

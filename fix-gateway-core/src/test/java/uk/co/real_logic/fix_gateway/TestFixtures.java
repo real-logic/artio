@@ -26,6 +26,7 @@ public final class TestFixtures
 {
     private static final int LOW_PORT = 9999;
     private static final int HIGH_PORT = 99999;
+    public static final int TERM_BUFFER_LENGTH = 4 * 1024 * 1024;
 
     private static int port = LOW_PORT;
 
@@ -41,18 +42,23 @@ public final class TestFixtures
 
     public static MediaDriver launchMediaDriver()
     {
-        return launchMediaDriver(4 * 1024 * 1024);
+        return launchMediaDriver(TERM_BUFFER_LENGTH);
     }
 
     public static MediaDriver launchMediaDriver(int termBufferLength)
     {
-        final MediaDriver.Context context = new MediaDriver.Context()
+        final MediaDriver.Context context = mediaDriverContext(termBufferLength);
+
+        return MediaDriver.launch(context);
+    }
+
+    public static MediaDriver.Context mediaDriverContext(final int termBufferLength)
+    {
+        return new MediaDriver.Context()
             .threadingMode(SHARED)
             .dirsDeleteOnStart(true)
             .publicationTermBufferLength(termBufferLength)
             .ipcTermBufferLength(termBufferLength);
-
-        return MediaDriver.launch(context);
     }
 
     public static void cleanupDirectory(final MediaDriver mediaDriver)

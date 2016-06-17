@@ -71,7 +71,7 @@ public final class FixLibrary extends GatewayProcess
 {
     public static final int NO_MESSAGE_REPLAY = -1;
 
-    private static final long RECONNECT_BACKOFF_IN_NS = MILLISECONDS.toNanos(500);
+    private static final long RECONNECT_BACKOFF_IN_NS = MILLISECONDS.toNanos(150);
 
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
