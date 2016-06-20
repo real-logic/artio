@@ -190,7 +190,7 @@ public final class SystemTestUtil
         final String countersSuffix)
     {
         return new EngineConfiguration()
-            .libraryAeronChannel("udp://localhost:" + libraryAeronPort)
+            .libraryAeronChannel("aeron:udp?endpoint=localhost:" + libraryAeronPort)
             .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + countersSuffix)
             .logFileDir(CLIENT_LOGS);
     }
@@ -306,7 +306,7 @@ public final class SystemTestUtil
                 .libraryId(libraryId)
                 .sessionAcquireHandler(sessionHandler)
                 .sentPositionHandler(sessionHandler)
-                .libraryAeronChannels(singletonList("udp://localhost:" + libraryAeronPort))
+                .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort))
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters-" + libraryId));
     }
 

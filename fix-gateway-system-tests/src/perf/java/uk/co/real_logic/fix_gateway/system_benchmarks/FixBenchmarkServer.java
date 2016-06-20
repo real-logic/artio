@@ -59,7 +59,7 @@ public final class FixBenchmarkServer
         final MediaDriver.Context context = new MediaDriver.Context()
             .dirsDeleteOnStart(true)
             .publicationTermBufferLength(128 * 1024 * 1024)
-            .maxImageTermBufferLength(128 * 1024 * 1024);
+            .maxTermBufferLength(128 * 1024 * 1024);
 
         return MediaDriver.launch(context);
     }

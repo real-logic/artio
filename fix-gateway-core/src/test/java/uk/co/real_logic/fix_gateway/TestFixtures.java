@@ -71,6 +71,6 @@ public final class TestFixtures
 
     public static String clusteredAeronChannel()
     {
-        return "aeron:udp?group=224.0.1.1:" + unusedPort();
+        return "aeron:udp?endpoint=224.0.1.1:" + unusedPort();
     }
 }

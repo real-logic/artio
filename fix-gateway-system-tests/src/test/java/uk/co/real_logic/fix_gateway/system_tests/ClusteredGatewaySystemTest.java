@@ -136,7 +136,7 @@ public class ClusteredGatewaySystemTest
 
     private String libraryChannel(final int id)
     {
-        return "aeron:udp?group=224.0.1.1:" + libraryPorts.get(id);
+        return "aeron:udp?endpoint=224.0.1.1:" + libraryPorts.get(id);
     }
 
     private List<Integer> allocatePorts()

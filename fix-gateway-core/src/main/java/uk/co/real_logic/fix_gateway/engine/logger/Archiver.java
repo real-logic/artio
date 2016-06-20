@@ -17,13 +17,14 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.Image;
 import io.aeron.Subscription;
-import io.aeron.logbuffer.FileBlockHandler;
+import io.aeron.logbuffer.RawBlockHandler;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.collections.Int2ObjectCache;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
@@ -37,7 +38,7 @@ import java.util.zip.CRC32;
 import static io.aeron.driver.Configuration.termBufferLength;
 import static io.aeron.logbuffer.LogBufferDescriptor.computePosition;
 
-public class Archiver implements Agent, FileBlockHandler
+public class Archiver implements Agent, RawBlockHandler
 {
     private static final int POLL_LENGTH = termBufferLength();
 
@@ -78,7 +79,7 @@ public class Archiver implements Agent, FileBlockHandler
             return 0;
         }
 
-        return (int) subscription.filePoll(this, POLL_LENGTH);
+        return (int) subscription.rawPoll(this, POLL_LENGTH);
     }
 
     private SessionArchiver newSessionArchiver(final int sessionId)
@@ -102,12 +103,15 @@ public class Archiver implements Agent, FileBlockHandler
 
     public void onBlock(
         final FileChannel fileChannel,
-        final long offset,
+        final long fileOffset,
+        final UnsafeBuffer termBuffer,
+        final int termOffset,
         final int length,
         final int aeronSessionId,
         final int termId)
     {
-        session(aeronSessionId).onBlock(fileChannel, offset, length, aeronSessionId, termId);
+        session(aeronSessionId).onBlock(
+            fileChannel, fileOffset, termBuffer, termOffset, length, aeronSessionId, termId);
     }
 
     public long positionOf(final int aeronSessionId)
@@ -143,7 +147,7 @@ public class Archiver implements Agent, FileBlockHandler
         metaData.close();
     }
 
-    public class SessionArchiver implements AutoCloseable, FileBlockHandler
+    public class SessionArchiver implements AutoCloseable, RawBlockHandler
     {
         public static final int UNKNOWN = -1;
         private final int sessionId;
@@ -165,11 +169,17 @@ public class Archiver implements Agent, FileBlockHandler
 
         public int poll()
         {
-            return image.filePoll(this, POLL_LENGTH);
+            return image.rawPoll(this, POLL_LENGTH);
         }
 
         public void onBlock(
-            final FileChannel fileChannel, final long offset, final int length, final int sessionId, final int termId)
+            final FileChannel fileChannel,
+            final long fileOffset,
+            final UnsafeBuffer termBuffer,
+            final int termOffset,
+            final int length,
+            final int sessionId,
+            final int termId)
         {
             try
             {
@@ -182,7 +192,7 @@ public class Archiver implements Agent, FileBlockHandler
                     currentTermId = termId;
                 }
 
-                final long transferred = fileChannel.transferTo(offset, length, currentLogChannel);
+                final long transferred = fileChannel.transferTo(fileOffset, length, currentLogChannel);
                 if (transferred != length)
                 {
                     final File location = logFile(termId);

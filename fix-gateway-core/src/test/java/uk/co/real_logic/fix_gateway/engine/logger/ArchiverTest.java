@@ -75,7 +75,7 @@ public class ArchiverTest
     public static final int OFFSET_WITHIN_MESSAGE = 42;
     public static final int INITIAL_VALUE = 43;
     public static final int PATCH_VALUE = 44;
-    public static final String CHANNEL = "udp://localhost:9999";
+    public static final String CHANNEL = "aeron:udp?endpoint=localhost:9999";
 
     @Parameters
     public static Collection<Object[]> data()
