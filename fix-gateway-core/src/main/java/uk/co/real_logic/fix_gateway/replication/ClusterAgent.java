@@ -41,6 +41,7 @@ public class ClusterAgent implements Agent
     private final RaftTransport transport;
     private final OutboundPipe outboundPipe;
     private final ClusterStreams clusterStreams;
+    private final NodeStateHandler nodeStateHandler;
 
     private Role currentRole;
 
@@ -50,6 +51,7 @@ public class ClusterAgent implements Agent
 
         nodeId = configuration.nodeId();
         transport = configuration.raftTransport();
+        nodeStateHandler = configuration.nodeStateHandler();
 
         final Publication dataPublication = transport.leaderPublication();
         final ArchiveReader archiveReader = configuration.archiveReader();
@@ -62,7 +64,6 @@ public class ClusterAgent implements Agent
         final Archiver archiver = configuration.archiver();
         final RaftArchiver raftArchiver = new RaftArchiver(termState.leaderSessionId(), archiver);
         final DirectBuffer nodeState = configuration.nodeState();
-        final NodeStateHandler nodeStateHandler = configuration.nodeStateHandler();
 
         requireNonNull(otherNodes, "otherNodes");
         requireNonNull(acknowledgementStrategy, "acknowledgementStrategy");
@@ -231,10 +232,7 @@ public class ClusterAgent implements Agent
 
     void onNewLeader()
     {
-        // TODO: do we need this?
-        //leaderSessionId.set(this.termState.leaderSessionId());
-        //System.out.println("New leader: " + termState.leaderSessionId());
-
+        nodeStateHandler.onNewLeader(termState.leaderSessionId().get());
     }
 
     public int doWork()

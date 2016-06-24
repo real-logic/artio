@@ -34,7 +34,8 @@ public interface RaftHandler
         final int leaderShipTerm,
         final Vote vote,
         final DirectBuffer nodeStateBuffer,
-        final int nodeStateLength);
+        final int nodeStateLength,
+        final int aeronSessionId);
 
     Action onConsensusHeartbeat(
         final short nodeId, final int leaderShipTerm, final long position, final int leaderSessionId);

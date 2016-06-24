@@ -142,7 +142,8 @@ public class Candidate implements Role, RaftHandler
         final int leaderShipTerm,
         final Vote vote,
         final DirectBuffer nodeStateBuffer,
-        final int nodeStateLength)
+        final int nodeStateLength,
+        final int aeronSessionId)
     {
         DebugLogger.log("%d: Received vote from %d about %d in %d%n", nodeId, senderNodeId, candidateId, leaderShipTerm);
 
@@ -150,13 +151,13 @@ public class Candidate implements Role, RaftHandler
         {
             voteTimeout.onKeepAlive(timeInMs);
 
-            nodeStateHandler.onNewNodeState(senderNodeId, nodeStateBuffer, nodeStateLength);
+            nodeStateHandler.onNewNodeState(senderNodeId, aeronSessionId, nodeStateBuffer, nodeStateLength);
 
             if (acknowledgementStrategy.isElected(votesFor.size(), clusterSize))
             {
                 termState
                     .leadershipTerm(leaderShipTerm)
-                    .leaderSessionId(sessionId);
+                    .leaderSessionId(this.sessionId);
 
                 clusterNode.transitionToLeader(timeInMs);
 

@@ -197,9 +197,11 @@ public class Follower implements Role, RaftHandler
         final short candidateId,
         final int leaderShipTerm,
         final Vote vote,
-        final DirectBuffer nodeStateBuffer, final int nodeStateLength)
+        final DirectBuffer nodeStateBuffer,
+        final int nodeStateLength,
+        final int aeronSessionId)
     {
-        // not interested in this message
+        nodeStateHandler.onNewNodeState(senderNodeId, aeronSessionId, nodeStateBuffer, nodeStateLength);
         return Action.CONTINUE;
     }
 
@@ -266,6 +268,7 @@ public class Follower implements Role, RaftHandler
         readTermState();
         return this;
     }
+
 
     private void readTermState()
     {

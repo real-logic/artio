@@ -30,6 +30,7 @@ import static io.aeron.Publication.BACK_PRESSURED;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.DebugLogger.logSbeMessage;
+import static uk.co.real_logic.fix_gateway.messages.NotLeaderEncoder.libraryChannelHeaderLength;
 
 /**
  * A proxy for publishing messages fix related messages
@@ -50,6 +51,8 @@ public class GatewayPublication extends ClaimablePublication
     public static final int REQUEST_SESSION_REPLY_LENGTH = HEADER_LENGTH + RequestSessionReplyEncoder.BLOCK_LENGTH;
     public static final int CONNECT_FIXED_LENGTH = HEADER_LENGTH + ConnectEncoder.BLOCK_LENGTH +
         ConnectEncoder.addressHeaderLength();
+    public static final int NOT_LEADER_BLOCK_LENGTH =
+        NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH + libraryChannelHeaderLength();
 
     private final LogonEncoder logon = new LogonEncoder();
     private final ManageConnectionEncoder manageConnection = new ManageConnectionEncoder();
@@ -756,8 +759,8 @@ public class GatewayPublication extends ClaimablePublication
     public long saveNotLeader(
         final int libraryId, final DirectBuffer channel)
     {
-        final int channelLength = channel == null ? 0 : channel.capacity();
-        final long position = claim(NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH + channelLength);
+        final int channelLength = (channel == null ? 0 : channel.capacity());
+        final long position = claim(NOT_LEADER_BLOCK_LENGTH + channelLength);
         if (position == BACK_PRESSURED)
         {
             return BACK_PRESSURED;

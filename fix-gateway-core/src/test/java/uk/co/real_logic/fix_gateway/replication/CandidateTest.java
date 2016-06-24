@@ -37,6 +37,7 @@ public class CandidateTest
     private static final int CLUSTER_SIZE = 5;
     private static final DirectBuffer NODE_STATE_BUFFER = new UnsafeBuffer(new byte[1]);
     private static final int NODE_STATE_LENGTH = 1;
+    private static final int SESSION_ID = 0;
 
     private static final short ID = 3;
     private static final short ID_4 = 4;
@@ -66,8 +67,10 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.onReplyVote(ID_4, ID, OLD_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH);
-        candidate.onReplyVote(ID_5, ID, OLD_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH);
+        candidate.onReplyVote(
+            ID_4, ID, OLD_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
+        candidate.onReplyVote(
+            ID_5, ID, OLD_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
 
         neverTransitionsToLeader(clusterNode);
     }
@@ -77,8 +80,10 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, AGAINST, NODE_STATE_BUFFER, NODE_STATE_LENGTH);
-        candidate.onReplyVote(ID_5, ID, NEW_LEADERSHIP_TERM, AGAINST, NODE_STATE_BUFFER, NODE_STATE_LENGTH);
+        candidate.onReplyVote(
+            ID_4, ID, NEW_LEADERSHIP_TERM, AGAINST, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
+        candidate.onReplyVote(
+            ID_5, ID, NEW_LEADERSHIP_TERM, AGAINST, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
 
         neverTransitionsToLeader(clusterNode);
     }
@@ -90,8 +95,10 @@ public class CandidateTest
 
         startElection();
 
-        candidate.onReplyVote(ID_4, otherCandidate, NEW_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH);
-        candidate.onReplyVote(ID_5, otherCandidate, NEW_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH);
+        candidate.onReplyVote(
+            ID_4, otherCandidate, NEW_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
+        candidate.onReplyVote(
+            ID_5, otherCandidate, NEW_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
 
         neverTransitionsToLeader(clusterNode);
     }
@@ -101,8 +108,8 @@ public class CandidateTest
     {
         startElection();
 
-        candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH);
-        candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH);
+        candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
+        candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
 
         neverTransitionsToLeader(clusterNode);
     }

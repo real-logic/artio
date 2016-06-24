@@ -86,7 +86,8 @@ public class RaftSubscription implements ControlledFragmentHandler
                     replyVote.leaderShipTerm(),
                     replyVote.vote(),
                     nodeStateBuffer,
-                    nodeStateLength
+                    nodeStateLength,
+                    header.sessionId()
                 );
             }
 

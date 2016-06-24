@@ -454,9 +454,9 @@ public class ScenariosTest
             (st) ->
             {
                 st.raftHandler.onReplyVote(
-                    FOLLOWER_1_ID, ID, LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH);
+                    FOLLOWER_1_ID, ID, LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
                 st.raftHandler.onReplyVote(
-                    FOLLOWER_2_ID, ID, LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH);
+                    FOLLOWER_2_ID, ID, LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
             }, "onMajority");
 
     private static Stimulus lowerPositionRequestVote =

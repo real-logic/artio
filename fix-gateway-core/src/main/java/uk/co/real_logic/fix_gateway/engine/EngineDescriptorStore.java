@@ -26,15 +26,22 @@ public class EngineDescriptorStore implements NodeStateHandler
 {
     // Thread-safe state
     private volatile UnsafeBuffer leaderLibraryChannel = null;
+    private int leaderSessionId;
 
     // Single-threaded state only used on archiver thread.
     private final Int2ObjectHashMap<UnsafeBuffer> nodeIdToLibraryChannel = new Int2ObjectHashMap<>();
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final EngineDescriptorDecoder engineDescriptor = new EngineDescriptorDecoder();
 
-    public void onNewNodeState(final short nodeId, final DirectBuffer buffer, int offset)
+    public void onNewNodeState(
+        final short nodeId,
+        final int aeronSessionId,
+        final DirectBuffer buffer,
+        int nodeStateLength)
     {
+        int offset = 0;
         messageHeader.wrap(buffer, offset);
+
         if (messageHeader.templateId() != EngineDescriptorDecoder.TEMPLATE_ID)
         {
             // TODO: log error
@@ -49,11 +56,23 @@ public class EngineDescriptorStore implements NodeStateHandler
         final int libraryChannelLength = engineDescriptor.libraryChannelLength();
         final UnsafeBuffer libraryChannel = new UnsafeBuffer(new byte[libraryChannelLength]);
         engineDescriptor.getLibraryChannel(libraryChannel, 0, libraryChannelLength);
-        nodeIdToLibraryChannel.put(Short.valueOf(nodeId), libraryChannel);
+        nodeIdToLibraryChannel.put(aeronSessionId, libraryChannel);
+        updateLeaderLibraryChannel();
+    }
+
+    public void onNewLeader(final int leaderSessionId)
+    {
+        this.leaderSessionId = leaderSessionId;
+        updateLeaderLibraryChannel();
+    }
+
+    private void updateLeaderLibraryChannel()
+    {
+        leaderLibraryChannel = nodeIdToLibraryChannel.get(leaderSessionId + 2);
     }
 
     public DirectBuffer leaderLibraryChannel()
     {
-        return leaderLibraryChannel;
+        return  leaderLibraryChannel;
     }
 }

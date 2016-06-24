@@ -17,8 +17,9 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import org.agrona.DirectBuffer;
 
-@FunctionalInterface
 public interface NodeStateHandler
 {
-    void onNewNodeState(short nodeId, DirectBuffer nodeStateBuffer, int nodeStateLength);
+    void onNewNodeState(short nodeId, int aeronSessionId, DirectBuffer nodeStateBuffer, int nodeStateLength);
+
+    void onNewLeader(int leaderSessionId);
 }

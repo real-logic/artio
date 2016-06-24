@@ -115,18 +115,10 @@ class NodeRunner implements AutoCloseable
             .archiver(archiver)
             .archiveReader(archiveReader)
             .nodeState(nodeState)
-            .nodeStateHandler(this::saveNodeState);
+            .nodeStateHandler(new NodeIdStasher());
 
         clusterNode = new ClusterAgent(configuration, System.currentTimeMillis());
         subscription = clusterNode.clusterStreams().subscription(1);
-    }
-
-    private void saveNodeState(final short id, final DirectBuffer nodeStateBuffer, final int nodeStateLength)
-    {
-        if (nodeStateLength == SIZE_OF_SHORT)
-        {
-            nodeIdToId.put(id, nodeStateBuffer.getShort(0));
-        }
     }
 
     private SendChannelEndpointSupplier newSendChannelEndpointSupplier()
@@ -191,5 +183,25 @@ class NodeRunner implements AutoCloseable
         CloseHelper.close(aeron);
         CloseHelper.close(mediaDriver);
         cleanupDirectory(mediaDriver);
+    }
+
+    private class NodeIdStasher implements NodeStateHandler
+    {
+
+        public void onNewNodeState(final short nodeId,
+                                   final int aeronSessionId,
+                                   final DirectBuffer nodeStateBuffer,
+                                   final int nodeStateLength)
+        {
+            if (nodeStateLength == SIZE_OF_SHORT)
+            {
+                nodeIdToId.put(nodeId, nodeStateBuffer.getShort(0));
+            }
+        }
+
+        public void onNewLeader(final int leaderSessionId)
+        {
+
+        }
     }
 }

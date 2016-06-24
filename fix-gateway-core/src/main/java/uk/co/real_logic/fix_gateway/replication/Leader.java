@@ -250,11 +250,12 @@ public class Leader implements Role, RaftHandler
         final int leaderShipTerm,
         final Vote vote,
         final DirectBuffer nodeStateBuffer,
-        final int nodeStateLength)
+        final int nodeStateLength,
+        final int aeronSessionId)
     {
         if (candidateId == nodeId)
         {
-            nodeStateHandler.onNewNodeState(senderNodeId, nodeStateBuffer, nodeStateLength);
+            nodeStateHandler.onNewNodeState(senderNodeId, aeronSessionId, nodeStateBuffer, nodeStateLength);
         }
 
         return Action.CONTINUE;
