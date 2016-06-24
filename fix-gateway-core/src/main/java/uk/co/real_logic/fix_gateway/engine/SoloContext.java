@@ -79,7 +79,10 @@ public class SoloContext extends EngineContext
     {
         if (configuration.logOutboundMessages())
         {
-            newIndexers(inboundArchiveReader, outboundArchiveReader);
+            newIndexers(
+                inboundArchiveReader,
+                outboundArchiveReader,
+                new SoloPositionSender(inboundLibraryPublication()));
 
             final Replayer replayer = newReplayer(replayPublication, outboundArchiveReader);
 

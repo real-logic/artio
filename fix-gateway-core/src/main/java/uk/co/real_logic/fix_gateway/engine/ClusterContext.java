@@ -57,10 +57,12 @@ class ClusterContext extends EngineContext
             aeron.addSubscription(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
         node = node(configuration, fixCounters, aeron, channel, engineDescriptorStore);
         newStreams(node.clusterStreams());
-        newIndexers(inboundArchiveReader(), outboundArchiveReader());
+        newIndexers(inboundArchiveReader(), outboundArchiveReader(), null);
         final Replayer replayer = newReplayer(replayPublication, outboundArchiveReader());
+        final ClusterPositionSender positionSender = new ClusterPositionSender(
+            outboundLibrarySubscription(), inboundLibraryPublication());
 
-        loggingRunner = newRunner(new CompositeAgent(inboundIndexer, outboundIndexer, node, replayer));
+        loggingRunner = newRunner(new CompositeAgent(inboundIndexer, outboundIndexer, node, replayer, positionSender));
     }
 
     private ClusterAgent node(

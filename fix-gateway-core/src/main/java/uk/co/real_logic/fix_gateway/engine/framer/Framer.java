@@ -96,7 +96,6 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final ReliefValve sendOutboundMessagesFunc = this::sendOutboundMessages;
 
-    private final PositionSender positionSender;
     private final EpochClock clock;
     private final Timer outboundTimer;
     private final Timer sendTimer;
@@ -222,7 +221,6 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             listeningChannel = null;
             selector = null;
         }
-        positionSender = new PositionSender(inboundPublication);
     }
 
     @Override
@@ -253,12 +251,6 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         if (outboundClusterSubscription == null)
         {
-            // TODO: remove this
-            if (newMessagesRead > 0)
-            {
-                outboundLibrarySubscription.forEachPosition(positionSender);
-            }
-
             return messagesRead;
         }
         else

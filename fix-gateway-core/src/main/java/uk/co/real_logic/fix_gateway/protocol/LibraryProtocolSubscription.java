@@ -169,7 +169,7 @@ public class LibraryProtocolSubscription implements ControlledFragmentHandler
     {
         newSentPosition.wrap(buffer, offset, blockLength, version);
         return handler.onNewSentPosition(
-            newSentPosition.sessionId(),
+            newSentPosition.libraryId(),
             newSentPosition.position()
         );
     }

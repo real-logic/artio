@@ -62,7 +62,7 @@ public interface LibraryEndPointHandler
 
     Action onCatchup(int libraryId, long connectionId, final int messageCount);
 
-    Action onNewSentPosition(final int sessionId, final long position);
+    Action onNewSentPosition(final int libraryId, final long position);
 
     Action onNotLeader(final int libraryId, final String libraryChannel);
 }

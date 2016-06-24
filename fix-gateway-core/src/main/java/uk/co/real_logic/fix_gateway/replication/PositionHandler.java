@@ -15,14 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.logbuffer.ControlledFragmentHandler;
-
-public abstract class ClusterableSubscription implements AutoCloseable
+public interface PositionHandler
 {
-    public abstract int controlledPoll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit);
-
-    public abstract void close();
-
-    public abstract void forEachPosition(PositionHandler handler);
-
+    void onNewPosition(final int libraryId, final long position);
 }

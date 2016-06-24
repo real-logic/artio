@@ -828,9 +828,9 @@ public final class FixLibrary extends GatewayProcess
             return CONTINUE;
         }
 
-        public Action onNewSentPosition(final int sessionId, final long position)
+        public Action onNewSentPosition(final int libraryId, final long position)
         {
-            if (this.sessionId == sessionId)
+            if (FixLibrary.this.libraryId == libraryId)
             {
                 return sentPositionHandler.onSendCompleted(position);
             }
