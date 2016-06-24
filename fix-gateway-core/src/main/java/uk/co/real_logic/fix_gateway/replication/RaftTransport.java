@@ -31,8 +31,9 @@ public class RaftTransport
     public void initialiseRoles(final Leader leader, final Candidate candidate, final Follower follower)
     {
         final RaftPublication acknowledgementPublication = raftPublication(configuration.acknowledgementStream());
-        final RaftPublication controlPublication = raftPublication(configuration.controlStream());
-        final Subscription controlSubscription = subscription(configuration.controlStream());
+        final StreamIdentifier controlStream = configuration.controlStream();
+        final RaftPublication controlPublication = raftPublication(controlStream);
+        final Subscription controlSubscription = subscription(controlStream.channel(), controlStream.streamId());
 
         leader
             .controlPublication(controlPublication)
@@ -50,20 +51,22 @@ public class RaftTransport
 
     public void injectLeaderSubscriptions(final Leader leader)
     {
+        final StreamIdentifier data = configuration.dataStream();
+        final StreamIdentifier acknowledgement = configuration.acknowledgementStream();
         leader
-            .acknowledgementSubscription(subscription(configuration.acknowledgementStream()))
-            .dataSubscription(dataSubscription());
+            .acknowledgementSubscription(subscription(acknowledgement.channel(), acknowledgement.streamId()))
+            .dataSubscription(subscription(data.spyChannel(), data.streamId()));
     }
 
     public Subscription dataSubscription()
     {
-        return subscription(configuration.dataStream());
+        final StreamIdentifier dataStream = configuration.dataStream();
+        return subscription(dataStream.channel(), dataStream.streamId());
     }
 
     public void injectFollowerSubscriptions(final Follower follower)
     {
-        configuration.archiver()
-                     .subscription(dataSubscription());
+        follower.dataSubscription(dataSubscription());
     }
 
     private Publication publication(final StreamIdentifier id)
@@ -73,11 +76,11 @@ public class RaftTransport
             .addPublication(id.channel(), id.streamId());
     }
 
-    private Subscription subscription(final StreamIdentifier id)
+    private Subscription subscription(final String channel, final int streamId)
     {
         return configuration
             .aeron()
-            .addSubscription(id.channel(), id.streamId());
+            .addSubscription(channel, streamId);
     }
 
     private RaftPublication raftPublication(final StreamIdentifier id)

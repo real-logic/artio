@@ -24,8 +24,11 @@ import io.aeron.driver.media.UdpChannel;
  */
 public final class StreamIdentifier
 {
+    private static final String SPY_PREFIX = "aeron-spy:";
+
     private final int streamId;
     private final String channel;
+    private final String spyChannel;
     private final String canonicalForm;
 
     public StreamIdentifier(final Subscription subscription)
@@ -37,6 +40,7 @@ public final class StreamIdentifier
     {
         this.streamId = streamId;
         this.channel = channel;
+        spyChannel = SPY_PREFIX + channel;
         if (CommonContext.IPC_CHANNEL.equals(channel))
         {
             canonicalForm = "aeron_ipc";
@@ -55,6 +59,11 @@ public final class StreamIdentifier
     public String channel()
     {
         return channel;
+    }
+
+    public String spyChannel()
+    {
+        return spyChannel;
     }
 
     public String canonicalForm()

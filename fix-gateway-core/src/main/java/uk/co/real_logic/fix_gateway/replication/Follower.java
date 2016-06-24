@@ -305,6 +305,12 @@ public class Follower implements Role, RaftHandler
         return this;
     }
 
+    public Follower dataSubscription(final Subscription dataSubscription)
+    {
+        raftArchiver.dataSubscription(dataSubscription);
+        return this;
+    }
+
     Follower votedFor(final short votedFor)
     {
         this.votedFor = votedFor;
