@@ -42,7 +42,7 @@ public class ClusterSubscription extends ClusterableSubscription
 
     private Image image;
 
-    public ClusterSubscription(
+    ClusterSubscription(
         final Subscription subscription,
         final int clusterStreamId,
         final AtomicLong consensusPosition,
@@ -78,11 +78,6 @@ public class ClusterSubscription extends ClusterableSubscription
     public void close()
     {
         CloseHelper.close(subscription);
-    }
-
-    public void forEachPosition(final PositionHandler handler)
-    {
-        // TODO: remove this method.
     }
 
     private boolean imageNeedsUpdate()

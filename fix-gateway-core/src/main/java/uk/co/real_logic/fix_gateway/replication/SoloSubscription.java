@@ -43,9 +43,4 @@ public class SoloSubscription extends ClusterableSubscription
         subscription.close();
     }
 
-    public void forEachPosition(final PositionHandler handler)
-    {
-        this.handler = handler;
-        subscription.forEachImage(positionUpdater);
-    }
 }
