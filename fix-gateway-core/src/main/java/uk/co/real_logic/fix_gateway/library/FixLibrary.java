@@ -41,9 +41,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.locks.LockSupport;
 
-import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.unmodifiableList;
@@ -137,7 +135,7 @@ public final class FixLibrary extends GatewayProcess
             configuration.outboundMaxClaimAttempts());
     }
 
-    private FixLibrary connect()
+    private FixLibrary connect(final int reconnectAttempts)
     {
         initStreams(configuration);
         if (isReconnect())
@@ -157,10 +155,12 @@ public final class FixLibrary extends GatewayProcess
         try
         {
             final long correlationId = ++currentCorrelationId;
-            if (outboundPublication.saveLibraryConnect(libraryId, correlationId) == BACK_PRESSURED)
+            long position;
+            while ((position = outboundPublication.saveLibraryConnect(libraryId, correlationId)) < 0)
             {
-                return connectError("BackPressured upon connection");
+                idleStrategy.idle();
             }
+            idleStrategy.reset();
 
             final String currentAeronChannel = this.currentAeronChannel;
             final long latestReplyArrivalTime = latestReplyArrivalTime();
@@ -168,13 +168,13 @@ public final class FixLibrary extends GatewayProcess
             {
                 final int workCount = poll(1);
 
-                checkTime(latestReplyArrivalTime);
+                checkTime(latestReplyArrivalTime, reconnectAttempts);
 
                 idleStrategy.idle(workCount);
 
                 if (!Objects.equals(currentAeronChannel, this.currentAeronChannel))
                 {
-                    connect();
+                    connect(reconnectAttempts - 1);
                 }
             }
 
@@ -229,7 +229,7 @@ public final class FixLibrary extends GatewayProcess
      */
     public static FixLibrary connect(final LibraryConfiguration configuration)
     {
-        return new FixLibrary(configuration).connect();
+        return new FixLibrary(configuration).connect(10);
     }
 
     /**
@@ -568,13 +568,19 @@ public final class FixLibrary extends GatewayProcess
         return clock.time() + configuration.replyTimeoutInMs();
     }
 
-    private void checkTime(final long latestReplyArrivalTime)
+    private void checkTime(final long latestReplyArrivalTime, final int reconnectAttempts)
     {
         if (clock.time() > latestReplyArrivalTime)
         {
-            throw new IllegalStateException(String.format(
-                "Failed to receive a reply from the engine within %dms, are you sure its running?",
-                this.configuration.replyTimeoutInMs()));
+            if (reconnectAttempts == 0)
+            {
+                throw new IllegalStateException(String.format(
+                    "Failed to receive a reply from the engine within %dms, are you sure its running?",
+                    this.configuration.replyTimeoutInMs()));
+            }
+
+            attemptNextEngine();
+            connect(reconnectAttempts - 1);
         }
     }
 
@@ -840,13 +846,10 @@ public final class FixLibrary extends GatewayProcess
 
         public Action onNotLeader(final int libraryId, final String libraryChannel)
         {
+            //System.out.println("ON NOT LEADER????? '" + libraryChannel + "' not '" + currentAeronChannel + "'");
             if (libraryChannel.isEmpty())
             {
-                // If the node doesn't know the leader then round-robin the existing behaviours
-                LockSupport.parkNanos(RECONNECT_BACKOFF_IN_NS);
-                final List<String> aeronChannels = configuration.libraryAeronChannels();
-                final int nextIndex = (aeronChannels.indexOf(currentAeronChannel) + 1) % aeronChannels.size();
-                currentAeronChannel = aeronChannels.get(nextIndex);
+                attemptNextEngine();
             }
             else
             {
@@ -854,6 +857,13 @@ public final class FixLibrary extends GatewayProcess
             }
             return CONTINUE;
         }
+    }
+
+    private void attemptNextEngine()
+    {
+        final List<String> aeronChannels = configuration.libraryAeronChannels();
+        final int nextIndex = (aeronChannels.indexOf(currentAeronChannel) + 1) % aeronChannels.size();
+        currentAeronChannel = aeronChannels.get(nextIndex);
     }
 
     private void newSession(final long connectionId, final long sessionId, final Session session)

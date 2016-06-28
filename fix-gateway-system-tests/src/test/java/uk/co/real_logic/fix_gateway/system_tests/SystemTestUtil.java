@@ -44,6 +44,7 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
+import static uk.co.real_logic.fix_gateway.library.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 
@@ -370,6 +371,7 @@ public final class SystemTestUtil
     {
         final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, lastReceivedMsgSeqNum);
         awaitReply(library, reply);
+        assertEquals(reply.state(), COMPLETED);
         return reply.resultIfPresent();
     }
 }

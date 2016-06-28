@@ -61,6 +61,9 @@ class SubscriptionSplitter implements ControlledFragmentHandler
 
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
+        /*String stringSbeMessage = DebugLogger.toStringSbeMessage(buffer, offset);
+        System.out.println("Wat? " + stringSbeMessage + " @ " + header.position());*/
+
         if (clusterableStreams.isLeader())
         {
             messageHeader.wrap(buffer, offset);

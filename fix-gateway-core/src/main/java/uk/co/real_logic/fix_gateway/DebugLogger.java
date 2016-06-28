@@ -80,17 +80,22 @@ public final class DebugLogger
     {
         if (DEBUG_PRINT_MESSAGES)
         {
-            final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-            headerDecoder.wrap(buffer, offset);
-            final MessageDumper dumper = new MessageDumper(MessageSchemaIr.SCHEMA_BUFFER);
-            OUTPUT.println(dumper.toString(
-                headerDecoder.templateId(),
-                headerDecoder.version(),
-                headerDecoder.blockLength(),
-                buffer,
-                offset + MessageHeaderDecoder.ENCODED_LENGTH
-            ));
+            OUTPUT.println(toStringSbeMessage(buffer, offset));
         }
+    }
+
+    public static String toStringSbeMessage(final DirectBuffer buffer, final int offset)
+    {
+        final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
+        headerDecoder.wrap(buffer, offset);
+        final MessageDumper dumper = new MessageDumper(MessageSchemaIr.SCHEMA_BUFFER);
+        return dumper.toString(
+            headerDecoder.templateId(),
+            headerDecoder.version(),
+            headerDecoder.blockLength(),
+            buffer,
+            offset + MessageHeaderDecoder.ENCODED_LENGTH
+        );
     }
 
     public static void log(final String formatString, final DirectBuffer buffer, final int offset, final int length)
