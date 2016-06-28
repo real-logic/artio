@@ -595,7 +595,10 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    public Action onLibraryConnect(final int libraryId, final long correlationId, final int aeronSessionId)
+    public Action onLibraryConnect(final int libraryId,
+                                   final long correlationId,
+                                   final int uniqueValue,
+                                   final int aeronSessionId)
     {
         final Action action = retryManager.retry(correlationId);
         if (action != null)
@@ -603,9 +606,15 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return action;
         }
 
-        if (idToLibrary.containsKey(libraryId))
+
+        final LibraryInfo existingLibrary = idToLibrary.get(libraryId);
+        if (existingLibrary != null)
         {
-            saveError(DUPLICATE_LIBRARY_ID, libraryId, correlationId);
+            // Check that they are genuinely different, otherwise ignore the re-send
+            if (existingLibrary.uniqueValue() != uniqueValue)
+            {
+                saveError(DUPLICATE_LIBRARY_ID, libraryId, correlationId);
+            }
 
             return CONTINUE;
         }
@@ -616,7 +625,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             configuration.replyTimeoutInMs(),
             clock.time());
 
-        final LibraryInfo library = new LibraryInfo(libraryId, livenessDetector, aeronSessionId);
+        final LibraryInfo library = new LibraryInfo(libraryId, livenessDetector, aeronSessionId, uniqueValue);
         idToLibrary.put(libraryId, library);
 
         final Transaction transaction = new Transaction(

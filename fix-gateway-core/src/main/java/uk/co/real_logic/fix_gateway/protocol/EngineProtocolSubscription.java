@@ -100,6 +100,7 @@ public class EngineProtocolSubscription implements ControlledFragmentHandler
         return handler.onLibraryConnect(
             libraryConnect.libraryId(),
             libraryConnect.correlationId(),
+            libraryConnect.uniqueValue(),
             header.sessionId());
     }
 

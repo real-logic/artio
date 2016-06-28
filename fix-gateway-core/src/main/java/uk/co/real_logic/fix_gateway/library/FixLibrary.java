@@ -74,6 +74,7 @@ public final class FixLibrary extends GatewayProcess
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
     private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
+    private final int uniqueValue = ThreadLocalRandom.current().nextInt();
 
     private final EpochClock clock;
     private final LibraryConfiguration configuration;
@@ -156,7 +157,7 @@ public final class FixLibrary extends GatewayProcess
         {
             final long correlationId = ++currentCorrelationId;
             long position;
-            while ((position = outboundPublication.saveLibraryConnect(libraryId, correlationId)) < 0)
+            while ((position = outboundPublication.saveLibraryConnect(libraryId, correlationId, uniqueValue)) < 0)
             {
                 idleStrategy.idle();
             }

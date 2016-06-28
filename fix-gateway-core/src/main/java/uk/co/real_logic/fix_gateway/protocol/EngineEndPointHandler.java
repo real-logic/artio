@@ -22,7 +22,10 @@ import uk.co.real_logic.fix_gateway.messages.SessionState;
 
 public interface EngineEndPointHandler
 {
-    Action onLibraryConnect(final int libraryId, final long correlationId, final int aeronSessionId);
+    Action onLibraryConnect(final int libraryId,
+                            final long correlationId,
+                            final int uniqueValue,
+                            final int aeronSessionId);
 
     Action onInitiateConnection(
         final int libraryId,
