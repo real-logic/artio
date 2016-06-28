@@ -24,7 +24,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.messages.EngineDescriptorEncoder.libraryChannelHeaderLength;
 import static uk.co.real_logic.sbe.ir.generated.MessageHeaderEncoder.ENCODED_LENGTH;
 
-class EngineDescriptorFactory
+final class EngineDescriptorFactory
 {
     static DirectBuffer make(final String libraryChannel)
     {

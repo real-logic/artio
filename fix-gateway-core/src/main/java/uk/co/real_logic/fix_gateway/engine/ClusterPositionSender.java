@@ -26,7 +26,7 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
-public class ClusterPositionSender implements Agent, ControlledFragmentHandler, LongLongConsumer
+class ClusterPositionSender implements Agent, ControlledFragmentHandler, LongLongConsumer
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
@@ -36,7 +36,7 @@ public class ClusterPositionSender implements Agent, ControlledFragmentHandler, 
     private final ClusterableSubscription subscription;
     private final GatewayPublication publication;
 
-    public ClusterPositionSender(
+    ClusterPositionSender(
         final ClusterableSubscription subscription, final GatewayPublication publication)
     {
         this.subscription = subscription;

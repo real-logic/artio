@@ -22,14 +22,14 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
-public class SoloPositionSender implements Index
+class SoloPositionSender implements Index
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
 
     private final GatewayPublication publication;
 
-    public SoloPositionSender(final GatewayPublication publication)
+    SoloPositionSender(final GatewayPublication publication)
     {
         this.publication = publication;
     }
