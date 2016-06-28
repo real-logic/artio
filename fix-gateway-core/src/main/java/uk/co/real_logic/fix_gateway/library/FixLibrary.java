@@ -155,28 +155,43 @@ public final class FixLibrary extends GatewayProcess
 
         try
         {
-            final long correlationId = ++currentCorrelationId;
-            long position;
-            while ((position = outboundPublication.saveLibraryConnect(libraryId, correlationId, uniqueValue)) < 0)
-            {
-                idleStrategy.idle();
-            }
-            idleStrategy.reset();
+            sendLibraryConnect();
 
             final String currentAeronChannel = this.currentAeronChannel;
+            final long connectResendTimeout = configuration.replyTimeoutInMs() / 4;
             final long latestReplyArrivalTime = latestReplyArrivalTime();
+            long latestConnectResentTime = clock.time() + connectResendTimeout;
             while (!livenessDetector.isConnected() && errorType == null)
             {
                 final int workCount = poll(1);
 
-                checkTime(latestReplyArrivalTime, reconnectAttempts);
+                final long time = clock.time();
+                if (time > latestReplyArrivalTime)
+                {
+                    if (reconnectAttempts == 0)
+                    {
+                        throw new IllegalStateException(String.format(
+                            "Failed to receive a reply from the engine within %dms, are you sure its running?",
+                            this.configuration.replyTimeoutInMs()));
+                    }
 
-                idleStrategy.idle(workCount);
+                    attemptNextEngine();
+                    return connect(reconnectAttempts - 1);
+                }
+
+                if (time > latestConnectResentTime)
+                {
+                    sendLibraryConnect();
+
+                    latestConnectResentTime = time + connectResendTimeout;
+                }
 
                 if (!Objects.equals(currentAeronChannel, this.currentAeronChannel))
                 {
-                    connect(reconnectAttempts - 1);
+                    return connect(reconnectAttempts - 1);
                 }
+
+                idleStrategy.idle(workCount);
             }
 
             if (errorType != null)
@@ -203,6 +218,17 @@ public final class FixLibrary extends GatewayProcess
         }
 
         return this;
+    }
+
+    private void sendLibraryConnect()
+    {
+        final long correlationId = ++currentCorrelationId;
+        long position;
+        while ((position = outboundPublication.saveLibraryConnect(libraryId, correlationId, uniqueValue)) < 0)
+        {
+            idleStrategy.idle();
+        }
+        idleStrategy.reset();
     }
 
     private boolean isReconnect()
@@ -567,22 +593,6 @@ public final class FixLibrary extends GatewayProcess
     private long latestReplyArrivalTime()
     {
         return clock.time() + configuration.replyTimeoutInMs();
-    }
-
-    private void checkTime(final long latestReplyArrivalTime, final int reconnectAttempts)
-    {
-        if (clock.time() > latestReplyArrivalTime)
-        {
-            if (reconnectAttempts == 0)
-            {
-                throw new IllegalStateException(String.format(
-                    "Failed to receive a reply from the engine within %dms, are you sure its running?",
-                    this.configuration.replyTimeoutInMs()));
-            }
-
-            attemptNextEngine();
-            connect(reconnectAttempts - 1);
-        }
     }
 
     private int pollSessions(final long timeInMs)
