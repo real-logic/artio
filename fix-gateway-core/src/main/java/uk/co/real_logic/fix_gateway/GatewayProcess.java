@@ -23,6 +23,7 @@ import uk.co.real_logic.fix_gateway.timing.HistogramLogWriter;
 import uk.co.real_logic.fix_gateway.timing.Timer;
 
 import java.nio.channels.ClosedByInterruptException;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -76,6 +77,7 @@ public class GatewayProcess implements AutoCloseable
     private Aeron.Context aeronContext(final CommonConfiguration configuration)
     {
         final Aeron.Context ctx = configuration.aeronContext();
+        ctx.imageMapMode(FileChannel.MapMode.READ_WRITE);
         ctx.errorHandler(throwable ->
         {
             if (!(throwable instanceof ClosedByInterruptException))
