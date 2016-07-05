@@ -71,4 +71,14 @@ public interface Index extends ControlledFragmentHandler, AutoCloseable
      * @param consumer a callback that receives each session id and position
      */
     void readLastPosition(final IndexedPositionConsumer consumer);
+
+    /**
+     * Optional method to perform some period work on the index, eg compaction or updating another system.
+     *
+     * @return amount of work done.
+     */
+    default int doWork()
+    {
+        return 0;
+    }
 }

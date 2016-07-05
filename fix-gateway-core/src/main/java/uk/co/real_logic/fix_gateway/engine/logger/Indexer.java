@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import org.agrona.collections.CollectionUtil;
 import org.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.replication.ReservedValue;
@@ -48,7 +49,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
     public int doWork() throws Exception
     {
-        return subscription.controlledPoll(this, LIMIT);
+        return subscription.controlledPoll(this, LIMIT) + CollectionUtil.sum(indices, Index::doWork);
     }
 
     private void catchIndexUp()

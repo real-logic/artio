@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import org.agrona.DirectBuffer;
+import org.agrona.collections.Long2LongHashMap;
 import uk.co.real_logic.fix_gateway.engine.logger.Index;
 import uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionConsumer;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
@@ -24,8 +25,12 @@ import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 class SoloPositionSender implements Index
 {
+    private static final int MISSING_LIBRARY = -1;
+
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
+    private final Long2LongHashMap libraryIdToPosition = new Long2LongHashMap(MISSING_LIBRARY);
+    private int resendCount;
 
     private final GatewayPublication publication;
 
@@ -51,8 +56,37 @@ class SoloPositionSender implements Index
             fixMessage.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
 
             // TODO: think of a sensible back-pressure strategy.
-            publication.saveNewSentPosition(fixMessage.libraryId(), endPosition);
+            final int libraryId = fixMessage.libraryId();
+            if (saveNewSentPosition(libraryId, endPosition))
+            {
+                libraryIdToPosition.remove(libraryId);
+            }
+            else
+            {
+                libraryIdToPosition.put(libraryId, endPosition);
+            }
         }
+    }
+
+    public int doWork()
+    {
+        resendCount = 0;
+        libraryIdToPosition.longForEach(this::resendPosition);
+        return resendCount;
+    }
+
+    private void resendPosition(final long libraryId, final long endPosition)
+    {
+        if (saveNewSentPosition((int) libraryId, endPosition))
+        {
+            libraryIdToPosition.remove(libraryId);
+            resendCount++;
+        }
+    }
+
+    private boolean saveNewSentPosition(final int libraryId, final long endPosition)
+    {
+        return publication.saveNewSentPosition(libraryId, endPosition) >= 0;
     }
 
     public void close()
