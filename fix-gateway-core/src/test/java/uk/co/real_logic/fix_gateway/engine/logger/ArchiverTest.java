@@ -28,7 +28,6 @@ import org.agrona.IoUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -53,6 +52,7 @@ import static io.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
 import static io.aeron.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static java.lang.Integer.numberOfTrailingZeros;
+import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.agrona.BitUtil.SIZE_OF_INT;
 import static org.agrona.BitUtil.findNextPositivePowerOfTwo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -63,13 +63,14 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
+import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor.alignTerm;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.*;
 
 @RunWith(Parameterized.class)
 public class ArchiverTest
 {
 
-    public static final int SIZE = 2 * 1024;
+    public static final int SIZE = 1337; // Exposes Alignment Bugs
     public static final int TERM_LENGTH = findNextPositivePowerOfTwo(SIZE * 32);
     public static final int STREAM_ID = 1;
     public static final int OFFSET_WITHIN_MESSAGE = 42;
@@ -112,14 +113,13 @@ public class ArchiverTest
     public void setUp()
     {
         mediaDriver = launchMediaDriver(TERM_LENGTH);
-        aeron = Aeron.connect(new Aeron.Context());
+        aeron = Aeron.connect(new Aeron.Context().imageMapMode(READ_WRITE));
 
         final File logFileDir = new File(DEFAULT_LOG_FILE_DIR);
         if (logFileDir.exists())
         {
             IoUtil.delete(logFileDir, false);
         }
-
 
         final StreamIdentifier dataStream = new StreamIdentifier(CHANNEL, STREAM_ID);
         logDirectoryDescriptor = new LogDirectoryDescriptor(DEFAULT_LOG_FILE_DIR);
@@ -141,7 +141,6 @@ public class ArchiverTest
         assertReadsInitialValue(HEADER_LENGTH);
     }
 
-    @Ignore
     @Test
     public void shouldNotReadDataThatHasBeenCorrupted() throws IOException
     {
@@ -152,6 +151,18 @@ public class ArchiverTest
         final long position = readTo((long) HEADER_LENGTH);
 
         assertNothingRead(position, CORRUPT_LOG);
+    }
+
+    @Test
+    public void shouldNotBlockReadDataThatHasBeenCorrupted() throws IOException
+    {
+        writeAndArchiveBuffer();
+
+        corruptLogFile();
+
+        final boolean wasRead = readBlockTo((long) HEADER_LENGTH);
+
+        assertNothingBlockRead(wasRead);
     }
 
     // TODO: updating checksums when you patch
@@ -224,7 +235,7 @@ public class ArchiverTest
         when(fragmentHandler.onFragment(any(), anyInt(), anyInt(), any()))
             .thenReturn(BREAK);
 
-        final long oneMessageIn = HEADER_LENGTH + SIZE + HEADER_LENGTH;
+        final long oneMessageIn = HEADER_LENGTH + alignTerm(SIZE) + HEADER_LENGTH;
 
         readUpTo(0, oneMessageIn, times(1));
     }
@@ -394,7 +405,7 @@ public class ArchiverTest
 
     private int lengthOfTwoMessages()
     {
-        return SIZE * 2 + HEADER_LENGTH;
+        return alignTerm(SIZE) * 2 + HEADER_LENGTH;
     }
 
     private long readTo(final long position)

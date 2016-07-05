@@ -38,6 +38,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import static io.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
 import static io.aeron.driver.ThreadingMode.SHARED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.agrona.BitUtil.SIZE_OF_SHORT;
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
@@ -92,8 +93,9 @@ class NodeRunner implements AutoCloseable
         }
 
         mediaDriver = MediaDriver.launch(context);
-        final Aeron.Context clientContext = new Aeron.Context();
-        clientContext.aeronDirectoryName(context.aeronDirectoryName());
+        final Aeron.Context clientContext = new Aeron.Context()
+            .aeronDirectoryName(context.aeronDirectoryName())
+            .imageMapMode(READ_WRITE);
         aeron = Aeron.connect(clientContext);
 
         final StreamIdentifier dataStream = new StreamIdentifier(AERON_CHANNEL, DEFAULT_DATA_STREAM_ID);

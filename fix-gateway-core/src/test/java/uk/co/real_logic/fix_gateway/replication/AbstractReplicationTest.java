@@ -35,6 +35,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.LogDirectoryDescriptor;
 
 import java.io.File;
 
+import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.agrona.CloseHelper.close;
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
@@ -100,7 +101,7 @@ public class AbstractReplicationTest
     public void setupAeron()
     {
         mediaDriver = TestFixtures.launchMediaDriver();
-        aeron = Aeron.connect(new Aeron.Context());
+        aeron = Aeron.connect(new Aeron.Context().imageMapMode(READ_WRITE));
     }
 
     @After

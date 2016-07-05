@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BlockHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
 import org.agrona.collections.Long2LongHashMap;
@@ -29,6 +28,7 @@ import uk.co.real_logic.fix_gateway.messages.Vote;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
 
@@ -177,7 +177,7 @@ public class Leader implements Role, RaftHandler
     }
 
     public Action onMessageAcknowledgement(
-        final long position, final short nodeId, final AcknowledgementStatus status)
+        long position, final short nodeId, final AcknowledgementStatus status)
     {
         if (status == OK)
         {
@@ -190,6 +190,7 @@ public class Leader implements Role, RaftHandler
             messageAcknowledgementPosition = position;
             if (validateReader())
             {
+                position = Math.max(position, HEADER_LENGTH);
                 if (!ourArchiveReader.readBlock(position, length, resendHandler))
                 {
                     saveResend(EMPTY_BUFFER, 0, 0);
@@ -305,7 +306,7 @@ public class Leader implements Role, RaftHandler
         this.timeInMs = timeInMs;
 
         leaderShipTerm = termState.leadershipTerm();
-        lastAppliedPosition = Math.max(DataHeaderFlyweight.HEADER_LENGTH, termState.lastAppliedPosition());
+        lastAppliedPosition = Math.max(HEADER_LENGTH, termState.lastAppliedPosition());
         heartbeat();
 
         raftArchiver.checkLeaderArchiver();

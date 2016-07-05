@@ -25,6 +25,7 @@ import org.agrona.LangUtil;
 import org.agrona.collections.Int2ObjectCache;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
@@ -37,6 +38,7 @@ import java.util.zip.CRC32;
 
 import static io.aeron.driver.Configuration.termBufferLength;
 import static io.aeron.logbuffer.LogBufferDescriptor.computePosition;
+import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 public class Archiver implements Agent, RawBlockHandler
 {
@@ -176,7 +178,7 @@ public class Archiver implements Agent, RawBlockHandler
             final FileChannel fileChannel,
             final long fileOffset,
             final UnsafeBuffer termBuffer,
-            final int termOffset,
+            int termOffset,
             final int length,
             final int sessionId,
             final int termId)
@@ -192,6 +194,8 @@ public class Archiver implements Agent, RawBlockHandler
                     currentTermId = termId;
                 }
 
+                writeChecksumForBlock(termBuffer, termOffset, length);
+
                 final long transferred = fileChannel.transferTo(fileOffset, length, currentLogChannel);
                 if (transferred != length)
                 {
@@ -206,6 +210,46 @@ public class Archiver implements Agent, RawBlockHandler
             catch (IOException e)
             {
                 LangUtil.rethrowUnchecked(e);
+            }
+        }
+
+        private void writeChecksumForBlock(final UnsafeBuffer termBuffer, int termOffset, final int length)
+        {
+            final ByteBuffer byteBuffer = termBuffer.byteBuffer();
+            final int end = termOffset + length - HEADER_LENGTH;
+            while (termOffset < end)
+            {
+                header.wrap(termBuffer, termOffset, length);
+                final int frameLength = header.frameLength();
+                final int messageOffset = termOffset + HEADER_LENGTH;
+                checksum.reset();
+
+                if (byteBuffer != null)
+                {
+                    final int limit = termOffset + frameLength;
+                    if (messageOffset > limit)
+                    {
+                        System.out.println("frameLength = " + frameLength);
+                        throw new IllegalArgumentException(
+                            String.format("%d is > than %d or < 0", messageOffset, limit));
+                    }
+                    byteBuffer
+                        .limit(limit)
+                        .position(messageOffset);
+
+                    checksum.update(byteBuffer);
+                }
+                else
+                {
+                    final int messageLength = frameLength - HEADER_LENGTH;
+                    final byte[] bytes = termBuffer.byteArray();
+
+                    checksum.update(bytes, messageOffset, messageLength);
+                }
+
+                writeChecksum(header);
+
+                termOffset = ArchiveDescriptor.nextTerm(termOffset, frameLength);
             }
         }
 
@@ -249,7 +293,7 @@ public class Archiver implements Agent, RawBlockHandler
                 }
 
                 writeToFile(
-                    bodyBuffer, readOffset, bodyLength, termWriteOffset, patchTermLogChannel, patchTermLogFile, header);
+                    bodyBuffer, readOffset, bodyLength, termWriteOffset, patchTermLogChannel, patchTermLogFile);
 
                 close(patchTermLogChannel);
 
@@ -293,21 +337,22 @@ public class Archiver implements Agent, RawBlockHandler
             final int bodyLength,
             int termWriteOffset,
             final FileChannel patchTermLogChannel,
-            final RandomAccessFile patchTermLogFile,
-            final DataHeaderFlyweight header) throws IOException
+            final RandomAccessFile patchTermLogFile) throws IOException
         {
+            final int messageOffset = readOffset + HEADER_LENGTH;
             checksum.reset();
 
             final ByteBuffer byteBuffer = bodyBuffer.byteBuffer();
             if (byteBuffer != null)
             {
-                byteBuffer
-                    .limit(readOffset + bodyLength)
-                    .position(readOffset);
-
+                // Update Checksum
+                final int limit = readOffset + bodyLength;
+                byteBuffer.limit(limit).position(messageOffset);
                 checksum.update(byteBuffer);
                 writeChecksum(header);
 
+                // Write patch
+                byteBuffer.limit(limit).position(readOffset);
                 while (byteBuffer.remaining() > 0)
                 {
                     termWriteOffset += patchTermLogChannel.write(byteBuffer, termWriteOffset);
@@ -315,9 +360,12 @@ public class Archiver implements Agent, RawBlockHandler
             }
             else
             {
+                // Update Checksum
                 final byte[] bytes = bodyBuffer.byteArray();
-                checksum.update(bytes, readOffset, bodyLength);
+                checksum.update(bytes, messageOffset, bodyLength - HEADER_LENGTH);
                 writeChecksum(header);
+
+                // Write patch
                 patchTermLogFile.seek(termWriteOffset);
                 patchTermLogFile.write(bytes, readOffset, bodyLength);
             }
@@ -325,7 +373,9 @@ public class Archiver implements Agent, RawBlockHandler
 
         private void writeChecksum(final DataHeaderFlyweight header)
         {
-            header.reservedValue((int) checksum.getValue());
+            final int clusterStreamId = ReservedValue.clusterStreamId(header.reservedValue());
+            final int checksumValue = (int) checksum.getValue();
+            header.reservedValue(ReservedValue.of(clusterStreamId, checksumValue));
         }
 
         private void close(final FileChannel patchTermLogChannel) throws IOException

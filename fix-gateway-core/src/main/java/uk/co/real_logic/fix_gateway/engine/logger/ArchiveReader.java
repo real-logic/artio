@@ -32,11 +32,13 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.function.IntFunction;
+import java.util.zip.CRC32;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static java.lang.Integer.numberOfTrailingZeros;
+import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor.nextTerm;
 
 public class ArchiveReader implements AutoCloseable
 {
@@ -70,6 +72,7 @@ public class ArchiveReader implements AutoCloseable
     private final LogDirectoryDescriptor directoryDescriptor;
     private final int cacheNumSets;
     private final int cacheSetSize;
+    private final CRC32 checksum = new CRC32();
 
     public ArchiveReader(
         final ArchiveMetaData metaData,
@@ -216,6 +219,11 @@ public class ArchiveReader implements AutoCloseable
                 return NO_MESSAGE;
             }
 
+            if (!validateChecksum(termOffset, frameLength))
+            {
+                return CORRUPT_LOG;
+            }
+
             final Action action = handler.onFragment(buffer, termOffset, frameLength - HEADER_LENGTH, header);
             if (action == ABORT)
             {
@@ -223,6 +231,24 @@ public class ArchiveReader implements AutoCloseable
             }
 
             return position + frameLength;
+        }
+
+        private boolean validateChecksum(final int termOffset, final int frameLength)
+        {
+            final int expectedChecksum = ReservedValue.checksum(header.reservedValue());
+            final int calculatedChecksum = readChecksum(termOffset, frameLength);
+            return expectedChecksum == calculatedChecksum;
+        }
+
+        private int readChecksum(final int messageOffset, final int frameLength)
+        {
+            final ByteBuffer byteBuffer = buffer.byteBuffer();
+            final int messageLength = Math.max(0, frameLength - HEADER_LENGTH);
+            final int limit = messageOffset + messageLength;
+            byteBuffer.limit(limit).position(messageOffset);
+            checksum.reset();
+            checksum.update(byteBuffer);
+            return (int) checksum.getValue();
         }
 
         /**
@@ -271,7 +297,7 @@ public class ArchiveReader implements AutoCloseable
                         return position;
                     }
 
-                    position += frameLength;
+                    position = nextTerm(position, frameLength);
 
                     if (action == BREAK)
                     {
@@ -280,7 +306,7 @@ public class ArchiveReader implements AutoCloseable
                 }
                 else
                 {
-                    position += frameLength;
+                    position = nextTerm(position, frameLength);
                 }
             }
 
@@ -309,6 +335,23 @@ public class ArchiveReader implements AutoCloseable
             final int termOffset = computeTermOffsetFromPosition(position);
             final int remainder = termBuffer.capacity() - termOffset;
             final int length = Math.min(requestedLength, remainder);
+
+            final int end = termOffset + length - HEADER_LENGTH;
+            header.buffer(buffer);
+
+            int messageOffset = termOffset;
+            while (messageOffset < end)
+            {
+                final int headerOffset = messageOffset - HEADER_LENGTH;
+                header.offset(headerOffset);
+                final int frameLength = header.frameLength();
+                if (!validateChecksum(messageOffset, frameLength))
+                {
+                    return false;
+                }
+
+                messageOffset = nextTerm(messageOffset, frameLength);
+            }
 
             handler.onBlock(buffer, termOffset, length, sessionId, termId);
 
