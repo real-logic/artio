@@ -28,13 +28,17 @@ import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
 class ClusterPositionSender implements Agent, ControlledFragmentHandler, LongLongConsumer
 {
+    private static final int MISSING_LIBRARY = -1;
+
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
 
-    private final Long2LongHashMap libraryIdToPosition = new Long2LongHashMap(-1);
+    private final Long2LongHashMap libraryIdToPosition = new Long2LongHashMap(MISSING_LIBRARY);
 
     private final ClusterableSubscription subscription;
     private final GatewayPublication publication;
+
+    private int resendCount;
 
     ClusterPositionSender(
         final ClusterableSubscription subscription, final GatewayPublication publication)
@@ -47,10 +51,10 @@ class ClusterPositionSender implements Agent, ControlledFragmentHandler, LongLon
     {
         final int work = subscription.controlledPoll(this, 10);
 
+        resendCount = 0;
         libraryIdToPosition.longForEach(this);
-        libraryIdToPosition.clear();
 
-        return work;
+        return work + resendCount;
     }
 
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
@@ -75,7 +79,10 @@ class ClusterPositionSender implements Agent, ControlledFragmentHandler, LongLon
 
     public void accept(final long libraryId, final long savedPosition)
     {
-        // TODO: sensible back pressure strategy
-        publication.saveNewSentPosition((int) libraryId, savedPosition);
+        if (publication.saveNewSentPosition((int) libraryId, savedPosition) >= 0)
+        {
+            libraryIdToPosition.remove(libraryId);
+            resendCount++;
+        }
     }
 }
