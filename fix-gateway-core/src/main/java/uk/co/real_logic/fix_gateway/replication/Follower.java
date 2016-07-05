@@ -112,11 +112,6 @@ public class Follower implements Role, RaftHandler
         }
 
         final long imagePosition = raftArchiver.archivedPosition();
-        if (imagePosition < receivedPosition)
-        {
-            // TODO: theoretically not possible, but maybe have a sanity check?
-        }
-
         if (imagePosition > receivedPosition)
         {
             saveMessageAcknowledgement(MISSING_LOG_ENTRIES);
