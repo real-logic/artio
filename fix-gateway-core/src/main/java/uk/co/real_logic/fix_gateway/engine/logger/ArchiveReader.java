@@ -243,8 +243,8 @@ public class ArchiveReader implements AutoCloseable
         private int readChecksum(final int messageOffset, final int frameLength)
         {
             final ByteBuffer byteBuffer = buffer.byteBuffer();
-            final int messageLength = Math.max(0, frameLength - HEADER_LENGTH);
-            final int limit = messageOffset + messageLength;
+            final int bodyLength = Math.max(0, frameLength - HEADER_LENGTH);
+            final int limit = messageOffset + bodyLength;
             byteBuffer.limit(limit).position(messageOffset);
             checksum.reset();
             checksum.update(byteBuffer);
@@ -291,6 +291,11 @@ public class ArchiveReader implements AutoCloseable
                 final int reservedValue = ReservedValue.clusterStreamId(header.reservedValue());
                 if ((reservedValue & reservedValueFilter) == reservedValueFilter)
                 {
+                    if (!validateChecksum(termOffset, frameLength))
+                    {
+                        return CORRUPT_LOG;
+                    }
+
                     final Action action = handler.onFragment(buffer, termOffset, bodyLength, header);
                     if (action == ABORT)
                     {

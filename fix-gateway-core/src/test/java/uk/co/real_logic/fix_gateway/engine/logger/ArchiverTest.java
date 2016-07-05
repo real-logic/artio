@@ -34,7 +34,6 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
-import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
@@ -65,6 +64,7 @@ import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor.alignTerm;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.*;
+import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 @RunWith(Parameterized.class)
 public class ArchiverTest
@@ -148,7 +148,7 @@ public class ArchiverTest
 
         corruptLogFile();
 
-        final long position = readTo((long) HEADER_LENGTH);
+        final long position = read((long) HEADER_LENGTH);
 
         assertNothingRead(position, CORRUPT_LOG);
     }
@@ -163,6 +163,19 @@ public class ArchiverTest
         final boolean wasRead = readBlockTo((long) HEADER_LENGTH);
 
         assertNothingBlockRead(wasRead);
+    }
+
+    @Test
+    public void shouldNotReadUpToDataThatHasBeenCorrupted() throws IOException
+    {
+        final long endPosition = writeAndArchiveBuffer();
+
+        corruptLogFile();
+
+        final long readPosition = archiveReader.readUpTo(
+            NO_FILTER, publication.sessionId(), (long) HEADER_LENGTH, endPosition, fragmentHandler);
+
+        assertNothingRead(readPosition, CORRUPT_LOG);
     }
 
     private void corruptLogFile() throws IOException
@@ -254,7 +267,7 @@ public class ArchiverTest
 
         final long begin = HEADER_LENGTH;
         final long end = begin + lengthOfTwoMessages() + offsetIntoNextMessage;
-        final long res = archiveReader.readUpTo(ReservedValue.NO_FILTER, publication.sessionId(), begin, end, fragmentHandler);
+        final long res = archiveReader.readUpTo(NO_FILTER, publication.sessionId(), begin, end, fragmentHandler);
 
         verify(fragmentHandler, times).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
 
@@ -264,7 +277,7 @@ public class ArchiverTest
     @Test
     public void shouldNotReadDataForNotArchivedSession()
     {
-        final long position = readTo((long)HEADER_LENGTH);
+        final long position = read((long)HEADER_LENGTH);
 
         assertNothingRead(position, UNKNOWN_SESSION);
     }
@@ -274,7 +287,7 @@ public class ArchiverTest
     {
         writeAndArchiveBuffer();
 
-        final long position = readTo(TERM_LENGTH + HEADER_LENGTH);
+        final long position = read(TERM_LENGTH + HEADER_LENGTH);
 
         assertNothingRead(position, UNKNOWN_TERM);
     }
@@ -284,7 +297,7 @@ public class ArchiverTest
     {
         final long endPosition = writeAndArchiveBuffer();
 
-        final long position = readTo(endPosition * 2);
+        final long position = read(endPosition * 2);
 
         assertNothingRead(position, NO_MESSAGE);
     }
@@ -406,7 +419,7 @@ public class ArchiverTest
         return alignTerm(SIZE) * 2 + HEADER_LENGTH;
     }
 
-    private long readTo(final long position)
+    private long read(final long position)
     {
         return archiveReader.read(publication.sessionId(), position, fragmentHandler);
     }
@@ -502,7 +515,7 @@ public class ArchiverTest
 
     private void assertReadsValueAt(final int value, final long position)
     {
-        final boolean hasRead = readTo(position) > 0;
+        final boolean hasRead = read(position) > 0;
 
         verify(fragmentHandler).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
 
