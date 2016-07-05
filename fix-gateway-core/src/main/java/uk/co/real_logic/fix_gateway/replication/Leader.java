@@ -198,8 +198,7 @@ public class Leader implements Role, RaftHandler
             }
             else
             {
-                // TODO: decide if this is the right mechanic
-                //saveResend(EMPTY_BUFFER, 0, 0);
+                return Action.ABORT;
             }
         }
 
