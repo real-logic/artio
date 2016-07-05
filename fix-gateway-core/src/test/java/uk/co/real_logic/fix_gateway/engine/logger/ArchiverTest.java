@@ -165,8 +165,6 @@ public class ArchiverTest
         assertNothingBlockRead(wasRead);
     }
 
-    // TODO: updating checksums when you patch
-
     private void corruptLogFile() throws IOException
     {
         final File file = logFiles().get(0);
