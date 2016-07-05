@@ -30,9 +30,10 @@ class SoloPositionSender implements Index
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
     private final Long2LongHashMap libraryIdToPosition = new Long2LongHashMap(MISSING_LIBRARY);
-    private int resendCount;
 
     private final GatewayPublication publication;
+
+    private int resendCount;
 
     SoloPositionSender(final GatewayPublication publication)
     {
