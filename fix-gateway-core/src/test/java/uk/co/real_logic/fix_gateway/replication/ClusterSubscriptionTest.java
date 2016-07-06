@@ -28,6 +28,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasResult;
 
+/**
+ * Test technically breaches encapsulation of ClusterSubscription
+ * deliberate tradeoff to avoid additional indirection and test complexity.
+ */
 public class ClusterSubscriptionTest
 {
 
