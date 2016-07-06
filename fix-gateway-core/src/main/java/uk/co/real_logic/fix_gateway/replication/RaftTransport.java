@@ -33,7 +33,7 @@ public class RaftTransport
         final RaftPublication acknowledgementPublication = raftPublication(configuration.acknowledgementStream());
         final StreamIdentifier controlStream = configuration.controlStream();
         final RaftPublication controlPublication = raftPublication(controlStream);
-        final Subscription controlSubscription = subscription(controlStream.channel(), controlStream.streamId());
+        final Subscription controlSubscription = controlSubscription();
 
         leader
             .controlPublication(controlPublication)
@@ -62,6 +62,12 @@ public class RaftTransport
     {
         final StreamIdentifier dataStream = configuration.dataStream();
         return subscription(dataStream.channel(), dataStream.streamId());
+    }
+
+    public Subscription controlSubscription()
+    {
+        final StreamIdentifier controlStream = configuration.controlStream();
+        return subscription(controlStream.channel(), controlStream.streamId());
     }
 
     public void injectFollowerSubscriptions(final Follower follower)

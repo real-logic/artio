@@ -123,14 +123,12 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderSubscription = new ClusterSubscription(
             dataSubscription(),
             CLUSTER_STREAM_ID,
-            termState1.consensusPosition(),
-            new AtomicInteger(leaderSessionId));
+            controlSubscription());
 
         follower1Subscription = new ClusterSubscription(
             dataSubscription(),
             CLUSTER_STREAM_ID,
-            termState2.consensusPosition(),
-            new AtomicInteger(leaderSessionId));
+            controlSubscription());
     }
 
     @Test
