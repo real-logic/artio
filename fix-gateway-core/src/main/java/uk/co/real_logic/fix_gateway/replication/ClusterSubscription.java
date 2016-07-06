@@ -139,7 +139,6 @@ public class ClusterSubscription extends ClusterableSubscription
         CloseHelper.close(dataSubscription);
     }
 
-    // TODO: fix thread-safety bug, what if commitPosition refers to a different leader?
     private final class MessageFilter implements ControlledFragmentHandler
     {
         private ControlledFragmentHandler fragmentHandler;
