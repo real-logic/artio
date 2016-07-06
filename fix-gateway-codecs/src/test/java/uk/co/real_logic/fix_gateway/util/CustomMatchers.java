@@ -143,9 +143,20 @@ public final class CustomMatchers
                 return valueMatcher.matches(value);
             }
 
+            protected void describeMismatchSafely(final T item, final Description mismatchDescription)
+            {
+                final V value = getter.apply(item);
+                mismatchDescription
+                    .appendText("was ")
+                    .appendValue(value);
+            }
+
             public void describeTo(final Description description)
             {
-                description.appendText("A method called " + name + " with ");
+                description
+                    .appendText("A method called ")
+                    .appendValue(name)
+                    .appendText(" with ");
                 valueMatcher.describeTo(description);
             }
         };

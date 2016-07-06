@@ -154,7 +154,7 @@ public class SoloContext extends EngineContext
         return outboundLibraryStreams().subscription();
     }
 
-    public ClusterSubscription outboundClusterSubscription()
+    public ClusterableSubscription outboundClusterSubscription()
     {
         return null;
     }
