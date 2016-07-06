@@ -160,10 +160,12 @@ public class RaftPublication
         return position;
     }
 
-    public long saveConcensusHeartbeat(final short nodeId,
-                                       final int leaderShipTerm,
-                                       final long position,
-                                       final int leaderSessionId)
+    public long saveConcensusHeartbeat(
+        final short nodeId,
+        final int leaderShipTerm,
+        final long position,
+        final int leaderSessionId,
+        final long startPosition)
     {
         final long pos = claim(CONCENSUS_HEARTBEAT_LENGTH);
 
@@ -184,7 +186,8 @@ public class RaftPublication
             .nodeId(nodeId)
             .leaderShipTerm(leaderShipTerm)
             .position(position)
-            .leaderSessionId(leaderSessionId);
+            .leaderSessionId(leaderSessionId)
+            .startPosition(startPosition);
 
         bufferClaim.commit();
 

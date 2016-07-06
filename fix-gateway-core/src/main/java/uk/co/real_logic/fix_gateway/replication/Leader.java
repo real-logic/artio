@@ -66,6 +66,7 @@ public class Leader implements Role, RaftHandler
     private final NodeStateHandler nodeStateHandler;
     /** Position in the log that has been applied to the state machine*/
     private long lastAppliedPosition;
+    private long previousConsensusPosition;
 
     private long nextHeartbeatTimeInMs;
     private int leaderShipTerm;
@@ -167,7 +168,11 @@ public class Leader implements Role, RaftHandler
 
     private void heartbeat()
     {
-        controlPublication.saveConcensusHeartbeat(nodeId, leaderShipTerm, consensusPosition.get(), ourSessionId);
+        final long currentPosition = consensusPosition.get();
+        controlPublication.saveConcensusHeartbeat(
+            nodeId, leaderShipTerm, currentPosition, ourSessionId, previousConsensusPosition);
+
+        previousConsensusPosition = currentPosition;
         updateHeartbeatInterval(timeInMs);
     }
 
