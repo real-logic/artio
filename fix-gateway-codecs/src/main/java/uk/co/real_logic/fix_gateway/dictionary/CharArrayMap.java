@@ -15,34 +15,27 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Set;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.toSet;
-
-public final class CharArraySet
+public final class CharArrayMap<V>
 {
     private final CharArrayWrapper wrapper = new CharArrayWrapper();
-    private final Set<CharArrayWrapper> values;
+    private final Map<CharArrayWrapper, V> map;
 
-    public CharArraySet(String ... values)
+    public CharArrayMap(Map<String, V> buildFrom)
     {
-        this(Arrays.asList(values));
-    }
-
-    public CharArraySet(Collection<String> values)
-    {
-        this.values = values
+        this.map = buildFrom
+            .entrySet()
             .stream()
-            .map(str -> new CharArrayWrapper().wrap(str))
-            .collect(toSet());
+            .collect(Collectors.toMap(
+                entry -> new CharArrayWrapper().wrap(entry.getKey()), Map.Entry::getValue));
     }
 
-    public boolean contains(final char[] value, final int length)
+    public V get(final char[] value, final int length)
     {
         wrapper.wrap(value, length);
-        return values.contains(wrapper);
+        return map.get(wrapper);
     }
 
 }

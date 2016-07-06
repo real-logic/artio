@@ -17,13 +17,16 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.agrona.LangUtil;
 import org.agrona.generation.OutputManager;
+import uk.co.real_logic.fix_gateway.dictionary.CharArrayMap;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
@@ -62,6 +65,9 @@ public final class EnumGenerator
             try
             {
                 out.append(fileHeader(PARENT_PACKAGE));
+                out.append(importFor(CharArrayMap.class));
+                out.append(importFor(Map.class));
+                out.append(importFor(HashMap.class));
                 out.append(generateEnumDeclaration(enumName));
 
                 out.append(generateEnumValues(values, type));
@@ -114,6 +120,8 @@ public final class EnumGenerator
             return "";
         }
 
+        final String optionalCharArrayDecode = optionalCharArrayDecode(name, allValues, type);
+
         final Var representation = representation(type);
 
         final String cases = allValues
@@ -122,6 +130,7 @@ public final class EnumGenerator
             .collect(joining());
 
         return format(
+            "%s" +
             "    public static %s decode(%s)\n" +
             "    {\n" +
             "        switch(representation)\n" +
@@ -130,9 +139,44 @@ public final class EnumGenerator
             "        default: throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
             "        }\n" +
             "    }\n",
+            optionalCharArrayDecode,
             name,
             representation.declaration(),
             cases);
+    }
+
+    private String optionalCharArrayDecode(final String typeName, final List<Value> allValues, final Type type)
+    {
+        switch (type)
+        {
+            case STRING:
+            case MULTIPLEVALUESTRING:
+
+                final String entries = allValues
+                    .stream()
+                    .map((value) ->
+                        format("        stringMap.put(%s, %s);\n", literal(value, type), value.description()))
+                    .collect(joining());
+
+                return format(
+                    "    private static final CharArrayMap<%1$s> charMap;\n" +
+                    "    static\n" +
+                    "    {\n" +
+                    "        final Map<String, %1$s> stringMap = new HashMap<>();\n" +
+                    "%2$s" +
+                    "        charMap = new CharArrayMap<>(stringMap);\n" +
+                    "    }\n" +
+                    "\n" +
+                    "    public static %1$s decode(final char[] representation, final int length)\n" +
+                    "    {\n" +
+                    "        return charMap.get(representation, length);" +
+                    "    }\n",
+                    typeName,
+                    entries);
+
+            default:
+                return "";
+        }
     }
 
     private boolean hasGeneratedValueOf(final Type type)
@@ -186,6 +230,7 @@ public final class EnumGenerator
             case SEQNUM:
             case NUMINGROUP:
             case DAYOFMONTH:
+                // Validate that the representation genuinely is a parseable int
                 Integer.parseInt(representation);
                 return representation;
 

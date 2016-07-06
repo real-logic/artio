@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import org.agrona.generation.CompilerUtil;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.lang.reflect.Method;
@@ -109,7 +108,6 @@ public class EnumGeneratorTest
         assertEquals(values[2], decode.invoke(null, "AA"));
     }
 
-    @Ignore // Low priority
     @Test
     public void generatesCharArrayBasedDecode() throws Exception
     {
