@@ -31,7 +31,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.Comparator.comparing;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
-public class ClusterSubscription extends ClusterableSubscription
+class ClusterSubscription extends ClusterableSubscription
 {
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
@@ -255,12 +255,12 @@ public class ClusterSubscription extends ClusterableSubscription
         }
     }
 
-    public long currentConcensusPosition()
+    long currentConcensusPosition()
     {
         return messageFilter.consensusPosition;
     }
 
-    public int currentLeadershipTermId()
+    int currentLeadershipTermId()
     {
         return currentLeadershipTermId;
     }
