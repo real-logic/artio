@@ -96,6 +96,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final ReliefValve sendOutboundMessagesFunc = this::sendOutboundMessages;
 
+    private final SocketChannelFactory socketChannelFactory;
     private final EpochClock clock;
     private final Timer outboundTimer;
     private final Timer sendTimer;
@@ -199,6 +200,15 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 replyPublication,
                 engineDescriptorStore);
             outboundClusterSubscriber = ProtocolSubscription.of(this);
+        }
+
+        try
+        {
+            socketChannelFactory = configuration.makeSocketChannelFactory();
+        }
+        catch (IOException e)
+        {
+            throw new IllegalArgumentException(e);
         }
 
         if (hasBindAddress)

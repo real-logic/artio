@@ -21,8 +21,10 @@ import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
+import uk.co.real_logic.fix_gateway.engine.framer.SocketChannelFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Objects;
 
@@ -655,5 +657,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public String libraryAeronChannel()
     {
         return libraryAeronChannel;
+    }
+
+    public SocketChannelFactory makeSocketChannelFactory() throws IOException
+    {
+        return new SocketChannelFactory(this);
     }
 }
