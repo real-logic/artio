@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
@@ -32,6 +33,7 @@ public class ClusterSubscription extends ClusterableSubscription
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final ConcensusHeartbeatDecoder concensusHeartbeat = new ConcensusHeartbeatDecoder();
+    private final ControlledFragmentHandler onControlMessage = this::onControlMessage;
 
     private final MessageFilter messageFilter;
     private final Subscription dataSubscription;
@@ -60,48 +62,7 @@ public class ClusterSubscription extends ClusterableSubscription
     {
         if (cannotAdvance())
         {
-            final int messagesRead = controlSubscription.controlledPoll((buffer, offset, length, header) ->
-            {
-                messageHeader.wrap(buffer, offset);
-                if (messageHeader.templateId() == ConcensusHeartbeatDecoder.TEMPLATE_ID)
-                {
-                    offset += MessageHeaderDecoder.ENCODED_LENGTH;
-
-                    concensusHeartbeat.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
-
-                    final int leaderShipTerm = concensusHeartbeat.leaderShipTerm();
-                    final long position = concensusHeartbeat.position();
-
-                    if (leaderShipTerm == currentLeadershipTermId)
-                    {
-                        if (messageFilter.consensusPosition < position)
-                        {
-                            messageFilter.consensusPosition = position;
-
-                            return BREAK;
-                        }
-                    }
-                    else if (leaderShipTerm == currentLeadershipTermId + 1 || dataImage == null)
-                    {
-                        // TODO: add previous position and check previous position.
-                        final int leaderSessionId = concensusHeartbeat.leaderSessionId();
-                        dataImage = dataSubscription.getImage(leaderSessionId);
-                        messageFilter.consensusPosition = position;
-                        currentLeadershipTermId = leaderShipTerm;
-
-                        return BREAK;
-                    }
-                    else if (leaderShipTerm > currentLeadershipTermId)
-                    {
-                        System.out.println("TODO: stash");
-                    }
-
-                    // We deliberately ignore leaderShipTerm < currentLeadershipTermId, as they would be old
-                    // leader messages
-                }
-
-                return CONTINUE;
-            }, fragmentLimit);
+            final int messagesRead = controlSubscription.controlledPoll(onControlMessage, fragmentLimit);
 
             if (cannotAdvance())
             {
@@ -111,6 +72,61 @@ public class ClusterSubscription extends ClusterableSubscription
 
         messageFilter.fragmentHandler = fragmentHandler;
         return dataImage.controlledPoll(messageFilter, fragmentLimit);
+    }
+
+    private Action onControlMessage(
+        final DirectBuffer buffer,
+        int offset,
+        final int length,
+        final Header header)
+    {
+        messageHeader.wrap(buffer, offset);
+        if (messageHeader.templateId() == ConcensusHeartbeatDecoder.TEMPLATE_ID)
+        {
+            offset += MessageHeaderDecoder.ENCODED_LENGTH;
+
+            concensusHeartbeat.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
+
+            final int leaderShipTerm = concensusHeartbeat.leaderShipTerm();
+            final int leaderSessionId = concensusHeartbeat.leaderSessionId();
+            final long position = concensusHeartbeat.position();
+
+            return onConcensusHeartbeat(leaderShipTerm, leaderSessionId, position);
+        }
+
+        return CONTINUE;
+    }
+
+    private Action onConcensusHeartbeat(final int leaderShipTerm, final int leaderSessionId, final long position)
+    {
+        if (leaderShipTerm == currentLeadershipTermId)
+        {
+            if (messageFilter.consensusPosition < position)
+            {
+                messageFilter.consensusPosition = position;
+
+                return BREAK;
+            }
+        }
+        else if (leaderShipTerm == currentLeadershipTermId + 1 || dataImage == null)
+        {
+            // TODO: add previous position and check previous position.
+
+            dataImage = dataSubscription.getImage(leaderSessionId);
+            messageFilter.consensusPosition = position;
+            currentLeadershipTermId = leaderShipTerm;
+
+            return BREAK;
+        }
+        else if (leaderShipTerm > currentLeadershipTermId)
+        {
+            System.out.println("TODO: stash");
+        }
+
+        // We deliberately ignore leaderShipTerm < currentLeadershipTermId, as they would be old
+        // leader messages
+
+        return CONTINUE;
     }
 
     private boolean cannotAdvance()
