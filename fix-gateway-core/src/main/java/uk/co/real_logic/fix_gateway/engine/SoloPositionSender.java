@@ -56,7 +56,6 @@ class SoloPositionSender implements Index
 
             fixMessage.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
 
-            // TODO: think of a sensible back-pressure strategy.
             final int libraryId = fixMessage.libraryId();
             if (saveNewSentPosition(libraryId, endPosition))
             {
