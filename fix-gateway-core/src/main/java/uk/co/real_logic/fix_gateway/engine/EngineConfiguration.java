@@ -21,12 +21,13 @@ import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
-import uk.co.real_logic.fix_gateway.engine.framer.SocketChannelFactory;
+import uk.co.real_logic.fix_gateway.engine.framer.ChannelSupplier;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Objects;
+import java.util.function.Function;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
@@ -139,6 +140,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int noLogonDisconnectTimeoutInMs =
         getInteger(NO_LOGON_DISCONNECT_TIMEOUT_PROP, DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT);
     private String libraryAeronChannel = null;
+    private Function<EngineConfiguration, ChannelSupplier> channelSupplierFactory =
+        ChannelSupplier::new;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -429,6 +432,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration channelSupplierFactory(final Function<EngineConfiguration, ChannelSupplier> value)
+    {
+        this.channelSupplierFactory = value;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -659,8 +668,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return libraryAeronChannel;
     }
 
-    public SocketChannelFactory makeSocketChannelFactory() throws IOException
+    public ChannelSupplier channelSupplier() throws IOException
     {
-        return new SocketChannelFactory(this);
+        return channelSupplierFactory.apply(this);
     }
 }

@@ -164,7 +164,7 @@ public final class FixEngine extends GatewayProcess
         final Streams outboundLibraryStreams = context.outboundLibraryStreams();
         final Streams inboundLibraryStreams = context.inboundLibraryStreams();
 
-        final ConnectionHandler handler = new ConnectionHandler(
+        final EndPointFactory handler = new EndPointFactory(
             configuration,
             sessionIdStrategy,
             sessionIds,

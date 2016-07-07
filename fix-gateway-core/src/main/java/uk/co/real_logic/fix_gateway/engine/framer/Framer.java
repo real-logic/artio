@@ -46,9 +46,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -96,7 +93,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final ReliefValve sendOutboundMessagesFunc = this::sendOutboundMessages;
 
-    private final SocketChannelFactory socketChannelFactory;
+    private final ChannelSupplier channelSupplier;
     private final EpochClock clock;
     private final Timer outboundTimer;
     private final Timer sendTimer;
@@ -104,14 +101,11 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ControlledFragmentHandler outboundLibrarySubscriber;
     private final ControlledFragmentHandler outboundClusterSubscriber;
 
-    private final boolean hasBindAddress;
-    private final Selector selector;
-    private final ServerSocketChannel listeningChannel;
     private final ReceiverEndPoints receiverEndPoints = new ReceiverEndPoints();
     private final SenderEndPoints senderEndPoints;
 
     private final EngineConfiguration configuration;
-    private final ConnectionHandler connectionHandler;
+    private final EndPointFactory endPointFactory;
     private final ClusterableSubscription outboundClusterSubscription;
     private final ClusterableSubscription outboundLibrarySubscription;
     private final ClusterableSubscription outboundSlowSubscription;
@@ -140,7 +134,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Timer outboundTimer,
         final Timer sendTimer,
         final EngineConfiguration configuration,
-        final ConnectionHandler connectionHandler,
+        final EndPointFactory endPointFactory,
         final ClusterableSubscription outboundClusterSubscription,
         final ClusterableSubscription outboundLibrarySubscription,
         final ClusterableSubscription outboundSlowSubscription,
@@ -162,7 +156,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundTimer = outboundTimer;
         this.sendTimer = sendTimer;
         this.configuration = configuration;
-        this.connectionHandler = connectionHandler;
+        this.endPointFactory = endPointFactory;
         this.outboundClusterSubscription = outboundClusterSubscription;
         this.outboundLibrarySubscription = outboundLibrarySubscription;
         this.outboundSlowSubscription = outboundSlowSubscription;
@@ -171,7 +165,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.inboundMessages = inboundMessages;
         this.errorHandler = errorHandler;
         this.outboundPublication = outboundPublication;
-        this.inboundPublication = connectionHandler.inboundPublication(sendOutboundMessagesFunc);
+        this.inboundPublication = endPointFactory.inboundPublication(sendOutboundMessagesFunc);
         this.clusterableStreams = clusterableStreams;
         this.senderEndPoints = new SenderEndPoints(inboundPublication);
         this.sessionIdStrategy = sessionIdStrategy;
@@ -184,7 +178,6 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
         this.inboundBytesReceivedLimit = configuration.inboundBytesReceivedLimit();
-        this.hasBindAddress = configuration.hasBindAddress();
 
         if (outboundClusterSubscription == null)
         {
@@ -204,32 +197,11 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         try
         {
-            socketChannelFactory = configuration.makeSocketChannelFactory();
+            channelSupplier = configuration.channelSupplier();
         }
         catch (IOException e)
         {
             throw new IllegalArgumentException(e);
-        }
-
-        if (hasBindAddress)
-        {
-            try
-            {
-                listeningChannel = ServerSocketChannel.open();
-                listeningChannel.bind(configuration.bindAddress()).configureBlocking(false);
-
-                selector = Selector.open();
-                listeningChannel.register(selector, SelectionKey.OP_ACCEPT);
-            }
-            catch (final IOException ex)
-            {
-                throw new IllegalArgumentException(ex);
-            }
-        }
-        else
-        {
-            listeningChannel = null;
-            selector = null;
         }
     }
 
@@ -333,66 +305,48 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int pollNewConnections(final long timeInMs) throws IOException
     {
-        if (!hasBindAddress)
+        return channelSupplier.forEachChannel(channel ->
         {
-            return 0;
-        }
-
-        final int newConnections = selector.selectNow();
-        if (newConnections > 0)
-        {
-            final Iterator<SelectionKey> it = selector.selectedKeys().iterator();
-            while (it.hasNext())
+            if (clusterableStreams.isLeader())
             {
-                it.next();
+                final long connectionId = this.nextConnectionId++;
+                final boolean resetSequenceNumbers = configuration.acceptorSequenceNumbersResetUponReconnect();
+                final GatewaySession session = setupConnection(
+                    channel, connectionId, UNKNOWN, null, GATEWAY_LIBRARY_ID, ACCEPTOR, resetSequenceNumbers);
 
-                final SocketChannel channel = listeningChannel.accept();
+                session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
 
-                if (clusterableStreams.isLeader())
+                gatewaySessions.acquire(
+                    session,
+                    CONNECTED,
+                    configuration.defaultHeartbeatIntervalInS(),
+                    UNK_SESSION,
+                    UNK_SESSION,
+                    null,
+                    null);
+
+                final String address = channel.getRemoteAddress().toString();
+                // In this case the save connect is simply logged for posterities sake
+                // So in the back-pressure we should just drop it
+                if (inboundPublication.saveConnect(connectionId, address) == BACK_PRESSURED)
                 {
-                    final long connectionId = this.nextConnectionId++;
-                    final boolean resetSequenceNumbers = configuration.acceptorSequenceNumbersResetUponReconnect();
-                    final GatewaySession session = setupConnection(
-                        channel, connectionId, UNKNOWN, null, GATEWAY_LIBRARY_ID, ACCEPTOR, resetSequenceNumbers);
-
-                    session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
-
-                    gatewaySessions.acquire(
-                        session,
-                        CONNECTED,
-                        configuration.defaultHeartbeatIntervalInS(),
-                        UNK_SESSION,
-                        UNK_SESSION,
-                        null,
-                        null);
-
-                    final String address = channel.getRemoteAddress().toString();
-                    // In this case the save connect is simply logged for posterities sake
-                    // So in the back-pressure we should just drop it
-                    if (inboundPublication.saveConnect(connectionId, address) == BACK_PRESSURED)
-                    {
-                        errorHandler.onError(new IllegalStateException(
-                            "Failed to log connect from " + address + " due to backpressure"));
-                    }
-                }
-                else
-                {
-                    final String address = channel.getRemoteAddress().toString();
                     errorHandler.onError(new IllegalStateException(
-                        String.format("Attempted connection from %s whilst follower", address)));
-
-                    // NB: channel is still blocking at this point, so will be placed in buffer
-                    // NB: Writing error message is best effort, possible that other end closes
-                    // Before receipt.
-                    channel.write(CONNECT_ERROR);
-                    channel.close();
+                        "Failed to log connect from " + address + " due to backpressure"));
                 }
-
-                it.remove();
             }
-        }
+            else
+            {
+                final String address = channel.getRemoteAddress().toString();
+                errorHandler.onError(new IllegalStateException(
+                    String.format("Attempted connection from %s whilst follower", address)));
 
-        return newConnections;
+                // NB: channel is still blocking at this point, so will be placed in buffer
+                // NB: Writing error message is best effort, possible that other end closes
+                // Before receipt.
+                channel.write(CONNECT_ERROR);
+                channel.close();
+            }
+        });
     }
 
     public Action onInitiateConnection(
@@ -432,8 +386,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             try
             {
                 address = new InetSocketAddress(host, port);
-                channel = SocketChannel.open();
-                channel.connect(address);
+                channel = channelSupplier.open(address);
             }
             catch (final Exception e)
             {
@@ -560,12 +513,12 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         channel.configureBlocking(false);
 
         final ReceiverEndPoint receiverEndPoint =
-            connectionHandler.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
+            endPointFactory.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
                 sendOutboundMessagesFunc, sentSequenceNumberIndex, recvSeqNumIndex, resetSequenceNumbers);
         receiverEndPoints.add(receiverEndPoint);
 
         final SenderEndPoint senderEndPoint =
-            connectionHandler.senderEndPoint(channel, connectionId, libraryId, this);
+            endPointFactory.senderEndPoint(channel, connectionId, libraryId, this);
         senderEndPoints.add(senderEndPoint);
 
         final GatewaySession gatewaySession = new GatewaySession(
@@ -927,8 +880,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         close(inboundMessages);
         receiverEndPoints.close();
         senderEndPoints.close();
-        close(selector);
-        close(listeningChannel);
+        close(channelSupplier);
     }
 
     public String roleName()

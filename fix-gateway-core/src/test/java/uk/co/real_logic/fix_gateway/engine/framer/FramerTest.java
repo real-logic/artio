@@ -79,7 +79,7 @@ public class FramerTest
 
     private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
     private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
-    private ConnectionHandler mockConnectionHandler = mock(ConnectionHandler.class);
+    private EndPointFactory mockEndPointFactory = mock(EndPointFactory.class);
     private GatewayPublication inboundPublication = mock(GatewayPublication.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private Header header = mock(Header.class);
@@ -106,19 +106,19 @@ public class FramerTest
     @SuppressWarnings("unchecked")
     public void setUp() throws IOException
     {
-        when(mockConnectionHandler.inboundPublication(any())).thenReturn(inboundPublication);
+        when(mockEndPointFactory.inboundPublication(any())).thenReturn(inboundPublication);
 
         server = ServerSocketChannel.open().bind(TEST_ADDRESS);
         server.configureBlocking(false);
 
         clientBuffer.putInt(10, 5);
 
-        when(mockConnectionHandler
+        when(mockEndPointFactory
             .receiverEndPoint(any(), connectionId.capture(), anyLong(), anyInt(), any(), any(),
                 eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean()))
             .thenReturn(mockReceiverEndPoint);
 
-        when(mockConnectionHandler.senderEndPoint(any(SocketChannel.class), anyLong(), anyInt(), any()))
+        when(mockEndPointFactory.senderEndPoint(any(SocketChannel.class), anyLong(), anyInt(), any()))
             .thenReturn(mockSenderEndPoint);
 
         when(mockReceiverEndPoint.connectionId()).then(inv -> connectionId.getValue());
@@ -136,7 +136,7 @@ public class FramerTest
             mock(Timer.class),
             mock(Timer.class),
             engineConfiguration,
-            mockConnectionHandler,
+            mockEndPointFactory,
             mock(ClusterableSubscription.class),
             outboundSubscription,
             mock(ClusterableSubscription.class),
@@ -545,11 +545,11 @@ public class FramerTest
 
     private void verifyEndpointsCreated() throws IOException
     {
-        verify(mockConnectionHandler).receiverEndPoint(
+        verify(mockEndPointFactory).receiverEndPoint(
             notNull(SocketChannel.class), anyLong(), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer),
             any(), eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean());
 
-        verify(mockConnectionHandler).senderEndPoint(
+        verify(mockEndPointFactory).senderEndPoint(
             notNull(SocketChannel.class), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer));
     }
 }

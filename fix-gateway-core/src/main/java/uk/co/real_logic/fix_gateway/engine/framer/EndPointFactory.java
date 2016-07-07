@@ -29,12 +29,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.SocketChannel;
 
-/**
- * Handles incoming connections including setting up framers.
- *
- * Threadsafe.
- */
-public class ConnectionHandler
+public class EndPointFactory
 {
     private final EngineConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
@@ -44,7 +39,7 @@ public class ConnectionHandler
     private final FixCounters fixCounters;
     private final ErrorHandler errorHandler;
 
-    public ConnectionHandler(
+    public EndPointFactory(
         final EngineConfiguration configuration,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
