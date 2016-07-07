@@ -56,7 +56,6 @@ import java.util.stream.Collectors;
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static java.net.StandardSocketOptions.*;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
@@ -501,17 +500,6 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final boolean resetSequenceNumbers)
         throws IOException
     {
-        channel.setOption(TCP_NODELAY, true);
-        if (configuration.receiverSocketBufferSize() > 0)
-        {
-            channel.setOption(SO_RCVBUF, configuration.receiverSocketBufferSize());
-        }
-        if (configuration.senderSocketBufferSize() > 0)
-        {
-            channel.setOption(SO_SNDBUF, configuration.senderSocketBufferSize());
-        }
-        channel.configureBlocking(false);
-
         final ReceiverEndPoint receiverEndPoint =
             endPointFactory.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
                 sendOutboundMessagesFunc, sentSequenceNumberIndex, recvSeqNumIndex, resetSequenceNumbers);

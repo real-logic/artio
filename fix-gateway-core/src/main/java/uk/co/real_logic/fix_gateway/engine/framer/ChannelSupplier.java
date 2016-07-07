@@ -26,19 +26,24 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
+import static java.net.StandardSocketOptions.SO_RCVBUF;
+import static java.net.StandardSocketOptions.SO_SNDBUF;
+import static java.net.StandardSocketOptions.TCP_NODELAY;
+
 /**
  * Mockable class for intercepting network communications
  */
 public class ChannelSupplier implements AutoCloseable
 {
-
     private final boolean hasBindAddress;
+    private final EngineConfiguration configuration;
     private final Selector selector;
     private final ServerSocketChannel listeningChannel;
 
     public ChannelSupplier(final EngineConfiguration configuration)
     {
         hasBindAddress = configuration.hasBindAddress();
+        this.configuration = configuration;
 
         if (hasBindAddress)
         {
@@ -78,6 +83,7 @@ public class ChannelSupplier implements AutoCloseable
                 it.next();
 
                 final SocketChannel channel = listeningChannel.accept();
+                configure(channel);
 
                 handler.onNewChannel(channel);
 
@@ -86,6 +92,21 @@ public class ChannelSupplier implements AutoCloseable
         }
 
         return newConnections;
+    }
+
+    private void configure(final SocketChannel channel) throws IOException
+    {
+        channel.setOption(TCP_NODELAY, true);
+        if (configuration.receiverSocketBufferSize() > 0)
+        {
+            channel.setOption(SO_RCVBUF, configuration.receiverSocketBufferSize());
+        }
+        if (configuration.senderSocketBufferSize() > 0)
+        {
+            channel.setOption(SO_SNDBUF, configuration.senderSocketBufferSize());
+        }
+        channel.configureBlocking(false);
+
     }
 
     public void close() throws Exception
@@ -98,6 +119,7 @@ public class ChannelSupplier implements AutoCloseable
     {
         final SocketChannel channel = SocketChannel.open();
         channel.connect(address);
+        configure(channel);
         return channel;
     }
 
