@@ -24,8 +24,6 @@ import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
-import uk.co.real_logic.fix_gateway.engine.framer.ChannelSupplier;
-import uk.co.real_logic.fix_gateway.engine.framer.ChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -43,13 +41,10 @@ import static org.agrona.CloseHelper.close;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-@Ignore
 public class SlowConsumerTest
 {
     private static final int MAX_BYTES_IN_BUFFER = 4 * 1024;
@@ -70,30 +65,12 @@ public class SlowConsumerTest
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(byteBuffer);
     private SocketChannel socket;
 
-    private ChannelSupplier channelSupplier;
-    private SocketChannel mockSocket = mock(SocketChannel.class);
-
-    public SlowConsumerTest()
-    {
-        channelSupplier = mock(ChannelSupplier.class);
-    }
-
     @Before
     public void setUp() throws IOException
     {
-        when(mockSocket.write(any(ByteBuffer.class))).thenReturn(0);
-
-        when(channelSupplier.forEachChannel(any())).then(inv ->
-        {
-            final NewChannelHandler handler = (NewChannelHandler) inv.getArguments()[0];
-            handler.onNewChannel(mockSocket);
-            return 1;
-        });
-
         mediaDriver = launchMediaDriver();
         delete(ACCEPTOR_LOGS);
-        final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID)
-            .channelSupplierFactory(ignore -> channelSupplier);
+        final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
         config.senderMaxBytesInBuffer(MAX_BYTES_IN_BUFFER);
         engine = FixEngine.launch(config);
         library = newAcceptingLibrary(handler);
@@ -102,7 +79,7 @@ public class SlowConsumerTest
     @Test
     public void shouldQuarantineThenDisconnectASlowConsumer() throws IOException
     {
-        //initiateConnection();
+        initiateConnection();
 
         final TestRequestEncoder testRequest = newTestRequest();
         final Session session = acquireSession(handler, library);
