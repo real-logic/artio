@@ -217,9 +217,10 @@ public class Archiver implements Agent, RawBlockHandler
         {
             final ByteBuffer byteBuffer = termBuffer.byteBuffer();
             final int end = termOffset + length - HEADER_LENGTH;
+            int remaining = length;
             while (termOffset < end)
             {
-                header.wrap(termBuffer, termOffset, length);
+                header.wrap(termBuffer, termOffset, remaining);
                 final int frameLength = header.frameLength();
                 final int messageOffset = termOffset + HEADER_LENGTH;
                 checksum.reset();
@@ -249,7 +250,9 @@ public class Archiver implements Agent, RawBlockHandler
 
                 writeChecksum(header);
 
-                termOffset = ArchiveDescriptor.nextTerm(termOffset, frameLength);
+                final int alignedFrameLength = ArchiveDescriptor.alignTerm(frameLength);
+                termOffset += alignedFrameLength;
+                remaining -= alignedFrameLength;
             }
         }
 

@@ -16,7 +16,10 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import io.aeron.driver.MediaDriver;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.Timeout;
 import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
@@ -27,6 +30,7 @@ import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -35,8 +39,8 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.List;
-import java.util.concurrent.locks.LockSupport;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.agrona.CloseHelper.close;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -63,17 +67,22 @@ public class SlowConsumerTest
     private LogonEncoder logon = new LogonEncoder();
     private ByteBuffer byteBuffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(byteBuffer);
+    private SteppingIdleStrategy framerIdleStrategy = new SteppingIdleStrategy();
     private SocketChannel socket;
 
     @Before
     public void setUp() throws IOException
     {
-        mediaDriver = launchMediaDriver();
+        mediaDriver = launchMediaDriver(128 * 1024 * 1024);
         delete(ACCEPTOR_LOGS);
-        final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
+        final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID)
+            .framerIdleStrategy(framerIdleStrategy);
         config.senderMaxBytesInBuffer(MAX_BYTES_IN_BUFFER);
         engine = FixEngine.launch(config);
-        library = newAcceptingLibrary(handler);
+        final LibraryConfiguration libraryConfiguration =
+            acceptingLibraryConfig(handler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", IPC_CHANNEL);
+        libraryConfiguration.outboundMaxClaimAttempts(1);
+        library = FixLibrary.connect(libraryConfiguration);
     }
 
     @Test
@@ -85,6 +94,8 @@ public class SlowConsumerTest
         final Session session = acquireSession(handler, library);
         final SessionInfo sessionInfo = getSessionInfo();
 
+        framerIdleStrategy.startStepping();
+
         while (socketIsConnected() || session.canSendMessage())
         {
             if (session.canSendMessage())
@@ -93,9 +104,12 @@ public class SlowConsumerTest
             }
 
             library.poll(1);
+            framerIdleStrategy.step();
         }
 
         bytesInBufferAtLeast(sessionInfo, (long) MAX_BYTES_IN_BUFFER);
+
+        framerIdleStrategy.stopStepping();
     }
 
     @Test
@@ -107,6 +121,8 @@ public class SlowConsumerTest
         final Session session = acquireSession(handler, library);
         final SessionInfo sessionInfo = getSessionInfo();
 
+        framerIdleStrategy.startStepping();
+
         // Get into a quarantined state
         while (sessionInfo.bytesInBuffer() == 0)
         {
@@ -116,8 +132,7 @@ public class SlowConsumerTest
             }
 
             library.poll(1);
-
-            LockSupport.parkNanos(1);
+            framerIdleStrategy.step();
         }
 
         socket.configureBlocking(false);
@@ -135,6 +150,7 @@ public class SlowConsumerTest
             session.send(testRequest);
 
             library.poll(1);
+            framerIdleStrategy.step();
         }
 
         assertEquals(ACTIVE, session.state());
@@ -146,6 +162,7 @@ public class SlowConsumerTest
         Timing.assertEventuallyTrue("Buffer doesn't have enough bytes in", () ->
         {
             assertThat(sessionInfo.bytesInBuffer(), greaterThanOrEqualTo(bytesInBuffer));
+            framerIdleStrategy.step();
         });
     }
 
