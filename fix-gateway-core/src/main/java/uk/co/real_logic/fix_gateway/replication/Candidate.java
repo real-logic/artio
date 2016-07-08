@@ -156,8 +156,7 @@ public class Candidate implements Role, RaftHandler
             if (acknowledgementStrategy.isElected(votesFor.size(), clusterSize))
             {
                 termState
-                    .leadershipTerm(leaderShipTerm)
-                    .leaderSessionId(this.sessionId);
+                    .leadershipTerm(leaderShipTerm);
 
                 clusterNode.transitionToLeader(timeInMs);
 

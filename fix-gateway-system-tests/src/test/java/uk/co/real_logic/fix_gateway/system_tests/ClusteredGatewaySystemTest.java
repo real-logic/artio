@@ -113,7 +113,8 @@ public class ClusteredGatewaySystemTest
             .collect(toList());
 
         final LibraryConfiguration configuration = acceptingLibraryConfig(
-            acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", null);
+            acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", null)
+            .replyTimeoutInMs(20_000);
         configuration.libraryAeronChannels(ids().mapToObj(this::libraryChannel).collect(toList()));
         acceptingLibrary = FixLibrary.connect(configuration);
 

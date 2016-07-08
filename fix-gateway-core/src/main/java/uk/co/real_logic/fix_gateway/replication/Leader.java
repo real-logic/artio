@@ -309,7 +309,10 @@ public class Leader implements Role, RaftHandler
     {
         this.timeInMs = timeInMs;
 
+        termState.leaderSessionId(ourSessionId);
+
         leaderShipTerm = termState.leadershipTerm();
+
         lastAppliedPosition = Math.max(HEADER_LENGTH, termState.lastAppliedPosition());
         heartbeat();
 

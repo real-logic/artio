@@ -115,7 +115,7 @@ public class ScenariosTest
 
             scenario(candidate, startElection, requestsVote, ignored),
 
-            scenario(candidate, onMajority, transitionsToLeader, isLeader(SESSION_ID)),
+            scenario(candidate, onMajority, transitionsToLeader, ignored),
 
             scenario(candidate, newLeaderRequestVote, votesAndFollows(CANDIDATE_ID), hasNewLeader(SESSION_ID)),
 

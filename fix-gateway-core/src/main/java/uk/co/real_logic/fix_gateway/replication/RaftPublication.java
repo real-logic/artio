@@ -260,7 +260,7 @@ public class RaftPublication
         if (position == NOT_CONNECTED)
         {
             throw new IllegalStateException(
-                "Unable to send publish message, probably a missing an engine or library instance");
+                "Unable to send publish message, probably a missing another cluster node");
         }
         else
         {
