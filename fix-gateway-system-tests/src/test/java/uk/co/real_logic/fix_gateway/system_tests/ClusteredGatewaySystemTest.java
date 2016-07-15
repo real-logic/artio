@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import io.aeron.CommonContext;
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
-import org.agrona.concurrent.YieldingIdleStrategy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -80,8 +79,6 @@ public class ClusteredGatewaySystemTest
         {
             final MediaDriver.Context context = mediaDriverContext(TERM_BUFFER_LENGTH);
             context.aeronDirectoryName(aeronDirName(id));
-            context.imageLivenessTimeoutNs(context.imageLivenessTimeoutNs() * 10);
-            context.clientLivenessTimeoutNs(context.clientLivenessTimeoutNs() * 10);
             context.termBufferSparseFile(true);
             context.publicationUnblockTimeoutNs(TimeUnit.SECONDS.toNanos(100));
             return MediaDriver.launch(context);
@@ -109,9 +106,7 @@ public class ClusteredGatewaySystemTest
                     .logFileDir(acceptorLogs)
                     .clusterAeronChannel(CLUSTER_AERON_CHANNEL)
                     .nodeId((short) ourId)
-                    .addOtherNodes(ids().filter(id -> id != ourId).toArray())
-                    .framerIdleStrategy(new YieldingIdleStrategy())
-                    .loggerIdleStrategy(new YieldingIdleStrategy());
+                    .addOtherNodes(ids().filter(id -> id != ourId).toArray());
 
                 configuration.aeronContext().aeronDirectoryName(aeronDirName(ourId));
 
