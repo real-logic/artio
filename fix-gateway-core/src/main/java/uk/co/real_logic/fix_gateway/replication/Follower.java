@@ -50,6 +50,7 @@ public class Follower implements Role, RaftHandler
 
     private Subscription controlSubscription;
     private long receivedPosition;
+    private boolean requiresAcknowledgementResend = false;
 
     private short votedFor = NO_ONE;
     private int leaderShipTerm;
@@ -123,14 +124,10 @@ public class Follower implements Role, RaftHandler
         }
 
         final int bytesRead = raftArchiver.poll();
-        if (bytesRead > 0)
+        if (bytesRead > 0 || requiresAcknowledgementResend)
         {
             receivedPosition += bytesRead;
-            if (saveMessageAcknowledgement(OK) >= 0)
-            {
-                onReplyKeepAlive(timeInMs);
-            }
-            // TODO: else resend
+            saveOkAcknowledgement();
         }
 
         return bytesRead;
@@ -253,13 +250,20 @@ public class Follower implements Role, RaftHandler
             {
                 raftArchiver.patch(bodyBuffer, bodyOffset, bodyLength);
                 receivedPosition += bodyLength;
-                onReplyKeepAlive(timeInMs);
-                // TODO: consider just recording that the ack needs to be resent.
-                return Pressure.apply(saveMessageAcknowledgement(OK));
+                saveOkAcknowledgement();
             }
         }
 
         return Action.CONTINUE;
+    }
+
+    private void saveOkAcknowledgement()
+    {
+        requiresAcknowledgementResend = saveMessageAcknowledgement(OK) < 0;
+        if (!requiresAcknowledgementResend)
+        {
+            onReplyKeepAlive(timeInMs);
+        }
     }
 
     private boolean isValidPosition(

@@ -22,12 +22,16 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.OngoingStubbing;
+import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 
+import static io.aeron.Publication.BACK_PRESSURED;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.anyShort;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
@@ -132,7 +136,21 @@ public class FollowerTest
 
         poll();
 
-        acknowledgeLogEntries();
+        acknowledgeLogEntries(times(1));
+    }
+
+    @Test
+    public void shouldResendAcknowledgeLogEntriesIfBackPressured()
+    {
+        when(leaderArchiver.poll()).thenReturn(100, 0);
+        when(acknowledgementPublication.saveMessageAcknowledgement(anyLong(), anyShort(), eq(OK)))
+            .thenReturn(BACK_PRESSURED, 100L);
+
+        poll();
+
+        poll();
+
+        acknowledgeLogEntries(times(2));
     }
 
     private void onHeartbeat()
@@ -167,9 +185,9 @@ public class FollowerTest
         receivesResendFrom(POSITION, SESSION_ID_4, NEW_LEADERSHIP_TERM);
     }
 
-    private void acknowledgeLogEntries()
+    private void acknowledgeLogEntries(final VerificationMode mode)
     {
-        verify(acknowledgementPublication)
+        verify(acknowledgementPublication, mode)
             .saveMessageAcknowledgement(POSITION + LENGTH, ID, OK);
     }
 
