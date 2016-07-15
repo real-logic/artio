@@ -23,6 +23,7 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
 
 import static io.aeron.Publication.BACK_PRESSURED;
+import static io.aeron.Publication.CLOSED;
 import static io.aeron.Publication.NOT_CONNECTED;
 
 /**
@@ -86,7 +87,7 @@ public class ClaimablePublication implements AutoCloseable
             i++;
         } while (i <= maxClaimAttempts);
 
-        if (position == NOT_CONNECTED)
+        if (position == NOT_CONNECTED || position == CLOSED)
         {
             throw new IllegalStateException(
                 "Unable to send publish message, probably a missing an engine or library instance");

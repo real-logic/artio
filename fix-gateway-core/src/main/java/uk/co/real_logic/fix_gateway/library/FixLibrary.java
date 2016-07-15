@@ -225,8 +225,7 @@ public final class FixLibrary extends GatewayProcess
     private void sendLibraryConnect()
     {
         final long correlationId = ++currentCorrelationId;
-        long position;
-        while ((position = outboundPublication.saveLibraryConnect(libraryId, correlationId, uniqueValue)) < 0)
+        while (outboundPublication.saveLibraryConnect(libraryId, correlationId, uniqueValue) < 0)
         {
             idleStrategy.idle();
         }
