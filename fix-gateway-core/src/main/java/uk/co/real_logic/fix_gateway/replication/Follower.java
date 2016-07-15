@@ -50,6 +50,7 @@ public class Follower implements Role, RaftHandler
 
     private Subscription controlSubscription;
     private long receivedPosition;
+    private long missingAckedPosition;
     private boolean requiresAcknowledgementResend = false;
 
     private short votedFor = NO_ONE;
@@ -114,11 +115,12 @@ public class Follower implements Role, RaftHandler
         }
 
         final long imagePosition = raftArchiver.archivedPosition();
-        if (imagePosition > receivedPosition)
+        if (imagePosition > receivedPosition && imagePosition > missingAckedPosition)
         {
-            // TODO: should we suppress resending this for some interval to avoid spamming the missing log entries
-            // messages?
-            saveMessageAcknowledgement(MISSING_LOG_ENTRIES);
+            if (saveMessageAcknowledgement(MISSING_LOG_ENTRIES) >= 0)
+            {
+                missingAckedPosition = imagePosition;
+            }
 
             return 1;
         }
@@ -288,6 +290,7 @@ public class Follower implements Role, RaftHandler
         leaderShipTerm = termState.leadershipTerm();
         receivedPosition = termState.receivedPosition();
         checkLeaderChange();
+        missingAckedPosition = 0;
     }
 
     private void checkLeaderChange()

@@ -122,7 +122,7 @@ public class FollowerTest
 
         poll();
 
-        notifyMissingLogEntries();
+        notifyMissingLogEntries(times(1));
     }
 
     @Test
@@ -153,14 +153,42 @@ public class FollowerTest
         acknowledgeLogEntries(times(2));
     }
 
+    @Test
+    public void shouldOnceSendMissingLogEntriesOnce()
+    {
+        dataToBeCommitted(POSITION + LENGTH);
+
+        poll();
+
+        poll();
+
+        notifyMissingLogEntries(times(1));
+    }
+
+    @Test
+    public void shouldSendSeperateMissingLogEntriesUponChangeOfLeader()
+    {
+        dataToBeCommitted(POSITION + LENGTH);
+
+        poll();
+
+        onHeartbeat();
+
+        dataToBeCommitted(POSITION + LENGTH);
+
+        poll();
+
+        notifyMissingLogEntries(times(2));
+    }
+
     private void onHeartbeat()
     {
         follower.onConsensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION, SESSION_ID_4);
     }
 
-    private void notifyMissingLogEntries()
+    private void notifyMissingLogEntries(final VerificationMode mode)
     {
-        verify(acknowledgementPublication)
+        verify(acknowledgementPublication, mode)
             .saveMessageAcknowledgement(POSITION, ID, MISSING_LOG_ENTRIES);
     }
 
