@@ -34,7 +34,7 @@ import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 class ClusterContext extends EngineContext
 {
-    private final SoloSubscription outboundLibrarySubscription;
+    private final String libraryAeronChannel;
     private final Publication inboundPublication;
     private final StreamIdentifier dataStream;
     private final ClusterAgent node;
@@ -51,10 +51,8 @@ class ClusterContext extends EngineContext
 
         final String channel = configuration.clusterAeronChannel();
         dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
-        final String libraryAeronChannel = configuration.libraryAeronChannel();
+        libraryAeronChannel = configuration.libraryAeronChannel();
         inboundPublication = aeron.addPublication(libraryAeronChannel, INBOUND_LIBRARY_STREAM);
-        outboundLibrarySubscription = new SoloSubscription(
-            aeron.addSubscription(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
         node = node(configuration, fixCounters, aeron, channel, engineDescriptorStore);
         newStreams(node.clusterStreams());
         newIndexers(inboundArchiveReader(), outboundArchiveReader(), null);
@@ -146,7 +144,8 @@ class ClusterContext extends EngineContext
 
     public ClusterableSubscription outboundLibrarySubscription()
     {
-        return outboundLibrarySubscription;
+        return new SoloSubscription(
+            aeron.addSubscription(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
     }
 
     public ClusterableSubscription outboundClusterSubscription()

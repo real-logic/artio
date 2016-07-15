@@ -235,6 +235,7 @@ public abstract class EngineContext implements AutoCloseable
 
     public abstract ClusterableSubscription outboundClusterSubscription();
 
+    // Each invocation should return a new instance of the subscription
     public abstract ClusterableSubscription outboundLibrarySubscription();
 
     public abstract ReplayQuery inboundReplayQuery();

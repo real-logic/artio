@@ -19,6 +19,7 @@ import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.messages.DisconnectDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
@@ -44,26 +45,26 @@ class SubscriptionSplitter implements ControlledFragmentHandler
     private final ClusterablePublication clusterPublication;
     private final GatewayPublication replyPublication;
     private final EngineDescriptorStore engineDescriptorStore;
+    private final String bindAddress;
 
     SubscriptionSplitter(
         final ClusterableStreams clusterableStreams,
         final EngineProtocolSubscription engineProtocolSubscription,
         final ClusterablePublication clusterPublication,
         final GatewayPublication replyPublication,
-        final EngineDescriptorStore engineDescriptorStore)
+        final EngineDescriptorStore engineDescriptorStore,
+        final String bindAddress)
     {
         this.clusterableStreams = clusterableStreams;
         this.engineProtocolSubscription = engineProtocolSubscription;
         this.clusterPublication = clusterPublication;
         this.replyPublication = replyPublication;
         this.engineDescriptorStore = engineDescriptorStore;
+        this.bindAddress = bindAddress;
     }
 
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
-        /*String stringSbeMessage = DebugLogger.toStringSbeMessage(buffer, offset);
-        System.out.println("Wat? " + stringSbeMessage + " @ " + header.position());*/
-
         if (clusterableStreams.isLeader())
         {
             messageHeader.wrap(buffer, offset);
@@ -87,6 +88,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
 
                 default:
                 {
+                    DebugLogger.logSbeMessage(buffer, offset);
                     return engineProtocolSubscription.onFragment(buffer, offset, length, header);
                 }
             }
@@ -94,7 +96,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         else
         {
             // TODO: generically extract the library id
-            replyPublication.saveNotLeader(0, engineDescriptorStore.leaderLibraryChannel());
+            final long position = replyPublication.saveNotLeader(0, engineDescriptorStore.leaderLibraryChannel());
         }
 
         return CONTINUE;

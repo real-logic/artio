@@ -190,7 +190,8 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 new EngineProtocolSubscription(this),
                 clusterableStreams.publication(OUTBOUND_LIBRARY_STREAM),
                 replyPublication,
-                engineDescriptorStore);
+                engineDescriptorStore,
+                configuration.bindAddress().toString());
             outboundClusterSubscriber = ProtocolSubscription.of(this);
         }
 

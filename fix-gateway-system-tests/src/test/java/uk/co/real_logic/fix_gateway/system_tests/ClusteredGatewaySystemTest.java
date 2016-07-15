@@ -18,9 +18,9 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import io.aeron.CommonContext;
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
+import org.agrona.concurrent.YieldingIdleStrategy;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -34,15 +34,16 @@ import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
 import static org.agrona.CloseHelper.close;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-@Ignore
 public class ClusteredGatewaySystemTest
 {
     private static final int CLUSTER_SIZE = 3;
@@ -79,6 +80,10 @@ public class ClusteredGatewaySystemTest
         {
             final MediaDriver.Context context = mediaDriverContext(TERM_BUFFER_LENGTH);
             context.aeronDirectoryName(aeronDirName(id));
+            context.imageLivenessTimeoutNs(context.imageLivenessTimeoutNs() * 10);
+            context.clientLivenessTimeoutNs(context.clientLivenessTimeoutNs() * 10);
+            context.termBufferSparseFile(true);
+            context.publicationUnblockTimeoutNs(TimeUnit.SECONDS.toNanos(100));
             return MediaDriver.launch(context);
         }).collect(toList());
 
@@ -104,7 +109,9 @@ public class ClusteredGatewaySystemTest
                     .logFileDir(acceptorLogs)
                     .clusterAeronChannel(CLUSTER_AERON_CHANNEL)
                     .nodeId((short) ourId)
-                    .addOtherNodes(ids().filter(id -> id != ourId).toArray());
+                    .addOtherNodes(ids().filter(id -> id != ourId).toArray())
+                    .framerIdleStrategy(new YieldingIdleStrategy())
+                    .loggerIdleStrategy(new YieldingIdleStrategy());
 
                 configuration.aeronContext().aeronDirectoryName(aeronDirName(ourId));
 
@@ -168,6 +175,8 @@ public class ClusteredGatewaySystemTest
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
         acceptingSession = acquireSession(acceptingHandler, acceptingLibrary);
+        assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
+        assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
 
         sendTestRequest(initiatingSession);
 
