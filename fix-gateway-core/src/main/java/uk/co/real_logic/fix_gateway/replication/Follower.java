@@ -19,6 +19,7 @@ import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
@@ -114,6 +115,8 @@ public class Follower implements Role, RaftHandler
         final long imagePosition = raftArchiver.archivedPosition();
         if (imagePosition > receivedPosition)
         {
+            // TODO: should we suppress resending this for some interval to avoid spamming the missing log entries
+            // messages?
             saveMessageAcknowledgement(MISSING_LOG_ENTRIES);
 
             return 1;
@@ -123,16 +126,19 @@ public class Follower implements Role, RaftHandler
         if (bytesRead > 0)
         {
             receivedPosition += bytesRead;
-            saveMessageAcknowledgement(OK);
-            onReplyKeepAlive(timeInMs);
+            if (saveMessageAcknowledgement(OK) >= 0)
+            {
+                onReplyKeepAlive(timeInMs);
+            }
+            // TODO: else resend
         }
 
         return bytesRead;
     }
 
-    private void saveMessageAcknowledgement(final AcknowledgementStatus status)
+    private long saveMessageAcknowledgement(final AcknowledgementStatus status)
     {
-        acknowledgementPublication.saveMessageAcknowledgement(receivedPosition, nodeId, status);
+        return acknowledgementPublication.saveMessageAcknowledgement(receivedPosition, nodeId, status);
     }
 
     public void closeStreams()
@@ -159,15 +165,22 @@ public class Follower implements Role, RaftHandler
         {
             if (canVoteFor(candidateId) && safeToVote(leaderShipTerm, candidatePosition))
             {
-                votedFor = candidateId;
-                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR, nodeState);
-                DebugLogger.log("%d: vote for %d in %d%n", nodeId, candidateId, leaderShipTerm);
-                onReplyKeepAlive(timeInMs);
+                if (controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR, nodeState) > 0)
+                {
+                    votedFor = candidateId;
+                    DebugLogger.log("%d: vote for %d in %d%n", nodeId, candidateId, leaderShipTerm);
+                    onReplyKeepAlive(timeInMs);
+                }
+                else
+                {
+                    return Action.ABORT;
+                }
             }
             else
             {
-                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST, nodeState);
                 DebugLogger.log("%d: vote against %d in %d%n", nodeId, candidateId, leaderShipTerm);
+                return Pressure.apply(
+                    controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST, nodeState));
             }
         }
 
@@ -241,7 +254,8 @@ public class Follower implements Role, RaftHandler
                 raftArchiver.patch(bodyBuffer, bodyOffset, bodyLength);
                 receivedPosition += bodyLength;
                 onReplyKeepAlive(timeInMs);
-                saveMessageAcknowledgement(OK);
+                // TODO: consider just recording that the ack needs to be resent.
+                return Pressure.apply(saveMessageAcknowledgement(OK));
             }
         }
 
