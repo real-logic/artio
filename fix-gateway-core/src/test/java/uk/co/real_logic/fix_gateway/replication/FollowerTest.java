@@ -143,14 +143,19 @@ public class FollowerTest
     public void shouldResendAcknowledgeLogEntriesIfBackPressured()
     {
         when(leaderArchiver.poll()).thenReturn(100, 0);
-        when(acknowledgementPublication.saveMessageAcknowledgement(anyLong(), anyShort(), eq(OK)))
-            .thenReturn(BACK_PRESSURED, 100L);
+        backpressureFirstAcknowledgement();
 
         poll();
 
         poll();
 
         acknowledgeLogEntries(times(2));
+    }
+
+    private void backpressureFirstAcknowledgement()
+    {
+        when(acknowledgementPublication.saveMessageAcknowledgement(anyLong(), anyShort(), any()))
+            .thenReturn(BACK_PRESSURED, 100L);
     }
 
     @Test
@@ -166,7 +171,21 @@ public class FollowerTest
     }
 
     @Test
-    public void shouldSendSeperateMissingLogEntriesUponChangeOfLeader()
+    public void shouldResendMissingLogEntriesIfFailed()
+    {
+        backpressureFirstAcknowledgement();
+
+        dataToBeCommitted(POSITION + LENGTH);
+
+        poll();
+
+        poll();
+
+        notifyMissingLogEntries(times(2));
+    }
+
+    @Test
+    public void shouldSendSeparateMissingLogEntriesUponChangeOfLeader()
     {
         dataToBeCommitted(POSITION + LENGTH);
 
