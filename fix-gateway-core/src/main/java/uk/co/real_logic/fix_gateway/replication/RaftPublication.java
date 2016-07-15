@@ -25,9 +25,11 @@ import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.messages.*;
 
 import static io.aeron.Publication.BACK_PRESSURED;
+import static io.aeron.Publication.CLOSED;
 import static io.aeron.Publication.NOT_CONNECTED;
 import static uk.co.real_logic.fix_gateway.messages.ReplyVoteEncoder.nodeStateHeaderLength;
 
+// NB: doens't extend ClaimablePublication because it works on raw Publication objects, not clusterable publications
 public class RaftPublication
 {
     private static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
@@ -72,6 +74,10 @@ public class RaftPublication
                                            final AcknowledgementStatus status)
     {
         final long position = claim(MESSAGE_ACKNOWLEDGEMENT_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -100,6 +106,10 @@ public class RaftPublication
         final short candidateId, final int candidateSessionId, final long lastAckedPosition, final int leaderShipTerm)
     {
         final long position = claim(REQUEST_VOTE_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -134,6 +144,10 @@ public class RaftPublication
     {
         final int nodeStateLength = nodeState.capacity();
         final long position = claim(REPLY_VOTE_LENGTH + nodeStateLength);
+        if (position < 0)
+        {
+            return position;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -168,6 +182,10 @@ public class RaftPublication
         final long startPosition)
     {
         final long pos = claim(CONCENSUS_HEARTBEAT_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -201,7 +219,11 @@ public class RaftPublication
                            final int bodyOffset,
                            final int bodyLength)
     {
-        final long pos = claim(RESEND_BLOCK_LENGTH + bodyLength);
+        final long position = claim(RESEND_BLOCK_LENGTH + bodyLength);
+        if (position < 0)
+        {
+            return position;
+        }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         int offset = bufferClaim.offset();
@@ -224,15 +246,10 @@ public class RaftPublication
 
         bufferClaim.commit();
 
-        return pos;
+        return position;
     }
 
-    protected long claim(final int framedLength)
-    {
-        return claim(framedLength, bufferClaim);
-    }
-
-    public long claim(final int framedLength, final BufferClaim bufferClaim)
+    private long claim(final int framedLength)
     {
         long position = 0;
         long i = 0;
@@ -257,7 +274,7 @@ public class RaftPublication
             i++;
         } while (i <= maxClaimAttempts);
 
-        if (position == NOT_CONNECTED)
+        if (position == NOT_CONNECTED || position == CLOSED)
         {
             throw new IllegalStateException(
                 "Unable to send publish message, probably a missing another cluster node");
