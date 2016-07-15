@@ -20,7 +20,9 @@ import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.verification.VerificationMode;
 
+import static io.aeron.Publication.BACK_PRESSURED;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
@@ -121,16 +123,33 @@ public class CandidateTest
 
         candidate.poll(1, VOTE_TIMEOUT * 2 + 1);
 
-        requestsVote(NEW_LEADERSHIP_TERM);
-        requestsVote(NEW_LEADERSHIP_TERM + 1);
+        requestsVote(NEW_LEADERSHIP_TERM, times(1));
+        requestsVote(NEW_LEADERSHIP_TERM + 1, times(1));
 
         neverTransitionsToLeader(clusterNode);
         neverTransitionsToFollower(clusterNode);
     }
 
-    private void requestsVote(final int term)
+    @Test
+    public void shouldResentRequestVoteIfBackPressured()
     {
-        verify(controlPublication, times(1)).saveRequestVote(ID, DATA_SESSION_ID, POSITION, term);
+        when(controlPublication.saveRequestVote(anyShort(), anyInt(), anyLong(), anyInt()))
+            .thenReturn(BACK_PRESSURED, 100L);
+
+        startElection();
+
+        candidate.poll(1, 0);
+
+        candidate.poll(1, 0);
+
+        candidate.poll(1, 0);
+
+        requestsVote(NEW_LEADERSHIP_TERM, times(2));
+    }
+
+    private void requestsVote(final int term, final VerificationMode mode)
+    {
+        verify(controlPublication, mode).saveRequestVote(ID, DATA_SESSION_ID, POSITION, term);
     }
 
     private void startElection()

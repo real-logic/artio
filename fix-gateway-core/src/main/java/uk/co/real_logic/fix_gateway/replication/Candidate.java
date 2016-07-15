@@ -20,11 +20,14 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.messages.Vote;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
 import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
 import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
@@ -49,6 +52,7 @@ public class Candidate implements Role, RaftHandler
     private Subscription controlSubscription;
     private int leaderShipTerm;
     private long timeInMs;
+    private boolean resendRequestVote = false;
 
     public Candidate(final short nodeId,
                      final int sessionId,
@@ -81,6 +85,12 @@ public class Candidate implements Role, RaftHandler
             DebugLogger.log("%d: restartElection @ %d in %d\n", nodeId, timeInMs, leaderShipTerm);
 
             startElection(timeInMs);
+
+            return 1;
+        }
+        else if (resendRequestVote)
+        {
+            requestVote();
 
             return 1;
         }
@@ -117,18 +127,19 @@ public class Candidate implements Role, RaftHandler
     {
         if (leaderShipTerm > this.leaderShipTerm && lastAckedPosition >= consensusPosition.get())
         {
-            replyVote(candidateId, leaderShipTerm, FOR);
+            if (replyVote(candidateId, leaderShipTerm, FOR) < 0)
+            {
+                return ABORT;
+            }
 
             transitionToFollower(leaderShipTerm, candidateId, consensusPosition.get(), candidateSessionId);
 
-            return Action.BREAK;
+            return BREAK;
         }
         else
         {
-            replyVote(candidateId, leaderShipTerm, AGAINST);
+            return Pressure.apply(replyVote(candidateId, leaderShipTerm, AGAINST));
         }
-
-        return Action.CONTINUE;
     }
 
     private long replyVote(final short candidateId, final int leaderShipTerm, final Vote vote)
@@ -160,7 +171,7 @@ public class Candidate implements Role, RaftHandler
 
                 clusterNode.transitionToLeader(timeInMs);
 
-                return Action.BREAK;
+                return BREAK;
             }
         }
 
@@ -191,7 +202,7 @@ public class Candidate implements Role, RaftHandler
             {
                 transitionToFollower(leaderShipTerm, NO_ONE, position, dataSessionId);
 
-                return Action.BREAK;
+                return BREAK;
             }
         }
 
@@ -240,7 +251,13 @@ public class Candidate implements Role, RaftHandler
         voteTimeout.onKeepAlive(timeInMs);
         leaderShipTerm++;
         countVote(nodeId); // Vote for yourself
-        controlPublication.saveRequestVote(nodeId, sessionId, consensusPosition.get(), leaderShipTerm);
+        requestVote();
+    }
+
+    private void requestVote()
+    {
+        resendRequestVote =
+            controlPublication.saveRequestVote(nodeId, sessionId, consensusPosition.get(), leaderShipTerm) < 0;
     }
 
     public Candidate controlPublication(final RaftPublication controlPublication)
