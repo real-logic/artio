@@ -116,7 +116,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final SessionIds sessionIds;
     private final QueuedPipe<AdminCommand> adminCommands;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
-    private final SequenceNumberIndexReader recvSeqNumIndex;
+    private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final IdleStrategy idleStrategy;
     private final int inboundBytesReceivedLimit;
     private final int outboundLibraryFragmentLimit;
@@ -143,7 +143,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader recvSeqNumIndex,
+        final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final GatewaySessions gatewaySessions,
         final ReplayQuery inboundMessages,
         final ErrorHandler errorHandler,
@@ -172,7 +172,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.sessionIds = sessionIds;
         this.adminCommands = adminCommands;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
-        this.recvSeqNumIndex = recvSeqNumIndex;
+        this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.idleStrategy = configuration.framerIdleStrategy();
 
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
@@ -272,7 +272,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final long sessionId = session.sessionId();
             final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-            final int receivedSequenceNumber = recvSeqNumIndex.lastKnownSequenceNumber(sessionId);
+            final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             final boolean hasLoggedIn = receivedSequenceNumber != UNK_SESSION;
             final SessionState state = hasLoggedIn ? ACTIVE : CONNECTED;
             gatewaySessions.acquire(
@@ -284,8 +284,6 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 session.username(),
                 session.password()
             );
-            // TODO: should backscan the gap between last received message at the engine and the library
-            // to process messages that we've got but the library hasn't.
         }
     }
 
@@ -418,7 +416,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sentSequenceNumberIndex.awaitingIndexingUpTo(header, idleStrategy);
 
             final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-            final int lastReceivedSequenceNumber = recvSeqNumIndex.lastKnownSequenceNumber(sessionId);
+            final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             session.onLogon(sessionId, sessionKey, username, password, heartbeatIntervalInS);
 
             final Transaction transaction = new Transaction(
@@ -505,7 +503,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         final ReceiverEndPoint receiverEndPoint =
             endPointFactory.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
-                sendOutboundMessagesFunc, sentSequenceNumberIndex, recvSeqNumIndex, resetSequenceNumbers);
+                sendOutboundMessagesFunc, sentSequenceNumberIndex, receivedSequenceNumberIndex, resetSequenceNumbers);
         receiverEndPoints.add(receiverEndPoint);
 
         final SenderEndPoint senderEndPoint =
@@ -774,7 +772,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             continuations.add(() ->
                 inboundPublication.saveCatchup(libraryId, connectionId, expectedNumberOfMessages));
             continuations.add(() ->
-                recvSeqNumIndex.lastKnownSequenceNumber(sessionId) < lastReceivedSeqNum ? BACK_PRESSURED : COMPLETE);
+                receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId) < lastReceivedSeqNum ? BACK_PRESSURED : COMPLETE);
             continuations.add(
                 new CatchupReplayer(
                     inboundMessages,
@@ -863,7 +861,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private boolean sequenceNumbersNotReset()
     {
         return sentSequenceNumberIndex.lastKnownSequenceNumber(1) != UNK_SESSION
-            || recvSeqNumIndex.lastKnownSequenceNumber(1) != UNK_SESSION;
+            || receivedSequenceNumberIndex.lastKnownSequenceNumber(1) != UNK_SESSION;
     }
 
     public void onClose()
