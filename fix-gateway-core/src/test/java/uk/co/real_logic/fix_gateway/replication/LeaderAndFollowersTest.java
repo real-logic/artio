@@ -254,7 +254,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     @Test
     public void shouldNotHeartbeatIfMessageRecentlySent()
     {
-        leader.updateHeartbeatInterval(HEARTBEAT_INTERVAL / 2);
+        leader.updateNextHeartbeatTime(HEARTBEAT_INTERVAL / 2);
 
         leader.poll(FRAGMENT_LIMIT, HEARTBEAT_INTERVAL + 1);
 

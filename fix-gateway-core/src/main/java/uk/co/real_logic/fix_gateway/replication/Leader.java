@@ -109,7 +109,7 @@ public class Leader implements Role, RaftHandler
         this.nodeStateHandler = nodeStateHandler;
 
         followers.forEach(follower -> nodeToPosition.put(follower, 0));
-        updateHeartbeatInterval(timeInMs);
+        updateNextHeartbeatTime(timeInMs);
         raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));
     }
 
@@ -184,14 +184,15 @@ public class Leader implements Role, RaftHandler
     private void heartbeat()
     {
         final long currentPosition = consensusPosition.get();
-        controlPublication.saveConcensusHeartbeat(
-            nodeId, leaderShipTerm, currentPosition, ourSessionId, previousConsensusPosition);
-
-        previousConsensusPosition = currentPosition;
-        updateHeartbeatInterval(timeInMs);
+        if (controlPublication.saveConcensusHeartbeat(
+            nodeId, leaderShipTerm, currentPosition, ourSessionId, previousConsensusPosition) > 0)
+        {
+            previousConsensusPosition = currentPosition;
+            updateNextHeartbeatTime(timeInMs);
+        }
     }
 
-    public void updateHeartbeatInterval(final long timeInMs)
+    void updateNextHeartbeatTime(final long timeInMs)
     {
         this.nextHeartbeatTimeInMs = timeInMs + heartbeatIntervalInMs;
     }
