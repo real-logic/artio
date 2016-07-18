@@ -127,8 +127,7 @@ public final class FixLibrary extends GatewayProcess
     {
         final NanoClock nanoClock = new SystemNanoClock();
         final SoloStreams soloNode = new SoloStreams(aeron, currentAeronChannel);
-        // TODO: expose this debug connection information more appropriately
-        // System.out.println("Attempting: " + currentAeronChannel);
+        DebugLogger.log("Attempting connect to %s", currentAeronChannel);
 
         inboundLibraryStreams = new Streams(
             soloNode, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
