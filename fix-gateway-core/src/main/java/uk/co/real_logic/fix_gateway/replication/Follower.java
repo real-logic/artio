@@ -238,6 +238,7 @@ public class Follower implements Role, RaftHandler
         return Action.CONTINUE;
     }
 
+    // TODO; optimisation to only save this message if your local log actually needs updating
     public Action onResend(
         final int leaderSessionId,
         final int leaderShipTerm,
