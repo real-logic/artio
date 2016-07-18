@@ -28,6 +28,9 @@ import uk.co.real_logic.fix_gateway.messages.Vote;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
@@ -50,6 +53,11 @@ public class Leader implements Role, RaftHandler
     // Counts of how many acknowledgements
     private final Long2LongHashMap nodeToPosition = new Long2LongHashMap(NO_SESSION_ID);
     private final ResendHandler resendHandler = new ResendHandler();
+
+    // retry a resend when it gets back pressured
+    private DirectBuffer repeatResendBuffer;
+    private int repeatResendOffset;
+    private int repeatResendLength;
 
     private ArchiveReader.SessionReader ourArchiveReader;
     private RaftPublication controlPublication;
@@ -143,6 +151,13 @@ public class Leader implements Role, RaftHandler
             return 1;
         }
 
+        if (repeatResendBuffer != null)
+        {
+            saveResend(repeatResendBuffer, repeatResendOffset, repeatResendLength);
+
+            return 1;
+        }
+
         return 0;
     }
 
@@ -203,11 +218,11 @@ public class Leader implements Role, RaftHandler
             }
             else
             {
-                return Action.ABORT;
+                return ABORT;
             }
         }
 
-        return Action.CONTINUE;
+        return CONTINUE;
     }
 
     private boolean validateReader()
@@ -233,20 +248,31 @@ public class Leader implements Role, RaftHandler
         {
             if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= consensusPosition.get())
             {
-                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.FOR, nodeState);
+                if (!replyVote(candidateId, leaderShipTerm, Vote.FOR))
+                {
+                    return ABORT;
+                }
 
                 termState.noLeader();
 
                 transitionToFollower(leaderShipTerm, candidateId);
-                return Action.BREAK;
+                return BREAK;
             }
             else
             {
-                controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, Vote.AGAINST, nodeState);
+                if (!replyVote(candidateId, leaderShipTerm, Vote.AGAINST))
+                {
+                    return ABORT;
+                }
             }
         }
 
-        return Action.CONTINUE;
+        return CONTINUE;
+    }
+
+    private boolean replyVote(final short candidateId, final int leaderShipTerm, final Vote against)
+    {
+        return controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, against, nodeState) >= 0;
     }
 
     public Action onReplyVote(
@@ -263,7 +289,7 @@ public class Leader implements Role, RaftHandler
             nodeStateHandler.onNewNodeState(senderNodeId, aeronSessionId, nodeStateBuffer, nodeStateLength);
         }
 
-        return Action.CONTINUE;
+        return CONTINUE;
     }
 
     public Action onResend(
@@ -275,7 +301,7 @@ public class Leader implements Role, RaftHandler
         final int bodyLength)
     {
         // Ignore this message
-        return Action.CONTINUE;
+        return CONTINUE;
     }
 
     public Action onConsensusHeartbeat(final short nodeId,
@@ -289,10 +315,10 @@ public class Leader implements Role, RaftHandler
 
             transitionToFollower(leaderShipTerm, Follower.NO_ONE);
 
-            return Action.BREAK;
+            return BREAK;
         }
 
-        return Action.CONTINUE;
+        return CONTINUE;
     }
 
     private void transitionToFollower(final int leaderShipTerm, final short votedFor)
@@ -357,7 +383,19 @@ public class Leader implements Role, RaftHandler
 
     private void saveResend(final DirectBuffer buffer, final int offset, final int length)
     {
-        controlPublication.saveResend(ourSessionId, leaderShipTerm, messageAcknowledgementPosition, buffer, offset, length);
+        if (controlPublication.saveResend(
+            ourSessionId, leaderShipTerm, messageAcknowledgementPosition, buffer, offset, length) < 0)
+        {
+            repeatResendBuffer = buffer;
+            repeatResendOffset = offset;
+            repeatResendLength = length;
+        }
+        else
+        {
+            repeatResendBuffer = null;
+            repeatResendOffset = 0;
+            repeatResendLength = 0;
+        }
     }
 
 }

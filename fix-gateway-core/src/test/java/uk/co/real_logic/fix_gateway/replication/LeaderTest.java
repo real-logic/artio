@@ -23,10 +23,12 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.OngoingStubbing;
+import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 
+import static io.aeron.Publication.BACK_PRESSURED;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.*;
@@ -47,6 +49,7 @@ public class LeaderTest
     private ClusterAgent clusterNode = mock(ClusterAgent.class);
     private Subscription acknowledgementSubscription = mock(Subscription.class);
     private Subscription dataSubscription = mock(Subscription.class);
+    private Subscription controlSubscription = mock(Subscription.class);
     private ArchiveReader archiveReader = mock(ArchiveReader.class);
     private ArchiveReader.SessionReader sessionReader = mock(ArchiveReader.SessionReader.class);
     private Archiver archiver = mock(Archiver.class);
@@ -81,6 +84,7 @@ public class LeaderTest
             .controlPublication(controlPublication)
             .acknowledgementSubscription(acknowledgementSubscription)
             .dataSubscription(dataSubscription)
+            .controlSubscription(controlSubscription)
             .getsElected(TIME);
 
         whenBlockRead().then(inv ->
@@ -91,7 +95,7 @@ public class LeaderTest
 
             if (handler != null)
             {
-                handler.onBlock(null, 0, length, LEADER_SESSION_ID, 1);
+                handler.onBlock(new UnsafeBuffer(new byte[length]), 0, length, LEADER_SESSION_ID, 1);
             }
 
             return true;
@@ -116,7 +120,27 @@ public class LeaderTest
 
         receivesMissingLogEntries(followerPosition);
 
-        resendsMissingLogEntries(followerPosition, (int) POSITION);
+        resendsMissingLogEntries(followerPosition, (int) POSITION, times(1));
+    }
+
+    @Test
+    public void shouldResendDataInResponseToMissingLogEntriesWhenBackPressured()
+    {
+        when(sessionArchiver.archivedPosition()).thenReturn(POSITION);
+        when(controlPublication.saveResend(anyInt(), anyInt(), anyLong(), any(), anyInt(), anyInt()))
+            .thenReturn(BACK_PRESSURED, 100L);
+
+        leader.readData();
+
+        final long followerPosition = 0;
+
+        receivesMissingLogEntries(followerPosition);
+
+        leader.poll(1, 0);
+
+        leader.poll(1, 0);
+
+        resendsMissingLogEntries(followerPosition, (int) POSITION, times(2));
     }
 
     @Test
@@ -128,7 +152,7 @@ public class LeaderTest
 
         receivesMissingLogEntries(followerPosition);
 
-        resendsMissingLogEntries(followerPosition, 0);
+        resendsMissingLogEntries(followerPosition, 0, times(1));
     }
 
     private void receivesMissingLogEntries(final long followerPosition)
@@ -136,9 +160,9 @@ public class LeaderTest
         leader.onMessageAcknowledgement(followerPosition, FOLLOWER_ID, MISSING_LOG_ENTRIES);
     }
 
-    private void resendsMissingLogEntries(final long followerPosition, final int length)
+    private void resendsMissingLogEntries(final long followerPosition, final int length, final VerificationMode mode)
     {
-        verify(controlPublication).saveResend(
+        verify(controlPublication, mode).saveResend(
             eq(LEADER_SESSION_ID),
             eq(LEADERSHIP_TERM),
             eq(followerPosition),
