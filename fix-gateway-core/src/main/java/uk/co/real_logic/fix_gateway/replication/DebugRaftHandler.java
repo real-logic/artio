@@ -25,7 +25,7 @@ import uk.co.real_logic.fix_gateway.messages.Vote;
 /**
  * A wrapper around a raft handler that can log out all the control protocol messages.
  */
-public class DebugRaftHandler implements RaftHandler
+final class DebugRaftHandler implements RaftHandler
 {
     private final short nodeId;
     private final RaftHandler delegateHandler;
@@ -37,7 +37,7 @@ public class DebugRaftHandler implements RaftHandler
              : delegateHandler;
     }
 
-    public DebugRaftHandler(final short nodeId, final RaftHandler delegateHandler)
+    private DebugRaftHandler(final short nodeId, final RaftHandler delegateHandler)
     {
         this.nodeId = nodeId;
         this.delegateHandler = delegateHandler;
