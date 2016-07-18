@@ -138,7 +138,7 @@ public final class FixEngine extends GatewayProcess
     {
         init(configuration);
         this.configuration = configuration;
-        engineDescriptorStore = new EngineDescriptorStore();
+        engineDescriptorStore = new EngineDescriptorStore(errorHandler);
 
         context = EngineContext.of(
             configuration,

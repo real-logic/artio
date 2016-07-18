@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.EngineDescriptorDecoder;
@@ -33,6 +34,13 @@ public class EngineDescriptorStore implements NodeStateHandler
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final EngineDescriptorDecoder engineDescriptor = new EngineDescriptorDecoder();
 
+    private final ErrorHandler errorHandler;
+
+    public EngineDescriptorStore(final ErrorHandler errorHandler)
+    {
+        this.errorHandler = errorHandler;
+    }
+
     public void onNewNodeState(
         final short nodeId,
         final int aeronSessionId,
@@ -42,9 +50,16 @@ public class EngineDescriptorStore implements NodeStateHandler
         int offset = 0;
         messageHeader.wrap(buffer, offset);
 
-        if (messageHeader.templateId() != EngineDescriptorDecoder.TEMPLATE_ID)
+        final int templateId = messageHeader.templateId();
+        if (templateId != EngineDescriptorDecoder.TEMPLATE_ID)
         {
-            // TODO: log error
+            errorHandler.onError(
+                new IllegalArgumentException(
+                    String.format(
+                        "Invalid template Id, expected %d, but received %d from %d",
+                        EngineDescriptorDecoder.TEMPLATE_ID,
+                        templateId,
+                        nodeId)));
             return;
         }
 
@@ -73,6 +88,6 @@ public class EngineDescriptorStore implements NodeStateHandler
 
     public DirectBuffer leaderLibraryChannel()
     {
-        return  leaderLibraryChannel;
+        return leaderLibraryChannel;
     }
 }
