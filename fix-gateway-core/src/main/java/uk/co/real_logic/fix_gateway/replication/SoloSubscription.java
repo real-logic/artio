@@ -15,17 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 
-import java.util.function.Consumer;
-
 public class SoloSubscription extends ClusterableSubscription
 {
-    private PositionHandler handler;
-    private final Consumer<Image> positionUpdater =
-        image -> handler.onNewPosition(image.sessionId(), image.position());
     private final Subscription subscription;
 
     public SoloSubscription(final Subscription subscription)
@@ -43,4 +37,8 @@ public class SoloSubscription extends ClusterableSubscription
         subscription.close();
     }
 
+    public long positionOf(final int aeronSessionId)
+    {
+        return subscription.getImage(aeronSessionId).position();
+    }
 }

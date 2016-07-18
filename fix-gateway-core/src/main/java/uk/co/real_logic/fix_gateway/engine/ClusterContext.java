@@ -142,7 +142,7 @@ class ClusterContext extends EngineContext
         return inboundLibraryStreams;
     }
 
-    public ClusterableSubscription outboundLibrarySubscription()
+    public SoloSubscription outboundLibrarySubscription()
     {
         return new SoloSubscription(
             aeron.addSubscription(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));

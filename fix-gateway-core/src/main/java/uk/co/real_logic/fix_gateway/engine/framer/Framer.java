@@ -37,6 +37,7 @@ import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.*;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
+import uk.co.real_logic.fix_gateway.replication.SoloSubscription;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -106,7 +107,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final EngineConfiguration configuration;
     private final EndPointFactory endPointFactory;
     private final ClusterableSubscription outboundClusterSubscription;
-    private final ClusterableSubscription outboundLibrarySubscription;
+    private final SoloSubscription outboundLibrarySubscription;
     private final ClusterableSubscription outboundSlowSubscription;
     private final Subscription replaySubscription;
     private final GatewayPublication inboundPublication;
@@ -135,7 +136,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final EngineConfiguration configuration,
         final EndPointFactory endPointFactory,
         final ClusterableSubscription outboundClusterSubscription,
-        final ClusterableSubscription outboundLibrarySubscription,
+        final SoloSubscription outboundLibrarySubscription,
         final ClusterableSubscription outboundSlowSubscription,
         final Subscription replaySubscription,
         final QueuedPipe<AdminCommand> adminCommands,
@@ -262,10 +263,10 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void acquireLibrarySessions(final LibraryInfo library)
     {
-        // TODO: re-add indexing
-        /*final long position = outboundDataSubscription.getImage(library.aeronSessionId()).position();
-        sentSequenceNumberIndex.awaitingIndexingUpTo(
-            library.aeronSessionId(), position, idleStrategy);*/
+        // Ensure latest library message is indexed
+        final int librarySessionId = library.aeronSessionId();
+        final long position = outboundLibrarySubscription.positionOf(librarySessionId);
+        sentSequenceNumberIndex.awaitingIndexingUpTo(librarySessionId, position, idleStrategy);
 
         for (final GatewaySession session : library.gatewaySessions())
         {
@@ -284,6 +285,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 session.password()
             );
             // TODO: should backscan the gap between last received message at the engine and the library
+            // to process messages that we've got but the library hasn't.
         }
     }
 

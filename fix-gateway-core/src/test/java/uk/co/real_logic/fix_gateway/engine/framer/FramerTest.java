@@ -33,6 +33,7 @@ import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
+import uk.co.real_logic.fix_gateway.replication.SoloSubscription;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.timing.Timer;
@@ -90,7 +91,7 @@ public class FramerTest
     private SessionIds sessionIds = mock(SessionIds.class);
     private GatewaySessions gatewaySessions = mock(GatewaySessions.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
-    private ClusterableSubscription outboundSubscription = mock(ClusterableSubscription.class);
+    private SoloSubscription outboundSubscription = mock(SoloSubscription.class);
     private ClusterableStreams node = mock(ClusterableStreams.class);
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()

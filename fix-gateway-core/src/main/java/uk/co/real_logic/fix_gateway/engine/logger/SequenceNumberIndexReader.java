@@ -87,7 +87,7 @@ public class SequenceNumberIndexReader
         idleStrategy.reset();
     }
 
-    public long indexedPosition(final int aeronSessionId)
+    long indexedPosition(final int aeronSessionId)
     {
         return positions.indexedPosition(aeronSessionId);
     }
