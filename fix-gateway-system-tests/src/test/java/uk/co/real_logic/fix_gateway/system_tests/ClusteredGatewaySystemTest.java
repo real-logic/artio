@@ -24,22 +24,28 @@ import org.junit.Test;
 import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.Reply;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration.Builder;
+import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
 import static org.agrona.CloseHelper.close;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -177,13 +183,44 @@ public class ClusteredGatewaySystemTest
 
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
 
-        // TODO: assert other nodes have stored the data.
+        closeLibrariesAndEngine();
+
+        allClusterNodesHaveArchivedTestRequestMessage();
+    }
+
+    private void allClusterNodesHaveArchivedTestRequestMessage()
+    {
+        acceptingEngineCluster.forEach(engine ->
+        {
+            final EngineConfiguration configuration = engine.configuration();
+            final FixArchiveScanner scanner = new FixArchiveScanner(configuration.logFileDir());
+            final StreamIdentifier id = new StreamIdentifier(
+                configuration.clusterAeronChannel(), OUTBOUND_LIBRARY_STREAM);
+            final TestRequestFinder testRequestFinder = new TestRequestFinder();
+            scanner.forEachMessage(id, testRequestFinder, Throwable::printStackTrace);
+            assertTrue(configuration.nodeId() + " is missing the test request message from its log",
+                testRequestFinder.isPresent);
+        });
     }
 
     @Test
     public void shouldExchangeMessagesAfterPartitionHeals()
     {
 
+    }
+
+    private class TestRequestFinder implements Consumer<FixMessageDecoder>
+    {
+        private boolean isPresent = false;
+
+        public void accept(final FixMessageDecoder fixMessage)
+        {
+            final String body = fixMessage.body();
+            if (body.contains("35=1\00149=initiator\u000156=acceptor\00134=2"))
+            {
+                isPresent = true;
+            }
+        }
     }
 
     // crash? engine process
@@ -194,6 +231,16 @@ public class ClusteredGatewaySystemTest
     @After
     public void tearDown()
     {
+        closeLibrariesAndEngine();
+
+        clusterMediaDrivers.forEach(CloseHelper::close);
+        clusterMediaDrivers.forEach(TestFixtures::cleanupDirectory);
+        close(mediaDriver);
+        cleanupDirectory(mediaDriver);
+    }
+
+    private void closeLibrariesAndEngine()
+    {
         close(acceptingLibrary);
         close(initiatingLibrary);
 
@@ -202,11 +249,6 @@ public class ClusteredGatewaySystemTest
         {
             acceptingEngineCluster.forEach(CloseHelper::close);
         }
-
-        clusterMediaDrivers.forEach(CloseHelper::close);
-        clusterMediaDrivers.forEach(TestFixtures::cleanupDirectory);
-        close(mediaDriver);
-        cleanupDirectory(mediaDriver);
     }
 
 }

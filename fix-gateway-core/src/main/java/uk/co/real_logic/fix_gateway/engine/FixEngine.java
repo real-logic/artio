@@ -233,4 +233,9 @@ public final class FixEngine extends GatewayProcess
         configuration.close();
         super.close();
     }
+
+    public EngineConfiguration configuration()
+    {
+        return configuration;
+    }
 }
