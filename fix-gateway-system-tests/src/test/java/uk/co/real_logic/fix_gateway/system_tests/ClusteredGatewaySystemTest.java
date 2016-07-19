@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.logger.FixArchiveScanner;
+import uk.co.real_logic.fix_gateway.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.Reply;
@@ -37,14 +38,11 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
 import static org.agrona.CloseHelper.close;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
@@ -209,11 +207,11 @@ public class ClusteredGatewaySystemTest
 
     }
 
-    private class TestRequestFinder implements Consumer<FixMessageDecoder>
+    private class TestRequestFinder implements FixMessageConsumer
     {
         private boolean isPresent = false;
 
-        public void accept(final FixMessageDecoder fixMessage)
+        public void onMessage(final FixMessageDecoder fixMessage)
         {
             final String body = fixMessage.body();
             if (body.contains("35=1\00149=initiator\u000156=acceptor\00134=2"))

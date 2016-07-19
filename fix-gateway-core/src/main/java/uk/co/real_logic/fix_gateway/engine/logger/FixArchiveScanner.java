@@ -23,8 +23,13 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
-import java.util.function.Consumer;
-
+/**
+ * Scan the archive for fix messages. Can be combined with predicates to create rich queries.
+ *
+ * @see FixMessageConsumer
+ * @see FixMessagePredicate
+ * @see FixMessagePredicates
+ */
 public class FixArchiveScanner
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
@@ -33,7 +38,7 @@ public class FixArchiveScanner
 
     private final ArchiveScanner archiveScanner;
 
-    private Consumer<FixMessageDecoder> handler;
+    private FixMessageConsumer handler;
 
     public FixArchiveScanner(final String logFileDir)
     {
@@ -42,7 +47,7 @@ public class FixArchiveScanner
 
     public void forEachMessage(
         final StreamIdentifier id,
-        final Consumer<FixMessageDecoder> handler,
+        final FixMessageConsumer handler,
         final ErrorHandler errorHandler)
     {
         this.handler = handler;
@@ -61,7 +66,7 @@ public class FixArchiveScanner
 
                 fixMessage.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
 
-                handler.accept(fixMessage);
+                handler.onMessage(fixMessage);
             }
         }
     }
