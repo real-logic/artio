@@ -32,8 +32,6 @@ import java.util.stream.Stream;
 public class FixMessagePredicates
 {
 
-    public static final int BUFFER_SIZE = 16 * 1024;
-
     public static FixMessageConsumer filterBy(final FixMessageConsumer consumer, final FixMessagePredicate predicate)
     {
         return message ->
