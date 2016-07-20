@@ -18,8 +18,9 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 
 /**
- * .
+ * A criteria for filtering fix messages.
  */
+@FunctionalInterface
 public interface FixMessagePredicate
 {
     boolean test(final FixMessageDecoder message);
@@ -27,5 +28,10 @@ public interface FixMessagePredicate
     default FixMessagePredicate and(final FixMessagePredicate other)
     {
         return message -> test(message) && other.test(message);
+    }
+
+    default FixMessagePredicate or(final FixMessagePredicate other)
+    {
+        return message -> test(message) || other.test(message);
     }
 }

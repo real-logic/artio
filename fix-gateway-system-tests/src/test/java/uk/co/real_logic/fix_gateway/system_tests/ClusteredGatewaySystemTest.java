@@ -188,11 +188,11 @@ public class ClusteredGatewaySystemTest
         closeLibrariesAndEngine();
         final long end = System.currentTimeMillis() + 1;
 
-        allClusterNodesHaveArchivedTestRequestMessage(begin, end);
+        allClusterNodesHaveArchivedTestRequestMessage(begin, end, acceptingSession.id());
     }
 
     private void allClusterNodesHaveArchivedTestRequestMessage(
-        final long begin, final long end)
+        final long begin, final long end, final long sessionId)
     {
         acceptingEngineCluster.forEach(engine ->
         {
@@ -206,7 +206,8 @@ public class ClusteredGatewaySystemTest
                 id,
                 filterBy(testRequestFinder,
                     messageTypeOf(TEST_REQUEST)
-                        .and(sessionOf(INITIATOR_ID, ACCEPTOR_ID))),
+                        .and(sessionOf(INITIATOR_ID, ACCEPTOR_ID))
+                        .and(sessionOf(sessionId))),
                 Throwable::printStackTrace);
 
             if (!testRequestFinder.isPresent)

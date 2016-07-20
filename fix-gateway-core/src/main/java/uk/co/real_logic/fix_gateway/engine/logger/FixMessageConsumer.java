@@ -20,6 +20,7 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 /**
  * .
  */
+@FunctionalInterface
 public interface FixMessageConsumer
 {
     void onMessage(final FixMessageDecoder message);
