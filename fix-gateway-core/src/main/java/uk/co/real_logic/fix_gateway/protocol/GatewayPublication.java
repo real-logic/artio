@@ -27,7 +27,6 @@ import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.DebugLogger.logSbeMessage;
 import static uk.co.real_logic.fix_gateway.messages.NotLeaderEncoder.libraryChannelHeaderLength;
 
@@ -96,7 +95,7 @@ public class GatewayPublication extends ClaimablePublication
         final long connectionId,
         final MessageStatus status)
     {
-        final long timestamp = TIME_MESSAGES ? nanoClock.nanoTime() : 0L;
+        final long timestamp = nanoClock.nanoTime();
         final int framedLength = header.encodedLength() + FRAME_SIZE + srcLength;
         final long position = claim(framedLength);
         if (position < 0)

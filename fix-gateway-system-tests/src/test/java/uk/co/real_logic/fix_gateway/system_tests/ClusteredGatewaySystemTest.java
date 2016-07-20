@@ -180,13 +180,13 @@ public class ClusteredGatewaySystemTest
         assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
         assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
 
-        final long begin = System.currentTimeMillis();
+        final long begin = System.nanoTime();
         sendTestRequest(initiatingSession);
 
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
 
         closeLibrariesAndEngine();
-        final long end = System.currentTimeMillis() + 1;
+        final long end = System.nanoTime() + 1;
 
         allClusterNodesHaveArchivedTestRequestMessage(begin, end, acceptingSession.id());
     }
@@ -207,7 +207,8 @@ public class ClusteredGatewaySystemTest
                 filterBy(testRequestFinder,
                     messageTypeOf(TEST_REQUEST)
                         .and(sessionOf(INITIATOR_ID, ACCEPTOR_ID))
-                        .and(sessionOf(sessionId))),
+                        .and(sessionOf(sessionId))
+                        .and(between(begin, end))),
                 Throwable::printStackTrace);
 
             if (!testRequestFinder.isPresent)
