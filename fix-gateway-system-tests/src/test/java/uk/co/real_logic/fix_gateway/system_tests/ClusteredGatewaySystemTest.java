@@ -17,7 +17,10 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import io.aeron.CommonContext;
 import io.aeron.driver.MediaDriver;
+import io.aeron.logbuffer.Header;
 import org.agrona.CloseHelper;
+import org.agrona.DirectBuffer;
+import org.agrona.LangUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -36,6 +39,9 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import uk.co.real_logic.fix_gateway.session.Session;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -47,6 +53,9 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQUEST;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_SEQUENCE_NUMBERS_SENT_FILE;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_SESSION_ID_FILE;
 import static uk.co.real_logic.fix_gateway.engine.logger.FixMessagePredicates.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -189,6 +198,9 @@ public class ClusteredGatewaySystemTest
         final long end = System.nanoTime() + 1;
 
         allClusterNodesHaveArchivedTestRequestMessage(begin, end, acceptingSession.id());
+
+        // TODO:
+        // allClusterNodesHaveSameIndexFiles();
     }
 
     private void allClusterNodesHaveArchivedTestRequestMessage(
@@ -197,7 +209,8 @@ public class ClusteredGatewaySystemTest
         acceptingEngineCluster.forEach(engine ->
         {
             final EngineConfiguration configuration = engine.configuration();
-            final FixArchiveScanner scanner = new FixArchiveScanner(configuration.logFileDir());
+            final String logFileDir = configuration.logFileDir();
+            final FixArchiveScanner scanner = new FixArchiveScanner(logFileDir);
             final StreamIdentifier id = new StreamIdentifier(
                 configuration.clusterAeronChannel(), OUTBOUND_LIBRARY_STREAM);
 
@@ -215,13 +228,52 @@ public class ClusteredGatewaySystemTest
             {
                 scanner.forEachMessage(
                     id,
-                    message -> System.out.println(message.body()),
+                    (message, buffer, offset, length, header) -> System.out.println(message.body()),
                     Throwable::printStackTrace);
             }
 
             assertTrue(configuration.nodeId() + " is missing the test request message from its log",
                 testRequestFinder.isPresent);
         });
+    }
+
+    private void allClusterNodesHaveSameIndexFiles()
+    {
+        final FixEngine firstNode = acceptingEngineCluster.get(0);
+        final String logFileDir = firstNode.configuration().logFileDir();
+        acceptingEngineCluster.stream().skip(1).forEach(otherNode ->
+        {
+            final String otherLogFileDir = otherNode.configuration().logFileDir();
+
+            assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SESSION_ID_FILE);
+            assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE);
+            assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SEQUENCE_NUMBERS_SENT_FILE);
+        });
+    }
+
+    private void assertFilesEqual(
+        final String logFileDir, final String otherLogFileDir, final String path)
+    {
+        final File file = new File(logFileDir, path);
+        assertTrue(file.getAbsolutePath(), file.exists());
+
+        final File otherFile = new File(otherLogFileDir, path);
+        assertTrue(otherFile.getAbsolutePath(), otherFile.exists());
+
+        final long length = file.length();
+        assertEquals("lengths differ", length, otherFile.length());
+
+        try
+        {
+            final byte[] bytes = Files.readAllBytes(file.toPath());
+            final byte[] otherBytes = Files.readAllBytes(otherFile.toPath());
+
+            assertArrayEquals(bytes, otherBytes);
+        }
+        catch (IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
     }
 
     @Ignore
@@ -235,7 +287,12 @@ public class ClusteredGatewaySystemTest
     {
         private boolean isPresent = false;
 
-        public void onMessage(final FixMessageDecoder fixMessage)
+        public void onMessage(
+            final FixMessageDecoder fixMessage,
+            final DirectBuffer buffer,
+            final int offset,
+            final int length,
+            final Header header)
         {
             isPresent = true;
         }

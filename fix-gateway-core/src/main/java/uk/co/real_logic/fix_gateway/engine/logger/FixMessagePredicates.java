@@ -45,11 +45,11 @@ public final class FixMessagePredicates
      */
     public static FixMessageConsumer filterBy(final FixMessageConsumer consumer, final FixMessagePredicate predicate)
     {
-        return message ->
+        return (message, buffer, offset, length, header) ->
         {
             if (predicate.test(message))
             {
-                consumer.onMessage(message);
+                consumer.onMessage(message, buffer, offset, length, header);
             }
         };
     }

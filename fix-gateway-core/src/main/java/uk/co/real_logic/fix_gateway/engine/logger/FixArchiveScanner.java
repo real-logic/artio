@@ -66,7 +66,7 @@ public class FixArchiveScanner
 
                 fixMessage.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
 
-                handler.onMessage(fixMessage);
+                handler.onMessage(fixMessage, buffer, offset, length, header);
             }
         }
     }

@@ -98,6 +98,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_SENDER_MAX_BYTES_IN_BUFFER = 1024 * 1024;
     public static final int DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT = (int) SECONDS.toMillis(30);
     public static final int DEFAULT_CLUSTER_TIMEOUT_IN_MS = 1000;
+    public static final String DEFAULT_SESSION_ID_FILE = "session_id_buffer";
+    public static final String DEFAULT_SEQUENCE_NUMBERS_SENT_FILE = "sequence_numbers_sent";
+    public static final String DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE = "sequence_numbers_received";
 
     private String host = null;
     private int port;
@@ -625,7 +628,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
         if (sentSequenceNumberIndex() == null)
         {
-            sentSequenceNumberIndex = mapFile("sequence_numbers_sent", sequenceNumberIndexSize);
+            sentSequenceNumberIndex = mapFile(DEFAULT_SEQUENCE_NUMBERS_SENT_FILE, sequenceNumberIndexSize);
         }
 
         if (sentSequenceNumberBuffer() == null)
@@ -635,7 +638,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
         if (receivedSequenceNumberIndex() == null)
         {
-            receivedSequenceNumberIndex = mapFile("sequence_numbers_received", sequenceNumberIndexSize);
+            receivedSequenceNumberIndex = mapFile(DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE, sequenceNumberIndexSize);
         }
 
         if (receivedSequenceNumberBuffer() == null)
@@ -645,7 +648,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
         if (sessionIdBuffer() == null)
         {
-            sessionIdBuffer = mapFile("session_id_buffer", sessionIdBufferSize);
+            sessionIdBuffer = mapFile(DEFAULT_SESSION_ID_FILE, sessionIdBufferSize);
         }
 
         return this;

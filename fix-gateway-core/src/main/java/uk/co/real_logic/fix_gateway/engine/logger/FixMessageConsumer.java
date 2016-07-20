@@ -15,13 +15,20 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import io.aeron.logbuffer.Header;
+import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 
 /**
- * .
+ * Consumer to read messages from the fix message archive.
  */
 @FunctionalInterface
 public interface FixMessageConsumer
 {
-    void onMessage(final FixMessageDecoder message);
+    void onMessage(
+        final FixMessageDecoder message,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final Header header);
 }
