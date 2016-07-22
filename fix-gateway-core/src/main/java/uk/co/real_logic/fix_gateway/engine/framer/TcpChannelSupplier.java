@@ -33,14 +33,14 @@ import static java.net.StandardSocketOptions.TCP_NODELAY;
 /**
  * Mockable class for intercepting network communications
  */
-public class ChannelSupplier implements AutoCloseable
+public class TcpChannelSupplier implements AutoCloseable
 {
     private final boolean hasBindAddress;
     private final EngineConfiguration configuration;
     private final Selector selector;
     private final ServerSocketChannel listeningChannel;
 
-    public ChannelSupplier(final EngineConfiguration configuration)
+    public TcpChannelSupplier(final EngineConfiguration configuration)
     {
         hasBindAddress = configuration.hasBindAddress();
         this.configuration = configuration;
@@ -106,7 +106,6 @@ public class ChannelSupplier implements AutoCloseable
             channel.setOption(SO_SNDBUF, configuration.senderSocketBufferSize());
         }
         channel.configureBlocking(false);
-
     }
 
     public void close() throws Exception

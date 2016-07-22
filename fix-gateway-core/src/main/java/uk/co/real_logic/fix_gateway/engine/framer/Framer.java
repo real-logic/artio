@@ -31,7 +31,7 @@ import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
-import uk.co.real_logic.fix_gateway.engine.framer.ChannelSupplier.NewChannelHandler;
+import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -95,7 +95,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ReliefValve sendOutboundMessagesFunc = this::sendOutboundMessages;
     private final NewChannelHandler onNewConnectionFunc = this::onNewConnection;
 
-    private final ChannelSupplier channelSupplier;
+    private final TcpChannelSupplier channelSupplier;
     private final EpochClock clock;
     private final Timer outboundTimer;
     private final Timer sendTimer;
