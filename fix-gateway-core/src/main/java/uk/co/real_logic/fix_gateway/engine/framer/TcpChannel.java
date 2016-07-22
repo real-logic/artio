@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import org.agrona.LangUtil;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -53,8 +55,15 @@ public class TcpChannel implements AutoCloseable
         return socketChannel.read(dst);
     }
 
-    public void close() throws IOException
+    public void close()
     {
-        socketChannel.close();
+        try
+        {
+            socketChannel.close();
+        }
+        catch (IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
     }
 }

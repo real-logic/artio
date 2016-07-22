@@ -103,7 +103,6 @@ public class ClusteredGatewaySystemTest
         tcpPorts = allocatePorts();
         libraryPorts = allocatePorts();
 
-        // TODO: be able to disconnect TCP connections when failing the machine
         acceptingEngineCluster = ids()
             .mapToObj(ourId ->
             {
@@ -122,7 +121,8 @@ public class ClusteredGatewaySystemTest
                     .logFileDir(acceptorLogs)
                     .clusterAeronChannel(CLUSTER_AERON_CHANNEL)
                     .nodeId((short) ourId)
-                    .addOtherNodes(ids().filter(id -> id != ourId).toArray());
+                    .addOtherNodes(ids().filter(id -> id != ourId).toArray())
+                    .channelSupplierFactory(DebugTcpChannelSupplier::new);
 
                 configuration.aeronContext().aeronDirectoryName(aeronDirName(ourId));
 
