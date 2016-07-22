@@ -17,10 +17,6 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Aeron;
 import io.aeron.driver.MediaDriver;
-import io.aeron.driver.ReceiveChannelEndpointSupplier;
-import io.aeron.driver.SendChannelEndpointSupplier;
-import io.aeron.driver.ext.DebugReceiveChannelEndpoint;
-import io.aeron.driver.ext.DebugSendChannelEndpoint;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
@@ -51,9 +47,7 @@ class NodeRunner implements AutoCloseable
     private static final long TIMEOUT_IN_MS = 1000;
     private static final String AERON_CHANNEL = TestFixtures.clusteredAeronChannel();
 
-    private final SwitchableLossGenerator outboundLossGenerator = new SwitchableLossGenerator();
-    private final SwitchableLossGenerator inboundLossGenerator = new SwitchableLossGenerator();
-
+    private final FrameDropper frameDropper;
     private final Int2IntHashMap nodeIdToId = new Int2IntHashMap(-1);
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
@@ -73,14 +67,15 @@ class NodeRunner implements AutoCloseable
             DebugLogger.log("%d: position %d\n", nodeId, replicatedPosition);
             return CONTINUE;
         };
+        this.frameDropper = new FrameDropper(nodeId);
 
         final int termBufferLength = 1024 * 1024;
         final MediaDriver.Context context = new MediaDriver.Context();
         context
             .threadingMode(SHARED)
             .sharedIdleStrategy(new YieldingIdleStrategy())
-            .receiveChannelEndpointSupplier(newReceiveChannelEndpointSupplier())
-            .sendChannelEndpointSupplier(newSendChannelEndpointSupplier())
+            .receiveChannelEndpointSupplier(frameDropper.newReceiveChannelEndpointSupplier())
+            .sendChannelEndpointSupplier(frameDropper.newSendChannelEndpointSupplier())
             .dirsDeleteOnStart(true)
             .aeronDirectoryName(AERON_DIR_PROP_DEFAULT + nodeId)
             .publicationTermBufferLength(termBufferLength)
@@ -123,20 +118,6 @@ class NodeRunner implements AutoCloseable
         subscription = clusterNode.clusterStreams().subscription(1);
     }
 
-    private SendChannelEndpointSupplier newSendChannelEndpointSupplier()
-    {
-        return (udpChannel, statusIndicator, context) ->
-            new DebugSendChannelEndpoint(
-                udpChannel, statusIndicator, context, outboundLossGenerator, outboundLossGenerator);
-    }
-
-    private ReceiveChannelEndpointSupplier newReceiveChannelEndpointSupplier()
-    {
-        return (udpChannel, dispatcher, statusIndicator, context) ->
-            new DebugReceiveChannelEndpoint(
-                udpChannel, dispatcher, statusIndicator, context, inboundLossGenerator, inboundLossGenerator);
-    }
-
     public int poll(final int fragmentLimit)
     {
         return clusterNode.doWork() + subscription.controlledPoll(handler, fragmentLimit);
@@ -144,15 +125,12 @@ class NodeRunner implements AutoCloseable
 
     public void dropFrames(final boolean dropFrames)
     {
-        dropFrames(dropFrames, dropFrames);
+        frameDropper.dropFrames(dropFrames);
     }
 
     public void dropFrames(final boolean dropInboundFrames, final boolean dropOutboundFrames)
     {
-        DebugLogger.log("Dropping frames to %d: %b\n", nodeId, dropInboundFrames);
-        DebugLogger.log("Dropping frames from %d: %b\n", nodeId, dropOutboundFrames);
-        inboundLossGenerator.dropFrames(dropInboundFrames);
-        outboundLossGenerator.dropFrames(dropOutboundFrames);
+        frameDropper.dropFrames(dropInboundFrames, dropOutboundFrames);
     }
 
     public boolean isLeader()

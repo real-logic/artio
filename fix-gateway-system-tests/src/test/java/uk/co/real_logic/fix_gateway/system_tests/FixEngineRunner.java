@@ -20,6 +20,7 @@ import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.replication.FrameDropper;
 
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
@@ -37,16 +38,24 @@ public class FixEngineRunner
     private final MediaDriver mediaDriver;
     private final FixEngine engine;
 
+    private final DebugTcpChannelSupplier tcpChannelSupplier;
+    private final FrameDropper frameDropper;
+
     public FixEngineRunner(final int ourId, final IntStream ids)
     {
         tcpPort = unusedPort();
         libraryPort = unusedPort();
         libraryChannel = "aeron:udp?endpoint=224.0.1.1:" + libraryPort;
+        frameDropper = new FrameDropper(ourId);
 
-        final MediaDriver.Context context = mediaDriverContext(TERM_BUFFER_LENGTH);
-        context.aeronDirectoryName(aeronDirName(ourId));
-        context.termBufferSparseFile(true);
-        context.publicationUnblockTimeoutNs(TimeUnit.SECONDS.toNanos(100));
+        final MediaDriver.Context context =
+            mediaDriverContext(TERM_BUFFER_LENGTH)
+                .aeronDirectoryName(aeronDirName(ourId))
+                .termBufferSparseFile(true)
+                .publicationUnblockTimeoutNs(TimeUnit.SECONDS.toNanos(100))
+                .receiveChannelEndpointSupplier(frameDropper.newReceiveChannelEndpointSupplier())
+                .sendChannelEndpointSupplier(frameDropper.newSendChannelEndpointSupplier());
+
         mediaDriver = MediaDriver.launch(context);
 
         final String acceptorLogs = ACCEPTOR_LOGS + ourId;
@@ -62,8 +71,10 @@ public class FixEngineRunner
             .logFileDir(acceptorLogs)
             .clusterAeronChannel(CLUSTER_AERON_CHANNEL)
             .nodeId((short) ourId)
-            .addOtherNodes(ids.filter(id -> id != ourId).toArray())
-            .channelSupplierFactory(DebugTcpChannelSupplier::new);
+            .addOtherNodes(ids.filter(id -> id != ourId).toArray());
+
+        tcpChannelSupplier = new DebugTcpChannelSupplier(configuration);
+        configuration.channelSupplierFactory(config -> tcpChannelSupplier);
 
         configuration.aeronContext().aeronDirectoryName(aeronDirName(ourId));
 
@@ -88,6 +99,18 @@ public class FixEngineRunner
     public EngineConfiguration configuration()
     {
         return engine.configuration();
+    }
+
+    public void disable()
+    {
+        tcpChannelSupplier.disable();
+        frameDropper.dropFrames(true);
+    }
+
+    public void enable()
+    {
+        tcpChannelSupplier.enable();
+        frameDropper.dropFrames(false);
     }
 
     public void close()
