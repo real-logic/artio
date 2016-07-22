@@ -46,7 +46,6 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
@@ -69,7 +68,7 @@ public final class FixLibrary extends GatewayProcess
 {
     public static final int NO_MESSAGE_REPLAY = -1;
 
-    private static final long RECONNECT_BACKOFF_IN_NS = MILLISECONDS.toNanos(150);
+    public static final int RECONNECT_ATTEMPTS = 10;
 
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
@@ -135,6 +134,11 @@ public final class FixLibrary extends GatewayProcess
         outboundLibraryStreams = new Streams(
             soloNode, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
             configuration.outboundMaxClaimAttempts());
+    }
+
+    private FixLibrary connect()
+    {
+        return connect(RECONNECT_ATTEMPTS);
     }
 
     private FixLibrary connect(final int reconnectAttempts)
@@ -256,7 +260,7 @@ public final class FixLibrary extends GatewayProcess
      */
     public static FixLibrary connect(final LibraryConfiguration configuration)
     {
-        return new FixLibrary(configuration).connect(10);
+        return new FixLibrary(configuration).connect();
     }
 
     /**
@@ -268,11 +272,21 @@ public final class FixLibrary extends GatewayProcess
      */
     public int poll(final int fragmentLimit)
     {
+        if (livenessDetector.hasDisconnected() && isConnectedToCluster())
+        {
+            connect();
+        }
+
         final long timeInMs = clock.time();
         return inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit) +
                pollSessions(timeInMs) +
                livenessDetector.poll(timeInMs) +
                checkReplies(timeInMs);
+    }
+
+    private boolean isConnectedToCluster()
+    {
+        return configuration.libraryAeronChannels().size() > 1;
     }
 
     private int checkReplies(final long timeInMs)

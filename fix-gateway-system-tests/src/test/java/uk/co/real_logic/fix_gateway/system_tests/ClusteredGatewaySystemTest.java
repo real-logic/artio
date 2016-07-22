@@ -42,6 +42,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -88,13 +90,15 @@ public class ClusteredGatewaySystemTest
 
         final LibraryConfiguration configuration = acceptingLibraryConfig(
             acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", null)
-            .replyTimeoutInMs(20_000);
+            .replyTimeoutInMs(2_000);
 
         configuration.libraryAeronChannels(
             cluster
                 .stream()
                 .map(FixEngineRunner::libraryChannel)
                 .collect(toList()));
+
+        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(500));
 
         acceptingLibrary = FixLibrary.connect(configuration);
 
@@ -250,7 +254,7 @@ public class ClusteredGatewaySystemTest
         final FixEngineRunner oldLeader = leader;
         oldLeader.disable();
         DebugLogger.log("Disabled old old leader");
-        // System.out.println("Disabled old old leader");
+        System.out.println("Disabled old old leader");
 
         while (true)
         {
@@ -268,7 +272,7 @@ public class ClusteredGatewaySystemTest
         ADMIN_IDLE_STRATEGY.reset();
 
         DebugLogger.log("Elected new leader: %d", leader.nodeId());
-        // System.out.println("Elected new leader");
+        System.out.println("Elected new leader");
 
         final String libraryChannel = leader.libraryChannel();
         while (!acceptingLibrary.currentAeronChannel().equals(libraryChannel))
@@ -281,10 +285,14 @@ public class ClusteredGatewaySystemTest
         ADMIN_IDLE_STRATEGY.reset();
 
         DebugLogger.log("Library has connected to new leader");
-        // System.out.println("Library has connected to new leader");
+        System.out.println("Library has connected to new leader");
 
         // TODO: acceptingLibrary disconnect/timeout
         // TODO: oldLeader.enable();
+
+        initiatingSession.close();
+        acceptingSession.close();
+        acceptingHandler.clearConnections();
 
         connectFixSession();
 

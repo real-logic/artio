@@ -83,6 +83,11 @@ public final class LivenessDetector
         return state == CONNECTED;
     }
 
+    public boolean hasDisconnected()
+    {
+        return state == DISCONNECTED;
+    }
+
     public int poll(final long timeInMs)
     {
         switch (state)
