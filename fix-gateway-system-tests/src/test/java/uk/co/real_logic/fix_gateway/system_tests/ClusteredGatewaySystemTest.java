@@ -15,17 +15,14 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
-import io.aeron.CommonContext;
 import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.Header;
-import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.logger.FixArchiveScanner;
@@ -42,9 +39,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -53,25 +48,18 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQUEST;
-import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE;
-import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_SEQUENCE_NUMBERS_SENT_FILE;
-import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_SESSION_ID_FILE;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.FixMessagePredicates.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class ClusteredGatewaySystemTest
 {
     private static final int CLUSTER_SIZE = 3;
-    private static final String CLUSTER_AERON_CHANNEL = clusteredAeronChannel();
 
     private int libraryAeronPort = unusedPort();
-    private List<Integer> tcpPorts;
-    private List<Integer> libraryPorts;
-    private List<String> libraryChannels = new ArrayList<>();
-    private MediaDriver mediaDriver;
-    private List<MediaDriver> clusterMediaDrivers;
+    private List<FixEngineRunner> cluster;
 
-    private List<FixEngine> acceptingEngineCluster;
+    private MediaDriver mediaDriver;
     private FixLibrary acceptingLibrary;
 
     private FixEngine initiatingEngine;
@@ -85,67 +73,38 @@ public class ClusteredGatewaySystemTest
 
     private Session initiatingSession;
     private Session acceptingSession;
-    private int leader;
+    private FixEngineRunner leader;
 
     @Before
     public void setUp()
     {
         mediaDriver = launchMediaDriver();
-        clusterMediaDrivers = ids().mapToObj(id ->
-        {
-            final MediaDriver.Context context = mediaDriverContext(TERM_BUFFER_LENGTH);
-            context.aeronDirectoryName(aeronDirName(id));
-            context.termBufferSparseFile(true);
-            context.publicationUnblockTimeoutNs(TimeUnit.SECONDS.toNanos(100));
-            return MediaDriver.launch(context);
-        }).collect(toList());
 
-        tcpPorts = allocatePorts();
-        libraryPorts = allocatePorts();
-
-        acceptingEngineCluster = ids()
-            .mapToObj(ourId ->
-            {
-                final String acceptorLogs = ACCEPTOR_LOGS + ourId;
-                delete(acceptorLogs);
-                final EngineConfiguration configuration = new EngineConfiguration();
-
-                setupAuthentication(ACCEPTOR_ID, INITIATOR_ID, configuration);
-
-                final String libraryChannel = libraryChannel(ourId);
-                libraryChannels.add(libraryChannel);
-                configuration
-                    .bindTo("localhost", tcpPorts.get(ourId))
-                    .libraryAeronChannel(libraryChannel)
-                    .monitoringFile(acceptorMonitoringFile("engineCounters" + ourId))
-                    .logFileDir(acceptorLogs)
-                    .clusterAeronChannel(CLUSTER_AERON_CHANNEL)
-                    .nodeId((short) ourId)
-                    .addOtherNodes(ids().filter(id -> id != ourId).toArray())
-                    .channelSupplierFactory(DebugTcpChannelSupplier::new);
-
-                configuration.aeronContext().aeronDirectoryName(aeronDirName(ourId));
-
-                return FixEngine.launch(configuration);
-            })
+        cluster = ids()
+            .mapToObj(ourId -> new FixEngineRunner(ourId, ids()))
             .collect(toList());
 
         final LibraryConfiguration configuration = acceptingLibraryConfig(
             acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", null)
             .replyTimeoutInMs(20_000);
-        configuration.libraryAeronChannels(ids().mapToObj(this::libraryChannel).collect(toList()));
+
+        configuration.libraryAeronChannels(
+            cluster
+                .stream()
+                .map(FixEngineRunner::libraryChannel)
+                .collect(toList()));
+
         acceptingLibrary = FixLibrary.connect(configuration);
 
-        leader = libraryChannels.indexOf(acceptingLibrary.currentAeronChannel());
+        leader = cluster
+            .stream()
+            .filter(runner -> runner.libraryChannel().equals(acceptingLibrary.currentAeronChannel()))
+            .findFirst()
+            .get();
 
         assertNotNull("Unable to connect to any cluster members", acceptingLibrary);
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
-    }
-
-    private String aeronDirName(final int id)
-    {
-        return CommonContext.AERON_DIR_PROP_DEFAULT + id;
     }
 
     private IntStream ids()
@@ -153,23 +112,26 @@ public class ClusteredGatewaySystemTest
         return IntStream.range(0, CLUSTER_SIZE);
     }
 
-    private String libraryChannel(final int id)
-    {
-        return "aeron:udp?endpoint=224.0.1.1:" + libraryPorts.get(id);
-    }
-
-    private List<Integer> allocatePorts()
-    {
-        return ids()
-            .mapToObj(i -> unusedPort())
-            .collect(toList());
-    }
-
     @Test
     public void shouldExchangeMessagesInCluster()
     {
+        connectFixSession();
+
+        final long begin = System.nanoTime();
+        roundtripAMessage();
+
+        closeLibrariesAndEngine();
+        final long end = System.nanoTime() + 1;
+
+        allClusterNodesHaveArchivedTestRequestMessage(begin, end, acceptingSession.id());
+
+        allClusterNodesHaveSameIndexFiles();
+    }
+
+    private void connectFixSession()
+    {
         final Builder builder = SessionConfiguration.builder();
-        builder.address("localhost", tcpPorts.get(leader));
+        builder.address("localhost", leader.tcpPort());
 
         final SessionConfiguration config = builder
             .credentials("bob", "Uv1aegoh")
@@ -188,26 +150,21 @@ public class ClusteredGatewaySystemTest
         acceptingSession = acquireSession(acceptingHandler, acceptingLibrary);
         assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
         assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
+    }
 
-        final long begin = System.nanoTime();
+    private void roundtripAMessage()
+    {
         sendTestRequest(initiatingSession);
 
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
-
-        closeLibrariesAndEngine();
-        final long end = System.nanoTime() + 1;
-
-        allClusterNodesHaveArchivedTestRequestMessage(begin, end, acceptingSession.id());
-
-        allClusterNodesHaveSameIndexFiles();
     }
 
     private void allClusterNodesHaveArchivedTestRequestMessage(
         final long begin, final long end, final long sessionId)
     {
-        acceptingEngineCluster.forEach(engine ->
+        cluster.forEach(runner ->
         {
-            final EngineConfiguration configuration = engine.configuration();
+            final EngineConfiguration configuration = runner.configuration();
             final String logFileDir = configuration.logFileDir();
             final FixArchiveScanner scanner = new FixArchiveScanner(logFileDir);
             final StreamIdentifier id = new StreamIdentifier(
@@ -238,11 +195,11 @@ public class ClusteredGatewaySystemTest
 
     private void allClusterNodesHaveSameIndexFiles()
     {
-        final FixEngine firstNode = acceptingEngineCluster.get(0);
+        final FixEngineRunner firstNode = cluster.get(0);
         final String logFileDir = firstNode.configuration().logFileDir();
-        acceptingEngineCluster.stream().skip(1).forEach(otherNode ->
+        cluster.stream().skip(1).forEach(runner ->
         {
-            final String otherLogFileDir = otherNode.configuration().logFileDir();
+            final String otherLogFileDir = runner.configuration().logFileDir();
 
             assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SESSION_ID_FILE);
             assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE);
@@ -279,7 +236,9 @@ public class ClusteredGatewaySystemTest
     @Test
     public void shouldExchangeMessagesAfterPartitionHeals()
     {
+        connectFixSession();
 
+        roundtripAMessage();
     }
 
     private class TestRequestFinder implements FixMessageConsumer
@@ -307,8 +266,6 @@ public class ClusteredGatewaySystemTest
     {
         closeLibrariesAndEngine();
 
-        clusterMediaDrivers.forEach(CloseHelper::close);
-        clusterMediaDrivers.forEach(TestFixtures::cleanupDirectory);
         close(mediaDriver);
         cleanupDirectory(mediaDriver);
     }
@@ -319,10 +276,7 @@ public class ClusteredGatewaySystemTest
         close(initiatingLibrary);
 
         close(initiatingEngine);
-        if (acceptingEngineCluster != null)
-        {
-            acceptingEngineCluster.forEach(CloseHelper::close);
-        }
+        cluster.forEach(FixEngineRunner::close);
     }
 
 }
