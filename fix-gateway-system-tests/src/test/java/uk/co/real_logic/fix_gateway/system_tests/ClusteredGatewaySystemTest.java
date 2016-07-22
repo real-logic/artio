@@ -23,6 +23,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.logger.FixArchiveScanner;
@@ -40,6 +41,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -96,15 +98,20 @@ public class ClusteredGatewaySystemTest
 
         acceptingLibrary = FixLibrary.connect(configuration);
 
-        leader = cluster
-            .stream()
-            .filter(runner -> runner.libraryChannel().equals(acceptingLibrary.currentAeronChannel()))
-            .findFirst()
-            .get();
+        leader = findNewLeader().get();
 
         assertNotNull("Unable to connect to any cluster members", acceptingLibrary);
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
+    }
+
+    private Optional<FixEngineRunner> findNewLeader()
+    {
+        return cluster
+            .stream()
+            .filter(leader -> leader != this.leader)
+            .filter(FixEngineRunner::isLeader)
+            .findFirst();
     }
 
     private IntStream ids()
@@ -236,6 +243,49 @@ public class ClusteredGatewaySystemTest
     @Test
     public void shouldExchangeMessagesAfterPartitionHeals()
     {
+        connectFixSession();
+
+        roundtripAMessage();
+
+        final FixEngineRunner oldLeader = leader;
+        oldLeader.disable();
+        DebugLogger.log("Disabled old old leader");
+        // System.out.println("Disabled old old leader");
+
+        while (true)
+        {
+            initiatingLibrary.poll(1);
+            acceptingLibrary.poll(1);
+
+            final Optional<FixEngineRunner> leader = findNewLeader();
+            if (leader.isPresent())
+            {
+                this.leader = leader.get();
+                break;
+            }
+            ADMIN_IDLE_STRATEGY.idle();
+        }
+        ADMIN_IDLE_STRATEGY.reset();
+
+        DebugLogger.log("Elected new leader: %d", leader.nodeId());
+        // System.out.println("Elected new leader");
+
+        final String libraryChannel = leader.libraryChannel();
+        while (!acceptingLibrary.currentAeronChannel().equals(libraryChannel))
+        {
+            initiatingLibrary.poll(1);
+            acceptingLibrary.poll(1);
+
+            ADMIN_IDLE_STRATEGY.idle();
+        }
+        ADMIN_IDLE_STRATEGY.reset();
+
+        DebugLogger.log("Library has connected to new leader");
+        // System.out.println("Library has connected to new leader");
+
+        // TODO: acceptingLibrary disconnect/timeout
+        // TODO: oldLeader.enable();
+
         connectFixSession();
 
         roundtripAMessage();

@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.engine.framer.*;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
+import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.timing.EngineTimers;
 
@@ -55,6 +56,7 @@ public final class FixEngine extends GatewayProcess
 
     private AgentRunner framerRunner;
     private EngineContext context;
+    private ClusterableStreams streams;
 
     /**
      * Launch the engine. This method starts up the engine threads and then returns.
@@ -158,6 +160,8 @@ public final class FixEngine extends GatewayProcess
 
     private void initFramer(final EngineConfiguration configuration, final FixCounters fixCounters)
     {
+        streams = context.streams();
+
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
         final SessionIds sessionIds = new SessionIds(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
@@ -205,9 +209,20 @@ public final class FixEngine extends GatewayProcess
             errorHandler,
             outboundLibraryStreams.gatewayPublication(idleStrategy),
             context.inboundLibraryPublication(),
-            context.streams(),
+            streams,
             engineDescriptorStore);
         framerRunner = new AgentRunner(idleStrategy, errorHandler, null, framer);
+    }
+
+    /**
+     * Check whether you're the leader of a cluster. NB: if you aren't running in a cluster
+     * this will always return true.
+     *
+     * @return true if you're a cluster leader, false otherwise
+     */
+    public boolean isLeader()
+    {
+        return streams.isLeader();
     }
 
     private Subscription replaySubscription()

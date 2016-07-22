@@ -40,9 +40,11 @@ public class FixEngineRunner
 
     private final DebugTcpChannelSupplier tcpChannelSupplier;
     private final FrameDropper frameDropper;
+    private final int nodeId;
 
     public FixEngineRunner(final int ourId, final IntStream ids)
     {
+        nodeId = ourId;
         tcpPort = unusedPort();
         libraryPort = unusedPort();
         libraryChannel = "aeron:udp?endpoint=224.0.1.1:" + libraryPort;
@@ -113,9 +115,19 @@ public class FixEngineRunner
         frameDropper.dropFrames(false);
     }
 
+    public boolean isLeader()
+    {
+        return engine.isLeader();
+    }
+
     public void close()
     {
         CloseHelper.close(engine);
         CloseHelper.close(mediaDriver);
+    }
+
+    public int nodeId()
+    {
+        return nodeId;
     }
 }
