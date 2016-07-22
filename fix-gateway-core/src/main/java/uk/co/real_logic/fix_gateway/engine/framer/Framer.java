@@ -484,6 +484,11 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         final long now = outboundTimer.recordSince(timestamp);
 
+        if (!clusterableStreams.isLeader())
+        {
+            sessionIds.onSentFollowerMessage(sessionId, messageType, buffer, offset, length);
+        }
+
         senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length);
 
         sendTimer.recordSince(now);
@@ -874,7 +879,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public String roleName()
     {
-        return "Framer";
+        return "Framer " + configuration.nodeId();
     }
 
     void schedule(final Transaction transaction)

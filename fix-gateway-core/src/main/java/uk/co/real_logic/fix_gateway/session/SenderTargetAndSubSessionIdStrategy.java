@@ -174,9 +174,9 @@ public class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
         public String toString()
         {
             return "CompositeKey{" +
-                "senderCompID=" + Arrays.toString(senderCompID) +
-                "senderSubID=" + Arrays.toString(senderSubID) +
-                ", targetCompID=" + Arrays.toString(targetCompID) +
+                "senderCompID=" + senderCompId() +
+                "senderSubID=" + senderSubId() +
+                ", targetCompID=" + targetCompId() +
                 '}';
         }
 

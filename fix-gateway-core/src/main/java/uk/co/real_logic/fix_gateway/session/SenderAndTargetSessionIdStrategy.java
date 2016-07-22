@@ -161,8 +161,8 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         public String toString()
         {
             return "CompositeKey{" +
-                "senderCompID=" + Arrays.toString(senderCompID) +
-                ", targetCompID=" + Arrays.toString(targetCompID) +
+                "senderCompID=" + senderCompId() +
+                ", targetCompID=" + targetCompId() +
                 '}';
         }
 

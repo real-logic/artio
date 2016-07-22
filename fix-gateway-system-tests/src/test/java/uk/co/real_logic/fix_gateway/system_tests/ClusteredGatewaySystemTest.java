@@ -199,8 +199,7 @@ public class ClusteredGatewaySystemTest
 
         allClusterNodesHaveArchivedTestRequestMessage(begin, end, acceptingSession.id());
 
-        // TODO:
-        // allClusterNodesHaveSameIndexFiles();
+        allClusterNodesHaveSameIndexFiles();
     }
 
     private void allClusterNodesHaveArchivedTestRequestMessage(

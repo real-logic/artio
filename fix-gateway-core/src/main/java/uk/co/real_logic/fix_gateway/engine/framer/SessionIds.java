@@ -15,10 +15,13 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
+import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.engine.SectorFramer;
 import uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil;
@@ -28,6 +31,8 @@ import uk.co.real_logic.fix_gateway.messages.SessionIdDecoder;
 import uk.co.real_logic.fix_gateway.messages.SessionIdEncoder;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -36,6 +41,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.zip.CRC32;
 
+import static uk.co.real_logic.fix_gateway.decoder.Constants.LOGON;
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionIdEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.session.SessionIdStrategy.INSUFFICIENT_SPACE;
@@ -61,11 +67,13 @@ public class SessionIds
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final SessionIdEncoder sessionIdEncoder = new SessionIdEncoder();
+    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
+    private final LogonDecoder logonDecoder = new LogonDecoder();
     private final int actingBlockLength = sessionIdEncoder.sbeBlockLength();
     private final int actingVersion = sessionIdEncoder.sbeSchemaVersion();
 
     private final Function<CompositeKey, Long> onLogonFunc = this::onNewLogon;
-    private final LongHashSet currentlyAuthenticated = new LongHashSet(MISSING);
+    private final LongHashSet currentlyAuthenticatedSessionIds = new LongHashSet(MISSING);
     private final Map<CompositeKey, Long> compositeToSurrogate = new HashMap<>();
 
     private final CRC32 crc32 = new CRC32();
@@ -192,7 +200,7 @@ public class SessionIds
     {
         final Long sessionId = compositeToSurrogate.computeIfAbsent(compositeKey, onLogonFunc);
 
-        if (!currentlyAuthenticated.add(sessionId))
+        if (!currentlyAuthenticatedSessionIds.add(sessionId))
         {
             return DUPLICATE_SESSION;
         }
@@ -203,6 +211,12 @@ public class SessionIds
     private long onNewLogon(final CompositeKey compositeKey)
     {
         final long sessionId = counter++;
+        assignSessionId(compositeKey, sessionId);
+        return sessionId;
+    }
+
+    private void assignSessionId(final CompositeKey compositeKey, final long sessionId)
+    {
         final int compositeKeyLength = idStrategy.save(compositeKey, compositeKeyBuffer, 0);
         if (compositeKeyLength == INSUFFICIENT_SPACE)
         {
@@ -218,7 +232,7 @@ public class SessionIds
             {
                 errorHandler.onError(new IllegalStateException(
                     "Run out of space when storing: " + compositeKey));
-                return sessionId;
+                return;
             }
 
             sessionIdEncoder
@@ -233,8 +247,6 @@ public class SessionIds
             updateChecksum(sectorFramer.sectorStart(), sectorFramer.checksumOffset());
             mappedFile.force();
         }
-
-        return sessionId;
     }
 
     // TODO: optimisation, more efficient checksumming, only checksum new data
@@ -250,18 +262,18 @@ public class SessionIds
 
     public void onDisconnect(final long sessionId)
     {
-        currentlyAuthenticated.remove(sessionId);
+        currentlyAuthenticatedSessionIds.remove(sessionId);
     }
 
     public void reset(final File backupLocation)
     {
-        if (!currentlyAuthenticated.isEmpty())
+        if (!currentlyAuthenticatedSessionIds.isEmpty())
         {
-            throw new IllegalStateException("There are currently authenticated sessions: " + currentlyAuthenticated);
+            throw new IllegalStateException("There are currently authenticated sessions: " + currentlyAuthenticatedSessionIds);
         }
 
         counter = LOWEST_VALID_SESSION_ID;
-        currentlyAuthenticated.clear();
+        currentlyAuthenticatedSessionIds.clear();
         compositeToSurrogate.clear();
 
         if (backupLocation != null)
@@ -271,5 +283,31 @@ public class SessionIds
 
         buffer.setMemory(0, buffer.capacity(), (byte) 0);
         initialiseBuffer();
+    }
+
+    void onSentFollowerMessage(
+        final long sessionId,
+        final int messageType,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length)
+    {
+        if (messageType == LOGON && currentlyAuthenticatedSessionIds.add(sessionId))
+        {
+            // Ensure no future collision if you take over as leader of the cluster.
+            counter = sessionId + 1;
+
+            asciiBuffer.wrap(buffer);
+            logonDecoder.decode(asciiBuffer, offset, length);
+
+            // We use the initiator logon variant as we are reading a sent message.
+            final HeaderDecoder header = logonDecoder.header();
+            final CompositeKey compositeKey = idStrategy.onLogon(
+                header.senderCompIDAsString(),
+                header.senderSubIDAsString(),
+                header.senderLocationIDAsString(),
+                header.targetCompIDAsString());
+            assignSessionId(compositeKey, sessionId);
+        }
     }
 }

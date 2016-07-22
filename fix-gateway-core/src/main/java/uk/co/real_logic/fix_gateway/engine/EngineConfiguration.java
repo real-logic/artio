@@ -101,6 +101,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final String DEFAULT_SESSION_ID_FILE = "session_id_buffer";
     public static final String DEFAULT_SEQUENCE_NUMBERS_SENT_FILE = "sequence_numbers_sent";
     public static final String DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE = "sequence_numbers_received";
+    public static final short NO_NODE_ID = -1;
 
     private String host = null;
     private int port;
@@ -118,7 +119,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile receivedSequenceNumberIndex;
     private MappedFile sessionIdBuffer;
     private String clusterAeronChannel = null;
-    private short nodeId;
+    private short nodeId = NO_NODE_ID;
     private IntHashSet otherNodes = new IntHashSet(-1);
     private long clusterTimeoutIntervalInMs = DEFAULT_CLUSTER_TIMEOUT_IN_MS;
 
@@ -404,6 +405,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      */
     public EngineConfiguration nodeId(final short nodeId)
     {
+        if (nodeId == NO_NODE_ID)
+        {
+            throw new IllegalArgumentException(NO_NODE_ID + " is reserved to mean that you don't have a node id");
+        }
         this.nodeId = nodeId;
         return this;
     }
