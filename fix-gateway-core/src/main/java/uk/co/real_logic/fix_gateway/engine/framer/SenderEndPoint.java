@@ -27,7 +27,6 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -39,7 +38,7 @@ class SenderEndPoint implements AutoCloseable
 {
     private final FixMessageEncoder fixMessageEncoder = new FixMessageEncoder();
     private final long connectionId;
-    private final SocketChannel channel;
+    private final TcpChannel channel;
     private final AtomicCounter bytesInBuffer;
     private final AtomicCounter invalidLibraryAttempts;
     private final ErrorHandler errorHandler;
@@ -51,7 +50,7 @@ class SenderEndPoint implements AutoCloseable
     SenderEndPoint(
         final long connectionId,
         final int libraryId,
-        final SocketChannel channel,
+        final TcpChannel channel,
         final AtomicCounter bytesInBuffer,
         final AtomicCounter invalidLibraryAttempts,
         final ErrorHandler errorHandler,

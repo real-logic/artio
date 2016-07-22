@@ -19,8 +19,6 @@ import org.agrona.CloseHelper;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.agrona.concurrent.status.CountersManager;
 
-import java.net.SocketAddress;
-
 public class FixCounters implements AutoCloseable
 {
     private final CountersManager countersManager;
@@ -63,17 +61,17 @@ public class FixCounters implements AutoCloseable
         return failedRaftPublications;
     }
 
-    public AtomicCounter messagesRead(final long connectionId, final SocketAddress address)
+    public AtomicCounter messagesRead(final long connectionId, final String address)
     {
         return newCounter("Messages Read from " + address + " id = " + connectionId);
     }
 
-    public AtomicCounter bytesInBuffer(final long connectionId, final SocketAddress address)
+    public AtomicCounter bytesInBuffer(final long connectionId, final String address)
     {
         return newCounter("Quarantined bytes for " + address + " id = " + connectionId);
     }
 
-    public AtomicCounter invalidLibraryAttempts(final long connectionId, final SocketAddress address)
+    public AtomicCounter invalidLibraryAttempts(final long connectionId, final String address)
     {
         return newCounter("Invalid Library Attempts for " + address + " id = " + connectionId);
     }

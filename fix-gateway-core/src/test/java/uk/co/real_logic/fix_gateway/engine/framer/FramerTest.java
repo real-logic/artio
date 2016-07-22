@@ -119,7 +119,7 @@ public class FramerTest
                 eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean()))
             .thenReturn(mockReceiverEndPoint);
 
-        when(mockEndPointFactory.senderEndPoint(any(SocketChannel.class), anyLong(), anyInt(), any()))
+        when(mockEndPointFactory.senderEndPoint(any(), anyLong(), anyInt(), any()))
             .thenReturn(mockSenderEndPoint);
 
         when(mockReceiverEndPoint.connectionId()).then(inv -> connectionId.getValue());
@@ -547,10 +547,10 @@ public class FramerTest
     private void verifyEndpointsCreated() throws IOException
     {
         verify(mockEndPointFactory).receiverEndPoint(
-            notNull(SocketChannel.class), anyLong(), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer),
+            notNull(TcpChannel.class), anyLong(), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer),
             any(), eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean());
 
         verify(mockEndPointFactory).senderEndPoint(
-            notNull(SocketChannel.class), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer));
+            notNull(TcpChannel.class), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer));
     }
 }

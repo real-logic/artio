@@ -48,7 +48,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -310,7 +309,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return channelSupplier.forEachChannel(timeInMs, onNewConnectionFunc);
     }
 
-    private void onNewConnection(final long timeInMs, final SocketChannel channel) throws IOException
+    private void onNewConnection(final long timeInMs, final TcpChannel channel) throws IOException
     {
         if (clusterableStreams.isLeader())
         {
@@ -330,7 +329,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 null,
                 null);
 
-            final String address = channel.getRemoteAddress().toString();
+            final String address = channel.remoteAddress();
             // In this case the save connect is simply logged for posterities sake
             // So in the back-pressure we should just drop it
             if (inboundPublication.saveConnect(connectionId, address) == BACK_PRESSURED)
@@ -341,7 +340,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
         else
         {
-            final String address = channel.getRemoteAddress().toString();
+            final String address = channel.remoteAddress();
             errorHandler.onError(new IllegalStateException(
                 String.format("Attempted connection from %s whilst follower", address)));
 
@@ -385,7 +384,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         try
         {
-            final SocketChannel channel;
+            final TcpChannel channel;
             final InetSocketAddress address;
             try
             {
@@ -501,7 +500,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     }
 
     private GatewaySession setupConnection(
-        final SocketChannel channel,
+        final TcpChannel channel,
         final long connectionId,
         final long sessionId,
         final CompositeKey sessionKey,
@@ -522,7 +521,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final GatewaySession gatewaySession = new GatewaySession(
             connectionId,
             sessionId,
-            channel.getRemoteAddress().toString(),
+            channel.remoteAddress(),
             connectionType,
             sessionKey,
             receiverEndPoint,

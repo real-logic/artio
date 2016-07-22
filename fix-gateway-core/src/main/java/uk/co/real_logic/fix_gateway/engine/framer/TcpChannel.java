@@ -15,14 +15,46 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 
-public class TcpChannel
+public class TcpChannel implements AutoCloseable
 {
     private final SocketChannel socketChannel;
+    private final String remoteAddress;
 
-    public TcpChannel(final SocketChannel socketChannel)
+    public TcpChannel(final SocketChannel socketChannel) throws IOException
     {
         this.socketChannel = socketChannel;
+        remoteAddress = socketChannel.getRemoteAddress().toString();
+    }
+
+    public String remoteAddress()
+    {
+        return remoteAddress;
+    }
+
+    public SelectionKey register(final Selector sel, final int ops, final Object att) throws ClosedChannelException
+    {
+        return socketChannel.register(sel, ops, att);
+    }
+
+    public int write(final ByteBuffer src) throws IOException
+    {
+        return socketChannel.write(src);
+    }
+
+    public int read(final ByteBuffer dst) throws IOException
+    {
+        return socketChannel.read(dst);
+    }
+
+    public void close() throws IOException
+    {
+        socketChannel.close();
     }
 }

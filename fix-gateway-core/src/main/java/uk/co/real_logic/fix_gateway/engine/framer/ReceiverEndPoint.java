@@ -35,7 +35,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static java.nio.channels.SelectionKey.OP_READ;
@@ -71,7 +70,7 @@ class ReceiverEndPoint
 
     private final LogonDecoder logon = new LogonDecoder();
 
-    private final SocketChannel channel;
+    private final TcpChannel channel;
     private final GatewayPublication publication;
     private final long connectionId;
     private final SessionIdStrategy sessionIdStrategy;
@@ -94,7 +93,7 @@ class ReceiverEndPoint
     private boolean isPaused = false;
 
     ReceiverEndPoint(
-        final SocketChannel channel,
+        final TcpChannel channel,
         final int bufferSize,
         final GatewayPublication publication,
         final long connectionId,

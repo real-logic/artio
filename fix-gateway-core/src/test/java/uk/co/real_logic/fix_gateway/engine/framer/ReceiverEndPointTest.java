@@ -33,7 +33,6 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SocketChannel;
 import java.util.function.ToIntFunction;
 
 import static io.aeron.Publication.BACK_PRESSURED;
@@ -56,7 +55,7 @@ public class ReceiverEndPointTest
     private static final long POSITION = 1024L;
 
     private CompositeKey compositeKey = mock(CompositeKey.class);
-    private SocketChannel mockChannel = mock(SocketChannel.class);
+    private TcpChannel mockChannel = mock(TcpChannel.class);
     private GatewayPublication publication = mock(GatewayPublication.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private SessionIds mockSessionIds = mock(SessionIds.class);

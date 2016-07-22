@@ -85,7 +85,7 @@ public class TcpChannelSupplier implements AutoCloseable
                 final SocketChannel channel = listeningChannel.accept();
                 configure(channel);
 
-                handler.onNewChannel(timeInMs, channel);
+                handler.onNewChannel(timeInMs, newTcpChannel(channel));
 
                 it.remove();
             }
@@ -114,18 +114,23 @@ public class TcpChannelSupplier implements AutoCloseable
         CloseHelper.close(selector);
     }
 
-    public SocketChannel open(final InetSocketAddress address) throws IOException
+    public TcpChannel open(final InetSocketAddress address) throws IOException
     {
         final SocketChannel channel = SocketChannel.open();
         channel.connect(address);
         configure(channel);
-        return channel;
+        return newTcpChannel(channel);
+    }
+
+    protected TcpChannel newTcpChannel(final SocketChannel channel) throws IOException
+    {
+        return new TcpChannel(channel);
     }
 
     @FunctionalInterface
     public interface NewChannelHandler
     {
-        void onNewChannel(final long timeInMs, final SocketChannel socketChannel) throws IOException;
+        void onNewChannel(final long timeInMs, final TcpChannel socketChannel) throws IOException;
     }
 
 }

@@ -26,8 +26,6 @@ import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.IOException;
-import java.net.SocketAddress;
-import java.nio.channels.SocketChannel;
 
 public class EndPointFactory
 {
@@ -58,7 +56,7 @@ public class EndPointFactory
     }
 
     ReceiverEndPoint receiverEndPoint(
-        final SocketChannel channel,
+        final TcpChannel channel,
         final long connectionId,
         final long sessionId,
         final int libraryId,
@@ -78,7 +76,7 @@ public class EndPointFactory
             sessionIds,
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex,
-            fixCounters.messagesRead(connectionId, channel.getRemoteAddress()),
+            fixCounters.messagesRead(connectionId, channel.remoteAddress()),
             framer,
             errorHandler,
             libraryId,
@@ -92,12 +90,12 @@ public class EndPointFactory
     }
 
     SenderEndPoint senderEndPoint(
-        final SocketChannel channel,
+        final TcpChannel channel,
         final long connectionId,
         final int libraryId,
         final Framer framer) throws IOException
     {
-        final SocketAddress remoteAddress = channel.getRemoteAddress();
+        final String remoteAddress = channel.remoteAddress();
         return new SenderEndPoint(
             connectionId,
             libraryId,
