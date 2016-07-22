@@ -67,7 +67,7 @@ public class ChannelSupplier implements AutoCloseable
         }
     }
 
-    public int forEachChannel(final NewChannelHandler handler) throws IOException
+    public int forEachChannel(final long timeInMs, final NewChannelHandler handler) throws IOException
     {
         if (!hasBindAddress)
         {
@@ -85,7 +85,7 @@ public class ChannelSupplier implements AutoCloseable
                 final SocketChannel channel = listeningChannel.accept();
                 configure(channel);
 
-                handler.onNewChannel(channel);
+                handler.onNewChannel(timeInMs, channel);
 
                 it.remove();
             }
@@ -126,7 +126,7 @@ public class ChannelSupplier implements AutoCloseable
     @FunctionalInterface
     public interface NewChannelHandler
     {
-        void onNewChannel(final SocketChannel socketChannel) throws IOException;
+        void onNewChannel(final long timeInMs, final SocketChannel socketChannel) throws IOException;
     }
 
 }

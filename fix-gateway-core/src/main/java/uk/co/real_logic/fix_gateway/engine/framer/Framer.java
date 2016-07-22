@@ -31,6 +31,7 @@ import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
+import uk.co.real_logic.fix_gateway.engine.framer.ChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -92,6 +93,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final ReliefValve sendOutboundMessagesFunc = this::sendOutboundMessages;
+    private final NewChannelHandler onNewConnectionFunc = this::onNewConnection;
 
     private final ChannelSupplier channelSupplier;
     private final EpochClock clock;
@@ -305,48 +307,50 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int pollNewConnections(final long timeInMs) throws IOException
     {
-        return channelSupplier.forEachChannel(channel ->
+        return channelSupplier.forEachChannel(timeInMs, onNewConnectionFunc);
+    }
+
+    private void onNewConnection(final long timeInMs, final SocketChannel channel) throws IOException
+    {
+        if (clusterableStreams.isLeader())
         {
-            if (clusterableStreams.isLeader())
+            final long connectionId = this.nextConnectionId++;
+            final boolean resetSequenceNumbers = configuration.acceptorSequenceNumbersResetUponReconnect();
+            final GatewaySession session = setupConnection(
+                channel, connectionId, UNKNOWN, null, GATEWAY_LIBRARY_ID, ACCEPTOR, resetSequenceNumbers);
+
+            session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
+
+            gatewaySessions.acquire(
+                session,
+                CONNECTED,
+                configuration.defaultHeartbeatIntervalInS(),
+                UNK_SESSION,
+                UNK_SESSION,
+                null,
+                null);
+
+            final String address = channel.getRemoteAddress().toString();
+            // In this case the save connect is simply logged for posterities sake
+            // So in the back-pressure we should just drop it
+            if (inboundPublication.saveConnect(connectionId, address) == BACK_PRESSURED)
             {
-                final long connectionId = this.nextConnectionId++;
-                final boolean resetSequenceNumbers = configuration.acceptorSequenceNumbersResetUponReconnect();
-                final GatewaySession session = setupConnection(
-                    channel, connectionId, UNKNOWN, null, GATEWAY_LIBRARY_ID, ACCEPTOR, resetSequenceNumbers);
-
-                session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
-
-                gatewaySessions.acquire(
-                    session,
-                    CONNECTED,
-                    configuration.defaultHeartbeatIntervalInS(),
-                    UNK_SESSION,
-                    UNK_SESSION,
-                    null,
-                    null);
-
-                final String address = channel.getRemoteAddress().toString();
-                // In this case the save connect is simply logged for posterities sake
-                // So in the back-pressure we should just drop it
-                if (inboundPublication.saveConnect(connectionId, address) == BACK_PRESSURED)
-                {
-                    errorHandler.onError(new IllegalStateException(
-                        "Failed to log connect from " + address + " due to backpressure"));
-                }
-            }
-            else
-            {
-                final String address = channel.getRemoteAddress().toString();
                 errorHandler.onError(new IllegalStateException(
-                    String.format("Attempted connection from %s whilst follower", address)));
-
-                // NB: channel is still blocking at this point, so will be placed in buffer
-                // NB: Writing error message is best effort, possible that other end closes
-                // Before receipt.
-                channel.write(CONNECT_ERROR);
-                channel.close();
+                    "Failed to log connect from " + address + " due to backpressure"));
             }
-        });
+        }
+        else
+        {
+            final String address = channel.getRemoteAddress().toString();
+            errorHandler.onError(new IllegalStateException(
+                String.format("Attempted connection from %s whilst follower", address)));
+
+            // NB: channel is still blocking at this point, so will be placed in buffer
+            // NB: Writing error message is best effort, possible that other end closes
+            // Before receipt.
+            channel.write(CONNECT_ERROR);
+            channel.close();
+        }
     }
 
     public Action onInitiateConnection(
