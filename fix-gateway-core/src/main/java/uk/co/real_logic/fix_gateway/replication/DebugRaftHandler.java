@@ -47,7 +47,7 @@ final class DebugRaftHandler implements RaftHandler
         final long newAckedPosition, final short nodeId, final AcknowledgementStatus status)
     {
         DebugLogger.log(
-            "%2$d: MesageAcknowledgement(newAckedPos=%3$d, nodeId=%4$d, %1$s)\n",
+            "%2$d: MessageAcknowledgement(newAckedPos=%3$d, nodeId=%4$d, %1$s)\n",
             status,
             this.nodeId,
             newAckedPosition,
