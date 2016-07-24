@@ -46,7 +46,7 @@ public class RaftPublication
     private final MessageAcknowledgementEncoder messageAcknowledgement = new MessageAcknowledgementEncoder();
     private final RequestVoteEncoder requestVote = new RequestVoteEncoder();
     private final ReplyVoteEncoder replyVote = new ReplyVoteEncoder();
-    private final ConsensusHeartbeatEncoder concensusHeart = new ConsensusHeartbeatEncoder();
+    private final ConsensusHeartbeatEncoder consensusHeart = new ConsensusHeartbeatEncoder();
     private final ResendEncoder resend = new ResendEncoder();
 
     private final long maxClaimAttempts;
@@ -69,9 +69,10 @@ public class RaftPublication
         this.dataPublication = dataPublication;
     }
 
-    public long saveMessageAcknowledgement(final long newAckedPosition,
-                                           final short nodeId,
-                                           final AcknowledgementStatus status)
+    public long saveMessageAcknowledgement(
+        final long newAckedPosition,
+        final short nodeId,
+        final AcknowledgementStatus status)
     {
         final long position = claim(MESSAGE_ACKNOWLEDGEMENT_LENGTH);
         if (position < 0)
@@ -192,14 +193,14 @@ public class RaftPublication
 
         header
             .wrap(buffer, offset)
-            .blockLength(concensusHeart.sbeBlockLength())
-            .templateId(concensusHeart.sbeTemplateId())
-            .schemaId(concensusHeart.sbeSchemaId())
-            .version(concensusHeart.sbeSchemaVersion());
+            .blockLength(consensusHeart.sbeBlockLength())
+            .templateId(consensusHeart.sbeTemplateId())
+            .schemaId(consensusHeart.sbeSchemaId())
+            .version(consensusHeart.sbeSchemaVersion());
 
         offset += header.encodedLength();
 
-        concensusHeart
+        consensusHeart
             .wrap(buffer, offset)
             .nodeId(nodeId)
             .leaderShipTerm(leaderShipTerm)
@@ -213,11 +214,11 @@ public class RaftPublication
     }
 
     public long saveResend(final int leaderSessionId,
-                           final int leaderShipTerm,
-                           final long startPosition,
-                           final DirectBuffer bodyBuffer,
-                           final int bodyOffset,
-                           final int bodyLength)
+        final int leaderShipTerm,
+        final long startPosition,
+        final DirectBuffer bodyBuffer,
+        final int bodyOffset,
+        final int bodyLength)
     {
         final long position = claim(RESEND_BLOCK_LENGTH + bodyLength);
         if (position < 0)
@@ -251,7 +252,7 @@ public class RaftPublication
 
     private long claim(final int framedLength)
     {
-        long position = 0;
+        long position;
         long i = 0;
         do
         {
@@ -272,7 +273,8 @@ public class RaftPublication
 
             fails.increment();
             i++;
-        } while (i <= maxClaimAttempts);
+        }
+        while (i <= maxClaimAttempts);
 
         if (position == NOT_CONNECTED || position == CLOSED)
         {

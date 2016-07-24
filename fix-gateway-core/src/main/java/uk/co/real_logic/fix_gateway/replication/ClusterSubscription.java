@@ -33,9 +33,8 @@ import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 class ClusterSubscription extends ClusterableSubscription
 {
-
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
-    private final ConsensusHeartbeatDecoder concensusHeartbeat = new ConsensusHeartbeatDecoder();
+    private final ConsensusHeartbeatDecoder consensusHeartbeat = new ConsensusHeartbeatDecoder();
     private final ControlledFragmentHandler onControlMessage = this::onControlMessage;
     private final PriorityQueue<FutureAck> futureAcks = new PriorityQueue<>(
         comparing(FutureAck::leaderShipTerm).thenComparing(FutureAck::position));
@@ -110,12 +109,12 @@ class ClusterSubscription extends ClusterableSubscription
         {
             offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
-            concensusHeartbeat.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
+            consensusHeartbeat.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
 
-            final int leaderShipTerm = concensusHeartbeat.leaderShipTerm();
-            final int leaderSessionId = concensusHeartbeat.leaderSessionId();
-            final long position = concensusHeartbeat.position();
-            final long previousPosition = concensusHeartbeat.startPosition();
+            final int leaderShipTerm = consensusHeartbeat.leaderShipTerm();
+            final int leaderSessionId = consensusHeartbeat.leaderSessionId();
+            final long position = consensusHeartbeat.position();
+            final long previousPosition = consensusHeartbeat.startPosition();
 
             return onConsensusHeartbeat(leaderShipTerm, leaderSessionId, position, previousPosition);
         }

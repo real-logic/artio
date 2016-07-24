@@ -230,7 +230,6 @@ public class Archiver implements Agent, RawBlockHandler
                     final int limit = termOffset + frameLength;
                     if (messageOffset > limit)
                     {
-                        System.out.println("frameLength = " + frameLength);
                         throw new IllegalArgumentException(
                             String.format("%d is > than %d or < 0", messageOffset, limit));
                     }

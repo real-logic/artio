@@ -27,7 +27,6 @@ import static uk.co.real_logic.fix_gateway.messages.ResendDecoder.bodyHeaderLeng
 
 public class RaftSubscription implements ControlledFragmentHandler
 {
-
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final MessageAcknowledgementDecoder messageAcknowledgement = new MessageAcknowledgementDecoder();
     private final RequestVoteDecoder requestVote = new RequestVoteDecoder();
