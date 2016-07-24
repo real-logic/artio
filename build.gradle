@@ -17,7 +17,7 @@ import org.gradle.plugins.ide.eclipse.model.Classpath
 
 buildscript {
     dependencies {
-        classpath 'com.puppycrawl.tools:checkstyle:6.19'
+        classpath 'com.puppycrawl.tools:checkstyle:7.0'
         classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
     }
 }
@@ -92,7 +92,7 @@ subprojects {
 
     checkstyle {
         configFile = new File(rootDir, 'config/checkstyle/checkstyle.xml')
-        toolVersion = "6.19"
+        toolVersion = "7.0"
     }
 
     test {
