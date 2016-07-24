@@ -91,7 +91,7 @@ public class ClusterReplicationTest
     @Test
     public void shouldReformClusterAfterLeaderPause()
     {
-        awaitLeadershipConcensus();
+        awaitLeadershipConsensus();
 
         final NodeRunner leader = leader();
         final NodeRunner[] followers = followers();
@@ -294,7 +294,7 @@ public class ClusterReplicationTest
         DebugLogger.log("Cluster Stable");
     }
 
-    private void awaitLeadershipConcensus()
+    private void awaitLeadershipConsensus()
     {
         while (!(node1.leaderSessionId() == node2.leaderSessionId() &&
                  node1.leaderSessionId() == node3.leaderSessionId()))

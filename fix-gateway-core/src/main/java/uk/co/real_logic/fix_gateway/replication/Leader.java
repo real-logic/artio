@@ -184,7 +184,7 @@ public class Leader implements Role, RaftHandler
     private void heartbeat()
     {
         final long currentPosition = consensusPosition.get();
-        if (controlPublication.saveConcensusHeartbeat(
+        if (controlPublication.saveConsensusHeartbeat(
             nodeId, leaderShipTerm, currentPosition, ourSessionId, previousConsensusPosition) > 0)
         {
             previousConsensusPosition = currentPosition;

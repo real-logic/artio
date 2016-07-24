@@ -333,7 +333,7 @@
         <field name="vote" id="4" type="Vote"/>
         <data name="nodeState" id="5" type="varDataEncoding"/>
     </sbe:message>
-    <sbe:message name="ConcensusHeartbeat" id="21" description="">
+    <sbe:message name="ConsensusHeartbeat" id="21" description="">
         <field name="nodeId" id="57" type="int16"/>
         <field name="leaderSessionId" id="27" type="int32"/>
         <field name="leaderShipTerm" id="66" type="int32"/>

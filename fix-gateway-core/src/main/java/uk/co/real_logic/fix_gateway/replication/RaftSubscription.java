@@ -32,7 +32,7 @@ public class RaftSubscription implements ControlledFragmentHandler
     private final MessageAcknowledgementDecoder messageAcknowledgement = new MessageAcknowledgementDecoder();
     private final RequestVoteDecoder requestVote = new RequestVoteDecoder();
     private final ReplyVoteDecoder replyVote = new ReplyVoteDecoder();
-    private final ConcensusHeartbeatDecoder concensusHeartbeat = new ConcensusHeartbeatDecoder();
+    private final ConsensusHeartbeatDecoder consensusHeartbeat = new ConsensusHeartbeatDecoder();
     private final ResendDecoder resend = new ResendDecoder();
     private final ExpandableArrayBuffer nodeStateBuffer = new ExpandableArrayBuffer();
 
@@ -91,14 +91,14 @@ public class RaftSubscription implements ControlledFragmentHandler
                 );
             }
 
-            case ConcensusHeartbeatDecoder.TEMPLATE_ID:
+            case ConsensusHeartbeatDecoder.TEMPLATE_ID:
             {
-                concensusHeartbeat.wrap(buffer, offset, blockLength, version);
+                consensusHeartbeat.wrap(buffer, offset, blockLength, version);
                 return handler.onConsensusHeartbeat(
-                    concensusHeartbeat.nodeId(),
-                    concensusHeartbeat.leaderShipTerm(),
-                    concensusHeartbeat.position(),
-                    concensusHeartbeat.leaderSessionId());
+                    consensusHeartbeat.nodeId(),
+                    consensusHeartbeat.leaderShipTerm(),
+                    consensusHeartbeat.position(),
+                    consensusHeartbeat.leaderSessionId());
             }
 
             case ResendDecoder.TEMPLATE_ID:

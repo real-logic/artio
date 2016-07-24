@@ -22,7 +22,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.messages.ConcensusHeartbeatDecoder;
+import uk.co.real_logic.fix_gateway.messages.ConsensusHeartbeatDecoder;
 import uk.co.real_logic.sbe.ir.generated.MessageHeaderDecoder;
 
 import java.util.PriorityQueue;
@@ -35,7 +35,7 @@ class ClusterSubscription extends ClusterableSubscription
 {
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
-    private final ConcensusHeartbeatDecoder concensusHeartbeat = new ConcensusHeartbeatDecoder();
+    private final ConsensusHeartbeatDecoder concensusHeartbeat = new ConsensusHeartbeatDecoder();
     private final ControlledFragmentHandler onControlMessage = this::onControlMessage;
     private final PriorityQueue<FutureAck> futureAcks = new PriorityQueue<>(
         comparing(FutureAck::leaderShipTerm).thenComparing(FutureAck::position));
@@ -106,7 +106,7 @@ class ClusterSubscription extends ClusterableSubscription
         final Header header)
     {
         messageHeader.wrap(buffer, offset);
-        if (messageHeader.templateId() == ConcensusHeartbeatDecoder.TEMPLATE_ID)
+        if (messageHeader.templateId() == ConsensusHeartbeatDecoder.TEMPLATE_ID)
         {
             offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
@@ -117,13 +117,13 @@ class ClusterSubscription extends ClusterableSubscription
             final long position = concensusHeartbeat.position();
             final long previousPosition = concensusHeartbeat.startPosition();
 
-            return onConcensusHeartbeat(leaderShipTerm, leaderSessionId, position, previousPosition);
+            return onConsensusHeartbeat(leaderShipTerm, leaderSessionId, position, previousPosition);
         }
 
         return CONTINUE;
     }
 
-    Action onConcensusHeartbeat(
+    Action onConsensusHeartbeat(
         final int leaderShipTermId,
         final int leaderSessionId,
         final long position,
@@ -210,7 +210,7 @@ class ClusterSubscription extends ClusterableSubscription
             if (this.clusterStreamId == clusterStreamId)
             {
                 messageHeader.wrap(buffer, offset);
-                if (messageHeader.templateId() != ConcensusHeartbeatDecoder.TEMPLATE_ID)
+                if (messageHeader.templateId() != ConsensusHeartbeatDecoder.TEMPLATE_ID)
                 {
                     return fragmentHandler.onFragment(buffer, offset, length, header);
                 }
@@ -255,7 +255,7 @@ class ClusterSubscription extends ClusterableSubscription
         }
     }
 
-    long currentConcensusPosition()
+    long currentConsensusPosition()
     {
         return messageFilter.consensusPosition;
     }

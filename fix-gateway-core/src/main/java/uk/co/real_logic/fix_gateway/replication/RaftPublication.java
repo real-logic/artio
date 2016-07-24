@@ -36,7 +36,7 @@ public class RaftPublication
     private static final int MESSAGE_ACKNOWLEDGEMENT_LENGTH = HEADER_LENGTH + MessageAcknowledgementEncoder.BLOCK_LENGTH;
     private static final int REQUEST_VOTE_LENGTH = HEADER_LENGTH + RequestVoteEncoder.BLOCK_LENGTH;
     private static final int REPLY_VOTE_LENGTH = HEADER_LENGTH + ReplyVoteEncoder.BLOCK_LENGTH + nodeStateHeaderLength();
-    private static final int CONCENSUS_HEARTBEAT_LENGTH = HEADER_LENGTH + ConcensusHeartbeatEncoder.BLOCK_LENGTH;
+    private static final int CONSENSUS_HEARTBEAT_LENGTH = HEADER_LENGTH + ConsensusHeartbeatEncoder.BLOCK_LENGTH;
     private static final int RESEND_BLOCK_LENGTH =
         HEADER_LENGTH + ResendEncoder.BLOCK_LENGTH + ResendDecoder.bodyHeaderLength();
 
@@ -46,7 +46,7 @@ public class RaftPublication
     private final MessageAcknowledgementEncoder messageAcknowledgement = new MessageAcknowledgementEncoder();
     private final RequestVoteEncoder requestVote = new RequestVoteEncoder();
     private final ReplyVoteEncoder replyVote = new ReplyVoteEncoder();
-    private final ConcensusHeartbeatEncoder concensusHeart = new ConcensusHeartbeatEncoder();
+    private final ConsensusHeartbeatEncoder concensusHeart = new ConsensusHeartbeatEncoder();
     private final ResendEncoder resend = new ResendEncoder();
 
     private final long maxClaimAttempts;
@@ -174,14 +174,14 @@ public class RaftPublication
         return position;
     }
 
-    public long saveConcensusHeartbeat(
+    public long saveConsensusHeartbeat(
         final short nodeId,
         final int leaderShipTerm,
         final long position,
         final int leaderSessionId,
         final long startPosition)
     {
-        final long pos = claim(CONCENSUS_HEARTBEAT_LENGTH);
+        final long pos = claim(CONSENSUS_HEARTBEAT_LENGTH);
         if (position < 0)
         {
             return position;

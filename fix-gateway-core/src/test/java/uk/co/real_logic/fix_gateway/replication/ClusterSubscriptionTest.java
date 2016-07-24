@@ -34,7 +34,6 @@ import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasResult;
  */
 public class ClusterSubscriptionTest
 {
-
     private static final int CLUSTER_STREAM_ID = 1;
 
     private Subscription dataSubscription = mock(Subscription.class);
@@ -54,9 +53,9 @@ public class ClusterSubscriptionTest
     @Test
     public void shouldUpdatePositionWhenAcknowledged()
     {
-        onConcensusHeartbeatPoll(1, 1, 1, 0);
+        onConsensusHeartbeatPoll(1, 1, 1, 0);
 
-        onConcensusHeartbeatPoll(1, 1, 2, 1);
+        onConsensusHeartbeatPoll(1, 1, 2, 1);
 
         assertState(1, 1, 2);
     }
@@ -64,9 +63,9 @@ public class ClusterSubscriptionTest
     @Test
     public void shouldStashUpdatesWithGap()
     {
-        onConcensusHeartbeatPoll(1, 1, 1, 0);
+        onConsensusHeartbeatPoll(1, 1, 1, 0);
 
-        onConcensusHeartbeatPoll(2, 2, 4, 2);
+        onConsensusHeartbeatPoll(2, 2, 4, 2);
 
         assertState(1, 1, 1);
     }
@@ -76,7 +75,7 @@ public class ClusterSubscriptionTest
     {
         shouldStashUpdatesWithGap();
 
-        onConcensusHeartbeatPoll(1, 1, 2, 1);
+        onConsensusHeartbeatPoll(1, 1, 2, 1);
 
         assertState(1, 1, 2);
 
@@ -88,9 +87,9 @@ public class ClusterSubscriptionTest
     @Test
     public void shouldStashUpdatesFromFutureLeadershipTerm()
     {
-        onConcensusHeartbeatPoll(1, 1, 1, 0);
+        onConsensusHeartbeatPoll(1, 1, 1, 0);
 
-        onConcensusHeartbeatPoll(3, 3, 4, 2);
+        onConsensusHeartbeatPoll(3, 3, 4, 2);
 
         assertState(1, 1, 1);
     }
@@ -100,7 +99,7 @@ public class ClusterSubscriptionTest
     {
         shouldStashUpdatesFromFutureLeadershipTerm();
 
-        onConcensusHeartbeatPoll(2, 2, 2, 1);
+        onConsensusHeartbeatPoll(2, 2, 2, 1);
 
         assertState(2, 2, 2);
 
@@ -109,20 +108,20 @@ public class ClusterSubscriptionTest
         assertState(3, 3, 4);
     }
 
-    private void onConcensusHeartbeatPoll(
+    private void onConsensusHeartbeatPoll(
         final int leaderShipTermId,
         final int leaderSessionId,
         final int position,
         final int previousPosition)
     {
         clusterSubscription.hasMatchingFutureAck();
-        clusterSubscription.onConcensusHeartbeat(leaderShipTermId, leaderSessionId, position, previousPosition);
+        clusterSubscription.onConsensusHeartbeat(leaderShipTermId, leaderSessionId, position, previousPosition);
     }
 
     private void assertState(
         final int currentLeadershipTermId,
         final Integer leadershipSessionId,
-        final long currentConcensusPosition)
+        final long currentConsensusPosition)
     {
         assertThat(clusterSubscription,
             hasResult(
@@ -134,8 +133,8 @@ public class ClusterSubscriptionTest
 
         assertThat(clusterSubscription,
             hasResult(
-                "currentConcensusPosition",
-                ClusterSubscription::currentConcensusPosition,
-                equalTo(currentConcensusPosition)));
+                "currentConsensusPosition",
+                ClusterSubscription::currentConsensusPosition,
+                equalTo(currentConsensusPosition)));
     }
 }
