@@ -33,7 +33,7 @@ import java.util.function.Function;
 
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
+import static uk.co.real_logic.fix_gateway.replication.messages.Vote.FOR;
 import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
 import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.*;
 

@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
-import uk.co.real_logic.fix_gateway.messages.Vote;
+import uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus;
+import uk.co.real_logic.fix_gateway.replication.messages.Vote;
 
 public interface RaftHandler
 {

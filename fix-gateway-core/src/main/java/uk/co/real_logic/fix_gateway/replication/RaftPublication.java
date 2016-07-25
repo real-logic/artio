@@ -22,12 +22,12 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.ReliefValve;
-import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.replication.messages.*;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.Publication.CLOSED;
 import static io.aeron.Publication.NOT_CONNECTED;
-import static uk.co.real_logic.fix_gateway.messages.ReplyVoteEncoder.nodeStateHeaderLength;
+import static uk.co.real_logic.fix_gateway.replication.messages.ReplyVoteEncoder.nodeStateHeaderLength;
 
 // NB: doens't extend ClaimablePublication because it works on raw Publication objects, not clusterable publications
 public class RaftPublication

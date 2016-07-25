@@ -20,15 +20,15 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.Pressure;
-import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
-import uk.co.real_logic.fix_gateway.messages.Vote;
+import uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus;
+import uk.co.real_logic.fix_gateway.replication.messages.Vote;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
-import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
-import static uk.co.real_logic.fix_gateway.messages.Vote.AGAINST;
-import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
+import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
+import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.OK;
+import static uk.co.real_logic.fix_gateway.replication.messages.Vote.AGAINST;
+import static uk.co.real_logic.fix_gateway.replication.messages.Vote.FOR;
 
 public class Follower implements Role, RaftHandler
 {

@@ -170,7 +170,10 @@ project(':fix-gateway-codecs') {
                 'sbe.target.language': 'Java',
                 'sbe.validation.stop.on.error': 'true',
                 'sbe.validation.xsd': validationXsdPath)
-        args = ['src/main/resources/uk/co/real_logic/fix_gateway/message-schema.xml']
+        args = [
+            'src/main/resources/uk/co/real_logic/fix_gateway/message-schema.xml',
+            'src/main/resources/uk/co/real_logic/fix_gateway/replication/replication-message-schema.xml'
+        ]
     }
 
     jar {

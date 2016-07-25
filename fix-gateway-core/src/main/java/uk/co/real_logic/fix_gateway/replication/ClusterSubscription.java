@@ -22,8 +22,8 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.messages.ConsensusHeartbeatDecoder;
-import uk.co.real_logic.sbe.ir.generated.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.replication.messages.ConsensusHeartbeatDecoder;
+import uk.co.real_logic.fix_gateway.replication.messages.MessageHeaderDecoder;
 
 import java.util.PriorityQueue;
 

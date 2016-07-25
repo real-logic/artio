@@ -16,10 +16,10 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import org.agrona.MutableDirectBuffer;
-import uk.co.real_logic.fix_gateway.messages.LeadershipTermDecoder;
-import uk.co.real_logic.fix_gateway.messages.LeadershipTermEncoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
+import uk.co.real_logic.fix_gateway.replication.messages.LeadershipTermDecoder;
+import uk.co.real_logic.fix_gateway.replication.messages.LeadershipTermEncoder;
+import uk.co.real_logic.fix_gateway.replication.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.replication.messages.MessageHeaderEncoder;
 
 import java.nio.ByteOrder;
 

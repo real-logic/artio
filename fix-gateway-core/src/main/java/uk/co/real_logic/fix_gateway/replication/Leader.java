@@ -23,8 +23,8 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
-import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
-import uk.co.real_logic.fix_gateway.messages.Vote;
+import uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus;
+import uk.co.real_logic.fix_gateway.replication.messages.Vote;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -32,8 +32,8 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
-import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
-import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
+import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
+import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.OK;
 
 public class Leader implements Role, RaftHandler
 {

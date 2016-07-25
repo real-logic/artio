@@ -19,11 +19,11 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
-import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.replication.messages.*;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder.ENCODED_LENGTH;
-import static uk.co.real_logic.fix_gateway.messages.ResendDecoder.bodyHeaderLength;
+import static uk.co.real_logic.fix_gateway.replication.messages.MessageHeaderDecoder.ENCODED_LENGTH;
+import static uk.co.real_logic.fix_gateway.replication.messages.ResendDecoder.bodyHeaderLength;
 
 public class RaftSubscription implements ControlledFragmentHandler
 {

@@ -19,8 +19,8 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus;
-import uk.co.real_logic.fix_gateway.messages.Vote;
+import uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus;
+import uk.co.real_logic.fix_gateway.replication.messages.Vote;
 
 /**
  * A wrapper around a raft handler that can log out all the control protocol messages.

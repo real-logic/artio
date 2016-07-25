@@ -33,9 +33,9 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyShort;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
-import static uk.co.real_logic.fix_gateway.messages.AcknowledgementStatus.OK;
-import static uk.co.real_logic.fix_gateway.messages.Vote.FOR;
+import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
+import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.OK;
+import static uk.co.real_logic.fix_gateway.replication.messages.Vote.FOR;
 
 public class FollowerTest
 {
