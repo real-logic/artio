@@ -229,8 +229,10 @@ public class Archiver implements Agent, RawBlockHandler
                 {
                     // This offset is as a result of the bytebuffer not having a one-to-one mapping
                     // to UnsafeBuffer instances as of Aeron 1.0
-                    final int bufferAdjustmentOffset =
+                    // TODO: replace this with termBuffer.wrapAdjustment() at when Agrona 0.5.4 is released.
+                    final int wrapAdjustment =
                         (int) (termBuffer.addressOffset() - ((sun.nio.ch.DirectBuffer) byteBuffer).address());
+
                     final int limit = termOffset + frameLength;
                     if (messageOffset > limit)
                     {
@@ -238,8 +240,8 @@ public class Archiver implements Agent, RawBlockHandler
                             String.format("%d is > than %d or < 0", messageOffset, limit));
                     }
                     byteBuffer
-                        .limit(limit + bufferAdjustmentOffset)
-                        .position(messageOffset + bufferAdjustmentOffset);
+                        .limit(limit + wrapAdjustment)
+                        .position(messageOffset + wrapAdjustment);
 
                     checksum.update(byteBuffer);
                 }
