@@ -53,6 +53,8 @@ import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasFluentProperty
 public class EngineAndLibraryIntegrationTest
 {
     private static final IdleStrategy ADMIN_IDLE_STRATEGY = backoffIdleStrategy();
+    private static final int SHORT_TIMEOUT_IN_MS = 100;
+    private static final int LONG_TIMEOUT_IN_MS = 10_000;
 
     private MediaDriver mediaDriver;
     private FixEngine engine;
@@ -65,12 +67,17 @@ public class EngineAndLibraryIntegrationTest
     @Before
     public void launch()
     {
-        delete(ACCEPTOR_LOGS);
         mediaDriver = launchMediaDriver();
 
+        launchEngine(SHORT_TIMEOUT_IN_MS);
+    }
+
+    private void launchEngine(final int replyTimeoutInMs)
+    {
+        delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(
             unusedPort(), "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
-        config.replyTimeoutInMs(TIMEOUT_IN_MS);
+        config.replyTimeoutInMs(replyTimeoutInMs);
         engine = FixEngine.launch(config);
     }
 
@@ -93,13 +100,16 @@ public class EngineAndLibraryIntegrationTest
     @Test(expected = FixGatewayException.class)
     public void librariesShouldNotBeAbleToConnectUntilTheyHaveTimedOut()
     {
+        engine.close();
+        launchEngine(LONG_TIMEOUT_IN_MS);
+
         library = connectLibrary();
 
         awaitLibraryConnect(library);
 
         library.close();
 
-        library = connectLibrary();
+        library2 = connectLibrary();
     }
 
     @Test
