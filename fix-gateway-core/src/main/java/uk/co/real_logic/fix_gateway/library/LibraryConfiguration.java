@@ -38,8 +38,9 @@ public final class LibraryConfiguration extends CommonConfiguration
     public static final int DEFAULT_LIBRARY_ID = 1;
     public static final GatewayErrorHandler DEFAULT_GATEWAY_ERROR_HANDLER =
         (errorType, libraryId, message) -> CONTINUE;
-    private static final SentPositionHandler DEFAULT_SENT_POSITION_HANDLER = position -> CONTINUE;
-    private static final SessionExistsHandler DEFAULT_SESSION_EXISTS_HANDLER =
+    public static final int DEFAULT_RECONNECT_ATTEMPTS = 10;
+    public static final SentPositionHandler DEFAULT_SENT_POSITION_HANDLER = position -> CONTINUE;
+    public static final SessionExistsHandler DEFAULT_SESSION_EXISTS_HANDLER =
         (library, sessionId, senderCompId, senderSubId, senderLocationId, targetCompId, username, password) ->
         {
         };
@@ -53,6 +54,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private GatewayErrorHandler gatewayErrorHandler = DEFAULT_GATEWAY_ERROR_HANDLER;
     private SentPositionHandler sentPositionHandler = DEFAULT_SENT_POSITION_HANDLER;
     private List<String> libraryAeronChannels = new ArrayList<>();
+    private int reconnectAttempts = DEFAULT_RECONNECT_ATTEMPTS;
 
     /**
      * When a new session connects to the gateway you register a callback handler to find
@@ -130,6 +132,12 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    public LibraryConfiguration reconnectAttempts(final int reconnectAttempts)
+    {
+        this.reconnectAttempts = reconnectAttempts;
+        return this;
+    }
+
     public int encoderBufferSize()
     {
         return encoderBufferSize;
@@ -158,6 +166,11 @@ public final class LibraryConfiguration extends CommonConfiguration
     public SentPositionHandler sentPositionHandler()
     {
         return sentPositionHandler;
+    }
+
+    public int reconnectAttempts()
+    {
+        return reconnectAttempts;
     }
 
     /**

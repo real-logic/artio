@@ -68,8 +68,6 @@ public final class FixLibrary extends GatewayProcess
 {
     public static final int NO_MESSAGE_REPLAY = -1;
 
-    public static final int RECONNECT_ATTEMPTS = 10;
-
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
     private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
@@ -84,6 +82,7 @@ public final class FixLibrary extends GatewayProcess
     private final int libraryId;
     private final IdleStrategy idleStrategy;
     private final SentPositionHandler sentPositionHandler;
+    private final boolean enginesAreClustered;
 
     private final Long2ObjectHashMap<Reply<?>> correlationIdToReply = new Long2ObjectHashMap<>();
 
@@ -100,6 +99,339 @@ public final class FixLibrary extends GatewayProcess
     private String currentAeronChannel;
     private Streams inboundLibraryStreams;
     private Streams outboundLibraryStreams;
+
+    // ------------- Public API -------------
+
+    /**
+     * Connect to an engine. This method blocks until the connection is complete and then returns.
+     *
+     * @param configuration the configuration for this library instance.
+     * @return the library instance once it has connected.
+     * @throws FixGatewayException
+     *         if there's an error connecting to the FIX Gateway or if there's a timeout talking to
+     *         the FixEngine.
+     */
+    public static FixLibrary connect(final LibraryConfiguration configuration)
+    {
+        return new FixLibrary(configuration).connect();
+    }
+
+    /**
+     * Poll the library all of its component sessions to process any messages
+     * and events that have received from or should be sent to the engine.
+     *
+     * @param fragmentLimit the maximum number of events to read from the engine.
+     * @return 0 if no work was performed, > 0 otherwise.
+     */
+    public int poll(final int fragmentLimit)
+    {
+        if (enginesAreClustered && livenessDetector.hasDisconnected())
+        {
+            connect();
+        }
+
+        final long timeInMs = clock.time();
+        return inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit) +
+               pollSessions(timeInMs) +
+               livenessDetector.poll(timeInMs) +
+               checkReplies(timeInMs);
+    }
+
+    /**
+     * Check if the library is connected to an engine.
+     * <p>
+     * Note that this refers to whether a library is connected to a FIX Engine,
+     * not whether of its sessions are connected.
+     *
+     * @return true if the library is connected to an engine, false otherwise.
+     * @see Session#isConnected()
+     * @see uk.co.real_logic.fix_gateway.engine.FixEngine
+     */
+    public boolean isConnected()
+    {
+        return livenessDetector.isConnected();
+    }
+
+    /**
+     * Get the identifier of the library.
+     *
+     * @return the identifier of the library.
+     */
+    public int libraryId()
+    {
+        return libraryId;
+    }
+
+    /**
+     * Get a list of the currently active sessions.
+     * <p>
+     * Note: the list is unmodifiable.
+     *
+     * @return a list of the currently active sessions.
+     */
+    public List<Session> sessions()
+    {
+        return unmodifiableSessions;
+    }
+
+    /**
+     * Close the Library.
+     */
+    public void close()
+    {
+        connectionIdToSession.values().forEach(SessionSubscriber::close);
+        super.close();
+    }
+
+    /**
+     * Initiate a FIX session with a FIX acceptor. This method returns a reply object
+     * wrapping the Session itself.
+     *
+     * @param configuration the configuration to use for the session.
+     * @return the session object for the session that you've initiated. It can return the following errors:
+     *         {@link IllegalStateException}
+     *         if you're trying to initiate two sessions at the same time or if there's a timeout talking to
+     *         the {@link uk.co.real_logic.fix_gateway.engine.FixEngine}.
+     *         This probably indicates that there's a problem in your code or that your engine isn't running.
+     *         {@link FixGatewayException}
+     *         if you're unable to connect to the accepting gateway.
+     *         This probably indicates a configuration problem related to the external gateway.
+     */
+    public Reply<Session> initiate(final SessionConfiguration configuration)
+    {
+        requireNonNull(configuration, "configuration");
+
+        return new InitiateSessionReply(latestReplyArrivalTime(), configuration);
+    }
+
+    /**
+     * Release this session object to the gateway to manage. If the release
+     * operation has successfully completed then it will return {@link SessionReplyStatus#OK}.
+     *
+     * Similar to {@link this#initiate(SessionConfiguration)} this is a non-blocking operation that
+     * returns a reply object that indicates what has happened to its result.
+     *
+     * @param session the session to release
+     * @return the result of this operation.
+     */
+    public Reply<SessionReplyStatus> releaseToGateway(final Session session)
+    {
+        requireNonNull(session, "session");
+
+        return new ReleaseToGatewayReply(latestReplyArrivalTime(), session);
+    }
+
+    /**
+     * Request a session be acquired from the Gateway. It returns a {@link Reply} object.
+     *
+     * If this session is being managed by
+     * the gateway then your {@link SessionAcquireHandler} will receive a callback
+     * and the reply will be {@link SessionReplyStatus#OK}.
+     *
+     * If another library has acquired the session then this method will return
+     * {@link SessionReplyStatus#OTHER_SESSION_OWNER}. If the connection id refers
+     * to an unknown session then the method returns {@link SessionReplyStatus#UNKNOWN_SESSION}.
+     * If this library instance is unknown to the gateway, for example if its heartbeating
+     * mechanism has timed out due to {@link this#poll(int)} not being called often enough.
+     *
+     * @param sessionId the id of the session to acquire.
+     * @param lastReceivedSequenceNumber the last received message sequence number
+     *                                   that you know about. You will get a stream
+     *                                   of messages replayed to you from
+     *                                   <code>lastReceivedMessageSequenceNumber + 1</code>
+     *                                   to the latest message sequence number.
+     *                                   If you don't care about message replay then
+     *                                   use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
+     * @return the reply object representing the result of the request.
+     */
+    public Reply<SessionReplyStatus> requestSession(final long sessionId, final int lastReceivedSequenceNumber)
+    {
+        return new RequestSessionReply(latestReplyArrivalTime(), sessionId, lastReceivedSequenceNumber);
+    }
+
+    // ------------- Reply Implementation Classes ------------
+
+    private class InitiateSessionReply extends Reply<Session>
+    {
+        private final SessionConfiguration configuration;
+
+        private int addressIndex = 0;
+        private long correlationId;
+        private boolean requiresResend;
+
+        InitiateSessionReply(
+            final long latestReplyArrivalTime,
+            final SessionConfiguration configuration)
+        {
+            super(latestReplyArrivalTime);
+            this.configuration = configuration;
+            correlationId = register(this);
+            sendMessage();
+        }
+
+        private void sendMessage()
+        {
+            final List<String> hosts = configuration.hosts();
+            final List<Integer> ports = configuration.ports();
+            final int size = hosts.size();
+            if (addressIndex >= size)
+            {
+                onError(new FixGatewayException("Unable to connect to any of the addresses specified"));
+                return;
+            }
+
+            final String host = hosts.get(addressIndex);
+            final int port = ports.get(addressIndex);
+
+            final long position = outboundPublication.saveInitiateConnection(
+                libraryId,
+                host,
+                port,
+                configuration.senderCompId(),
+                configuration.senderSubId(),
+                configuration.senderLocationId(),
+                configuration.targetCompId(),
+                configuration.sequenceNumberType(),
+                configuration.initialSequenceNumber(),
+                configuration.username(),
+                configuration.password(),
+                FixLibrary.this.configuration.defaultHeartbeatIntervalInS(),
+                correlationId);
+
+            requiresResend = position < 0;
+        }
+
+        void onError(final GatewayError errorType, final String errorMessage)
+        {
+            if (errorType == UNABLE_TO_CONNECT)
+            {
+                addressIndex++;
+                correlationId = register(this);
+                sendMessage();
+            }
+            else
+            {
+                onError(new FixGatewayException(String.format("%s: %s", errorType, errorMessage)));
+            }
+        }
+
+        void onComplete(final Session result)
+        {
+            result.address(configuration.hosts().get(addressIndex), configuration.ports().get(addressIndex));
+            super.onComplete(result);
+        }
+
+        boolean poll(final long timeInMs)
+        {
+            if (requiresResend)
+            {
+                sendMessage();
+            }
+
+            return super.poll(timeInMs);
+        }
+    }
+
+    private class ReleaseToGatewayReply extends Reply<SessionReplyStatus>
+    {
+        private final long correlationId;
+        private final Session session;
+
+        private boolean requiresResend;
+
+        ReleaseToGatewayReply(final long latestReplyArrivalTime, final Session session)
+        {
+            super(latestReplyArrivalTime);
+            this.session = session;
+            correlationId = register(this);
+            sendMessage();
+        }
+
+        private void sendMessage()
+        {
+            final long position = outboundPublication.saveReleaseSession(
+                libraryId,
+                session.connectionId(),
+                correlationId,
+                session.state(),
+                session.heartbeatIntervalInMs(),
+                session.lastSentMsgSeqNum(),
+                session.lastReceivedMsgSeqNum(),
+                session.username(),
+                session.password());
+
+            requiresResend = position < 0;
+        }
+
+        void onComplete(final SessionReplyStatus result)
+        {
+            if (result == SessionReplyStatus.OK)
+            {
+                sessions.remove(session);
+                session.disable();
+            }
+
+            super.onComplete(result);
+        }
+
+        void onError(final GatewayError errorType, final String errorMessage)
+        {
+        }
+
+        boolean poll(final long timeInMs)
+        {
+            if (requiresResend)
+            {
+                sendMessage();
+            }
+
+            return super.poll(timeInMs);
+        }
+    }
+
+    private class RequestSessionReply extends Reply<SessionReplyStatus>
+    {
+        private final long sessionId;
+        private final int lastReceivedSequenceNumber;
+        private final long correlationId;
+
+        private boolean requiresResend;
+
+        RequestSessionReply(final long latestReplyArrivalTime,
+                            final long sessionId,
+                            final int lastReceivedSequenceNumber)
+        {
+            super(latestReplyArrivalTime);
+            this.sessionId = sessionId;
+            this.lastReceivedSequenceNumber = lastReceivedSequenceNumber;
+            correlationId = register(this);
+            sendMessage();
+        }
+
+        private void sendMessage()
+        {
+            final long position = outboundPublication.saveRequestSession(
+                libraryId, sessionId, correlationId, lastReceivedSequenceNumber);
+
+            requiresResend = position < 0;
+        }
+
+        void onError(final GatewayError errorType, final String errorMessage)
+        {
+        }
+
+        boolean poll(final long timeInMs)
+        {
+            if (requiresResend)
+            {
+                sendMessage();
+            }
+
+            return super.poll(timeInMs);
+        }
+    }
+
+    // ------------- End Public API -------------
 
     private FixLibrary(final LibraryConfiguration configuration)
     {
@@ -120,6 +452,7 @@ public final class FixLibrary extends GatewayProcess
         idleStrategy = configuration.libraryIdleStrategy();
         sentPositionHandler = configuration.sentPositionHandler();
         clock = new SystemEpochClock();
+        enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
     }
 
     private void initStreams(final CommonConfiguration configuration)
@@ -138,7 +471,7 @@ public final class FixLibrary extends GatewayProcess
 
     private FixLibrary connect()
     {
-        return connect(RECONNECT_ATTEMPTS);
+        return connect(configuration.reconnectAttempts());
     }
 
     private FixLibrary connect(final int reconnectAttempts)
@@ -225,16 +558,6 @@ public final class FixLibrary extends GatewayProcess
         return this;
     }
 
-    private void sendLibraryConnect()
-    {
-        final long correlationId = ++currentCorrelationId;
-        while (outboundPublication.saveLibraryConnect(libraryId, correlationId, uniqueValue) < 0)
-        {
-            idleStrategy.idle();
-        }
-        idleStrategy.reset();
-    }
-
     private boolean isReconnect()
     {
         return inboundSubscription != null;
@@ -243,50 +566,13 @@ public final class FixLibrary extends GatewayProcess
     private FixLibrary connectError(final String message)
     {
         throw new FixGatewayException(String.format(
-                "Unable to connect to engine: %s", message
+            "Unable to connect to engine: %s", message
         ));
     }
 
-    // ------------- Public API -------------
-
-    /**
-     * Connect to an engine. This method blocks until the connection is complete and then returns.
-     *
-     * @param configuration the configuration for this library instance.
-     * @return the library instance once it has connected.
-     * @throws FixGatewayException
-     *         if there's an error connecting to the FIX Gateway or if there's a timeout talking to
-     *         the FixEngine.
-     */
-    public static FixLibrary connect(final LibraryConfiguration configuration)
+    private long latestReplyArrivalTime()
     {
-        return new FixLibrary(configuration).connect();
-    }
-
-    /**
-     * Poll the library all of its component sessions to process any messages
-     * and events that have received from or should be sent to the engine.
-     *
-     * @param fragmentLimit the maximum number of events to read from the engine.
-     * @return 0 if no work was performed, > 0 otherwise.
-     */
-    public int poll(final int fragmentLimit)
-    {
-        if (livenessDetector.hasDisconnected() && isConnectedToCluster())
-        {
-            connect();
-        }
-
-        final long timeInMs = clock.time();
-        return inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit) +
-               pollSessions(timeInMs) +
-               livenessDetector.poll(timeInMs) +
-               checkReplies(timeInMs);
-    }
-
-    private boolean isConnectedToCluster()
-    {
-        return configuration.libraryAeronChannels().size() > 1;
+        return clock.time() + configuration.replyTimeoutInMs();
     }
 
     private int checkReplies(final long timeInMs)
@@ -310,303 +596,14 @@ public final class FixLibrary extends GatewayProcess
         return count;
     }
 
-    /**
-     * Check if the library is connected to an engine.
-     * <p>
-     * Note that this refers to whether a library is connected to a FIX Engine,
-     * not whether of its sessions are connected.
-     *
-     * @return true if the library is connected to an engine, false otherwise.
-     * @see Session#isConnected()
-     * @see uk.co.real_logic.fix_gateway.engine.FixEngine
-     */
-    public boolean isConnected()
+    private void sendLibraryConnect()
     {
-        return livenessDetector.isConnected();
-    }
-
-    /**
-     * Get the identifier of the library.
-     *
-     * @return the identifier of the library.
-     */
-    public int libraryId()
-    {
-        return libraryId;
-    }
-
-    /**
-     * Get a list of the currently active sessions.
-     * <p>
-     * Note: the list is unmodifiable.
-     *
-     * @return a list of the currently active sessions.
-     */
-    public List<Session> sessions()
-    {
-        return unmodifiableSessions;
-    }
-
-    /**
-     * Close the Library.
-     */
-    public void close()
-    {
-        connectionIdToSession.values().forEach(SessionSubscriber::close);
-        super.close();
-    }
-
-    /**
-     * Initiate a FIX session with a FIX acceptor. This method returns a reply object
-     * wrapping the Session itself.
-     *
-     * @param configuration the configuration to use for the session.
-     * @return the session object for the session that you've initiated. It can return the following errors:
-     *         {@link IllegalStateException}
-     *         if you're trying to initiate two sessions at the same time or if there's a timeout talking to
-     *         the {@link uk.co.real_logic.fix_gateway.engine.FixEngine}.
-     *         This probably indicates that there's a problem in your code or that your engine isn't running.
-     *         {@link FixGatewayException}
-     *         if you're unable to connect to the accepting gateway.
-     *         This probably indicates a configuration problem related to the external gateway.
-     */
-    public Reply<Session> initiate(final SessionConfiguration configuration)
-    {
-        requireNonNull(configuration, "configuration");
-
-        return new InitiateSessionReply(latestReplyArrivalTime(), configuration);
-    }
-
-    private class InitiateSessionReply extends Reply<Session>
-    {
-        private final SessionConfiguration configuration;
-
-        private int addressIndex = 0;
-        private long correlationId;
-        private boolean requiresResend;
-
-        InitiateSessionReply(
-            final long latestReplyArrivalTime,
-            final SessionConfiguration configuration)
+        final long correlationId = ++currentCorrelationId;
+        while (outboundPublication.saveLibraryConnect(libraryId, correlationId, uniqueValue) < 0)
         {
-            super(latestReplyArrivalTime);
-            this.configuration = configuration;
-            correlationId = register(this);
-            sendMessage();
+            idleStrategy.idle();
         }
-
-        private void sendMessage()
-        {
-            final List<String> hosts = configuration.hosts();
-            final List<Integer> ports = configuration.ports();
-            final int size = hosts.size();
-            if (addressIndex >= size)
-            {
-                onError(new FixGatewayException("Unable to connect to any of the addresses specified"));
-                return;
-            }
-
-            final String host = hosts.get(addressIndex);
-            final int port = ports.get(addressIndex);
-
-            final long position = outboundPublication.saveInitiateConnection(
-                libraryId,
-                host,
-                port,
-                configuration.senderCompId(),
-                configuration.senderSubId(),
-                configuration.senderLocationId(),
-                configuration.targetCompId(),
-                configuration.sequenceNumberType(),
-                configuration.initialSequenceNumber(),
-                configuration.username(),
-                configuration.password(),
-                FixLibrary.this.configuration.defaultHeartbeatIntervalInS(),
-                correlationId);
-
-            requiresResend = position < 0;
-        }
-
-        void onError(final GatewayError errorType, final String errorMessage)
-        {
-            if (errorType == UNABLE_TO_CONNECT)
-            {
-                addressIndex++;
-                correlationId = register(this);
-                sendMessage();
-            }
-            else
-            {
-                onError(new FixGatewayException(String.format("%s: %s", errorType, errorMessage)));
-            }
-        }
-
-        void onComplete(final Session result)
-        {
-            result.address(configuration.hosts().get(addressIndex), configuration.ports().get(addressIndex));
-            super.onComplete(result);
-        }
-
-        boolean poll(final long timeInMs)
-        {
-            if (requiresResend)
-            {
-                sendMessage();
-            }
-
-            return super.poll(timeInMs);
-        }
-    }
-
-    /**
-     * Release this session object to the gateway to manage. If the release
-     * operation has successfully completed then it will return {@link SessionReplyStatus#OK}.
-     *
-     * Similar to {@link this#initiate(SessionConfiguration)} this is a non-blocking operation that
-     * returns a reply object that indicates what has happened to its result.
-     *
-     * @param session the session to release
-     * @return the result of this operation.
-     */
-    public Reply<SessionReplyStatus> releaseToGateway(final Session session)
-    {
-        requireNonNull(session, "session");
-
-        return new ReleaseToGatewayReply(latestReplyArrivalTime(), session);
-    }
-
-    private class ReleaseToGatewayReply extends Reply<SessionReplyStatus>
-    {
-        private final long correlationId;
-        private final Session session;
-
-        private boolean requiresResend;
-
-        ReleaseToGatewayReply(final long latestReplyArrivalTime, final Session session)
-        {
-            super(latestReplyArrivalTime);
-            this.session = session;
-            correlationId = register(this);
-            sendMessage();
-        }
-
-        private void sendMessage()
-        {
-            final long position = outboundPublication.saveReleaseSession(
-                libraryId,
-                session.connectionId(),
-                correlationId,
-                session.state(),
-                session.heartbeatIntervalInMs(),
-                session.lastSentMsgSeqNum(),
-                session.lastReceivedMsgSeqNum(),
-                session.username(),
-                session.password());
-
-            requiresResend = position < 0;
-        }
-
-        void onComplete(final SessionReplyStatus result)
-        {
-            if (result == SessionReplyStatus.OK)
-            {
-                sessions.remove(session);
-                session.disable();
-            }
-
-            super.onComplete(result);
-        }
-
-        void onError(final GatewayError errorType, final String errorMessage)
-        {
-        }
-
-        boolean poll(final long timeInMs)
-        {
-            if (requiresResend)
-            {
-                sendMessage();
-            }
-
-            return super.poll(timeInMs);
-        }
-    }
-
-    /**
-     * Request a session be acquired from the Gateway. It returns a {@link Reply} object.
-     *
-     * If this session is being managed by
-     * the gateway then your {@link SessionAcquireHandler} will receive a callback
-     * and the reply will be {@link SessionReplyStatus#OK}.
-     *
-     * If another library has acquired the session then this method will return
-     * {@link SessionReplyStatus#OTHER_SESSION_OWNER}. If the connection id refers
-     * to an unknown session then the method returns {@link SessionReplyStatus#UNKNOWN_SESSION}.
-     * If this library instance is unknown to the gateway, for example if its heartbeating
-     * mechanism has timed out due to {@link this#poll(int)} not being called often enough.
-     *
-     * @param sessionId the id of the session to acquire.
-     * @param lastReceivedSequenceNumber the last received message sequence number
-     *                                   that you know about. You will get a stream
-     *                                   of messages replayed to you from
-     *                                   <code>lastReceivedMessageSequenceNumber + 1</code>
-     *                                   to the latest message sequence number.
-     *                                   If you don't care about message replay then
-     *                                   use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
-     * @return the reply object representing the result of the request.
-     */
-    public Reply<SessionReplyStatus> requestSession(final long sessionId, final int lastReceivedSequenceNumber)
-    {
-        return new RequestSessionReply(latestReplyArrivalTime(), sessionId, lastReceivedSequenceNumber);
-    }
-
-    private class RequestSessionReply extends Reply<SessionReplyStatus>
-    {
-        private final long sessionId;
-        private final int lastReceivedSequenceNumber;
-        private final long correlationId;
-
-        private boolean requiresResend;
-
-        RequestSessionReply(final long latestReplyArrivalTime,
-                            final long sessionId,
-                            final int lastReceivedSequenceNumber)
-        {
-            super(latestReplyArrivalTime);
-            this.sessionId = sessionId;
-            this.lastReceivedSequenceNumber = lastReceivedSequenceNumber;
-            correlationId = register(this);
-            sendMessage();
-        }
-
-        private void sendMessage()
-        {
-            final long position = outboundPublication.saveRequestSession(
-                libraryId, sessionId, correlationId, lastReceivedSequenceNumber);
-
-            requiresResend = position < 0;
-        }
-
-        void onError(final GatewayError errorType, final String errorMessage)
-        {
-        }
-
-        boolean poll(final long timeInMs)
-        {
-            if (requiresResend)
-            {
-                sendMessage();
-            }
-
-            return super.poll(timeInMs);
-        }
-    }
-
-    // ------------- End Public API -------------
-
-    private long latestReplyArrivalTime()
-    {
-        return clock.time() + configuration.replyTimeoutInMs();
+        idleStrategy.reset();
     }
 
     private int pollSessions(final long timeInMs)
@@ -871,7 +868,6 @@ public final class FixLibrary extends GatewayProcess
 
         public Action onNotLeader(final int libraryId, final String libraryChannel)
         {
-            //System.out.println("ON NOT LEADER????? '" + libraryChannel + "' not '" + currentAeronChannel + "'");
             if (libraryChannel.isEmpty())
             {
                 attemptNextEngine();
@@ -879,6 +875,7 @@ public final class FixLibrary extends GatewayProcess
             else
             {
                 currentAeronChannel = libraryChannel;
+                DebugLogger.log("Attempting connect to leader (%s)", currentAeronChannel);
             }
             return CONTINUE;
         }
@@ -889,6 +886,7 @@ public final class FixLibrary extends GatewayProcess
         final List<String> aeronChannels = configuration.libraryAeronChannels();
         final int nextIndex = (aeronChannels.indexOf(currentAeronChannel) + 1) % aeronChannels.size();
         currentAeronChannel = aeronChannels.get(nextIndex);
+        DebugLogger.log("Attempting connect to next engine (%s) in round-robin", currentAeronChannel);
     }
 
     private void newSession(final long connectionId, final long sessionId, final Session session)
