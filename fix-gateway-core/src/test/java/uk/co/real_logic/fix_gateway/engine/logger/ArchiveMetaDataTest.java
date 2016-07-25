@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import org.agrona.IoUtil;
 import org.junit.After;
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;

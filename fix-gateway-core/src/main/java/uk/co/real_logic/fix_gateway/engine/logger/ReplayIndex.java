@@ -21,7 +21,11 @@ import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
-import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
+import uk.co.real_logic.fix_gateway.storage.messages.ReplayIndexRecordEncoder;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 

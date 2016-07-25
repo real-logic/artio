@@ -20,7 +20,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.messages.LogonEncoder;
-import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.ReplayIndexRecordDecoder;
 
 import java.io.File;
 import java.nio.ByteBuffer;

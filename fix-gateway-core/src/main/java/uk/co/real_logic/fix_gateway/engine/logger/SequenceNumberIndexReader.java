@@ -19,15 +19,15 @@ import io.aeron.logbuffer.Header;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.SectorFramer;
-import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberDecoder;
-import uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder;
+import uk.co.real_logic.fix_gateway.storage.messages.LastKnownSequenceNumberDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.LastKnownSequenceNumberEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.OUT_OF_SPACE;
 import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.*;
-import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.BLOCK_LENGTH;
-import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
+import static uk.co.real_logic.fix_gateway.storage.messages.LastKnownSequenceNumberEncoder.BLOCK_LENGTH;
+import static uk.co.real_logic.fix_gateway.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
 public class SequenceNumberIndexReader
 {

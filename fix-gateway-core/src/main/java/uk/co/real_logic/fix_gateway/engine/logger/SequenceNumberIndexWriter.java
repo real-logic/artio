@@ -24,6 +24,8 @@ import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.engine.ChecksumFramer;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.storage.messages.LastKnownSequenceNumberDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.LastKnownSequenceNumberEncoder;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -31,7 +33,7 @@ import java.io.File;
 
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.*;
-import static uk.co.real_logic.fix_gateway.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
+import static uk.co.real_logic.fix_gateway.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
 public class SequenceNumberIndexWriter implements Index
 {

@@ -20,8 +20,8 @@ import org.agrona.MutableDirectBuffer;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
-import uk.co.real_logic.fix_gateway.messages.SenderTargetAndSubCompositeKeyDecoder;
-import uk.co.real_logic.fix_gateway.messages.SenderTargetAndSubCompositeKeyEncoder;
+import uk.co.real_logic.fix_gateway.storage.messages.SenderTargetAndSubCompositeKeyDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.SenderTargetAndSubCompositeKeyEncoder;
 
 import java.util.Arrays;
 

@@ -19,8 +19,8 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2IntHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.engine.ChecksumFramer;
-import uk.co.real_logic.fix_gateway.messages.IndexedPositionDecoder;
-import uk.co.real_logic.fix_gateway.messages.IndexedPositionEncoder;
+import uk.co.real_logic.fix_gateway.storage.messages.IndexedPositionDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.IndexedPositionEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 

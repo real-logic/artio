@@ -171,8 +171,9 @@ project(':fix-gateway-codecs') {
                 'sbe.validation.stop.on.error': 'true',
                 'sbe.validation.xsd': validationXsdPath)
         args = [
-            'src/main/resources/uk/co/real_logic/fix_gateway/message-schema.xml',
-            'src/main/resources/uk/co/real_logic/fix_gateway/replication/replication-message-schema.xml'
+            'src/main/resources/uk/co/real_logic/fix_gateway/messages/message-schema.xml',
+            'src/main/resources/uk/co/real_logic/fix_gateway/replication/replication-message-schema.xml',
+            'src/main/resources/uk/co/real_logic/fix_gateway/storage/storage-message-schema.xml'
         ]
     }
 

@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.sbe_util;
 
-import uk.co.real_logic.fix_gateway.MessageSchemaLocation;
+import uk.co.real_logic.fix_gateway.messages.MessageSchemaLocation;
 import uk.co.real_logic.sbe.ir.Ir;
 import uk.co.real_logic.sbe.ir.IrEncoder;
 import uk.co.real_logic.sbe.xml.IrGenerator;

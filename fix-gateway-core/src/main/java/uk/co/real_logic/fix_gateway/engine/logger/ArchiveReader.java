@@ -24,7 +24,7 @@ import org.agrona.IoUtil;
 import org.agrona.collections.Int2ObjectCache;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.messages.ArchiveMetaDataDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 

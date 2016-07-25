@@ -27,8 +27,8 @@ import uk.co.real_logic.fix_gateway.engine.SectorFramer;
 import uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
-import uk.co.real_logic.fix_gateway.messages.SessionIdDecoder;
-import uk.co.real_logic.fix_gateway.messages.SessionIdEncoder;
+import uk.co.real_logic.fix_gateway.storage.messages.SessionIdDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.SessionIdEncoder;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
@@ -43,7 +43,7 @@ import java.util.zip.CRC32;
 
 import static uk.co.real_logic.fix_gateway.decoder.Constants.LOGON;
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.*;
-import static uk.co.real_logic.fix_gateway.messages.SessionIdEncoder.BLOCK_LENGTH;
+import static uk.co.real_logic.fix_gateway.storage.messages.SessionIdEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.session.SessionIdStrategy.INSUFFICIENT_SPACE;
 
 /**

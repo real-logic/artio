@@ -20,7 +20,7 @@ import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
-import uk.co.real_logic.fix_gateway.messages.ReplayIndexRecordDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.ReplayIndexRecordDecoder;
 
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
