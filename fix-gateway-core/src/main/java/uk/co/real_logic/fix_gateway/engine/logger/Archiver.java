@@ -36,13 +36,13 @@ import java.nio.channels.FileChannel;
 import java.util.function.IntFunction;
 import java.util.zip.CRC32;
 
-import static io.aeron.driver.Configuration.termBufferLength;
+import static io.aeron.driver.Configuration.TERM_BUFFER_LENGTH_DEFAULT;
 import static io.aeron.logbuffer.LogBufferDescriptor.computePosition;
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 public class Archiver implements Agent, RawBlockHandler
 {
-    private static final int POLL_LENGTH = termBufferLength();
+    private static final int POLL_LENGTH = TERM_BUFFER_LENGTH_DEFAULT;
 
     public static final long UNKNOWN_POSITION = -1;
 
@@ -86,7 +86,7 @@ public class Archiver implements Agent, RawBlockHandler
 
     private SessionArchiver newSessionArchiver(final int sessionId)
     {
-        final Image image = subscription.getImage(sessionId);
+        final Image image = subscription.imageBySessionId(sessionId);
         if (image == null)
         {
             return null;
@@ -227,6 +227,10 @@ public class Archiver implements Agent, RawBlockHandler
 
                 if (byteBuffer != null)
                 {
+                    // This offset is as a result of the bytebuffer not having a one-to-one mapping
+                    // to UnsafeBuffer instances as of Aeron 1.0
+                    final int bufferAdjustmentOffset =
+                        (int) (termBuffer.addressOffset() - ((sun.nio.ch.DirectBuffer) byteBuffer).address());
                     final int limit = termOffset + frameLength;
                     if (messageOffset > limit)
                     {
@@ -234,8 +238,8 @@ public class Archiver implements Agent, RawBlockHandler
                             String.format("%d is > than %d or < 0", messageOffset, limit));
                     }
                     byteBuffer
-                        .limit(limit)
-                        .position(messageOffset);
+                        .limit(limit + bufferAdjustmentOffset)
+                        .position(messageOffset + bufferAdjustmentOffset);
 
                     checksum.update(byteBuffer);
                 }
@@ -365,6 +369,7 @@ public class Archiver implements Agent, RawBlockHandler
                 // Update Checksum
                 final byte[] bytes = bodyBuffer.byteArray();
                 checksum.update(bytes, messageOffset, bodyLength - HEADER_LENGTH);
+
                 writeChecksum(header);
 
                 // Write patch

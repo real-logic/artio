@@ -483,7 +483,7 @@ public class ScenariosTest
 
     private void setup()
     {
-        when(dataSubscription.getImage(SESSION_ID)).thenReturn(leaderDataImage);
+        when(dataSubscription.imageBySessionId(SESSION_ID)).thenReturn(leaderDataImage);
         when(archiver.session(SESSION_ID)).thenReturn(leaderArchiver);
         when(archiveReader.session(SESSION_ID)).thenReturn(sessionReader);
 

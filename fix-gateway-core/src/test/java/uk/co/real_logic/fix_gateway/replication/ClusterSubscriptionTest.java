@@ -47,7 +47,7 @@ public class ClusterSubscriptionTest
     @Before
     public void setUp()
     {
-        when(dataSubscription.getImage(leadershipSessionId.capture())).thenReturn(dataImage);
+        when(dataSubscription.imageBySessionId(leadershipSessionId.capture())).thenReturn(dataImage);
     }
 
     @Test

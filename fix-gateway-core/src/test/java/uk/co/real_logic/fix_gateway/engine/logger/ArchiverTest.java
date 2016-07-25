@@ -70,13 +70,13 @@ import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 public class ArchiverTest
 {
 
-    public static final int SIZE = 1337; // Exposes Alignment Bugs
-    public static final int TERM_LENGTH = findNextPositivePowerOfTwo(SIZE * 32);
-    public static final int STREAM_ID = 1;
-    public static final int OFFSET_WITHIN_MESSAGE = 42;
-    public static final int INITIAL_VALUE = 43;
-    public static final int PATCH_VALUE = 44;
-    public static final String CHANNEL = "aeron:udp?endpoint=localhost:9999";
+    private static final int SIZE = 1337; // Exposes Alignment Bugs
+    private static final int TERM_LENGTH = findNextPositivePowerOfTwo(SIZE * 32);
+    private static final int STREAM_ID = 1;
+    private static final int OFFSET_WITHIN_MESSAGE = 42;
+    private static final int INITIAL_VALUE = 43;
+    private static final int PATCH_VALUE = 44;
+    private static final String CHANNEL = "aeron:udp?endpoint=localhost:9999";
 
     @Parameters
     public static Collection<Object[]> data()

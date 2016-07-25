@@ -236,16 +236,17 @@ public class ArchiveReader implements AutoCloseable
         private boolean validateChecksum(final int termOffset, final int frameLength)
         {
             final int expectedChecksum = ReservedValue.checksum(header.reservedValue());
-            final int calculatedChecksum = readChecksum(termOffset, frameLength);
+            final int calculatedChecksum = calculateChecksum(termOffset, frameLength);
             return expectedChecksum == calculatedChecksum;
         }
 
-        private int readChecksum(final int messageOffset, final int frameLength)
+        private int calculateChecksum(final int messageOffset, final int frameLength)
         {
             final ByteBuffer byteBuffer = buffer.byteBuffer();
             final int bodyLength = Math.max(0, frameLength - HEADER_LENGTH);
             final int limit = messageOffset + bodyLength;
             byteBuffer.limit(limit).position(messageOffset);
+
             checksum.reset();
             checksum.update(byteBuffer);
             return (int) checksum.getValue();

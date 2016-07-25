@@ -39,6 +39,6 @@ public class SoloSubscription extends ClusterableSubscription
 
     public long positionOf(final int aeronSessionId)
     {
-        return subscription.getImage(aeronSessionId).position();
+        return subscription.imageBySessionId(aeronSessionId).position();
     }
 }
