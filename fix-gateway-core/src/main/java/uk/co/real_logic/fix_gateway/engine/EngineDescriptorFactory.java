@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.engine;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.EngineDescriptorEncoder;
-import uk.co.real_logic.sbe.ir.generated.MessageHeaderEncoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.messages.EngineDescriptorEncoder.libraryChannelHeaderLength;
