@@ -84,25 +84,26 @@ public class Session implements AutoCloseable
      */
     public static final double HEARTBEAT_PAUSE_FACTOR = 0.8;
 
-    public static final String TEST_REQ_ID = "TEST";
-    public static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
+    static final String TEST_REQ_ID = "TEST";
+    private static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
 
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
 
-    private final EpochClock clock;
-
-    protected final SessionProxy proxy;
     protected final long connectionId;
     protected final SessionIdStrategy sessionIdStrategy;
     protected final GatewayPublication publication;
     protected final MutableDirectBuffer buffer;
     protected final MutableAsciiBuffer string;
+    protected final int libraryId;
+
+    final SessionProxy proxy;
+
+    private final EpochClock clock;
     private final long sendingTimeWindowInMs;
     private final AtomicCounter receivedMsgSeqNo;
     private final AtomicCounter sentMsgSeqNo;
-    protected final int libraryId;
 
-    protected CompositeKey sessionKey;
+    CompositeKey sessionKey;
 
     private SessionState state;
     private long id = UNKNOWN;
@@ -1135,6 +1136,11 @@ public class Session implements AutoCloseable
     {
         state(SessionState.DISABLED);
         close();
+    }
+
+    public boolean isAcceptor()
+    {
+        return false;
     }
 
 }

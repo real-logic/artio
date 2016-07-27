@@ -21,7 +21,7 @@ import uk.co.real_logic.fix_gateway.builder.LogoutEncoder;
 /**
  * A {@link SessionCustomisationStrategy} that does no customisation.
  */
-public class NoSessionCustomisationStrategy implements SessionCustomisationStrategy
+class NoSessionCustomisationStrategy implements SessionCustomisationStrategy
 {
     public void configureLogon(final LogonEncoder logon, final long sessionId)
     {

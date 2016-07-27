@@ -934,9 +934,9 @@ public final class FixLibrary extends GatewayProcess
             fixCounters.sentMsgSeqNo(connectionId),
             libraryId,
             configuration.sessionBufferSize(),
-            initiatorInitialSequenceNumber(sessionConfiguration, lastSequenceNumber),
-            state)
-            .lastReceivedMsgSeqNum(initiatorInitialSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
+            initiatorInitialSequenceNumber(sessionConfiguration, lastSequenceNumber), state)
+            .lastReceivedMsgSeqNum(
+                initiatorInitialSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
     }
 
     private int initiatorInitialSequenceNumber(
@@ -987,7 +987,6 @@ public final class FixLibrary extends GatewayProcess
             sentMsgSeqNo,
             libraryId,
             sessionBufferSize,
-            // If a persisted sequence number is needed then it will be set with the logon message.
             1,
             state)
             .address(host, port);

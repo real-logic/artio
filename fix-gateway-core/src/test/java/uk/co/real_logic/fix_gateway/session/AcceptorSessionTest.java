@@ -37,9 +37,19 @@ public class AcceptorSessionTest extends AbstractSessionTest
     private AcceptorSession newAcceptorSession()
     {
         return new AcceptorSession(
-            HEARTBEAT_INTERVAL, CONNECTION_ID, fakeClock, mockProxy, mockPublication, null,
-            SENDING_TIME_WINDOW, mockReceivedMsgSeqNo,
-            mockSentMsgSeqNo, LIBRARY_ID, DEFAULT_SESSION_BUFFER_SIZE, 1, CONNECTED);
+            HEARTBEAT_INTERVAL,
+            CONNECTION_ID,
+            fakeClock,
+            mockProxy,
+            mockPublication,
+            null,
+            SENDING_TIME_WINDOW,
+            mockReceivedMsgSeqNo,
+            mockSentMsgSeqNo,
+            LIBRARY_ID,
+            DEFAULT_SESSION_BUFFER_SIZE,
+            1,
+            CONNECTED);
     }
 
     @Test

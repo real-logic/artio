@@ -34,7 +34,7 @@ public class SenderAndTargetSessionIdStrategyTest
 {
     public static final List<String> IDS = Arrays.asList("SIGMAX", "ABC_DEFG04", "LEH_LZJ02");
 
-    private SenderAndTargetSessionIdStrategy strategy = new SenderAndTargetSessionIdStrategy();
+    private SenderAndTargetSessionIdStrategy strategy = SessionIdStrategy.senderAndTarget();
 
     @Test
     public void differentIdsDoNotClash()

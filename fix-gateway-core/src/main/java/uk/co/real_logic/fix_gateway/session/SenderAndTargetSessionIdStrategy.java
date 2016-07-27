@@ -32,7 +32,7 @@ import static java.util.Objects.requireNonNull;
  * A simple, and dumb session id Strategy based upon hashing SenderCompID and TargetCompID. Makes no assumptions
  * about the nature of either identifiers.
  */
-public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
+class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 {
     private static final int BLOCK_AND_LENGTH_FIELDS_LENGTH = SenderAndTargetCompositeKeyEncoder.BLOCK_LENGTH + 4;
 
@@ -40,6 +40,10 @@ public class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
     private final SenderAndTargetCompositeKeyDecoder keyDecoder = new SenderAndTargetCompositeKeyDecoder();
     private final int actingBlockLength = keyDecoder.sbeBlockLength();
     private final int actingVersion = keyDecoder.sbeSchemaVersion();
+
+    SenderAndTargetSessionIdStrategy()
+    {
+    }
 
     public CompositeKey onLogon(final HeaderDecoder header)
     {

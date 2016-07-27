@@ -27,6 +27,11 @@ import uk.co.real_logic.fix_gateway.builder.LogoutEncoder;
  */
 public interface SessionCustomisationStrategy
 {
+    static SessionCustomisationStrategy none()
+    {
+        return new NoSessionCustomisationStrategy();
+    }
+
     /**
      * Add additional fields or information to the logon message.
      *

@@ -35,13 +35,20 @@ import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
  * equals/hashcode implementation. Strategy should be stateless.
  *
  * In all cases sender and target are defined from your own perspective of the connection.
- *
- * @see SenderAndTargetSessionIdStrategy
- * @see SenderTargetAndSubSessionIdStrategy
  */
 public interface SessionIdStrategy
 {
     int INSUFFICIENT_SPACE = -1;
+
+    static SenderAndTargetSessionIdStrategy senderAndTarget()
+    {
+        return new SenderAndTargetSessionIdStrategy();
+    }
+
+    static SenderTargetAndSubSessionIdStrategy senderTargetAndSub()
+    {
+        return new SenderTargetAndSubSessionIdStrategy();
+    }
 
     /**
      * Creates the composite session key when you accept a logon.

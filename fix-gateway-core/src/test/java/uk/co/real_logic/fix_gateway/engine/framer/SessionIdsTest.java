@@ -23,7 +23,6 @@ import org.junit.Test;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
-import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.File;
@@ -42,7 +41,7 @@ public class SessionIdsTest
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));
     private MappedFile mappedFile = mock(MappedFile.class);
-    private SessionIdStrategy idStrategy = new SenderAndTargetSessionIdStrategy();
+    private SessionIdStrategy idStrategy = SessionIdStrategy.senderAndTarget();
     private SessionIds sessionIds = newSessionIds(buffer);
 
     private CompositeKey aSession = idStrategy.onLogon("a", null, null, "b");
