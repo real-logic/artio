@@ -28,7 +28,7 @@ public class FixCounters implements AutoCloseable
 
     private AtomicCounter failedRaftPublications = null;
 
-    public FixCounters(final CountersManager countersManager)
+    FixCounters(final CountersManager countersManager)
     {
         this.countersManager = countersManager;
         failedInboundPublications = countersManager.newCounter("Failed offer to inbound publication");

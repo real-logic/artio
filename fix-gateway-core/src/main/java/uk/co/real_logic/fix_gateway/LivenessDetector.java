@@ -27,9 +27,9 @@ import static uk.co.real_logic.fix_gateway.LivenessDetector.LivenessState.*;
 public final class LivenessDetector
 {
 
-    public static final int SEND_INTERVAL_FRACTION = 4;
+    private static final int SEND_INTERVAL_FRACTION = 4;
 
-    public enum LivenessState
+    enum LivenessState
     {
         AWAITING_CONNECT,
         CONNECTED,
@@ -119,7 +119,7 @@ public final class LivenessDetector
         latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
     }
 
-    public void heartbeat(final long timeInMs)
+    private void heartbeat(final long timeInMs)
     {
         if (publication.saveApplicationHeartbeat(libraryId) >= 0)
         {

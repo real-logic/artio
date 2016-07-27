@@ -96,7 +96,7 @@ public class GatewayProcess implements AutoCloseable
         }
     }
 
-    public void initMonitoringAgent(final List<Timer> timers, final CommonConfiguration configuration)
+    protected void initMonitoringAgent(final List<Timer> timers, final CommonConfiguration configuration)
     {
         final List<Agent> agents = new ArrayList<>();
         if (TIME_MESSAGES)
