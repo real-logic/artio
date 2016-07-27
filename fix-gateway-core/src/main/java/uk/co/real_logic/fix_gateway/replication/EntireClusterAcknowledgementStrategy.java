@@ -21,7 +21,7 @@ import org.agrona.collections.Long2LongHashMap;
 /**
  * A leaderShipTerm is acknowledged if the entire cluster acknowledges it.
  */
-public class EntireClusterAcknowledgementStrategy implements AcknowledgementStrategy
+class EntireClusterAcknowledgementStrategy implements AcknowledgementStrategy
 {
     public long findAckedTerm(final Long2LongHashMap sessionIdToPosition)
     {

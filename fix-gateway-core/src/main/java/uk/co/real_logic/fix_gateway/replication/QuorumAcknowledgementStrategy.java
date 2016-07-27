@@ -22,7 +22,7 @@ import java.util.Arrays;
 /**
  * A leaderShipTerm is acknowledged if a quorum of cluster members acknowledge it
  */
-public class QuorumAcknowledgementStrategy implements AcknowledgementStrategy
+class QuorumAcknowledgementStrategy implements AcknowledgementStrategy
 {
     private long[] positions = new long[0];
 

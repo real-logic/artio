@@ -252,7 +252,7 @@ public class ClusterNodeConfiguration
 
         if (acknowledgementStrategy() == null)
         {
-            acknowledgementStrategy(new QuorumAcknowledgementStrategy());
+            acknowledgementStrategy(AcknowledgementStrategy.quorum());
         }
     }
 

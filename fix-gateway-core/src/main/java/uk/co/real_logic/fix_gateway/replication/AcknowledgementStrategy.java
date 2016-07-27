@@ -17,8 +17,24 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import org.agrona.collections.Long2LongHashMap;
 
+/**
+ * Implement this to determine what position to acknowledge. Most
+ * systems should use a Quorum based acknowledgement. Some systems
+ * may want to ensure that the entire cluster has acknowledged a
+ * position. You can also implement a custom strategy.
+ */
 public interface AcknowledgementStrategy
 {
+    static AcknowledgementStrategy quorum()
+    {
+        return new QuorumAcknowledgementStrategy();
+    }
+
+    static AcknowledgementStrategy entireCluster()
+    {
+        return new EntireClusterAcknowledgementStrategy();
+    }
+
     long findAckedTerm(final Long2LongHashMap sessionIdToPosition);
 
     boolean isElected(final int receivedVotes, final int clusterSize);
