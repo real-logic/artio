@@ -66,6 +66,14 @@ public final class LibraryInfo
         return unmodifiableAllSessions;
     }
 
+    public String toString()
+    {
+        return "LibraryInfo{" +
+            "libraryId=" + libraryId +
+            ", allSessions=" + allSessions +
+            '}';
+    }
+
     int aeronSessionId()
     {
         return aeronSessionId;
@@ -96,20 +104,12 @@ public final class LibraryInfo
         allSessions.add(session);
     }
 
-    public String toString()
-    {
-        return "LibraryInfo{" +
-            "libraryId=" + libraryId +
-            ", allSessions=" + allSessions +
-            '}';
-    }
-
     GatewaySession removeSession(final long connectionId)
     {
         return GatewaySessions.removeSessionByConn(connectionId, allSessions);
     }
 
-    public int uniqueValue()
+    int uniqueValue()
     {
         return uniqueValue;
     }

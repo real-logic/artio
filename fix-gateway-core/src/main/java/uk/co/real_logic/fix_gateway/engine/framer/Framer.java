@@ -168,7 +168,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundPublication = outboundPublication;
         this.inboundPublication = endPointFactory.inboundPublication(sendOutboundMessagesFunc);
         this.clusterableStreams = clusterableStreams;
-        this.senderEndPoints = new SenderEndPoints(inboundPublication);
+        this.senderEndPoints = new SenderEndPoints();
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
         this.adminCommands = adminCommands;

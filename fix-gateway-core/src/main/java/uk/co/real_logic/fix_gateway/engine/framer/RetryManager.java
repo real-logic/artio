@@ -24,12 +24,12 @@ import java.util.List;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-public class RetryManager
+class RetryManager
 {
     private final Long2ObjectHashMap<Transaction> correlationIdToTransactions = new Long2ObjectHashMap<>();
     private List<Transaction> polledTransactions = new ArrayList<>();
 
-    public Action retry(final long correlationId)
+    Action retry(final long correlationId)
     {
         final Transaction transaction = correlationIdToTransactions.get(correlationId);
         if (transaction == null)
@@ -40,7 +40,7 @@ public class RetryManager
         return attempt(correlationId, transaction);
     }
 
-    public Action firstAttempt(final long correlationId, final Transaction transaction)
+    Action firstAttempt(final long correlationId, final Transaction transaction)
     {
         correlationIdToTransactions.put(correlationId, transaction);
 
@@ -57,12 +57,12 @@ public class RetryManager
         return action;
     }
 
-    public void schedule(final Transaction transaction)
+    void schedule(final Transaction transaction)
     {
         polledTransactions.add(transaction);
     }
 
-    public int attemptSteps()
+    int attemptSteps()
     {
         return polledTransactions.removeIf(step -> step.attempt() == CONTINUE) ? 1 : 0;
     }

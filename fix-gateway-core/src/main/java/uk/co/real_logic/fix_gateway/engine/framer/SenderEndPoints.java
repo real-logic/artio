@@ -21,7 +21,6 @@ import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
-import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 {
@@ -31,11 +30,8 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
     private final Long2ObjectHashMap<SenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
 
-    private GatewayPublication publication;
-
-    SenderEndPoints(final GatewayPublication publication)
+    SenderEndPoints()
     {
-        this.publication = publication;
     }
 
     public void add(final SenderEndPoint senderEndPoint)
@@ -43,7 +39,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         connectionIdToSenderEndpoint.put(senderEndPoint.connectionId(), senderEndPoint);
     }
 
-    public void removeConnection(final long connectionId)
+    void removeConnection(final long connectionId)
     {
         final SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.remove(connectionId);
         if (senderEndPoint != null)
