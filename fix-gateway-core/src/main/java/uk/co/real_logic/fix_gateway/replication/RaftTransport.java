@@ -19,16 +19,16 @@ import io.aeron.Publication;
 import io.aeron.Subscription;
 import uk.co.real_logic.fix_gateway.ReliefValve;
 
-public class RaftTransport
+class RaftTransport
 {
     private final ClusterNodeConfiguration configuration;
 
-    public RaftTransport(final ClusterNodeConfiguration configuration)
+    RaftTransport(final ClusterNodeConfiguration configuration)
     {
         this.configuration = configuration;
     }
 
-    public void initialiseRoles(final Leader leader, final Candidate candidate, final Follower follower)
+    void initialiseRoles(final Leader leader, final Candidate candidate, final Follower follower)
     {
         final RaftPublication acknowledgementPublication = raftPublication(configuration.acknowledgementStream());
         final StreamIdentifier controlStream = configuration.controlStream();
@@ -49,7 +49,7 @@ public class RaftTransport
             .controlSubscription(controlSubscription);
     }
 
-    public void injectLeaderSubscriptions(final Leader leader)
+    void injectLeaderSubscriptions(final Leader leader)
     {
         final StreamIdentifier data = configuration.dataStream();
         final StreamIdentifier acknowledgement = configuration.acknowledgementStream();
@@ -58,19 +58,19 @@ public class RaftTransport
             .dataSubscription(subscription(data.spyChannel(), data.streamId()));
     }
 
-    public Subscription dataSubscription()
+    Subscription dataSubscription()
     {
         final StreamIdentifier dataStream = configuration.dataStream();
         return subscription(dataStream.channel(), dataStream.streamId());
     }
 
-    public Subscription controlSubscription()
+    Subscription controlSubscription()
     {
         final StreamIdentifier controlStream = configuration.controlStream();
         return subscription(controlStream.channel(), controlStream.streamId());
     }
 
-    public void injectFollowerSubscriptions(final Follower follower)
+    void injectFollowerSubscriptions(final Follower follower)
     {
         follower.dataSubscription(dataSubscription());
     }
@@ -99,7 +99,7 @@ public class RaftTransport
             publication(id));
     }
 
-    public Publication leaderPublication()
+    Publication leaderPublication()
     {
         return publication(configuration.dataStream());
     }

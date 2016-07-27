@@ -35,7 +35,7 @@ import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.OK;
 
-public class Leader implements Role, RaftHandler
+class Leader implements Role, RaftHandler
 {
     private static final UnsafeBuffer EMPTY_BUFFER = new UnsafeBuffer(new byte[0]);
 
@@ -82,7 +82,7 @@ public class Leader implements Role, RaftHandler
 
     private long messageAcknowledgementPosition;
 
-    public Leader(
+    Leader(
         final short nodeId,
         final AcknowledgementStrategy acknowledgementStrategy,
         final IntHashSet followers,
@@ -332,7 +332,7 @@ public class Leader implements Role, RaftHandler
         clusterNode.transitionToFollower(this, votedFor, timeInMs);
     }
 
-    public Leader getsElected(final long timeInMs)
+    Leader getsElected(final long timeInMs)
     {
         this.timeInMs = timeInMs;
 
@@ -348,26 +348,26 @@ public class Leader implements Role, RaftHandler
         return this;
     }
 
-    public Leader acknowledgementSubscription(final Subscription acknowledgementSubscription)
+    Leader acknowledgementSubscription(final Subscription acknowledgementSubscription)
     {
         this.acknowledgementSubscription = acknowledgementSubscription;
         return this;
     }
 
-    public Leader dataSubscription(final Subscription dataSubscription)
+    Leader dataSubscription(final Subscription dataSubscription)
     {
         this.dataSubscription = dataSubscription;
         raftArchiver.dataSubscription(dataSubscription);
         return this;
     }
 
-    public Leader controlPublication(final RaftPublication controlPublication)
+    Leader controlPublication(final RaftPublication controlPublication)
     {
         this.controlPublication = controlPublication;
         return this;
     }
 
-    public Leader controlSubscription(final Subscription controlSubscription)
+    Leader controlSubscription(final Subscription controlSubscription)
     {
         this.controlSubscription = controlSubscription;
         return this;

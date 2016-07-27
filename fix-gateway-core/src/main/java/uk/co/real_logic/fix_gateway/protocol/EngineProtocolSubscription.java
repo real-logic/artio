@@ -22,7 +22,7 @@ import uk.co.real_logic.fix_gateway.messages.*;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-public class EngineProtocolSubscription implements ControlledFragmentHandler
+public final class EngineProtocolSubscription implements ControlledFragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final InitiateConnectionDecoder initiateConnection = new InitiateConnectionDecoder();

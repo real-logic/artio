@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.replication;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class TermState
+class TermState
 {
     static final int NO_LEADER = 0;
 
@@ -37,43 +37,43 @@ public class TermState
     /** The position within the current leadership term that we can commit up to. */
     private final AtomicLong consensusPosition = new AtomicLong(0);
 
-    public TermState leaderSessionId(int leadershipSessionId)
+    TermState leaderSessionId(int leadershipSessionId)
     {
         this.leaderSessionId.set(leadershipSessionId);
         return this;
     }
 
-    public TermState noLeader()
+    TermState noLeader()
     {
         leaderSessionId.set(NO_LEADER);
         return this;
     }
 
-    public TermState leadershipTerm(int leadershipTerm)
+    TermState leadershipTerm(int leadershipTerm)
     {
         this.leadershipTerm = leadershipTerm;
         return this;
     }
 
-    public TermState receivedPosition(final long receivedPosition)
+    TermState receivedPosition(final long receivedPosition)
     {
         this.receivedPosition = receivedPosition;
         return this;
     }
 
-    public TermState lastAppliedPosition(final long lastAppliedPosition)
+    TermState lastAppliedPosition(final long lastAppliedPosition)
     {
         this.lastAppliedPosition = lastAppliedPosition;
         return this;
     }
 
-    public TermState consensusPosition(final long consensusPosition)
+    TermState consensusPosition(final long consensusPosition)
     {
         consensusPosition().set(consensusPosition);
         return this;
     }
 
-    public TermState allPositions(final long position)
+    TermState allPositions(final long position)
     {
         receivedPosition(position);
         lastAppliedPosition(position);
@@ -81,37 +81,37 @@ public class TermState
         return this;
     }
 
-    public AtomicInteger leaderSessionId()
+    AtomicInteger leaderSessionId()
     {
         return leaderSessionId;
     }
 
-    public boolean hasLeader()
+    boolean hasLeader()
     {
         return leaderSessionId.get() != NO_LEADER;
     }
 
-    public int leadershipTerm()
+    int leadershipTerm()
     {
         return leadershipTerm;
     }
 
-    public long receivedPosition()
+    long receivedPosition()
     {
         return receivedPosition;
     }
 
-    public long lastAppliedPosition()
+    long lastAppliedPosition()
     {
         return lastAppliedPosition;
     }
 
-    public AtomicLong consensusPosition()
+    AtomicLong consensusPosition()
     {
         return consensusPosition;
     }
 
-    public TermState reset()
+    TermState reset()
     {
         noLeader();
         leaderSessionId(0);

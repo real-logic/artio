@@ -23,7 +23,7 @@ import uk.co.real_logic.fix_gateway.messages.*;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.messages.ManageConnectionDecoder.addressHeaderLength;
 
-public class LibraryProtocolSubscription implements ControlledFragmentHandler
+public final class LibraryProtocolSubscription implements ControlledFragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final LogonDecoder logon = new LogonDecoder();

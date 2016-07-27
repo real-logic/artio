@@ -17,30 +17,30 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-public class RandomTimeout
+class RandomTimeout
 {
-    public static final int MAX_TO_MIN_TIMEOUT = 2;
+    static final int MAX_TO_MIN_TIMEOUT = 2;
 
     private final long maxTimeout;
     private final long minTimeout;
 
     private long nextExpiry;
 
-    public RandomTimeout(final long minTimeout, final long timeInMs)
+    RandomTimeout(final long minTimeout, final long timeInMs)
     {
         this.minTimeout = minTimeout;
         this.maxTimeout = minTimeout * MAX_TO_MIN_TIMEOUT;
         onKeepAlive(timeInMs);
     }
 
-    public void onKeepAlive(final long timeInMs)
+    void onKeepAlive(final long timeInMs)
     {
         final long timeout = ThreadLocalRandom.current().nextLong(minTimeout, maxTimeout);
         // System.out.println(timeout);
         nextExpiry = timeInMs + timeout;
     }
 
-    public boolean hasTimedOut(final long timeInMs)
+    boolean hasTimedOut(final long timeInMs)
     {
         return timeInMs > nextExpiry;
     }

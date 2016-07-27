@@ -24,7 +24,7 @@ import org.agrona.DirectBuffer;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-public class OutboundPipe implements ControlledFragmentHandler
+class OutboundPipe implements ControlledFragmentHandler
 {
     private final BufferClaim bufferClaim = new BufferClaim();
 
@@ -32,7 +32,7 @@ public class OutboundPipe implements ControlledFragmentHandler
     private final ClusterStreams streams;
     private final ClusterableSubscription subscription;
 
-    public OutboundPipe(final Publication publication, final ClusterStreams streams)
+    OutboundPipe(final Publication publication, final ClusterStreams streams)
     {
         this.publication = publication;
         this.streams = streams;
@@ -43,8 +43,7 @@ public class OutboundPipe implements ControlledFragmentHandler
     {
         if (publication != null && streams.isLeader())
         {
-            final int sent = subscription.controlledPoll(this, fragmentLimit);
-            return sent;
+            return subscription.controlledPoll(this, fragmentLimit);
         }
 
         return 0;

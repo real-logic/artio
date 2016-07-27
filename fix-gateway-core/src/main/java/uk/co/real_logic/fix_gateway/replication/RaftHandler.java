@@ -20,7 +20,7 @@ import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.replication.messages.Vote;
 
-public interface RaftHandler
+interface RaftHandler
 {
     Action onMessageAcknowledgement(
         final long newAckedPosition, final short nodeId, final AcknowledgementStatus status);

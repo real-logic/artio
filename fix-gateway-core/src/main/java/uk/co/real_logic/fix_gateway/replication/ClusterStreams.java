@@ -18,30 +18,26 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Publication;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Thread-safe constructor of clusterable streams
  */
-public class ClusterStreams extends ClusterableStreams
+class ClusterStreams extends ClusterableStreams
 {
     private final RaftTransport transport;
     private final int ourSessionId;
     private final AtomicInteger leaderSessionId;
-    private final AtomicLong consensusPosition;
     private final Publication dataPublication;
 
-    public ClusterStreams(
+    ClusterStreams(
         final RaftTransport transport,
         final int ourSessionId,
         final AtomicInteger leaderSessionId,
-        final AtomicLong consensusPosition,
         final Publication dataPublication)
     {
         this.transport = transport;
         this.ourSessionId = ourSessionId;
         this.leaderSessionId = leaderSessionId;
-        this.consensusPosition = consensusPosition;
         this.dataPublication = dataPublication;
     }
 

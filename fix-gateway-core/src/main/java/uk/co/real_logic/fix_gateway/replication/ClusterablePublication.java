@@ -27,7 +27,7 @@ public abstract class ClusterablePublication implements Closeable
      */
     public static final long CANT_PUBLISH = -1005;
 
-    public ClusterablePublication()
+    ClusterablePublication()
     {
     }
 

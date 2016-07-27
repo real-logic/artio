@@ -238,17 +238,17 @@ class ClusterSubscription extends ClusterableSubscription
             this.previousPosition = previousPosition;
         }
 
-        public int leaderShipTerm()
+        private int leaderShipTerm()
         {
             return leaderShipTermId;
         }
 
-        public long position()
+        private long position()
         {
             return position;
         }
 
-        public int previousLeadershipTermId()
+        private int previousLeadershipTermId()
         {
             return leaderSessionId - 1;
         }

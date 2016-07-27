@@ -30,7 +30,7 @@ import static io.aeron.Publication.NOT_CONNECTED;
 import static uk.co.real_logic.fix_gateway.replication.messages.ReplyVoteEncoder.nodeStateHeaderLength;
 
 // NB: doens't extend ClaimablePublication because it works on raw Publication objects, not clusterable publications
-public class RaftPublication
+class RaftPublication
 {
     private static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int MESSAGE_ACKNOWLEDGEMENT_LENGTH = HEADER_LENGTH + MessageAcknowledgementEncoder.BLOCK_LENGTH;
@@ -55,7 +55,7 @@ public class RaftPublication
     private final IdleStrategy idleStrategy;
     private final AtomicCounter fails;
 
-    public RaftPublication(
+    RaftPublication(
         final int maxClaimAttempts,
         final IdleStrategy idleStrategy,
         final AtomicCounter fails,
@@ -69,7 +69,7 @@ public class RaftPublication
         this.dataPublication = dataPublication;
     }
 
-    public long saveMessageAcknowledgement(
+    long saveMessageAcknowledgement(
         final long newAckedPosition,
         final short nodeId,
         final AcknowledgementStatus status)
@@ -103,7 +103,7 @@ public class RaftPublication
         return position;
     }
 
-    public long saveRequestVote(
+    long saveRequestVote(
         final short candidateId, final int candidateSessionId, final long lastAckedPosition, final int leaderShipTerm)
     {
         final long position = claim(REQUEST_VOTE_LENGTH);
@@ -136,7 +136,7 @@ public class RaftPublication
         return position;
     }
 
-    public long saveReplyVote(
+    long saveReplyVote(
         final short senderNodeId,
         final short candidateId,
         final int leaderShipTerm,
@@ -175,7 +175,7 @@ public class RaftPublication
         return position;
     }
 
-    public long saveConsensusHeartbeat(
+    long saveConsensusHeartbeat(
         final short nodeId,
         final int leaderShipTerm,
         final long position,
@@ -213,7 +213,8 @@ public class RaftPublication
         return pos;
     }
 
-    public long saveResend(final int leaderSessionId,
+    long saveResend(
+        final int leaderSessionId,
         final int leaderShipTerm,
         final long startPosition,
         final DirectBuffer bodyBuffer,

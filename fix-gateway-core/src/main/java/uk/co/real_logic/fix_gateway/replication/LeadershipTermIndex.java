@@ -32,9 +32,9 @@ import static org.agrona.BitUtil.SIZE_OF_INT;
  * This acts as an off-heap archive that does a binary search over the underlying
  * intervals.
  */
-public class LeadershipTermIndex
+class LeadershipTermIndex
 {
-    public static final int NO_HEADER_WRITTEN = 0;
+    private static final int NO_HEADER_WRITTEN = 0;
 
     private static final int CURRENT_ROW_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int HEADER_SIZE = CURRENT_ROW_OFFSET + SIZE_OF_INT;
@@ -50,7 +50,7 @@ public class LeadershipTermIndex
     private final int actingBlockLength;
     private final int actingVersion;
 
-    public LeadershipTermIndex(final MutableDirectBuffer buffer)
+    LeadershipTermIndex(final MutableDirectBuffer buffer)
     {
         this.buffer = buffer;
         setupHeader();
@@ -90,7 +90,7 @@ public class LeadershipTermIndex
         return buffer.getInt(CURRENT_ROW_OFFSET);
     }
 
-    public void onNewLeader(
+    void onNewLeader(
         final long finalStreamPositionOfPreviousLeader,
         final long initialPosition,
         final long initialStreamPosition,
@@ -114,7 +114,7 @@ public class LeadershipTermIndex
         currentRow(currentRow + ROW_SIZE);
     }
 
-    public boolean find(final long position, final Cursor cursor)
+    boolean find(final long position, final Cursor cursor)
     {
         requireNonNull(cursor, "Cursor cannot be null");
 
@@ -185,17 +185,17 @@ public class LeadershipTermIndex
         return decoder.wrap(buffer, offset(mid), actingBlockLength, actingVersion);
     }
 
-    public static class Cursor
+    static class Cursor
     {
         private long streamPosition;
         private int sessionId;
 
-        public long streamPosition()
+        long streamPosition()
         {
             return streamPosition;
         }
 
-        public int sessionId()
+        int sessionId()
         {
             return sessionId;
         }

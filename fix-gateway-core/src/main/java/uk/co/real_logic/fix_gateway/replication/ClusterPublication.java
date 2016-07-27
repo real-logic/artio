@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * A Clustered Publication is a publication that support the raft protocol and allows
  * for publication of messages if you're the leader of the cluster.
  */
-public class ClusterPublication extends ClusterablePublication
+class ClusterPublication extends ClusterablePublication
 {
     private final Publication dataPublication;
     private final AtomicInteger leaderSessionId;
@@ -32,7 +32,7 @@ public class ClusterPublication extends ClusterablePublication
     private final long reservedValue;
     private final int streamId;
 
-    public ClusterPublication(
+    ClusterPublication(
         final Publication dataPublication,
         final AtomicInteger leaderSessionId,
         final int ourSessionId,

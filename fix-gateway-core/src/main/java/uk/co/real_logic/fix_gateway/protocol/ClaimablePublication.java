@@ -29,20 +29,21 @@ import static io.aeron.Publication.NOT_CONNECTED;
 /**
  * A publication designed for deterministic claiming.
  */
-public class ClaimablePublication implements AutoCloseable
+class ClaimablePublication implements AutoCloseable
 {
     public static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
 
     protected final MessageHeaderEncoder header = new MessageHeaderEncoder();
 
-    protected final long maxClaimAttempts;
-    protected final ReliefValve reliefValve;
     protected final BufferClaim bufferClaim;
     protected final ClusterablePublication dataPublication;
     protected final IdleStrategy idleStrategy;
-    protected final AtomicCounter fails;
 
-    public ClaimablePublication(
+    private final long maxClaimAttempts;
+    private final ReliefValve reliefValve;
+    private final AtomicCounter fails;
+
+    ClaimablePublication(
         final int maxClaimAttempts,
         final IdleStrategy idleStrategy,
         final AtomicCounter fails,

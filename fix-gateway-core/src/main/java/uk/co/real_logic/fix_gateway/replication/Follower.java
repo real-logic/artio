@@ -30,7 +30,7 @@ import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementS
 import static uk.co.real_logic.fix_gateway.replication.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.replication.messages.Vote.FOR;
 
-public class Follower implements Role, RaftHandler
+class Follower implements Role, RaftHandler
 {
     static final short NO_ONE = -1;
 
@@ -57,7 +57,7 @@ public class Follower implements Role, RaftHandler
     private int leaderShipTerm;
     private long timeInMs;
 
-    public Follower(
+    Follower(
         final short nodeId,
         final ClusterAgent clusterNode,
         final long timeInMs,
@@ -313,19 +313,19 @@ public class Follower implements Role, RaftHandler
         return this;
     }
 
-    public Follower controlPublication(final RaftPublication controlPublication)
+    Follower controlPublication(final RaftPublication controlPublication)
     {
         this.controlPublication = controlPublication;
         return this;
     }
 
-    public Follower controlSubscription(final Subscription controlSubscription)
+    Follower controlSubscription(final Subscription controlSubscription)
     {
         this.controlSubscription = controlSubscription;
         return this;
     }
 
-    public Follower dataSubscription(final Subscription dataSubscription)
+    Follower dataSubscription(final Subscription dataSubscription)
     {
         raftArchiver.dataSubscription(dataSubscription);
         return this;

@@ -32,7 +32,7 @@ import static uk.co.real_logic.fix_gateway.replication.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.replication.messages.Vote.FOR;
 import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
 
-public class Candidate implements Role, RaftHandler
+class Candidate implements Role, RaftHandler
 {
     private final RaftSubscription raftSubscription;
     private final DirectBuffer nodeState;
@@ -54,15 +54,15 @@ public class Candidate implements Role, RaftHandler
     private long timeInMs;
     private boolean resendRequestVote = false;
 
-    public Candidate(final short nodeId,
-                     final int sessionId,
-                     final ClusterAgent clusterNode,
-                     final int clusterSize,
-                     final long voteTimeout,
-                     final TermState termState,
-                     final AcknowledgementStrategy acknowledgementStrategy,
-                     final DirectBuffer nodeState,
-                     final NodeStateHandler nodeStateHandler)
+    Candidate(final short nodeId,
+              final int sessionId,
+              final ClusterAgent clusterNode,
+              final int clusterSize,
+              final long voteTimeout,
+              final TermState termState,
+              final AcknowledgementStrategy acknowledgementStrategy,
+              final DirectBuffer nodeState,
+              final NodeStateHandler nodeStateHandler)
     {
         this.nodeId = nodeId;
         this.sessionId = sessionId;
@@ -236,13 +236,25 @@ public class Candidate implements Role, RaftHandler
         return Action.CONTINUE;
     }
 
-    public Candidate startNewElection(final long timeInMs)
+    Candidate startNewElection(final long timeInMs)
     {
         this.leaderShipTerm = termState.leadershipTerm();
 
         DebugLogger.log("%d: startNewElection @ %d in %d\n", nodeId, timeInMs, leaderShipTerm);
 
         startElection(timeInMs);
+        return this;
+    }
+
+    Candidate controlPublication(final RaftPublication controlPublication)
+    {
+        this.controlPublication = controlPublication;
+        return this;
+    }
+
+    Candidate controlSubscription(final Subscription controlSubscription)
+    {
+        this.controlSubscription = controlSubscription;
         return this;
     }
 
@@ -258,18 +270,6 @@ public class Candidate implements Role, RaftHandler
     {
         resendRequestVote =
             controlPublication.saveRequestVote(nodeId, sessionId, consensusPosition.get(), leaderShipTerm) < 0;
-    }
-
-    public Candidate controlPublication(final RaftPublication controlPublication)
-    {
-        this.controlPublication = controlPublication;
-        return this;
-    }
-
-    public Candidate controlSubscription(final Subscription controlSubscription)
-    {
-        this.controlSubscription = controlSubscription;
-        return this;
     }
 
 }

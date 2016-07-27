@@ -30,7 +30,7 @@ final class DebugRaftHandler implements RaftHandler
     private final short nodeId;
     private final RaftHandler delegateHandler;
 
-    public static RaftHandler wrap(final short nodeId, final RaftHandler delegateHandler)
+    static RaftHandler wrap(final short nodeId, final RaftHandler delegateHandler)
     {
         return CommonConfiguration.DEBUG_PRINT_MESSAGES
              ? new DebugRaftHandler(nodeId, delegateHandler)

@@ -25,7 +25,7 @@ import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
 import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;
 
-public class Streams
+public final class Streams
 {
     private final int streamId;
     private final NanoClock nanoClock;

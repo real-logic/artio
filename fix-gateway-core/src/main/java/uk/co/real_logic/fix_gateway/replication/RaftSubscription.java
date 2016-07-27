@@ -25,7 +25,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.replication.messages.MessageHeaderDecoder.ENCODED_LENGTH;
 import static uk.co.real_logic.fix_gateway.replication.messages.ResendDecoder.bodyHeaderLength;
 
-public class RaftSubscription implements ControlledFragmentHandler
+class RaftSubscription implements ControlledFragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final MessageAcknowledgementDecoder messageAcknowledgement = new MessageAcknowledgementDecoder();
@@ -37,7 +37,7 @@ public class RaftSubscription implements ControlledFragmentHandler
 
     private final RaftHandler handler;
 
-    public RaftSubscription(final RaftHandler handler)
+    RaftSubscription(final RaftHandler handler)
     {
         this.handler = handler;
     }
