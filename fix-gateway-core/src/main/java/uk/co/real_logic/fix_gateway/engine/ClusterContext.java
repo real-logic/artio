@@ -124,7 +124,7 @@ class ClusterContext extends EngineContext
     public GatewayPublication inboundLibraryPublication()
     {
         return new GatewayPublication(
-            new SoloPublication(inboundPublication),
+            ClusterablePublication.solo(inboundPublication),
             fixCounters.failedInboundPublications(),
             configuration.framerIdleStrategy(),
             nanoClock,

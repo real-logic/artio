@@ -26,8 +26,8 @@ import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.*;
+import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
-import uk.co.real_logic.fix_gateway.replication.SoloStreams;
 import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
 import uk.co.real_logic.fix_gateway.timing.Timer;
@@ -458,7 +458,7 @@ public final class FixLibrary extends GatewayProcess
     private void initStreams(final CommonConfiguration configuration)
     {
         final NanoClock nanoClock = new SystemNanoClock();
-        final SoloStreams soloNode = new SoloStreams(aeron, currentAeronChannel);
+        final ClusterableStreams soloNode = ClusterableStreams.solo(aeron, currentAeronChannel);
         DebugLogger.log("Attempting connect to %s", currentAeronChannel);
 
         inboundLibraryStreams = new Streams(

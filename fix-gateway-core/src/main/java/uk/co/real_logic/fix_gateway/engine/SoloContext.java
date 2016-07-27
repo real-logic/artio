@@ -43,7 +43,7 @@ class SoloContext extends EngineContext
     private final List<Archiver> archivers = new ArrayList<>();
     private final StreamIdentifier inboundStreamId;
     private final StreamIdentifier outboundStreamId;
-    private final SoloStreams node;
+    private final ClusterableStreams node;
 
     private ArchiveReader outboundArchiveReader;
     private ArchiveReader inboundArchiveReader;
@@ -70,9 +70,9 @@ class SoloContext extends EngineContext
         newLoggingRunner();
     }
 
-    private SoloStreams initNode()
+    private ClusterableStreams initNode()
     {
-        return new SoloStreams(aeron, configuration.libraryAeronChannel());
+        return ClusterableStreams.solo(aeron, configuration.libraryAeronChannel());
     }
 
     public void newLoggingRunner()
@@ -104,7 +104,7 @@ class SoloContext extends EngineContext
         {
             final GatewayPublication replayGatewayPublication =
                 new GatewayPublication(
-                    new SoloPublication(replayPublication),
+                    ClusterablePublication.solo(replayPublication),
                     fixCounters.failedReplayPublications(),
                     configuration.loggerIdleStrategy(),
                     new SystemNanoClock(),

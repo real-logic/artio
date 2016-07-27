@@ -17,12 +17,12 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Aeron;
 
-public class SoloStreams extends ClusterableStreams
+class SoloStreams extends ClusterableStreams
 {
     private final Aeron aeron;
     private final String aeronChannel;
 
-    public SoloStreams(final Aeron aeron, final String aeronChannel)
+    SoloStreams(final Aeron aeron, final String aeronChannel)
     {
         this.aeron = aeron;
         this.aeronChannel = aeronChannel;
@@ -35,7 +35,7 @@ public class SoloStreams extends ClusterableStreams
 
     public SoloPublication publication(final int clusterStreamId)
     {
-        return new SoloPublication(aeron.addPublication(aeronChannel, clusterStreamId));
+        return ClusterablePublication.solo(aeron.addPublication(aeronChannel, clusterStreamId));
     }
 
     public SoloSubscription subscription(final int clusterStreamId)

@@ -18,11 +18,11 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Publication;
 import io.aeron.logbuffer.BufferClaim;
 
-public class SoloPublication extends ClusterablePublication
+class SoloPublication extends ClusterablePublication
 {
     private final Publication dataPublication;
 
-    public SoloPublication(final Publication dataPublication)
+    SoloPublication(final Publication dataPublication)
     {
         this.dataPublication = dataPublication;
     }

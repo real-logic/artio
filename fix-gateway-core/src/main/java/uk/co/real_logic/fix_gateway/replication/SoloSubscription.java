@@ -18,6 +18,10 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 
+/**
+ * NB: left exposed as a public class because it the additional functionality over
+ * {@link ClusterableSubscription} of being able to lookup the position of a session.
+ */
 public class SoloSubscription extends ClusterableSubscription
 {
     private final Subscription subscription;

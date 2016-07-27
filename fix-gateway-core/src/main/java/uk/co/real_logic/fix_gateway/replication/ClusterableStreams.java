@@ -15,8 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import io.aeron.Aeron;
+
 public abstract class ClusterableStreams
 {
+    public static SoloStreams solo(final Aeron aeron, final String aeronChannel)
+    {
+        return new SoloStreams(aeron, aeronChannel);
+    }
+
     public abstract boolean isLeader();
 
     public abstract ClusterablePublication publication(final int clusterStreamId);

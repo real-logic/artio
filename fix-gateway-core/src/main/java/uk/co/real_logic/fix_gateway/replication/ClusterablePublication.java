@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import io.aeron.Publication;
 import io.aeron.logbuffer.BufferClaim;
 
 import java.io.Closeable;
@@ -29,6 +30,11 @@ public abstract class ClusterablePublication implements Closeable
 
     ClusterablePublication()
     {
+    }
+
+    public static SoloPublication solo(final Publication dataPublication)
+    {
+        return new SoloPublication(dataPublication);
     }
 
     public abstract long tryClaim(final int length, final BufferClaim bufferClaim);
