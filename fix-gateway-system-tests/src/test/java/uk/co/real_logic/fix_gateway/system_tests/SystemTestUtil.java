@@ -31,7 +31,6 @@ import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.validation.SenderCompIdValidationStrategy;
 import uk.co.real_logic.fix_gateway.validation.TargetCompIdValidationStrategy;
 
 import java.io.File;
@@ -261,7 +260,7 @@ public final class SystemTestUtil
         final CommonConfiguration configuration)
     {
         final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(acceptorId)
-            .and(new SenderCompIdValidationStrategy(Arrays.asList(initiatorId, INITIATOR_ID2)));
+            .and(MessageValidationStrategy.senderCompId(Arrays.asList(initiatorId, INITIATOR_ID2)));
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 

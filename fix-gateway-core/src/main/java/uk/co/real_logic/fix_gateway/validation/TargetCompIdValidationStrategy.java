@@ -33,7 +33,7 @@ public final class TargetCompIdValidationStrategy implements MessageValidationSt
         this(gatewayCompId.toCharArray());
     }
 
-    public TargetCompIdValidationStrategy(final char[] gatewayCompId)
+    private TargetCompIdValidationStrategy(final char[] gatewayCompId)
     {
         this.gatewayCompId = gatewayCompId;
     }

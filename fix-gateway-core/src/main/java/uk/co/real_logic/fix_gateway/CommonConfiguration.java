@@ -23,8 +23,6 @@ import uk.co.real_logic.fix_gateway.session.SessionCustomisationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.validation.NoAuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.validation.NoMessageValidationStrategy;
 
 import java.io.File;
 
@@ -115,8 +113,8 @@ public class CommonConfiguration
     private IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
     private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
     private SessionIdStrategy sessionIdStrategy = SessionIdStrategy.senderAndTarget();
-    private AuthenticationStrategy authenticationStrategy = new NoAuthenticationStrategy();
-    private MessageValidationStrategy messageValidationStrategy = new NoMessageValidationStrategy();
+    private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
+    private MessageValidationStrategy messageValidationStrategy = MessageValidationStrategy.none();
     private SessionCustomisationStrategy sessionCustomisationStrategy = SessionCustomisationStrategy.none();
     private int monitoringBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROPERTY, DEFAULT_MONITORING_BUFFER_LENGTH);
     private String monitoringFile = null;

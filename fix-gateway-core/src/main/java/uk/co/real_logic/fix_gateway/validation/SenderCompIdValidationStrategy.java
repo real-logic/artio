@@ -26,11 +26,11 @@ import static uk.co.real_logic.fix_gateway.fields.RejectReason.COMPID_PROBLEM;
 /**
  * A message validation strategy that checks the sender comp id of each message.
  */
-public class SenderCompIdValidationStrategy implements MessageValidationStrategy
+class SenderCompIdValidationStrategy implements MessageValidationStrategy
 {
     private final CharArraySet validSenderIds;
 
-    public SenderCompIdValidationStrategy(final Collection<String> validSenderIds)
+    SenderCompIdValidationStrategy(final Collection<String> validSenderIds)
     {
         this.validSenderIds = new CharArraySet(validSenderIds);
     }

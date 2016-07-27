@@ -17,6 +17,8 @@ package uk.co.real_logic.fix_gateway.validation;
 
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
+import java.util.Collection;
+
 /**
  * A strategy that, if message validation is switched on, validates each FIX message in turn before
  * the message is handed off the domain logic. Validation might including checking that the sender
@@ -28,6 +30,16 @@ import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
  */
 public interface MessageValidationStrategy
 {
+    static NoMessageValidationStrategy none()
+    {
+        return new NoMessageValidationStrategy();
+    }
+
+    static SenderCompIdValidationStrategy senderCompId(final Collection<String> validSenderIds)
+    {
+        return new SenderCompIdValidationStrategy(validSenderIds);
+    }
+
     /**
      * Validate the header in question.
      *

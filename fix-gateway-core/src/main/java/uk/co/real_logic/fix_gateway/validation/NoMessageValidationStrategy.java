@@ -20,8 +20,12 @@ import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 /**
  * A dummy message validation strategy that checks nothing.
  */
-public class NoMessageValidationStrategy implements MessageValidationStrategy
+class NoMessageValidationStrategy implements MessageValidationStrategy
 {
+    NoMessageValidationStrategy()
+    {
+    }
+
     public boolean validate(final HeaderDecoder logon)
     {
         return true;

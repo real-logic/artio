@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 
 public class SenderCompIdValidationStrategyTest
 {
-    private SenderCompIdValidationStrategy authenticationStrategy = new SenderCompIdValidationStrategy(
+    private SenderCompIdValidationStrategy authenticationStrategy = MessageValidationStrategy.senderCompId(
         Arrays.asList("ab", "a"));
 
     private char[] examples = "abcdef".toCharArray();

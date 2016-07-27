@@ -25,7 +25,7 @@ import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 
 public class Timer
 {
-    public static final int NUMBER_OF_SIGNIFICANT_VALUE_DIGITS = 3;
+    private static final int NUMBER_OF_SIGNIFICANT_VALUE_DIGITS = 3;
 
     // Only written to on recording thread
     private final SingleWriterRecorder recorder;

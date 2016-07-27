@@ -17,8 +17,12 @@ package uk.co.real_logic.fix_gateway.validation;
 
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 
-public final class NoAuthenticationStrategy implements AuthenticationStrategy
+final class NoAuthenticationStrategy implements AuthenticationStrategy
 {
+    NoAuthenticationStrategy()
+    {
+    }
+
     public boolean authenticate(final LogonDecoder logon)
     {
         return true;
