@@ -27,7 +27,7 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.IOException;
 
-public class EndPointFactory
+class EndPointFactory
 {
     private final EngineConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
@@ -37,7 +37,7 @@ public class EndPointFactory
     private final FixCounters fixCounters;
     private final ErrorHandler errorHandler;
 
-    public EndPointFactory(
+    EndPointFactory(
         final EngineConfiguration configuration,
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,

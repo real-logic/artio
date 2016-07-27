@@ -17,15 +17,13 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import io.aeron.Publication;
 import io.aeron.Subscription;
-import org.agrona.LangUtil;
-import org.agrona.concurrent.*;
+import org.agrona.concurrent.AgentRunner;
+import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
-import uk.co.real_logic.fix_gateway.engine.framer.*;
-import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.fix_gateway.protocol.Streams;
+import uk.co.real_logic.fix_gateway.engine.framer.FramerContext;
+import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
-import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.timing.EngineTimers;
 
 import java.io.File;
@@ -48,14 +46,13 @@ public final class FixEngine extends GatewayProcess
 {
     public static final int GATEWAY_LIBRARY_ID = 0;
 
-    private QueuedPipe<AdminCommand> adminCommands = new ManyToOneConcurrentArrayQueue<>(16);
-
     private final EngineTimers timers = new EngineTimers();
     private final EngineConfiguration configuration;
     private final EngineDescriptorStore engineDescriptorStore;
 
     private AgentRunner framerRunner;
-    private EngineContext context;
+    private FramerContext framerContext;
+    private EngineContext engineContext;
     private ClusterableStreams streams;
 
     /**
@@ -79,10 +76,7 @@ public final class FixEngine extends GatewayProcess
      */
     public List<LibraryInfo> libraries(final IdleStrategy idleStrategy)
     {
-        final QueryLibrariesCommand command = new QueryLibrariesCommand();
-        sendAdminCommand(idleStrategy, command);
-
-        return command.awaitResponse(idleStrategy);
+        return framerContext.libraries(idleStrategy);
     }
 
     /**
@@ -93,10 +87,7 @@ public final class FixEngine extends GatewayProcess
      */
     public List<SessionInfo> gatewaySessions(final IdleStrategy idleStrategy)
     {
-        final GatewaySessionsCommand command = new GatewaySessionsCommand();
-        sendAdminCommand(idleStrategy, command);
-
-        return command.awaitResponse(idleStrategy);
+        return framerContext.gatewaySessions(idleStrategy);
     }
 
     /**
@@ -110,30 +101,7 @@ public final class FixEngine extends GatewayProcess
      */
     public void resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)
     {
-        if (backupLocation != null && !backupLocation.exists())
-        {
-            try
-            {
-                backupLocation.createNewFile();
-            }
-            catch (IOException e)
-            {
-                LangUtil.rethrowUnchecked(e);
-            }
-        }
-
-        final ResetSessionIdsCommand command = new ResetSessionIdsCommand(backupLocation);
-        sendAdminCommand(idleStrategy, command);
-        command.awaitResponse(idleStrategy);
-    }
-
-    private void sendAdminCommand(final IdleStrategy idleStrategy, final AdminCommand query)
-    {
-        while (!adminCommands.offer(query))
-        {
-            idleStrategy.idle();
-        }
-        idleStrategy.reset();
+        framerContext.resetSessionIds(backupLocation, idleStrategy);
     }
 
     private FixEngine(final EngineConfiguration configuration)
@@ -142,13 +110,14 @@ public final class FixEngine extends GatewayProcess
         this.configuration = configuration;
         engineDescriptorStore = new EngineDescriptorStore(errorHandler);
 
-        context = EngineContext.of(
+        engineContext = EngineContext.of(
             configuration,
             errorHandler,
             replayPublication(),
             fixCounters,
             aeron,
             engineDescriptorStore);
+        streams = engineContext.streams();
         initFramer(configuration, fixCounters);
         initMonitoringAgent(timers.all(), configuration);
     }
@@ -160,58 +129,16 @@ public final class FixEngine extends GatewayProcess
 
     private void initFramer(final EngineConfiguration configuration, final FixCounters fixCounters)
     {
-        streams = context.streams();
-
-        final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
-        final SessionIds sessionIds = new SessionIds(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
-        final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
-        final Streams outboundLibraryStreams = context.outboundLibraryStreams();
-        final Streams inboundLibraryStreams = context.inboundLibraryStreams();
-
-        final EndPointFactory handler = new EndPointFactory(
+        framerContext = new FramerContext(
             configuration,
-            sessionIdStrategy,
-            sessionIds,
-            inboundLibraryStreams,
-            idleStrategy,
             fixCounters,
-            errorHandler);
-
-        final SystemEpochClock clock = new SystemEpochClock();
-        final GatewaySessions gatewaySessions = new GatewaySessions(
-            clock,
-            outboundLibraryStreams.gatewayPublication(idleStrategy),
-            sessionIdStrategy,
-            configuration.sessionCustomisationStrategy(),
-            fixCounters,
-            configuration.authenticationStrategy(),
-            configuration.messageValidationStrategy(),
-            configuration.sessionBufferSize(),
-            configuration.sendingTimeWindowInMs());
-
-        final Framer framer = new Framer(
-            clock,
-            timers.outboundTimer(),
-            timers.sendTimer(),
-            configuration,
-            handler,
-            context.outboundClusterSubscription(),
-            context.outboundLibrarySubscription(),
-            context.outboundLibrarySubscription(),
-            replaySubscription(),
-            adminCommands,
-            sessionIdStrategy,
-            sessionIds,
-            new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer()),
-            new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer()),
-            gatewaySessions,
-            context.inboundReplayQuery(),
+            engineContext,
             errorHandler,
-            outboundLibraryStreams.gatewayPublication(idleStrategy),
-            context.inboundLibraryPublication(),
-            streams,
-            engineDescriptorStore);
-        framerRunner = new AgentRunner(idleStrategy, errorHandler, null, framer);
+            replaySubscription(),
+            engineDescriptorStore,
+            timers);
+        framerRunner = new AgentRunner(
+            configuration.framerIdleStrategy(), errorHandler, null, framerContext.framer());
     }
 
     /**
@@ -233,7 +160,7 @@ public final class FixEngine extends GatewayProcess
     private FixEngine launch()
     {
         startOnThread(framerRunner);
-        context.start();
+        engineContext.start();
         start();
         return this;
     }
@@ -244,7 +171,7 @@ public final class FixEngine extends GatewayProcess
     public synchronized void close()
     {
         framerRunner.close();
-        context.close();
+        engineContext.close();
         configuration.close();
         super.close();
     }

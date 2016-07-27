@@ -19,7 +19,7 @@ import org.agrona.concurrent.IdleStrategy;
 
 import java.util.List;
 
-public final class QueryLibrariesCommand implements AdminCommand
+final class QueryLibrariesCommand implements AdminCommand
 {
     private volatile List<LibraryInfo> response;
 
@@ -33,7 +33,7 @@ public final class QueryLibrariesCommand implements AdminCommand
         this.response = response;
     }
 
-    public List<LibraryInfo> awaitResponse(final IdleStrategy idleStrategy)
+    List<LibraryInfo> awaitResponse(final IdleStrategy idleStrategy)
     {
         List<LibraryInfo> response;
         while ((response = this.response) == null)

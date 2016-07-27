@@ -20,7 +20,7 @@ import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 
 import java.util.List;
 
-public final class GatewaySessionsCommand implements AdminCommand
+final class GatewaySessionsCommand implements AdminCommand
 {
     private volatile List<SessionInfo> response;
 
@@ -34,7 +34,7 @@ public final class GatewaySessionsCommand implements AdminCommand
         this.response = response;
     }
 
-    public List<SessionInfo> awaitResponse(final IdleStrategy idleStrategy)
+    List<SessionInfo> awaitResponse(final IdleStrategy idleStrategy)
     {
         List<SessionInfo> response;
         while ((response = this.response) == null)

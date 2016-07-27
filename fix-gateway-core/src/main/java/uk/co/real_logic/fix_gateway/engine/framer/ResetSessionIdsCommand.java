@@ -20,14 +20,14 @@ import org.agrona.concurrent.IdleStrategy;
 
 import java.io.File;
 
-public final class ResetSessionIdsCommand implements AdminCommand
+final class ResetSessionIdsCommand implements AdminCommand
 {
     private final File backupLocation;
 
     private volatile Exception error;
     private volatile boolean done;
 
-    public ResetSessionIdsCommand(final File backupLocation)
+    ResetSessionIdsCommand(final File backupLocation)
     {
         this.backupLocation = backupLocation;
     }
@@ -37,7 +37,7 @@ public final class ResetSessionIdsCommand implements AdminCommand
         framer.onResetSessionIds(backupLocation, this);
     }
 
-    public void awaitResponse(final IdleStrategy idleStrategy)
+    void awaitResponse(final IdleStrategy idleStrategy)
     {
         while (!isDone() && error == null)
         {

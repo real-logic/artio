@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-public interface AdminCommand
+interface AdminCommand
 {
     void execute(Framer framer);
 }

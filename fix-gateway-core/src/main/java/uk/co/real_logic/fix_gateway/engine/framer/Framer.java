@@ -77,7 +77,7 @@ import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
  */
-public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
+class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 {
 
     private static final ByteBuffer CONNECT_ERROR;
@@ -130,7 +130,7 @@ public class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
-    public Framer(
+    Framer(
         final EpochClock clock,
         final Timer outboundTimer,
         final Timer sendTimer,
