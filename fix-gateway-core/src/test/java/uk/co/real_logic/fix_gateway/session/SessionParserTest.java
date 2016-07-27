@@ -23,7 +23,6 @@ import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.validation.TargetCompIdValidationStrategy;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.mockito.Mockito.*;
@@ -36,7 +35,7 @@ public class SessionParserTest
     private Session mockSession = mock(Session.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private AuthenticationStrategy mockAuthenticationStrategy = mock(AuthenticationStrategy.class);
-    private MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy("das");
+    private MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId("das");
 
     private SessionParser parser = new SessionParser(
         mockSession, mockSessionIdStrategy, mockAuthenticationStrategy, validationStrategy);

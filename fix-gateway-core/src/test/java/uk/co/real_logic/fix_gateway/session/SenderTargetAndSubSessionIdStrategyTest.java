@@ -32,7 +32,7 @@ import static uk.co.real_logic.fix_gateway.session.SessionIdStrategy.INSUFFICIEN
 public class SenderTargetAndSubSessionIdStrategyTest
 {
 
-    private SenderTargetAndSubSessionIdStrategy strategy = SessionIdStrategy.senderTargetAndSub();
+    private SenderTargetAndSubSessionIdStrategy strategy = new SenderTargetAndSubSessionIdStrategy();
 
     @Test
     public void differentIdsDoNotClash()

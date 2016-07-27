@@ -26,7 +26,6 @@ import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.validation.TargetCompIdValidationStrategy;
 
 import java.io.File;
 import java.util.Arrays;
@@ -96,7 +95,7 @@ public final class FixBenchmarkServer
     private static void setupAuthentication(final CommonConfiguration configuration)
     {
         final MessageValidationStrategy validationStrategy =
-            new TargetCompIdValidationStrategy(ACCEPTOR_ID)
+            MessageValidationStrategy.targetCompId(ACCEPTOR_ID)
                 .and(MessageValidationStrategy.senderCompId(Arrays.asList(INITIATOR_ID)));
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);

@@ -23,15 +23,15 @@ import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 @FunctionalInterface
 public interface AuthenticationStrategy
 {
-    static NoAuthenticationStrategy none()
+    static AuthenticationStrategy none()
     {
         return new NoAuthenticationStrategy();
     }
-
-    boolean authenticate(final LogonDecoder logon);
 
     static AuthenticationStrategy of(final MessageValidationStrategy delegate)
     {
         return logon -> delegate.validate(logon.header());
     }
+
+    boolean authenticate(final LogonDecoder logon);
 }

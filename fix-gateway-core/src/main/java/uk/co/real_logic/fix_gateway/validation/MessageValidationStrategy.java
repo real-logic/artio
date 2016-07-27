@@ -23,21 +23,22 @@ import java.util.Collection;
  * A strategy that, if message validation is switched on, validates each FIX message in turn before
  * the message is handed off the domain logic. Validation might including checking that the sender
  * or target comp id is on an approved list.
- *
- * @see SenderCompIdValidationStrategy
- * @see TargetCompIdValidationStrategy
- * @see NoMessageValidationStrategy
  */
 public interface MessageValidationStrategy
 {
-    static NoMessageValidationStrategy none()
+    static MessageValidationStrategy none()
     {
         return new NoMessageValidationStrategy();
     }
 
-    static SenderCompIdValidationStrategy senderCompId(final Collection<String> validSenderIds)
+    static MessageValidationStrategy senderCompId(final Collection<String> validSenderIds)
     {
         return new SenderCompIdValidationStrategy(validSenderIds);
+    }
+
+    static MessageValidationStrategy targetCompId(final String gatewayCompId)
+    {
+        return new TargetCompIdValidationStrategy(gatewayCompId);
     }
 
     /**

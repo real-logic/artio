@@ -26,7 +26,6 @@ import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.validation.TargetCompIdValidationStrategy;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -48,7 +47,7 @@ public final class MessageApiExamples
         final EngineConfiguration configuration = new EngineConfiguration()
             .libraryAeronChannel(AERON_CHANNEL);
 
-        final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(TARGET_COMP_ID)
+        final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(TARGET_COMP_ID)
             .and(MessageValidationStrategy.senderCompId(asList(SENDER_COMP_ID)));
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);

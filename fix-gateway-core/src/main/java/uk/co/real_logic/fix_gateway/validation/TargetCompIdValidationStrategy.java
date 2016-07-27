@@ -24,18 +24,13 @@ import static uk.co.real_logic.fix_gateway.fields.RejectReason.COMPID_PROBLEM;
 /**
  * A message validation strategy that checks the target comp id of each message.
  */
-public final class TargetCompIdValidationStrategy implements MessageValidationStrategy
+final class TargetCompIdValidationStrategy implements MessageValidationStrategy
 {
     private final char[] gatewayCompId;
 
-    public TargetCompIdValidationStrategy(final String gatewayCompId)
+    TargetCompIdValidationStrategy(final String gatewayCompId)
     {
-        this(gatewayCompId.toCharArray());
-    }
-
-    private TargetCompIdValidationStrategy(final char[] gatewayCompId)
-    {
-        this.gatewayCompId = gatewayCompId;
+        this.gatewayCompId = gatewayCompId.toCharArray();
     }
 
     public boolean validate(final HeaderDecoder header)

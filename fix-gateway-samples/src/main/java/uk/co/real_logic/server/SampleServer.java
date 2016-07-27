@@ -28,7 +28,6 @@ import uk.co.real_logic.fix_gateway.library.SessionHandler;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.validation.TargetCompIdValidationStrategy;
 
 import java.io.File;
 import java.util.Arrays;
@@ -47,7 +46,7 @@ public final class SampleServer
 
     public static void main(final String[] args) throws Exception
     {
-        final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(ACCEPTOR_COMP_ID)
+        final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(ACCEPTOR_COMP_ID)
             .and(MessageValidationStrategy.senderCompId(Arrays.asList(INITIATOR_COMP_ID)));
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);

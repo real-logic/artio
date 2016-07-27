@@ -32,7 +32,6 @@ import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
-import uk.co.real_logic.fix_gateway.validation.TargetCompIdValidationStrategy;
 
 import java.io.File;
 import java.util.Arrays;
@@ -218,7 +217,7 @@ public class EngineAndLibraryIntegrationTest
 
     private FixLibrary connectLibrary(final int libraryId)
     {
-        final MessageValidationStrategy validationStrategy = new TargetCompIdValidationStrategy(ACCEPTOR_ID)
+        final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(ACCEPTOR_ID)
             .and(MessageValidationStrategy.senderCompId(Arrays.asList(INITIATOR_ID, INITIATOR_ID2)));
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);

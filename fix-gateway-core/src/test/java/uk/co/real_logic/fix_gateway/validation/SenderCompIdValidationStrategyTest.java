@@ -28,8 +28,8 @@ import static org.mockito.Mockito.when;
 
 public class SenderCompIdValidationStrategyTest
 {
-    private SenderCompIdValidationStrategy authenticationStrategy = MessageValidationStrategy.senderCompId(
-        Arrays.asList("ab", "a"));
+    private SenderCompIdValidationStrategy authenticationStrategy =
+        new SenderCompIdValidationStrategy(Arrays.asList("ab", "a"));
 
     private char[] examples = "abcdef".toCharArray();
     private HeaderDecoder headerDecoder = mock(HeaderDecoder.class);

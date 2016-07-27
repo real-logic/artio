@@ -40,12 +40,12 @@ public interface SessionIdStrategy
 {
     int INSUFFICIENT_SPACE = -1;
 
-    static SenderAndTargetSessionIdStrategy senderAndTarget()
+    static SessionIdStrategy senderAndTarget()
     {
         return new SenderAndTargetSessionIdStrategy();
     }
 
-    static SenderTargetAndSubSessionIdStrategy senderTargetAndSub()
+    static SessionIdStrategy senderTargetAndSub()
     {
         return new SenderTargetAndSubSessionIdStrategy();
     }
