@@ -23,6 +23,7 @@ import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeMatcher;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -104,7 +105,18 @@ public final class CustomMatchers
             {
                 try
                 {
-                    final Object value = item.getClass().getMethod(name).invoke(item);
+                    final Class<?> aClass = item.getClass();
+                    Method method;
+                    try
+                    {
+                        method = aClass.getDeclaredMethod(name);
+                    }
+                    catch (NoSuchMethodException e)
+                    {
+                        method = aClass.getMethod(name);
+                    }
+                    method.setAccessible(true);
+                    final Object value = method.invoke(item);
                     return valueMatcher.matches(value);
                 }
                 catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e)
