@@ -45,7 +45,7 @@ public class ArchiveMetaData implements AutoCloseable
         this(directoryDescriptor, LoggerUtil::mapExistingFile, LoggerUtil::map);
     }
 
-    public ArchiveMetaData(
+    ArchiveMetaData(
         final LogDirectoryDescriptor directoryDescriptor,
         final ExistingBufferFactory existingBufferFactory,
         final BufferFactory newBufferFactory)

@@ -36,7 +36,7 @@ public class EngineDescriptorStore implements NodeStateHandler
 
     private final ErrorHandler errorHandler;
 
-    public EngineDescriptorStore(final ErrorHandler errorHandler)
+    EngineDescriptorStore(final ErrorHandler errorHandler)
     {
         this.errorHandler = errorHandler;
     }

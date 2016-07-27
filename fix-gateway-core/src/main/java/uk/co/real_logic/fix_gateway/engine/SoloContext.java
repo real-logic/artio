@@ -37,7 +37,7 @@ import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREA
 import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
-public class SoloContext extends EngineContext
+class SoloContext extends EngineContext
 {
     private final Publication replayPublication;
     private final List<Archiver> archivers = new ArrayList<>();
