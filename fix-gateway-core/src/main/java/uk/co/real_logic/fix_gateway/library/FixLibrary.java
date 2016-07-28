@@ -484,7 +484,6 @@ public final class FixLibrary extends GatewayProcess
         }
         inboundSubscription = inboundLibraryStreams.subscription();
         outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy);
-        processProtocolHandler.sessionId = outboundPublication.id();
 
         livenessDetector = LivenessDetector.forLibrary(
             outboundPublication,
@@ -633,7 +632,6 @@ public final class FixLibrary extends GatewayProcess
 
     private class FixLibraryEndPointHandler implements LibraryEndPointHandler, ProtocolHandler
     {
-        private int sessionId;
         private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
         public Action onManageConnection(
