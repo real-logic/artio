@@ -55,7 +55,7 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNE
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
-class LibraryPoller
+final class LibraryPoller
 {
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
@@ -88,7 +88,7 @@ class LibraryPoller
     private String currentAeronChannel;
     private Streams inboundLibraryStreams;
     private Streams outboundLibraryStreams;
-    
+
     int poll(final int fragmentLimit)
     {
         if (enginesAreClustered && livenessDetector.hasDisconnected())
@@ -521,7 +521,8 @@ class LibraryPoller
         return correlationId;
     }
 
-    private final LibraryPoller.LibraryPollerEndPointHandler processProtocolHandler = new LibraryPoller.LibraryPollerEndPointHandler();
+    private final LibraryPoller.LibraryPollerEndPointHandler processProtocolHandler =
+        new LibraryPoller.LibraryPollerEndPointHandler();
     private final ControlledFragmentHandler outboundSubscription =
         ProtocolSubscription.of(processProtocolHandler, new LibraryProtocolSubscription(processProtocolHandler));
 
@@ -662,7 +663,8 @@ class LibraryPoller
             return CONTINUE;
         }
 
-        public ControlledFragmentHandler.Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+        public ControlledFragmentHandler.Action onDisconnect(
+            final int libraryId, final long connectionId, final DisconnectReason reason)
         {
             if (libraryId == LibraryPoller.this.libraryId)
             {
@@ -715,7 +717,8 @@ class LibraryPoller
 
         public ControlledFragmentHandler.Action onReleaseSessionReply(final long correlationId, final SessionReplyStatus status)
         {
-            final LibraryPoller.ReleaseToGatewayReply reply = (LibraryPoller.ReleaseToGatewayReply) correlationIdToReply.remove(correlationId);
+            final LibraryPoller.ReleaseToGatewayReply reply =
+                (LibraryPoller.ReleaseToGatewayReply) correlationIdToReply.remove(correlationId);
             if (reply != null)
             {
                 reply.onComplete(status);
@@ -726,7 +729,8 @@ class LibraryPoller
 
         public ControlledFragmentHandler.Action onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
         {
-            final LibraryPoller.RequestSessionReply reply = (LibraryPoller.RequestSessionReply) correlationIdToReply.remove(correlationId);
+            final LibraryPoller.RequestSessionReply reply =
+                (LibraryPoller.RequestSessionReply) correlationIdToReply.remove(correlationId);
             if (reply != null)
             {
                 reply.onComplete(status);
