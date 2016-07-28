@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
-import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
@@ -61,7 +60,6 @@ class EndPointFactory
         final long sessionId,
         final int libraryId,
         final Framer framer,
-        final ReliefValve reliefValve,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final boolean resetSequenceNumbers) throws IOException
@@ -69,7 +67,7 @@ class EndPointFactory
         return new ReceiverEndPoint(
             channel,
             configuration.receiverBufferSize(),
-            inboundPublication(reliefValve),
+            inboundPublication(),
             connectionId,
             sessionId,
             sessionIdStrategy,
@@ -84,9 +82,9 @@ class EndPointFactory
         );
     }
 
-    GatewayPublication inboundPublication(final ReliefValve reliefValve)
+    GatewayPublication inboundPublication()
     {
-        return inboundStreams.gatewayPublication(idleStrategy, reliefValve);
+        return inboundStreams.gatewayPublication(idleStrategy);
     }
 
     SenderEndPoint senderEndPoint(

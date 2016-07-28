@@ -20,7 +20,6 @@ import io.aeron.Publication;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.FixCounters;
-import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
@@ -129,8 +128,8 @@ class ClusterContext extends EngineContext
             fixCounters.failedInboundPublications(),
             configuration.framerIdleStrategy(),
             nanoClock,
-            configuration.inboundMaxClaimAttempts(),
-            ReliefValve.NO_RELIEF_VALVE);
+            configuration.inboundMaxClaimAttempts()
+        );
     }
 
     public Streams outboundLibraryStreams()

@@ -18,13 +18,10 @@ package uk.co.real_logic.fix_gateway.protocol;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
 
-import static io.aeron.Publication.BACK_PRESSURED;
-import static io.aeron.Publication.CLOSED;
-import static io.aeron.Publication.NOT_CONNECTED;
+import static io.aeron.Publication.*;
 
 /**
  * A publication designed for deterministic claiming.
@@ -40,21 +37,18 @@ class ClaimablePublication implements AutoCloseable
     protected final IdleStrategy idleStrategy;
 
     private final long maxClaimAttempts;
-    private final ReliefValve reliefValve;
     private final AtomicCounter fails;
 
     ClaimablePublication(
         final int maxClaimAttempts,
         final IdleStrategy idleStrategy,
         final AtomicCounter fails,
-        final ReliefValve reliefValve,
         final ClusterablePublication dataPublication)
     {
         this.maxClaimAttempts = maxClaimAttempts;
         this.idleStrategy = idleStrategy;
         this.fails = fails;
         bufferClaim = new BufferClaim();
-        this.reliefValve = reliefValve;
         this.dataPublication = dataPublication;
     }
 
@@ -74,10 +68,6 @@ class ClaimablePublication implements AutoCloseable
             if (position > 0L)
             {
                 return position;
-            }
-            else if (position == BACK_PRESSURED)
-            {
-                idleStrategy.idle(reliefValve.vent());
             }
             else
             {

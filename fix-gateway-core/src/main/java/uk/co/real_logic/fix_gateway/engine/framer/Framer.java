@@ -28,7 +28,6 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.Pressure;
-import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier.NewChannelHandler;
@@ -91,7 +90,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final RetryManager retryManager = new RetryManager();
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
-    private final ReliefValve sendOutboundMessagesFunc = this::sendOutboundMessages;
     private final NewChannelHandler onNewConnectionFunc = this::onNewConnection;
 
     private final TcpChannelSupplier channelSupplier;
@@ -166,7 +164,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.inboundMessages = inboundMessages;
         this.errorHandler = errorHandler;
         this.outboundPublication = outboundPublication;
-        this.inboundPublication = endPointFactory.inboundPublication(sendOutboundMessagesFunc);
+        this.inboundPublication = endPointFactory.inboundPublication();
         this.clusterableStreams = clusterableStreams;
         this.senderEndPoints = new SenderEndPoints();
         this.sessionIdStrategy = sessionIdStrategy;
@@ -511,7 +509,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         final ReceiverEndPoint receiverEndPoint =
             endPointFactory.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
-                sendOutboundMessagesFunc, sentSequenceNumberIndex, receivedSequenceNumberIndex, resetSequenceNumbers);
+                sentSequenceNumberIndex, receivedSequenceNumberIndex, resetSequenceNumbers);
         receiverEndPoints.add(receiverEndPoint);
 
         final SenderEndPoint senderEndPoint =
@@ -565,7 +563,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             return action;
         }
-
 
         final LibraryInfo existingLibrary = idToLibrary.get(libraryId);
         if (existingLibrary != null)

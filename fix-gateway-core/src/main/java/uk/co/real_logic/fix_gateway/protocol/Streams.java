@@ -18,12 +18,9 @@ package uk.co.real_logic.fix_gateway.protocol;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.fix_gateway.ReliefValve;
-import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
+import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
-
-import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;
 
 public final class Streams
 {
@@ -49,18 +46,13 @@ public final class Streams
 
     public GatewayPublication gatewayPublication(final IdleStrategy idleStrategy)
     {
-        return gatewayPublication(idleStrategy, NO_RELIEF_VALVE);
-    }
-
-    public GatewayPublication gatewayPublication(final IdleStrategy idleStrategy, final ReliefValve reliefValve)
-    {
         return new GatewayPublication(
             dataPublication(),
             failedPublications,
             idleStrategy,
             nanoClock,
-            maxClaimAttempts,
-            reliefValve);
+            maxClaimAttempts
+        );
     }
 
     public ClusterablePublication dataPublication()

@@ -107,7 +107,7 @@ public class FramerTest
     @SuppressWarnings("unchecked")
     public void setUp() throws IOException
     {
-        when(mockEndPointFactory.inboundPublication(any())).thenReturn(inboundPublication);
+        when(mockEndPointFactory.inboundPublication()).thenReturn(inboundPublication);
 
         server = ServerSocketChannel.open().bind(TEST_ADDRESS);
         server.configureBlocking(false);
@@ -115,7 +115,7 @@ public class FramerTest
         clientBuffer.putInt(10, 5);
 
         when(mockEndPointFactory
-            .receiverEndPoint(any(), connectionId.capture(), anyLong(), anyInt(), any(), any(),
+            .receiverEndPoint(any(), connectionId.capture(), anyLong(), anyInt(), any(),
                 eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean()))
             .thenReturn(mockReceiverEndPoint);
 
@@ -548,7 +548,7 @@ public class FramerTest
     {
         verify(mockEndPointFactory).receiverEndPoint(
             notNull(TcpChannel.class), anyLong(), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer),
-            any(), eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean());
+            eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean());
 
         verify(mockEndPointFactory).senderEndPoint(
             notNull(TcpChannel.class), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer));

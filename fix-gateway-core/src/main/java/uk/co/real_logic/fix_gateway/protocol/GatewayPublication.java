@@ -21,7 +21,6 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
@@ -79,10 +78,9 @@ public class GatewayPublication extends ClaimablePublication
         final AtomicCounter fails,
         final IdleStrategy idleStrategy,
         final NanoClock nanoClock,
-        final int maxClaimAttempts,
-        final ReliefValve reliefValve)
+        final int maxClaimAttempts)
     {
-        super(maxClaimAttempts, idleStrategy, fails, reliefValve, dataPublication);
+        super(maxClaimAttempts, idleStrategy, fails, dataPublication);
         this.nanoClock = nanoClock;
     }
 

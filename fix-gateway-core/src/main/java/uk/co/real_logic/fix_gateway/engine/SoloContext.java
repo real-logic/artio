@@ -34,7 +34,6 @@ import java.util.List;
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.fix_gateway.ReliefValve.NO_RELIEF_VALVE;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 class SoloContext extends EngineContext
@@ -75,7 +74,7 @@ class SoloContext extends EngineContext
         return ClusterableStreams.solo(aeron, configuration.libraryAeronChannel());
     }
 
-    public void newLoggingRunner()
+    private void newLoggingRunner()
     {
         if (configuration.logOutboundMessages())
         {
@@ -108,8 +107,8 @@ class SoloContext extends EngineContext
                     fixCounters.failedReplayPublications(),
                     configuration.loggerIdleStrategy(),
                     new SystemNanoClock(),
-                    configuration.outboundMaxClaimAttempts(),
-                    NO_RELIEF_VALVE);
+                    configuration.outboundMaxClaimAttempts()
+                );
             final GapFiller gapFiller = new GapFiller(
                 inboundLibraryStreams.subscription(),
                 replayGatewayPublication);
