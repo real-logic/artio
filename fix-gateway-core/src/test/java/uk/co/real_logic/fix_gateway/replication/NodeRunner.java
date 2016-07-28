@@ -36,6 +36,7 @@ import static io.aeron.driver.ThreadingMode.SHARED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.agrona.BitUtil.SIZE_OF_SHORT;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
@@ -48,6 +49,7 @@ class NodeRunner implements AutoCloseable
     private static final String AERON_CHANNEL = TestFixtures.clusteredAeronChannel();
 
     private final FrameDropper frameDropper;
+    private final StashingRoleHandler stashingNodeHandler = new StashingRoleHandler();
     private final Int2IntHashMap nodeIdToId = new Int2IntHashMap(-1);
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
@@ -112,7 +114,8 @@ class NodeRunner implements AutoCloseable
             .archiver(archiver)
             .archiveReader(archiveReader)
             .nodeState(nodeState)
-            .nodeStateHandler(new NodeIdStasher());
+            .nodeStateHandler(new NodeIdStasher())
+            .nodeHandler(stashingNodeHandler);
 
         clusterNode = new ClusterAgent(configuration, System.currentTimeMillis());
         subscription = clusterNode.clusterStreams().subscription(1);
@@ -120,7 +123,9 @@ class NodeRunner implements AutoCloseable
 
     public int poll(final int fragmentLimit)
     {
-        return clusterNode.doWork() + subscription.controlledPoll(handler, fragmentLimit);
+        final int work = clusterNode.doWork() + subscription.controlledPoll(handler, fragmentLimit);
+        validateRole();
+        return work;
     }
 
     public void dropFrames(final boolean dropFrames)
@@ -136,6 +141,24 @@ class NodeRunner implements AutoCloseable
     public boolean isLeader()
     {
         return clusterNode.isLeader();
+    }
+
+    private void validateRole()
+    {
+        switch (stashingNodeHandler.role())
+        {
+            case LEADER:
+                assertTrue(clusterNode.isLeader());
+                break;
+
+            case FOLLOWER:
+                assertTrue(clusterNode.isFollower());
+                break;
+
+            case CANDIDATE:
+                assertTrue(clusterNode.isCandidate());
+                break;
+        }
     }
 
     public ClusterAgent raftNode()

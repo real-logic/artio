@@ -42,6 +42,7 @@ public class ClusterAgent implements Agent
     private final OutboundPipe outboundPipe;
     private final ClusterStreams clusterStreams;
     private final NodeStateHandler nodeStateHandler;
+    private final RoleHandler roleHandler;
 
     private Role currentRole;
 
@@ -52,6 +53,7 @@ public class ClusterAgent implements Agent
         nodeId = configuration.nodeId();
         transport = configuration.raftTransport();
         nodeStateHandler = configuration.nodeStateHandler();
+        roleHandler = configuration.nodeHandler();
 
         final Publication dataPublication = transport.leaderPublication();
         final ArchiveReader archiveReader = configuration.archiveReader();
@@ -150,7 +152,8 @@ public class ClusterAgent implements Agent
     {
         void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
         {
-            DebugLogger.log("%d: L -> Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+            final int leadershipTerm = termState.leadershipTerm();
+            DebugLogger.log("%d: L -> Follower @ %d in %d\n", nodeId, timeInMs, leadershipTerm);
 
             leader.closeStreams();
 
@@ -160,6 +163,7 @@ public class ClusterAgent implements Agent
                 .follow(timeInMs);
 
             onNewLeader();
+            roleHandler.onTransitionToFollower(leadershipTerm);
         }
     };
 
@@ -167,11 +171,13 @@ public class ClusterAgent implements Agent
     {
         void transitionToCandidate(final Follower follower, final long timeInMs)
         {
-            DebugLogger.log("%d: F -> Candidate @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+            final int leadershipTerm = termState.leadershipTerm();
+            DebugLogger.log("%d: F -> Candidate @ %d in %d\n", nodeId, timeInMs, leadershipTerm);
 
             follower.closeStreams();
 
             currentRole = candidate.startNewElection(timeInMs);
+            roleHandler.onTransitionToCandidate(leadershipTerm);
         }
     };
 
@@ -179,7 +185,8 @@ public class ClusterAgent implements Agent
     {
         void transitionToLeader(final Candidate candidate, long timeInMs)
         {
-            DebugLogger.log("%d: C -> Leader @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+            final int leadershipTerm = termState.leadershipTerm();
+            DebugLogger.log("%d: C -> Leader @ %d in %d\n", nodeId, timeInMs, leadershipTerm);
 
             candidate.closeStreams();
 
@@ -188,11 +195,13 @@ public class ClusterAgent implements Agent
             currentRole = leader.getsElected(timeInMs);
 
             onNewLeader();
+            roleHandler.onTransitionToLeader(leadershipTerm);
         }
 
         void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
         {
-            DebugLogger.log("%d: C -> Follower @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+            final int leadershipTerm = termState.leadershipTerm();
+            DebugLogger.log("%d: C -> Follower @ %d in %d\n", nodeId, timeInMs, leadershipTerm);
 
             candidate.closeStreams();
 
@@ -200,6 +209,8 @@ public class ClusterAgent implements Agent
 
             currentRole = follower.votedFor(votedFor)
                 .follow(timeInMs);
+
+            roleHandler.onTransitionToFollower(leadershipTerm);
         }
     };
 
@@ -208,6 +219,8 @@ public class ClusterAgent implements Agent
         transport.injectFollowerSubscriptions(follower);
 
         currentRole = follower.follow(timeInMs);
+
+        roleHandler.onTransitionToFollower(termState.leadershipTerm());
     }
 
     void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)

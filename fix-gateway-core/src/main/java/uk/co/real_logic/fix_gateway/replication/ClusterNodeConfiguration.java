@@ -32,6 +32,20 @@ public class ClusterNodeConfiguration
     public static final int DEFAULT_CONTROL_STREAM_ID = 1;
     public static final int DEFAULT_DATA_STREAM_ID = 2;
     public static final int DEFAULT_ACKNOWLEDGEMENT_STREAM_ID = 3;
+    public static final RoleHandler DEFAULT_NODE_HANDLER = new RoleHandler()
+    {
+        public void onTransitionToLeader(final int leadershipTerm)
+        {
+        }
+
+        public void onTransitionToFollower(final int leadershipTerm)
+        {
+        }
+
+        public void onTransitionToCandidate(final int leadershipTerm)
+        {
+        }
+    };
 
     private short nodeId;
     private IntHashSet otherNodes;
@@ -51,6 +65,7 @@ public class ClusterNodeConfiguration
     private Publication copyToPublication;
     private DirectBuffer nodeState;
     private NodeStateHandler nodeStateHandler;
+    private RoleHandler roleHandler = DEFAULT_NODE_HANDLER;
 
     /**
      * Sets the control, data and acknowledge streams to all this aeron
@@ -163,6 +178,12 @@ public class ClusterNodeConfiguration
         return this;
     }
 
+    public ClusterNodeConfiguration nodeHandler(final RoleHandler roleHandler)
+    {
+        this.roleHandler = roleHandler;
+        return this;
+    }
+
     public StreamIdentifier controlStream()
     {
         return controlStream;
@@ -241,6 +262,11 @@ public class ClusterNodeConfiguration
     public NodeStateHandler nodeStateHandler()
     {
         return nodeStateHandler;
+    }
+
+    public RoleHandler nodeHandler()
+    {
+        return roleHandler;
     }
 
     public void conclude()

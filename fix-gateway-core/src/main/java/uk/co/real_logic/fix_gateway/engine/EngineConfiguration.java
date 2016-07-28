@@ -22,6 +22,8 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier;
+import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;
+import uk.co.real_logic.fix_gateway.replication.RoleHandler;
 
 import java.io.File;
 import java.io.IOException;
@@ -146,6 +148,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private String libraryAeronChannel = null;
     private Function<EngineConfiguration, TcpChannelSupplier> channelSupplierFactory =
         TcpChannelSupplier::new;
+    private RoleHandler roleHandler = ClusterNodeConfiguration.DEFAULT_NODE_HANDLER;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -446,6 +449,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration nodeHandler(final RoleHandler roleHandler)
+    {
+        this.roleHandler = roleHandler;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -584,6 +593,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public long clusterTimeoutIntervalInMs()
     {
         return clusterTimeoutIntervalInMs;
+    }
+
+    public RoleHandler nodeHandler()
+    {
+        return roleHandler;
     }
 
     /**
