@@ -49,7 +49,6 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 public final class SystemTestUtil
 {
     public static final IdleStrategy ADMIN_IDLE_STRATEGY = backoffIdleStrategy();
-    public static final long CONNECTION_ID = 0L;
     public static final String ACCEPTOR_ID = "acceptor";
     public static final String INITIATOR_ID = "initiator";
     public static final String INITIATOR_ID2 = "initiator2";
