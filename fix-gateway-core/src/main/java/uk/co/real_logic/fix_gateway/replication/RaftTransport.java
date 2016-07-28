@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Publication;
 import io.aeron.Subscription;
-import uk.co.real_logic.fix_gateway.ReliefValve;
 
 class RaftTransport
 {
@@ -95,7 +94,6 @@ class RaftTransport
             configuration.maxClaimAttempts(),
             configuration.idleStrategy(),
             configuration.failCounter(),
-            ReliefValve.NO_RELIEF_VALVE,
             publication(id));
     }
 

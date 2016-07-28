@@ -26,7 +26,6 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
-import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
@@ -88,7 +87,6 @@ public class AbstractReplicationTest
             100,
             new NoOpIdleStrategy(),
             mock(AtomicCounter.class),
-            mock(ReliefValve.class),
             aeron.addPublication(IPC, streamId));
     }
 

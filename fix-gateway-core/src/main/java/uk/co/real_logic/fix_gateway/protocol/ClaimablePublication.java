@@ -88,6 +88,8 @@ class ClaimablePublication implements AutoCloseable
             i++;
         } while (i <= maxClaimAttempts);
 
+        idleStrategy.reset();
+
         if (position == NOT_CONNECTED || position == CLOSED)
         {
             throw new IllegalStateException(

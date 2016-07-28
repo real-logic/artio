@@ -21,12 +21,9 @@ import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.fix_gateway.ReliefValve;
 import uk.co.real_logic.fix_gateway.replication.messages.*;
 
-import static io.aeron.Publication.BACK_PRESSURED;
-import static io.aeron.Publication.CLOSED;
-import static io.aeron.Publication.NOT_CONNECTED;
+import static io.aeron.Publication.*;
 import static uk.co.real_logic.fix_gateway.replication.messages.ReplyVoteEncoder.nodeStateHeaderLength;
 
 // NB: doens't extend ClaimablePublication because it works on raw Publication objects, not clusterable publications
@@ -50,7 +47,6 @@ class RaftPublication
     private final ResendEncoder resend = new ResendEncoder();
 
     private final long maxClaimAttempts;
-    private final ReliefValve reliefValve;
     private final Publication dataPublication;
     private final IdleStrategy idleStrategy;
     private final AtomicCounter fails;
@@ -59,13 +55,11 @@ class RaftPublication
         final int maxClaimAttempts,
         final IdleStrategy idleStrategy,
         final AtomicCounter fails,
-        final ReliefValve reliefValve,
         final Publication dataPublication)
     {
         this.maxClaimAttempts = maxClaimAttempts;
         this.idleStrategy = idleStrategy;
         this.fails = fails;
-        this.reliefValve = reliefValve;
         this.dataPublication = dataPublication;
     }
 
@@ -263,10 +257,6 @@ class RaftPublication
             {
                 return position;
             }
-            else if (position == BACK_PRESSURED)
-            {
-                idleStrategy.idle(reliefValve.vent());
-            }
             else
             {
                 idleStrategy.idle();
@@ -276,6 +266,8 @@ class RaftPublication
             i++;
         }
         while (i <= maxClaimAttempts);
+
+        idleStrategy.reset();
 
         if (position == NOT_CONNECTED || position == CLOSED)
         {
