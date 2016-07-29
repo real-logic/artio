@@ -50,7 +50,7 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNE
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
-final class LibraryPoller
+final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
 {
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
@@ -492,261 +492,256 @@ final class LibraryPoller
         return correlationId;
     }
 
-    private final LibraryPoller.LibraryPollerEndPointHandler processProtocolHandler =
-        new LibraryPoller.LibraryPollerEndPointHandler();
     private final ControlledFragmentHandler outboundSubscription =
-        ProtocolSubscription.of(processProtocolHandler, new LibraryProtocolSubscription(processProtocolHandler));
+        ProtocolSubscription.of(this, new LibraryProtocolSubscription(this));
 
-    private class LibraryPollerEndPointHandler implements LibraryEndPointHandler, ProtocolHandler
+    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
+
+    public ControlledFragmentHandler.Action onManageConnection(
+        final int libraryId,
+        final long connectionId,
+        final long sessionId,
+        final ConnectionType type,
+        final int lastSentSequenceNumber,
+        final int lastReceivedSequenceNumber,
+        final DirectBuffer buffer,
+        final int addressOffset,
+        final int addressLength,
+        final SessionState state,
+        final int heartbeatIntervalInS,
+        final long replyToId)
     {
-        private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
-
-        public ControlledFragmentHandler.Action onManageConnection(
-            final int libraryId,
-            final long connectionId,
-            final long sessionId,
-            final ConnectionType type,
-            final int lastSentSequenceNumber,
-            final int lastReceivedSequenceNumber,
-            final DirectBuffer buffer,
-            final int addressOffset,
-            final int addressLength,
-            final SessionState state,
-            final int heartbeatIntervalInS,
-            final long replyToId)
+        if (libraryId == LibraryPoller.this.libraryId)
         {
-            if (libraryId == LibraryPoller.this.libraryId)
+            if (type == INITIATOR)
             {
-                if (type == INITIATOR)
+                DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
+                final boolean isInitiator = correlationIdToReply.get(replyToId) instanceof LibraryPoller.InitiateSessionReply;
+                final LibraryPoller.InitiateSessionReply reply =
+                    isInitiator ? (LibraryPoller.InitiateSessionReply) correlationIdToReply.remove(replyToId) : null;
+                final Session session = initiateSession(
+                    connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state,
+                    isInitiator ? reply.configuration : null);
+                newSession(connectionId, sessionId, session);
+                if (isInitiator)
                 {
-                    DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
-                    final boolean isInitiator = correlationIdToReply.get(replyToId) instanceof LibraryPoller.InitiateSessionReply;
-                    final LibraryPoller.InitiateSessionReply reply =
-                        isInitiator ? (LibraryPoller.InitiateSessionReply) correlationIdToReply.remove(replyToId) : null;
-                    final Session session = initiateSession(
-                        connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state,
-                        isInitiator ? reply.configuration : null);
-                    newSession(connectionId, sessionId, session);
-                    if (isInitiator)
-                    {
-                        reply.onComplete(session);
-                    }
+                    reply.onComplete(session);
                 }
-                else
-                {
-                    DebugLogger.log("Acct Connect: %d, %d\n", connectionId, libraryId);
-                    asciiBuffer.wrap(buffer);
-                    final String address = asciiBuffer.getAscii(addressOffset, addressLength);
-                    final Session session = acceptSession(connectionId, address, state, heartbeatIntervalInS);
-                    newSession(connectionId, sessionId, session);
-                }
-            }
-
-            return CONTINUE;
-        }
-
-        public ControlledFragmentHandler.Action onLogon(
-            final int libraryId,
-            final long connectionId,
-            final long sessionId,
-            int lastSentSequenceNumber,
-            int lastReceivedSequenceNumber,
-            final LogonStatus status,
-            final String senderCompId,
-            final String senderSubId,
-            final String senderLocationId,
-            final String targetCompId,
-            final String username,
-            final String password)
-        {
-            final boolean thisLibrary = libraryId == LibraryPoller.this.libraryId;
-            if (thisLibrary && status == LogonStatus.NEW)
-            {
-                DebugLogger.log("Library Logon: %d, %d\n", connectionId, sessionId);
-                final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
-                if (subscriber != null)
-                {
-                    final SessionState state = subscriber.session().state();
-                    lastSentSequenceNumber = acceptorSequenceNumber(lastSentSequenceNumber, state);
-                    lastReceivedSequenceNumber = acceptorSequenceNumber(lastReceivedSequenceNumber, state);
-                    final CompositeKey compositeKey = senderCompId.length() == 0 ? null :
-                        sessionIdStrategy.onLogon(senderCompId, senderSubId, senderLocationId, targetCompId);
-                    subscriber.onLogon(
-                        sessionId,
-                        lastSentSequenceNumber,
-                        lastReceivedSequenceNumber,
-                        compositeKey,
-                        username,
-                        password);
-                }
-            }
-            else if (libraryId == GATEWAY_LIBRARY_ID || thisLibrary && status == LIBRARY_NOTIFICATION)
-            {
-                sessionExistsHandler.onSessionExists(
-                    fixLibrary,
-                    sessionId,
-                    senderCompId,
-                    senderSubId,
-                    senderLocationId,
-                    targetCompId,
-                    username,
-                    password
-                );
-            }
-
-            return CONTINUE;
-        }
-
-        private int acceptorSequenceNumber(int lastSequenceNumber, final SessionState state)
-        {
-            if (!configuration.acceptorSequenceNumbersResetUponReconnect() &&
-                lastSequenceNumber != SessionInfo.UNK_SESSION)
-            {
-                return lastSequenceNumber;
-            }
-
-            return state == ACTIVE ? 1 : 0;
-        }
-
-        public ControlledFragmentHandler.Action onMessage(
-            final DirectBuffer buffer,
-            final int offset,
-            final int length,
-            final int libraryId,
-            final long connectionId,
-            final long sessionId,
-            final int messageType,
-            final long timestamp,
-            final long position)
-        {
-            if (libraryId == LibraryPoller.this.libraryId)
-            {
-                DebugLogger.log("Received %s\n", buffer, offset, length);
-                DebugLogger.log("(%d)\n", libraryId);
-                final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
-                if (subscriber != null)
-                {
-                    return subscriber.onMessage(
-                        buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
-                }
-            }
-
-            return CONTINUE;
-        }
-
-        public ControlledFragmentHandler.Action onDisconnect(
-            final int libraryId, final long connectionId, final DisconnectReason reason)
-        {
-            if (libraryId == LibraryPoller.this.libraryId)
-            {
-                final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
-                DebugLogger.log("Library Disconnect %d, %s\n", connectionId, reason);
-                if (subscriber != null)
-                {
-                    final ControlledFragmentHandler.Action action = subscriber.onDisconnect(libraryId, reason);
-                    if (action != ABORT)
-                    {
-                        final Session session = subscriber.session();
-                        session.close();
-                        sessions.remove(session);
-                    }
-                    return action;
-                }
-            }
-            return CONTINUE;
-        }
-
-        public ControlledFragmentHandler.Action onError(
-            final GatewayError errorType, final int libraryId, final long replyToId, final String message)
-        {
-            if (libraryId == LibraryPoller.this.libraryId)
-            {
-                final Reply<?> reply = correlationIdToReply.remove(replyToId);
-                if (reply != null)
-                {
-                    reply.onError(errorType, errorMessage);
-                }
-                else
-                {
-                    LibraryPoller.this.errorType = errorType;
-                    LibraryPoller.this.errorMessage = message;
-                }
-            }
-
-            return configuration.gatewayErrorHandler().onError(errorType, libraryId, message);
-        }
-
-        public ControlledFragmentHandler.Action onApplicationHeartbeat(final int libraryId)
-        {
-            if (libraryId == LibraryPoller.this.libraryId)
-            {
-                livenessDetector.onHeartbeat(clock.time());
-            }
-
-            return CONTINUE;
-        }
-
-        public ControlledFragmentHandler.Action onReleaseSessionReply(final long correlationId, final SessionReplyStatus status)
-        {
-            final LibraryPoller.ReleaseToGatewayReply reply =
-                (LibraryPoller.ReleaseToGatewayReply) correlationIdToReply.remove(correlationId);
-            if (reply != null)
-            {
-                reply.onComplete(status);
-            }
-
-            return CONTINUE;
-        }
-
-        public ControlledFragmentHandler.Action onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
-        {
-            final LibraryPoller.RequestSessionReply reply =
-                (LibraryPoller.RequestSessionReply) correlationIdToReply.remove(correlationId);
-            if (reply != null)
-            {
-                reply.onComplete(status);
-            }
-
-            return CONTINUE;
-        }
-
-        public ControlledFragmentHandler.Action onCatchup(final int libraryId, final long connectionId, final int messageCount)
-        {
-            if (LibraryPoller.this.libraryId == libraryId)
-            {
-                final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
-                if (subscriber != null)
-                {
-                    subscriber.startCatchup(messageCount);
-                }
-            }
-
-            return CONTINUE;
-        }
-
-        public ControlledFragmentHandler.Action onNewSentPosition(final int libraryId, final long position)
-        {
-            if (LibraryPoller.this.libraryId == libraryId)
-            {
-                return sentPositionHandler.onSendCompleted(position);
-            }
-
-            return CONTINUE;
-        }
-
-        public ControlledFragmentHandler.Action onNotLeader(final int libraryId, final String libraryChannel)
-        {
-            if (libraryChannel.isEmpty())
-            {
-                attemptNextEngine();
             }
             else
             {
-                currentAeronChannel = libraryChannel;
-                DebugLogger.log("Attempting connect to leader (%s)", currentAeronChannel);
+                DebugLogger.log("Acct Connect: %d, %d\n", connectionId, libraryId);
+                asciiBuffer.wrap(buffer);
+                final String address = asciiBuffer.getAscii(addressOffset, addressLength);
+                final Session session = acceptSession(connectionId, address, state, heartbeatIntervalInS);
+                newSession(connectionId, sessionId, session);
             }
-            return CONTINUE;
         }
+
+        return CONTINUE;
+    }
+
+    public ControlledFragmentHandler.Action onLogon(
+        final int libraryId,
+        final long connectionId,
+        final long sessionId,
+        int lastSentSequenceNumber,
+        int lastReceivedSequenceNumber,
+        final LogonStatus status,
+        final String senderCompId,
+        final String senderSubId,
+        final String senderLocationId,
+        final String targetCompId,
+        final String username,
+        final String password)
+    {
+        final boolean thisLibrary = libraryId == LibraryPoller.this.libraryId;
+        if (thisLibrary && status == LogonStatus.NEW)
+        {
+            DebugLogger.log("Library Logon: %d, %d\n", connectionId, sessionId);
+            final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
+            if (subscriber != null)
+            {
+                final SessionState state = subscriber.session().state();
+                lastSentSequenceNumber = acceptorSequenceNumber(lastSentSequenceNumber, state);
+                lastReceivedSequenceNumber = acceptorSequenceNumber(lastReceivedSequenceNumber, state);
+                final CompositeKey compositeKey = senderCompId.length() == 0 ? null :
+                    sessionIdStrategy.onLogon(senderCompId, senderSubId, senderLocationId, targetCompId);
+                subscriber.onLogon(
+                    sessionId,
+                    lastSentSequenceNumber,
+                    lastReceivedSequenceNumber,
+                    compositeKey,
+                    username,
+                    password);
+            }
+        }
+        else if (libraryId == GATEWAY_LIBRARY_ID || thisLibrary && status == LIBRARY_NOTIFICATION)
+        {
+            sessionExistsHandler.onSessionExists(
+                fixLibrary,
+                sessionId,
+                senderCompId,
+                senderSubId,
+                senderLocationId,
+                targetCompId,
+                username,
+                password
+            );
+        }
+
+        return CONTINUE;
+    }
+
+    private int acceptorSequenceNumber(int lastSequenceNumber, final SessionState state)
+    {
+        if (!configuration.acceptorSequenceNumbersResetUponReconnect() &&
+            lastSequenceNumber != SessionInfo.UNK_SESSION)
+        {
+            return lastSequenceNumber;
+        }
+
+        return state == ACTIVE ? 1 : 0;
+    }
+
+    public ControlledFragmentHandler.Action onMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final int libraryId,
+        final long connectionId,
+        final long sessionId,
+        final int messageType,
+        final long timestamp,
+        final long position)
+    {
+        if (libraryId == LibraryPoller.this.libraryId)
+        {
+            DebugLogger.log("Received %s\n", buffer, offset, length);
+            DebugLogger.log("(%d)\n", libraryId);
+            final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
+            if (subscriber != null)
+            {
+                return subscriber.onMessage(
+                    buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
+            }
+        }
+
+        return CONTINUE;
+    }
+
+    public ControlledFragmentHandler.Action onDisconnect(
+        final int libraryId, final long connectionId, final DisconnectReason reason)
+    {
+        if (libraryId == LibraryPoller.this.libraryId)
+        {
+            final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
+            DebugLogger.log("Library Disconnect %d, %s\n", connectionId, reason);
+            if (subscriber != null)
+            {
+                final ControlledFragmentHandler.Action action = subscriber.onDisconnect(libraryId, reason);
+                if (action != ABORT)
+                {
+                    final Session session = subscriber.session();
+                    session.close();
+                    sessions.remove(session);
+                }
+                return action;
+            }
+        }
+        return CONTINUE;
+    }
+
+    public ControlledFragmentHandler.Action onError(
+        final GatewayError errorType, final int libraryId, final long replyToId, final String message)
+    {
+        if (libraryId == LibraryPoller.this.libraryId)
+        {
+            final Reply<?> reply = correlationIdToReply.remove(replyToId);
+            if (reply != null)
+            {
+                reply.onError(errorType, errorMessage);
+            }
+            else
+            {
+                LibraryPoller.this.errorType = errorType;
+                LibraryPoller.this.errorMessage = message;
+            }
+        }
+
+        return configuration.gatewayErrorHandler().onError(errorType, libraryId, message);
+    }
+
+    public ControlledFragmentHandler.Action onApplicationHeartbeat(final int libraryId)
+    {
+        if (libraryId == LibraryPoller.this.libraryId)
+        {
+            livenessDetector.onHeartbeat(clock.time());
+        }
+
+        return CONTINUE;
+    }
+
+    public ControlledFragmentHandler.Action onReleaseSessionReply(final long correlationId, final SessionReplyStatus status)
+    {
+        final LibraryPoller.ReleaseToGatewayReply reply =
+            (LibraryPoller.ReleaseToGatewayReply) correlationIdToReply.remove(correlationId);
+        if (reply != null)
+        {
+            reply.onComplete(status);
+        }
+
+        return CONTINUE;
+    }
+
+    public ControlledFragmentHandler.Action onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
+    {
+        final LibraryPoller.RequestSessionReply reply =
+            (LibraryPoller.RequestSessionReply) correlationIdToReply.remove(correlationId);
+        if (reply != null)
+        {
+            reply.onComplete(status);
+        }
+
+        return CONTINUE;
+    }
+
+    public ControlledFragmentHandler.Action onCatchup(final int libraryId, final long connectionId, final int messageCount)
+    {
+        if (LibraryPoller.this.libraryId == libraryId)
+        {
+            final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
+            if (subscriber != null)
+            {
+                subscriber.startCatchup(messageCount);
+            }
+        }
+
+        return CONTINUE;
+    }
+
+    public ControlledFragmentHandler.Action onNewSentPosition(final int libraryId, final long position)
+    {
+        if (LibraryPoller.this.libraryId == libraryId)
+        {
+            return sentPositionHandler.onSendCompleted(position);
+        }
+
+        return CONTINUE;
+    }
+
+    public ControlledFragmentHandler.Action onNotLeader(final int libraryId, final String libraryChannel)
+    {
+        if (libraryChannel.isEmpty())
+        {
+            attemptNextEngine();
+        }
+        else
+        {
+            currentAeronChannel = libraryChannel;
+            DebugLogger.log("Attempting connect to leader (%s)", currentAeronChannel);
+        }
+        return CONTINUE;
     }
 
     private void attemptNextEngine()
