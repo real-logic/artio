@@ -130,7 +130,7 @@ public final class FixLibrary extends GatewayProcess
      */
     public void close()
     {
-        poller.sessions();
+        poller.close();
         super.close();
     }
 
