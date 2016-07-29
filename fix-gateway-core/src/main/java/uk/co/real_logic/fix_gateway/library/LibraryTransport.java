@@ -15,6 +15,77 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import io.aeron.Aeron;
+import org.agrona.concurrent.NanoClock;
+import org.agrona.concurrent.SystemNanoClock;
+import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.protocol.Streams;
+import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
+import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
+
+import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+
 class LibraryTransport
 {
+
+    private final LibraryConfiguration configuration;
+    private final FixCounters fixCounters;
+    private final Aeron aeron;
+
+    private Streams inboundLibraryStreams;
+    private Streams outboundLibraryStreams;
+
+    private ClusterableSubscription inboundSubscription;
+    private GatewayPublication outboundPublication;
+
+    LibraryTransport(
+        final LibraryConfiguration configuration,
+        final FixCounters fixCounters,
+        final Aeron aeron)
+    {
+        this.configuration = configuration;
+        this.fixCounters = fixCounters;
+        this.aeron = aeron;
+    }
+
+    void initStreams(final String aeronChannel)
+    {
+        final NanoClock nanoClock = new SystemNanoClock();
+        final ClusterableStreams soloNode = ClusterableStreams.solo(aeron, aeronChannel);
+        DebugLogger.log("Attempting connect to %s", aeronChannel);
+
+        inboundLibraryStreams = new Streams(
+            soloNode, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
+            configuration.inboundMaxClaimAttempts());
+        outboundLibraryStreams = new Streams(
+            soloNode, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
+            configuration.outboundMaxClaimAttempts());
+
+
+        if (isReconnect())
+        {
+            inboundSubscription.close();
+            outboundPublication.close();
+        }
+        inboundSubscription = inboundLibraryStreams.subscription();
+        outboundPublication = outboundLibraryStreams.gatewayPublication(configuration.libraryIdleStrategy());
+    }
+
+    public ClusterableSubscription inboundSubscription()
+    {
+        return inboundSubscription;
+    }
+
+    public GatewayPublication outboundPublication()
+    {
+        return outboundPublication;
+    }
+
+    private boolean isReconnect()
+    {
+        return inboundSubscription != null;
+    }
 }

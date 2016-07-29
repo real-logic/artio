@@ -523,8 +523,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             connectionType,
             sessionKey,
             receiverEndPoint,
-            senderEndPoint
-        );
+            senderEndPoint);
 
         receiverEndPoint.gatewaySession(gatewaySession);
 

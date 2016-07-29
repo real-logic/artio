@@ -19,14 +19,9 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.collections.Long2ObjectHashMap;
-import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.SystemEpochClock;
+import org.agrona.concurrent.*;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.fix_gateway.CommonConfiguration;
-import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.FixGatewayException;
-import uk.co.real_logic.fix_gateway.LivenessDetector;
+import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.*;
@@ -72,8 +67,11 @@ final class LibraryPoller
     private final IdleStrategy idleStrategy;
     private final SentPositionHandler sentPositionHandler;
     private final boolean enginesAreClustered;
+    private final FixCounters fixCounters;
 
     private final Long2ObjectHashMap<Reply<?>> correlationIdToReply = new Long2ObjectHashMap<>();
+    private final LibraryTransport transport;
+    private final FixLibrary fixLibrary;
 
     /** Correlation Id is initialised to a random number to reduce the chance of correlation id collision. */
     private long currentCorrelationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
@@ -86,8 +84,6 @@ final class LibraryPoller
     private ClusterableSubscription inboundSubscription;
     private GatewayPublication outboundPublication;
     private String currentAeronChannel;
-    private Streams inboundLibraryStreams;
-    private Streams outboundLibraryStreams;
 
     int poll(final int fragmentLimit)
     {
@@ -324,19 +320,22 @@ final class LibraryPoller
         }
     }
 
-    // ------------- End Public API -------------
-
-    private LibraryPoller(final LibraryConfiguration configuration)
+    LibraryPoller(
+        final LibraryConfiguration configuration,
+        final LibraryTimers timers,
+        final FixCounters fixCounters,
+        final LibraryTransport transport,
+        final FixLibrary fixLibrary)
     {
+        this.fixCounters = fixCounters;
+        this.transport = transport;
+        this.fixLibrary = fixLibrary;
+
         configuration.conclude();
 
-        // TODO: init(configuration);
         currentAeronChannel = configuration.libraryAeronChannels().get(0);
-
-        final LibraryTimers timers = new LibraryTimers();
         sessionTimer = timers.sessionTimer();
         receiveTimer = timers.receiveTimer();
-        // TODO: initMonitoringAgent(timers.all(), configuration);
 
         this.configuration = configuration;
         this.sessionIdStrategy = configuration.sessionIdStrategy();
@@ -348,36 +347,16 @@ final class LibraryPoller
         enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
     }
 
-    private void initStreams(final CommonConfiguration configuration)
-    {
-        // TODO:
-        /*final NanoClock nanoClock = new SystemNanoClock();
-        final ClusterableStreams soloNode = ClusterableStreams.solo(aeron, currentAeronChannel);
-        DebugLogger.log("Attempting connect to %s", currentAeronChannel);*/
-
-        /*inboundLibraryStreams = new Streams(
-            soloNode, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
-            configuration.inboundMaxClaimAttempts());
-        outboundLibraryStreams = new Streams(
-            soloNode, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
-            configuration.outboundMaxClaimAttempts());*/
-    }
-
-    private void connect()
+    void connect()
     {
         connect(configuration.reconnectAttempts());
     }
 
     private void connect(final int reconnectAttempts)
     {
-        initStreams(configuration);
-        if (isReconnect())
-        {
-            inboundSubscription.close();
-            outboundPublication.close();
-        }
-        inboundSubscription = inboundLibraryStreams.subscription();
-        outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy);
+        transport.initStreams(currentAeronChannel);
+        inboundSubscription = transport.inboundSubscription();
+        outboundPublication = transport.outboundPublication();
 
         livenessDetector = LivenessDetector.forLibrary(
             outboundPublication,
@@ -430,10 +409,7 @@ final class LibraryPoller
             if (errorType != null)
             {
                 connectError(errorType.toString());
-                return;
             }
-
-            // TODO: start();
         }
         catch (Exception e)
         {
@@ -450,11 +426,6 @@ final class LibraryPoller
 
             LangUtil.rethrowUnchecked(e);
         }
-    }
-
-    private boolean isReconnect()
-    {
-        return inboundSubscription != null;
     }
 
     private LibraryPoller connectError(final String message)
@@ -612,7 +583,7 @@ final class LibraryPoller
             else if (libraryId == GATEWAY_LIBRARY_ID || thisLibrary && status == LIBRARY_NOTIFICATION)
             {
                 sessionExistsHandler.onSessionExists(
-                    null, // TODO
+                    fixLibrary,
                     sessionId,
                     senderCompId,
                     senderSubId,
@@ -808,7 +779,7 @@ final class LibraryPoller
         final SessionConfiguration sessionConfiguration)
     {
         final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
-        final GatewayPublication publication = outboundLibraryStreams.gatewayPublication(idleStrategy);
+        final GatewayPublication publication = transport.outboundPublication();
 
         final SessionProxy sessionProxy = sessionProxy(connectionId);
         if (sessionConfiguration != null)
@@ -827,13 +798,12 @@ final class LibraryPoller
             publication,
             sessionIdStrategy,
             configuration.sendingTimeWindowInMs(),
-            null,
-            null,
-            // TODO: fixCounters.receivedMsgSeqNo(connectionId),
-            // TODO: fixCounters.sentMsgSeqNo(connectionId),
+            fixCounters.receivedMsgSeqNo(connectionId),
+            fixCounters.sentMsgSeqNo(connectionId),
             libraryId,
             configuration.sessionBufferSize(),
-            initiatorInitialSequenceNumber(sessionConfiguration, lastSequenceNumber), state)
+            initiatorInitialSequenceNumber(sessionConfiguration, lastSequenceNumber),
+            state)
             .lastReceivedMsgSeqNum(
                 initiatorInitialSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
     }
@@ -864,14 +834,14 @@ final class LibraryPoller
                                   final SessionState state,
                                   final int heartbeatIntervalInS)
     {
-        final GatewayPublication publication = outboundLibraryStreams.gatewayPublication(idleStrategy);
+        final GatewayPublication publication = transport.outboundPublication();
         final int split = address.lastIndexOf(':');
         final int start = address.startsWith("/") ? 1 : 0;
         final String host = address.substring(start, split);
         final int port = Integer.parseInt(address.substring(split + 1));
         final long sendingTimeWindow = configuration.sendingTimeWindowInMs();
-        final AtomicCounter receivedMsgSeqNo = null; // TODO: fixCounters.receivedMsgSeqNo(connectionId);
-        final AtomicCounter sentMsgSeqNo = null; // TODO: fixCounters.sentMsgSeqNo(connectionId);
+        final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
+        final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final int sessionBufferSize = configuration.sessionBufferSize();
 
         return new AcceptorSession(
@@ -895,7 +865,7 @@ final class LibraryPoller
     {
         return new SessionProxy(
             configuration.encoderBufferSize(),
-            outboundLibraryStreams.gatewayPublication(idleStrategy),
+            transport.outboundPublication(),
             sessionIdStrategy,
             configuration.sessionCustomisationStrategy(),
             new SystemEpochClock(),
