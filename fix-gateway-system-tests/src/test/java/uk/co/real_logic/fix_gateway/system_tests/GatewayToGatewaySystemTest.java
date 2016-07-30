@@ -55,7 +55,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
 
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
 
         connectSessions();
     }
@@ -159,7 +159,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final FakeOtfAcceptor initiatingOtfAcceptor2 = new FakeOtfAcceptor();
         final FakeHandler initiatingSessionHandler2 = new FakeHandler(initiatingOtfAcceptor2);
-        try (final FixLibrary library2 = newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2, 2))
+        try (final FixLibrary library2 = newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2))
         {
             acceptingHandler.clearConnections();
             final Session session2 = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID).resultIfPresent();
@@ -363,8 +363,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FakeOtfAcceptor otfAcceptor2 = new FakeOtfAcceptor();
         final FakeHandler handler2 = new FakeHandler(otfAcceptor2);
         try (final FixLibrary library2 = FixLibrary.connect(
-            acceptingLibraryConfig(handler2, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor-2", IPC_CHANNEL)
-                .libraryId(2)))
+            acceptingLibraryConfig(handler2, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor-2", IPC_CHANNEL)))
         {
             while (!handler2.hasSession())
             {

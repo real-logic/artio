@@ -39,7 +39,7 @@ public class LibraryDisconnectTest extends AbstractGatewayToGatewaySystemTest
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
 
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
 
         wireSessions();
     }

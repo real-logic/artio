@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
@@ -35,7 +36,6 @@ public final class LibraryConfiguration extends CommonConfiguration
 {
 
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
-    public static final int DEFAULT_LIBRARY_ID = 1;
     public static final GatewayErrorHandler DEFAULT_GATEWAY_ERROR_HANDLER =
         (errorType, libraryId, message) -> CONTINUE;
     public static final int DEFAULT_RECONNECT_ATTEMPTS = 10;
@@ -45,10 +45,10 @@ public final class LibraryConfiguration extends CommonConfiguration
         {
         };
 
+    private final int libraryId = ThreadLocalRandom.current().nextInt();
+
     private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
     private SessionAcquireHandler sessionAcquireHandler;
-
-    private int libraryId = DEFAULT_LIBRARY_ID;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
     private SessionExistsHandler sessionExistsHandler = DEFAULT_SESSION_EXISTS_HANDLER;
     private GatewayErrorHandler gatewayErrorHandler = DEFAULT_GATEWAY_ERROR_HANDLER;
@@ -81,24 +81,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConfiguration encoderBufferSize(final int encoderBufferSize)
     {
         this.encoderBufferSize = encoderBufferSize;
-        return this;
-    }
-
-    /**
-     * Sets the identifier for this library instance. The identifier should be unique amongst the libraries that
-     * are connected to this gateway.
-     *
-     * @param libraryId the identifier for this library instance
-     * @return this
-     */
-    public LibraryConfiguration libraryId(final int libraryId)
-    {
-        if (libraryId < DEFAULT_LIBRARY_ID)
-        {
-            throw new IllegalArgumentException(
-                String.format("Your Library Id was %d, Ids below %d are reserved.", libraryId, DEFAULT_LIBRARY_ID));
-        }
-        this.libraryId = libraryId;
         return this;
     }
 

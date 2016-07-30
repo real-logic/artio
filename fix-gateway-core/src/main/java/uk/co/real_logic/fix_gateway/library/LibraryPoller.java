@@ -55,8 +55,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
     private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
-    private final int libraryId = ThreadLocalRandom.current().nextInt();
 
+    private final int libraryId;
     private final EpochClock clock;
     private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
@@ -191,11 +191,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         final LibraryTransport transport,
         final FixLibrary fixLibrary)
     {
+        this.libraryId = configuration.libraryId();
         this.fixCounters = fixCounters;
         this.transport = transport;
         this.fixLibrary = fixLibrary;
-
-        configuration.conclude();
 
         currentAeronChannel = configuration.libraryAeronChannels().get(0);
         sessionTimer = timers.sessionTimer();

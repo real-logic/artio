@@ -92,7 +92,6 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         return handler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
     }
 
-
     private Action onLibraryConnect(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
     {

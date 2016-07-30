@@ -17,15 +17,11 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
-import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
 import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.FixGatewayException;
-import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
@@ -34,7 +30,6 @@ import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
@@ -45,7 +40,6 @@ import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.fix_gateway.library.LibraryConfiguration.DEFAULT_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasFluentProperty;
 
@@ -96,22 +90,6 @@ public class EngineAndLibraryIntegrationTest
         assertHasLibraries(matchesLibrary(library.libraryId()));
     }
 
-    @Ignore // TODO: rewrite as unit test on LibraryPoller now we randomise library id
-    @Test(expected = FixGatewayException.class)
-    public void librariesShouldNotBeAbleToConnectUntilTheyHaveTimedOut()
-    {
-        engine.close();
-        launchEngine(LONG_TIMEOUT_IN_MS);
-
-        library = connectLibrary();
-
-        awaitLibraryConnect(library);
-
-        library.close();
-
-        library2 = connectLibrary();
-    }
-
     @Test
     public void engineDetectsLibraryDisconnect()
     {
@@ -126,11 +104,7 @@ public class EngineAndLibraryIntegrationTest
     @Test
     public void engineDetectsMultipleLibraryInstances()
     {
-        library = connectLibrary(2);
-        awaitLibraryConnect(library);
-
-        library2 = connectLibrary(3);
-        awaitLibraryConnect(library2);
+        setupTwoLibraries();
 
         assertHasLibraries(
             matchesLibrary(library.libraryId()),
@@ -145,11 +119,7 @@ public class EngineAndLibraryIntegrationTest
 
     private FixLibrary setupTwoLibrariesAndCloseTheFirst()
     {
-        library = connectLibrary(2);
-        awaitLibraryConnect(library);
-
-        library2 = connectLibrary(3);
-        awaitLibraryConnect(library2);
+        setupTwoLibraries();
 
         library.close();
 
@@ -158,6 +128,15 @@ public class EngineAndLibraryIntegrationTest
         assertHasLibraries(matchesLibrary(library2.libraryId()));
 
         return library2;
+    }
+
+    private void setupTwoLibraries()
+    {
+        library = connectLibrary();
+        awaitLibraryConnect(library);
+
+        library2 = connectLibrary();
+        awaitLibraryConnect(library2);
     }
 
     @Test
@@ -187,14 +166,10 @@ public class EngineAndLibraryIntegrationTest
             1);
     }
 
-    @Ignore // TODO: move to unit test of the Framer
-    @Test(expected = FixGatewayException.class)
-    public void refuseDuplicateLibraryId()
-    {
-        library = connectLibrary(2);
+    // TODO: rewrite librariesShouldNotBeAbleToConnectUntilTheyHaveTimedOut as
+    // unit test on LibraryPoller now we randomise library id
 
-        library2 = connectLibrary(2);
-    }
+    // TODO: move refuseDuplicateLibraryId to unit test of the Framer
 
     private Matcher<LibraryInfo> matchesLibrary(final int libraryId)
     {
@@ -215,28 +190,17 @@ public class EngineAndLibraryIntegrationTest
 
     private FixLibrary connectLibrary()
     {
-        return connectLibrary(DEFAULT_LIBRARY_ID);
-    }
-
-    private FixLibrary connectLibrary(final int libraryId)
-    {
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(ACCEPTOR_ID)
             .and(MessageValidationStrategy.senderCompId(Arrays.asList(INITIATOR_ID, INITIATOR_ID2)));
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
-        // Force multiple libraries with the same id to use different monitoring files
-        final String monitoringFile = IoUtil.tmpDirName() + "fix-acceptor-" + libraryId + "-" +
-                TestFixtures.unusedPort() + File.separator + "accLibraryCounters";
-
         final LibraryConfiguration config = new LibraryConfiguration();
         config
             .sessionAcquireHandler(sessionHandler)
-            .libraryId(libraryId)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .authenticationStrategy(authenticationStrategy)
             .messageValidationStrategy(validationStrategy)
-            .monitoringFile(monitoringFile)
             .replyTimeoutInMs(TIMEOUT_IN_MS);
 
         return FixLibrary.connect(config);

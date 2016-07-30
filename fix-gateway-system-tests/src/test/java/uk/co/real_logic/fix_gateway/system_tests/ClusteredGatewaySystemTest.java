@@ -106,7 +106,7 @@ public class ClusteredGatewaySystemTest
 
         assertNotNull("Unable to connect to any cluster members", acceptingLibrary);
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
     }
 
     private Optional<FixEngineRunner> findNewLeader()

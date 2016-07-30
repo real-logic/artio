@@ -43,7 +43,7 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
         final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
         acceptingEngine = FixEngine.launch(config);
 
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler, 1);
+        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
     }
 

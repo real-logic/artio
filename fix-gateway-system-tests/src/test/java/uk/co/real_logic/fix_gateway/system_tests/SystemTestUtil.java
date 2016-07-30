@@ -296,16 +296,17 @@ public final class SystemTestUtil
 
     public static FixLibrary newInitiatingLibrary(
         final int libraryAeronPort,
-        final FakeHandler sessionHandler,
-        final int libraryId)
+        final FakeHandler sessionHandler)
     {
-        return FixLibrary.connect(
-            new LibraryConfiguration()
-                .libraryId(libraryId)
-                .sessionAcquireHandler(sessionHandler)
-                .sentPositionHandler(sessionHandler)
-                .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort))
-                .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters-" + libraryId));
+        final LibraryConfiguration configuration = new LibraryConfiguration()
+            .sessionAcquireHandler(sessionHandler)
+            .sentPositionHandler(sessionHandler)
+            .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort));
+
+        configuration.monitoringFile(
+            IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters-" + configuration.libraryId());
+
+        return FixLibrary.connect(configuration);
     }
 
     public static FixLibrary newAcceptingLibrary(final FakeHandler sessionHandler)

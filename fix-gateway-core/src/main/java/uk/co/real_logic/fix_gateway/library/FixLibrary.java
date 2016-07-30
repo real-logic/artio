@@ -43,6 +43,8 @@ public final class FixLibrary extends GatewayProcess
 
     private FixLibrary(final LibraryConfiguration configuration)
     {
+        configuration.conclude();
+
         init(configuration);
         final LibraryTimers timers = new LibraryTimers();
         initMonitoringAgent(timers.all(), configuration);
