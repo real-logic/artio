@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.library;
 
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.collections.Long2ObjectHashMap;
@@ -54,6 +55,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
     private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
+    private final int libraryId = ThreadLocalRandom.current().nextInt();
 
     private final EpochClock clock;
     private final LibraryConfiguration configuration;
@@ -61,7 +63,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
     private final Timer sessionTimer;
     private final Timer receiveTimer;
     private final SessionExistsHandler sessionExistsHandler;
-    private final int libraryId;
     private final IdleStrategy idleStrategy;
     private final SentPositionHandler sentPositionHandler;
     private final boolean enginesAreClustered;
@@ -173,7 +174,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
             configuration.initialSequenceNumber(),
             configuration.username(),
             configuration.password(),
-            LibraryPoller.this.configuration.defaultHeartbeatIntervalInS(),
+            this.configuration.defaultHeartbeatIntervalInS(),
             correlationId);
     }
 
@@ -202,7 +203,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
 
         this.configuration = configuration;
         this.sessionIdStrategy = configuration.sessionIdStrategy();
-        this.libraryId = configuration.libraryId();
         sessionExistsHandler = configuration.sessionExistsHandler();
         idleStrategy = configuration.libraryIdleStrategy();
         sentPositionHandler = configuration.sentPositionHandler();
@@ -223,7 +223,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
 
         livenessDetector = LivenessDetector.forLibrary(
             outboundPublication,
-            configuration.libraryId(),
+            libraryId,
             configuration.replyTimeoutInMs());
 
         try
@@ -360,7 +360,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
-    public ControlledFragmentHandler.Action onManageConnection(
+    public Action onManageConnection(
         final int libraryId,
         final long connectionId,
         final long sessionId,
@@ -374,7 +374,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         final int heartbeatIntervalInS,
         final long replyToId)
     {
-        if (libraryId == LibraryPoller.this.libraryId)
+        if (libraryId == this.libraryId)
         {
             if (type == INITIATOR)
             {
@@ -404,7 +404,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    public ControlledFragmentHandler.Action onLogon(
+    public Action onLogon(
         final int libraryId,
         final long connectionId,
         final long sessionId,
@@ -418,7 +418,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         final String username,
         final String password)
     {
-        final boolean thisLibrary = libraryId == LibraryPoller.this.libraryId;
+        final boolean thisLibrary = libraryId == this.libraryId;
         if (thisLibrary && status == LogonStatus.NEW)
         {
             DebugLogger.log("Library Logon: %d, %d\n", connectionId, sessionId);
@@ -467,7 +467,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         return state == ACTIVE ? 1 : 0;
     }
 
-    public ControlledFragmentHandler.Action onMessage(
+    public Action onMessage(
         final DirectBuffer buffer,
         final int offset,
         final int length,
@@ -478,7 +478,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         final long timestamp,
         final long position)
     {
-        if (libraryId == LibraryPoller.this.libraryId)
+        if (libraryId == this.libraryId)
         {
             DebugLogger.log("Received %s\n", buffer, offset, length);
             DebugLogger.log("(%d)\n", libraryId);
@@ -493,16 +493,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    public ControlledFragmentHandler.Action onDisconnect(
+    public Action onDisconnect(
         final int libraryId, final long connectionId, final DisconnectReason reason)
     {
-        if (libraryId == LibraryPoller.this.libraryId)
+        if (libraryId == this.libraryId)
         {
             final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
             DebugLogger.log("Library Disconnect %d, %s\n", connectionId, reason);
             if (subscriber != null)
             {
-                final ControlledFragmentHandler.Action action = subscriber.onDisconnect(libraryId, reason);
+                final Action action = subscriber.onDisconnect(libraryId, reason);
                 if (action != ABORT)
                 {
                     final Session session = subscriber.session();
@@ -515,10 +515,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    public ControlledFragmentHandler.Action onError(
+    public Action onError(
         final GatewayError errorType, final int libraryId, final long replyToId, final String message)
     {
-        if (libraryId == LibraryPoller.this.libraryId)
+        if (libraryId == this.libraryId)
         {
             final Reply<?> reply = correlationIdToReply.remove(replyToId);
             if (reply != null)
@@ -527,17 +527,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
             }
             else
             {
-                LibraryPoller.this.errorType = errorType;
-                LibraryPoller.this.errorMessage = message;
+                this.errorType = errorType;
+                this.errorMessage = message;
             }
         }
 
         return configuration.gatewayErrorHandler().onError(errorType, libraryId, message);
     }
 
-    public ControlledFragmentHandler.Action onApplicationHeartbeat(final int libraryId)
+    public Action onApplicationHeartbeat(final int libraryId)
     {
-        if (libraryId == LibraryPoller.this.libraryId)
+        if (libraryId == this.libraryId)
         {
             livenessDetector.onHeartbeat(clock.time());
         }
@@ -545,7 +545,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    public ControlledFragmentHandler.Action onReleaseSessionReply(final long correlationId, final SessionReplyStatus status)
+    public Action onReleaseSessionReply(final long correlationId, final SessionReplyStatus status)
     {
         final ReleaseToGatewayReply reply =
             (ReleaseToGatewayReply) correlationIdToReply.remove(correlationId);
@@ -557,7 +557,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    public ControlledFragmentHandler.Action onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
+    public Action onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
     {
         final RequestSessionReply reply =
             (RequestSessionReply) correlationIdToReply.remove(correlationId);
@@ -569,9 +569,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    public ControlledFragmentHandler.Action onCatchup(final int libraryId, final long connectionId, final int messageCount)
+    public Action onCatchup(final int libraryId, final long connectionId, final int messageCount)
     {
-        if (LibraryPoller.this.libraryId == libraryId)
+        if (this.libraryId == libraryId)
         {
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)
@@ -583,9 +583,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    public ControlledFragmentHandler.Action onNewSentPosition(final int libraryId, final long position)
+    public Action onNewSentPosition(final int libraryId, final long position)
     {
-        if (LibraryPoller.this.libraryId == libraryId)
+        if (this.libraryId == libraryId)
         {
             return sentPositionHandler.onSendCompleted(position);
         }
@@ -593,7 +593,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    public ControlledFragmentHandler.Action onNotLeader(final int libraryId, final String libraryChannel)
+    public Action onNotLeader(final int libraryId, final String libraryChannel)
     {
         if (libraryChannel.isEmpty())
         {

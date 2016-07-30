@@ -24,7 +24,7 @@
     </types>
     <types>
         <type name="FixSessionId" primitiveType="int64"/>
-        <type name="LibraryId" primitiveType="uint16"/>
+        <type name="LibraryId" primitiveType="int32"/>
         <type name="ConnectionId" primitiveType="int64"/>
         <type name="CorrelationId" primitiveType="int64"/>
         <type name="TermId" primitiveType="int32"/>
