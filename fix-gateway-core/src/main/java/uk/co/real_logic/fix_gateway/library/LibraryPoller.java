@@ -46,7 +46,6 @@ import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
-import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNECT;
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
@@ -123,201 +122,68 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
     {
         requireNonNull(configuration, "configuration");
 
-        return new InitiateSessionReply(latestReplyArrivalTime(), configuration);
+        return new InitiateSessionReply(this, latestReplyArrivalTime(), configuration);
     }
 
     Reply<SessionReplyStatus> releaseToGateway(final Session session)
     {
         requireNonNull(session, "session");
 
-        return new ReleaseToGatewayReply(latestReplyArrivalTime(), session);
+        return new ReleaseToGatewayReply(this, latestReplyArrivalTime(), session);
     }
 
     Reply<SessionReplyStatus> requestSession(final long sessionId, final int lastReceivedSequenceNumber)
     {
-        return new RequestSessionReply(latestReplyArrivalTime(), sessionId, lastReceivedSequenceNumber);
+        return new RequestSessionReply(this, latestReplyArrivalTime(), sessionId, lastReceivedSequenceNumber);
     }
 
     // ------------- Reply Implementation Classes ------------
 
-    private class InitiateSessionReply extends Reply<Session>
+    boolean removeSession(final Session session)
     {
-        private final SessionConfiguration configuration;
-
-        private int addressIndex = 0;
-        private long correlationId;
-        private boolean requiresResend;
-
-        InitiateSessionReply(
-            final long latestReplyArrivalTime,
-            final SessionConfiguration configuration)
-        {
-            super(latestReplyArrivalTime);
-            this.configuration = configuration;
-            correlationId = register(this);
-            sendMessage();
-        }
-
-        private void sendMessage()
-        {
-            final List<String> hosts = configuration.hosts();
-            final List<Integer> ports = configuration.ports();
-            final int size = hosts.size();
-            if (addressIndex >= size)
-            {
-                onError(new FixGatewayException("Unable to connect to any of the addresses specified"));
-                return;
-            }
-
-            final String host = hosts.get(addressIndex);
-            final int port = ports.get(addressIndex);
-
-            final long position = outboundPublication.saveInitiateConnection(
-                libraryId,
-                host,
-                port,
-                configuration.senderCompId(),
-                configuration.senderSubId(),
-                configuration.senderLocationId(),
-                configuration.targetCompId(),
-                configuration.sequenceNumberType(),
-                configuration.initialSequenceNumber(),
-                configuration.username(),
-                configuration.password(),
-                LibraryPoller.this.configuration.defaultHeartbeatIntervalInS(),
-                correlationId);
-
-            requiresResend = position < 0;
-        }
-
-        void onError(final GatewayError errorType, final String errorMessage)
-        {
-            if (errorType == UNABLE_TO_CONNECT)
-            {
-                addressIndex++;
-                correlationId = register(this);
-                sendMessage();
-            }
-            else
-            {
-                onError(new FixGatewayException(String.format("%s: %s", errorType, errorMessage)));
-            }
-        }
-
-        void onComplete(final Session result)
-        {
-            result.address(configuration.hosts().get(addressIndex), configuration.ports().get(addressIndex));
-            super.onComplete(result);
-        }
-
-        boolean poll(final long timeInMs)
-        {
-            if (requiresResend)
-            {
-                sendMessage();
-            }
-
-            return super.poll(timeInMs);
-        }
+        return sessions.remove(session);
     }
 
-    private class ReleaseToGatewayReply extends Reply<SessionReplyStatus>
+    long saveReleaseSession(final Session session, final long correlationId)
     {
-        private final long correlationId;
-        private final Session session;
-
-        private boolean requiresResend;
-
-        ReleaseToGatewayReply(final long latestReplyArrivalTime, final Session session)
-        {
-            super(latestReplyArrivalTime);
-            this.session = session;
-            correlationId = register(this);
-            sendMessage();
-        }
-
-        private void sendMessage()
-        {
-            final long position = outboundPublication.saveReleaseSession(
-                libraryId,
-                session.connectionId(),
-                correlationId,
-                session.state(),
-                session.heartbeatIntervalInMs(),
-                session.lastSentMsgSeqNum(),
-                session.lastReceivedMsgSeqNum(),
-                session.username(),
-                session.password());
-
-            requiresResend = position < 0;
-        }
-
-        void onComplete(final SessionReplyStatus result)
-        {
-            if (result == SessionReplyStatus.OK)
-            {
-                sessions.remove(session);
-                session.disable();
-            }
-
-            super.onComplete(result);
-        }
-
-        void onError(final GatewayError errorType, final String errorMessage)
-        {
-        }
-
-        boolean poll(final long timeInMs)
-        {
-            if (requiresResend)
-            {
-                sendMessage();
-            }
-
-            return super.poll(timeInMs);
-        }
+        return outboundPublication.saveReleaseSession(
+            libraryId,
+            session.connectionId(),
+            correlationId,
+            session.state(),
+            session.heartbeatIntervalInMs(),
+            session.lastSentMsgSeqNum(),
+            session.lastReceivedMsgSeqNum(),
+            session.username(),
+            session.password());
     }
 
-    private class RequestSessionReply extends Reply<SessionReplyStatus>
+    long saveInitiateConnection(
+        final String host,
+        final int port,
+        final long correlationId,
+        final SessionConfiguration configuration)
     {
-        private final long sessionId;
-        private final int lastReceivedSequenceNumber;
-        private final long correlationId;
+        return outboundPublication.saveInitiateConnection(
+            libraryId,
+            host,
+            port,
+            configuration.senderCompId(),
+            configuration.senderSubId(),
+            configuration.senderLocationId(),
+            configuration.targetCompId(),
+            configuration.sequenceNumberType(),
+            configuration.initialSequenceNumber(),
+            configuration.username(),
+            configuration.password(),
+            LibraryPoller.this.configuration.defaultHeartbeatIntervalInS(),
+            correlationId);
+    }
 
-        private boolean requiresResend;
-
-        RequestSessionReply(final long latestReplyArrivalTime,
-                            final long sessionId,
-                            final int lastReceivedSequenceNumber)
-        {
-            super(latestReplyArrivalTime);
-            this.sessionId = sessionId;
-            this.lastReceivedSequenceNumber = lastReceivedSequenceNumber;
-            correlationId = register(this);
-            sendMessage();
-        }
-
-        private void sendMessage()
-        {
-            final long position = outboundPublication.saveRequestSession(
-                libraryId, sessionId, correlationId, lastReceivedSequenceNumber);
-
-            requiresResend = position < 0;
-        }
-
-        void onError(final GatewayError errorType, final String errorMessage)
-        {
-        }
-
-        boolean poll(final long timeInMs)
-        {
-            if (requiresResend)
-            {
-                sendMessage();
-            }
-
-            return super.poll(timeInMs);
-        }
+    long saveRequestSession(final long sessionId, final long correlationId, final int lastReceivedSequenceNumber)
+    {
+        return outboundPublication.saveRequestSession(
+            libraryId, sessionId, correlationId, lastReceivedSequenceNumber);
     }
 
     LibraryPoller(
@@ -485,7 +351,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         return total;
     }
 
-    private long register(final Reply<?> reply)
+    long register(final Reply<?> reply)
     {
         final long correlationId = ++currentCorrelationId;
         correlationIdToReply.put(correlationId, reply);
@@ -516,12 +382,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
             if (type == INITIATOR)
             {
                 DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
-                final boolean isInitiator = correlationIdToReply.get(replyToId) instanceof LibraryPoller.InitiateSessionReply;
-                final LibraryPoller.InitiateSessionReply reply =
-                    isInitiator ? (LibraryPoller.InitiateSessionReply) correlationIdToReply.remove(replyToId) : null;
+                final boolean isInitiator = correlationIdToReply.get(replyToId) instanceof InitiateSessionReply;
+                final InitiateSessionReply reply =
+                    isInitiator ? (InitiateSessionReply) correlationIdToReply.remove(replyToId) : null;
                 final Session session = initiateSession(
                     connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state,
-                    isInitiator ? reply.configuration : null);
+                    isInitiator ? reply.configuration() : null);
                 newSession(connectionId, sessionId, session);
                 if (isInitiator)
                 {
@@ -684,8 +550,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
 
     public ControlledFragmentHandler.Action onReleaseSessionReply(final long correlationId, final SessionReplyStatus status)
     {
-        final LibraryPoller.ReleaseToGatewayReply reply =
-            (LibraryPoller.ReleaseToGatewayReply) correlationIdToReply.remove(correlationId);
+        final ReleaseToGatewayReply reply =
+            (ReleaseToGatewayReply) correlationIdToReply.remove(correlationId);
         if (reply != null)
         {
             reply.onComplete(status);
@@ -696,8 +562,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
 
     public ControlledFragmentHandler.Action onRequestSessionReply(final long correlationId, final SessionReplyStatus status)
     {
-        final LibraryPoller.RequestSessionReply reply =
-            (LibraryPoller.RequestSessionReply) correlationIdToReply.remove(correlationId);
+        final RequestSessionReply reply =
+            (RequestSessionReply) correlationIdToReply.remove(correlationId);
         if (reply != null)
         {
             reply.onComplete(status);
