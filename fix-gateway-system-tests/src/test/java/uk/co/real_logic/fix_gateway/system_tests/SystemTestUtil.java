@@ -303,9 +303,6 @@ public final class SystemTestUtil
             .sentPositionHandler(sessionHandler)
             .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort));
 
-        configuration.monitoringFile(
-            IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters-" + configuration.libraryId());
-
         return FixLibrary.connect(configuration);
     }
 
