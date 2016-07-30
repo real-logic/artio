@@ -536,7 +536,7 @@ public class GatewayPublication extends ClaimablePublication
     }
 
     public long saveLibraryConnect(
-        final int libraryId, final long correlationId, final int uniqueValue)
+        final int libraryId, final long correlationId)
     {
         final long position = claim(LIBRARY_CONNECT_LENGTH);
         if (position < 0)
@@ -559,8 +559,7 @@ public class GatewayPublication extends ClaimablePublication
         libraryConnect
             .wrap(buffer, offset)
             .libraryId(libraryId)
-            .correlationId(correlationId)
-            .uniqueValue(uniqueValue);
+            .correlationId(correlationId);
 
         bufferClaim.commit();
 

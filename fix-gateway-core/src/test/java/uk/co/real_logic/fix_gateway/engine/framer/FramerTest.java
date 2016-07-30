@@ -416,7 +416,7 @@ public class FramerTest
 
     private Action onLibraryConnect()
     {
-        return framer.onLibraryConnect(LIBRARY_ID, CORR_ID, 1, 1);
+        return framer.onLibraryConnect(LIBRARY_ID, CORR_ID, 1);
     }
 
     private void givenAGatewayToManage()

@@ -24,7 +24,6 @@ public interface EngineEndPointHandler
 {
     Action onLibraryConnect(final int libraryId,
                             final long correlationId,
-                            final int uniqueValue,
                             final int aeronSessionId);
 
     Action onInitiateConnection(

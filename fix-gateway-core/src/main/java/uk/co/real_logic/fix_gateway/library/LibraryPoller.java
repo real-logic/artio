@@ -54,7 +54,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
     private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
-    private final int uniqueValue = ThreadLocalRandom.current().nextInt();
 
     private final EpochClock clock;
     private final LibraryConfiguration configuration;
@@ -136,8 +135,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
     {
         return new RequestSessionReply(this, latestReplyArrivalTime(), sessionId, lastReceivedSequenceNumber);
     }
-
-    // ------------- Reply Implementation Classes ------------
 
     boolean removeSession(final Session session)
     {
@@ -330,7 +327,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
     private void sendLibraryConnect()
     {
         final long correlationId = ++currentCorrelationId;
-        while (outboundPublication.saveLibraryConnect(libraryId, correlationId, uniqueValue) < 0)
+        while (outboundPublication.saveLibraryConnect(libraryId, correlationId) < 0)
         {
             idleStrategy.idle();
         }

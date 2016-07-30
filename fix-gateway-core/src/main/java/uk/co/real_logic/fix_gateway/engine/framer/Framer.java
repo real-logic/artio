@@ -554,7 +554,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public Action onLibraryConnect(final int libraryId,
                                    final long correlationId,
-                                   final int uniqueValue,
                                    final int aeronSessionId)
     {
         final Action action = retryManager.retry(correlationId);
@@ -567,10 +566,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (existingLibrary != null)
         {
             // Check that they are genuinely different, otherwise ignore the re-send
-            if (existingLibrary.uniqueValue() != uniqueValue)
-            {
-                saveError(DUPLICATE_LIBRARY_ID, libraryId, correlationId);
-            }
+            saveError(DUPLICATE_LIBRARY_ID, libraryId, correlationId);
 
             return CONTINUE;
         }
@@ -581,7 +577,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             configuration.replyTimeoutInMs(),
             clock.time());
 
-        final LibraryInfo library = new LibraryInfo(libraryId, livenessDetector, aeronSessionId, uniqueValue);
+        final LibraryInfo library = new LibraryInfo(libraryId, livenessDetector, aeronSessionId);
         idToLibrary.put(libraryId, library);
 
         final Transaction transaction = new Transaction(

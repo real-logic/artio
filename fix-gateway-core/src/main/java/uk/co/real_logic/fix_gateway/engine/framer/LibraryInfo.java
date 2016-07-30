@@ -33,17 +33,14 @@ public final class LibraryInfo
     private final int aeronSessionId;
     private final List<GatewaySession> allSessions = new CopyOnWriteArrayList<>();
     private final List<SessionInfo> unmodifiableAllSessions = unmodifiableList(allSessions);
-    private final int uniqueValue;
 
     LibraryInfo(final int libraryId,
                 final LivenessDetector livenessDetector,
-                final int aeronSessionId,
-                final int uniqueValue)
+                final int aeronSessionId)
     {
         this.libraryId = libraryId;
         this.livenessDetector = livenessDetector;
         this.aeronSessionId = aeronSessionId;
-        this.uniqueValue = uniqueValue;
     }
 
     /**
@@ -107,10 +104,5 @@ public final class LibraryInfo
     GatewaySession removeSession(final long connectionId)
     {
         return GatewaySessions.removeSessionByConn(connectionId, allSessions);
-    }
-
-    int uniqueValue()
-    {
-        return uniqueValue;
     }
 }
