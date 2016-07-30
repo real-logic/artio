@@ -166,11 +166,6 @@ public class EngineAndLibraryIntegrationTest
             1);
     }
 
-    // TODO: rewrite librariesShouldNotBeAbleToConnectUntilTheyHaveTimedOut as
-    // unit test on LibraryPoller now we randomise library id
-
-    // TODO: move refuseDuplicateLibraryId to unit test of the Framer
-
     private Matcher<LibraryInfo> matchesLibrary(final int libraryId)
     {
         return hasFluentProperty("libraryId", is(libraryId));

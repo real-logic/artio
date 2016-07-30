@@ -24,6 +24,8 @@ import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+
 public final class BenchmarkSessionHandler implements SessionHandler
 {
     private final AsciiBuffer flyweight = new MutableAsciiBuffer();
@@ -42,14 +44,20 @@ public final class BenchmarkSessionHandler implements SessionHandler
         //flyweight.wrap(buffer);
         //System.out.printf("Received Message: ");
         //System.out.println(printer.toString(flyweight, offset, length, messageType));
-        return Action.CONTINUE;
+        return CONTINUE;
+    }
+
+    @Override
+    public Action onTimeout(final int libraryId, final long sessionId)
+    {
+        return CONTINUE;
     }
 
     public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
     {
         System.out.printf("%d disconnected\n", sessionId);
 
-        return Action.CONTINUE;
+        return CONTINUE;
     }
 
 }

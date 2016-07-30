@@ -25,6 +25,8 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+
 public class SampleSessionHandler implements SessionHandler
 {
 
@@ -48,12 +50,18 @@ public class SampleSessionHandler implements SessionHandler
         string.wrap(buffer);
         System.out.printf("%d -> %s\n", sessionId, printer.toString(string, offset, length, messageType));
 
-        return Action.CONTINUE;
+        return CONTINUE;
+    }
+
+    @Override
+    public Action onTimeout(final int libraryId, final long sessionId)
+    {
+        return CONTINUE;
     }
 
     public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
     {
         System.out.printf("%d Disconnected: %s\n", sessionId, reason);
-        return Action.CONTINUE;
+        return CONTINUE;
     }
 }

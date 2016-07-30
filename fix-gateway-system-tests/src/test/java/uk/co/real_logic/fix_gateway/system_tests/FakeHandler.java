@@ -28,6 +28,7 @@ import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertNotEquals;
 
 public class FakeHandler implements SessionHandler, SessionAcquireHandler, SessionExistsHandler, SentPositionHandler
@@ -62,14 +63,20 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
     {
         parser.onMessage(buffer, offset, length);
         acceptor.forSession(connectionIdToSession.get(sessionId));
-        return Action.CONTINUE;
+        return CONTINUE;
+    }
+
+    @Override
+    public Action onTimeout(final int libraryId, final long sessionId)
+    {
+        return CONTINUE;
     }
 
     public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
     {
         connectionIdToSession.remove(sessionId);
         hasDisconnected = true;
-        return Action.CONTINUE;
+        return CONTINUE;
     }
 
     public SessionHandler onSessionAcquired(final Session session)
@@ -118,7 +125,7 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
     public Action onSendCompleted(final long position)
     {
         this.sentPosition = position;
-        return Action.CONTINUE;
+        return CONTINUE;
     }
 
     public long sentPosition()

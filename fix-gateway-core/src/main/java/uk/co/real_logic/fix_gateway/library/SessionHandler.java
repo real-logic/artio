@@ -35,5 +35,7 @@ public interface SessionHandler
         final long timestamp,
         final long position);
 
+    Action onTimeout(final int libraryId, final long sessionId);
+
     Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason);
 }
