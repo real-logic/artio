@@ -23,7 +23,10 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.messages.ControlNotificationEncoder.SessionsEncoder;
 import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
+
+import java.util.List;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.DebugLogger.logSbeMessage;
@@ -70,6 +73,7 @@ public class GatewayPublication extends ClaimablePublication
     private final NewSentPositionEncoder newSentPosition = new NewSentPositionEncoder();
     private final ResetSessionIdsEncoder resetSessionIds = new ResetSessionIdsEncoder();
     private final NotLeaderEncoder notLeader = new NotLeaderEncoder();
+    private final ControlNotificationEncoder controlNotification = new ControlNotificationEncoder();
 
     private final NanoClock nanoClock;
 
@@ -817,6 +821,49 @@ public class GatewayPublication extends ClaimablePublication
             .wrap(buffer, offset)
             .libraryId(libraryId)
             .position(sentPosition);
+
+        bufferClaim.commit();
+
+        logSbeMessage(buffer, bufferClaim.offset());
+
+        return position;
+    }
+
+    public long saveControlNotification(
+        final int libraryId, final List<SessionInfo> sessions)
+    {
+        final int sessionsCount = sessions.size();
+        final long position = claim(
+            ControlNotificationEncoder.BLOCK_LENGTH +
+                sessionsCount * SessionsEncoder.sbeBlockLength() + HEADER_LENGTH);
+
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(controlNotification.sbeBlockLength())
+            .templateId(controlNotification.sbeTemplateId())
+            .schemaId(controlNotification.sbeSchemaId())
+            .version(controlNotification.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        controlNotification
+            .wrap(buffer, offset)
+            .libraryId(libraryId);
+
+        final SessionsEncoder sessionsEncoder = controlNotification.sessionsCount(sessionsCount);
+        for (int i = 0; i < sessionsCount; i++)
+        {
+            final long sessionId = sessions.get(i).sessionId();
+            sessionsEncoder.next().sessionId(sessionId);
+        }
 
         bufferClaim.commit();
 

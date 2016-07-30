@@ -35,6 +35,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final CatchupDecoder catchup = new CatchupDecoder();
     private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
     private final NotLeaderDecoder libraryConnect = new NotLeaderDecoder();
+    private final ControlNotificationDecoder controlNotification = new ControlNotificationDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -97,6 +98,11 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             {
                 return onNotLeader(buffer, offset, blockLength, version);
             }
+
+            case ControlNotificationDecoder.TEMPLATE_ID:
+            {
+                return onControlNotification(buffer, offset, blockLength, version);
+            }
         }
 
         return CONTINUE;
@@ -112,6 +118,19 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         return handler.onNotLeader(
             libraryConnect.libraryId(),
             libraryConnect.libraryChannel()
+        );
+    }
+
+    private Action onControlNotification(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version)
+    {
+        controlNotification.wrap(buffer, offset, blockLength, version);
+        return handler.onControlNotification(
+            controlNotification.libraryId(),
+            controlNotification.sessions()
         );
     }
 

@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.protocol;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
 
 public interface LibraryEndPointHandler
 {
@@ -65,4 +66,6 @@ public interface LibraryEndPointHandler
     Action onNewSentPosition(final int libraryId, final long position);
 
     Action onNotLeader(final int libraryId, final String libraryChannel);
+
+    Action onControlNotification(final int libraryId, final SessionsDecoder sessions);
 }

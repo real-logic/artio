@@ -255,4 +255,11 @@
     <sbe:message name="EngineDescriptor" id="38" description="">
         <data name="libraryChannel" id="1" type="varDataEncoding"/>
     </sbe:message>
+    <sbe:message name="ControlNotification" id="39"
+                 description="notifies library instances of messages that have been acquired">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <group name="sessions" id="2" dimensionType="groupSizeEncoding">
+            <field name="sessionId" id="10" type="FixSessionId"/>
+        </group>
+    </sbe:message>
 </sbe:messageSchema>

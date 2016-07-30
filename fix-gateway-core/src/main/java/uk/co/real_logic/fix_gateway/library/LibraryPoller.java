@@ -25,6 +25,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.fix_gateway.protocol.*;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.session.*;
@@ -603,6 +604,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
             currentAeronChannel = libraryChannel;
             DebugLogger.log("Attempting connect to leader (%s)", currentAeronChannel);
         }
+        return CONTINUE;
+    }
+
+    @Override
+    public Action onControlNotification(final int libraryId, final SessionsDecoder sessions)
+    {
         return CONTINUE;
     }
 
