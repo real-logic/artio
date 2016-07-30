@@ -51,7 +51,7 @@ public class ReceiverEndPointTest
     private static final int MESSAGE_TYPE = 'D';
     private static final long CONNECTION_ID = 20L;
     private static final long SESSION_ID = 4L;
-    private static final int LIBRARY_ID = FixEngine.GATEWAY_LIBRARY_ID;
+    private static final int LIBRARY_ID = FixEngine.ENGINE_LIBRARY_ID;
     private static final long POSITION = 1024L;
 
     private CompositeKey compositeKey = mock(CompositeKey.class);

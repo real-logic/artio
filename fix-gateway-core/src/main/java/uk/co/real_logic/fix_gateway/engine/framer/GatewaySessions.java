@@ -87,7 +87,7 @@ public class GatewaySessions
             customisationStrategy,
             clock,
             connectionId,
-            FixEngine.GATEWAY_LIBRARY_ID
+            FixEngine.ENGINE_LIBRARY_ID
         );
 
         final Session session = new Session(
@@ -101,7 +101,7 @@ public class GatewaySessions
             sendingTimeWindowInMs,
             receivedMsgSeqNo,
             sentMsgSeqNo,
-            FixEngine.GATEWAY_LIBRARY_ID,
+            FixEngine.ENGINE_LIBRARY_ID,
             sessionBufferSize,
             lastSentSequenceNumber + 1
         );

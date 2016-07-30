@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 
 
 /**
@@ -45,7 +46,17 @@ public final class LibraryConfiguration extends CommonConfiguration
         {
         };
 
-    private final int libraryId = ThreadLocalRandom.current().nextInt();
+    private final int libraryId;
+    {
+        int libraryId;
+        do
+        {
+            libraryId = ThreadLocalRandom.current().nextInt();
+        }
+        while (libraryId == ENGINE_LIBRARY_ID);
+
+        this.libraryId = libraryId;
+    }
 
     private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
     private SessionAcquireHandler sessionAcquireHandler;

@@ -53,7 +53,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
@@ -547,10 +547,10 @@ public class FramerTest
     private void verifyEndpointsCreated() throws IOException
     {
         verify(mockEndPointFactory).receiverEndPoint(
-            notNull(TcpChannel.class), anyLong(), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer),
+            notNull(TcpChannel.class), anyLong(), anyLong(), eq(ENGINE_LIBRARY_ID), eq(framer),
             eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean());
 
         verify(mockEndPointFactory).senderEndPoint(
-            notNull(TcpChannel.class), anyLong(), eq(GATEWAY_LIBRARY_ID), eq(framer));
+            notNull(TcpChannel.class), anyLong(), eq(ENGINE_LIBRARY_ID), eq(framer));
     }
 }

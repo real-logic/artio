@@ -44,7 +44,7 @@ import static org.agrona.concurrent.AgentRunner.startOnThread;
  */
 public final class FixEngine extends GatewayProcess
 {
-    public static final int GATEWAY_LIBRARY_ID = 0;
+    public static final int ENGINE_LIBRARY_ID = 0;
 
     private final EngineTimers timers = new EngineTimers();
     private final EngineConfiguration configuration;

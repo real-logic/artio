@@ -45,7 +45,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
-import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
@@ -438,7 +438,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
                     password);
             }
         }
-        else if (libraryId == GATEWAY_LIBRARY_ID || thisLibrary && status == LIBRARY_NOTIFICATION)
+        else if (libraryId == ENGINE_LIBRARY_ID || thisLibrary && status == LIBRARY_NOTIFICATION)
         {
             sessionExistsHandler.onSessionExists(
                 fixLibrary,

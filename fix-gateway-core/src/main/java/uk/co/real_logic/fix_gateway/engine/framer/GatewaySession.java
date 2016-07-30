@@ -23,7 +23,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 
 class GatewaySession implements SessionInfo
 {
@@ -81,8 +81,8 @@ class GatewaySession implements SessionInfo
     {
         this.sessionParser = sessionParser;
         this.session = session;
-        receiverEndPoint.libraryId(GATEWAY_LIBRARY_ID);
-        senderEndPoint.libraryId(GATEWAY_LIBRARY_ID);
+        receiverEndPoint.libraryId(ENGINE_LIBRARY_ID);
+        senderEndPoint.libraryId(ENGINE_LIBRARY_ID);
     }
 
     void handoverManagementTo(final int libraryId)

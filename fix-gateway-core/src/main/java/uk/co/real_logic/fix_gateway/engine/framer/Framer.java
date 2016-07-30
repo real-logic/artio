@@ -60,7 +60,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.fix_gateway.engine.FixEngine.GATEWAY_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.fix_gateway.engine.framer.Continuation.COMPLETE;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
@@ -314,7 +314,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final long connectionId = this.nextConnectionId++;
             final boolean resetSequenceNumbers = configuration.acceptorSequenceNumbersResetUponReconnect();
             final GatewaySession session = setupConnection(
-                channel, connectionId, UNKNOWN, null, GATEWAY_LIBRARY_ID, ACCEPTOR, resetSequenceNumbers);
+                channel, connectionId, UNKNOWN, null, ENGINE_LIBRARY_ID, ACCEPTOR, resetSequenceNumbers);
 
             session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
 
