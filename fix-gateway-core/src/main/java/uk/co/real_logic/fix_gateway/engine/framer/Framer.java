@@ -565,8 +565,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LibraryInfo existingLibrary = idToLibrary.get(libraryId);
         if (existingLibrary != null)
         {
-            // Check that they are genuinely different, otherwise ignore the re-send
-            saveError(DUPLICATE_LIBRARY_ID, libraryId, correlationId);
+            inboundPublication.saveControlNotification(libraryId, existingLibrary.sessions());
 
             return CONTINUE;
         }

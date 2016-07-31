@@ -834,8 +834,10 @@ public class GatewayPublication extends ClaimablePublication
     {
         final int sessionsCount = sessions.size();
         final long position = claim(
+            HEADER_LENGTH +
             ControlNotificationEncoder.BLOCK_LENGTH +
-                sessionsCount * SessionsEncoder.sbeBlockLength() + HEADER_LENGTH);
+            GroupSizeEncodingEncoder.ENCODED_LENGTH +
+            sessionsCount * SessionsEncoder.sbeBlockLength());
 
         if (position < 0)
         {
