@@ -565,7 +565,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LibraryInfo existingLibrary = idToLibrary.get(libraryId);
         if (existingLibrary != null)
         {
-            inboundPublication.saveControlNotification(libraryId, existingLibrary.sessions());
+            final long position =
+                inboundPublication.saveControlNotification(libraryId, existingLibrary.sessions());
+
+            if (position < 0)
+            {
+                return ABORT;
+            }
+
+            existingLibrary.onHeartbeat(clock.time());
 
             return CONTINUE;
         }
