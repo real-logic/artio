@@ -21,9 +21,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.fix_gateway.FixCounters;
-import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
-import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -31,15 +29,24 @@ import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
-import static org.mockito.Matchers.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
 public class LibraryPollerTest
 {
-    private static final int CONNECTION_ID = 2;
-    private static final int SESSION_ID = 3;
+    private static final long CONNECTION_ID = 2;
+    private static final long SESSION_ID = 3;
+    private static final long OTHER_CONNECTION_ID = 4;
+    private static final long OTHER_SESSION_ID = 5;
+
+    private static final int LAST_SENT_SEQUENCE_NUMBER = 1;
+    private static final int LAST_RECEIVED_SEQUENCE_NUMBER = 1;
+    private static final int HEARTBEAT_INTERVAL_IN_S = 1;
+    private static final int REPLY_TO_ID = 0;
 
     private ArgumentCaptor<Session> session = ArgumentCaptor.forClass(Session.class);
     private SessionHandler sessionHandler = mock(SessionHandler.class);
@@ -49,7 +56,9 @@ public class LibraryPollerTest
     private LibraryTransport transport = mock(LibraryTransport.class);
     private FixCounters counters = mock(FixCounters.class);
     private FixLibrary library = mock(FixLibrary.class);
-    private UnsafeBuffer buffer = new UnsafeBuffer(new byte[1024]);
+    private UnsafeBuffer address = new UnsafeBuffer(new byte[1024]);
+    private int addressLength = address.putStringUtf8(0, "localhost:1234");
+    private int libraryId;
 
     private LibraryPoller libraryPoller;
 
@@ -80,34 +89,57 @@ public class LibraryPollerTest
             library);
 
         libraryPoller.connect();
+
+        libraryId = libraryPoller.libraryId();
     }
 
     @Test
-    public void shouldNotifyClientsOfSessionTimeouts()
+    public void shouldNotifyClientOfSessionTimeouts()
     {
-        final int encodedLength = buffer.putStringUtf8(0, "localhost:1234");
-        final int libraryId = libraryPoller.libraryId();
+        manageConnection(CONNECTION_ID, SESSION_ID);
 
-        libraryPoller.onManageConnection(
-            libraryId,
-            CONNECTION_ID,
-            SESSION_ID,
-            ConnectionType.ACCEPTOR,
-            1,
-            1,
-            buffer,
-            0,
-            encodedLength,
-            SessionState.ACTIVE,
-            1,
-            0);
-
-        libraryPoller.onControlNotification(libraryId, noSessions());
+        libraryPoller.onControlNotification(libraryId, noSessionIds());
 
         verify(sessionHandler).onTimeout(libraryId, SESSION_ID);
     }
 
-    private SessionsDecoder noSessions()
+    @Test
+    public void shouldNotifyClientsOfRelevantSessionTimeouts()
+    {
+        manageConnection(CONNECTION_ID, SESSION_ID);
+        manageConnection(OTHER_CONNECTION_ID, OTHER_SESSION_ID);
+
+        libraryPoller.onControlNotification(libraryId, hasOtherSessionId());
+
+        verify(sessionHandler).onTimeout(libraryId, SESSION_ID);
+    }
+
+    private void manageConnection(final long connectionId, final long sessionId)
+    {
+        libraryPoller.onManageConnection(
+            libraryId,
+            connectionId,
+            sessionId,
+            ACCEPTOR,
+            LAST_SENT_SEQUENCE_NUMBER,
+            LAST_RECEIVED_SEQUENCE_NUMBER,
+            address,
+            0,
+            addressLength,
+            ACTIVE,
+            HEARTBEAT_INTERVAL_IN_S,
+            REPLY_TO_ID);
+    }
+
+    private SessionsDecoder hasOtherSessionId()
+    {
+        final SessionsDecoder sessionsDecoder = mock(SessionsDecoder.class);
+        when(sessionsDecoder.hasNext()).thenReturn(true, false);
+        when(sessionsDecoder.sessionId()).thenReturn(OTHER_SESSION_ID);
+        return sessionsDecoder;
+    }
+
+    private SessionsDecoder noSessionIds()
     {
         final SessionsDecoder sessionsDecoder = mock(SessionsDecoder.class);
         when(sessionsDecoder.hasNext()).thenReturn(false);
