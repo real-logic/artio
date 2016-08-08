@@ -55,10 +55,8 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
         return CONTINUE;
     }
 
-    @Override
-    public Action onTimeout(final int libraryId, final long sessionId)
+    public void onTimeout(final int libraryId, final long sessionId)
     {
-        return CONTINUE;
     }
 
     public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)

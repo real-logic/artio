@@ -20,10 +20,17 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.collections.Long2ObjectHashMap;
-import org.agrona.concurrent.*;
+import org.agrona.collections.LongHashSet;
+import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.fix_gateway.*;
+import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.FixGatewayException;
+import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.fix_gateway.protocol.*;
@@ -56,6 +63,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
     private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
+
+    // Used when checking the consistency of the session ids
+    private final LongHashSet sessionIds = new LongHashSet(SessionIds.MISSING);
 
     private final int libraryId;
     private final EpochClock clock;
@@ -595,21 +605,56 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
 
     public Action onNotLeader(final int libraryId, final String libraryChannel)
     {
-        if (libraryChannel.isEmpty())
+        if (libraryId == this.libraryId)
         {
-            attemptNextEngine();
+            if (libraryChannel.isEmpty())
+            {
+                attemptNextEngine();
+            }
+            else
+            {
+                currentAeronChannel = libraryChannel;
+                DebugLogger.log("Attempting connect to leader (%s)", currentAeronChannel);
+            }
         }
-        else
-        {
-            currentAeronChannel = libraryChannel;
-            DebugLogger.log("Attempting connect to leader (%s)", currentAeronChannel);
-        }
+
         return CONTINUE;
     }
 
     @Override
-    public Action onControlNotification(final int libraryId, final SessionsDecoder sessions)
+    public Action onControlNotification(final int libraryId, final SessionsDecoder sessionsDecoder)
     {
+        if (libraryId == this.libraryId)
+        {
+            final LongHashSet sessionIds = this.sessionIds;
+            final List<Session> sessions = this.sessions;
+
+            // copy session ids.
+            sessionIds.clear();
+            while (sessionsDecoder.hasNext())
+            {
+                sessionsDecoder.next();
+
+                sessionIds.add(sessionsDecoder.sessionId());
+            }
+
+            for (int i = 0, size = sessions.size(); i < size; i++)
+            {
+                final Session session = sessions.get(i);
+                final long sessionId = session.id();
+                if (!sessionIds.remove(sessionId))
+                {
+                    final SessionSubscriber subscriber = connectionIdToSession.remove(session.connectionId());
+                    if (subscriber != null)
+                    {
+                        subscriber.onTimeout(libraryId, sessionId);
+                    }
+                }
+            }
+
+            // TODO: sessions that the gateway thinks you have, that you don't?
+        }
+
         return CONTINUE;
     }
 

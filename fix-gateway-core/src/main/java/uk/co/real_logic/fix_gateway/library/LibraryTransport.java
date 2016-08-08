@@ -74,12 +74,12 @@ class LibraryTransport
         outboundPublication = outboundLibraryStreams.gatewayPublication(configuration.libraryIdleStrategy());
     }
 
-    public ClusterableSubscription inboundSubscription()
+    ClusterableSubscription inboundSubscription()
     {
         return inboundSubscription;
     }
 
-    public GatewayPublication outboundPublication()
+    GatewayPublication outboundPublication()
     {
         return outboundPublication;
     }

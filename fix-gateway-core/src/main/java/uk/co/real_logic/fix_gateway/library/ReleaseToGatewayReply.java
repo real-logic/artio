@@ -24,18 +24,14 @@ import uk.co.real_logic.fix_gateway.session.Session;
  */
 class ReleaseToGatewayReply extends Reply<SessionReplyStatus>
 {
-    private final long correlationId;
-    private final LibraryPoller libraryPoller;
     private final Session session;
 
     private boolean requiresResend;
 
     ReleaseToGatewayReply(final LibraryPoller libraryPoller, final long latestReplyArrivalTime, final Session session)
     {
-        super(latestReplyArrivalTime);
-        this.libraryPoller = libraryPoller;
+        super(libraryPoller, latestReplyArrivalTime);
         this.session = session;
-        correlationId = libraryPoller.register(this);
         sendMessage();
     }
 

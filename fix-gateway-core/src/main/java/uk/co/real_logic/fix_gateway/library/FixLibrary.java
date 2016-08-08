@@ -35,13 +35,13 @@ import java.util.List;
  *
  * @see uk.co.real_logic.fix_gateway.engine.FixEngine
  */
-public final class FixLibrary extends GatewayProcess
+public class FixLibrary extends GatewayProcess
 {
     public static final int NO_MESSAGE_REPLAY = -1;
 
     private final LibraryPoller poller;
 
-    private FixLibrary(final LibraryConfiguration configuration)
+    FixLibrary(final LibraryConfiguration configuration)
     {
         configuration.conclude();
 

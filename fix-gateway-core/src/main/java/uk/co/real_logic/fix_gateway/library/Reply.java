@@ -41,13 +41,23 @@ public abstract class Reply<T>
 
     private final long latestReplyArrivalTime;
 
+    final LibraryPoller libraryPoller;
+
+    long correlationId;
     private Exception error;
     private T result;
     private State state = State.EXECUTING;
 
-    Reply(final long latestReplyArrivalTime)
+    Reply(final LibraryPoller libraryPoller, final long latestReplyArrivalTime)
     {
+        this.libraryPoller = libraryPoller;
         this.latestReplyArrivalTime = latestReplyArrivalTime;
+        register();
+    }
+
+    protected void register()
+    {
+        correlationId = libraryPoller.register(this);
     }
 
     public boolean isExecuting()
@@ -98,6 +108,16 @@ public abstract class Reply<T>
     public State state()
     {
         return state;
+    }
+
+    /**
+     * Gets the correlation id of the message that is being replied to.
+     *
+     * @return the correlation id of the message that is being replied to.
+     */
+    public long correlationId()
+    {
+        return correlationId;
     }
 
     void onComplete(T result)

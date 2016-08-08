@@ -47,7 +47,6 @@ public class EngineAndLibraryIntegrationTest
 {
     private static final IdleStrategy ADMIN_IDLE_STRATEGY = backoffIdleStrategy();
     private static final int SHORT_TIMEOUT_IN_MS = 100;
-    private static final int LONG_TIMEOUT_IN_MS = 10_000;
 
     private MediaDriver mediaDriver;
     private FixEngine engine;

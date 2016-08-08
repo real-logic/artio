@@ -49,15 +49,16 @@ class SessionSubscriber implements AutoCloseable
         this.sessionTimer = sessionTimer;
     }
 
-    public Action onMessage(final DirectBuffer buffer,
-                            final int offset,
-                            final int length,
-                            final int libraryId,
-                            final long connectionId,
-                            final long sessionId,
-                            final int messageType,
-                            final long timestamp,
-                            final long position)
+    Action onMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final int libraryId,
+        final long connectionId,
+        final long sessionId,
+        final int messageType,
+        final long timestamp,
+        final long position)
     {
         final long now = receiveTimer.recordSince(timestamp);
 
@@ -92,13 +93,13 @@ class SessionSubscriber implements AutoCloseable
         }
     }
 
-    public Action onDisconnect(final int libraryId, final DisconnectReason reason)
+    Action onDisconnect(final int libraryId, final DisconnectReason reason)
     {
         session.onDisconnect();
         return handler.onDisconnect(libraryId, session.id(), reason);
     }
 
-    public void onLogon(
+    void onLogon(
         final long sessionId,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
@@ -126,6 +127,14 @@ class SessionSubscriber implements AutoCloseable
         session.password(password);
     }
 
+    void onTimeout(
+        final int libraryId,
+        final long sessionId
+    )
+    {
+        handler.onTimeout(libraryId, sessionId);
+    }
+
     public int poll(final long time)
     {
         return session.poll(time);
@@ -145,4 +154,5 @@ class SessionSubscriber implements AutoCloseable
     {
         remainingCatchupCount = messageCount;
     }
+
 }

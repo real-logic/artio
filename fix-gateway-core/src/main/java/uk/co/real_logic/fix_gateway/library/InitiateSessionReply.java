@@ -28,11 +28,9 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNE
  */
 class InitiateSessionReply extends Reply<Session>
 {
-    private final LibraryPoller libraryPoller;
     private final SessionConfiguration configuration;
 
     private int addressIndex = 0;
-    private long correlationId;
     private boolean requiresResend;
 
     InitiateSessionReply(
@@ -40,10 +38,8 @@ class InitiateSessionReply extends Reply<Session>
         final long latestReplyArrivalTime,
         final SessionConfiguration configuration)
     {
-        super(latestReplyArrivalTime);
-        this.libraryPoller = libraryPoller;
+        super(libraryPoller, latestReplyArrivalTime);
         this.configuration = configuration;
-        correlationId = libraryPoller.register(this);
         sendMessage();
     }
 
@@ -71,7 +67,7 @@ class InitiateSessionReply extends Reply<Session>
         if (errorType == UNABLE_TO_CONNECT)
         {
             addressIndex++;
-            correlationId = libraryPoller.register(this);
+            register();
             sendMessage();
         }
         else

@@ -23,10 +23,8 @@ import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
  */
 class RequestSessionReply extends Reply<SessionReplyStatus>
 {
-    private final LibraryPoller libraryPoller;
     private final long sessionId;
     private final int lastReceivedSequenceNumber;
-    private final long correlationId;
 
     private boolean requiresResend;
 
@@ -36,11 +34,9 @@ class RequestSessionReply extends Reply<SessionReplyStatus>
         final long sessionId,
         final int lastReceivedSequenceNumber)
     {
-        super(latestReplyArrivalTime);
-        this.libraryPoller = libraryPoller;
+        super(libraryPoller, latestReplyArrivalTime);
         this.sessionId = sessionId;
         this.lastReceivedSequenceNumber = lastReceivedSequenceNumber;
-        correlationId = libraryPoller.register(this);
         sendMessage();
     }
 
