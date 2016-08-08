@@ -652,7 +652,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
                 }
             }
 
-            // TODO: sessions that the gateway thinks you have, that you don't?
+            // sessions that the gateway thinks you have, that you don't
+            if (!sessionIds.isEmpty())
+            {
+                configuration
+                    .gatewayErrorHandler()
+                    .onError(GatewayError.UNKNOWN_SESSION, libraryId,
+                        String.format("The gateway thinks that we own the following session ids: %s", sessionIds));
+            }
         }
 
         return CONTINUE;
