@@ -151,13 +151,19 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderCommitted(0, position);
     }
 
-    @Test
+    @Test(timeout = 10000)
     public void shouldCommitOnFollowers()
     {
         final int position = roundtripABuffer();
 
-        poll(follower1, 1);
-        pollFollower1();
+        pollUntilRead(follower1, 1);
+
+        follower1.poll(FRAGMENT_LIMIT, 0);
+
+        while (follower1Subscription.controlledPoll(follower1Handler, FRAGMENT_LIMIT) == 0)
+        {
+            Thread.yield();
+        }
 
         verify(follower1Handler).onFragment(any(), eq(HEADER_LENGTH), eq(position - HEADER_LENGTH), any());
     }
@@ -172,7 +178,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         buffer.putInt(OFFSET, secondValue);
 
         final int position2 = roundtripABuffer();
-        pollLeader(1);
+        pollUntilRead(leader, 1);
         pollLeaderSubscription();
         leaderCommitted(position1, position2 - position1, secondValue);
     }
@@ -195,9 +201,10 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     {
         offerBuffer();
 
-        pollFollower1();
+        follower1.poll(FRAGMENT_LIMIT, 0);
+        follower1Subscription.controlledPoll(follower1Handler, FRAGMENT_LIMIT);
 
-        pollLeader(1);
+        pollUntilRead(leader, 1);
         leaderNeverCommitted();
     }
 
@@ -206,13 +213,15 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     {
         final int position = offerBuffer();
 
-        pollFollower1();
+        follower1.poll(FRAGMENT_LIMIT, 0);
+        follower1Subscription.controlledPoll(follower1Handler, FRAGMENT_LIMIT);
 
-        pollLeader(1);
+        pollUntilRead(leader, 1);
         leaderNeverCommitted();
 
         poll(follower2);
-        pollLeader(1);
+
+        pollUntilRead(leader, 1);
         pollLeaderSubscription();
 
         leaderCommitted(0, position);
@@ -270,23 +279,15 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     {
         final int position = offerBuffer();
 
-        pollFollower1();
-        poll(follower2);
+        follower1.poll(FRAGMENT_LIMIT, 0);
+        follower1Subscription.controlledPoll(follower1Handler, FRAGMENT_LIMIT);
 
-        pollLeader(2);
+        follower2.poll(FRAGMENT_LIMIT, 0);
+
+        pollUntilRead(leader, 2);
+
         pollLeaderSubscription();
         return position;
-    }
-
-    private void pollFollower1()
-    {
-        poll(follower1);
-        follower1Subscription.controlledPoll(follower1Handler, FRAGMENT_LIMIT);
-    }
-
-    private void pollLeader(int toRead)
-    {
-        poll(leader, toRead);
     }
 
     private int pollLeaderSubscription()
@@ -294,11 +295,11 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         return leaderSubscription.controlledPoll(leaderHandler, FRAGMENT_LIMIT);
     }
 
-    private void poll(final Role role, int toRead)
+    private void pollUntilRead(final Role role, int toRead)
     {
         while (toRead > 0)
         {
-            if (poll(role) > 0)
+            if (role.poll(FRAGMENT_LIMIT, 0) > 0)
             {
                 toRead--;
             }
