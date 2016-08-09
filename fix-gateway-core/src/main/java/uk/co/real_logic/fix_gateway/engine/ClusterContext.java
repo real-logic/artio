@@ -91,7 +91,7 @@ class ClusterContext extends EngineContext
             .aeron(aeron)
             .nodeState(EngineDescriptorFactory.make(configuration.libraryAeronChannel()))
             .nodeStateHandler(engineDescriptorStore)
-            .nodeHandler(configuration.nodeHandler());
+            .nodeHandler(configuration.roleHandler());
 
         return new ClusterAgent(clusterNodeConfiguration, System.currentTimeMillis());
     }

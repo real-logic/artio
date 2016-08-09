@@ -449,7 +449,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    public EngineConfiguration nodeHandler(final RoleHandler roleHandler)
+    public EngineConfiguration roleHandler(final RoleHandler roleHandler)
     {
         this.roleHandler = roleHandler;
         return this;
@@ -595,7 +595,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return clusterTimeoutIntervalInMs;
     }
 
-    public RoleHandler nodeHandler()
+    public RoleHandler roleHandler()
     {
         return roleHandler;
     }
