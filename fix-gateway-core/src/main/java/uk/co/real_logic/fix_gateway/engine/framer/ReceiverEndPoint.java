@@ -131,7 +131,7 @@ class ReceiverEndPoint
         return connectionId;
     }
 
-    public int pollForData()
+    int pollForData()
     {
         if (isPaused || hasDisconnected())
         {
@@ -459,7 +459,7 @@ class ReceiverEndPoint
         removeEndpointFromFramer();
     }
 
-    public void onNoLogonDisconnect()
+    void onNoLogonDisconnect()
     {
         disconnectEndpoint(NO_LOGON);
         removeEndpointFromFramer();
@@ -478,7 +478,7 @@ class ReceiverEndPoint
         hasDisconnected = true;
     }
 
-    public boolean hasDisconnected()
+    boolean hasDisconnected()
     {
         return hasDisconnected;
     }
@@ -498,7 +498,7 @@ class ReceiverEndPoint
         this.libraryId = libraryId;
     }
 
-    public void gatewaySession(final GatewaySession gatewaySession)
+    void gatewaySession(final GatewaySession gatewaySession)
     {
         this.gatewaySession = gatewaySession;
     }

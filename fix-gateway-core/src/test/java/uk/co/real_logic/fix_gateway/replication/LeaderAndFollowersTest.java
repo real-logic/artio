@@ -24,7 +24,9 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
@@ -33,6 +35,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -55,6 +58,9 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     private static final short FOLLOWER_1_ID = (short) 2;
     private static final short FOLLOWER_2_ID = (short) 3;
     private static final int CLUSTER_STREAM_ID = 1;
+
+    @Rule
+    public Timeout timeout = new Timeout(10_000, MILLISECONDS);
 
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
 
@@ -151,7 +157,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderCommitted(0, position);
     }
 
-    @Test(timeout = 10000)
+    @Test
     public void shouldCommitOnFollowers()
     {
         final int position = roundtripABuffer();

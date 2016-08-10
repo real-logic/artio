@@ -328,8 +328,7 @@ public class SessionParser
                     username,
                     password,
                     isPossDup(header),
-                    resetSeqNumFlag(logon)
-                );
+                    resetSeqNumFlag(logon));
             }
             else
             {
