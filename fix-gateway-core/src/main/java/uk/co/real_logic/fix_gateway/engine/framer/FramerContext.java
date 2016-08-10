@@ -69,6 +69,7 @@ public class FramerContext
             sessionIdStrategy,
             sessionIds,
             inboundLibraryStreams,
+            engineContext.inboundLibraryPublication(),
             idleStrategy,
             fixCounters,
             errorHandler);

@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
+import uk.co.real_logic.fix_gateway.validation.SessionReplicationStrategy;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -71,7 +72,9 @@ class ReceiverEndPoint
     private final LogonDecoder logon = new LogonDecoder();
 
     private final TcpChannel channel;
-    private final GatewayPublication publication;
+    private final GatewayPublication libraryPublication;
+    private final GatewayPublication clusterablePublication;
+    private final SessionReplicationStrategy sessionReplicationStrategy;
     private final long connectionId;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
@@ -83,6 +86,7 @@ class ReceiverEndPoint
     private final MutableAsciiBuffer buffer;
     private final ByteBuffer byteBuffer;
 
+    private GatewayPublication publication;
     private int libraryId;
     private final boolean resetSequenceNumbers;
     private GatewaySession gatewaySession;
@@ -95,7 +99,9 @@ class ReceiverEndPoint
     ReceiverEndPoint(
         final TcpChannel channel,
         final int bufferSize,
-        final GatewayPublication publication,
+        final GatewayPublication clusterablePublication,
+        final GatewayPublication libraryPublication,
+        final SessionReplicationStrategy sessionReplicationStrategy,
         final long connectionId,
         final long sessionId,
         final SessionIdStrategy sessionIdStrategy,
@@ -109,7 +115,9 @@ class ReceiverEndPoint
         final boolean resetSequenceNumbers)
     {
         this.channel = channel;
-        this.publication = publication;
+        this.clusterablePublication = clusterablePublication;
+        this.libraryPublication = libraryPublication;
+        this.sessionReplicationStrategy = sessionReplicationStrategy;
         this.connectionId = connectionId;
         this.sessionId = sessionId;
         this.sessionIdStrategy = sessionIdStrategy;
@@ -124,6 +132,10 @@ class ReceiverEndPoint
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
+
+        // TODO: think of a cleaner way of doing this.
+        // If you're initiating the session in a cluster then you need to set the publication object
+        publication = resetSequenceNumbers ? libraryPublication : clusterablePublication;
     }
 
     public long connectionId()
@@ -288,14 +300,14 @@ class ReceiverEndPoint
     private void saveInvalidMessage(final int offset)
     {
         // Completely unable to deal with parsing this message, bail
-        publication.saveMessage(
+        libraryPublication.saveMessage(
             buffer, offset, usedBufferData, libraryId, '-', sessionId, connectionId, INVALID);
         moveRemainingDataToBufferStart(usedBufferData);
     }
 
     private void saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
     {
-        publication.saveMessage(
+        libraryPublication.saveMessage(
             buffer, offset, length, libraryId, messageType, sessionId, connectionId, INVALID_CHECKSUM);
     }
 
@@ -323,7 +335,7 @@ class ReceiverEndPoint
             sessionId = sessionIds.onLogon(compositeKey);
             if (sessionId == DUPLICATE_SESSION)
             {
-                publication.saveError(GatewayError.DUPLICATE_SESSION, libraryId, 0,
+                libraryPublication.saveError(GatewayError.DUPLICATE_SESSION, libraryId, 0,
                     connectionId + ": Duplicate Session: " + compositeKey);
                 close(LOCAL_DISCONNECT);
             }
@@ -335,6 +347,15 @@ class ReceiverEndPoint
                 final String password = SessionParser.password(logon);
                 gatewaySession.onLogon(sessionId, compositeKey, username, password, logon.heartBtInt());
                 gatewaySession.sequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
+
+                if (sessionReplicationStrategy.shouldReplicate(logon))
+                {
+                    publication = clusterablePublication;
+                }
+                else
+                {
+                    publication = libraryPublication;
+                }
 
                 publication.saveLogon(
                     libraryId,
@@ -367,7 +388,7 @@ class ReceiverEndPoint
 
     private void saveInvalidMessage(final int offset, final int startOfChecksumTag)
     {
-        publication.saveMessage(
+        libraryPublication.saveMessage(
             buffer,
             offset,
             libraryId,
@@ -468,7 +489,7 @@ class ReceiverEndPoint
     private void disconnectEndpoint(final DisconnectReason reason)
     {
         framer.schedule(
-            new Transaction(() -> publication.saveDisconnect(libraryId, connectionId, reason)));
+            new Transaction(() -> libraryPublication.saveDisconnect(libraryId, connectionId, reason)));
 
         sessionIds.onDisconnect(sessionId);
         if (selectionKey != null)

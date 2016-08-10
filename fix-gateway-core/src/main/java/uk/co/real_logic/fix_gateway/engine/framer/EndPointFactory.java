@@ -32,6 +32,7 @@ class EndPointFactory
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
     private final Streams inboundStreams;
+    private final GatewayPublication inboundLibraryPublication;
     private final IdleStrategy idleStrategy;
     private final FixCounters fixCounters;
     private final ErrorHandler errorHandler;
@@ -41,6 +42,7 @@ class EndPointFactory
         final SessionIdStrategy sessionIdStrategy,
         final SessionIds sessionIds,
         final Streams inboundStreams,
+        final GatewayPublication inboundLibraryPublication,
         final IdleStrategy idleStrategy,
         final FixCounters fixCounters,
         final ErrorHandler errorHandler)
@@ -49,6 +51,7 @@ class EndPointFactory
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
         this.inboundStreams = inboundStreams;
+        this.inboundLibraryPublication = inboundLibraryPublication;
         this.idleStrategy = idleStrategy;
         this.fixCounters = fixCounters;
         this.errorHandler = errorHandler;
@@ -68,6 +71,8 @@ class EndPointFactory
             channel,
             configuration.receiverBufferSize(),
             inboundPublication(),
+            inboundLibraryPublication,
+            configuration.sessionReplicationStrategy(),
             connectionId,
             sessionId,
             sessionIdStrategy,
