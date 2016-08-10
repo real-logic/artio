@@ -15,18 +15,25 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import io.aeron.Publication;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+
+import static io.aeron.Publication.ADMIN_ACTION;
+import static io.aeron.Publication.BACK_PRESSURED;
 
 public final class Pressure
 {
     public static Action apply(final long position)
     {
-        if (position == Publication.BACK_PRESSURED)
+        if (isBackPressured(position))
         {
             return Action.ABORT;
         }
 
         return Action.CONTINUE;
+    }
+
+    public static boolean isBackPressured(final long position)
+    {
+        return position == BACK_PRESSURED || position == ADMIN_ACTION;
     }
 }

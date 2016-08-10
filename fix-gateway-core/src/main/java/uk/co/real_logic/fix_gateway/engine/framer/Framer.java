@@ -60,6 +60,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.Pressure.isBackPressured;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.fix_gateway.engine.framer.Continuation.COMPLETE;
@@ -330,7 +331,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final String address = channel.remoteAddress();
             // In this case the save connect is simply logged for posterities sake
             // So in the back-pressure we should just drop it
-            if (inboundPublication.saveConnect(connectionId, address) == BACK_PRESSURED)
+            final long position = inboundPublication.saveConnect(connectionId, address);
+            if (isBackPressured(inboundPublication.saveConnect(connectionId, address)))
             {
                 errorHandler.onError(new IllegalStateException(
                     "Failed to log connect from " + address + " due to backpressure"));
@@ -457,7 +459,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private void pressuredError(
         final GatewayError error, final int libraryId, final String message, final long position)
     {
-        if (position == BACK_PRESSURED)
+        if (isBackPressured(position))
         {
             if (message == null)
             {
