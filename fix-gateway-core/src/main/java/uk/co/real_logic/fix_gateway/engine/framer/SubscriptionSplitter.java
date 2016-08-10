@@ -19,6 +19,7 @@ import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import org.agrona.collections.LongHashSet;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.messages.DisconnectDecoder;
@@ -39,6 +40,8 @@ class SubscriptionSplitter implements ControlledFragmentHandler
 {
     private final BufferClaim bufferClaim = new BufferClaim();
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
+    private final FixMessageDecoder fixMessage = new FixMessageDecoder();
+    private final DisconnectDecoder disconnect = new DisconnectDecoder();
 
     private final ClusterableStreams clusterableStreams;
     private final EngineProtocolSubscription engineProtocolSubscription;
@@ -46,6 +49,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
     private final GatewayPublication replyPublication;
     private final EngineDescriptorStore engineDescriptorStore;
     private final String bindAddress;
+    private final LongHashSet replicatedConnectionIds;
 
     SubscriptionSplitter(
         final ClusterableStreams clusterableStreams,
@@ -53,7 +57,8 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         final ClusterablePublication clusterPublication,
         final GatewayPublication replyPublication,
         final EngineDescriptorStore engineDescriptorStore,
-        final String bindAddress)
+        final String bindAddress,
+        final LongHashSet replicatedConnectionIds)
     {
         this.clusterableStreams = clusterableStreams;
         this.engineProtocolSubscription = engineProtocolSubscription;
@@ -61,6 +66,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         this.replyPublication = replyPublication;
         this.engineDescriptorStore = engineDescriptorStore;
         this.bindAddress = bindAddress;
+        this.replicatedConnectionIds = replicatedConnectionIds;
     }
 
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
@@ -68,28 +74,28 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         if (clusterableStreams.isLeader())
         {
             messageHeader.wrap(buffer, offset);
+            final int messageOffset = offset + MessageHeaderDecoder.ENCODED_LENGTH;
 
             switch (messageHeader.templateId())
             {
                 case FixMessageDecoder.TEMPLATE_ID:
+                {
+                    fixMessage.wrap(buffer, messageOffset, messageHeader.blockLength(), messageHeader.version());
+
+                    return onReplicatedMessage(
+                        buffer, offset, length, header, fixMessage.connection());
+                }
                 case DisconnectDecoder.TEMPLATE_ID:
                 {
-                    final long position = clusterPublication.tryClaim(length, bufferClaim);
-                    if (position < 0)
-                    {
-                        return ABORT;
-                    }
+                    disconnect.wrap(buffer, messageOffset, messageHeader.blockLength(), messageHeader.version());
 
-                    bufferClaim.buffer().putBytes(bufferClaim.offset(), buffer, offset, length);
-
-                    bufferClaim.commit();
-                    return CONTINUE;
+                    return onReplicatedMessage(
+                        buffer, offset, length, header, disconnect.connection());
                 }
 
                 default:
                 {
-                    DebugLogger.logSbeMessage(buffer, offset);
-                    return engineProtocolSubscription.onFragment(buffer, offset, length, header);
+                    return handleMessage(buffer, offset, length, header);
                 }
             }
         }
@@ -100,5 +106,42 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         }
 
         return CONTINUE;
+    }
+
+    private Action onReplicatedMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final Header header,
+        final long connectionId)
+    {
+        if (replicatedConnectionIds.contains(connectionId))
+        {
+            return replicateMessage(buffer, offset, length);
+        }
+        else
+        {
+            return handleMessage(buffer, offset, length, header);
+        }
+    }
+
+    private Action replicateMessage(final DirectBuffer buffer, final int offset, final int length)
+    {
+        final long position = clusterPublication.tryClaim(length, bufferClaim);
+        if (position < 0)
+        {
+            return ABORT;
+        }
+
+        bufferClaim.buffer().putBytes(bufferClaim.offset(), buffer, offset, length);
+
+        bufferClaim.commit();
+        return CONTINUE;
+    }
+
+    private Action handleMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    {
+        DebugLogger.logSbeMessage(buffer, offset);
+        return engineProtocolSubscription.onFragment(buffer, offset, length, header);
     }
 }

@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.agrona.ErrorHandler;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -36,6 +37,7 @@ class EndPointFactory
     private final IdleStrategy idleStrategy;
     private final FixCounters fixCounters;
     private final ErrorHandler errorHandler;
+    private final LongHashSet replicatedConnectionIds;
 
     EndPointFactory(
         final EngineConfiguration configuration,
@@ -45,7 +47,8 @@ class EndPointFactory
         final GatewayPublication inboundLibraryPublication,
         final IdleStrategy idleStrategy,
         final FixCounters fixCounters,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final LongHashSet replicatedConnectionIds)
     {
         this.configuration = configuration;
         this.sessionIdStrategy = sessionIdStrategy;
@@ -55,6 +58,7 @@ class EndPointFactory
         this.idleStrategy = idleStrategy;
         this.fixCounters = fixCounters;
         this.errorHandler = errorHandler;
+        this.replicatedConnectionIds = replicatedConnectionIds;
     }
 
     ReceiverEndPoint receiverEndPoint(
@@ -83,7 +87,8 @@ class EndPointFactory
             framer,
             errorHandler,
             libraryId,
-            resetSequenceNumbers
+            resetSequenceNumbers,
+            replicatedConnectionIds
         );
     }
 

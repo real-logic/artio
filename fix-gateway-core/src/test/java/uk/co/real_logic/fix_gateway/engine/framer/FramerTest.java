@@ -19,6 +19,7 @@ import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.ErrorHandler;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.QueuedPipe;
 import org.junit.After;
 import org.junit.Before;
@@ -156,7 +157,8 @@ public class FramerTest
             mock(GatewayPublication.class),
             mock(GatewayPublication.class),
             node,
-            mock(EngineDescriptorStore.class));
+            mock(EngineDescriptorStore.class),
+            new LongHashSet(SessionIds.MISSING));
     }
 
     private void isLeader(final boolean value)

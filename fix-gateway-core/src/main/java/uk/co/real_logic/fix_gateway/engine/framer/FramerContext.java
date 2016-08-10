@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import io.aeron.Subscription;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -64,6 +65,9 @@ public class FramerContext
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
         final Streams inboundLibraryStreams = engineContext.inboundLibraryStreams();
 
+        final SystemEpochClock clock = new SystemEpochClock();
+        final LongHashSet replicatedConnectionIds = new LongHashSet(SessionIds.MISSING);
+
         final EndPointFactory handler = new EndPointFactory(
             configuration,
             sessionIdStrategy,
@@ -72,9 +76,9 @@ public class FramerContext
             engineContext.inboundLibraryPublication(),
             idleStrategy,
             fixCounters,
-            errorHandler);
+            errorHandler,
+            replicatedConnectionIds);
 
-        final SystemEpochClock clock = new SystemEpochClock();
         final GatewaySessions gatewaySessions = new GatewaySessions(
             clock,
             outboundLibraryStreams.gatewayPublication(idleStrategy),
@@ -107,7 +111,8 @@ public class FramerContext
             outboundLibraryStreams.gatewayPublication(idleStrategy),
             engineContext.inboundLibraryPublication(),
             streams,
-            engineDescriptorStore);
+            engineDescriptorStore,
+            replicatedConnectionIds);
     }
 
     public Agent framer()

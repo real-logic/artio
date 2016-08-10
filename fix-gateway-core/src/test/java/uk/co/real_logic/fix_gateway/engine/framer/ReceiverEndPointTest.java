@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
@@ -38,8 +39,8 @@ import java.nio.channels.ClosedChannelException;
 import java.util.function.ToIntFunction;
 
 import static io.aeron.Publication.BACK_PRESSURED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.hamcrest.Matchers.hasSize;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES;
@@ -68,12 +69,14 @@ public class ReceiverEndPointTest
     private SequenceNumberIndexReader sentSequenceNumbers = mock(SequenceNumberIndexReader.class);
     private SequenceNumberIndexReader receivedSequenceNumbers = mock(SequenceNumberIndexReader.class);
     private Framer framer = mock(Framer.class);
+    private final LongHashSet replicatedConnectionIds = new LongHashSet(SessionIds.MISSING);
 
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
             mockChannel, 16 * 1024, clusterablePublication, libraryPublication, sessionReplicationStrategy,
             CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
-            sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID, false);
+            sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID, false,
+            replicatedConnectionIds);
 
     @Before
     public void setUp()
@@ -92,6 +95,7 @@ public class ReceiverEndPointTest
     public void tearDown()
     {
         verifyNoMoreInteractions(clusterablePublication);
+        assertThat(replicatedConnectionIds, hasSize(0));
     }
 
     @Test

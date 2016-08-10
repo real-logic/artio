@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.agrona.ErrorHandler;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
@@ -85,6 +86,7 @@ class ReceiverEndPoint
     private final ErrorHandler errorHandler;
     private final MutableAsciiBuffer buffer;
     private final ByteBuffer byteBuffer;
+    private final LongHashSet replicatedConnectionIds;
 
     private GatewayPublication publication;
     private int libraryId;
@@ -112,7 +114,8 @@ class ReceiverEndPoint
         final Framer framer,
         final ErrorHandler errorHandler,
         final int libraryId,
-        final boolean resetSequenceNumbers)
+        final boolean resetSequenceNumbers,
+        final LongHashSet replicatedConnectionIds)
     {
         this.channel = channel;
         this.clusterablePublication = clusterablePublication;
@@ -131,11 +134,19 @@ class ReceiverEndPoint
         this.resetSequenceNumbers = resetSequenceNumbers;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
+        this.replicatedConnectionIds = replicatedConnectionIds;
         buffer = new MutableAsciiBuffer(byteBuffer);
 
         // TODO: think of a cleaner way of doing this.
         // If you're initiating the session in a cluster then you need to set the publication object
-        publication = resetSequenceNumbers ? libraryPublication : clusterablePublication;
+        if (resetSequenceNumbers)
+        {
+            publication = libraryPublication;
+        }
+        else
+        {
+            publication = clusterablePublication;
+        }
     }
 
     public long connectionId()
@@ -351,6 +362,7 @@ class ReceiverEndPoint
                 if (sessionReplicationStrategy.shouldReplicate(logon))
                 {
                     publication = clusterablePublication;
+                    replicatedConnectionIds.add(connectionId);
                 }
                 else
                 {

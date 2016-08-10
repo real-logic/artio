@@ -22,6 +22,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2ObjectHashMap;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
@@ -92,6 +93,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final NewChannelHandler onNewConnectionFunc = this::onNewConnection;
+    private final LongHashSet replicatedConnectionIds;
 
     private final TcpChannelSupplier channelSupplier;
     private final EpochClock clock;
@@ -150,7 +152,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final GatewayPublication outboundPublication,
         final GatewayPublication replyPublication,
         final ClusterableStreams clusterableStreams,
-        final EngineDescriptorStore engineDescriptorStore)
+        final EngineDescriptorStore engineDescriptorStore,
+        final LongHashSet replicatedConnectionIds)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
@@ -167,6 +170,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundPublication = outboundPublication;
         this.inboundPublication = endPointFactory.inboundPublication();
         this.clusterableStreams = clusterableStreams;
+        this.replicatedConnectionIds = replicatedConnectionIds;
         this.senderEndPoints = new SenderEndPoints();
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
@@ -192,7 +196,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 clusterableStreams.publication(OUTBOUND_LIBRARY_STREAM),
                 replyPublication,
                 engineDescriptorStore,
-                configuration.bindAddress().toString());
+                configuration.bindAddress().toString(),
+                this.replicatedConnectionIds);
             outboundClusterSubscriber = ProtocolSubscription.of(this);
         }
 
@@ -410,7 +415,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 return CONTINUE;
             }
 
-            final boolean resetSeqNumbers = sequenceNumberType == SequenceNumberType.TRANSIENT;
+            final boolean resetSeqNumbers;
+            if (sequenceNumberType == SequenceNumberType.TRANSIENT)
+            {
+                resetSeqNumbers = true;
+            }
+            else
+            {
+                resetSeqNumbers = false;
+                replicatedConnectionIds.add(connectionId);
+            }
             final GatewaySession session =
                 setupConnection(channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR, resetSeqNumbers);
 
