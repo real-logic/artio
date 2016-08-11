@@ -19,6 +19,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
@@ -38,7 +39,6 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 
-import static io.aeron.Publication.BACK_PRESSURED;
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
@@ -261,7 +261,12 @@ class ReceiverEndPoint
                 }
                 else
                 {
-                    checkSessionId(offset, length);
+                    if (checkSessionId(offset, length))
+                    {
+                        moveRemainingDataToBufferStart(offset);
+                        return offset;
+                    }
+
                     messagesRead.orderedIncrement();
                     if (!saveMessage(offset, messageType, length))
                     {
@@ -318,6 +323,7 @@ class ReceiverEndPoint
 
     private void saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
     {
+        // Willing to drop invalid message in the case of back pressure.
         libraryPublication.saveMessage(
             buffer, offset, length, libraryId, messageType, sessionId, connectionId, INVALID_CHECKSUM);
     }
@@ -326,7 +332,7 @@ class ReceiverEndPoint
     {
         final long position = publication.saveMessage(
             buffer, offset, length, libraryId, messageType, sessionId, connectionId, OK);
-        if (position == BACK_PRESSURED)
+        if (Pressure.isBackPressured(position))
         {
             return false;
         }
@@ -337,7 +343,7 @@ class ReceiverEndPoint
         }
     }
 
-    private void checkSessionId(final int offset, final int length)
+    private boolean checkSessionId(final int offset, final int length)
     {
         if (sessionId == UNKNOWN)
         {
@@ -346,8 +352,12 @@ class ReceiverEndPoint
             sessionId = sessionIds.onLogon(compositeKey);
             if (sessionId == DUPLICATE_SESSION)
             {
-                libraryPublication.saveError(GatewayError.DUPLICATE_SESSION, libraryId, 0,
+                final long position = libraryPublication.saveError(GatewayError.DUPLICATE_SESSION, libraryId, 0,
                     connectionId + ": Duplicate Session: " + compositeKey);
+                if (Pressure.isBackPressured(position))
+                {
+                    return true;
+                }
                 close(LOCAL_DISCONNECT);
             }
             else
@@ -369,7 +379,7 @@ class ReceiverEndPoint
                     publication = libraryPublication;
                 }
 
-                publication.saveLogon(
+                return Pressure.isBackPressured(publication.saveLogon(
                     libraryId,
                     connectionId,
                     sessionId,
@@ -381,9 +391,11 @@ class ReceiverEndPoint
                     compositeKey.targetCompId(),
                     username,
                     password,
-                    LogonStatus.NEW);
+                    LogonStatus.NEW));
             }
         }
+
+        return false;
     }
 
     private int sequenceNumber(
@@ -400,6 +412,7 @@ class ReceiverEndPoint
 
     private void saveInvalidMessage(final int offset, final int startOfChecksumTag)
     {
+        // Willing to drop invalid message in the case of back pressure.
         libraryPublication.saveMessage(
             buffer,
             offset,
