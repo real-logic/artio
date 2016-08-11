@@ -41,7 +41,7 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
 
     private final Deque<CompleteSessionId> completeSessionIds = new ArrayDeque<>();
 
-    private Session latestSession;
+    private Session lastSession;
     private boolean hasDisconnected = false;
     private long sentPosition;
 
@@ -50,6 +50,8 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
         this.acceptor = acceptor;
         parser = new OtfParser(acceptor, new IntDictionary());
     }
+
+    // ----------- EVENTS -----------
 
     public Action onMessage(
         final DirectBuffer buffer,
@@ -81,18 +83,33 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
     {
         assertNotEquals(Session.UNKNOWN, session.id());
         connectionIdToSession.put(session.id(), session);
-        this.latestSession = session;
+        this.lastSession = session;
         return this;
     }
 
-    public Session latestSession()
+    public Action onSendCompleted(final long position)
     {
-        return latestSession;
+        this.sentPosition = position;
+        return CONTINUE;
     }
+
+    public void onSessionExists(final FixLibrary library,
+                                final long sessionId,
+                                final String acceptorCompId,
+                                final String acceptorSubId,
+                                final String acceptorLocationId,
+                                final String initiatorCompId,
+                                final String username,
+                                final String password)
+    {
+        completeSessionIds.add(new CompleteSessionId(acceptorCompId, initiatorCompId, sessionId));
+    }
+
+    // ----------- END EVENTS -----------
 
     public void resetSession()
     {
-        latestSession = null;
+        lastSession = null;
     }
 
     public Collection<Session> sessions()
@@ -105,17 +122,17 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
         return hasDisconnected;
     }
 
-    public long onlySessionId()
+    public long awaitSessionId(final Runnable poller)
     {
+        while (!hasSession())
+        {
+            poller.run();
+        }
+
         return lastSessionId().sessionId();
     }
 
-    private CompleteSessionId lastSessionId()
-    {
-        return completeSessionIds.peekFirst();
-    }
-
-    public boolean hasSession()
+    private boolean hasSession()
     {
         return !completeSessionIds.isEmpty();
     }
@@ -123,12 +140,6 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
     public void clearSessions()
     {
         completeSessionIds.clear();
-    }
-
-    public Action onSendCompleted(final long position)
-    {
-        this.sentPosition = position;
-        return CONTINUE;
     }
 
     public long sentPosition()
@@ -158,18 +169,6 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
         }
     }
 
-    public void onSessionExists(final FixLibrary library,
-                                final long sessionId,
-                                final String acceptorCompId,
-                                final String acceptorSubId,
-                                final String acceptorLocationId,
-                                final String initiatorCompId,
-                                final String username,
-                                final String password)
-    {
-        completeSessionIds.add(new CompleteSessionId(acceptorCompId, initiatorCompId, sessionId));
-    }
-
     public String lastAcceptorCompId()
     {
         return lastSessionId().acceptorCompId();
@@ -178,6 +177,16 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
     public String lastInitiatorCompId()
     {
         return lastSessionId().initiatorCompId();
+    }
+
+    public Session lastSession()
+    {
+        return lastSession;
+    }
+
+    private CompleteSessionId lastSessionId()
+    {
+        return completeSessionIds.peekFirst();
     }
 
     public static final class CompleteSessionId

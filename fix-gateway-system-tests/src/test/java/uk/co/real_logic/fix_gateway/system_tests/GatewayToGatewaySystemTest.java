@@ -372,12 +372,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         try (final FixLibrary library2 = FixLibrary.connect(
             acceptingLibraryConfig(handler2, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor-2", IPC_CHANNEL)))
         {
-            while (!handler2.hasSession())
-            {
-                library2.poll(1);
-            }
-
-            assertEquals(1, handler2.onlySessionId());
+            assertEquals(1, handler2.awaitSessionId(() -> library2.poll(1)));
         }
     }
 

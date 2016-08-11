@@ -271,11 +271,7 @@ public final class SystemTestUtil
         final FakeHandler sessionHandler,
         final FixLibrary library)
     {
-        while (!sessionHandler.hasSession())
-        {
-            library.poll(1);
-        }
-        final long sessionId = sessionHandler.onlySessionId();
+        final long sessionId = sessionHandler.awaitSessionId(() -> library.poll(1));
         return acquireSession(sessionHandler, library, sessionId);
     }
 
@@ -286,7 +282,7 @@ public final class SystemTestUtil
     {
         final SessionReplyStatus reply = getSessionStatus(library, sessionId, NO_MESSAGE_REPLAY);
         assertEquals(SessionReplyStatus.OK, reply);
-        final Session session = sessionHandler.latestSession();
+        final Session session = sessionHandler.lastSession();
         sessionHandler.resetSession();
         return session;
     }
