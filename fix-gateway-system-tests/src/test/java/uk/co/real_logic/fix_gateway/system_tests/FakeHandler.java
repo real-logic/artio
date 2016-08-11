@@ -37,13 +37,12 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
     private final Long2ObjectHashMap<Session> connectionIdToSession = new Long2ObjectHashMap<>();
     private final OtfParser parser;
     private final FakeOtfAcceptor acceptor;
-    private final Deque<Long> sessionIds = new ArrayDeque<>();
+
+    private final Deque<CompleteSessionId> completeSessionIds = new ArrayDeque<>();
 
     private Session latestSession;
     private boolean hasDisconnected = false;
     private long sentPosition;
-    private String lastAcceptorCompId;
-    private String lastInitiatorCompId;
 
     public FakeHandler(final FakeOtfAcceptor acceptor)
     {
@@ -105,19 +104,29 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
         return hasDisconnected;
     }
 
-    public long latestSessionId()
+    public long onlySessionId()
     {
-        return sessionIds.peekFirst();
+        return lastSessionId().sessionId;
+    }
+
+    public CompleteSessionId lastSessionId()
+    {
+        return completeSessionIds.peekFirst();
+    }
+
+    public Deque<CompleteSessionId> completeSessionIds()
+    {
+        return completeSessionIds;
     }
 
     public boolean hasSession()
     {
-        return !sessionIds.isEmpty();
+        return !completeSessionIds.isEmpty();
     }
 
-    public void clearConnections()
+    public void clearSessions()
     {
-        sessionIds.clear();
+        completeSessionIds.clear();
     }
 
     public Action onSendCompleted(final long position)
@@ -140,18 +149,30 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
                                 final String username,
                                 final String password)
     {
-        this.lastAcceptorCompId = acceptorCompId;
-        this.lastInitiatorCompId = initiatorCompId;
-        sessionIds.add(sessionId);
+        completeSessionIds.add(new CompleteSessionId(acceptorCompId, initiatorCompId, sessionId));
     }
 
     public String lastAcceptorCompId()
     {
-        return lastAcceptorCompId;
+        return lastSessionId().acceptorCompId;
     }
 
     public String lastInitiatorCompId()
     {
-        return lastInitiatorCompId;
+        return lastSessionId().initiatorCompId;
+    }
+
+    public static class CompleteSessionId
+    {
+        final String acceptorCompId;
+        final String initiatorCompId;
+        final long sessionId;
+
+        CompleteSessionId(final String acceptorCompId, final String initiatorCompId, final long sessionId)
+        {
+            this.acceptorCompId = acceptorCompId;
+            this.initiatorCompId = initiatorCompId;
+            this.sessionId = sessionId;
+        }
     }
 }

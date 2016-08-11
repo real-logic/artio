@@ -275,7 +275,7 @@ public final class SystemTestUtil
         {
             library.poll(1);
         }
-        final long sessionId = sessionHandler.latestSessionId();
+        final long sessionId = sessionHandler.onlySessionId();
         final SessionReplyStatus reply = acquireSession(library, sessionId, NO_MESSAGE_REPLAY);
         assertEquals(SessionReplyStatus.OK, reply);
         final Session session = sessionHandler.latestSession();

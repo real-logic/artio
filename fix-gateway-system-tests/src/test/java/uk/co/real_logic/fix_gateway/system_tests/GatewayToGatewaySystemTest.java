@@ -25,8 +25,10 @@ import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.system_tests.FakeHandler.CompleteSessionId;
 
 import java.util.List;
+import java.util.Optional;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.hamcrest.Matchers.*;
@@ -161,13 +163,36 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FakeHandler initiatingSessionHandler2 = new FakeHandler(initiatingOtfAcceptor2);
         try (final FixLibrary library2 = newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2))
         {
-            acceptingHandler.clearConnections();
+            acceptingHandler.clearSessions();
             final Session session2 = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID).resultIfPresent();
 
             assertConnected(session2);
             sessionLogsOn(library2, acceptingLibrary, session2);
-            // TODO: fix test, sometimes fails due to acquiring the wrong session
-            final Session acceptingSession2 = acquireSession(acceptingHandler, acceptingLibrary);
+
+            long sessionId;
+            while (true)
+            {
+                acceptingLibrary.poll(1);
+                library2.poll(1);
+                initiatingLibrary.poll(1);
+
+                final Optional<CompleteSessionId> maybeSession = acceptingHandler.completeSessionIds()
+                    .stream()
+                    .filter(sid ->
+                        sid.initiatorCompId.equals(INITIATOR_ID2) && sid.acceptorCompId.equals(ACCEPTOR_ID))
+                    .findFirst();
+
+                if (maybeSession.isPresent())
+                {
+                    sessionId = maybeSession.get().sessionId;
+                    break;
+                }
+            }
+
+            final SessionReplyStatus reply = acquireSession(acceptingLibrary, sessionId, NO_MESSAGE_REPLAY);
+            assertEquals(SessionReplyStatus.OK, reply);
+            final Session acceptingSession2 = acceptingHandler.latestSession();
+            acceptingHandler.resetSession();
 
             sendTestRequest(acceptingSession2);
             assertReceivedTestRequest(library2, acceptingLibrary, initiatingOtfAcceptor2);
@@ -370,7 +395,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
                 library2.poll(1);
             }
 
-            assertEquals(1, handler2.latestSessionId());
+            assertEquals(1, handler2.onlySessionId());
         }
     }
 

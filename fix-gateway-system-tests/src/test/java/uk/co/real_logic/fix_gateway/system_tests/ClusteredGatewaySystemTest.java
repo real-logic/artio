@@ -292,7 +292,7 @@ public class ClusteredGatewaySystemTest
 
         initiatingSession.close();
         acceptingSession.close();
-        acceptingHandler.clearConnections();
+        acceptingHandler.clearSessions();
 
         connectFixSession();
 
