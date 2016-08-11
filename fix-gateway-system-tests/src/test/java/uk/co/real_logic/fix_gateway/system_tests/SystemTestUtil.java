@@ -276,11 +276,30 @@ public final class SystemTestUtil
             library.poll(1);
         }
         final long sessionId = sessionHandler.onlySessionId();
-        final SessionReplyStatus reply = acquireSession(library, sessionId, NO_MESSAGE_REPLAY);
+        return acquireSession(sessionHandler, library, sessionId);
+    }
+
+    public static Session acquireSession(
+        final FakeHandler sessionHandler,
+        final FixLibrary library,
+        final long sessionId)
+    {
+        final SessionReplyStatus reply = getSessionStatus(library, sessionId, NO_MESSAGE_REPLAY);
         assertEquals(SessionReplyStatus.OK, reply);
         final Session session = sessionHandler.latestSession();
         sessionHandler.resetSession();
         return session;
+    }
+
+    public static SessionReplyStatus getSessionStatus(
+        final FixLibrary library,
+        final long sessionId,
+        final int lastReceivedMsgSeqNum)
+    {
+        final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, lastReceivedMsgSeqNum);
+        awaitReply(library, reply);
+        assertEquals(reply.state(), COMPLETED);
+        return reply.resultIfPresent();
     }
 
     public static void sessionLogsOn(final FixLibrary library1,
@@ -357,16 +376,5 @@ public final class SystemTestUtil
                 .filter(message -> HI_ID.equals(message.get(Constants.TEST_REQ_ID)))
                 .isPresent();
         });
-    }
-
-    public static SessionReplyStatus acquireSession(
-        final FixLibrary library,
-        final long sessionId,
-        final int lastReceivedMsgSeqNum)
-    {
-        final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, lastReceivedMsgSeqNum);
-        awaitReply(library, reply);
-        assertEquals(reply.state(), COMPLETED);
-        return reply.resultIfPresent();
     }
 }

@@ -27,6 +27,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
+import java.util.Optional;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertNotEquals;
@@ -106,17 +107,12 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
 
     public long onlySessionId()
     {
-        return lastSessionId().sessionId;
+        return lastSessionId().sessionId();
     }
 
-    public CompleteSessionId lastSessionId()
+    private CompleteSessionId lastSessionId()
     {
         return completeSessionIds.peekFirst();
-    }
-
-    public Deque<CompleteSessionId> completeSessionIds()
-    {
-        return completeSessionIds;
     }
 
     public boolean hasSession()
@@ -140,6 +136,28 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
         return sentPosition;
     }
 
+    public long awaitSessionIdFor(
+        final String initiatorId,
+        final String acceptorId,
+        final Runnable poller)
+    {
+        while (true)
+        {
+            poller.run();
+
+            final Optional<CompleteSessionId> maybeSession = completeSessionIds
+                .stream()
+                .filter(sid ->
+                    sid.initiatorCompId().equals(initiatorId) && sid.acceptorCompId().equals(acceptorId))
+                .findFirst();
+
+            if (maybeSession.isPresent())
+            {
+                return maybeSession.get().sessionId();
+            }
+        }
+    }
+
     public void onSessionExists(final FixLibrary library,
                                 final long sessionId,
                                 final String acceptorCompId,
@@ -154,25 +172,40 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
 
     public String lastAcceptorCompId()
     {
-        return lastSessionId().acceptorCompId;
+        return lastSessionId().acceptorCompId();
     }
 
     public String lastInitiatorCompId()
     {
-        return lastSessionId().initiatorCompId;
+        return lastSessionId().initiatorCompId();
     }
 
-    public static class CompleteSessionId
+    public static final class CompleteSessionId
     {
-        final String acceptorCompId;
-        final String initiatorCompId;
-        final long sessionId;
+        private final String acceptorCompId;
+        private final String initiatorCompId;
+        private final long sessionId;
 
-        CompleteSessionId(final String acceptorCompId, final String initiatorCompId, final long sessionId)
+        private CompleteSessionId(final String acceptorCompId, final String initiatorCompId, final long sessionId)
         {
             this.acceptorCompId = acceptorCompId;
             this.initiatorCompId = initiatorCompId;
             this.sessionId = sessionId;
+        }
+
+        public String acceptorCompId()
+        {
+            return acceptorCompId;
+        }
+
+        public String initiatorCompId()
+        {
+            return initiatorCompId;
+        }
+
+        public long sessionId()
+        {
+            return sessionId;
         }
     }
 }
