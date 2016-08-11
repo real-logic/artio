@@ -25,6 +25,19 @@ import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
  */
 public interface SessionHandler
 {
+    /**
+     * Event to indicate that a fix message has arrived to process.
+     *
+     * @param buffer the buffer containing the fix message.
+     * @param offset the offset in the buffer where the message starts.
+     * @param length the length of the message within the buffer.
+     * @param libraryId the id of library which has received this message.
+     * @param sessionId the id of the session which has received this message.
+     * @param messageType the FIX msgType field, encoded as an int.
+     * @param timestampInNs the time of the message in nanoseconds.
+     * @param position the position in the Aeron stream at the end of the message.
+     * @return an action to indicate the correct back pressure behaviour.
+     */
     Action onMessage(
         final DirectBuffer buffer,
         final int offset,
@@ -32,10 +45,26 @@ public interface SessionHandler
         final int libraryId,
         final long sessionId,
         final int messageType,
-        final long timestamp,
+        final long timestampInNs,
         final long position);
 
+    /**
+     * This session has timed out on this library. It is still connected, but will
+     * be managed by the gateway.
+     *
+     * @param libraryId the id of library which the session used to owned by.
+     * @param sessionId the id of the session.
+     */
     void onTimeout(final int libraryId, final long sessionId);
 
+    /**
+     * The session has disconnected.
+     *
+     *
+     * @param libraryId the id of library which the session used to owned by.
+     * @param sessionId the id of the session.
+     * @param reason the reason for the disconnection happening.
+     * @return an action to indicate the correct back pressure behaviour.
+     */
     Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason);
 }

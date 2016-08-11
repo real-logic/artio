@@ -44,7 +44,7 @@ public class SampleSessionHandler implements SessionHandler
         final int libraryId,
         final long sessionId,
         final int messageType,
-        final long timestamp,
+        final long timestampInNs,
         final long position)
     {
         string.wrap(buffer);

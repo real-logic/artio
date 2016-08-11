@@ -58,7 +58,7 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
         final int libraryId,
         final long sessionId,
         final int messageType,
-        final long timestamp,
+        final long timestampInNs,
         final long position)
     {
         parser.onMessage(buffer, offset, length);
