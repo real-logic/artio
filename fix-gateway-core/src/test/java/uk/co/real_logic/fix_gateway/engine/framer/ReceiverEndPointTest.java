@@ -25,6 +25,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
+import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
@@ -199,15 +200,25 @@ public class ReceiverEndPointTest
     @Test
     public void invalidChecksumMessageRecorded() throws IOException
     {
-        theEndpointReceives(INVALID_CHECKSUM_MSG, 0, INVALID_CHECKSUM_LEN);
+        theEndpointReceivesAMessageWithInvalidChecksum();
 
         endPoint.pollForData();
 
-        verify(libraryPublication, times(1))
-            .saveMessage(
-                anyBuffer(), eq(0), eq(INVALID_CHECKSUM_LEN),
-                eq(LIBRARY_ID), eq(MESSAGE_TYPE), anyLong(), eq(CONNECTION_ID),
-                eq(INVALID_CHECKSUM));
+        publicationSavesInvalidChecksumMessage(times(1));
+    }
+
+    @Test
+    public void invalidChecksumMessageRecordedWhenBackpressured() throws IOException
+    {
+        firstSaveAttemptIsBackpressured();
+
+        theEndpointReceivesAMessageWithInvalidChecksum();
+
+        endPoint.pollForData();
+
+        endPoint.pollForData();
+
+        publicationSavesInvalidChecksumMessage(times(2));
     }
 
     @Test
@@ -299,7 +310,7 @@ public class ReceiverEndPointTest
     private void firstSaveAttemptIsBackpressured()
     {
         when(libraryPublication
-            .saveMessage(anyBuffer(), anyInt(), anyInt(), anyInt(), anyInt(), anyLong(), anyLong(), eq(OK)))
+            .saveMessage(anyBuffer(), anyInt(), anyInt(), anyInt(), anyInt(), anyLong(), anyLong(), any()))
             .thenReturn(BACK_PRESSURED, POSITION);
     }
 
@@ -448,4 +459,19 @@ public class ReceiverEndPointTest
             LangUtil.rethrowUnchecked(ex);
         }
     }
+
+    private void theEndpointReceivesAMessageWithInvalidChecksum()
+    {
+        theEndpointReceives(INVALID_CHECKSUM_MSG, 0, INVALID_CHECKSUM_LEN);
+    }
+
+    private void publicationSavesInvalidChecksumMessage(final VerificationMode mode)
+    {
+        verify(libraryPublication, mode)
+            .saveMessage(
+                anyBuffer(), eq(0), eq(INVALID_CHECKSUM_LEN),
+                eq(LIBRARY_ID), eq(MESSAGE_TYPE), anyLong(), eq(CONNECTION_ID),
+                eq(INVALID_CHECKSUM));
+    }
+
 }

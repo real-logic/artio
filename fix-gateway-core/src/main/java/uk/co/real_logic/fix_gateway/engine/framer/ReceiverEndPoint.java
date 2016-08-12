@@ -135,9 +135,9 @@ class ReceiverEndPoint
         this.errorHandler = errorHandler;
         this.libraryId = libraryId;
         this.transientSequenceNumbers = transientSequenceNumbers;
+        this.replicatedConnectionIds = replicatedConnectionIds;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
-        this.replicatedConnectionIds = replicatedConnectionIds;
         buffer = new MutableAsciiBuffer(byteBuffer);
 
         // Initiator sessions are persistent if the sequence numbers are expected to be persistent.
@@ -263,7 +263,11 @@ class ReceiverEndPoint
                 final int length = (endOfMessage + 1) - offset;
                 if (checksumInvalid(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
                 {
-                    saveInvalidChecksumMessage(offset, messageType, length);
+                    if (saveInvalidChecksumMessage(offset, messageType, length))
+                    {
+                        moveRemainingDataToBufferStart(offset);
+                        return offset;
+                    }
                 }
                 else
                 {
@@ -327,11 +331,11 @@ class ReceiverEndPoint
         moveRemainingDataToBufferStart(usedBufferData);
     }
 
-    private void saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
+    private boolean saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
     {
-        // Willing to drop invalid message in the case of back pressure.
-        libraryPublication.saveMessage(
+        final long position = libraryPublication.saveMessage(
             buffer, offset, length, libraryId, messageType, sessionId, connectionId, INVALID_CHECKSUM);
+        return Pressure.isBackPressured(position);
     }
 
     private boolean saveMessage(final int offset, final int messageType, final int length)
@@ -470,6 +474,7 @@ class ReceiverEndPoint
     {
         usedBufferData -= offset;
         buffer.putBytes(0, buffer, offset, usedBufferData);
+        // position set to ensure that back pressure is applied to TCP when read(byteBuffer) called.
         byteBuffer.position(usedBufferData);
     }
 
