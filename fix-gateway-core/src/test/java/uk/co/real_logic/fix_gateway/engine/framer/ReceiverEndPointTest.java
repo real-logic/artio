@@ -71,6 +71,7 @@ public class ReceiverEndPointTest
     private SequenceNumberIndexReader sentSequenceNumbers = mock(SequenceNumberIndexReader.class);
     private SequenceNumberIndexReader receivedSequenceNumbers = mock(SequenceNumberIndexReader.class);
     private Framer framer = mock(Framer.class);
+    private GatewaySession gatewaySession = mock(GatewaySession.class);
     private final LongHashSet replicatedConnectionIds = new LongHashSet(SessionIds.MISSING);
 
     private ReceiverEndPoint endPoint =
@@ -83,7 +84,7 @@ public class ReceiverEndPointTest
     @Before
     public void setUp()
     {
-        endPoint.gatewaySession(mock(GatewaySession.class));
+        endPoint.gatewaySession(gatewaySession);
         when(mockSessionIds.onLogon(any())).thenReturn(SESSION_ID);
         when(mockSessionIdStrategy.onLogon(any())).thenReturn(compositeKey);
         doAnswer(inv ->
@@ -108,6 +109,24 @@ public class ReceiverEndPointTest
         pollsData(2 * MSG_LEN);
 
         savesAFramedMessage();
+
+        sessionReceivesOneMessage();
+    }
+
+    @Test
+    public void shouldFrameValidFixMessageWhenBackpressured()
+    {
+        firstSaveAttemptIsBackpressured();
+
+        theEndpointReceivesACompleteMessage();
+        pollsData(MSG_LEN);
+
+        theEndpointReceivesNothing();
+        pollsData(MSG_LEN);
+
+        savesFramedMessages(2, OK, MSG_LEN);
+
+        sessionReceivesOneMessage();
     }
 
     @Test
@@ -142,6 +161,8 @@ public class ReceiverEndPointTest
         endPoint.pollForData();
 
         savesAFramedMessage();
+
+        sessionReceivesOneMessage();
     }
 
     @Test
@@ -152,6 +173,8 @@ public class ReceiverEndPointTest
         endPoint.pollForData();
 
         savesTwoFramedMessages(1);
+
+        sessionReceivesTwoMessages();
     }
 
     @Test
@@ -162,6 +185,8 @@ public class ReceiverEndPointTest
         endPoint.pollForData();
 
         savesAFramedMessage();
+
+        sessionReceivesOneMessage();
     }
 
     @Test
@@ -174,6 +199,8 @@ public class ReceiverEndPointTest
         endPoint.pollForData();
 
         savesFramedMessages(2, OK, MSG_LEN);
+
+        sessionReceivesTwoMessageAtBufferStart();
     }
 
     @Test
@@ -245,20 +272,6 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldFrameValidFixMessageWhenBackpressured()
-    {
-        firstSaveAttemptIsBackpressured();
-
-        theEndpointReceivesACompleteMessage();
-        pollsData(MSG_LEN);
-
-        theEndpointReceivesNothing();
-        pollsData(MSG_LEN);
-
-        savesFramedMessages(2, OK, MSG_LEN);
-    }
-
-    @Test
     public void shouldFrameSplitFixMessageWhenBackpressured()
     {
         firstSaveAttemptIsBackpressured();
@@ -273,6 +286,8 @@ public class ReceiverEndPointTest
         endPoint.pollForData();
 
         savesFramedMessages(2, OK, MSG_LEN);
+
+        sessionReceivesOneMessage();
     }
 
     @Test
@@ -287,6 +302,8 @@ public class ReceiverEndPointTest
         endPoint.pollForData();
 
         savesTwoFramedMessages(2);
+
+        sessionReceivesTwoMessages();
     }
 
     @Test
@@ -315,6 +332,8 @@ public class ReceiverEndPointTest
         endPoint.pollForData();
 
         savesFramedMessages(2, OK, MSG_LEN);
+
+        sessionReceivesTwoMessages();
     }
 
     private void firstSaveAttemptIsBackpressured()
@@ -492,6 +511,37 @@ public class ReceiverEndPointTest
                 anyBuffer(), eq(0), eq(INVALID_CHECKSUM_LEN),
                 eq(LIBRARY_ID), eq(MESSAGE_TYPE), anyLong(), eq(CONNECTION_ID),
                 eq(INVALID_CHECKSUM));
+    }
+
+    private void sessionReceivesOneMessage()
+    {
+        sessionReceivesMessageAt(0, MSG_LEN, times(1));
+        sessionReceivedCountIs(1);
+    }
+
+    private void sessionReceivesTwoMessages()
+    {
+        sessionReceivesMessageAt(0, MSG_LEN, times(1));
+        sessionReceivesMessageAt(MSG_LEN, MSG_LEN, times(1));
+        sessionReceivedCountIs(2);
+    }
+
+    private void sessionReceivesTwoMessageAtBufferStart()
+    {
+        sessionReceivesMessageAt(0, MSG_LEN, times(2));
+        sessionReceivedCountIs(2);
+    }
+
+    private void sessionReceivedCountIs(final int numberOfMessages)
+    {
+        verify(gatewaySession, times(numberOfMessages))
+            .onMessage(any(), anyInt(), anyInt(), anyInt(), anyLong());
+    }
+
+    private void sessionReceivesMessageAt(final int offset, final int length, final VerificationMode mode)
+    {
+        verify(gatewaySession, mode)
+            .onMessage(any(), eq(offset), eq(length), eq(MESSAGE_TYPE), eq(SESSION_ID));
     }
 
 }
