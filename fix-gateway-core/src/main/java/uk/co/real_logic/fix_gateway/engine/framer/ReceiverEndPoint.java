@@ -245,7 +245,10 @@ class ReceiverEndPoint
 
                 if (!validateBodyLength(startOfChecksumTag))
                 {
-                    saveInvalidMessage(offset, startOfChecksumTag);
+                    if (saveInvalidMessage(offset, startOfChecksumTag))
+                    {
+                        return offset;
+                    }
                     close(LOCAL_DISCONNECT);
                     removeEndpointFromFramer();
                     break;
@@ -265,7 +268,6 @@ class ReceiverEndPoint
                 {
                     if (saveInvalidChecksumMessage(offset, messageType, length))
                     {
-                        moveRemainingDataToBufferStart(offset);
                         return offset;
                     }
                 }
@@ -273,14 +275,12 @@ class ReceiverEndPoint
                 {
                     if (checkSessionId(offset, length))
                     {
-                        moveRemainingDataToBufferStart(offset);
                         return offset;
                     }
 
                     messagesRead.orderedIncrement();
-                    if (!saveMessage(offset, messageType, length))
+                    if (saveMessage(offset, messageType, length))
                     {
-                        moveRemainingDataToBufferStart(offset);
                         return offset;
                     }
                 }
@@ -323,34 +323,16 @@ class ReceiverEndPoint
         return buffer.scan(startOfBodyLength + 1, usedBufferData - 1, START_OF_HEADER);
     }
 
-    private void saveInvalidMessage(final int offset)
+    private boolean saveInvalidMessage(final int offset)
     {
-        // Completely unable to deal with parsing this message, bail
-        libraryPublication.saveMessage(
-            buffer, offset, usedBufferData, libraryId, '-', sessionId, connectionId, INVALID);
-        moveRemainingDataToBufferStart(usedBufferData);
+        return stashIfBackpressured(offset, libraryPublication.saveMessage(
+            buffer, offset, usedBufferData, libraryId, '-', sessionId, connectionId, INVALID));
     }
 
     private boolean saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
     {
-        final long position = libraryPublication.saveMessage(
-            buffer, offset, length, libraryId, messageType, sessionId, connectionId, INVALID_CHECKSUM);
-        return Pressure.isBackPressured(position);
-    }
-
-    private boolean saveMessage(final int offset, final int messageType, final int length)
-    {
-        final long position = publication.saveMessage(
-            buffer, offset, length, libraryId, messageType, sessionId, connectionId, OK);
-        if (Pressure.isBackPressured(position))
-        {
-            return false;
-        }
-        else
-        {
-            gatewaySession.onMessage(buffer, offset, length, messageType, sessionId);
-            return true;
-        }
+        return stashIfBackpressured(offset, libraryPublication.saveMessage(
+            buffer, offset, length, libraryId, messageType, sessionId, connectionId, INVALID_CHECKSUM));
     }
 
     private boolean checkSessionId(final int offset, final int length)
@@ -366,6 +348,7 @@ class ReceiverEndPoint
                     connectionId + ": Duplicate Session: " + compositeKey);
                 if (Pressure.isBackPressured(position))
                 {
+                    moveRemainingDataToBufferStart(offset);
                     return true;
                 }
                 close(LOCAL_DISCONNECT);
@@ -389,7 +372,7 @@ class ReceiverEndPoint
                     publication = libraryPublication;
                 }
 
-                return Pressure.isBackPressured(publication.saveLogon(
+                return stashIfBackpressured(offset, publication.saveLogon(
                     libraryId,
                     connectionId,
                     sessionId,
@@ -408,6 +391,32 @@ class ReceiverEndPoint
         return false;
     }
 
+    private boolean stashIfBackpressured(final int offset, final long position)
+    {
+        final boolean backPressured = Pressure.isBackPressured(position);
+        if (backPressured)
+        {
+            moveRemainingDataToBufferStart(offset);
+        }
+        return backPressured;
+    }
+
+    private boolean saveMessage(final int offset, final int messageType, final int length)
+    {
+        final long position = publication.saveMessage(
+            buffer, offset, length, libraryId, messageType, sessionId, connectionId, OK);
+        if (Pressure.isBackPressured(position))
+        {
+            moveRemainingDataToBufferStart(offset);
+            return true;
+        }
+        else
+        {
+            gatewaySession.onMessage(buffer, offset, length, messageType, sessionId);
+            return false;
+        }
+    }
+
     private int sequenceNumber(
         final SequenceNumberIndexReader sequenceNumberIndexReader,
         final long sessionId)
@@ -420,10 +429,9 @@ class ReceiverEndPoint
         return sequenceNumberIndexReader.lastKnownSequenceNumber(sessionId);
     }
 
-    private void saveInvalidMessage(final int offset, final int startOfChecksumTag)
+    private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag)
     {
-        // Willing to drop invalid message in the case of back pressure.
-        libraryPublication.saveMessage(
+        return stashIfBackpressured(offset, libraryPublication.saveMessage(
             buffer,
             offset,
             libraryId,
@@ -431,7 +439,7 @@ class ReceiverEndPoint
             UNKNOWN_MESSAGE_TYPE,
             sessionId,
             connectionId,
-            INVALID_BODYLENGTH);
+            INVALID_BODYLENGTH));
     }
 
     private boolean validateBodyLength(final int startOfChecksumTag)

@@ -118,7 +118,7 @@ public class ReceiverEndPointTest
 
         endPoint.pollForData();
 
-        savesInvalidMessage(length);
+        savesInvalidMessage(length, times(1));
         verifyNoError();
     }
 
@@ -224,13 +224,23 @@ public class ReceiverEndPointTest
     @Test
     public void fieldOutOfOrderMessageRecorded() throws IOException
     {
-        final int length = TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES.length;
+        final int length = theEndpointReceivesAnOutOfOrderMessage();
 
-        theEndpointReceives(
-            TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES, 0, length);
+        savesInvalidMessage(length, times(1));
+        verifyNoError();
+    }
+
+    @Test
+    public void fieldOutOfOrderMessageRecordedWhenBackpressured() throws IOException
+    {
+        firstSaveAttemptIsBackpressured();
+
+        final int length = theEndpointReceivesAnOutOfOrderMessage();
+
+        theEndpointReceivesNothing();
         endPoint.pollForData();
 
-        savesInvalidMessage(length);
+        savesInvalidMessage(length, times(2));
         verifyNoError();
     }
 
@@ -330,9 +340,9 @@ public class ReceiverEndPointTest
         assertFalse("Endpoint Disconnected", endPoint.hasDisconnected());
     }
 
-    private void savesInvalidMessage(final int length)
+    private void savesInvalidMessage(final int length, final VerificationMode mode)
     {
-        verify(libraryPublication, times(1))
+        verify(libraryPublication, mode)
             .saveMessage(
                 anyBuffer(), eq(0), eq(length), eq(LIBRARY_ID),
                 anyInt(), anyLong(), eq(CONNECTION_ID),
@@ -440,6 +450,16 @@ public class ReceiverEndPointTest
                     .put(EG_MESSAGE, secondOffset, secondLength);
                 return MSG_LEN + secondLength;
             });
+    }
+
+    private int theEndpointReceivesAnOutOfOrderMessage()
+    {
+        final int length = TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES.length;
+
+        theEndpointReceives(
+            TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES, 0, length);
+        endPoint.pollForData();
+        return length;
     }
 
     private void endpointBufferUpdatedWith(final ToIntFunction<ByteBuffer> bufferUpdater)
