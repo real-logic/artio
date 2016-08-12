@@ -21,6 +21,7 @@ import org.junit.After;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.Reply;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import static org.hamcrest.Matchers.*;
@@ -51,7 +52,7 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void assertOriginalLibraryDoesNotReceiveMessages(final int initiator1MessageCount)
     {
-        initiatingLibrary.poll(5);
+        initiatingLibrary.poll(LIBRARY_LIMIT);
         assertThat("Messages received by wrong initiator",
             initiatingOtfAcceptor.messages(), hasSize(initiator1MessageCount));
     }
@@ -72,7 +73,7 @@ public class AbstractGatewayToGatewaySystemTest
     {
         while (session.lastReceivedMsgSeqNum() < sequenceNumber)
         {
-            library.poll(1);
+            library.poll(LIBRARY_LIMIT);
         }
     }
 
@@ -110,10 +111,29 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void connectSessions()
     {
-        initiatingSession = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID).resultIfPresent();
+        final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+
+        pollUntilReply(reply);
+        initiatingSession = reply.resultIfPresent();
 
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
+    }
+
+    protected void pollUntilReply(final Reply<?> reply)
+    {
+        while (reply.isExecuting())
+        {
+            pollLibraries();
+            ADMIN_IDLE_STRATEGY.idle();
+        }
+        ADMIN_IDLE_STRATEGY.reset();
+    }
+
+    protected void pollLibraries()
+    {
+        initiatingLibrary.poll(LIBRARY_LIMIT);
+        acceptingLibrary.poll(LIBRARY_LIMIT);
     }
 
     protected void assertMessageResent()
@@ -121,8 +141,8 @@ public class AbstractGatewayToGatewaySystemTest
         assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
         assertEventuallyTrue("Failed to receive the reply", () ->
         {
-            acceptingLibrary.poll(1);
-            initiatingLibrary.poll(1);
+            acceptingLibrary.poll(LIBRARY_LIMIT);
+            initiatingLibrary.poll(LIBRARY_LIMIT);
 
             final FixMessage message = acceptingOtfAcceptor.lastMessage();
             final String messageType = message.getMsgType();
@@ -166,7 +186,7 @@ public class AbstractGatewayToGatewaySystemTest
 
         assertEventuallyTrue("position never catches up", () ->
         {
-            initiatingLibrary.poll(1);
+            initiatingLibrary.poll(LIBRARY_LIMIT);
 
             return initiatingHandler.sentPosition() >= position;
         });

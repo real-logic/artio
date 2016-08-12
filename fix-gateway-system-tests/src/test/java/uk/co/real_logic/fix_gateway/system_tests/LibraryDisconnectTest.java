@@ -35,7 +35,7 @@ public class LibraryDisconnectTest extends AbstractGatewayToGatewaySystemTest
         delete(ACCEPTOR_LOGS);
         acceptingEngine = FixEngine.launch(
             acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID)
-              .replyTimeoutInMs(600));
+              .replyTimeoutInMs(1000));
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
 
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);

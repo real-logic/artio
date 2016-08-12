@@ -57,6 +57,7 @@ public final class SystemTestUtil
     public static final long TIMEOUT_IN_MS = 100;
     public static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
     public static final String HI_ID = "hi";
+    public static final int LIBRARY_LIMIT = 2;
 
     public static void assertSessionDisconnected(final FixLibrary library1, final Session session)
     {
@@ -99,10 +100,10 @@ public final class SystemTestUtil
 
     public static void poll(final FixLibrary library1, final FixLibrary library2)
     {
-        library1.poll(1);
+        library1.poll(LIBRARY_LIMIT);
         if (library2 != null)
         {
-            library2.poll(1);
+            library2.poll(LIBRARY_LIMIT);
         }
     }
 
@@ -133,6 +134,19 @@ public final class SystemTestUtil
         return hasProperty("senderCompID", equalTo(senderCompId));
     }
 
+    public static Reply<Session> initiateAndAwait(
+        final FixLibrary library,
+        final int port,
+        final String initiatorId,
+        final String acceptorId)
+    {
+        final Reply<Session> reply = initiate(library, port, initiatorId, acceptorId);
+
+        awaitReply(library, reply);
+
+        return reply;
+    }
+
     public static Reply<Session> initiate(
         final FixLibrary library,
         final int port,
@@ -146,11 +160,7 @@ public final class SystemTestUtil
             .targetCompId(acceptorId)
             .build();
 
-        final Reply<Session> reply = library.initiate(config);
-
-        awaitReply(library, reply);
-
-        return reply;
+        return library.initiate(config);
     }
 
     public static void awaitReply(final FixLibrary library, final Reply<?> reply)
@@ -271,7 +281,7 @@ public final class SystemTestUtil
         final FakeHandler sessionHandler,
         final FixLibrary library)
     {
-        final long sessionId = sessionHandler.awaitSessionId(() -> library.poll(1));
+        final long sessionId = sessionHandler.awaitSessionId(() -> library.poll(LIBRARY_LIMIT));
         return acquireSession(sessionHandler, library, sessionId);
     }
 
