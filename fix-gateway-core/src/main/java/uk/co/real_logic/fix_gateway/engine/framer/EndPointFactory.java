@@ -21,6 +21,7 @@ import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -69,7 +70,8 @@ class EndPointFactory
         final Framer framer,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
-        final boolean resetSequenceNumbers) throws IOException
+        final boolean resetSequenceNumbers,
+        final ConnectionType connectionType) throws IOException
     {
         return new ReceiverEndPoint(
             channel,
@@ -88,6 +90,7 @@ class EndPointFactory
             errorHandler,
             libraryId,
             resetSequenceNumbers,
+            connectionType,
             replicatedConnectionIds
         );
     }

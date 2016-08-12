@@ -183,12 +183,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.replayFragmentLimit = configuration.replayFragmentLimit();
         this.inboundBytesReceivedLimit = configuration.inboundBytesReceivedLimit();
 
-        if (outboundClusterSubscription == null)
-        {
-            outboundLibrarySubscriber = ProtocolSubscription.of(this, new EngineProtocolSubscription(this));
-            outboundClusterSubscriber = null;
-        }
-        else
+        if (isClustered())
         {
             outboundLibrarySubscriber = new SubscriptionSplitter(
                 clusterableStreams,
@@ -200,6 +195,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 this.replicatedConnectionIds);
             outboundClusterSubscriber = ProtocolSubscription.of(this);
         }
+        else
+        {
+            outboundLibrarySubscriber = ProtocolSubscription.of(this, new EngineProtocolSubscription(this));
+            outboundClusterSubscriber = null;
+        }
 
         try
         {
@@ -209,6 +209,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    private boolean isClustered()
+    {
+        return outboundClusterSubscription != null;
     }
 
     @Override
@@ -234,18 +239,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         final int newMessagesRead =
             outboundLibrarySubscription.controlledPoll(outboundLibrarySubscriber, outboundLibraryFragmentLimit);
-        final int messagesRead = newMessagesRead +
+        int messagesRead = newMessagesRead +
             outboundSlowSubscription.controlledPoll(senderEndPoints, outboundLibraryFragmentLimit);
 
-        if (outboundClusterSubscription == null)
+        if (isClustered())
         {
-            return messagesRead;
-        }
-        else
-        {
-            return messagesRead +
+            messagesRead +=
                 outboundClusterSubscription.controlledPoll(outboundClusterSubscriber, outboundLibraryFragmentLimit);
         }
+
+        return messagesRead;
     }
 
     private int pollLibraries(final long timeInMs)
@@ -337,7 +340,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             // In this case the save connect is simply logged for posterities sake
             // So in the back-pressure we should just drop it
             final long position = inboundPublication.saveConnect(connectionId, address);
-            if (isBackPressured(inboundPublication.saveConnect(connectionId, address)))
+            if (isBackPressured(position))
             {
                 errorHandler.onError(new IllegalStateException(
                     "Failed to log connect from " + address + " due to backpressure"));
@@ -415,16 +418,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 return CONTINUE;
             }
 
-            final boolean resetSeqNumbers;
-            if (sequenceNumberType == SequenceNumberType.TRANSIENT)
-            {
-                resetSeqNumbers = true;
-            }
-            else
-            {
-                resetSeqNumbers = false;
-                replicatedConnectionIds.add(connectionId);
-            }
+            final boolean resetSeqNumbers = sequenceNumberType == SequenceNumberType.TRANSIENT;
             final GatewaySession session =
                 setupConnection(channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR, resetSeqNumbers);
 
@@ -525,7 +519,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         final ReceiverEndPoint receiverEndPoint =
             endPointFactory.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
-                sentSequenceNumberIndex, receivedSequenceNumberIndex, resetSequenceNumbers);
+                sentSequenceNumberIndex, receivedSequenceNumberIndex, resetSequenceNumbers, connectionType);
         receiverEndPoints.add(receiverEndPoint);
 
         final SenderEndPoint senderEndPoint =

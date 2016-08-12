@@ -27,6 +27,7 @@ import org.mockito.InOrder;
 import org.mockito.Mockito;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
@@ -76,7 +77,7 @@ public class ReceiverEndPointTest
             mockChannel, 16 * 1024, clusterablePublication, libraryPublication, sessionReplicationStrategy,
             CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
             sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID, false,
-            replicatedConnectionIds);
+            ConnectionType.ACCEPTOR, replicatedConnectionIds);
 
     @Before
     public void setUp()

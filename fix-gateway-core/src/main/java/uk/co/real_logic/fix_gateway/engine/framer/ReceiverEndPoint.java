@@ -23,6 +23,7 @@ import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.messages.LogonStatus;
@@ -42,6 +43,7 @@ import java.nio.channels.Selector;
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
+import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.*;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
 import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
@@ -90,7 +92,7 @@ class ReceiverEndPoint
 
     private GatewayPublication publication;
     private int libraryId;
-    private final boolean resetSequenceNumbers;
+    private final boolean transientSequenceNumbers;
     private GatewaySession gatewaySession;
     private long sessionId;
     private int usedBufferData = 0;
@@ -114,7 +116,8 @@ class ReceiverEndPoint
         final Framer framer,
         final ErrorHandler errorHandler,
         final int libraryId,
-        final boolean resetSequenceNumbers,
+        final boolean transientSequenceNumbers,
+        final ConnectionType connectionType,
         final LongHashSet replicatedConnectionIds)
     {
         this.channel = channel;
@@ -131,21 +134,24 @@ class ReceiverEndPoint
         this.framer = framer;
         this.errorHandler = errorHandler;
         this.libraryId = libraryId;
-        this.resetSequenceNumbers = resetSequenceNumbers;
+        this.transientSequenceNumbers = transientSequenceNumbers;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         this.replicatedConnectionIds = replicatedConnectionIds;
         buffer = new MutableAsciiBuffer(byteBuffer);
 
-        // TODO: think of a cleaner way of doing this.
-        // If you're initiating the session in a cluster then you need to set the publication object
-        if (resetSequenceNumbers)
+        // Initiator sessions are persistent if the sequence numbers are expected to be persistent.
+        if (connectionType == INITIATOR)
         {
-            publication = libraryPublication;
-        }
-        else
-        {
-            publication = clusterablePublication;
+            if (transientSequenceNumbers)
+            {
+                publication = libraryPublication;
+            }
+            else
+            {
+                publication = clusterablePublication;
+                replicatedConnectionIds.add(connectionId);
+            }
         }
     }
 
@@ -402,7 +408,7 @@ class ReceiverEndPoint
         final SequenceNumberIndexReader sequenceNumberIndexReader,
         final long sessionId)
     {
-        if (resetSequenceNumbers)
+        if (transientSequenceNumbers)
         {
             return SessionInfo.UNK_SESSION;
         }
