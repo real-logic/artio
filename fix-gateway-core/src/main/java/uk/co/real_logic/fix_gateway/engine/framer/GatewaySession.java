@@ -77,6 +77,11 @@ class GatewaySession implements SessionInfo
         return sessionId;
     }
 
+    public CompositeKey sessionKey()
+    {
+        return sessionKey;
+    }
+
     void manage(final SessionParser sessionParser, final Session session)
     {
         this.sessionParser = sessionParser;
@@ -134,11 +139,6 @@ class GatewaySession implements SessionInfo
     ConnectionType connectionType()
     {
         return connectionType;
-    }
-
-    CompositeKey compositeKey()
-    {
-        return sessionKey;
     }
 
     public void onMessage(final MutableAsciiBuffer buffer,

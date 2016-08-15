@@ -443,7 +443,7 @@ public class FramerTest
     private void givenAGatewayToManage()
     {
         when(gatewaySession.connectionId()).thenReturn(connectionId.getValue());
-        when(gatewaySession.compositeKey()).thenReturn(mock(CompositeKey.class));
+        when(gatewaySession.sessionKey()).thenReturn(mock(CompositeKey.class));
         when(gatewaySessions.sessions()).thenReturn(singletonList(gatewaySession));
     }
 

@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
+
 /**
  * Class represents information that a gateway is aware of about a session.
  */
@@ -46,6 +48,14 @@ public interface SessionInfo
      * @return the session id.
      */
     long sessionId();
+
+    /**
+     * Get the full identifying key of the session in question or <code>null</code>
+     * if the session hasn't completed its logon yet.
+     *
+     * @return the full identifying key of the session in question.
+     */
+    CompositeKey sessionKey();
 
     /**
      * Returns the number of bytes outstanding in the quarantine buffer to send.

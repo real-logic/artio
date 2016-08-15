@@ -734,7 +734,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                           final int lastReceivedSeqNum,
                           final LogonStatus status)
     {
-        final CompositeKey compositeKey = gatewaySession.compositeKey();
+        final CompositeKey compositeKey = gatewaySession.sessionKey();
         if (compositeKey != null)
         {
             final long connectionId = gatewaySession.connectionId();

@@ -116,7 +116,7 @@ public class GatewaySessions
         sessions.add(gatewaySession);
         gatewaySession.manage(sessionParser, session);
 
-        final CompositeKey sessionKey = gatewaySession.compositeKey();
+        final CompositeKey sessionKey = gatewaySession.sessionKey();
         DebugLogger.log("Gateway Acquired Session %d\n", connectionId);
         if (sessionKey != null)
         {
