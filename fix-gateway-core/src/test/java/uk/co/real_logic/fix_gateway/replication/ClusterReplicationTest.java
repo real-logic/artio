@@ -208,11 +208,19 @@ public class ClusterReplicationTest
 
     private void assertNodeStateReplicated()
     {
+        final int[] nodeIds = {1, 2, 3};
+        final int followerCount = nodeIds.length - 1;
         final NodeRunner leader = leader();
-        final Int2IntHashMap nodeIdToId = leader.nodeIdToId();
+        Int2IntHashMap nodeIdToId;
+        do
+        {
+            pollAll();
+            nodeIdToId = leader.nodeIdToId();
+        } while (nodeIdToId.size() < followerCount);
+
         final short leaderId = leader.raftNode().nodeId();
 
-        for (final int id : new int[]{1, 2, 3})
+        for (final int id : nodeIds)
         {
             if (id != leaderId)
             {
