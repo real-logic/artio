@@ -21,6 +21,7 @@ import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
+import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -181,6 +182,19 @@ public class SessionIdsTest
         {
             IoUtil.deleteIfExists(backupLocation);
         }
+    }
+
+    @Test
+    public void handsOutSameSessionIdAfterTakingOverAsLeader()
+    {
+        final long sessionId = 123;
+        final HeaderDecoder header = mock(HeaderDecoder.class);
+        when(header.senderCompIDAsString()).thenReturn(aSession.senderCompId());
+        when(header.targetCompIDAsString()).thenReturn(aSession.targetCompId());
+
+        sessionIds.onSentFollowerLogon(sessionId, header);
+
+        assertEquals(sessionId, sessionIds.onLogon(aSession));
     }
 
     private void verifyNoBackUp()

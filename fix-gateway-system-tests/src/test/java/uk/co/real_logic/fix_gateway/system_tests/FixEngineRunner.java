@@ -18,10 +18,13 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import io.aeron.CommonContext;
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
+import org.agrona.concurrent.NoOpIdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.replication.FrameDropper;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
@@ -129,5 +132,10 @@ public class FixEngineRunner
     public int nodeId()
     {
         return nodeId;
+    }
+
+    public List<SessionInfo> sessions()
+    {
+        return engine.gatewaySessions(new NoOpIdleStrategy());
     }
 }

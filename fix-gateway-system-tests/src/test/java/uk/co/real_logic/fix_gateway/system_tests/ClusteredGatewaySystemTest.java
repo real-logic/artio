@@ -158,7 +158,12 @@ public class ClusteredGatewaySystemTest
 
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
-        acceptingSession = acquireSession(acceptingHandler, acceptingLibrary);
+        final long sessionId = acceptingHandler.awaitSessionIdFor(INITIATOR_ID, ACCEPTOR_ID, () ->
+        {
+            acceptingLibrary.poll(1);
+            initiatingLibrary.poll(1);
+        });
+        acceptingSession = acquireSession(acceptingHandler, acceptingLibrary, sessionId);
         assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
         assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
     }

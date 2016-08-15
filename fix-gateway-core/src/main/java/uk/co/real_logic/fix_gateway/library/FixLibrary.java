@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import org.agrona.CloseHelper;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
@@ -132,7 +133,7 @@ public class FixLibrary extends GatewayProcess
      */
     public void close()
     {
-        poller.close();
+        CloseHelper.quietClose(poller);
         super.close();
     }
 

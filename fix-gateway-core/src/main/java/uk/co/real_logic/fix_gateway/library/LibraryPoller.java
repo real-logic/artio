@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.library;
 
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.collections.Long2ObjectHashMap;
@@ -58,7 +59,7 @@ import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
-final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
+final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable
 {
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
@@ -124,9 +125,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         return unmodifiableSessions;
     }
 
-    void close()
+    public void close()
     {
-        connectionIdToSession.values().forEach(SessionSubscriber::close);
+        connectionIdToSession.values().forEach(CloseHelper::quietClose);
     }
 
     Reply<Session> initiate(final SessionConfiguration configuration)
@@ -238,7 +239,23 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
 
         try
         {
-            sendLibraryConnect();
+            try
+            {
+                sendLibraryConnect();
+            }
+            catch (final NotConnectedException e)
+            {
+                if (enginesAreClustered)
+                {
+                    attemptNextEngine();
+                    connect(reconnectAttempts - 1);
+                    return;
+                }
+                else
+                {
+                    throw e;
+                }
+            }
 
             final String currentAeronChannel = this.currentAeronChannel;
             final long connectResendTimeout = configuration.replyTimeoutInMs() / 4;
@@ -670,7 +687,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler
         final List<String> aeronChannels = configuration.libraryAeronChannels();
         final int nextIndex = (aeronChannels.indexOf(currentAeronChannel) + 1) % aeronChannels.size();
         currentAeronChannel = aeronChannels.get(nextIndex);
-        DebugLogger.log("Attempting connect to next engine (%s) in round-robin", currentAeronChannel);
+        DebugLogger.log("Attempting connect to next engine (%s) in round-robin\n", currentAeronChannel);
     }
 
     private void newSession(final long connectionId, final long sessionId, final Session session)

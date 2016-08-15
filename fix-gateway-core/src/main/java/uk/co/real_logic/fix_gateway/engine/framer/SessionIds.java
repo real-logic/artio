@@ -72,7 +72,7 @@ public class SessionIds
     private final int actingBlockLength = sessionIdEncoder.sbeBlockLength();
     private final int actingVersion = sessionIdEncoder.sbeSchemaVersion();
 
-    private final Function<CompositeKey, Long> onLogonFunc = this::onNewLogon;
+    private final Function<CompositeKey, Long> onNewLogonFunc = this::onNewLogon;
     private final LongHashSet currentlyAuthenticatedSessionIds = new LongHashSet(MISSING);
     private final Map<CompositeKey, Long> compositeToSurrogate = new HashMap<>();
 
@@ -198,7 +198,7 @@ public class SessionIds
 
     public long onLogon(final CompositeKey compositeKey)
     {
-        final Long sessionId = compositeToSurrogate.computeIfAbsent(compositeKey, onLogonFunc);
+        final Long sessionId = compositeToSurrogate.computeIfAbsent(compositeKey, onNewLogonFunc);
 
         if (!currentlyAuthenticatedSessionIds.add(sessionId))
         {
@@ -302,12 +302,18 @@ public class SessionIds
 
             // We use the initiator logon variant as we are reading a sent message.
             final HeaderDecoder header = logonDecoder.header();
-            final CompositeKey compositeKey = idStrategy.onLogon(
-                header.senderCompIDAsString(),
-                header.senderSubIDAsString(),
-                header.senderLocationIDAsString(),
-                header.targetCompIDAsString());
-            assignSessionId(compositeKey, sessionId);
+            onSentFollowerLogon(sessionId, header);
         }
+    }
+
+    void onSentFollowerLogon(final long sessionId, final HeaderDecoder header)
+    {
+        final CompositeKey compositeKey = idStrategy.onLogon(
+            header.senderCompIDAsString(),
+            header.senderSubIDAsString(),
+            header.senderLocationIDAsString(),
+            header.targetCompIDAsString());
+        assignSessionId(compositeKey, sessionId);
+        compositeToSurrogate.put(compositeKey, sessionId);
     }
 }

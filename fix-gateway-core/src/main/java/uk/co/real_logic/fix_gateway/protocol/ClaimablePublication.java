@@ -21,7 +21,8 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
 
-import static io.aeron.Publication.*;
+import static io.aeron.Publication.CLOSED;
+import static io.aeron.Publication.NOT_CONNECTED;
 
 /**
  * A publication designed for deterministic claiming.
@@ -82,8 +83,7 @@ class ClaimablePublication implements AutoCloseable
 
         if (position == NOT_CONNECTED || position == CLOSED)
         {
-            throw new IllegalStateException(
-                "Unable to send publish message, probably a missing an engine or library instance");
+            throw new NotConnectedException();
         }
         else
         {
