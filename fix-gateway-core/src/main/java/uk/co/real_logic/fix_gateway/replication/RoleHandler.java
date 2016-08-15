@@ -17,6 +17,10 @@ package uk.co.real_logic.fix_gateway.replication;
 
 /**
  * Handler for changes to the state of the node. A callback for each event change.
+ *
+ * The leadership term is provided so as to give an ordered sequence of events. If you
+ * need to message an external system about these events then this ordering can be used
+ * to disambiguate messages from different nodes in the cluster.
  */
 public interface RoleHandler
 {
