@@ -143,15 +143,7 @@ class ReceiverEndPoint
         // Initiator sessions are persistent if the sequence numbers are expected to be persistent.
         if (connectionType == INITIATOR)
         {
-            if (transientSequenceNumbers)
-            {
-                publication = libraryPublication;
-            }
-            else
-            {
-                publication = clusterablePublication;
-                replicatedConnectionIds.add(connectionId);
-            }
+            choosePublication(transientSequenceNumbers);
         }
     }
 
@@ -362,15 +354,7 @@ class ReceiverEndPoint
                 gatewaySession.onLogon(sessionId, compositeKey, username, password, logon.heartBtInt());
                 gatewaySession.sequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
 
-                if (sessionReplicationStrategy.shouldReplicate(logon))
-                {
-                    publication = clusterablePublication;
-                    replicatedConnectionIds.add(connectionId);
-                }
-                else
-                {
-                    publication = libraryPublication;
-                }
+                choosePublication(sessionReplicationStrategy.shouldReplicate(logon));
 
                 return stashIfBackpressured(offset, publication.saveLogon(
                     libraryId,
@@ -576,5 +560,18 @@ class ReceiverEndPoint
     void play()
     {
         isPaused = false;
+    }
+
+    private void choosePublication(final boolean replicated)
+    {
+        if (replicated)
+        {
+            publication = clusterablePublication;
+            replicatedConnectionIds.add(connectionId);
+        }
+        else
+        {
+            publication = libraryPublication;
+        }
     }
 }
