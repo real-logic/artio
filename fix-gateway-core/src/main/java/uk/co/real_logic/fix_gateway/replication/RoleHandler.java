@@ -20,9 +20,24 @@ package uk.co.real_logic.fix_gateway.replication;
  */
 public interface RoleHandler
 {
+    /**
+     * Invoked when the node that the handler has been registered with transitions to a leader.
+     *
+     * @param leadershipTerm the current leadership term.
+     */
     void onTransitionToLeader(final int leadershipTerm);
 
+    /**
+     * Invoked when the node that the handler has been registered with transitions to a follower.
+     *
+     * @param leadershipTerm the current leadership term.
+     */
     void onTransitionToFollower(final int leadershipTerm);
 
+    /**
+     * Invoked when the node that the handler has been registered with transitions to a candidate.
+     *
+     * @param leadershipTerm the current leadership term.
+     */
     void onTransitionToCandidate(final int leadershipTerm);
 }
