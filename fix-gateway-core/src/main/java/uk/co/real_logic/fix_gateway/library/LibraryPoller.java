@@ -103,6 +103,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             connect();
         }
 
+        return pollWithoutReconnect(fragmentLimit);
+    }
+
+    private int pollWithoutReconnect(final int fragmentLimit)
+    {
         final long timeInMs = clock.time();
         return inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit) +
             pollSessions(timeInMs) +
@@ -263,7 +268,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             long latestConnectResentTime = clock.time() + connectResendTimeout;
             while (!livenessDetector.isConnected() && errorType == null)
             {
-                final int workCount = poll(1);
+                final int workCount = pollWithoutReconnect(3);
 
                 final long time = clock.time();
                 if (time > latestReplyArrivalTime)
@@ -295,6 +300,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
                 idleStrategy.idle(workCount);
             }
+            idleStrategy.reset();
 
             if (errorType != null)
             {
@@ -684,6 +690,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void attemptNextEngine()
     {
+        idleStrategy.reset();
+
         final List<String> aeronChannels = configuration.libraryAeronChannels();
         final int nextIndex = (aeronChannels.indexOf(currentAeronChannel) + 1) % aeronChannels.size();
         currentAeronChannel = aeronChannels.get(nextIndex);
