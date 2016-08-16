@@ -16,12 +16,14 @@
 package uk.co.real_logic.fix_gateway.library;
 
 import org.agrona.CloseHelper;
+import org.agrona.IoUtil;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
 
+import java.io.File;
 import java.util.List;
 
 /**
@@ -41,9 +43,11 @@ public class FixLibrary extends GatewayProcess
     public static final int NO_MESSAGE_REPLAY = -1;
 
     private final LibraryPoller poller;
+    private final LibraryConfiguration configuration;
 
     FixLibrary(final LibraryConfiguration configuration)
     {
+        this.configuration = configuration;
         configuration.conclude();
 
         init(configuration);
@@ -135,6 +139,22 @@ public class FixLibrary extends GatewayProcess
     {
         CloseHelper.quietClose(poller);
         super.close();
+        deleteFiles();
+    }
+
+    private void deleteFiles()
+    {
+        removeParentDirectory(configuration.histogramLoggingFile());
+        removeParentDirectory(configuration.monitoringFile());
+    }
+
+    private void removeParentDirectory(final String path)
+    {
+        final File parentFile = new File(path).getParentFile();
+        if (parentFile.exists())
+        {
+            IoUtil.delete(parentFile, false);
+        }
     }
 
     /**
