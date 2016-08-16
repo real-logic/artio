@@ -19,10 +19,8 @@ import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
+import org.junit.rules.Timeout;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -46,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.IntStream;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.agrona.CloseHelper.close;
 import static org.junit.Assert.*;
@@ -78,6 +77,9 @@ public class ClusteredGatewaySystemTest
     private Session initiatingSession;
     private Session acceptingSession;
     private FixEngineRunner leader;
+
+    @Rule
+    public Timeout timeout = new Timeout(10, SECONDS);
 
     @Before
     public void setUp()
