@@ -31,7 +31,7 @@ class ReceiverEndPoints extends TransportPoller
 {
     private ReceiverEndPoint[] endPoints = new ReceiverEndPoint[0];
 
-    public void add(final ReceiverEndPoint endPoint)
+    void add(final ReceiverEndPoint endPoint)
     {
         try
         {
@@ -77,7 +77,7 @@ class ReceiverEndPoints extends TransportPoller
         }
     }
 
-    public int pollEndPoints()
+    int pollEndPoints()
     {
         int bytesReceived = 0;
         try

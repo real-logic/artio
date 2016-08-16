@@ -58,6 +58,7 @@ public class ReceiverEndPointTest
     private static final long SESSION_ID = 4L;
     private static final int LIBRARY_ID = FixEngine.ENGINE_LIBRARY_ID;
     private static final long POSITION = 1024L;
+    private static final int BUFFER_SIZE = 16 * 1024;
 
     private CompositeKey compositeKey = mock(CompositeKey.class);
     private TcpChannel mockChannel = mock(TcpChannel.class);
@@ -76,7 +77,7 @@ public class ReceiverEndPointTest
 
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
-            mockChannel, 16 * 1024, clusterablePublication, libraryPublication, sessionReplicationStrategy,
+            mockChannel, BUFFER_SIZE, clusterablePublication, libraryPublication, sessionReplicationStrategy,
             CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
             sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID, false,
             ConnectionType.ACCEPTOR, replicatedConnectionIds);
