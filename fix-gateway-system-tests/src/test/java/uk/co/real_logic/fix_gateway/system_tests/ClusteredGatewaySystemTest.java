@@ -80,7 +80,7 @@ public class ClusteredGatewaySystemTest
     private FixEngineRunner leader;
 
     @Rule
-    public Timeout timeout = new Timeout(10, SECONDS);
+    public Timeout timeout = new Timeout(20, SECONDS);
 
     @Before
     public void setUp()
@@ -93,7 +93,7 @@ public class ClusteredGatewaySystemTest
 
         final LibraryConfiguration configuration = acceptingLibraryConfig(
             acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", null)
-            .replyTimeoutInMs(2_000);
+            .replyTimeoutInMs(1_000);
 
         configuration.libraryAeronChannels(
             cluster
@@ -261,7 +261,7 @@ public class ClusteredGatewaySystemTest
 
         final FixEngineRunner oldLeader = leader;
         oldLeader.disable();
-        DebugLogger.log(GATEWAY_CLUSTER, "Disabled old old leader\n");
+        DebugLogger.log(GATEWAY_CLUSTER, "Disabled old old leader (%s)\n", oldLeader.libraryChannel());
 
         while (true)
         {
@@ -278,7 +278,7 @@ public class ClusteredGatewaySystemTest
         }
         ADMIN_IDLE_STRATEGY.reset();
 
-        DebugLogger.log(GATEWAY_CLUSTER, "Elected new leader: %d\n", leader.nodeId());
+        DebugLogger.log(GATEWAY_CLUSTER, "Elected new leader: (%s)\n", leader.libraryChannel());
 
         final String libraryChannel = leader.libraryChannel();
         while (!acceptingLibrary.currentAeronChannel().equals(libraryChannel))
