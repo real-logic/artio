@@ -280,6 +280,7 @@ public class FramerTest
         framer.doWork();
 
         verifySessionsAcquired(ACTIVE);
+        verifyLibraryTimeout();
     }
 
     @Test
@@ -292,6 +293,7 @@ public class FramerTest
         framer.doWork();
 
         verifySessionsAcquired(CONNECTED);
+        verifyLibraryTimeout();
     }
 
     @Test
@@ -573,5 +575,10 @@ public class FramerTest
 
         verify(mockEndPointFactory).senderEndPoint(
             notNull(TcpChannel.class), anyLong(), eq(ENGINE_LIBRARY_ID), eq(framer));
+    }
+
+    private void verifyLibraryTimeout()
+    {
+        verify(inboundPublication).saveLibraryTimeout(LIBRARY_ID);
     }
 }

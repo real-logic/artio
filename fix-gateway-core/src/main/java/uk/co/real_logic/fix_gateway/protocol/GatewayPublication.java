@@ -74,6 +74,7 @@ public class GatewayPublication extends ClaimablePublication
     private final ResetSessionIdsEncoder resetSessionIds = new ResetSessionIdsEncoder();
     private final NotLeaderEncoder notLeader = new NotLeaderEncoder();
     private final ControlNotificationEncoder controlNotification = new ControlNotificationEncoder();
+    private final LibraryTimeoutEncoder libraryTimeout = new LibraryTimeoutEncoder();
 
     private final NanoClock nanoClock;
 
@@ -821,6 +822,37 @@ public class GatewayPublication extends ClaimablePublication
             .wrap(buffer, offset)
             .libraryId(libraryId)
             .position(sentPosition);
+
+        bufferClaim.commit();
+
+        logSbeMessage(buffer, bufferClaim.offset());
+
+        return position;
+    }
+
+    public long saveLibraryTimeout(final int libraryId)
+    {
+        final long position = claim(LibraryTimeoutEncoder.BLOCK_LENGTH + HEADER_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(libraryTimeout.sbeBlockLength())
+            .templateId(libraryTimeout.sbeTemplateId())
+            .schemaId(libraryTimeout.sbeSchemaId())
+            .version(libraryTimeout.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        libraryTimeout
+            .wrap(buffer, offset)
+            .libraryId(libraryId);
 
         bufferClaim.commit();
 

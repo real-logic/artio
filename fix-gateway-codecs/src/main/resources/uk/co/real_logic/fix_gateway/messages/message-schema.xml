@@ -262,4 +262,8 @@
             <field name="sessionId" id="10" type="FixSessionId"/>
         </group>
     </sbe:message>
+    <sbe:message name="LibraryTimeout" id="40"
+                 description="notifies library instances that they have been timed out, added for monitoring purposes">
+        <field name="libraryId" id="1" type="LibraryId"/>
+    </sbe:message>
 </sbe:messageSchema>

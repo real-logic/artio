@@ -93,7 +93,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final NewChannelHandler onNewConnectionFunc = this::onNewConnection;
-    private final LongHashSet replicatedConnectionIds;
 
     private final TcpChannelSupplier channelSupplier;
     private final EpochClock clock;
@@ -170,7 +169,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundPublication = outboundPublication;
         this.inboundPublication = endPointFactory.inboundPublication();
         this.clusterableStreams = clusterableStreams;
-        this.replicatedConnectionIds = replicatedConnectionIds;
         this.senderEndPoints = new SenderEndPoints();
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
@@ -192,7 +190,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 replyPublication,
                 engineDescriptorStore,
                 configuration.bindAddress().toString(),
-                this.replicatedConnectionIds);
+                replicatedConnectionIds);
             outboundClusterSubscriber = ProtocolSubscription.of(this);
         }
         else
@@ -263,10 +261,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             {
                 iterator.remove();
                 acquireLibrarySessions(library);
+                saveLibraryTimeout(library);
             }
         }
 
         return total;
+    }
+
+    private void saveLibraryTimeout(final LibraryInfo library)
+    {
+        final int libraryId = library.libraryId();
+        schedule(new Transaction(() ->
+            inboundPublication.saveLibraryTimeout(libraryId)));
     }
 
     private void acquireLibrarySessions(final LibraryInfo library)
