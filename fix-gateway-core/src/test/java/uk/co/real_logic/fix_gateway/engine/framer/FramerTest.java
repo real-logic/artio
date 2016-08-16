@@ -75,7 +75,7 @@ public class FramerTest
     private static final long HEARTBEAT_INTERVAL_IN_MS = TimeUnit.SECONDS.toMillis(HEARTBEAT_INTERVAL_IN_S);
     private static final int CORR_ID = 1;
     private static final long POSITION = 1024;
-    public static final int AERON_SESSION_ID = 1;
+    private static final int AERON_SESSION_ID = 1;
 
     private ServerSocketChannel server;
 

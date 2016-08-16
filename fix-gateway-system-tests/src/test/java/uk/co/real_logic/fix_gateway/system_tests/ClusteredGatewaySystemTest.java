@@ -259,7 +259,7 @@ public class ClusteredGatewaySystemTest
         final FixEngineRunner oldLeader = leader;
         oldLeader.disable();
         DebugLogger.log("Disabled old old leader");
-        System.out.println("Disabled old old leader");
+        //System.out.println("Disabled old old leader");
 
         while (true)
         {
@@ -277,7 +277,7 @@ public class ClusteredGatewaySystemTest
         ADMIN_IDLE_STRATEGY.reset();
 
         DebugLogger.log("Elected new leader: %d", leader.nodeId());
-        System.out.println("Elected new leader");
+        //System.out.println("Elected new leader");
 
         final String libraryChannel = leader.libraryChannel();
         while (!acceptingLibrary.currentAeronChannel().equals(libraryChannel))
@@ -290,7 +290,7 @@ public class ClusteredGatewaySystemTest
         ADMIN_IDLE_STRATEGY.reset();
 
         DebugLogger.log("Library has connected to new leader");
-        System.out.println("Library has connected to new leader");
+        //System.out.println("Library has connected to new leader");
 
         // TODO: acceptingLibrary disconnect/timeout
         // TODO: oldLeader.enable();

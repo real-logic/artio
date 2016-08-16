@@ -74,6 +74,7 @@ public class SessionIds
 
     private final Function<CompositeKey, Long> onNewLogonFunc = this::onNewLogon;
     private final LongHashSet currentlyAuthenticatedSessionIds = new LongHashSet(MISSING);
+    private final LongHashSet recordedSessions = new LongHashSet(MISSING);
     private final Map<CompositeKey, Long> compositeToSurrogate = new HashMap<>();
 
     private final CRC32 crc32 = new CRC32();
@@ -142,6 +143,7 @@ public class SessionIds
             }
 
             compositeToSurrogate.put(compositeKey, sessionId);
+            recordedSessions.add(sessionId);
             counter = Math.max(counter, sessionId + 1);
 
             filePosition += BLOCK_LENGTH + compositeKeyLength;
@@ -292,7 +294,7 @@ public class SessionIds
         final int offset,
         final int length)
     {
-        if (messageType == LOGON && currentlyAuthenticatedSessionIds.add(sessionId))
+        if (messageType == LOGON && recordedSessions.add(sessionId))
         {
             // Ensure no future collision if you take over as leader of the cluster.
             counter = sessionId + 1;
