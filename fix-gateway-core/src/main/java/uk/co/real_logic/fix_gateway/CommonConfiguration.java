@@ -88,7 +88,7 @@ public class CommonConfiguration
     public static final boolean DEBUG_PRINT_MESSAGES = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
     public static final String DEBUG_FILE = System.getProperty(DEBUG_FILE_PROPERTY);
     public static final boolean TIME_MESSAGES = Boolean.getBoolean(TIME_MESSAGES_PROPERTY);
-    public static final boolean FORCE_WRITES = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
+    public static final boolean FORCE_WRITES = Boolean.getBoolean(FORCE_WRITES_MESSAGES_PROPERTY);
 
     public static final int BACKOFF_SPINS = Integer.getInteger("fix.core.spins", 1_000);
     public static final int BACKOFF_YIELDS = Integer.getInteger("fix.core.yields", 10_000);
