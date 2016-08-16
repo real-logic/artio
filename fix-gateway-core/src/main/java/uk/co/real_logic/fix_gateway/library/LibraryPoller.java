@@ -638,7 +638,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             else
             {
                 currentAeronChannel = libraryChannel;
-                DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to leader (%s)", currentAeronChannel);
+                DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to leader (%s)\n", currentAeronChannel);
             }
         }
 
