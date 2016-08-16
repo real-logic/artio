@@ -29,6 +29,8 @@ import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import java.util.ArrayList;
 import java.util.List;
 
+import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
+
 /**
  * Keeps track of which sessions managed by the gateway
  */
@@ -117,7 +119,7 @@ public class GatewaySessions
         gatewaySession.manage(sessionParser, session);
 
         final CompositeKey sessionKey = gatewaySession.sessionKey();
-        DebugLogger.log("Gateway Acquired Session %d\n", connectionId);
+        DebugLogger.log(FIX_MESSAGE, "Gateway Acquired Session %d\n", connectionId);
         if (sessionKey != null)
         {
             gatewaySession.onLogon(

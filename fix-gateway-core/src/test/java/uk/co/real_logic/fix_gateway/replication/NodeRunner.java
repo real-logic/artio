@@ -41,6 +41,7 @@ import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
+import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
 
 class NodeRunner implements AutoCloseable
@@ -54,7 +55,6 @@ class NodeRunner implements AutoCloseable
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
     private final ClusterAgent clusterNode;
-    private final int nodeId;
     private final ControlledFragmentHandler handler;
     private final ClusterableSubscription subscription;
 
@@ -62,11 +62,10 @@ class NodeRunner implements AutoCloseable
 
     NodeRunner(final int nodeId, final int... otherNodes)
     {
-        this.nodeId = nodeId;
         this.handler = (buffer, offset, length, header) ->
         {
             replicatedPosition = offset + length;
-            DebugLogger.log("%d: position %d\n", nodeId, replicatedPosition);
+            DebugLogger.log(RAFT, "%d: position %d\n", nodeId, replicatedPosition);
             return CONTINUE;
         };
         this.frameDropper = new FrameDropper(nodeId);

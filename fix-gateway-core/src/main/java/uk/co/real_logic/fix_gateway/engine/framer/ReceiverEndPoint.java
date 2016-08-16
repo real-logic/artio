@@ -42,6 +42,7 @@ import java.nio.channels.Selector;
 
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
+import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.*;
@@ -189,7 +190,7 @@ class ReceiverEndPoint
         {
             if (dataRead > 0)
             {
-                DebugLogger.log("Read     %s\n", buffer, 0, dataRead);
+                DebugLogger.log(FIX_MESSAGE, "Read     %s\n", buffer, 0, dataRead);
             }
             usedBufferData += dataRead;
         }
@@ -472,7 +473,7 @@ class ReceiverEndPoint
 
     private void invalidateMessage(final int offset)
     {
-        DebugLogger.log("%s", buffer, offset, COMMON_PREFIX_LENGTH);
+        DebugLogger.log(FIX_MESSAGE, "%s", buffer, offset, COMMON_PREFIX_LENGTH);
     }
 
     public void close(final DisconnectReason reason)

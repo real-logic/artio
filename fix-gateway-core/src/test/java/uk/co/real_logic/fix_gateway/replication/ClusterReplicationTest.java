@@ -33,6 +33,7 @@ import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 
 /**
  * Test simulated cluster.
@@ -63,7 +64,7 @@ public class ClusterReplicationTest
         }
 
         final NodeRunner leader = leader();
-        DebugLogger.log("Leader elected: %d\n\n", leader.raftNode().nodeId());
+        DebugLogger.log(RAFT, "Leader elected: %d\n\n", leader.raftNode().nodeId());
     }
 
     @Test
@@ -79,11 +80,11 @@ public class ClusterReplicationTest
     {
         final NodeRunner leader = leader();
 
-        DebugLogger.log("Leader is %s\n", leader.raftNode().nodeId());
+        DebugLogger.log(RAFT, "Leader is %s\n", leader.raftNode().nodeId());
 
         final long position = sendMessageTo(leader);
 
-        DebugLogger.log("Leader @ %s\n", position);
+        DebugLogger.log(RAFT, "Leader @ %s\n", position);
 
         assertMessageReceived();
     }
@@ -299,7 +300,7 @@ public class ClusterReplicationTest
 
         assertAllNodesSeeSameLeader();
 
-        DebugLogger.log("Cluster Stable");
+        DebugLogger.log(RAFT, "Cluster Stable");
     }
 
     private void awaitLeadershipConsensus()

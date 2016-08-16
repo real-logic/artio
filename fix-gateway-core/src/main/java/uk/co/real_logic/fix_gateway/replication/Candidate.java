@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
+import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 import static uk.co.real_logic.fix_gateway.replication.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.replication.messages.Vote.FOR;
 import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
@@ -82,7 +83,7 @@ class Candidate implements Role, RaftHandler
     {
         if (voteTimeout.hasTimedOut(timeInMs))
         {
-            DebugLogger.log("%d: restartElection @ %d in %d\n", nodeId, timeInMs, leaderShipTerm);
+            DebugLogger.log(RAFT, "%d: restartElection @ %d in %d\n", nodeId, timeInMs, leaderShipTerm);
 
             startElection(timeInMs);
 
@@ -156,7 +157,13 @@ class Candidate implements Role, RaftHandler
         final int nodeStateLength,
         final int aeronSessionId)
     {
-        DebugLogger.log("%d: Received vote from %d about %d in %d%n", nodeId, senderNodeId, candidateId, leaderShipTerm);
+        DebugLogger.log(
+            RAFT,
+            "%d: Received vote from %d about %d in %d%n",
+            nodeId,
+            senderNodeId,
+            candidateId,
+            leaderShipTerm);
 
         if (shouldCountVote(candidateId, leaderShipTerm, vote) && countVote(senderNodeId))
         {
@@ -197,7 +204,7 @@ class Candidate implements Role, RaftHandler
         if (nodeId != this.nodeId)
         {
             final boolean hasHigherPosition = position >= this.consensusPosition.get();
-            DebugLogger.log("%d: New Leader %s%n", this.nodeId, hasHigherPosition);
+            DebugLogger.log(RAFT, "%d: New Leader %s%n", this.nodeId, hasHigherPosition);
             if (hasHigherPosition)
             {
                 transitionToFollower(leaderShipTerm, NO_ONE, position, dataSessionId);
@@ -240,7 +247,7 @@ class Candidate implements Role, RaftHandler
     {
         this.leaderShipTerm = termState.leadershipTerm();
 
-        DebugLogger.log("%d: startNewElection @ %d in %d\n", nodeId, timeInMs, leaderShipTerm);
+        DebugLogger.log(RAFT, "%d: startNewElection @ %d in %d\n", nodeId, timeInMs, leaderShipTerm);
 
         startElection(timeInMs);
         return this;

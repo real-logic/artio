@@ -55,6 +55,8 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.fix_gateway.LogTag.LIBRARY_CONNECT;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
@@ -411,7 +413,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             if (type == INITIATOR)
             {
-                DebugLogger.log("Init Connect: %d, %d\n", connectionId, libraryId);
+                DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d\n", connectionId, libraryId);
                 final boolean isInitiator = correlationIdToReply.get(replyToId) instanceof InitiateSessionReply;
                 final InitiateSessionReply reply =
                     isInitiator ? (InitiateSessionReply) correlationIdToReply.remove(replyToId) : null;
@@ -426,7 +428,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
             else
             {
-                DebugLogger.log("Acct Connect: %d, %d\n", connectionId, libraryId);
+                DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d\n", connectionId, libraryId);
                 asciiBuffer.wrap(buffer);
                 final String address = asciiBuffer.getAscii(addressOffset, addressLength);
                 final Session session = acceptSession(connectionId, address, state, heartbeatIntervalInS);
@@ -454,7 +456,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final boolean thisLibrary = libraryId == this.libraryId;
         if (thisLibrary && status == LogonStatus.NEW)
         {
-            DebugLogger.log("Library Logon: %d, %d\n", connectionId, sessionId);
+            DebugLogger.log(FIX_MESSAGE, "Library Logon: %d, %d\n", connectionId, sessionId);
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)
             {
@@ -513,8 +515,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            DebugLogger.log("Received %s\n", buffer, offset, length);
-            DebugLogger.log("(%d)\n", libraryId);
+            DebugLogger.log(FIX_MESSAGE, "(%d) Received %s \n", libraryId, buffer, offset, length);
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)
             {
@@ -532,7 +533,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         if (libraryId == this.libraryId)
         {
             final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
-            DebugLogger.log("Library Disconnect %d, %s\n", connectionId, reason);
+            DebugLogger.log(FIX_MESSAGE, "Library Disconnect %d, %s\n", connectionId, reason);
             if (subscriber != null)
             {
                 final Action action = subscriber.onDisconnect(libraryId, reason);
@@ -637,7 +638,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             else
             {
                 currentAeronChannel = libraryChannel;
-                DebugLogger.log("Attempting connect to leader (%s)", currentAeronChannel);
+                DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to leader (%s)", currentAeronChannel);
             }
         }
 
@@ -695,7 +696,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final List<String> aeronChannels = configuration.libraryAeronChannels();
         final int nextIndex = (aeronChannels.indexOf(currentAeronChannel) + 1) % aeronChannels.size();
         currentAeronChannel = aeronChannels.get(nextIndex);
-        DebugLogger.log("Attempting connect to next engine (%s) in round-robin\n", currentAeronChannel);
+        DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to next engine (%s) in round-robin\n", currentAeronChannel);
     }
 
     private void newSession(final long connectionId, final long sessionId, final Session session)

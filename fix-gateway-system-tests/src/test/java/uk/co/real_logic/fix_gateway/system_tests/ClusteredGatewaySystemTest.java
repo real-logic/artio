@@ -52,6 +52,7 @@ import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREA
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQUEST;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
+import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_CLUSTER;
 import static uk.co.real_logic.fix_gateway.engine.logger.FixMessagePredicates.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -260,7 +261,7 @@ public class ClusteredGatewaySystemTest
 
         final FixEngineRunner oldLeader = leader;
         oldLeader.disable();
-        DebugLogger.log("Disabled old old leader");
+        DebugLogger.log(GATEWAY_CLUSTER, "Disabled old old leader");
         //System.out.println("Disabled old old leader");
 
         while (true)
@@ -278,7 +279,7 @@ public class ClusteredGatewaySystemTest
         }
         ADMIN_IDLE_STRATEGY.reset();
 
-        DebugLogger.log("Elected new leader: %d", leader.nodeId());
+        DebugLogger.log(GATEWAY_CLUSTER, "Elected new leader: %d", leader.nodeId());
         //System.out.println("Elected new leader");
 
         final String libraryChannel = leader.libraryChannel();
@@ -291,7 +292,7 @@ public class ClusteredGatewaySystemTest
         }
         ADMIN_IDLE_STRATEGY.reset();
 
-        DebugLogger.log("Library has connected to new leader");
+        DebugLogger.log(GATEWAY_CLUSTER, "Library has connected to new leader");
         //System.out.println("Library has connected to new leader");
 
         // TODO: acceptingLibrary disconnect/timeout

@@ -25,6 +25,11 @@ import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
 import java.io.File;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
@@ -85,7 +90,42 @@ public class CommonConfiguration
     // ------------------------------------------------
 
     /** These are static final fields in order to give the optimiser more scope */
-    public static final boolean DEBUG_PRINT_MESSAGES = Boolean.getBoolean(DEBUG_PRINT_MESSAGES_PROPERTY);
+    public static final boolean DEBUG_PRINT_MESSAGES;
+    public static final Set<LogTag> DEBUG_TAGS;
+    static
+    {
+        final String property = getProperty(DEBUG_PRINT_MESSAGES_PROPERTY);
+        boolean debugPrintMessages = false;
+        Set<LogTag> debugTags = Collections.emptySet();
+        if (property != null)
+        {
+            if ("all".equals(property) || "true".equals(property))
+            {
+                debugPrintMessages = true;
+                debugTags = EnumSet.allOf(LogTag.class);
+            }
+            else
+            {
+                try
+                {
+                    debugTags =
+                        Stream.of(property.split(","))
+                            .map(LogTag::valueOf)
+                            .collect(Collectors.toCollection(() -> EnumSet.noneOf(LogTag.class)));
+
+                    debugPrintMessages = !debugTags.isEmpty();
+                }
+                catch (final IllegalArgumentException e)
+                {
+                    // parse error in valueOf();
+                }
+            }
+        }
+
+        DEBUG_PRINT_MESSAGES = debugPrintMessages;
+        DEBUG_TAGS = debugTags;
+    }
+
     public static final String DEBUG_FILE = System.getProperty(DEBUG_FILE_PROPERTY);
     public static final boolean TIME_MESSAGES = Boolean.getBoolean(TIME_MESSAGES_PROPERTY);
     public static final boolean FORCE_WRITES = Boolean.getBoolean(FORCE_WRITES_MESSAGES_PROPERTY);

@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_MESSAGE;
 
 class GatewaySession implements SessionInfo
 {
@@ -168,7 +169,7 @@ class GatewaySession implements SessionInfo
         if (session != null)
         {
             session.setupSession(sessionId, sessionKey);
-            DebugLogger.log("Setup Session As: " + sessionKey.senderCompId());
+            DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: %s", sessionKey.senderCompId());
         }
     }
 

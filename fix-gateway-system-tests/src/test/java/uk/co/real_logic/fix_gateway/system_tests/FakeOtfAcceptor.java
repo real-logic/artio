@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_TYPE;
+import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 
 /**
  * An otf acceptor used to accumulate/log/check acceptor interactions.
@@ -45,7 +46,6 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
 
     public MessageControl onNext()
     {
-        DebugLogger.log("Next Message");
         senderCompId = null;
         error = null;
         isCompleted = false;
@@ -55,7 +55,6 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
 
     public MessageControl onComplete()
     {
-        DebugLogger.log("Message Complete");
         isCompleted = true;
         messages.add(message);
         message = null;
@@ -64,7 +63,7 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
 
     public synchronized MessageControl onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
-        DebugLogger.log("Field: %s=%s\n", tag, buffer, offset, length);
+        DebugLogger.log(FIX_MESSAGE, "Field: %s=%s\n", tag, buffer, offset, length);
         if (tag == Constants.SENDER_COMP_ID)
         {
             senderCompId = buffer.getAscii(offset, length);

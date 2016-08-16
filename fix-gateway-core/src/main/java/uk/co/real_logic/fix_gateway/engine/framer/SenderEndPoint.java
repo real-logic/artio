@@ -30,6 +30,7 @@ import java.nio.ByteBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.fix_gateway.protocol.GatewayPublication.FRAME_SIZE;
@@ -99,7 +100,7 @@ class SenderEndPoint implements AutoCloseable
             buffer.position(offset);
 
             final int written = channel.write(buffer);
-            DebugLogger.log("Written  %s\n", buffer, written);
+            DebugLogger.log(FIX_MESSAGE, "Written  %s\n", buffer, written);
 
             if (written != length)
             {

@@ -27,6 +27,7 @@ import java.io.PrintStream;
 import java.nio.ByteBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEBUG_TAGS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEBUG_FILE;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEBUG_PRINT_MESSAGES;
 
@@ -64,9 +65,28 @@ public final class DebugLogger
     }
 
     public static void log(
-        final String formatString, final Object value, final DirectBuffer buffer, final int offset, final int length)
+        final LogTag tag,
+        final String formatString,
+        final int value,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
+        {
+            log(tag, formatString, value, buffer, offset, length);
+        }
+    }
+
+    public static void log(
+        final LogTag tag,
+        final String formatString,
+        final Object value,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length)
+    {
+        if (isEnabled(tag))
         {
             final byte[] data = new byte[length];
             buffer.getBytes(offset, data);
@@ -75,10 +95,11 @@ public final class DebugLogger
     }
 
     public static void logSbeMessage(
+        final LogTag tag,
         final DirectBuffer buffer,
         final int offset)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             OUTPUT.println(toStringSbeMessage(buffer, offset));
         }
@@ -98,9 +119,14 @@ public final class DebugLogger
         );
     }
 
-    public static void log(final String formatString, final DirectBuffer buffer, final int offset, final int length)
+    public static void log(
+        final LogTag tag,
+        final String formatString,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             final byte[] data = new byte[length];
             buffer.getBytes(offset, data);
@@ -108,9 +134,13 @@ public final class DebugLogger
         }
     }
 
-    public static void log(final String formatString, final ByteBuffer byteBuffer, final int length)
+    public static void log(
+        final LogTag tag,
+        final String formatString,
+        final ByteBuffer byteBuffer,
+        final int length)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             final byte[] data = new byte[length];
             final int originalPosition = byteBuffer.position();
@@ -122,97 +152,143 @@ public final class DebugLogger
         }
     }
 
-    public static void log(final String message)
+    public static void log(
+        final LogTag tag,
+        final String message)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             OUTPUT.println(message);
         }
     }
 
-    public static void log(final String formatString, final Object value)
+    public static void log(
+        final LogTag tag,
+        final String formatString,
+        final Object value)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             OUTPUT.printf(formatString, value);
         }
     }
 
-    public static void log(final String formatString, final long first, final boolean second)
+    public static void log(
+        final LogTag tag,
+        final String formatString,
+        final long first,
+        final boolean second)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             OUTPUT.printf(formatString, first, second);
         }
     }
 
-    public static void log(final String formatString, final long first)
+    public static void log(
+        final LogTag tag,
+        final String formatString,
+        final long first)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             OUTPUT.printf(formatString, first);
         }
     }
 
-    public static void log(final String formatString, final Object first, final Object second)
+    public static void log(
+        final LogTag tag,
+        final String formatString,
+        final Object first,
+        final Object second)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             OUTPUT.printf(formatString, first, second);
         }
     }
 
-    public static void log(final String formatString, final long first, final long second)
+    public static void log(
+        final LogTag tag,
+        final String formatString,
+        final long first,
+        final long second)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             OUTPUT.printf(formatString, first, second);
         }
     }
 
-    public static void log(final String formatString, final long first, final long second, final long third)
+    public static void log(
+        final LogTag tag,
+        final String formatString,
+        final long first,
+        final long second,
+        final long third)
     {
-        if (DEBUG_PRINT_MESSAGES)
-        {
-            OUTPUT.printf(formatString, first, second, third);
-        }
-    }
-
-    public static void log(final String formatString, final Object first, final long second, final long third)
-    {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             OUTPUT.printf(formatString, first, second, third);
         }
     }
 
     public static void log(
-        final String formatString, final long first, final long second, final long third, final long fourth)
+        final LogTag tag,
+        final String formatString,
+        final Object first,
+        final long second,
+        final long third)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
+        {
+            OUTPUT.printf(formatString, first, second, third);
+        }
+    }
+
+    public static void log(
+        final LogTag tag,
+        final String formatString,
+        final long first,
+        final long second,
+        final long third,
+        final long fourth)
+    {
+        if (isEnabled(tag))
         {
             OUTPUT.printf(formatString, first, second, third, fourth);
         }
     }
 
     public static void log(
-        final String formatString, final Object first, final long second, final long third, final long fourth)
+        final LogTag tag,
+        final String formatString,
+        final Object first,
+        final long second,
+        final long third,
+        final long fourth)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             OUTPUT.printf(formatString, first, second, third, fourth);
         }
     }
 
-    public static void log(final String formatString, final Object first, final Object second, final Object third)
+    public static void log(
+        final LogTag tag,
+        final String formatString,
+        final Object first,
+        final Object second,
+        final Object third)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             OUTPUT.printf(formatString, first, second, third);
         }
     }
 
     public static void log(
+        final LogTag tag,
         final String formatString,
         final long first,
         final long second,
@@ -220,13 +296,14 @@ public final class DebugLogger
         final long fourth,
         final long fifth)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             OUTPUT.printf(formatString, first, second, third, fourth, fifth);
         }
     }
 
     public static void log(
+        final LogTag tag,
         final String formatString,
         final Object first,
         final long second,
@@ -234,10 +311,15 @@ public final class DebugLogger
         final long fourth,
         final long fifth)
     {
-        if (DEBUG_PRINT_MESSAGES)
+        if (isEnabled(tag))
         {
             OUTPUT.printf(formatString, first, second, third, fourth, fifth);
         }
+    }
+
+    private static boolean isEnabled(final LogTag tag)
+    {
+        return DEBUG_PRINT_MESSAGES && DEBUG_TAGS.contains(tag);
     }
 
 }

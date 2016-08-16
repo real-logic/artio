@@ -32,6 +32,7 @@ import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_MESSAGE;
 
 /**
  * Splits the subscription out into messages that we deal with locally vs cluster
@@ -141,7 +142,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
 
     private Action handleMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        DebugLogger.logSbeMessage(buffer, offset);
+        DebugLogger.logSbeMessage(GATEWAY_MESSAGE, buffer, offset);
         return engineProtocolSubscription.onFragment(buffer, offset, length, header);
     }
 }

@@ -21,6 +21,8 @@ import io.aeron.driver.ext.DebugReceiveChannelEndpoint;
 import io.aeron.driver.ext.DebugSendChannelEndpoint;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 
+import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
+
 public class FrameDropper
 {
     private final SwitchableLossGenerator outboundLossGenerator = new SwitchableLossGenerator();
@@ -53,8 +55,8 @@ public class FrameDropper
 
     public void dropFrames(final boolean dropInboundFrames, final boolean dropOutboundFrames)
     {
-        DebugLogger.log("Dropping frames to %d: %b\n", nodeId, dropInboundFrames);
-        DebugLogger.log("Dropping frames from %d: %b\n", nodeId, dropOutboundFrames);
+        DebugLogger.log(RAFT, "Dropping frames to %d: %b\n", nodeId, dropInboundFrames);
+        DebugLogger.log(RAFT, "Dropping frames from %d: %b\n", nodeId, dropOutboundFrames);
         inboundLossGenerator.dropFrames(dropInboundFrames);
         outboundLossGenerator.dropFrames(dropOutboundFrames);
     }

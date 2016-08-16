@@ -30,6 +30,7 @@ import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 
@@ -99,7 +100,8 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 .wrap(destBuffer, frameOffset)
                 .libraryId(libraryId);
 
-            DebugLogger.log("Resending: %s\n", destBuffer, destOffset + FRAME_LENGTH, length - FRAME_LENGTH);
+            DebugLogger.log(
+                FIX_MESSAGE, "Resending: %s\n", destBuffer, destOffset + FRAME_LENGTH, length - FRAME_LENGTH);
 
             bufferClaim.commit();
             replayedMessages++;

@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.replication.messages.Vote;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.OK;
 import static uk.co.real_logic.fix_gateway.replication.messages.Vote.AGAINST;
@@ -167,7 +168,7 @@ class Follower implements Role, RaftHandler
                 if (controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, FOR, nodeState) > 0)
                 {
                     votedFor = candidateId;
-                    DebugLogger.log("%d: vote for %d in %d%n", nodeId, candidateId, leaderShipTerm);
+                    DebugLogger.log(RAFT, "%d: vote for %d in %d%n", nodeId, candidateId, leaderShipTerm);
                     onReplyKeepAlive(timeInMs);
                 }
                 else
@@ -177,7 +178,7 @@ class Follower implements Role, RaftHandler
             }
             else
             {
-                DebugLogger.log("%d: vote against %d in %d%n", nodeId, candidateId, leaderShipTerm);
+                DebugLogger.log(RAFT, "%d: vote against %d in %d%n", nodeId, candidateId, leaderShipTerm);
                 return Pressure.apply(
                     controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST, nodeState));
             }

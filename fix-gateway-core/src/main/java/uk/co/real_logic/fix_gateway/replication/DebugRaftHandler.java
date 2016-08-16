@@ -22,6 +22,8 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.replication.messages.Vote;
 
+import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
+
 /**
  * A wrapper around a raft handler that can log out all the control protocol messages.
  */
@@ -47,6 +49,7 @@ final class DebugRaftHandler implements RaftHandler
         final long newAckedPosition, final short nodeId, final AcknowledgementStatus status)
     {
         DebugLogger.log(
+            RAFT,
             "%2$d: MessageAcknowledgement(newAckedPos=%3$d, nodeId=%4$d, %1$s)\n",
             status,
             this.nodeId,
@@ -63,6 +66,7 @@ final class DebugRaftHandler implements RaftHandler
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long lastAckedPosition)
     {
         DebugLogger.log(
+            RAFT,
             "%d: RequestVote(candidateId=%d, candidateSessionId=%d, leadershipTerm=%d, lastAckedPosition=%d)\n",
             this.nodeId,
             candidateId,
@@ -86,6 +90,7 @@ final class DebugRaftHandler implements RaftHandler
         final int sessionId)
     {
         DebugLogger.log(
+            RAFT,
             "%2$d: ReplyVote(senderNodeId=%3$d, candidateId=%4$d, leaderShipTerm=%5$d, %1$s)\n",
             vote,
             this.nodeId,
@@ -103,6 +108,7 @@ final class DebugRaftHandler implements RaftHandler
         final short nodeId, final int leaderShipTerm, final long position, final int leaderSessionId)
     {
         DebugLogger.log(
+            RAFT,
             "%d: ConsensusHeartbeat(nodeId=%d, leaderShipTerm=%d, position=%d, leaderSessionId=%d)\n",
             this.nodeId,
             nodeId,
@@ -125,6 +131,7 @@ final class DebugRaftHandler implements RaftHandler
         final int bodyLength)
     {
         DebugLogger.log(
+            RAFT,
             "%d: Resend(leaderSessionId=%d, leaderShipTerm=%d, startPosition=%d, bodyLength=%d)\n",
             this.nodeId,
             leaderSessionId,

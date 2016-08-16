@@ -27,6 +27,7 @@ import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.LogTag.LIBRARY_CONNECT;
 
 class LibraryTransport
 {
@@ -55,7 +56,7 @@ class LibraryTransport
     {
         final NanoClock nanoClock = new SystemNanoClock();
         final ClusterableStreams soloNode = ClusterableStreams.solo(aeron, aeronChannel);
-        DebugLogger.log("Attempting connect to %s", aeronChannel);
+        DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to %s", aeronChannel);
 
         inboundLibraryStreams = new Streams(
             soloNode, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
