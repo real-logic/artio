@@ -91,4 +91,12 @@ public final class StreamIdentifier
     {
         return 31 * streamId + channel.hashCode();
     }
+
+    public String toString()
+    {
+        return "StreamIdentifier{" +
+            "streamId=" + streamId +
+            ", channel='" + channel + '\'' +
+            '}';
+    }
 }

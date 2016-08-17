@@ -21,5 +21,5 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 @FunctionalInterface
 public interface IndexedPositionConsumer
 {
-    void accept(final int aeronSessionId, final long position);
+    void accept(final int aeronSessionId, final long endPosition);
 }

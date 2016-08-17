@@ -201,13 +201,13 @@ public class ArchiveReader implements AutoCloseable
         /**
          * Reads a message out of this session's log archive.
          *
-         * @param position the log position to start reading at
+         * @param messagePosition the log position to start reading at
          * @param handler the handler to pass the data into
          * @return the position after the end of this message. If there's another message, then this is its start.
          */
-        public long read(final long position, final ControlledFragmentHandler handler)
+        public long read(final long messagePosition, final ControlledFragmentHandler handler)
         {
-            final int termOffset = scan(position);
+            final int termOffset = scan(messagePosition);
             if (termOffset == UNKNOWN_TERM)
             {
                 return UNKNOWN_TERM;
@@ -227,10 +227,10 @@ public class ArchiveReader implements AutoCloseable
             final Action action = handler.onFragment(buffer, termOffset, frameLength - HEADER_LENGTH, header);
             if (action == ABORT)
             {
-                return position;
+                return messagePosition;
             }
 
-            return position + frameLength;
+            return messagePosition + frameLength;
         }
 
         private boolean validateChecksum(final int termOffset, final int frameLength)

@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
@@ -50,14 +49,19 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         System.gc();
 
         delete(ACCEPTOR_LOGS);
-        final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
-        acceptingEngine = FixEngine.launch(config);
+        launchAcceptingEngine();
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
 
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
 
         connectSessions();
+    }
+
+    private void launchAcceptingEngine()
+    {
+        acceptingEngine = FixEngine.launch(
+            acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID));
     }
 
     @Test
@@ -374,6 +378,20 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         {
             assertEquals(1, handler2.awaitSessionId(() -> library2.poll(1)));
         }
+    }
+
+    @Test
+    public void gatewaysShouldBeRestartable()
+    {
+        messagesCanBeExchanged();
+
+        acceptingLibrary.close();
+        acceptingEngine.close();
+
+        launchAcceptingEngine();
+        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+
+        messagesCanBeExchanged();
     }
 
 }

@@ -26,6 +26,8 @@ import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 import java.util.List;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor.alignTerm;
 
 /**
  * Incrementally builds indexes by polling a subscription.
@@ -56,15 +58,17 @@ public class Indexer implements Agent, ControlledFragmentHandler
     {
         for (final Index index : indices)
         {
-            index.readLastPosition((aeronSessionId, position) ->
+            index.readLastPosition((aeronSessionId, endOfLastMessageposition) ->
             {
                 final ArchiveReader.SessionReader sessionReader = archiveReader.session(aeronSessionId);
                 if (sessionReader != null)
                 {
                     do
                     {
-                        position = sessionReader.read(position, index);
-                    } while (position > 0);
+
+                        final long nextMessagePosition = alignTerm(endOfLastMessageposition) + HEADER_LENGTH;
+                        endOfLastMessageposition = sessionReader.read(nextMessagePosition, index);
+                    } while (endOfLastMessageposition > 0);
                 }
             });
         }
