@@ -68,6 +68,24 @@
                 description="We disconnected due the session id being the same as one already connected">7</validValue>
             <validValue name="INVALID_BODY_LENGTH"
                 description="We disconnected due a message having an invalid body length field">8</validValue>
+            <validValue name="LOGOUT"
+                description="We disconnected due to receiving a logout message">9</validValue>
+            <validValue name="FIRST_MESSAGE_NOT_LOGON"
+                description="We disconnected due to the first message that we received not being a logon">10</validValue>
+            <validValue name="INCORRECT_BEGIN_STRING"
+                description="We disconnected due begin string field was invalid">11</validValue>
+            <validValue name="MSG_SEQ_NO_TOO_LOW"
+                description="We disconnected due to the message sequence number being too low">12</validValue>
+            <validValue name="MSG_SEQ_NO_MISSING"
+                description="We disconnected due to the message sequence number field being missing">13</validValue>
+            <validValue name="INVALID_SENDING_TIME"
+                description="We disconnected due an invalid sending time field in the fix message">14</validValue>
+            <validValue name="NEGATIVE_HEARTBEAT_INTERVAL"
+                description="We disconnected due to a negative heartbeat interval field">15</validValue>
+            <validValue name="FAILED_AUTHENTICATION"
+                description="We disconnected due to the authentication strategy returning false">16</validValue>
+            <validValue name="INVALID_FIX_MESSAGE"
+                description="We disconnected due to codec validation failing">17</validValue>
         </enum>
         <enum name="SessionState" encodingType="uint8">
             <validValue name="CONNECTING"
