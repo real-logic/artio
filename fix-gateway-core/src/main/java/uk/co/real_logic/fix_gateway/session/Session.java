@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -42,6 +43,7 @@ import static uk.co.real_logic.fix_gateway.decoder.Constants.VERSION_CHARS;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.*;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.APPLICATION_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
@@ -306,10 +308,15 @@ public class Session implements AutoCloseable
      */
     public long requestDisconnect()
     {
+        return requestDisconnect(APPLICATION_DISCONNECT);
+    }
+
+    private long requestDisconnect(final DisconnectReason reason)
+    {
         long position = NO_OPERATION;
         if (state() != DISCONNECTED)
         {
-            position = proxy.requestDisconnect(connectionId);
+            position = proxy.requestDisconnect(connectionId, reason);
             state(position < 0 ? DISCONNECTING : DISCONNECTED);
         }
         return position;

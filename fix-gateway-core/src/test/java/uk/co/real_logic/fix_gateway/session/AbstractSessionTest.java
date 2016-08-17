@@ -35,6 +35,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.*;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.APPLICATION_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 import static uk.co.real_logic.fix_gateway.session.Session.TEST_REQ_ID;
 import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
@@ -602,13 +603,13 @@ public abstract class AbstractSessionTest
 
     public void verifyDisconnect(final VerificationMode times)
     {
-        verify(mockProxy, times).requestDisconnect(CONNECTION_ID);
+        verify(mockProxy, times).requestDisconnect(CONNECTION_ID, APPLICATION_DISCONNECT);
         assertState(DISCONNECTED);
     }
 
     private void backpressureDisconnect()
     {
-        when(mockProxy.requestDisconnect(CONNECTION_ID)).thenReturn(BACK_PRESSURED, POSITION);
+        when(mockProxy.requestDisconnect(CONNECTION_ID, APPLICATION_DISCONNECT)).thenReturn(BACK_PRESSURED, POSITION);
     }
 
     protected void givenActive()
@@ -687,7 +688,7 @@ public abstract class AbstractSessionTest
 
     protected void verifyConnected()
     {
-        verify(mockProxy, never()).requestDisconnect(CONNECTION_ID);
+        verify(mockProxy, never()).requestDisconnect(CONNECTION_ID, APPLICATION_DISCONNECT);
     }
 
     protected void verifyCanRoundtripTestMessage()

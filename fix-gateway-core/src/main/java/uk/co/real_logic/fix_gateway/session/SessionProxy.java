@@ -32,7 +32,6 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.VALUE_IS_INCORRECT;
-import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.APPLICATION_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
 /**
@@ -134,18 +133,7 @@ public class SessionProxy
         return send(length, ResendRequestDecoder.MESSAGE_TYPE, resendRequest);
     }
 
-    /**
-     * NB: Refers to a connectionId because the session may requestDisconnect before a session id is associated
-     * with it.
-     *
-     * @param connectionId the connection to disconnect
-     */
-    public long requestDisconnect(final long connectionId)
-    {
-        return requestDisconnect(connectionId, APPLICATION_DISCONNECT);
-    }
-
-    private long requestDisconnect(final long connectionId, final DisconnectReason reason)
+    public long requestDisconnect(final long connectionId, final DisconnectReason reason)
     {
         return gatewayPublication.saveRequestDisconnect(libraryId, connectionId, reason);
     }
