@@ -59,6 +59,15 @@ public final class SystemTestUtil
     public static final String HI_ID = "hi";
     public static final int LIBRARY_LIMIT = 2;
 
+    static
+    {
+        final File parentDirectory = new File(CommonConfiguration.optimalTmpDirName());
+        for (final File directory : parentDirectory.listFiles(file -> file.getName().startsWith("fix-library-")))
+        {
+            IoUtil.delete(directory, true);
+        }
+    }
+
     public static void assertSessionDisconnected(final FixLibrary library1, final Session session)
     {
         assertSessionDisconnected(library1, null, session);

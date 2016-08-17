@@ -79,11 +79,12 @@ public class CommonConfiguration
     public static final String HISTOGRAM_LOGGING_FILE_PROPERTY = "fix.benchmark.histogram_file";
 
     public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 8 * 1024 * 1024;
+    public static final String DEFAULT_DIRECTORY = optimalTmpDirName() + File.separator + "fix-%s";
     public static final String DEFAULT_MONITORING_FILE =
-        optimalTmpDirName() + File.separator + "fix-%s" + File.separator + "monitoring";
+        DEFAULT_DIRECTORY + File.separator + "monitoring";
 
     public static final String DEFAULT_HISTOGRAM_LOGGING_FILE =
-        optimalTmpDirName() + File.separator + "fix-%s" + File.separator + "histograms";
+        DEFAULT_DIRECTORY + File.separator + "histograms";
 
     // ------------------------------------------------
     //          Static Configuration
