@@ -208,7 +208,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final LibraryTimers timers,
         final FixCounters fixCounters,
         final LibraryTransport transport,
-        final FixLibrary fixLibrary)
+        final FixLibrary fixLibrary,
+        final SystemEpochClock clock)
     {
         this.libraryId = configuration.libraryId();
         this.fixCounters = fixCounters;
@@ -224,7 +225,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         sessionExistsHandler = configuration.sessionExistsHandler();
         idleStrategy = configuration.libraryIdleStrategy();
         sentPositionHandler = configuration.sentPositionHandler();
-        clock = new SystemEpochClock();
+        this.clock = clock;
         enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
     }
 
@@ -629,17 +630,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onNotLeader(final int libraryId, final String libraryChannel)
     {
-        if (libraryId == this.libraryId)
+        if (libraryChannel.isEmpty())
         {
-            if (libraryChannel.isEmpty())
-            {
-                attemptNextEngine();
-            }
-            else
-            {
-                currentAeronChannel = libraryChannel;
-                DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to leader (%s)\n", currentAeronChannel);
-            }
+            attemptNextEngine();
+        }
+        else
+        {
+            currentAeronChannel = libraryChannel;
+            DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to (%s) claimed leader\n", currentAeronChannel);
         }
 
         return CONTINUE;

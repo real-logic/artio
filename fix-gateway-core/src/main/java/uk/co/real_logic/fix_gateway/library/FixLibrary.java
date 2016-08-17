@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.library;
 
 import org.agrona.CloseHelper;
 import org.agrona.IoUtil;
+import org.agrona.concurrent.SystemEpochClock;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
@@ -57,7 +58,7 @@ public class FixLibrary extends GatewayProcess
         final LibraryTransport transport = new LibraryTransport(
             configuration, fixCounters, aeron);
         poller = new LibraryPoller(
-            configuration, timers, fixCounters, transport, this);
+            configuration, timers, fixCounters, transport, this, new SystemEpochClock());
     }
 
     private FixLibrary connect()
