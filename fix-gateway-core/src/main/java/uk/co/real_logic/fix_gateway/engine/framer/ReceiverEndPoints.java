@@ -24,8 +24,8 @@ import java.nio.channels.SelectionKey;
 import java.util.stream.Stream;
 
 import static org.agrona.collections.ArrayUtil.UNKNOWN_INDEX;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.CUSTOM_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.ENGINE_SHUTDOWN;
-import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
 
 class ReceiverEndPoints extends TransportPoller
 {
@@ -56,7 +56,7 @@ class ReceiverEndPoints extends TransportPoller
             if (endPoint.connectionId() == connectionId)
             {
                 index = i;
-                endPoint.close(LOCAL_DISCONNECT);
+                endPoint.close(CUSTOM_DISCONNECT);
             }
         }
 

@@ -242,7 +242,7 @@ class ReceiverEndPoint
                     {
                         return offset;
                     }
-                    close(LOCAL_DISCONNECT);
+                    close(INVALID_BODY_LENGTH);
                     removeEndpointFromFramer();
                     break;
                 }
@@ -344,7 +344,7 @@ class ReceiverEndPoint
                     moveRemainingDataToBufferStart(offset);
                     return true;
                 }
-                close(LOCAL_DISCONNECT);
+                close(DisconnectReason.DUPLICATE_SESSION);
             }
             else
             {

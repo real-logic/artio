@@ -52,8 +52,8 @@
         <enum name="DisconnectReason" encodingType="uint8">
             <validValue name="REMOTE_DISCONNECT"
                 description="The TCP connection was disconnected remotely">0</validValue>
-            <validValue name="LOCAL_DISCONNECT"
-                description="We disconnected due to session management rules">1</validValue>
+            <validValue name="CUSTOM_DISCONNECT"
+                description="We disconnected due an application level request">1</validValue>
             <validValue name="LIBRARY_DISCONNECT"
                 description="We disconnected due to its library disconnecting">2</validValue>
             <validValue name="ENGINE_SHUTDOWN"
@@ -64,6 +64,10 @@
                 description="We disconnected due to the consumer being too slow at reading the connection">5</validValue>
             <validValue name="NO_LOGON"
                 description="We disconnected due to no logon message being sent after a timeout">6</validValue>
+            <validValue name="DUPLICATE_SESSION"
+                description="We disconnected due the session id being the same as one already connected">7</validValue>
+            <validValue name="INVALID_BODY_LENGTH"
+                description="We disconnected due a message having an invalid body length field">8</validValue>
         </enum>
         <enum name="SessionState" encodingType="uint8">
             <validValue name="CONNECTING"

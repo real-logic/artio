@@ -59,7 +59,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
-import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.LOCAL_DISCONNECT;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.CUSTOM_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 import static uk.co.real_logic.fix_gateway.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
@@ -216,7 +216,7 @@ public class FramerTest
         framer.onDisconnect(LIBRARY_ID, connectionId.getValue(), null);
         framer.doWork();
 
-        verifyEndPointsDisconnected(LOCAL_DISCONNECT);
+        verifyEndPointsDisconnected(CUSTOM_DISCONNECT);
     }
 
     @Test
