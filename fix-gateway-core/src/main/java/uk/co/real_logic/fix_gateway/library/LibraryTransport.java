@@ -56,7 +56,7 @@ class LibraryTransport
     {
         final NanoClock nanoClock = new SystemNanoClock();
         final ClusterableStreams soloNode = ClusterableStreams.solo(aeron, aeronChannel);
-        DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to %s\n", aeronChannel);
+        DebugLogger.log(LIBRARY_CONNECT, "Directed streams at %s\n", aeronChannel);
 
         inboundLibraryStreams = new Streams(
             soloNode, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,

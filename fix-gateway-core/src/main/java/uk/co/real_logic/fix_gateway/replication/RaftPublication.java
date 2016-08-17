@@ -23,7 +23,6 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.replication.messages.*;
 
-import static io.aeron.Publication.*;
 import static uk.co.real_logic.fix_gateway.replication.messages.ReplyVoteEncoder.nodeStateHeaderLength;
 
 // NB: doens't extend ClaimablePublication because it works on raw Publication objects, not clusterable publications
@@ -269,15 +268,7 @@ class RaftPublication
 
         idleStrategy.reset();
 
-        if (position == NOT_CONNECTED || position == CLOSED)
-        {
-            throw new IllegalStateException(
-                "Unable to send publish message, probably a missing another cluster node");
-        }
-        else
-        {
-            return position;
-        }
+        return position;
     }
 
     public void close()
