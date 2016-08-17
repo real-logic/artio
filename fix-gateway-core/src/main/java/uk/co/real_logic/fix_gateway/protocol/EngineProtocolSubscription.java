@@ -162,6 +162,9 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
                                     final int version)
     {
         requestDisconnect.wrap(buffer, offset, blockLength, version);
-        return handler.onRequestDisconnect(requestDisconnect.libraryId(), requestDisconnect.connection());
+        return handler.onRequestDisconnect(
+            requestDisconnect.libraryId(),
+            requestDisconnect.connection(),
+            requestDisconnect.reason());
     }
 }

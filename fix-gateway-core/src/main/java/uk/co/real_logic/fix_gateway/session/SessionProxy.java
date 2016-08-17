@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.builder.*;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiFormatter;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -31,6 +32,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.VALUE_IS_INCORRECT;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.APPLICATION_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
 /**
@@ -140,7 +142,12 @@ public class SessionProxy
      */
     public long requestDisconnect(final long connectionId)
     {
-        return gatewayPublication.saveRequestDisconnect(libraryId, connectionId);
+        return requestDisconnect(connectionId, APPLICATION_DISCONNECT);
+    }
+
+    private long requestDisconnect(final long connectionId, final DisconnectReason reason)
+    {
+        return gatewayPublication.saveRequestDisconnect(libraryId, connectionId, reason);
     }
 
     public long logon(

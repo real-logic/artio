@@ -52,7 +52,7 @@
         <enum name="DisconnectReason" encodingType="uint8">
             <validValue name="REMOTE_DISCONNECT"
                 description="The TCP connection was disconnected remotely">0</validValue>
-            <validValue name="CUSTOM_DISCONNECT"
+            <validValue name="APPLICATION_DISCONNECT"
                 description="We disconnected due an application level request">1</validValue>
             <validValue name="LIBRARY_DISCONNECT"
                 description="We disconnected due to its library disconnecting">2</validValue>
@@ -196,8 +196,9 @@
         <data name="password" id="12" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">
-        <field name="libraryId" id="45" type="LibraryId"/>
-        <field name="connection" id="24" type="ConnectionId"/>
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="reason" id="3" type="DisconnectReason"/>
     </sbe:message>
     <sbe:message name="Error" id="13" description="An error has occurred">
         <field name="type" id="1" type="GatewayError"/>

@@ -364,7 +364,8 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveRequestDisconnect(final int libraryId, final long connectionId)
+    public long saveRequestDisconnect(
+        final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         final long position = claim(header.encodedLength() + RequestDisconnectEncoder.BLOCK_LENGTH);
         if (position < 0)
@@ -387,7 +388,8 @@ public class GatewayPublication extends ClaimablePublication
         requestDisconnect
             .wrap(buffer, offset)
             .libraryId(libraryId)
-            .connection(connectionId);
+            .connection(connectionId)
+            .reason(reason);
 
         bufferClaim.commit();
 

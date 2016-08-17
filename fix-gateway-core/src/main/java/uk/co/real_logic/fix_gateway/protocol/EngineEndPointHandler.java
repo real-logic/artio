@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.protocol;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.SequenceNumberType;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 
@@ -42,7 +43,10 @@ public interface EngineEndPointHandler
         final long correlationId,
         final Header header);
 
-    Action onRequestDisconnect(final int libraryId, final long connectionId);
+    Action onRequestDisconnect(
+        final int libraryId,
+        final long connectionId,
+        final DisconnectReason reason);
 
     Action onApplicationHeartbeat(final int libraryId);
 

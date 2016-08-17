@@ -546,14 +546,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return gatewaySession;
     }
 
-    public Action onRequestDisconnect(final int libraryId, final long connectionId)
+    public Action onRequestDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
-        return onDisconnect(libraryId, connectionId, null);
+        return onDisconnect(libraryId, connectionId, reason);
     }
 
     public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
-        receiverEndPoints.removeConnection(connectionId);
+        receiverEndPoints.removeConnection(connectionId, reason);
         senderEndPoints.removeConnection(connectionId);
         final LibraryInfo library = idToLibrary.get(libraryId);
         if (library != null)

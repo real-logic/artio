@@ -18,13 +18,13 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import org.agrona.LangUtil;
 import org.agrona.collections.ArrayUtil;
 import org.agrona.nio.TransportPoller;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.util.stream.Stream;
 
 import static org.agrona.collections.ArrayUtil.UNKNOWN_INDEX;
-import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.CUSTOM_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.ENGINE_SHUTDOWN;
 
 class ReceiverEndPoints extends TransportPoller
@@ -44,7 +44,7 @@ class ReceiverEndPoints extends TransportPoller
         }
     }
 
-    void removeConnection(final long connectionId)
+    void removeConnection(final long connectionId, final DisconnectReason reason)
     {
         final ReceiverEndPoint[] endPoints = this.endPoints;
         final int length = endPoints.length;
@@ -56,7 +56,7 @@ class ReceiverEndPoints extends TransportPoller
             if (endPoint.connectionId() == connectionId)
             {
                 index = i;
-                endPoint.close(CUSTOM_DISCONNECT);
+                endPoint.close(reason);
             }
         }
 
