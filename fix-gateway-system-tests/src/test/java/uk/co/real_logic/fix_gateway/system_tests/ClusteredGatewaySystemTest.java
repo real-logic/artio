@@ -172,7 +172,7 @@ public class ClusteredGatewaySystemTest
         DebugLogger.log(GATEWAY_CLUSTER, "Elected new leader: (%s)\n", leader.libraryChannel());
 
         final String libraryChannel = leader.libraryChannel();
-        while (!acceptingLibrary.currentAeronChannel().equals(libraryChannel))
+        while (notConnectedTo(libraryChannel))
         {
             initiatingLibrary.poll(1);
             acceptingLibrary.poll(1);
@@ -193,6 +193,12 @@ public class ClusteredGatewaySystemTest
         connectFixSession();
 
         roundtripAMessage();
+    }
+
+    private boolean notConnectedTo(final String libraryChannel)
+    {
+        return !acceptingLibrary.isConnected()
+            || !acceptingLibrary.currentAeronChannel().equals(libraryChannel);
     }
 
     private void connectFixSession()
