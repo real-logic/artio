@@ -21,8 +21,10 @@ import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 import uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.BufferAsciiSequence;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -139,5 +141,19 @@ public final class FixMessagePredicates
     public static FixMessagePredicate sessionOf(final long sessionId)
     {
         return message -> message.session() == sessionId;
+    }
+
+    public static FixMessagePredicate bodyMatches(final Pattern pattern)
+    {
+        final ExpandableArrayBuffer buffer = new ExpandableArrayBuffer(1024);
+        final BufferAsciiSequence sequence = new BufferAsciiSequence();
+        return message ->
+        {
+            final int length = message.bodyLength();
+            buffer.checkLimit(length);
+            message.getBody(buffer, 0, length);
+            sequence.wrap(buffer, 0, length);
+            return pattern.matcher(sequence).matches();
+        };
     }
 }
