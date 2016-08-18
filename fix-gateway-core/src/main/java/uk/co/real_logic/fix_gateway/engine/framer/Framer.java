@@ -572,7 +572,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                                    final long correlationId,
                                    final int aeronSessionId)
     {
+        //System.out.println("LIBRARY CONNECT correlationId = " + correlationId);
         final Action action = retryManager.retry(correlationId);
+        //System.out.println("action = " + action);
         if (action != null)
         {
             return action;
@@ -591,6 +593,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             existingLibrary.onHeartbeat(clock.time());
 
+            //System.out.println("EXISTING correlationId = " + correlationId);
+
             return CONTINUE;
         }
 
@@ -599,6 +603,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             libraryId,
             configuration.replyTimeoutInMs(),
             clock.time());
+
+        //System.out.println("SENT HEARTBEAT");
 
         final LibraryInfo library = new LibraryInfo(libraryId, livenessDetector, aeronSessionId);
         idToLibrary.put(libraryId, library);

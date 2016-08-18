@@ -203,7 +203,10 @@ class NodeRunner implements AutoCloseable
 
         public void onNewLeader(final int leaderSessionId)
         {
+        }
 
+        public void noLeader()
+        {
         }
     }
 }

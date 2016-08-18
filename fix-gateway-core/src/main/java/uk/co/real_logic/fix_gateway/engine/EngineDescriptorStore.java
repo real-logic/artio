@@ -27,7 +27,7 @@ public class EngineDescriptorStore implements NodeStateHandler
 {
     // Thread-safe state
     private volatile UnsafeBuffer leaderLibraryChannel = null;
-    private int leaderSessionId;
+    private Integer leaderSessionId;
 
     // Single-threaded state only used on archiver thread.
     private final Int2ObjectHashMap<UnsafeBuffer> nodeIdToLibraryChannel = new Int2ObjectHashMap<>();
@@ -77,13 +77,22 @@ public class EngineDescriptorStore implements NodeStateHandler
 
     public void onNewLeader(final int leaderSessionId)
     {
-        this.leaderSessionId = leaderSessionId;
+        this.leaderSessionId = Integer.valueOf(leaderSessionId);
         updateLeaderLibraryChannel();
+    }
+
+    public void noLeader()
+    {
+        leaderSessionId = null;
+        leaderLibraryChannel = null;
     }
 
     private void updateLeaderLibraryChannel()
     {
-        leaderLibraryChannel = nodeIdToLibraryChannel.get(leaderSessionId + 2);
+        if (leaderSessionId != null)
+        {
+            leaderLibraryChannel = nodeIdToLibraryChannel.get(leaderSessionId + 2);
+        }
     }
 
     public DirectBuffer leaderLibraryChannel()

@@ -384,6 +384,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
         idleStrategy.reset();
         this.connectCorrelationId = correlationId;
+        //System.out.println("SEND connectCorrelationId = " + connectCorrelationId);
     }
 
     private int pollSessions(final long timeInMs)
@@ -588,6 +589,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onApplicationHeartbeat(final int libraryId)
     {
+        //System.out.println("HEARTBEAT libraryId = " + libraryId);
         if (libraryId == this.libraryId)
         {
             livenessDetector.onHeartbeat(clock.time());

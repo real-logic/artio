@@ -305,6 +305,7 @@ class Follower implements Role, RaftHandler
         else
         {
             raftArchiver.onNoLeader();
+            clusterNode.onNoLeader();
         }
     }
 

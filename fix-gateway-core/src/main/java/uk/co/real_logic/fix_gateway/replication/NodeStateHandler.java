@@ -22,4 +22,6 @@ public interface NodeStateHandler
     void onNewNodeState(short nodeId, int aeronSessionId, DirectBuffer nodeStateBuffer, int nodeStateLength);
 
     void onNewLeader(int leaderSessionId);
+
+    void noLeader();
 }

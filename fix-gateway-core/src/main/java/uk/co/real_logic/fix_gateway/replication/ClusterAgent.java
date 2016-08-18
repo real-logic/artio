@@ -178,6 +178,7 @@ public class ClusterAgent implements Agent
             follower.closeStreams();
 
             currentRole = candidate.startNewElection(timeInMs);
+            onNoLeader();
             roleHandler.onTransitionToCandidate(leadershipTerm);
         }
     };
@@ -211,6 +212,7 @@ public class ClusterAgent implements Agent
             currentRole = follower.votedFor(votedFor)
                 .follow(timeInMs);
 
+            onNoLeader();
             roleHandler.onTransitionToFollower(leadershipTerm);
         }
     };
@@ -221,6 +223,7 @@ public class ClusterAgent implements Agent
 
         currentRole = follower.follow(timeInMs);
 
+        onNoLeader();
         roleHandler.onTransitionToFollower(termState.leadershipTerm());
     }
 
@@ -247,6 +250,11 @@ public class ClusterAgent implements Agent
     void onNewLeader()
     {
         nodeStateHandler.onNewLeader(termState.leaderSessionId().get());
+    }
+
+    void onNoLeader()
+    {
+        nodeStateHandler.noLeader();
     }
 
     public int doWork()
