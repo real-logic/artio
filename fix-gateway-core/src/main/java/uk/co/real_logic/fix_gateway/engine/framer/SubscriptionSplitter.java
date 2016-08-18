@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.protocol.EngineProtocolSubscription;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
+import uk.co.real_logic.fix_gateway.sbe_util.IdExtractor;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -43,6 +44,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
+    private final IdExtractor idExtractor = new IdExtractor();
 
     private final ClusterableStreams clusterableStreams;
     private final EngineProtocolSubscription engineProtocolSubscription;
@@ -72,23 +74,27 @@ class SubscriptionSplitter implements ControlledFragmentHandler
 
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
+        messageHeader.wrap(buffer, offset);
+
+        final int messageOffset = offset + MessageHeaderDecoder.ENCODED_LENGTH;
+        final int actingBlockLength = messageHeader.blockLength();
+        final int version = messageHeader.version();
+        final int templateId = messageHeader.templateId();
+
         if (clusterableStreams.isLeader())
         {
-            messageHeader.wrap(buffer, offset);
-            final int messageOffset = offset + MessageHeaderDecoder.ENCODED_LENGTH;
-
-            switch (messageHeader.templateId())
+            switch (templateId)
             {
                 case FixMessageDecoder.TEMPLATE_ID:
                 {
-                    fixMessage.wrap(buffer, messageOffset, messageHeader.blockLength(), messageHeader.version());
+                    fixMessage.wrap(buffer, messageOffset, actingBlockLength, version);
 
                     return onReplicatedMessage(
                         buffer, offset, length, header, fixMessage.connection());
                 }
                 case DisconnectDecoder.TEMPLATE_ID:
                 {
-                    disconnect.wrap(buffer, messageOffset, messageHeader.blockLength(), messageHeader.version());
+                    disconnect.wrap(buffer, messageOffset, actingBlockLength, version);
 
                     return onReplicatedMessage(
                         buffer, offset, length, header, disconnect.connection());
@@ -102,11 +108,22 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         }
         else
         {
-            // TODO: generically extract the library id
-            final int libraryId = 0;
-            final int replyToId = 0;
+            idExtractor.decode(
+                buffer,
+                messageOffset,
+                actingBlockLength,
+                version,
+                templateId);
+
+            final int libraryId = idExtractor.libraryId();
+            final long correlationId = idExtractor.correlationId();
+
             final long position = replyPublication.saveNotLeader(
-                libraryId, replyToId, engineDescriptorStore.leaderLibraryChannel());
+                libraryId,
+                correlationId,
+                engineDescriptorStore.leaderLibraryChannel());
+
+            // TODO: counter to record back pressure
         }
 
         return CONTINUE;

@@ -169,8 +169,8 @@
 
     <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">
         <field name="libraryId" id="1" type="LibraryId"/>
-        <field name="connection" id="2" type="ConnectionId"/>
-        <field name="correlationId" id="3" type="CorrelationId"/>
+        <field name="correlationId" id="2" type="CorrelationId"/>
+        <field name="connection" id="3" type="ConnectionId"/>
         <field name="reason" id="4" type="DisconnectReason"/>
     </sbe:message>
 
@@ -196,21 +196,21 @@
     <sbe:message name="RequestSession" id="31"
                  description="requests control of a session for this library">
         <field name="libraryId" id="1" type="LibraryId"/>
-        <field name="sessionId" id="2" type="FixSessionId"/>
-        <field name="correlationId" id="3" type="CorrelationId"/>
+        <field name="correlationId" id="2" type="CorrelationId"/>
+        <field name="sessionId" id="3" type="FixSessionId"/>
         <field name="lastReceivedSequenceNumber" id="4" type="int32"/>
     </sbe:message>
 
     <!-- Messages From Engine To Library -->
     <sbe:message name="Disconnect" id="7" description="A connection has disconnected">
-        <field name="libraryId" id="42" type="LibraryId"/>
-        <field name="connection" id="8" type="ConnectionId"/>
-        <field name="reason" id="46" type="DisconnectReason"/>
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="reason" id="3" type="DisconnectReason"/>
     </sbe:message>
 
     <sbe:message name="Connect" id="33" description="We have accepted an inbound TCP Connection">
-        <field name="connection" id="17" type="ConnectionId"/>
-        <data name="address" id="18" type="varDataEncoding"/>
+        <field name="connection" id="1" type="ConnectionId"/>
+        <data name="address" id="2" type="varDataEncoding"/>
     </sbe:message>
 
     <sbe:message name="ManageConnection" id="10" description="Here's a connection to manage">
@@ -312,7 +312,8 @@
 
     <sbe:message name="ApplicationHeartbeat" id="16"
                  description="A heartbeat message sent within the application protocol">
-        <field name="libraryId" id="40" type="LibraryId"/>
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connectCorrelationId" id="2" type="CorrelationId"/>
     </sbe:message>
 
 </sbe:messageSchema>

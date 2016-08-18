@@ -63,6 +63,8 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
 final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable
 {
+    private static final long NO_CORRELATION_ID = 0;
+
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private final List<Session> sessions = new ArrayList<>();
     private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
@@ -70,6 +72,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     // Used when checking the consistency of the session ids
     private final LongHashSet sessionIds = new LongHashSet(SessionIds.MISSING);
 
+    // Uniquely identifies library session
     private final int libraryId;
     private final EpochClock clock;
     private final LibraryConfiguration configuration;
@@ -98,6 +101,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private GatewayPublication outboundPublication;
     private String currentAeronChannel;
 
+    // Combined with Library Id, uniquely identifies library connection
+    private long connectCorrelationId = NO_CORRELATION_ID;
+
     int poll(final int fragmentLimit)
     {
         if (enginesAreClustered && livenessDetector.hasDisconnected())
@@ -125,6 +131,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     int libraryId()
     {
         return libraryId;
+    }
+
+    long connectCorrelationId()
+    {
+        return connectCorrelationId;
     }
 
     List<Session> sessions()
@@ -368,6 +379,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             idleStrategy.idle();
         }
         idleStrategy.reset();
+        this.connectCorrelationId = correlationId;
     }
 
     private int pollSessions(final long timeInMs)
@@ -630,14 +642,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onNotLeader(final int libraryId, final long replyToId, final String libraryChannel)
     {
-        if (libraryChannel.isEmpty())
+        if (libraryId == this.libraryId && replyToId >= connectCorrelationId)
         {
-            attemptNextEngine();
-        }
-        else
-        {
-            currentAeronChannel = libraryChannel;
-            DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to (%s) claimed leader\n", currentAeronChannel);
+            if (libraryChannel.isEmpty())
+            {
+                attemptNextEngine();
+            }
+            else
+            {
+                currentAeronChannel = libraryChannel;
+                DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to (%s) claimed leader\n", currentAeronChannel);
+            }
         }
 
         return CONTINUE;

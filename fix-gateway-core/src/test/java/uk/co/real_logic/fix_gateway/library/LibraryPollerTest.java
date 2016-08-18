@@ -32,6 +32,8 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
 
 import java.util.List;
+import java.util.function.IntSupplier;
+import java.util.function.LongSupplier;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Arrays.asList;
@@ -71,7 +73,6 @@ public class LibraryPollerTest
     private FixLibrary fixLibrary = mock(FixLibrary.class);
     private UnsafeBuffer address = new UnsafeBuffer(new byte[1024]);
     private int addressLength = address.putStringUtf8(0, "localhost:1234");
-    private int libraryId;
 
     private LibraryPoller library;
 
@@ -94,9 +95,9 @@ public class LibraryPollerTest
 
         manageConnection(CONNECTION_ID, SESSION_ID);
 
-        library.onControlNotification(libraryId, noSessionIds());
+        library.onControlNotification(libraryId(), noSessionIds());
 
-        verify(sessionHandler).onTimeout(libraryId, SESSION_ID);
+        verify(sessionHandler).onTimeout(libraryId(), SESSION_ID);
     }
 
     @Test
@@ -107,18 +108,48 @@ public class LibraryPollerTest
         manageConnection(CONNECTION_ID, SESSION_ID);
         manageConnection(OTHER_CONNECTION_ID, OTHER_SESSION_ID);
 
-        library.onControlNotification(libraryId, hasOtherSessionId());
+        library.onControlNotification(libraryId(), hasOtherSessionId());
 
-        verify(sessionHandler).onTimeout(libraryId, SESSION_ID);
+        verify(sessionHandler).onTimeout(libraryId(), SESSION_ID);
     }
 
     @Test
     public void shouldAttemptAnotherEngineWhenNotLeader()
     {
+        shouldReplyToOnNotLeaderWith(this::libraryId, this::connectCorrelationId, FIRST_CHANNEL, LEADER_CHANNEL);
+    }
+
+    @Test
+    public void shouldNotAttemptAnotherEngineWithDifferentLibraryId()
+    {
+        shouldReplyToOnNotLeaderWith(() -> ENGINE_LIBRARY_ID, this::connectCorrelationId, FIRST_CHANNEL);
+    }
+
+    @Test
+    public void shouldNotAttemptAnotherEngineWithDifferentConnectCorrelation()
+    {
+        shouldReplyToOnNotLeaderWith(this::libraryId, () -> 0, FIRST_CHANNEL);
+    }
+
+    private int libraryId()
+    {
+        return library.libraryId();
+    }
+
+    private long connectCorrelationId()
+    {
+        return library.connectCorrelationId();
+    }
+
+    private void shouldReplyToOnNotLeaderWith(
+        final IntSupplier libraryId,
+        final LongSupplier connectCorrelationId,
+        final String... channels)
+    {
         whenPolled()
             .then(inv ->
             {
-                library.onNotLeader(ENGINE_LIBRARY_ID, library.libraryId(), LEADER_CHANNEL);
+                library.onNotLeader(libraryId.getAsInt(), connectCorrelationId.getAsLong(), LEADER_CHANNEL);
                 return 1;
             })
             .then(replyWithApplicationHeartbeat())
@@ -128,7 +159,7 @@ public class LibraryPollerTest
 
         library.connect();
 
-        attemptToConnectTo(FIRST_CHANNEL, LEADER_CHANNEL);
+        attemptToConnectTo(channels);
     }
 
     private void attemptToConnectTo(final String ... channels)
@@ -140,7 +171,7 @@ public class LibraryPollerTest
             inOrder.verify(transport).inboundSubscription();
             inOrder.verify(transport).outboundPublication();
             inOrder.verify(outboundPublication)
-                .saveLibraryConnect(eq(library.libraryId()), anyLong());
+                .saveLibraryConnect(eq(libraryId()), anyLong());
         }
         verifyNoMoreInteractions(transport);
     }
@@ -152,15 +183,13 @@ public class LibraryPollerTest
         newLibraryPoller(singletonList(IPC_CHANNEL));
 
         library.connect();
-
-        libraryId = library.libraryId();
     }
 
     private Answer<Integer> replyWithApplicationHeartbeat()
     {
         return inv ->
         {
-            library.onApplicationHeartbeat(library.libraryId());
+            library.onApplicationHeartbeat(libraryId());
             return 1;
         };
     }
@@ -191,7 +220,7 @@ public class LibraryPollerTest
     private void manageConnection(final long connectionId, final long sessionId)
     {
         library.onManageConnection(
-            libraryId,
+            libraryId(),
             connectionId,
             sessionId,
             ACCEPTOR,
