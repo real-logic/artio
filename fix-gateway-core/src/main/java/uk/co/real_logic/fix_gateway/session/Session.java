@@ -34,6 +34,7 @@ import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
+import static java.lang.Integer.MIN_VALUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
@@ -79,7 +80,8 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 public class Session implements AutoCloseable
 {
     public static final long UNKNOWN = -1;
-    public static final long NO_OPERATION = -4;
+    public static final long NO_OPERATION = MIN_VALUE;
+    public static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
 
     /**
      * The proportion of the maximum heartbeat interval before you send your heartbeat
@@ -123,7 +125,8 @@ public class Session implements AutoCloseable
     private int connectedPort;
 
     private boolean incorrectBeginString = false;
-    boolean resendSaveLogon = false;
+    protected boolean resendSaveLogon = false;
+    private boolean libraryConnected = true;
 
     public Session(
         final int heartbeatIntervalInS,
@@ -1157,6 +1160,12 @@ public class Session implements AutoCloseable
     {
         state(SessionState.DISABLED);
         close();
+    }
+
+    public void libraryConnected(final boolean libraryConnected)
+    {
+        this.libraryConnected = libraryConnected;
+        proxy.libraryConnected(libraryConnected);
     }
 
     public boolean isAcceptor()

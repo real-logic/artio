@@ -33,6 +33,7 @@ import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.VALUE_IS_INCORRECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
+import static uk.co.real_logic.fix_gateway.session.Session.LIBRARY_DISCONNECTED;
 
 /**
  * Encapsulates sending messages relating to sessions
@@ -93,6 +94,7 @@ public class SessionProxy
     private final int libraryId;
     private long sessionId;
     private CompositeKey sessionKey;
+    private boolean libraryConnected = true;
 
     public SessionProxy(
         final int bufferSize,
@@ -341,9 +343,19 @@ public class SessionProxy
 
     private long send(final int length, final int messageType, final Encoder encoder)
     {
+        if (!libraryConnected)
+        {
+            return LIBRARY_DISCONNECTED;
+        }
+
         final long position = gatewayPublication.saveMessage(
             buffer, 0, length, libraryId, messageType, sessionId, connectionId, OK);
         encoder.reset();
         return position;
+    }
+
+    void libraryConnected(final boolean libraryConnected)
+    {
+        this.libraryConnected = libraryConnected;
     }
 }

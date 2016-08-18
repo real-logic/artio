@@ -18,14 +18,20 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.library.FixLibrary;
 
 import java.util.concurrent.locks.LockSupport;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
+import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.fix_gateway.session.Session.LIBRARY_DISCONNECTED;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class LibraryDisconnectTest extends AbstractGatewayToGatewaySystemTest
 {
+
+    private static final int REPLY_TIMEOUT_IN_MS = 1000;
 
     @Before
     public void launch()
@@ -35,10 +41,12 @@ public class LibraryDisconnectTest extends AbstractGatewayToGatewaySystemTest
         delete(ACCEPTOR_LOGS);
         acceptingEngine = FixEngine.launch(
             acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID)
-              .replyTimeoutInMs(1000));
+              .replyTimeoutInMs(REPLY_TIMEOUT_IN_MS));
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
 
-        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+        acceptingLibrary = FixLibrary.connect(
+            acceptingLibraryConfig(acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", IPC_CHANNEL)
+            .replyTimeoutInMs(REPLY_TIMEOUT_IN_MS));
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
 
         wireSessions();
@@ -51,6 +59,13 @@ public class LibraryDisconnectTest extends AbstractGatewayToGatewaySystemTest
 
         messagesCanBeExchanged(
             initiatingSession, initiatingLibrary, null, initiatingOtfAcceptor);
+
+        while (acceptingLibrary.isConnected())
+        {
+            acceptingLibrary.poll(2);
+        }
+
+        assertEquals(LIBRARY_DISCONNECTED, acceptingSession.sendSequenceReset(1));
     }
 
     private void engineAcquiresAcceptingLibrariesSession()

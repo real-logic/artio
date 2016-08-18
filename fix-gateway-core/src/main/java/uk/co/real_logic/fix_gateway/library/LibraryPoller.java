@@ -88,7 +88,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final Long2ObjectHashMap<Reply<?>> correlationIdToReply = new Long2ObjectHashMap<>();
     private final LibraryTransport transport;
     private final FixLibrary fixLibrary;
-    private final Runnable onDisconnectFunc;
+    private final Runnable onDisconnectFunc = this::onDisconnect;
 
     /** Correlation Id is initialised to a random number to reduce the chance of correlation id collision. */
     private long currentCorrelationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
@@ -129,7 +129,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         sentPositionHandler = configuration.sentPositionHandler();
         this.clock = clock;
         enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
-        onDisconnectFunc = () -> configuration.libraryConnectHandler().onDisconnect(fixLibrary);
     }
 
     int poll(final int fragmentLimit)
@@ -324,7 +323,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 connectError(errorType.toString());
             }
 
-            configuration.libraryConnectHandler().onConnect(fixLibrary);
+            onConnect();
         }
         catch (Exception e)
         {
@@ -831,6 +830,28 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             new SystemEpochClock(),
             connectionId,
             libraryId);
+    }
+
+    private void onConnect()
+    {
+        configuration.libraryConnectHandler().onConnect(fixLibrary);
+        setLibraryConnected(false);
+    }
+
+    private void onDisconnect()
+    {
+        configuration.libraryConnectHandler().onDisconnect(fixLibrary);
+        setLibraryConnected(false);
+    }
+
+    private void setLibraryConnected(final boolean libraryConnected)
+    {
+        final List<Session> sessions = this.sessions;
+        for (int i = 0, size = sessions.size(); i < size; i++)
+        {
+            final Session session = sessions.get(i);
+            session.libraryConnected(libraryConnected);
+        }
     }
 
     String currentAeronChannel()
