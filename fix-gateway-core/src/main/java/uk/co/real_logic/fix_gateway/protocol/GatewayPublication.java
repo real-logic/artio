@@ -628,7 +628,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveReleaseSessionReply(final SessionReplyStatus status, final long correlationId)
+    public long saveReleaseSessionReply(final SessionReplyStatus status, final long replyToId)
     {
         final long position = claim(RELEASE_SESSION_REPLY_LENGTH);
         if (position < 0)
@@ -650,7 +650,7 @@ public class GatewayPublication extends ClaimablePublication
 
         releaseSessionReply
             .wrap(buffer, offset)
-            .correlationId(correlationId)
+            .replyToId(replyToId)
             .status(status);
 
         bufferClaim.commit();
@@ -697,7 +697,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveRequestSessionReply(final SessionReplyStatus status, final long correlationId)
+    public long saveRequestSessionReply(final SessionReplyStatus status, final long replyToId)
     {
         final long position = claim(REQUEST_SESSION_REPLY_LENGTH);
         if (position < 0)
@@ -719,7 +719,7 @@ public class GatewayPublication extends ClaimablePublication
 
         requestSessionReply
             .wrap(buffer, offset)
-            .correlationId(correlationId)
+            .replyToId(replyToId)
             .status(status);
 
         bufferClaim.commit();

@@ -150,54 +150,7 @@
         </enum>
     </types>
 
-    <!-- MESSAGING PROTOCOL -->
-    <sbe:message name="FixMessage" id="1" description="A framed FIX message">
-        <field name="messageType" id="1" type="MessageType"/>
-        <field name="session" id="2" type="FixSessionId"/>
-        <field name="connection" id="3" type="ConnectionId"/>
-        <field name="timestamp" id="4" type="Timestamp"/>
-        <field name="status" id="5" type="MessageStatus"/>
-        <field name="libraryId" id="6" type="LibraryId"/>
-        <field name="bytesSent" id="7" type="int32" />
-        <data name="body" id="5" type="varDataEncoding"/>
-    </sbe:message>
-    <sbe:message name="Disconnect" id="7" description="A connection has disconnected">
-        <field name="libraryId" id="42" type="LibraryId"/>
-        <field name="connection" id="8" type="ConnectionId"/>
-        <field name="reason" id="46" type="DisconnectReason"/>
-    </sbe:message>
-    <sbe:message name="Connect" id="33" description="We have accepted an inbound TCP Connection">
-        <field name="connection" id="17" type="ConnectionId"/>
-        <data name="address" id="18" type="varDataEncoding"/>
-    </sbe:message>
-    <sbe:message name="ManageConnection" id="10" description="Here's a connection to manage">
-        <field name="libraryId" id="1" type="LibraryId"/>
-        <field name="connection" id="2" type="ConnectionId"/>
-        <field name="session" id="10" type="FixSessionId"/>
-        <field name="type" id="3" type="ConnectionType"/>
-        <field name="lastSentSequenceNumber" id="4" type="int32"/>
-        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
-        <field name="sessionState" id="6" type="SessionState"/>
-        <field name="heartbeatIntervalInS" id="7" type="int32"/>
-        <field name="replyToId" id="8" type="CorrelationId"/>
-        <data name="address" id="9" type="varDataEncoding"/>
-    </sbe:message>
-    <sbe:message name="ResetSessionIds" id="36" description="All session ids have been reset">
-    </sbe:message>
-    <sbe:message name="Logon" id="9" description="A logon has occurred">
-        <field name="libraryId" id="1" type="LibraryId"/>
-        <field name="connection" id="2" type="ConnectionId"/>
-        <field name="session" id="3" type="FixSessionId"/>
-        <field name="lastSentSequenceNumber" id="4" type="int32"/>
-        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
-        <field name="status" id="6" type="LogonStatus"/>
-        <data name="senderCompId" id="7" type="varDataEncoding"/>
-        <data name="senderSubId" id="8" type="varDataEncoding"/>
-        <data name="senderLocationId" id="9" type="varDataEncoding"/>
-        <data name="targetCompId" id="10" type="varDataEncoding"/>
-        <data name="username" id="11" type="varDataEncoding"/>
-        <data name="password" id="12" type="varDataEncoding"/>
-    </sbe:message>
+    <!-- Messages From Library To Engine -->
     <sbe:message name="InitiateConnection" id="11" description="Try to make an outbound connection">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="requestedInitialSequenceNumber" id="2" type="int32"/>
@@ -213,26 +166,20 @@
         <data name="username" id="11" type="varDataEncoding"/>
         <data name="password" id="12" type="varDataEncoding"/>
     </sbe:message>
+
     <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connection" id="2" type="ConnectionId"/>
-        <field name="reason" id="3" type="DisconnectReason"/>
+        <field name="correlationId" id="3" type="CorrelationId"/>
+        <field name="reason" id="4" type="DisconnectReason"/>
     </sbe:message>
-    <sbe:message name="Error" id="13" description="An error has occurred">
-        <field name="type" id="1" type="GatewayError"/>
-        <field name="libraryId" id="2" type="LibraryId"/>
-        <field name="replyToId" id="3" type="CorrelationId"/>
-        <data name="message" id="4" type="varDataEncoding"/>
-    </sbe:message>
-    <sbe:message name="ApplicationHeartbeat" id="16"
-                 description="A heartbeat message sent within the application protocol">
-        <field name="libraryId" id="40" type="LibraryId"/>
-    </sbe:message>
+
     <sbe:message name="LibraryConnect" id="17"
                  description="Notify an engine that a new library has connected">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="correlationId" id="2" type="CorrelationId"/>
     </sbe:message>
+
     <sbe:message name="ReleaseSession" id="29"
                  description="releases a session from the library's control to the gateway">
         <field name="libraryId" id="1" type="LibraryId"/>
@@ -245,11 +192,7 @@
         <data name="username" id="8" type="varDataEncoding"/>
         <data name="password" id="9" type="varDataEncoding"/>
     </sbe:message>
-    <sbe:message name="ReleaseSessionReply" id="30"
-                 description="response to ReleaseSession">
-        <field name="correlationId" id="93" type="CorrelationId"/>
-        <field name="status" id="94" type="SessionReplyStatus"/>
-    </sbe:message>
+
     <sbe:message name="RequestSession" id="31"
                  description="requests control of a session for this library">
         <field name="libraryId" id="1" type="LibraryId"/>
@@ -257,27 +200,90 @@
         <field name="correlationId" id="3" type="CorrelationId"/>
         <field name="lastReceivedSequenceNumber" id="4" type="int32"/>
     </sbe:message>
+
+    <!-- Messages From Engine To Library -->
+    <sbe:message name="Disconnect" id="7" description="A connection has disconnected">
+        <field name="libraryId" id="42" type="LibraryId"/>
+        <field name="connection" id="8" type="ConnectionId"/>
+        <field name="reason" id="46" type="DisconnectReason"/>
+    </sbe:message>
+
+    <sbe:message name="Connect" id="33" description="We have accepted an inbound TCP Connection">
+        <field name="connection" id="17" type="ConnectionId"/>
+        <data name="address" id="18" type="varDataEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="ManageConnection" id="10" description="Here's a connection to manage">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="session" id="10" type="FixSessionId"/>
+        <field name="type" id="3" type="ConnectionType"/>
+        <field name="lastSentSequenceNumber" id="4" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
+        <field name="sessionState" id="6" type="SessionState"/>
+        <field name="heartbeatIntervalInS" id="7" type="int32"/>
+        <field name="replyToId" id="8" type="CorrelationId"/>
+        <data name="address" id="9" type="varDataEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="ResetSessionIds" id="36" description="All session ids have been reset">
+    </sbe:message>
+
+    <sbe:message name="Logon" id="9" description="A logon has occurred">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="session" id="3" type="FixSessionId"/>
+        <field name="lastSentSequenceNumber" id="4" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
+        <field name="status" id="6" type="LogonStatus"/>
+        <data name="senderCompId" id="7" type="varDataEncoding"/>
+        <data name="senderSubId" id="8" type="varDataEncoding"/>
+        <data name="senderLocationId" id="9" type="varDataEncoding"/>
+        <data name="targetCompId" id="10" type="varDataEncoding"/>
+        <data name="username" id="11" type="varDataEncoding"/>
+        <data name="password" id="12" type="varDataEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="Error" id="13" description="An error has occurred">
+        <field name="type" id="1" type="GatewayError"/>
+        <field name="libraryId" id="2" type="LibraryId"/>
+        <field name="replyToId" id="3" type="CorrelationId"/>
+        <data name="message" id="4" type="varDataEncoding"/>
+    </sbe:message>
+
     <sbe:message name="RequestSessionReply" id="32"
                  description="response to ReleaseSession">
-        <field name="correlationId" id="1" type="CorrelationId"/>
+        <field name="replyToId" id="1" type="CorrelationId"/>
         <field name="status" id="2" type="SessionReplyStatus"/>
     </sbe:message>
+
+    <sbe:message name="ReleaseSessionReply" id="30"
+                 description="response to ReleaseSession">
+        <field name="replyToId" id="93" type="CorrelationId"/>
+        <field name="status" id="94" type="SessionReplyStatus"/>
+    </sbe:message>
+
     <sbe:message name="Catchup" id="34" description="A notice that the following messages will be catchups">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connection" id="2" type="ConnectionId"/>
         <field name="messageCount" id="3" type="int32"/>
     </sbe:message>
+
     <sbe:message name="NewSentPosition" id="35" description="A notice of the owned position of the stream is">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="position" id="2" type="int64"/>
     </sbe:message>
+
     <sbe:message name="NotLeader" id="37" description="Let a library know that you aren't the leader">
         <field name="libraryId" id="1" type="LibraryId"/>
-        <data name="libraryChannel" id="2" type="varDataEncoding"/>
+        <field name="replyToId" id="2" type="CorrelationId"/>
+        <data name="libraryChannel" id="3" type="varDataEncoding"/>
     </sbe:message>
+
     <sbe:message name="EngineDescriptor" id="38" description="">
         <data name="libraryChannel" id="1" type="varDataEncoding"/>
     </sbe:message>
+
     <sbe:message name="ControlNotification" id="39"
                  description="notifies library instances of messages that have been acquired">
         <field name="libraryId" id="1" type="LibraryId"/>
@@ -285,8 +291,28 @@
             <field name="sessionId" id="10" type="FixSessionId"/>
         </group>
     </sbe:message>
+
     <sbe:message name="LibraryTimeout" id="40"
                  description="notifies library instances that they have been timed out, added for monitoring purposes">
         <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connectCorrelationId" id="2" type="CorrelationId"/>
     </sbe:message>
+
+    <!-- Messages In Either Direction -->
+    <sbe:message name="FixMessage" id="1" description="A framed FIX message">
+        <field name="messageType" id="1" type="MessageType"/>
+        <field name="session" id="2" type="FixSessionId"/>
+        <field name="connection" id="3" type="ConnectionId"/>
+        <field name="timestamp" id="4" type="Timestamp"/>
+        <field name="status" id="5" type="MessageStatus"/>
+        <field name="libraryId" id="6" type="LibraryId"/>
+        <field name="bytesSent" id="7" type="int32" />
+        <data name="body" id="5" type="varDataEncoding"/>
+    </sbe:message>
+
+    <sbe:message name="ApplicationHeartbeat" id="16"
+                 description="A heartbeat message sent within the application protocol">
+        <field name="libraryId" id="40" type="LibraryId"/>
+    </sbe:message>
+
 </sbe:messageSchema>

@@ -57,9 +57,9 @@ public interface LibraryEndPointHandler
 
     Action onApplicationHeartbeat(final int libraryId);
 
-    Action onReleaseSessionReply(final long correlationId, final SessionReplyStatus status);
+    Action onReleaseSessionReply(final long replyToId, final SessionReplyStatus status);
 
-    Action onRequestSessionReply(final long correlationId, final SessionReplyStatus status);
+    Action onRequestSessionReply(final long replyToId, final SessionReplyStatus status);
 
     Action onCatchup(int libraryId, long connectionId, final int messageCount);
 

@@ -158,7 +158,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     {
         releaseSessionReply.wrap(buffer, offset, blockLength, version);
         return handler.onReleaseSessionReply(
-            releaseSessionReply.correlationId(),
+            releaseSessionReply.replyToId(),
             releaseSessionReply.status());
     }
 
@@ -167,7 +167,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     {
         requestSessionReply.wrap(buffer, offset, blockLength, version);
         return handler.onRequestSessionReply(
-            requestSessionReply.correlationId(),
+            requestSessionReply.replyToId(),
             requestSessionReply.status());
     }
 
