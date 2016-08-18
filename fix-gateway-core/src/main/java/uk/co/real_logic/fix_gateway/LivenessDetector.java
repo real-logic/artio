@@ -129,11 +129,23 @@ public final class LivenessDetector
         latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
     }
 
-    private void heartbeat(final long timeInMs)
+    private boolean heartbeat(final long timeInMs)
     {
         if (publication.saveApplicationHeartbeat(libraryId) >= 0)
         {
             nextSendTimeInMs = timeInMs + sendIntervalInMs;
+            return true;
+        }
+
+        return false;
+    }
+
+    public void onReconnect(final long timeInMs)
+    {
+        onHeartbeat(timeInMs);
+        if (!heartbeat(timeInMs))
+        {
+            nextSendTimeInMs = 0;
         }
     }
 }

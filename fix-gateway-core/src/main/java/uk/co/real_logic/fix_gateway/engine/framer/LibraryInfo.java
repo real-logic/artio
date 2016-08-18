@@ -105,4 +105,9 @@ public final class LibraryInfo
     {
         return GatewaySessions.removeSessionByConn(connectionId, allSessions);
     }
+
+    void onReconnect(final long timeInMs)
+    {
+        livenessDetector.onReconnect(timeInMs);
+    }
 }

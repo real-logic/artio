@@ -142,6 +142,59 @@ public class ClusteredGatewaySystemTest
         allClusterNodesHaveSameIndexFiles();
     }
 
+    @Ignore
+    @Test
+    public void shouldExchangeMessagesAfterPartitionHeals()
+    {
+        connectFixSession();
+
+        roundtripAMessage();
+
+        final FixEngineRunner oldLeader = leader;
+        oldLeader.disable();
+        DebugLogger.log(GATEWAY_CLUSTER, "Disabled old old leader (%s)\n", oldLeader.libraryChannel());
+
+        while (true)
+        {
+            initiatingLibrary.poll(1);
+            acceptingLibrary.poll(1);
+
+            final Optional<FixEngineRunner> leader = findNewLeader();
+            if (leader.isPresent())
+            {
+                this.leader = leader.get();
+                break;
+            }
+            ADMIN_IDLE_STRATEGY.idle();
+        }
+        ADMIN_IDLE_STRATEGY.reset();
+
+        DebugLogger.log(GATEWAY_CLUSTER, "Elected new leader: (%s)\n", leader.libraryChannel());
+
+        final String libraryChannel = leader.libraryChannel();
+        while (!acceptingLibrary.currentAeronChannel().equals(libraryChannel))
+        {
+            initiatingLibrary.poll(1);
+            acceptingLibrary.poll(1);
+
+            ADMIN_IDLE_STRATEGY.idle();
+        }
+        ADMIN_IDLE_STRATEGY.reset();
+
+        DebugLogger.log(GATEWAY_CLUSTER, "Library has connected to new leader\n");
+
+        // TODO: acceptingLibrary disconnect/timeout
+        // TODO: oldLeader.enable();
+
+        initiatingSession.close();
+        acceptingSession.close();
+        acceptingHandler.clearSessions();
+
+        connectFixSession();
+
+        roundtripAMessage();
+    }
+
     private void connectFixSession()
     {
         final Builder builder = SessionConfiguration.builder();
@@ -249,59 +302,6 @@ public class ClusteredGatewaySystemTest
         {
             LangUtil.rethrowUnchecked(e);
         }
-    }
-
-    @Ignore
-    @Test
-    public void shouldExchangeMessagesAfterPartitionHeals()
-    {
-        connectFixSession();
-
-        roundtripAMessage();
-
-        final FixEngineRunner oldLeader = leader;
-        oldLeader.disable();
-        DebugLogger.log(GATEWAY_CLUSTER, "Disabled old old leader (%s)\n", oldLeader.libraryChannel());
-
-        while (true)
-        {
-            initiatingLibrary.poll(1);
-            acceptingLibrary.poll(1);
-
-            final Optional<FixEngineRunner> leader = findNewLeader();
-            if (leader.isPresent())
-            {
-                this.leader = leader.get();
-                break;
-            }
-            ADMIN_IDLE_STRATEGY.idle();
-        }
-        ADMIN_IDLE_STRATEGY.reset();
-
-        DebugLogger.log(GATEWAY_CLUSTER, "Elected new leader: (%s)\n", leader.libraryChannel());
-
-        final String libraryChannel = leader.libraryChannel();
-        while (!acceptingLibrary.currentAeronChannel().equals(libraryChannel))
-        {
-            initiatingLibrary.poll(1);
-            acceptingLibrary.poll(1);
-
-            ADMIN_IDLE_STRATEGY.idle();
-        }
-        ADMIN_IDLE_STRATEGY.reset();
-
-        DebugLogger.log(GATEWAY_CLUSTER, "Library has connected to new leader\n");
-
-        // TODO: acceptingLibrary disconnect/timeout
-        // TODO: oldLeader.enable();
-
-        initiatingSession.close();
-        acceptingSession.close();
-        acceptingHandler.clearSessions();
-
-        connectFixSession();
-
-        roundtripAMessage();
     }
 
     private class TestRequestFinder implements FixMessageConsumer
