@@ -603,13 +603,13 @@ public abstract class AbstractSessionTest
 
     public void verifyDisconnect(final VerificationMode times)
     {
-        verify(mockProxy, times).requestDisconnect(CONNECTION_ID, APPLICATION_DISCONNECT);
+        verify(mockProxy, times).requestDisconnect(eq(CONNECTION_ID), any());
         assertState(DISCONNECTED);
     }
 
     private void backpressureDisconnect()
     {
-        when(mockProxy.requestDisconnect(CONNECTION_ID, APPLICATION_DISCONNECT)).thenReturn(BACK_PRESSURED, POSITION);
+        when(mockProxy.requestDisconnect(eq(CONNECTION_ID), any())).thenReturn(BACK_PRESSURED, POSITION);
     }
 
     protected void givenActive()

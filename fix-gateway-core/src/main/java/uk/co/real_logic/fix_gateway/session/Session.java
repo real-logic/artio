@@ -43,7 +43,7 @@ import static uk.co.real_logic.fix_gateway.decoder.Constants.VERSION_CHARS;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.*;
-import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.APPLICATION_DISCONNECT;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.*;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
@@ -331,6 +331,11 @@ public class Session implements AutoCloseable
      */
     public long logoutAndDisconnect()
     {
+        return logoutAndDisconnect(APPLICATION_DISCONNECT);
+    }
+
+    private long logoutAndDisconnect(final DisconnectReason reason)
+    {
         long position = NO_OPERATION;
         if (state() != DISCONNECTED)
         {
@@ -341,7 +346,7 @@ public class Session implements AutoCloseable
             }
             else
             {
-                position = requestDisconnect();
+                position = requestDisconnect(reason);
             }
         }
         return position;
@@ -457,9 +462,12 @@ public class Session implements AutoCloseable
                     return 1;
                 }
                 lastSentMsgSeqNum(sentMsgSeqNum);
+                requestDisconnect(INCORRECT_BEGIN_STRING);
             }
-
-            requestDisconnect();
+            else
+            {
+                requestDisconnect();
+            }
 
             return 1;
         }
@@ -531,9 +539,9 @@ public class Session implements AutoCloseable
 
     // ---------- Event Handlers & Logic ----------
 
-    Action onRequestDisconnect()
+    Action onRequestDisconnect(final DisconnectReason reason)
     {
-        return Pressure.apply(requestDisconnect());
+        return Pressure.apply(requestDisconnect(reason));
     }
 
     public void onDisconnect()
@@ -562,14 +570,16 @@ public class Session implements AutoCloseable
         if (state() == SessionState.CONNECTED)
         {
             // Disconnect if the first message isn't a logon message
-            return Pressure.apply(requestDisconnect());
+            return Pressure.apply(requestDisconnect(FIRST_MESSAGE_NOT_LOGON));
         }
         else
         {
             if (msgSeqNo == MISSING_INT)
             {
                 final int sentSeqNum = newSentSeqNum();
-                return checkPositionAndDisconnect(proxy.receivedMessageWithoutSequenceNumber(sentSeqNum));
+                return checkPositionAndDisconnect(
+                    proxy.receivedMessageWithoutSequenceNumber(sentSeqNum),
+                    MSG_SEQ_NO_MISSING);
             }
 
             final long time = time();
@@ -598,7 +608,7 @@ public class Session implements AutoCloseable
                     final Action action = rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
                     if (action != BREAK)
                     {
-                        logoutAndDisconnect();
+                        logoutAndDisconnect(INVALID_SENDING_TIME);
                     }
                     return action;
                 }
@@ -619,7 +629,8 @@ public class Session implements AutoCloseable
             else if (expectedSeqNo > msgSeqNo && !isPossDupOrResend)
             {
                 return checkPositionAndDisconnect(
-                    proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedSeqNo, msgSeqNo));
+                    proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedSeqNo, msgSeqNo),
+                    MSG_SEQ_NO_TOO_LOW);
             }
         }
 
@@ -805,7 +816,8 @@ public class Session implements AutoCloseable
         }
 
         return checkPositionAndDisconnect(
-            proxy.rejectWhilstNotLoggedOn(newSentSeqNum(), SENDINGTIME_ACCURACY_PROBLEM));
+            proxy.rejectWhilstNotLoggedOn(newSentSeqNum(), SENDINGTIME_ACCURACY_PROBLEM),
+            INVALID_SENDING_TIME);
     }
 
     Action validateHeartbeat(int heartbeatInterval)
@@ -813,7 +825,8 @@ public class Session implements AutoCloseable
         if (heartbeatInterval < 0)
         {
             return checkPositionAndDisconnect(
-                proxy.negativeHeartbeatLogout(newSentSeqNum()));
+                proxy.negativeHeartbeatLogout(newSentSeqNum()),
+                NEGATIVE_HEARTBEAT_INTERVAL);
         }
         else
         {
@@ -821,12 +834,12 @@ public class Session implements AutoCloseable
         }
     }
 
-    private Action checkPositionAndDisconnect(final long position)
+    private Action checkPositionAndDisconnect(final long position, final DisconnectReason reason)
     {
         final Action action = checkPosition(position);
         if (action != ABORT)
         {
-            requestDisconnect();
+            requestDisconnect(reason);
         }
         return action;
     }
@@ -846,11 +859,11 @@ public class Session implements AutoCloseable
 
         if (state() == AWAITING_LOGOUT)
         {
-            requestDisconnect();
+            requestDisconnect(LOGOUT);
         }
         else
         {
-            logoutAndDisconnect();
+            logoutAndDisconnect(LOGOUT);
         }
 
         return CONTINUE;
@@ -937,7 +950,8 @@ public class Session implements AutoCloseable
             if (!possDupFlag)
             {
                 return checkPositionAndDisconnect(
-                    proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedMsgSeqNo, receivedMsgSeqNo));
+                    proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedMsgSeqNo, receivedMsgSeqNo),
+                    MSG_SEQ_NO_TOO_LOW);
             }
         }
         else
@@ -976,7 +990,7 @@ public class Session implements AutoCloseable
                     lastSentMsgSeqNum(sentMsgSeqNum);
                 }
             }
-            requestDisconnect();
+            requestDisconnect(INCORRECT_BEGIN_STRING);
         }
         return isValid;
     }

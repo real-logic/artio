@@ -34,6 +34,8 @@ import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_E
 import static uk.co.real_logic.fix_gateway.builder.Validation.isValidMsgType;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_LONG;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.FAILED_AUTHENTICATION;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.INVALID_FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.AWAITING_LOGOUT;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
@@ -332,7 +334,7 @@ public class SessionParser
             }
             else
             {
-                return session.onRequestDisconnect();
+                return session.onRequestDisconnect(FAILED_AUTHENTICATION);
             }
         }
     }
@@ -390,7 +392,7 @@ public class SessionParser
 
             if (action == CONTINUE && requestDisconnect)
             {
-                return session.onRequestDisconnect();
+                return session.onRequestDisconnect(INVALID_FIX_MESSAGE);
             }
 
             return action;
@@ -398,7 +400,7 @@ public class SessionParser
 
         if (requestDisconnect)
         {
-            return session.onRequestDisconnect();
+            return session.onRequestDisconnect(INVALID_FIX_MESSAGE);
         }
 
         return CONTINUE;
