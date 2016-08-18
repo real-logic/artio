@@ -45,6 +45,16 @@ public final class LibraryConfiguration extends CommonConfiguration
         (library, sessionId, senderCompId, senderSubId, senderLocationId, targetCompId, username, password) ->
         {
         };
+    public static final LibraryConnectHandler DEFAULT_LIBRARY_CONNECT_HANDLER = new LibraryConnectHandler()
+    {
+        public void onConnect(final FixLibrary library)
+        {
+        }
+
+        public void onDisconnect(final FixLibrary library)
+        {
+        }
+    };
 
     private final int libraryId;
     {
@@ -66,6 +76,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private SentPositionHandler sentPositionHandler = DEFAULT_SENT_POSITION_HANDLER;
     private List<String> libraryAeronChannels = new ArrayList<>();
     private int reconnectAttempts = DEFAULT_RECONNECT_ATTEMPTS;
+    private LibraryConnectHandler libraryConnectHandler = DEFAULT_LIBRARY_CONNECT_HANDLER;
 
     /**
      * When a new session connects to the gateway you register a callback handler to find
@@ -131,6 +142,12 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    public LibraryConfiguration libraryConnectHandler(final LibraryConnectHandler libraryConnectHandler)
+    {
+        this.libraryConnectHandler = libraryConnectHandler;
+        return this;
+    }
+
     public int encoderBufferSize()
     {
         return encoderBufferSize;
@@ -164,6 +181,11 @@ public final class LibraryConfiguration extends CommonConfiguration
     public int reconnectAttempts()
     {
         return reconnectAttempts;
+    }
+
+    public LibraryConnectHandler libraryConnectHandler()
+    {
+        return libraryConnectHandler;
     }
 
     /**

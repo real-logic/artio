@@ -28,6 +28,9 @@ public final class LivenessDetector
 {
 
     private static final int SEND_INTERVAL_FRACTION = 4;
+    private static final Runnable NONE = () ->
+    {
+    };
 
     enum LivenessState
     {
@@ -37,6 +40,7 @@ public final class LivenessDetector
     }
 
     private final GatewayPublication publication;
+    private final Runnable onDisconnect;
     private final int libraryId;
     private final long replyTimeoutInMs;
     private final long sendIntervalInMs;
@@ -51,7 +55,8 @@ public final class LivenessDetector
         final long replyTimeoutInMs,
         final long timeInMs)
     {
-        final LivenessDetector detector = new LivenessDetector(publication, libraryId, replyTimeoutInMs, CONNECTED);
+        final LivenessDetector detector = new LivenessDetector(
+            publication, libraryId, replyTimeoutInMs, CONNECTED, NONE);
         detector.latestNextReceiveTimeInMs = timeInMs + replyTimeoutInMs;
         detector.heartbeat(timeInMs);
         return detector;
@@ -60,22 +65,26 @@ public final class LivenessDetector
     public static LivenessDetector forLibrary(
         final GatewayPublication publication,
         final int libraryId,
-        final long replyTimeoutInMs)
+        final long replyTimeoutInMs,
+        final Runnable onDisconnect)
     {
-        return new LivenessDetector(publication, libraryId, replyTimeoutInMs, AWAITING_CONNECT);
+        return new LivenessDetector(
+            publication, libraryId, replyTimeoutInMs, AWAITING_CONNECT, onDisconnect);
     }
 
     private LivenessDetector(
         final GatewayPublication publication,
         final int libraryId,
         final long replyTimeoutInMs,
-        final LivenessState state)
+        final LivenessState state,
+        final Runnable onDisconnect)
     {
         this.publication = publication;
         this.libraryId = libraryId;
         this.replyTimeoutInMs = replyTimeoutInMs;
         this.state = state;
         this.sendIntervalInMs = replyTimeoutInMs / SEND_INTERVAL_FRACTION;
+        this.onDisconnect = onDisconnect;
     }
 
     public boolean isConnected()
@@ -96,6 +105,7 @@ public final class LivenessDetector
                 if (timeInMs > latestNextReceiveTimeInMs)
                 {
                     state = DISCONNECTED;
+                    onDisconnect.run();
                     return 1;
                 }
 

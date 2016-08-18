@@ -88,6 +88,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final Long2ObjectHashMap<Reply<?>> correlationIdToReply = new Long2ObjectHashMap<>();
     private final LibraryTransport transport;
     private final FixLibrary fixLibrary;
+    private final Runnable onDisconnectFunc;
 
     /** Correlation Id is initialised to a random number to reduce the chance of correlation id collision. */
     private long currentCorrelationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
@@ -103,6 +104,33 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // Combined with Library Id, uniquely identifies library connection
     private long connectCorrelationId = NO_CORRELATION_ID;
+
+    LibraryPoller(
+        final LibraryConfiguration configuration,
+        final LibraryTimers timers,
+        final FixCounters fixCounters,
+        final LibraryTransport transport,
+        final FixLibrary fixLibrary,
+        final SystemEpochClock clock)
+    {
+        this.libraryId = configuration.libraryId();
+        this.fixCounters = fixCounters;
+        this.transport = transport;
+        this.fixLibrary = fixLibrary;
+
+        currentAeronChannel = configuration.libraryAeronChannels().get(0);
+        sessionTimer = timers.sessionTimer();
+        receiveTimer = timers.receiveTimer();
+
+        this.configuration = configuration;
+        this.sessionIdStrategy = configuration.sessionIdStrategy();
+        sessionExistsHandler = configuration.sessionExistsHandler();
+        idleStrategy = configuration.libraryIdleStrategy();
+        sentPositionHandler = configuration.sentPositionHandler();
+        this.clock = clock;
+        enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
+        onDisconnectFunc = () -> configuration.libraryConnectHandler().onDisconnect(fixLibrary);
+    }
 
     int poll(final int fragmentLimit)
     {
@@ -214,32 +242,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             libraryId, sessionId, correlationId, lastReceivedSequenceNumber);
     }
 
-    LibraryPoller(
-        final LibraryConfiguration configuration,
-        final LibraryTimers timers,
-        final FixCounters fixCounters,
-        final LibraryTransport transport,
-        final FixLibrary fixLibrary,
-        final SystemEpochClock clock)
-    {
-        this.libraryId = configuration.libraryId();
-        this.fixCounters = fixCounters;
-        this.transport = transport;
-        this.fixLibrary = fixLibrary;
-
-        currentAeronChannel = configuration.libraryAeronChannels().get(0);
-        sessionTimer = timers.sessionTimer();
-        receiveTimer = timers.receiveTimer();
-
-        this.configuration = configuration;
-        this.sessionIdStrategy = configuration.sessionIdStrategy();
-        sessionExistsHandler = configuration.sessionExistsHandler();
-        idleStrategy = configuration.libraryIdleStrategy();
-        sentPositionHandler = configuration.sentPositionHandler();
-        this.clock = clock;
-        enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
-    }
-
     void connect()
     {
         connect(configuration.reconnectAttempts());
@@ -254,7 +256,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         livenessDetector = LivenessDetector.forLibrary(
             outboundPublication,
             libraryId,
-            configuration.replyTimeoutInMs());
+            configuration.replyTimeoutInMs(),
+            onDisconnectFunc);
 
         try
         {
@@ -320,6 +323,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 connectError(errorType.toString());
             }
+
+            configuration.libraryConnectHandler().onConnect(fixLibrary);
         }
         catch (Exception e)
         {

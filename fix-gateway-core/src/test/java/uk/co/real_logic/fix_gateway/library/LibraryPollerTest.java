@@ -64,6 +64,7 @@ public class LibraryPollerTest
     private static final List<String> CLUSTER_CHANNELS = asList(FIRST_CHANNEL, LEADER_CHANNEL, "3");
 
     private ArgumentCaptor<Session> session = ArgumentCaptor.forClass(Session.class);
+    private LibraryConnectHandler connectHandler = mock(LibraryConnectHandler.class);
     private SessionHandler sessionHandler = mock(SessionHandler.class);
     private SessionAcquireHandler sessionAcquireHandler = mock(SessionAcquireHandler.class);
     private GatewayPublication outboundPublication = mock(GatewayPublication.class);
@@ -160,6 +161,7 @@ public class LibraryPollerTest
         library.connect();
 
         attemptToConnectTo(channels);
+        verify(connectHandler).onConnect(fixLibrary);
     }
 
     private void attemptToConnectTo(final String ... channels)
@@ -204,7 +206,8 @@ public class LibraryPollerTest
         library = new LibraryPoller(
             new LibraryConfiguration()
                 .libraryAeronChannels(libraryAeronChannels)
-                .sessionAcquireHandler(sessionAcquireHandler),
+                .sessionAcquireHandler(sessionAcquireHandler)
+                .libraryConnectHandler(connectHandler),
             new LibraryTimers(),
             counters,
             transport,
