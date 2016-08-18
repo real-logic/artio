@@ -103,7 +103,10 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         else
         {
             // TODO: generically extract the library id
-            final long position = replyPublication.saveNotLeader(0, engineDescriptorStore.leaderLibraryChannel());
+            final int libraryId = 0;
+            final int replyToId = 0;
+            final long position = replyPublication.saveNotLeader(
+                libraryId, replyToId, engineDescriptorStore.leaderLibraryChannel());
         }
 
         return CONTINUE;

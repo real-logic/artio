@@ -68,12 +68,12 @@ public class LibraryPollerTest
     private ClusterableSubscription inboundSubscription = mock(ClusterableSubscription.class);
     private LibraryTransport transport = mock(LibraryTransport.class);
     private FixCounters counters = mock(FixCounters.class);
-    private FixLibrary library = mock(FixLibrary.class);
+    private FixLibrary fixLibrary = mock(FixLibrary.class);
     private UnsafeBuffer address = new UnsafeBuffer(new byte[1024]);
     private int addressLength = address.putStringUtf8(0, "localhost:1234");
     private int libraryId;
 
-    private LibraryPoller libraryPoller;
+    private LibraryPoller library;
 
     @Before
     public void setUp()
@@ -94,7 +94,7 @@ public class LibraryPollerTest
 
         manageConnection(CONNECTION_ID, SESSION_ID);
 
-        libraryPoller.onControlNotification(libraryId, noSessionIds());
+        library.onControlNotification(libraryId, noSessionIds());
 
         verify(sessionHandler).onTimeout(libraryId, SESSION_ID);
     }
@@ -107,7 +107,7 @@ public class LibraryPollerTest
         manageConnection(CONNECTION_ID, SESSION_ID);
         manageConnection(OTHER_CONNECTION_ID, OTHER_SESSION_ID);
 
-        libraryPoller.onControlNotification(libraryId, hasOtherSessionId());
+        library.onControlNotification(libraryId, hasOtherSessionId());
 
         verify(sessionHandler).onTimeout(libraryId, SESSION_ID);
     }
@@ -118,7 +118,7 @@ public class LibraryPollerTest
         whenPolled()
             .then(inv ->
             {
-                libraryPoller.onNotLeader(ENGINE_LIBRARY_ID, LEADER_CHANNEL);
+                library.onNotLeader(ENGINE_LIBRARY_ID, library.libraryId(), LEADER_CHANNEL);
                 return 1;
             })
             .then(replyWithApplicationHeartbeat())
@@ -126,7 +126,7 @@ public class LibraryPollerTest
 
         newLibraryPoller(CLUSTER_CHANNELS);
 
-        libraryPoller.connect();
+        library.connect();
 
         attemptToConnectTo(FIRST_CHANNEL, LEADER_CHANNEL);
     }
@@ -140,7 +140,7 @@ public class LibraryPollerTest
             inOrder.verify(transport).inboundSubscription();
             inOrder.verify(transport).outboundPublication();
             inOrder.verify(outboundPublication)
-                .saveLibraryConnect(eq(libraryPoller.libraryId()), anyLong());
+                .saveLibraryConnect(eq(library.libraryId()), anyLong());
         }
         verifyNoMoreInteractions(transport);
     }
@@ -151,16 +151,16 @@ public class LibraryPollerTest
 
         newLibraryPoller(singletonList(IPC_CHANNEL));
 
-        libraryPoller.connect();
+        library.connect();
 
-        libraryId = libraryPoller.libraryId();
+        libraryId = library.libraryId();
     }
 
     private Answer<Integer> replyWithApplicationHeartbeat()
     {
         return inv ->
         {
-            libraryPoller.onApplicationHeartbeat(libraryPoller.libraryId());
+            library.onApplicationHeartbeat(library.libraryId());
             return 1;
         };
     }
@@ -172,14 +172,14 @@ public class LibraryPollerTest
 
     private void newLibraryPoller(final List<String> libraryAeronChannels)
     {
-        libraryPoller = new LibraryPoller(
+        library = new LibraryPoller(
             new LibraryConfiguration()
                 .libraryAeronChannels(libraryAeronChannels)
                 .sessionAcquireHandler(sessionAcquireHandler),
             new LibraryTimers(),
             counters,
             transport,
-            library,
+            fixLibrary,
             new SystemEpochClock());
     }
 
@@ -190,7 +190,7 @@ public class LibraryPollerTest
 
     private void manageConnection(final long connectionId, final long sessionId)
     {
-        libraryPoller.onManageConnection(
+        library.onManageConnection(
             libraryId,
             connectionId,
             sessionId,

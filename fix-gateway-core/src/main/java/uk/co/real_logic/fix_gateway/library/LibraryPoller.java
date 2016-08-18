@@ -628,7 +628,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onNotLeader(final int libraryId, final String libraryChannel)
+    public Action onNotLeader(final int libraryId, final long replyToId, final String libraryChannel)
     {
         if (libraryChannel.isEmpty())
         {

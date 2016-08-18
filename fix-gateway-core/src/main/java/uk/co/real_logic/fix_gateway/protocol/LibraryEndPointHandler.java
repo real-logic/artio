@@ -65,7 +65,7 @@ public interface LibraryEndPointHandler
 
     Action onNewSentPosition(final int libraryId, final long position);
 
-    Action onNotLeader(final int libraryId, final String libraryChannel);
+    Action onNotLeader(final int libraryId, final long replyToId, final String libraryChannel);
 
     Action onControlNotification(final int libraryId, final SessionsDecoder sessions);
 }

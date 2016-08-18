@@ -579,6 +579,6 @@ public class FramerTest
 
     private void verifyLibraryTimeout()
     {
-        verify(inboundPublication).saveLibraryTimeout(LIBRARY_ID);
+        verify(inboundPublication).saveLibraryTimeout(LIBRARY_ID, 0);
     }
 }

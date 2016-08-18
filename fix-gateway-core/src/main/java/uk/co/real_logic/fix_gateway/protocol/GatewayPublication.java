@@ -764,7 +764,7 @@ public class GatewayPublication extends ClaimablePublication
     }
 
     public long saveNotLeader(
-        final int libraryId, final DirectBuffer channel)
+        final int libraryId, final long replyToId, final DirectBuffer channel)
     {
         final int channelLength = (channel == null ? 0 : channel.capacity());
         final long position = claim(NOT_LEADER_BLOCK_LENGTH + channelLength);
@@ -787,7 +787,8 @@ public class GatewayPublication extends ClaimablePublication
 
         notLeader
             .wrap(buffer, offset)
-            .libraryId(libraryId);
+            .libraryId(libraryId)
+            .replyToId(replyToId);
 
         if (channel != null)
         {
@@ -834,7 +835,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveLibraryTimeout(final int libraryId)
+    public long saveLibraryTimeout(final int libraryId, final long connectCorrelationId)
     {
         final long position = claim(LibraryTimeoutEncoder.BLOCK_LENGTH + HEADER_LENGTH);
         if (position < 0)
@@ -856,7 +857,8 @@ public class GatewayPublication extends ClaimablePublication
 
         libraryTimeout
             .wrap(buffer, offset)
-            .libraryId(libraryId);
+            .libraryId(libraryId)
+            .connectCorrelationId(connectCorrelationId);
 
         bufferClaim.commit();
 
