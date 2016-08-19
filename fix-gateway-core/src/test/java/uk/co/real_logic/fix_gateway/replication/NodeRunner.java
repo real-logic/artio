@@ -46,7 +46,7 @@ import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.
 
 class NodeRunner implements AutoCloseable
 {
-    private static final long TIMEOUT_IN_MS = 1000;
+    private static final long TIMEOUT_IN_MS = 300;
     private static final String AERON_CHANNEL = TestFixtures.clusteredAeronChannel();
 
     private final FrameDropper frameDropper;

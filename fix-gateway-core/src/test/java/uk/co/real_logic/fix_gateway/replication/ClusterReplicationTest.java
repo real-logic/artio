@@ -40,7 +40,7 @@ import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 public class ClusterReplicationTest
 {
 
-    private static final int BUFFER_SIZE = 16;
+    private static final int BUFFER_SIZE = 1337;
     private static final int POSITION_AFTER_MESSAGE = BUFFER_SIZE + HEADER_LENGTH;
 
     private BufferClaim bufferClaim = new BufferClaim();
@@ -52,7 +52,7 @@ public class ClusterReplicationTest
     private final NodeRunner[] allNodes = { node1, node2, node3 };
 
     @Rule
-    public Timeout timeout = Timeout.seconds(10);
+    public Timeout timeout = Timeout.seconds(7);
 
     @Before
     public void hasElectedLeader()
