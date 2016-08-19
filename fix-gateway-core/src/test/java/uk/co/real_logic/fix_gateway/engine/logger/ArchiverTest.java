@@ -40,10 +40,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.locks.LockSupport;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
@@ -53,7 +55,6 @@ import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static java.lang.Integer.numberOfTrailingZeros;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.agrona.BitUtil.SIZE_OF_INT;
-import static org.agrona.BitUtil.findNextPositivePowerOfTwo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
@@ -70,8 +71,7 @@ import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 public class ArchiverTest
 {
 
-    private static final int SIZE = 1337; // Exposes Alignment Bugs
-    private static final int TERM_LENGTH = findNextPositivePowerOfTwo(SIZE * 32);
+    private static final int TERM_LENGTH = 65536;
     private static final int STREAM_ID = 1;
     private static final int OFFSET_WITHIN_MESSAGE = 42;
     private static final int INITIAL_VALUE = 43;
@@ -81,11 +81,14 @@ public class ArchiverTest
     @Parameters
     public static Collection<Object[]> data()
     {
-        return Arrays.asList(new Object[][]
-            {
-                { new UnsafeBuffer(ByteBuffer.allocateDirect(SIZE)) },
-                { new UnsafeBuffer(new byte[SIZE]) },
-            });
+        return IntStream.of(128, 129, 1337, 4097)
+                        .boxed()
+                        .flatMap(size ->
+                            Stream.of(
+                                new UnsafeBuffer(ByteBuffer.allocateDirect(128)),
+                                new UnsafeBuffer(new byte[128])))
+                        .map(buffer -> new Object[]{buffer})
+                        .collect(Collectors.toList());
     }
 
     private final BlockHandler blockHandler = mock(BlockHandler.class);
@@ -93,6 +96,7 @@ public class ArchiverTest
     private final ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
     private final ArgumentCaptor<Integer> offsetCaptor = ArgumentCaptor.forClass(Integer.class);
 
+    private final int size;
     private final UnsafeBuffer buffer;
 
     private LogDirectoryDescriptor logDirectoryDescriptor;
@@ -107,6 +111,7 @@ public class ArchiverTest
     public ArchiverTest(final UnsafeBuffer buffer)
     {
         this.buffer = buffer;
+        size = buffer.capacity();
     }
 
     @Before
@@ -184,7 +189,7 @@ public class ArchiverTest
         try (final RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw"))
         {
             randomAccessFile.seek(HEADER_LENGTH);
-            randomAccessFile.write(new byte[SIZE]);
+            randomAccessFile.write(new byte[size]);
             randomAccessFile.getFD().sync();
         }
     }
@@ -246,7 +251,7 @@ public class ArchiverTest
         when(fragmentHandler.onFragment(any(), anyInt(), anyInt(), any()))
             .thenReturn(BREAK);
 
-        final long oneMessageIn = HEADER_LENGTH + alignTerm(SIZE) + HEADER_LENGTH;
+        final long oneMessageIn = HEADER_LENGTH + alignTerm(size) + HEADER_LENGTH;
 
         readUpTo(0, oneMessageIn, times(1));
     }
@@ -317,7 +322,7 @@ public class ArchiverTest
 
         try
         {
-            archiveReader.readBlock(publication.sessionId(), (long)HEADER_LENGTH, SIZE,
+            archiveReader.readBlock(publication.sessionId(), (long)HEADER_LENGTH, size,
                 (buffer, offset, length, sessionId, termId) ->
                 {
                     throw new RuntimeException();
@@ -416,7 +421,7 @@ public class ArchiverTest
 
     private int lengthOfTwoMessages()
     {
-        return alignTerm(SIZE) * 2 + HEADER_LENGTH;
+        return alignTerm(size) * 2 + HEADER_LENGTH;
     }
 
     private long read(final long position)
@@ -426,7 +431,7 @@ public class ArchiverTest
 
     private boolean readBlockTo(final long position)
     {
-        return archiveReader.readBlock(publication.sessionId(), position, SIZE, blockHandler);
+        return archiveReader.readBlock(publication.sessionId(), position, size, blockHandler);
     }
 
     private void removeLogFiles()
@@ -524,7 +529,7 @@ public class ArchiverTest
 
     private void assertDataPublished(final long endPosition)
     {
-        assertThat("Publication has failed an offer", endPosition, greaterThan((long)SIZE));
+        assertThat("Publication has failed an offer", endPosition, greaterThan((long) size));
     }
 
     private void assertCanBlockReadValueAt(final int position)
@@ -537,7 +542,7 @@ public class ArchiverTest
         final boolean hasRead = readBlockTo(position);
 
         verify(blockHandler).onBlock(
-            bufferCaptor.capture(), offsetCaptor.capture(), eq(SIZE), eq(publication.sessionId()), anyInt());
+            bufferCaptor.capture(), offsetCaptor.capture(), eq(size), eq(publication.sessionId()), anyInt());
 
         assertReadValue(value, position, hasRead);
     }
@@ -555,7 +560,7 @@ public class ArchiverTest
         long endPosition;
         do
         {
-            endPosition = publication.offer(buffer, 0, SIZE);
+            endPosition = publication.offer(buffer, 0, size);
             LockSupport.parkNanos(100);
         }
         while (endPosition < 0);
