@@ -42,6 +42,7 @@ public final class SampleServer
 
     public static final String ACCEPTOR_COMP_ID = "acceptor";
     public static final String INITIATOR_COMP_ID = "initiator";
+
     private static Session session;
 
     public static void main(final String[] args) throws Exception
@@ -52,7 +53,7 @@ public final class SampleServer
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
         // Static configuration lasts the duration of a FIX-Gateway instance
-        final String aeronChannel = "udp://localhost:10000";
+        final String aeronChannel = "aeron:udp?endpoint=localhost:10000";
         final EngineConfiguration configuration = new EngineConfiguration()
             .bindTo("localhost", 9999)
             .libraryAeronChannel(aeronChannel);

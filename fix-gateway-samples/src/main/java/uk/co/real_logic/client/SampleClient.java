@@ -33,7 +33,7 @@ public final class SampleClient
     public static void main(final String[] args) throws Exception
     {
         // Static configuration lasts the duration of a FIX-Gateway instance
-        final String aeronChannel = "udp://localhost:10002";
+        final String aeronChannel = "aeron:udp?endpoint=localhost:10002";
         final EngineConfiguration configuration = new EngineConfiguration()
             .libraryAeronChannel(aeronChannel)
             .bindTo("localhost", 10001);
@@ -70,7 +70,14 @@ public final class SampleClient
                     System.exit(-1);
                 }
 
+                System.out.println("Replied with: " + reply.state());
                 final Session session = reply.resultIfPresent();
+
+                while (!session.canSendMessage())
+                {
+                    idleStrategy.idle(library.poll(1));
+                }
+
                 final TestRequestEncoder testRequest = new TestRequestEncoder();
                 testRequest.testReqID("Hello World");
 
