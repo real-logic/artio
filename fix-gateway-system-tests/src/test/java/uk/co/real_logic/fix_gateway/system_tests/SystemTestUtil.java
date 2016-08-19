@@ -209,7 +209,7 @@ public final class SystemTestUtil
     {
         return new EngineConfiguration()
             .libraryAeronChannel("aeron:udp?endpoint=localhost:" + libraryAeronPort)
-            .monitoringFile(optimalTmpDirName() + "fix-client" + File.separator + countersSuffix)
+            .monitoringFile(optimalTmpDirName() + File.separator + "fix-client" + File.separator + countersSuffix)
             .logFileDir(CLIENT_LOGS);
     }
 
@@ -249,7 +249,7 @@ public final class SystemTestUtil
 
     public static String acceptorMonitoringFile(final String countersSuffix)
     {
-        return optimalTmpDirName() + "fix-acceptor" + File.separator + countersSuffix;
+        return optimalTmpDirName() + File.separator + "fix-acceptor" + File.separator + countersSuffix;
     }
 
     public static LibraryConfiguration acceptingLibraryConfig(
