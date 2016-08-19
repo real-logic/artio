@@ -74,7 +74,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            log(tag, formatString, value, buffer, offset, length);
+            log(tag, formatString, Integer.valueOf(value), buffer, offset, length);
         }
     }
 
