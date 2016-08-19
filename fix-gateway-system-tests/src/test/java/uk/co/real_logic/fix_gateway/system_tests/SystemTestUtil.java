@@ -40,6 +40,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.optimalTmpDirName;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.library.Reply.State.COMPLETED;
@@ -61,7 +62,7 @@ public final class SystemTestUtil
 
     static
     {
-        final File parentDirectory = new File(CommonConfiguration.optimalTmpDirName());
+        final File parentDirectory = new File(optimalTmpDirName());
         for (final File directory : parentDirectory.listFiles(file -> file.getName().startsWith("fix-library-")))
         {
             IoUtil.delete(directory, true);
@@ -208,7 +209,7 @@ public final class SystemTestUtil
     {
         return new EngineConfiguration()
             .libraryAeronChannel("aeron:udp?endpoint=localhost:" + libraryAeronPort)
-            .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + countersSuffix)
+            .monitoringFile(optimalTmpDirName() + "fix-client" + File.separator + countersSuffix)
             .logFileDir(CLIENT_LOGS);
     }
 
@@ -248,7 +249,7 @@ public final class SystemTestUtil
 
     public static String acceptorMonitoringFile(final String countersSuffix)
     {
-        return IoUtil.tmpDirName() + "fix-acceptor" + File.separator + countersSuffix;
+        return optimalTmpDirName() + "fix-acceptor" + File.separator + countersSuffix;
     }
 
     public static LibraryConfiguration acceptingLibraryConfig(
