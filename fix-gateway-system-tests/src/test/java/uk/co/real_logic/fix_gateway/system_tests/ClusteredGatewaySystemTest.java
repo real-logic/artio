@@ -92,7 +92,7 @@ public class ClusteredGatewaySystemTest
             .collect(toList());
 
         final LibraryConfiguration configuration = acceptingLibraryConfig(
-            acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", null)
+            acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, null)
             .replyTimeoutInMs(2_000);
 
         configuration.libraryAeronChannels(

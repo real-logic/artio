@@ -154,7 +154,7 @@ public class FixLibrary extends GatewayProcess
         final File parentFile = new File(path).getParentFile();
         if (parentFile.exists())
         {
-            IoUtil.delete(parentFile, false);
+            IoUtil.delete(parentFile, true);
         }
     }
 

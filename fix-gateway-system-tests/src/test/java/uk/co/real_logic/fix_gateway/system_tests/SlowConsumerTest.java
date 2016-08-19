@@ -80,7 +80,7 @@ public class SlowConsumerTest
         config.senderMaxBytesInBuffer(MAX_BYTES_IN_BUFFER);
         engine = FixEngine.launch(config);
         final LibraryConfiguration libraryConfiguration =
-            acceptingLibraryConfig(handler, ACCEPTOR_ID, INITIATOR_ID, "fix-acceptor", IPC_CHANNEL);
+            acceptingLibraryConfig(handler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL);
         libraryConfiguration.outboundMaxClaimAttempts(1);
         library = FixLibrary.connect(libraryConfiguration);
     }
