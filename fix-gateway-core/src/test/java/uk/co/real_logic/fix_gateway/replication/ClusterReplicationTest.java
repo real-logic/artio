@@ -30,7 +30,6 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
@@ -340,14 +339,8 @@ public class ClusterReplicationTest
                 bufferClaim.commit();
                 return position;
             }
-            pause();
             pollAll();
         }
-    }
-
-    private void pause()
-    {
-        LockSupport.parkNanos(1000);
     }
 
     private void pollAll()
@@ -362,7 +355,7 @@ public class ClusterReplicationTest
         {
             node.poll(fragmentLimit);
         }
-        LockSupport.parkNanos(MILLISECONDS.toNanos(1));
+        LockSupport.parkNanos(500);
     }
 
     private boolean foundLeader()
