@@ -126,8 +126,6 @@ class SubscriptionSplitter implements ControlledFragmentHandler
             //System.out.println("NOT LEADER position = " + position);
             //System.out.println("NOT LEADER libraryId = " + libraryId);
             //System.out.println("NOT LEADER correlationId = " + correlationId);
-
-            // TODO: counter to record back pressure
         }
 
         return CONTINUE;
