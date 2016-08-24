@@ -74,22 +74,16 @@ public class SectorFramer
     }
 
     public static void validateCheckSum(
+        final String fileName,
         final int start,
         final int end,
-        final int calculateChecksum,
         final int savedChecksum,
-        final String fileName)
+        final int calculatedChecksum)
     {
-        if (calculateChecksum != savedChecksum)
+        if (calculatedChecksum != savedChecksum)
         {
             throw new FileSystemCorruptionException(
-                String.format(
-                    "The " + fileName + " file is corrupted between bytes %d and %d, " +
-                    "saved checksum is %d, but %d was calculated",
-                    start,
-                    end,
-                    savedChecksum,
-                    calculateChecksum));
+                fileName, start, end, savedChecksum, calculatedChecksum);
         }
     }
 }

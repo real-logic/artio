@@ -51,7 +51,7 @@ public class ChecksumFramer extends SectorFramer
         final int savedChecksum = buffer.getInt(checksumOffset);
         final int start = checksumOffset - SECTOR_DATA_LENGTH;
         final int end = checksumOffset + CHECKSUM_SIZE;
-        validateCheckSum(start, end, calculatedChecksum, savedChecksum, "sequence numbers");
+        validateCheckSum("sequence numbers", start, end, savedChecksum, calculatedChecksum);
     }
 
     private void withChecksums(final ChecksumConsumer consumer)

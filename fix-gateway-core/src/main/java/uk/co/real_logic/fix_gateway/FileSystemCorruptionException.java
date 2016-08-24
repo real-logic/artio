@@ -17,8 +17,21 @@ package uk.co.real_logic.fix_gateway;
 
 public class FileSystemCorruptionException extends IllegalStateException
 {
-    public FileSystemCorruptionException(final String message)
+    public FileSystemCorruptionException(final String fileName,
+                                         final int start,
+                                         final int end,
+                                         final int savedChecksum,
+                                         final int calculatedChecksum)
     {
-        super(message);
+        super(String.format(
+            "The %s file is corrupted between bytes %d and %d, saved checksum is %d, but %d was calculated",
+            fileName,
+            start,
+            end,
+            savedChecksum,
+            calculatedChecksum));
+
     }
+
+
 }

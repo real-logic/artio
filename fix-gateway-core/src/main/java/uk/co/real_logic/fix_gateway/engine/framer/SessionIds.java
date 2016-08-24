@@ -191,7 +191,7 @@ public class SessionIds
             crc32.update(byteBuffer);
             final int calculatedChecksum = (int) crc32.getValue();
             final int savedChecksum = buffer.getInt(nextChecksum);
-            validateCheckSum(sectorEnd, nextSectorEnd, calculatedChecksum, savedChecksum, "session ids");
+            validateCheckSum("session ids", sectorEnd, nextSectorEnd, savedChecksum, calculatedChecksum);
             return nextSectorEnd;
         }
 
