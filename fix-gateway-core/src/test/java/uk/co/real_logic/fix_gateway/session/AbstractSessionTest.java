@@ -31,6 +31,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
@@ -515,7 +516,7 @@ public abstract class AbstractSessionTest
     @Test
     public void shouldStartLogonBasedSequenceNumberReset()
     {
-        sequenceNumbersAreTwo();
+        sequenceNumbersAreThreeAndActive();
 
         session().resetSequenceNumbers();
 
@@ -525,13 +526,27 @@ public abstract class AbstractSessionTest
     @Test
     public void shouldComplyWithLogonBasedSequenceNumberReset()
     {
-        session().lastReceivedMsgSeqNum(2).lastSentMsgSeqNum(2);
+        sequenceNumbersAreThree();
 
         onLogon(HEARTBEAT_INTERVAL, 1, true);
 
         verifySetupSession();
         verifySetsSequenceNumberToOne();
     }
+
+    @Test
+    public void shouldComplyWithLogonBasedSequenceNumberResetWhenActive()
+    {
+        sequenceNumbersAreThreeAndActive();
+
+        onLogon(HEARTBEAT_INTERVAL, 1, true);
+
+        verifySetupSession();
+        verifySetsSequenceNumberToOne();
+    }
+
+    // [8=FIX.4.4|9=0079|35=A|49=LSTESTSTR|56=HSBCUKFIX|34=1
+    // |52=20160825-10:25:03.931|98=0|108=30|141=Y|10=018]
 
     @Test
     public void shouldTerminateLogonBasedSequenceNumberReset()
@@ -551,15 +566,20 @@ public abstract class AbstractSessionTest
 
     private void verifySetsSequenceNumberToOne()
     {
-        verify(mockProxy).logon(anyInt(), eq(1), anyString(), anyString(), eq(true));
+        verify(mockProxy).logon(eq(HEARTBEAT_INTERVAL), eq(1), anyString(), anyString(), eq(true));
         assertEquals(1, session().lastSentMsgSeqNum());
         verifyNoFurtherMessages();
     }
 
-    private void sequenceNumbersAreTwo()
+    private void sequenceNumbersAreThreeAndActive()
     {
         givenActive();
-        session().lastReceivedMsgSeqNum(2).lastSentMsgSeqNum(2);
+        sequenceNumbersAreThree();
+    }
+
+    private void sequenceNumbersAreThree()
+    {
+        session().lastReceivedMsgSeqNum(3).lastSentMsgSeqNum(3);
     }
 
     private void incorrectBeginStringLogout(final int times)
