@@ -525,7 +525,7 @@ public abstract class AbstractSessionTest
     @Test
     public void shouldComplyWithLogonBasedSequenceNumberReset()
     {
-        sequenceNumbersAreTwo();
+        session().lastReceivedMsgSeqNum(2).lastSentMsgSeqNum(2);
 
         onLogon(HEARTBEAT_INTERVAL, 1, true);
 

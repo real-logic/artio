@@ -722,7 +722,7 @@ public class Session implements AutoCloseable
 
         if (resetSeqNumFlag)
         {
-            final Action action = resetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password);
+            final Action action = onResetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password);
             if (action != null)
             {
                 return action;
@@ -752,7 +752,7 @@ public class Session implements AutoCloseable
         return false;
     }
 
-    Action resetSeqNumLogon(
+    Action onResetSeqNumLogon(
         final int heartbeatInterval,
         final int msgSeqNo,
         final String username,
@@ -777,6 +777,7 @@ public class Session implements AutoCloseable
             lastReceivedMsgSeqNum(msgSeqNo - 1); // onMessage will check and increment this
             setLogonState(heartbeatInterval, username, password);
         }
+
         return null;
     }
 

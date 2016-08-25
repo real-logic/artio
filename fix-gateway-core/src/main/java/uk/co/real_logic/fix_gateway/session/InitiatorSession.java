@@ -80,7 +80,7 @@ public class InitiatorSession extends Session
         {
             proxy.setupSession(sessionId, sessionKey);
 
-            Action action = resetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password);
+            Action action = onResetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password);
             if (action != null)
             {
                 return action;
