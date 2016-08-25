@@ -20,6 +20,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import io.aeron.logbuffer.LogBufferDescriptor;
+import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Int2ObjectCache;
 import org.agrona.collections.Int2ObjectHashMap;
@@ -78,7 +79,8 @@ public class ArchiveReader implements AutoCloseable
         final ArchiveMetaData metaData,
         final int cacheNumSets,
         final int cacheSetSize,
-        final StreamIdentifier streamId)
+        final StreamIdentifier streamId,
+        final ErrorHandler errorHandler)
     {
         this.cacheNumSets = cacheNumSets;
         this.cacheSetSize = cacheSetSize;

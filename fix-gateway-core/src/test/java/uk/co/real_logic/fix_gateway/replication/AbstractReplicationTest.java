@@ -20,6 +20,7 @@ import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.driver.MediaDriver;
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -65,6 +66,7 @@ public class AbstractReplicationTest
 
     protected MediaDriver mediaDriver;
     protected Aeron aeron;
+    protected ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     protected Subscription controlSubscription()
     {
@@ -167,7 +169,7 @@ public class AbstractReplicationTest
         final ArchiveMetaData metaData = archiveMetaData(id);
         final StreamIdentifier streamId = new StreamIdentifier(subscription);
         return new ArchiveReader(
-            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, streamId);
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, streamId, errorHandler);
     }
 
     public static ArchiveMetaData archiveMetaData(final short nodeId)
