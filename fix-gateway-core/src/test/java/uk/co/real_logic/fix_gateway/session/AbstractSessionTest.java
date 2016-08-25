@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.session;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
@@ -524,29 +525,21 @@ public abstract class AbstractSessionTest
     }
 
     @Test
-    public void shouldComplyWithLogonBasedSequenceNumberReset()
+    public void shouldComplyWithLogonBasedSequenceNumberResetInAllStates()
     {
-        sequenceNumbersAreThree();
+        for (SessionState state : SessionState.values())
+        {
+            Mockito.reset(mockProxy);
 
-        onLogon(HEARTBEAT_INTERVAL, 1, true);
+            session().state(state);
+            sequenceNumbersAreThree();
 
-        verifySetupSession();
-        verifySetsSequenceNumberToOne();
+            onLogon(HEARTBEAT_INTERVAL, 1, true);
+
+            verifySetupSession();
+            verifySetsSequenceNumberToOne();
+        }
     }
-
-    @Test
-    public void shouldComplyWithLogonBasedSequenceNumberResetWhenActive()
-    {
-        sequenceNumbersAreThreeAndActive();
-
-        onLogon(HEARTBEAT_INTERVAL, 1, true);
-
-        verifySetupSession();
-        verifySetsSequenceNumberToOne();
-    }
-
-    // [8=FIX.4.4|9=0079|35=A|49=LSTESTSTR|56=HSBCUKFIX|34=1
-    // |52=20160825-10:25:03.931|98=0|108=30|141=Y|10=018]
 
     @Test
     public void shouldTerminateLogonBasedSequenceNumberReset()
