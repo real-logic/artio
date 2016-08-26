@@ -223,16 +223,16 @@ public final class SystemTestUtil
     }
 
     public static EngineConfiguration acceptingConfig(
-        final int libraryAeronPort,
+        final int port,
         final String countersSuffix,
         final String acceptorId,
         final String initiatorId)
     {
-        return acceptingConfig(libraryAeronPort, countersSuffix, acceptorId, initiatorId, ACCEPTOR_LOGS);
+        return acceptingConfig(port, countersSuffix, acceptorId, initiatorId, ACCEPTOR_LOGS);
     }
 
     public static EngineConfiguration acceptingConfig(
-        final int libraryAeronPort,
+        final int port,
         final String countersSuffix,
         final String acceptorId,
         final String initiatorId,
@@ -241,7 +241,7 @@ public final class SystemTestUtil
         final EngineConfiguration configuration = new EngineConfiguration();
         setupAuthentication(acceptorId, initiatorId, configuration);
         return configuration
-            .bindTo("localhost", libraryAeronPort)
+            .bindTo("localhost", port)
             .libraryAeronChannel("aeron:ipc")
             .monitoringFile(acceptorMonitoringFile(countersSuffix))
             .logFileDir(acceptorLogs);

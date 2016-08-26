@@ -21,5 +21,6 @@ public enum LogTag
     LIBRARY_CONNECT,
     GATEWAY_CLUSTER,
     FIX_MESSAGE,
+    FIX_TEST,
     GATEWAY_MESSAGE,
 }
