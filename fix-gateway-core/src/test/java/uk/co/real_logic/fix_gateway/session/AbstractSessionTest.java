@@ -525,7 +525,7 @@ public abstract class AbstractSessionTest
     }
 
     @Test
-    public void shouldComplyWithLogonBasedSequenceNumberResetInAllStates()
+    public void shouldComplyWithLogonBasedSequenceNumberReset()
     {
         for (SessionState state : SessionState.values())
         {
@@ -535,6 +535,8 @@ public abstract class AbstractSessionTest
             sequenceNumbersAreThree();
 
             onLogon(HEARTBEAT_INTERVAL, 1, true);
+
+            session().poll(100);
 
             verifySetupSession();
             verifySetsSequenceNumberToOne();
