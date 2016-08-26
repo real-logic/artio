@@ -17,11 +17,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.agrona.LangUtil;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
-import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
-import uk.co.real_logic.fix_gateway.builder.LogoutEncoder;
-import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
-import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
+import uk.co.real_logic.fix_gateway.builder.*;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -83,18 +79,16 @@ class FixConnection
             .sendingTime(timestampEncoder.buffer(), timestampLength);
     }
 
-    void readMessage(final String msgType)
+    void readMessage(final Decoder decoder)
     {
         final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(buffer);
-        final HeaderDecoder decoder = new HeaderDecoder();
 
         try
         {
             final int read = socket.read(buffer);
             DebugLogger.log(FIX_TEST, "< [" + asciiBuffer.getAscii(OFFSET, read) + "]");
             decoder.decode(asciiBuffer, OFFSET, read);
-            assertEquals(msgType, decoder.msgTypeAsString());
         }
         catch (IOException e)
         {

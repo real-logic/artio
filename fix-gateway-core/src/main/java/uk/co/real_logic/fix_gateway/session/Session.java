@@ -700,7 +700,7 @@ public class Session implements AutoCloseable
             final int expectedSeqNo = expectedReceivedSeqNum();
             if (expectedSeqNo == msgSeqNo)
             {
-                action = replyToLogon(heartbeatInterval);
+                action = replyToLogon(heartbeatInterval, resetSeqNumFlag);
                 if (action == ABORT)
                 {
                     return ABORT;
@@ -710,7 +710,7 @@ public class Session implements AutoCloseable
             }
             else if (expectedSeqNo < msgSeqNo)
             {
-                action = replyToLogon(heartbeatInterval);
+                action = replyToLogon(heartbeatInterval, resetSeqNumFlag);
                 if (action == ABORT)
                 {
                     return ABORT;
@@ -801,9 +801,9 @@ public class Session implements AutoCloseable
         proxy.setupSession(sessionId, sessionKey);
     }
 
-    private Action replyToLogon(int heartbeatInterval)
+    private Action replyToLogon(int heartbeatInterval, final boolean resetSeqNumFlag)
     {
-        return checkPosition(proxy.logon(heartbeatInterval, newSentSeqNum(), null, null, false));
+        return checkPosition(proxy.logon(heartbeatInterval, newSentSeqNum(), null, null, resetSeqNumFlag));
     }
 
     Action validateSendingTime(final long sendingTime)
