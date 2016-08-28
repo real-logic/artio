@@ -760,6 +760,7 @@ public class Session implements AutoCloseable
     {
         if (lastSentMsgSeqNum() == 1)
         {
+            lastReceivedMsgSeqNum(1);
             // You've received a reply to a resetSeqNumFlag = Y message
             return CONTINUE;
         }

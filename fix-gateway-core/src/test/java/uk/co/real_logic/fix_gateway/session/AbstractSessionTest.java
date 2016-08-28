@@ -521,7 +521,16 @@ public abstract class AbstractSessionTest
 
         session().resetSequenceNumbers();
 
-        verifySetsSequenceNumberToOne();
+        verifySetsSentSequenceNumbersToTwo();
+    }
+
+    @Test
+    public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne()
+    {
+        onLogon(HEARTBEAT_INTERVAL, 1, true);
+
+        verifySetupSession();
+        verifySetsSequenceNumbersToTwo();
     }
 
     @Test
@@ -539,7 +548,7 @@ public abstract class AbstractSessionTest
             session().poll(100);
 
             verifySetupSession();
-            verifySetsSequenceNumberToOne();
+            verifySetsSequenceNumbersToTwo();
         }
     }
 
@@ -559,7 +568,13 @@ public abstract class AbstractSessionTest
         verify(mockProxy, atLeastOnce()).setupSession(anyLong(), any());
     }
 
-    private void verifySetsSequenceNumberToOne()
+    private void verifySetsSequenceNumbersToTwo()
+    {
+        verifySetsSentSequenceNumbersToTwo();
+        assertEquals(1, session().lastReceivedMsgSeqNum());
+    }
+
+    private void verifySetsSentSequenceNumbersToTwo()
     {
         verify(mockProxy).logon(eq(HEARTBEAT_INTERVAL), eq(1), anyString(), anyString(), eq(true));
         assertEquals(1, session().lastSentMsgSeqNum());

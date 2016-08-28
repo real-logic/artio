@@ -17,8 +17,10 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import io.aeron.driver.MediaDriver;
 import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.experimental.theories.DataPoint;
+import org.junit.experimental.theories.Theories;
+import org.junit.experimental.theories.Theory;
+import org.junit.runner.RunWith;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.decoder.LogoutDecoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -27,10 +29,12 @@ import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import java.io.IOException;
 
 import static org.agrona.CloseHelper.close;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
+@RunWith(Theories.class)
 public class MessageBasedSystemTest
 {
     private int port = unusedPort();
@@ -38,8 +42,28 @@ public class MessageBasedSystemTest
     private MediaDriver mediaDriver;
     private FixEngine engine;
 
-    @Before
-    public void setUp()
+    // Trying to reproduce
+    // > [8=FIX.4.4|9=0079|35=A|49=initiator|56=acceptor|34=1|52=20160825-10:25:03.931|98=0|108=30|141=Y|10=018]
+    // < [8=FIX.4.4|9=0079|35=A|49=acceptor|56=initiator|34=1|52=20160825-10:24:57.920|98=0|108=30|141=N|10=013]
+    // < [8=FIX.4.4|9=0070|35=2|49=acceptor|56=initiator|34=3|52=20160825-10:25:27.766|7=1|16=0|10=061]
+
+    @DataPoint
+    public static boolean on = true;
+    @DataPoint
+    public static boolean off = false;
+
+    @Theory
+    public void shouldComplyWIthLogonBasedSequenceNumberReset(final boolean sequenceNumberReset)
+        throws IOException
+    {
+        setup(sequenceNumberReset);
+
+        logonThenLogout();
+
+        logonThenLogout();
+    }
+
+    private void setup(final boolean sequenceNumberReset)
     {
         mediaDriver = launchMediaDriver();
 
@@ -49,20 +73,8 @@ public class MessageBasedSystemTest
             .libraryAeronChannel("aeron:ipc")
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(ACCEPTOR_LOGS);
+        config.acceptorSequenceNumbersResetUponReconnect(sequenceNumberReset);
         engine = FixEngine.launch(config);
-    }
-
-    @Test
-    public void shouldComplyWIthLogonBasedSequenceNumberReset() throws IOException
-    {
-        // Trying to reproduce
-        // > [8=FIX.4.4|9=0079|35=A|49=initiator|56=acceptor|34=1|52=20160825-10:25:03.931|98=0|108=30|141=Y|10=018]
-        // < [8=FIX.4.4|9=0079|35=A|49=acceptor|56=initiator|34=1|52=20160825-10:24:57.920|98=0|108=30|141=N|10=013]
-        // < [8=FIX.4.4|9=0070|35=2|49=acceptor|56=initiator|34=3|52=20160825-10:25:27.766|7=1|16=0|10=061]
-
-        logonThenLogout();
-
-        logonThenLogout();
     }
 
     private void logonThenLogout() throws IOException
@@ -85,6 +97,7 @@ public class MessageBasedSystemTest
         final LogoutDecoder logon = new LogoutDecoder();
         connection.readMessage(logon);
 
+        assertFalse(logon.textAsString(), logon.hasText());
         assertTrue(logon.validate());
     }
 

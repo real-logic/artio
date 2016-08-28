@@ -45,6 +45,8 @@ class FixConnection
 
     private final SocketChannel socket;
 
+    private int msgSeqNum = 1;
+
     FixConnection(final int port) throws IOException
     {
         socket = SocketChannel.open(new InetSocketAddress("localhost", port));
@@ -75,7 +77,7 @@ class FixConnection
         header
             .senderCompID(INITIATOR_ID)
             .targetCompID(ACCEPTOR_ID)
-            .msgSeqNum(1)
+            .msgSeqNum(msgSeqNum++)
             .sendingTime(timestampEncoder.buffer(), timestampLength);
     }
 
