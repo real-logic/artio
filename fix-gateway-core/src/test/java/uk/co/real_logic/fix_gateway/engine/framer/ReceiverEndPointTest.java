@@ -33,7 +33,7 @@ import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.validation.SessionReplicationStrategy;
+import uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -64,7 +64,7 @@ public class ReceiverEndPointTest
     private TcpChannel mockChannel = mock(TcpChannel.class);
     private GatewayPublication libraryPublication = mock(GatewayPublication.class);
     private GatewayPublication clusterablePublication = mock(GatewayPublication.class);
-    private SessionReplicationStrategy sessionReplicationStrategy = SessionReplicationStrategy.none();
+    private SessionPersistenceStrategy sessionReplicationStrategy = SessionPersistenceStrategy.alwaysPersistent();
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private SessionIds mockSessionIds = mock(SessionIds.class);
     private AtomicCounter messagesRead = mock(AtomicCounter.class);

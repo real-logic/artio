@@ -32,7 +32,8 @@ import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
-import uk.co.real_logic.fix_gateway.validation.SessionReplicationStrategy;
+import uk.co.real_logic.fix_gateway.validation.PersistenceLevel;
+import uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -49,6 +50,8 @@ import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.*;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
 import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
+import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.LOCAL_ARCHIVE;
+import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATED;
 
 /**
  * Handles incoming data from sockets.
@@ -78,7 +81,7 @@ class ReceiverEndPoint
     private final TcpChannel channel;
     private final GatewayPublication libraryPublication;
     private final GatewayPublication clusterablePublication;
-    private final SessionReplicationStrategy sessionReplicationStrategy;
+    private final SessionPersistenceStrategy sessionReplicationStrategy;
     private final long connectionId;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
@@ -106,7 +109,7 @@ class ReceiverEndPoint
         final int bufferSize,
         final GatewayPublication clusterablePublication,
         final GatewayPublication libraryPublication,
-        final SessionReplicationStrategy sessionReplicationStrategy,
+        final SessionPersistenceStrategy sessionReplicationStrategy,
         final long connectionId,
         final long sessionId,
         final SessionIdStrategy sessionIdStrategy,
@@ -144,7 +147,7 @@ class ReceiverEndPoint
         // Initiator sessions are persistent if the sequence numbers are expected to be persistent.
         if (connectionType == INITIATOR)
         {
-            choosePublication(transientSequenceNumbers);
+            choosePublication(transientSequenceNumbers ? LOCAL_ARCHIVE : REPLICATED);
         }
     }
 
@@ -343,7 +346,7 @@ class ReceiverEndPoint
                 gatewaySession.onLogon(sessionId, compositeKey, username, password, logon.heartBtInt());
                 gatewaySession.sequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
 
-                choosePublication(sessionReplicationStrategy.shouldReplicate(logon));
+                choosePublication(sessionReplicationStrategy.getPersistenceLevel(logon));
 
                 return stashIfBackpressured(offset, publication.saveLogon(
                     libraryId,
@@ -573,9 +576,9 @@ class ReceiverEndPoint
         isPaused = false;
     }
 
-    private void choosePublication(final boolean replicated)
+    private void choosePublication(final PersistenceLevel persistenceLevel)
     {
-        if (replicated)
+        if (persistenceLevel == REPLICATED)
         {
             publication = clusterablePublication;
             replicatedConnectionIds.add(connectionId);

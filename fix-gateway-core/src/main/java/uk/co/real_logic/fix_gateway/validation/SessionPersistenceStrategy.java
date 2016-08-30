@@ -17,20 +17,23 @@ package uk.co.real_logic.fix_gateway.validation;
 
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 
+import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.LOCAL_ARCHIVE;
+import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATED;
+
 /**
  * Determines whether a session should be replicated or not.
  */
-public interface SessionReplicationStrategy
+public interface SessionPersistenceStrategy
 {
-    static SessionReplicationStrategy all()
+    static SessionPersistenceStrategy alwaysReplicated()
     {
-        return logon -> true;
+        return logon -> REPLICATED;
     }
 
-    static SessionReplicationStrategy none()
+    static SessionPersistenceStrategy alwaysPersistent()
     {
-        return logon -> false;
+        return logon -> LOCAL_ARCHIVE;
     }
 
-    boolean shouldReplicate(final LogonDecoder logon);
+    PersistenceLevel getPersistenceLevel(final LogonDecoder logon);
 }

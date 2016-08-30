@@ -24,7 +24,7 @@ import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier;
 import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;
 import uk.co.real_logic.fix_gateway.replication.RoleHandler;
-import uk.co.real_logic.fix_gateway.validation.SessionReplicationStrategy;
+import uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy;
 
 import java.io.File;
 import java.io.IOException;
@@ -150,7 +150,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private Function<EngineConfiguration, TcpChannelSupplier> channelSupplierFactory =
         TcpChannelSupplier::new;
     private RoleHandler roleHandler = ClusterNodeConfiguration.DEFAULT_NODE_HANDLER;
-    private SessionReplicationStrategy sessionReplicationStrategy = SessionReplicationStrategy.all();
+    private SessionPersistenceStrategy sessionReplicationStrategy = SessionPersistenceStrategy.alwaysReplicated();
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -457,7 +457,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    public EngineConfiguration sessionReplicationStrategy(final SessionReplicationStrategy sessionReplicationStrategy)
+    public EngineConfiguration sessionReplicationStrategy(final SessionPersistenceStrategy sessionReplicationStrategy)
     {
         this.sessionReplicationStrategy = sessionReplicationStrategy;
         return this;
@@ -608,7 +608,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return roleHandler;
     }
 
-    public SessionReplicationStrategy sessionReplicationStrategy()
+    public SessionPersistenceStrategy sessionReplicationStrategy()
     {
         return sessionReplicationStrategy;
     }
