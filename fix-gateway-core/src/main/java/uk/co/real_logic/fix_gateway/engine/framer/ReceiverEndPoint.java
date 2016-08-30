@@ -316,18 +316,6 @@ class ReceiverEndPoint
         return buffer.scan(startOfBodyLength + 1, usedBufferData - 1, START_OF_HEADER);
     }
 
-    private boolean saveInvalidMessage(final int offset)
-    {
-        return stashIfBackpressured(offset, libraryPublication.saveMessage(
-            buffer, offset, usedBufferData, libraryId, '-', sessionId, connectionId, INVALID));
-    }
-
-    private boolean saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
-    {
-        return stashIfBackpressured(offset, libraryPublication.saveMessage(
-            buffer, offset, length, libraryId, messageType, sessionId, connectionId, INVALID_CHECKSUM));
-    }
-
     private boolean checkSessionId(final int offset, final int length)
     {
         if (sessionId == UNKNOWN)
@@ -414,19 +402,6 @@ class ReceiverEndPoint
         return sequenceNumberIndexReader.lastKnownSequenceNumber(sessionId);
     }
 
-    private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag)
-    {
-        return stashIfBackpressured(offset, libraryPublication.saveMessage(
-            buffer,
-            offset,
-            libraryId,
-            startOfChecksumTag,
-            UNKNOWN_MESSAGE_TYPE,
-            sessionId,
-            connectionId,
-            INVALID_BODYLENGTH));
-    }
-
     private boolean validateBodyLength(final int startOfChecksumTag)
     {
         return buffer.getByte(startOfChecksumTag) == CHECKSUM0
@@ -474,6 +449,41 @@ class ReceiverEndPoint
     private void invalidateMessage(final int offset)
     {
         DebugLogger.log(FIX_MESSAGE, "%s", buffer, offset, COMMON_PREFIX_LENGTH);
+    }
+
+    private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag)
+    {
+        return stashIfBackpressured(offset, libraryPublication.saveMessage(
+            buffer,
+            offset,
+            libraryId,
+            startOfChecksumTag,
+            UNKNOWN_MESSAGE_TYPE,
+            sessionId,
+            connectionId,
+            INVALID_BODYLENGTH));
+    }
+
+    private boolean saveInvalidMessage(final int offset)
+    {
+        final boolean backpressured = stashIfBackpressured(offset, libraryPublication.saveMessage(
+            buffer, offset, usedBufferData, libraryId, '-', sessionId, connectionId, INVALID));
+        if (!backpressured)
+        {
+            clearBuffer();
+        }
+        return backpressured;
+    }
+
+    private void clearBuffer()
+    {
+        moveRemainingDataToBufferStart(usedBufferData);
+    }
+
+    private boolean saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
+    {
+        return stashIfBackpressured(offset, libraryPublication.saveMessage(
+            buffer, offset, length, libraryId, messageType, sessionId, connectionId, INVALID_CHECKSUM));
     }
 
     public void close(final DisconnectReason reason)

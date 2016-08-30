@@ -149,7 +149,7 @@ public class ReceiverEndPointTest
 
         endPoint.pollForData();
 
-        nothingSaved();
+        nothingMoreSaved();
     }
 
     @Test
@@ -232,7 +232,11 @@ public class ReceiverEndPointTest
 
         endPoint.pollForData();
 
-        publicationSavesInvalidChecksumMessage(times(1));
+        // Test for bug where invalid message re-saved.
+        pollWithNoData();
+
+        savesInvalidChecksumMessage(times(1));
+        nothingMoreSaved();
     }
 
     @Test
@@ -246,7 +250,7 @@ public class ReceiverEndPointTest
 
         endPoint.pollForData();
 
-        publicationSavesInvalidChecksumMessage(times(2));
+        savesInvalidChecksumMessage(times(2));
     }
 
     @Test
@@ -254,7 +258,11 @@ public class ReceiverEndPointTest
     {
         final int length = theEndpointReceivesAnOutOfOrderMessage();
 
+        // Test for bug where invalid message re-saved.
+        pollWithNoData();
+
         savesInvalidMessage(length, times(1));
+        nothingMoreSaved();
         verifyNoError();
     }
 
@@ -265,8 +273,7 @@ public class ReceiverEndPointTest
 
         final int length = theEndpointReceivesAnOutOfOrderMessage();
 
-        theEndpointReceivesNothing();
-        endPoint.pollForData();
+        pollWithNoData();
 
         savesInvalidMessage(length, times(2));
         verifyNoError();
@@ -283,8 +290,7 @@ public class ReceiverEndPointTest
         theEndpointReceivesTheRestOfTheMessage();
         endPoint.pollForData();
 
-        theEndpointReceivesNothing();
-        endPoint.pollForData();
+        pollWithNoData();
 
         savesFramedMessages(2, OK, MSG_LEN);
 
@@ -299,8 +305,7 @@ public class ReceiverEndPointTest
         theEndpointReceivesTwoCompleteMessages();
         endPoint.pollForData();
 
-        theEndpointReceivesNothing();
-        endPoint.pollForData();
+        pollWithNoData();
 
         savesTwoFramedMessages(2);
 
@@ -315,8 +320,7 @@ public class ReceiverEndPointTest
         theEndpointReceivesACompleteAndAnIncompleteMessage();
         endPoint.pollForData();
 
-        theEndpointReceivesNothing();
-        endPoint.pollForData();
+        pollWithNoData();
 
         savesFramedMessages(2, OK, MSG_LEN);
     }
@@ -416,7 +420,7 @@ public class ReceiverEndPointTest
         inOrder.verifyNoMoreInteractions();
     }
 
-    private void nothingSaved()
+    private void nothingMoreSaved()
     {
         verifyNoMoreInteractions(libraryPublication);
     }
@@ -505,7 +509,7 @@ public class ReceiverEndPointTest
         theEndpointReceives(INVALID_CHECKSUM_MSG, 0, INVALID_CHECKSUM_LEN);
     }
 
-    private void publicationSavesInvalidChecksumMessage(final VerificationMode mode)
+    private void savesInvalidChecksumMessage(final VerificationMode mode)
     {
         verify(libraryPublication, mode)
             .saveMessage(
@@ -543,6 +547,12 @@ public class ReceiverEndPointTest
     {
         verify(gatewaySession, mode)
             .onMessage(any(), eq(offset), eq(length), eq(MESSAGE_TYPE), eq(SESSION_ID));
+    }
+
+    private void pollWithNoData()
+    {
+        theEndpointReceivesNothing();
+        endPoint.pollForData();
     }
 
 }
