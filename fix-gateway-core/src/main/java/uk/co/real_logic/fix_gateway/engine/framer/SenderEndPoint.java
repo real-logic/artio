@@ -31,6 +31,7 @@ import java.nio.ByteBuffer;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.fix_gateway.protocol.GatewayPublication.FRAME_SIZE;
@@ -74,7 +75,7 @@ class SenderEndPoint implements AutoCloseable
         final int offset,
         final int length)
     {
-        if (libraryId != this.libraryId)
+        if (isWrongLibraryId(libraryId))
         {
             invalidLibraryAttempts.increment();
             return;
@@ -162,7 +163,7 @@ class SenderEndPoint implements AutoCloseable
         final int length)
     {
         final int libraryId = fixMessage.libraryId();
-        if (libraryId != this.libraryId)
+        if (isWrongLibraryId(libraryId))
         {
             invalidLibraryAttempts.increment();
             return CONTINUE;
@@ -203,6 +204,14 @@ class SenderEndPoint implements AutoCloseable
         }
 
         return CONTINUE;
+    }
+
+    private boolean isWrongLibraryId(final int libraryId)
+    {
+        // We allow the engine's messages to pass through in case the session
+        // has been acquired by a library in the same duty cycle as an engine
+        // sends a message, which would otherwise result in the message being dropped.
+        return !(libraryId == ENGINE_LIBRARY_ID || libraryId == this.libraryId);
     }
 
     private boolean isSlowConsumer()
