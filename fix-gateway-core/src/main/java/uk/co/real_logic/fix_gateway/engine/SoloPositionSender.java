@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2LongHashMap;
+import org.agrona.collections.LongLongConsumer;
 import uk.co.real_logic.fix_gateway.engine.logger.Index;
 import uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionConsumer;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
@@ -30,6 +31,7 @@ class SoloPositionSender implements Index
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
     private final Long2LongHashMap libraryIdToPosition = new Long2LongHashMap(MISSING_LIBRARY);
+    private final LongLongConsumer resendPositionFunc = this::resendPosition;
 
     private final GatewayPublication publication;
 
@@ -71,7 +73,7 @@ class SoloPositionSender implements Index
     public int doWork()
     {
         resendCount = 0;
-        libraryIdToPosition.longForEach(this::resendPosition);
+        libraryIdToPosition.longForEach(resendPositionFunc);
         return resendCount;
     }
 

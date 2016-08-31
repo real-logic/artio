@@ -59,14 +59,15 @@ class ClusterContext extends EngineContext
         final ClusterPositionSender positionSender = new ClusterPositionSender(
             outboundLibrarySubscription(), inboundLibraryPublication());
 
-        loggingRunner = newRunner(new CompositeAgent(inboundIndexer, outboundIndexer, node, replayer, positionSender));
+        loggingRunner = newRunner(
+            new CompositeAgent(inboundIndexer, outboundIndexer, node, replayer, positionSender));
     }
 
     private ClusterAgent node(
         final EngineConfiguration configuration,
         final FixCounters fixCounters,
         final Aeron aeron,
-        final String channel,
+        final String clusterAeronChannel,
         final EngineDescriptorStore engineDescriptorStore)
     {
         final int cacheNumSets = configuration.loggerCacheNumSets();
@@ -87,7 +88,7 @@ class ClusterContext extends EngineContext
             .failCounter(fixCounters.failedRaftPublications())
             .maxClaimAttempts(configuration.inboundMaxClaimAttempts())
             .copyTo(inboundPublication)
-            .aeronChannel(channel)
+            .aeronChannel(clusterAeronChannel)
             .aeron(aeron)
             .nodeState(EngineDescriptorFactory.make(configuration.libraryAeronChannel()))
             .nodeStateHandler(engineDescriptorStore)
