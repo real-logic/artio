@@ -17,7 +17,7 @@ package uk.co.real_logic.fix_gateway.validation;
 
 public enum PersistenceLevel
 {
-    /** Locally archive messages to disk, does not replicate them, resets sequence numbers upon connect */
+    /** Locally archive messages to disk, does not replicate or index them, resets sequence numbers upon connect */
     LOCAL_ARCHIVE,
 
     /** archives messages to disk, replicates them, persists sequence numbers over reconnects */
