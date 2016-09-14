@@ -19,6 +19,6 @@ public class NotConnectedException extends IllegalStateException
 {
     NotConnectedException()
     {
-        super("Unable to send publish message, probably a missing an engine or library instance");
+        super("Unable to send message, probably a missing an engine or library instance");
     }
 }
