@@ -56,11 +56,24 @@ class ClusterContext extends EngineContext
         newStreams(node.clusterStreams());
         newIndexers(inboundArchiveReader(), outboundArchiveReader(), null);
         final Replayer replayer = newReplayer(replayPublication, outboundArchiveReader());
+
+        final Archiver localInboundArchiver =
+            archiver(new StreamIdentifier(libraryAeronChannel, INBOUND_LIBRARY_STREAM));
+        final Archiver localOutboundArchiver =
+            archiver(new StreamIdentifier(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
+
         final ClusterPositionSender positionSender = new ClusterPositionSender(
             outboundLibrarySubscription(), inboundLibraryPublication());
 
         loggingRunner = newRunner(
-            new CompositeAgent(inboundIndexer, outboundIndexer, node, replayer, positionSender));
+            new CompositeAgent(
+                inboundIndexer,
+                outboundIndexer,
+                node,
+                replayer,
+                localInboundArchiver,
+                localOutboundArchiver,
+                positionSender));
     }
 
     private ClusterAgent node(
