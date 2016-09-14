@@ -33,26 +33,27 @@ class ClusterPositionSender implements Agent, ControlledFragmentHandler, LongLon
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
 
-    private final Long2LongHashMap libraryIdToPosition = new Long2LongHashMap(MISSING_LIBRARY);
+    private final Long2LongHashMap libraryIdToClusterPosition = new Long2LongHashMap(MISSING_LIBRARY);
+    //private final
 
-    private final ClusterableSubscription subscription;
-    private final GatewayPublication publication;
+    private final ClusterableSubscription fromClusterSubscription;
+    private final GatewayPublication toLibraryPublication;
 
     private int resendCount;
 
     ClusterPositionSender(
-        final ClusterableSubscription subscription, final GatewayPublication publication)
+        final ClusterableSubscription fromClusterSubscription, final GatewayPublication toLibraryPublication)
     {
-        this.subscription = subscription;
-        this.publication = publication;
+        this.fromClusterSubscription = fromClusterSubscription;
+        this.toLibraryPublication = toLibraryPublication;
     }
 
     public int doWork() throws Exception
     {
-        final int work = subscription.controlledPoll(this, 10);
+        final int work = fromClusterSubscription.controlledPoll(this, 10);
 
         resendCount = 0;
-        libraryIdToPosition.longForEach(this);
+        libraryIdToClusterPosition.longForEach(this);
 
         return work + resendCount;
     }
@@ -66,7 +67,7 @@ class ClusterPositionSender implements Agent, ControlledFragmentHandler, LongLon
             offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
             fixMessage.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
-            libraryIdToPosition.put(fixMessage.libraryId(), header.position());
+            libraryIdToClusterPosition.put(fixMessage.libraryId(), header.position());
         }
 
         return Action.CONTINUE;
@@ -79,9 +80,9 @@ class ClusterPositionSender implements Agent, ControlledFragmentHandler, LongLon
 
     public void accept(final long libraryId, final long savedPosition)
     {
-        if (publication.saveNewSentPosition((int) libraryId, savedPosition) >= 0)
+        if (toLibraryPublication.saveNewSentPosition((int) libraryId, savedPosition) >= 0)
         {
-            libraryIdToPosition.remove(libraryId);
+            libraryIdToClusterPosition.remove(libraryId);
             resendCount++;
         }
     }
