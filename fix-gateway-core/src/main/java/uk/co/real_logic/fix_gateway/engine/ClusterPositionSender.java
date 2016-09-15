@@ -18,23 +18,35 @@ package uk.co.real_logic.fix_gateway.engine;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import org.agrona.collections.Int2IntHashMap;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.LongLongConsumer;
 import org.agrona.concurrent.Agent;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver.ArchivedPositionHandler;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.fix_gateway.messages.LibraryConnectDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
-class ClusterPositionSender implements Agent, ControlledFragmentHandler, LongLongConsumer
+// TODO: fix position sender, doesn't work because position is in the clustered stream
+// rather than local
+// aeron sid -> library id
+// archiver: aeron sid -> position
+// replicated streams on other thread
+class ClusterPositionSender implements Agent, ControlledFragmentHandler, LongLongConsumer, ArchivedPositionHandler
 {
-    private static final int MISSING_LIBRARY = -1;
+    private static final int MISSING = -1;
+    private static final int MISSING_INT = -1;
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
+    private final LibraryConnectDecoder libraryConnect = new LibraryConnectDecoder();
 
-    private final Long2LongHashMap libraryIdToClusterPosition = new Long2LongHashMap(MISSING_LIBRARY);
-    //private final
+    private final Long2LongHashMap libraryIdToClusterPosition = new Long2LongHashMap(MISSING);
+    private final Long2LongHashMap aeronSessionIdToArchivedPosition = new Long2LongHashMap(MISSING);
+
+    private final Int2IntHashMap aeronSessionIdToLibraryId = new Int2IntHashMap(MISSING_INT);
 
     private final ClusterableSubscription fromClusterSubscription;
     private final GatewayPublication toLibraryPublication;
@@ -62,12 +74,23 @@ class ClusterPositionSender implements Agent, ControlledFragmentHandler, LongLon
     {
         messageHeader.wrap(buffer, offset);
 
-        if (messageHeader.templateId() == FixMessageDecoder.TEMPLATE_ID)
-        {
-            offset += MessageHeaderDecoder.ENCODED_LENGTH;
+        offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
-            fixMessage.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
-            libraryIdToClusterPosition.put(fixMessage.libraryId(), header.position());
+        final int version = messageHeader.version();
+        final int actingBlockLength = messageHeader.blockLength();
+
+        switch (messageHeader.templateId())
+        {
+            // NB: Relies on subscribing to the inbound library stream
+            case LibraryConnectDecoder.TEMPLATE_ID:
+                libraryConnect.wrap(buffer, offset, actingBlockLength, version);
+                aeronSessionIdToLibraryId.put(header.sessionId(), libraryConnect.libraryId());
+                break;
+
+            case FixMessageDecoder.TEMPLATE_ID:
+                fixMessage.wrap(buffer, offset, actingBlockLength, version);
+                libraryIdToClusterPosition.put(fixMessage.libraryId(), header.position());
+                break;
         }
 
         return Action.CONTINUE;
@@ -85,5 +108,21 @@ class ClusterPositionSender implements Agent, ControlledFragmentHandler, LongLon
             libraryIdToClusterPosition.remove(libraryId);
             resendCount++;
         }
+    }
+
+    public void onArchivedPosition(final int aeronSessionId, final long position)
+    {
+        final int libraryId = aeronSessionIdToLibraryId.get(aeronSessionId);
+        if (libraryId != MISSING_INT)
+        {
+            aeronSessionIdToArchivedPosition.put(aeronSessionId, position);
+        }
+    }
+
+    private static final class Positions
+    {
+        private long archivedPosition;
+        private long clusteredPosition;
+        private boolean hasUpdated = false;
     }
 }

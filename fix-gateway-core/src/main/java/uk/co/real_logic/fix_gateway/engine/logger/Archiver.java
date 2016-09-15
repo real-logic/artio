@@ -42,6 +42,11 @@ import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 public class Archiver implements Agent, RawBlockHandler
 {
+    public interface ArchivedPositionHandler
+    {
+        void onArchivedPosition(final int aeronSessionId, final long position);
+    }
+
     private static final int POLL_LENGTH = TERM_BUFFER_LENGTH_DEFAULT;
 
     public static final long UNKNOWN_POSITION = -1;
@@ -53,6 +58,7 @@ public class Archiver implements Agent, RawBlockHandler
     private final LogDirectoryDescriptor directoryDescriptor;
     private final CRC32 checksum = new CRC32();
 
+    private ArchivedPositionHandler positionHandler = (aeronSessionId, position) -> {};
     private DataHeaderFlyweight header = new DataHeaderFlyweight();
     private Subscription subscription;
 
@@ -66,6 +72,12 @@ public class Archiver implements Agent, RawBlockHandler
         this.directoryDescriptor = metaData.directoryDescriptor();
         this.streamId = streamId;
         sessionIdToArchive = new Int2ObjectCache<>(cacheNumSets, cacheSetSize, SessionArchiver::close);
+    }
+
+    public Archiver positionHandler(final ArchivedPositionHandler positionHandler)
+    {
+        this.positionHandler = positionHandler;
+        return this;
     }
 
     public Archiver subscription(final Subscription subscription)
@@ -156,6 +168,7 @@ public class Archiver implements Agent, RawBlockHandler
         private final Image image;
         private final int termBufferLength;
         private final int positionBitsToShift;
+        private final int initialTermId;
 
         private int currentTermId = UNKNOWN;
         private RandomAccessFile currentLogFile;
@@ -167,6 +180,7 @@ public class Archiver implements Agent, RawBlockHandler
             this.image = image;
             termBufferLength = image.termBufferLength();
             positionBitsToShift = Integer.numberOfTrailingZeros(termBufferLength);
+            initialTermId = image.initialTermId();
         }
 
         public int poll()
@@ -197,6 +211,9 @@ public class Archiver implements Agent, RawBlockHandler
                 writeChecksumForBlock(termBuffer, termOffset, length);
 
                 final long transferred = fileChannel.transferTo(fileOffset, length, currentLogChannel);
+                final long position = computePosition(termId, termOffset, positionBitsToShift, initialTermId);
+                positionHandler.onArchivedPosition(sessionId, position);
+
                 if (transferred != length)
                 {
                     final File location = logFile(termId);
