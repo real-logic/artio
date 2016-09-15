@@ -82,7 +82,8 @@ public class ArchiverTest
     @Parameters
     public static Collection<Object[]> data()
     {
-        return IntStream.of(128, 129, 1337, 4097)
+        // TODO: enable more comprehensive testing in a CI environment
+        return IntStream.of(1337/*, 129, 1337, 4097*/)
                         .boxed()
                         .flatMap(size ->
                             Stream.of(

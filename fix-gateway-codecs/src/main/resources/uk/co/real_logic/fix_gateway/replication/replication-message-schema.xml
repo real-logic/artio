@@ -35,50 +35,49 @@
         </enum>
     </types>
 
-    <!-- Clustering/Replication Protocol -->
     <sbe:message name="MessageAcknowledgement" id="2"
                  description="Acknowledgement that you've received up to a certain position">
-        <field name="newAckedPosition" id="53" type="int64"/>
-        <field name="nodeId" id="54" type="int16"/>
-        <field name="status" id="58" type="AcknowledgementStatus"/>
+        <field name="newAckedPosition" id="1" type="int64"/>
+        <field name="nodeId" id="2" type="int16"/>
+        <field name="status" id="3" type="AcknowledgementStatus"/>
     </sbe:message>
-    <sbe:message name="RequestVote" id="20" description="">
-        <field name="lastAckedPosition" id="55" type="int64"/>
-        <field name="candidateId" id="56" type="int16"/>
-        <field name="candidateSessionId" id="75" type="int32"/>
-        <field name="leaderShipTerm" id="59" type="int32"/>
+    <sbe:message name="RequestVote" id="3" description="">
+        <field name="lastAckedPosition" id="1" type="int64"/>
+        <field name="candidateId" id="2" type="int16"/>
+        <field name="candidateSessionId" id="3" type="int32"/>
+        <field name="leaderShipTerm" id="4" type="int32"/>
     </sbe:message>
-    <sbe:message name="ReplyVote" id="22" description="">
+    <sbe:message name="ReplyVote" id="4" description="">
         <field name="senderNodeId" id="1" type="int16"/>
         <field name="candidateId" id="2" type="int16"/>
         <field name="leaderShipTerm" id="3" type="int32"/>
         <field name="vote" id="4" type="Vote"/>
         <data name="nodeState" id="5" type="varDataEncoding"/>
     </sbe:message>
-    <sbe:message name="ConsensusHeartbeat" id="21" description="">
-        <field name="nodeId" id="57" type="int16"/>
-        <field name="leaderSessionId" id="27" type="int32"/>
-        <field name="leaderShipTerm" id="66" type="int32"/>
-        <field name="position" id="64" type="int64"/>
-        <field name="startPosition" id="64" type="int64"/>
+    <sbe:message name="ConsensusHeartbeat" id="5" description="">
+        <field name="nodeId" id="1" type="int16"/>
+        <field name="leaderSessionId" id="2" type="int32"/>
+        <field name="leaderShipTerm" id="3" type="int32"/>
+        <field name="position" id="4" type="int64"/>
+        <field name="startPosition" id="5" type="int64"/>
     </sbe:message>
-    <sbe:message name="Resend" id="23" description="">
-        <field name="leaderSessionId" id="67" type="int32"/>
-        <field name="leaderShipTerm" id="68" type="int32"/>
-        <field name="startPosition" id="69" type="int64"/>
-        <data name="body" id="70" type="varDataEncoding"/>
+    <sbe:message name="Resend" id="6" description="">
+        <field name="leaderSessionId" id="1" type="int32"/>
+        <field name="leaderShipTerm" id="2" type="int32"/>
+        <field name="startPosition" id="3" type="int64"/>
+        <data name="body" id="4" type="varDataEncoding"/>
     </sbe:message>
-    <sbe:message name="LeadershipTerm" id="24" description="">
-        <field name="sessionId" id="71" type="int32"/>
-        <field name="initialPosition" id="74" type="int64"/>
-        <field name="initialStreamPosition" id="72" type="int64"/>
-        <field name="finalStreamPosition" id="73" type="int64"/>
+    <sbe:message name="LeadershipTerm" id="7" description="">
+        <field name="sessionId" id="1" type="int32"/>
+        <field name="initialPosition" id="2" type="int64"/>
+        <field name="initialStreamPosition" id="3" type="int64"/>
+        <field name="finalStreamPosition" id="4" type="int64"/>
     </sbe:message>
-    <sbe:message name="ClusterState" id="39" description="Queryable Message for exchanging cluster state">
+    <sbe:message name="ClusterState" id="8" description="Queryable Message for exchanging cluster state">
         <field name="leaderNodeId" id="1" type="int16"/>
         <group name="nodes" id="2" dimensionType="groupSizeEncoding">
-            <field name="nodeId" id="10" type="int16"/>
-            <data name="payload" id="11" type="varDataEncoding"/>
+            <field name="nodeId" id="3" type="int16"/>
+            <data name="payload" id="4" type="varDataEncoding"/>
         </group>
     </sbe:message>
 </sbe:messageSchema>
