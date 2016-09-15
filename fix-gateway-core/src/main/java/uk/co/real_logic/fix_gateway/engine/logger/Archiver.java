@@ -58,7 +58,9 @@ public class Archiver implements Agent, RawBlockHandler
     private final LogDirectoryDescriptor directoryDescriptor;
     private final CRC32 checksum = new CRC32();
 
-    private ArchivedPositionHandler positionHandler = (aeronSessionId, position) -> {};
+    private ArchivedPositionHandler positionHandler = (aeronSessionId, position) ->
+    {
+    };
     private DataHeaderFlyweight header = new DataHeaderFlyweight();
     private Subscription subscription;
 
