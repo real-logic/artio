@@ -63,7 +63,9 @@ class ClusterContext extends EngineContext
             archiver(new StreamIdentifier(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
 
         final ClusterPositionSender positionSender = new ClusterPositionSender(
-            outboundLibrarySubscription(), inboundLibraryPublication());
+            outboundLibrarySubscription(),
+            outboundClusterSubscription(),
+            inboundLibraryPublication());
 
         loggingRunner = newRunner(
             new CompositeAgent(
