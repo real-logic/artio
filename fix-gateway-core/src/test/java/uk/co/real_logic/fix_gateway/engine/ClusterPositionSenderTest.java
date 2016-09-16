@@ -16,9 +16,11 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import org.junit.Test;
+import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
+import static io.aeron.Publication.BACK_PRESSURED;
 import static org.mockito.Mockito.*;
 
 public class ClusterPositionSenderTest
@@ -45,6 +47,19 @@ public class ClusterPositionSenderTest
         checkConditions();
 
         savedPosition(POSITION);
+    }
+
+    @Test
+    public void shouldPublishPositionOfOnlyArchivedStreamWhenBackPressured()
+    {
+        backPressureSave();
+
+        connectLibrary();
+        checkConditions();
+        onArchivedPosition(POSITION);
+        checkConditions();
+
+        savedPosition(POSITION, times(2));
     }
 
     @Test
@@ -114,6 +129,12 @@ public class ClusterPositionSenderTest
         notSavedPosition();
     }
 
+    private void backPressureSave()
+    {
+        when(publication.saveNewSentPosition(anyInt(), anyLong()))
+            .thenReturn(BACK_PRESSURED, 1024L);
+    }
+
     private void notSavedPosition()
     {
         verify(publication, never()).saveNewSentPosition(anyInt(), anyLong());
@@ -127,7 +148,12 @@ public class ClusterPositionSenderTest
 
     private void savedPosition(final long position)
     {
-        verify(publication, times(1)).saveNewSentPosition(LIBRARY_ID, position);
+        savedPosition(position, times(1));
+    }
+
+    private void savedPosition(final long position, final VerificationMode mode)
+    {
+        verify(publication, mode).saveNewSentPosition(LIBRARY_ID, position);
     }
 
     private void connectLibrary()
@@ -145,7 +171,6 @@ public class ClusterPositionSenderTest
         positionSender.onClusteredLibraryPosition(LIBRARY_ID, position);
     }
 
-    // TODO: back pressured resends
     // TODO: sustained non-replicated messages without a replicated message update
 
 }

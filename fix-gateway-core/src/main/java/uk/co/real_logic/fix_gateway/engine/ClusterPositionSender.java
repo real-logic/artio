@@ -160,6 +160,10 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
                 {
                     resendCount++;
                 }
+                else
+                {
+                    continue; // don't remove libraryId
+                }
             }
 
             // TODO: move to it.remove() in agrona 0.5.5
