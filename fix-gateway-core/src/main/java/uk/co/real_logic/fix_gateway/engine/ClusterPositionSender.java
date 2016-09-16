@@ -44,6 +44,7 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
 
     private final Long2LongHashMap libraryIdToClusterPosition = new Long2LongHashMap(MISSING);
     private final Long2LongHashMap libraryIdToArchivedPosition = new Long2LongHashMap(MISSING);
+    private final Long2LongHashMap aeronSessionIdToArchivedPosition = new Long2LongHashMap(MISSING);
     private final Int2IntHashMap aeronSessionIdToLibraryId = new Int2IntHashMap(MISSING);
     private final IntHashSet updatedLibraryIds = new IntHashSet(MISSING);
 
@@ -176,6 +177,13 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
     void onLibraryConnect(final int sessionId, final int libraryId)
     {
         aeronSessionIdToLibraryId.put(sessionId, libraryId);
+        // Backup path to avoid missing a position
+        final long archivedPosition = aeronSessionIdToArchivedPosition.remove(sessionId);
+        if (archivedPosition != MISSING)
+        {
+            libraryIdToArchivedPosition.put(libraryId, archivedPosition);
+            updatedLibraryIds.add(libraryId);
+        }
     }
 
     void onClusteredLibraryPosition(final int libraryId, final long position)
@@ -190,6 +198,11 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
         {
             libraryIdToArchivedPosition.put(libraryId, position);
             updatedLibraryIds.add(libraryId);
+        }
+        else
+        {
+            // Backup path in case we haven't yet seen the library connect message
+            aeronSessionIdToArchivedPosition.put(aeronSessionId, position);
         }
     }
 }

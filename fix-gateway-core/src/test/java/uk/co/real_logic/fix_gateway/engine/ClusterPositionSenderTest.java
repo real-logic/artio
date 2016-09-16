@@ -25,14 +25,10 @@ public class ClusterPositionSenderTest
 {
 
     private static final int AERON_SESSION_ID = 1;
-    private static final int OTHER_AERON_SESSION_ID = 2;
     private static final int LIBRARY_ID = 3;
-    private static final int OTHER_LIBRARY_ID = 4;
 
     private static final long POSITION = 1042;
     private static final long NEXT_POSITION = POSITION + 100;
-    private static final long REPLICATED_POSITION = 42;
-    private static final long REPLICATED_NEXT_POSITION = REPLICATED_POSITION + 10;
 
     private GatewayPublication publication = mock(GatewayPublication.class);
     private ClusterPositionSender positionSender = new ClusterPositionSender(
@@ -44,7 +40,19 @@ public class ClusterPositionSenderTest
     public void shouldPublishPositionOfOnlyArchivedStream()
     {
         connectLibrary();
-        positionSender.onArchivedPosition(AERON_SESSION_ID, POSITION);
+        checkConditions();
+        onArchivedPosition(POSITION);
+        checkConditions();
+
+        savedPosition(POSITION);
+    }
+
+    @Test
+    public void shouldPublishPositionOfOnlyArchivedStreamOutOfOrder()
+    {
+        onArchivedPosition(POSITION);
+        checkConditions();
+        connectLibrary();
         checkConditions();
 
         savedPosition(POSITION);
@@ -54,8 +62,8 @@ public class ClusterPositionSenderTest
     public void shouldPublishMinimumPositionOfReplicatedAndArchivedStream()
     {
         connectLibrary();
-        positionSender.onClusteredLibraryPosition(LIBRARY_ID, NEXT_POSITION);
-        positionSender.onArchivedPosition(AERON_SESSION_ID, POSITION);
+        onClusteredPosition(NEXT_POSITION);
+        onArchivedPosition(POSITION);
         checkConditions();
 
         savedPosition(POSITION);
@@ -65,8 +73,21 @@ public class ClusterPositionSenderTest
     public void shouldPublishMinimumPositionOfArchivedAndReplicatedStream()
     {
         connectLibrary();
-        positionSender.onClusteredLibraryPosition(LIBRARY_ID, POSITION);
-        positionSender.onArchivedPosition(AERON_SESSION_ID, NEXT_POSITION);
+        onClusteredPosition(POSITION);
+        onArchivedPosition(NEXT_POSITION);
+        checkConditions();
+
+        savedPosition(POSITION);
+    }
+
+    @Test
+    public void shouldPublishMinimumPositionOfArchivedAndReplicatedStreamOutOfOrder()
+    {
+        onClusteredPosition(POSITION);
+        onArchivedPosition(NEXT_POSITION);
+        checkConditions();
+
+        connectLibrary();
         checkConditions();
 
         savedPosition(POSITION);
@@ -77,8 +98,7 @@ public class ClusterPositionSenderTest
     {
         shouldPublishMinimumPositionOfReplicatedAndArchivedStream();
 
-        positionSender.onArchivedPosition(AERON_SESSION_ID, NEXT_POSITION);
-
+        onArchivedPosition(NEXT_POSITION);
         checkConditions();
 
         savedPosition(NEXT_POSITION);
@@ -88,7 +108,7 @@ public class ClusterPositionSenderTest
     public void shouldNotPublishPositionOfNotArchivedStream()
     {
         connectLibrary();
-        positionSender.onClusteredLibraryPosition(LIBRARY_ID, POSITION);
+        onClusteredPosition(POSITION);
         checkConditions();
 
         notSavedPosition();
@@ -115,9 +135,17 @@ public class ClusterPositionSenderTest
         positionSender.onLibraryConnect(AERON_SESSION_ID, LIBRARY_ID);
     }
 
-    // TODO: sustained
-    // TODO: flipped ordering of archiver and connects
-    // TODO: other streams
+    private void onArchivedPosition(final long position)
+    {
+        positionSender.onArchivedPosition(AERON_SESSION_ID, position);
+    }
+
+    private void onClusteredPosition(final long position)
+    {
+        positionSender.onClusteredLibraryPosition(LIBRARY_ID, position);
+    }
+
     // TODO: back pressured resends
+    // TODO: sustained non-replicated messages without a replicated message update
 
 }
