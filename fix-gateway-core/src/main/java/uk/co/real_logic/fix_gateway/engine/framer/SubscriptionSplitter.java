@@ -19,12 +19,11 @@ import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.LongHashSet;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
-import uk.co.real_logic.fix_gateway.messages.DisconnectDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.EngineProtocolSubscription;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
@@ -40,11 +39,17 @@ import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_MESSAGE;
  */
 class SubscriptionSplitter implements ControlledFragmentHandler
 {
+    private static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
+
     private final BufferClaim bufferClaim = new BufferClaim();
-    private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
+
+    private final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final IdExtractor idExtractor = new IdExtractor();
+
+    private final MessageHeaderEncoder messageHeaderEncoder = new MessageHeaderEncoder();
+    private final ReplicatedMessageEncoder replicatedMessage = new ReplicatedMessageEncoder();
 
     private final ClusterableStreams clusterableStreams;
     private final EngineProtocolSubscription engineProtocolSubscription;
@@ -74,12 +79,12 @@ class SubscriptionSplitter implements ControlledFragmentHandler
 
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
-        messageHeader.wrap(buffer, offset);
+        messageHeaderDecoder.wrap(buffer, offset);
 
         final int messageOffset = offset + MessageHeaderDecoder.ENCODED_LENGTH;
-        final int actingBlockLength = messageHeader.blockLength();
-        final int version = messageHeader.version();
-        final int templateId = messageHeader.templateId();
+        final int actingBlockLength = messageHeaderDecoder.blockLength();
+        final int version = messageHeaderDecoder.version();
+        final int templateId = messageHeaderDecoder.templateId();
 
         if (clusterableStreams.isLeader())
         {
@@ -89,15 +94,19 @@ class SubscriptionSplitter implements ControlledFragmentHandler
                 {
                     fixMessage.wrap(buffer, messageOffset, actingBlockLength, version);
 
+                    final long connection = fixMessage.connection();
+                    final int libraryId = fixMessage.libraryId();
                     return onReplicatedMessage(
-                        buffer, offset, length, header, fixMessage.connection());
+                        buffer, offset, length, header, connection, libraryId);
                 }
                 case DisconnectDecoder.TEMPLATE_ID:
                 {
                     disconnect.wrap(buffer, messageOffset, actingBlockLength, version);
 
+                    final long connection = disconnect.connection();
+                    final int libraryId = disconnect.libraryId();
                     return onReplicatedMessage(
-                        buffer, offset, length, header, disconnect.connection());
+                        buffer, offset, length, header, connection, libraryId);
                 }
 
                 default:
@@ -136,11 +145,12 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         final int offset,
         final int length,
         final Header header,
-        final long connectionId)
+        final long connectionId,
+        final int libraryId)
     {
         if (replicatedConnectionIds.contains(connectionId))
         {
-            return replicateMessage(buffer, offset, length);
+            return replicateMessage(buffer, offset, length, header, libraryId);
         }
         else
         {
@@ -148,15 +158,40 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         }
     }
 
-    private Action replicateMessage(final DirectBuffer buffer, final int offset, final int length)
+    private Action replicateMessage(final DirectBuffer buffer,
+                                    final int offset,
+                                    final int length,
+                                    final Header header,
+                                    final int libraryId)
     {
-        final long position = clusterPublication.tryClaim(length, bufferClaim);
+        final int requiredLength =
+            HEADER_LENGTH + ReplicatedMessageEncoder.BLOCK_LENGTH + length;
+        final long position = clusterPublication.tryClaim(requiredLength, bufferClaim);
         if (position < 0)
         {
             return ABORT;
         }
 
-        bufferClaim.buffer().putBytes(bufferClaim.offset(), buffer, offset, length);
+        final MutableDirectBuffer clusterBuffer = bufferClaim.buffer();
+        int clusterOffset = bufferClaim.offset();
+
+        messageHeaderEncoder
+            .wrap(clusterBuffer, clusterOffset)
+            .blockLength(replicatedMessage.sbeBlockLength())
+            .templateId(replicatedMessage.sbeTemplateId())
+            .schemaId(replicatedMessage.sbeSchemaId())
+            .version(replicatedMessage.sbeSchemaVersion());
+
+        clusterOffset += HEADER_LENGTH;
+
+        replicatedMessage
+            .wrap(clusterBuffer, clusterOffset)
+            .libraryId(libraryId)
+            .position(header.position());
+
+        clusterOffset += ReplicatedMessageEncoder.BLOCK_LENGTH;
+
+        clusterBuffer.putBytes(clusterOffset, buffer, offset, length);
 
         bufferClaim.commit();
         return CONTINUE;

@@ -19,9 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.messages.DisconnectDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.messages.*;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
@@ -31,11 +29,14 @@ import static uk.co.real_logic.fix_gateway.protocol.GatewayPublication.FRAME_SIZ
 public final class ProtocolSubscription implements ControlledFragmentHandler
 {
 
+    private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
+
     private static final Action UNKNOWN_TEMPLATE = null;
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
+    private final ReplicatedMessageDecoder replicatedMessage = new ReplicatedMessageDecoder();
 
     private final ProtocolHandler protocolHandler;
     private final Action defaultAction;
@@ -68,13 +69,13 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
         this.defaultAction = defaultAction;
     }
 
-    public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
+    public Action onFragment(final DirectBuffer buffer, int offset, int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);
 
         final int blockLength = messageHeader.blockLength();
         final int version = messageHeader.version();
-        offset += messageHeader.encodedLength();
+        offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
         switch (messageHeader.templateId())
         {
@@ -86,6 +87,14 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
             case DisconnectDecoder.TEMPLATE_ID:
             {
                 return onDisconnect(buffer, offset, blockLength, version);
+            }
+
+            case ReplicatedMessageDecoder.TEMPLATE_ID:
+            {
+                // Skip over replicated message header to its payload
+                offset += ReplicatedMessageDecoder.BLOCK_LENGTH;
+                length -= HEADER_LENGTH + ReplicatedMessageDecoder.BLOCK_LENGTH;
+                return onFragment(buffer, offset, length, header);
             }
         }
 

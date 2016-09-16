@@ -316,4 +316,10 @@
         <field name="connectCorrelationId" id="2" type="CorrelationId"/>
     </sbe:message>
 
+    <sbe:message name="ReplicatedMessage" id="41"
+                 description="A header for replicated messages">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="position" id="2" type="int64"/>
+    </sbe:message>
+
 </sbe:messageSchema>
