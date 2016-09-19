@@ -134,7 +134,7 @@ public class FixLibrary extends GatewayProcess
     }
 
     /**
-     * Close the Library.
+     * Close the Library. This will also remove all files associated with the library.
      */
     public void close()
     {

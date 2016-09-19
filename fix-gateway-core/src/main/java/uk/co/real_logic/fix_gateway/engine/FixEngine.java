@@ -167,6 +167,9 @@ public final class FixEngine extends GatewayProcess
 
     /**
      * Close the engine down, including stopping other running threads.
+     *
+     * This does not remove files associated with the engine, that are persistent
+     * over multiple runs of the engine.
      */
     public synchronized void close()
     {
