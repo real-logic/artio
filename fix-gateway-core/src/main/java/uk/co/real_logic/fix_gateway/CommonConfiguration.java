@@ -78,7 +78,7 @@ public class CommonConfiguration
     /** Property name for the file to which histogram intervals are logged */
     public static final String HISTOGRAM_LOGGING_FILE_PROPERTY = "fix.benchmark.histogram_file";
 
-    public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 8 * 1024 * 1024;
+    public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 64 * 1024 * 1024;
     public static final String DEFAULT_DIRECTORY = optimalTmpDirName() + File.separator + "fix-%s";
     public static final String DEFAULT_MONITORING_FILE =
         DEFAULT_DIRECTORY + File.separator + "monitoring";
