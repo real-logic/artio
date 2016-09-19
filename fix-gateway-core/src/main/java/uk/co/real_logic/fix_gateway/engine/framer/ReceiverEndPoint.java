@@ -23,10 +23,7 @@ import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.fix_gateway.messages.ConnectionType;
-import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
-import uk.co.real_logic.fix_gateway.messages.GatewayError;
-import uk.co.real_logic.fix_gateway.messages.LogonStatus;
+import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -42,16 +39,18 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 
 import static java.nio.channels.SelectionKey.OP_READ;
-import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.*;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
+import static uk.co.real_logic.fix_gateway.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.LOCAL_ARCHIVE;
 import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATED;
+import static uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy.resetSequenceNumbersUponLogon;
 
 /**
  * Handles incoming data from sockets.
@@ -96,7 +95,6 @@ class ReceiverEndPoint
 
     private GatewayPublication publication;
     private int libraryId;
-    private final boolean transientSequenceNumbers;
     private GatewaySession gatewaySession;
     private long sessionId;
     private int usedBufferData = 0;
@@ -120,7 +118,7 @@ class ReceiverEndPoint
         final Framer framer,
         final ErrorHandler errorHandler,
         final int libraryId,
-        final boolean transientSequenceNumbers,
+        final SequenceNumberType sequenceNumberType,
         final ConnectionType connectionType,
         final LongHashSet replicatedConnectionIds)
     {
@@ -138,7 +136,6 @@ class ReceiverEndPoint
         this.framer = framer;
         this.errorHandler = errorHandler;
         this.libraryId = libraryId;
-        this.transientSequenceNumbers = transientSequenceNumbers;
         this.replicatedConnectionIds = replicatedConnectionIds;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
@@ -147,7 +144,7 @@ class ReceiverEndPoint
         // Initiator sessions are persistent if the sequence numbers are expected to be persistent.
         if (connectionType == INITIATOR)
         {
-            choosePublication(transientSequenceNumbers ? LOCAL_ARCHIVE : REPLICATED);
+            choosePublication(sequenceNumberType == TRANSIENT ? LOCAL_ARCHIVE : REPLICATED);
         }
     }
 
@@ -339,14 +336,16 @@ class ReceiverEndPoint
             }
             else
             {
-                final int sentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, sessionId);
-                final int receivedSequenceNumber = sequenceNumber(receivedSequenceNumberIndex, sessionId);
+                final PersistenceLevel persistenceLevel = sessionReplicationStrategy.getPersistenceLevel(logon);
+                final boolean resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel);
+                final int sentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, resetSeqNum, sessionId);
+                final int receivedSequenceNumber = sequenceNumber(receivedSequenceNumberIndex, resetSeqNum, sessionId);
                 final String username = SessionParser.username(logon);
                 final String password = SessionParser.password(logon);
                 gatewaySession.onLogon(sessionId, compositeKey, username, password, logon.heartBtInt());
                 gatewaySession.sequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
 
-                choosePublication(sessionReplicationStrategy.getPersistenceLevel(logon));
+                choosePublication(persistenceLevel);
 
                 return stashIfBackpressured(offset, publication.saveLogon(
                     libraryId,
@@ -395,9 +394,10 @@ class ReceiverEndPoint
 
     private int sequenceNumber(
         final SequenceNumberIndexReader sequenceNumberIndexReader,
+        final boolean resetSeqNum,
         final long sessionId)
     {
-        if (transientSequenceNumbers)
+        if (resetSeqNum)
         {
             return SessionInfo.UNK_SESSION;
         }

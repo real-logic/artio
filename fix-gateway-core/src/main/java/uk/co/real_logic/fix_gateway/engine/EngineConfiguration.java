@@ -35,6 +35,8 @@ import java.util.function.Function;
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy.alwaysLocallyArchive;
+import static uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy.alwaysReplicated;
 
 /**
  * Configuration that exists for the entire duration of a fix gateway. Some options are configurable via
@@ -150,7 +152,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private Function<EngineConfiguration, TcpChannelSupplier> channelSupplierFactory =
         TcpChannelSupplier::new;
     private RoleHandler roleHandler = ClusterNodeConfiguration.DEFAULT_NODE_HANDLER;
-    private SessionPersistenceStrategy sessionReplicationStrategy = SessionPersistenceStrategy.alwaysReplicated();
+    private SessionPersistenceStrategy sessionPersistenceStrategy;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -457,9 +459,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    public EngineConfiguration sessionReplicationStrategy(final SessionPersistenceStrategy sessionReplicationStrategy)
+    public EngineConfiguration sessionPersistenceStrategy(final SessionPersistenceStrategy sessionReplicationStrategy)
     {
-        this.sessionReplicationStrategy = sessionReplicationStrategy;
+        this.sessionPersistenceStrategy = sessionReplicationStrategy;
         return this;
     }
 
@@ -608,9 +610,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return roleHandler;
     }
 
-    public SessionPersistenceStrategy sessionReplicationStrategy()
+    public SessionPersistenceStrategy sessionPersistenceStrategy()
     {
-        return sessionReplicationStrategy;
+        return sessionPersistenceStrategy;
     }
 
     /**
@@ -681,6 +683,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         if (sessionIdBuffer() == null)
         {
             sessionIdBuffer = mapFile(DEFAULT_SESSION_ID_FILE, sessionIdBufferSize);
+        }
+
+        if (sessionPersistenceStrategy() == null)
+        {
+            sessionPersistenceStrategy(
+                isClustered() ? alwaysReplicated() : alwaysLocallyArchive());
         }
 
         return this;

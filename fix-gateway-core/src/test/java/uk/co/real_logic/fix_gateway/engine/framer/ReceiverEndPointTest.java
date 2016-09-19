@@ -48,6 +48,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
+import static uk.co.real_logic.fix_gateway.messages.SequenceNumberType.DETERMINE_AT_LOGON;
 import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.util.TestMessages.*;
 
@@ -64,7 +65,7 @@ public class ReceiverEndPointTest
     private TcpChannel mockChannel = mock(TcpChannel.class);
     private GatewayPublication libraryPublication = mock(GatewayPublication.class);
     private GatewayPublication clusterablePublication = mock(GatewayPublication.class);
-    private SessionPersistenceStrategy sessionReplicationStrategy = SessionPersistenceStrategy.alwaysPersistent();
+    private SessionPersistenceStrategy sessionReplicationStrategy = SessionPersistenceStrategy.alwaysLocallyArchive();
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private SessionIds mockSessionIds = mock(SessionIds.class);
     private AtomicCounter messagesRead = mock(AtomicCounter.class);
@@ -79,8 +80,8 @@ public class ReceiverEndPointTest
         new ReceiverEndPoint(
             mockChannel, BUFFER_SIZE, clusterablePublication, libraryPublication, sessionReplicationStrategy,
             CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
-            sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID, false,
-            ConnectionType.ACCEPTOR, replicatedConnectionIds);
+            sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID,
+            DETERMINE_AT_LOGON, ConnectionType.ACCEPTOR, replicatedConnectionIds);
 
     @Before
     public void setUp()

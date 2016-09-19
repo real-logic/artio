@@ -23,6 +23,7 @@ import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATE
 /**
  * Determines whether a session should be replicated or not.
  */
+@FunctionalInterface
 public interface SessionPersistenceStrategy
 {
     static SessionPersistenceStrategy alwaysReplicated()
@@ -30,9 +31,22 @@ public interface SessionPersistenceStrategy
         return logon -> REPLICATED;
     }
 
-    static SessionPersistenceStrategy alwaysPersistent()
+    static SessionPersistenceStrategy alwaysLocallyArchive()
     {
         return logon -> LOCAL_ARCHIVE;
+    }
+
+    static boolean resetSequenceNumbersUponLogon(final PersistenceLevel persistenceLevel)
+    {
+        switch (persistenceLevel)
+        {
+            case REPLICATED:
+                return false;
+            case LOCAL_ARCHIVE:
+                return true;
+            default:
+                throw new IllegalArgumentException();
+        }
     }
 
     PersistenceLevel getPersistenceLevel(final LogonDecoder logon);

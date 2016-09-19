@@ -70,6 +70,7 @@ import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
+import static uk.co.real_logic.fix_gateway.messages.SequenceNumberType.DETERMINE_AT_LOGON;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
@@ -327,9 +328,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (clusterableStreams.isLeader())
         {
             final long connectionId = this.nextConnectionId++;
-            final boolean resetSequenceNumbers = configuration.acceptorSequenceNumbersResetUponReconnect();
             final GatewaySession session = setupConnection(
-                channel, connectionId, UNKNOWN, null, ENGINE_LIBRARY_ID, ACCEPTOR, resetSequenceNumbers);
+                channel, connectionId, UNKNOWN, null, ENGINE_LIBRARY_ID, ACCEPTOR, DETERMINE_AT_LOGON);
 
             session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
 
@@ -424,9 +424,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 return CONTINUE;
             }
 
-            final boolean resetSeqNumbers = sequenceNumberType == SequenceNumberType.TRANSIENT;
             final GatewaySession session =
-                setupConnection(channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR, resetSeqNumbers);
+                setupConnection(channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR, sequenceNumberType);
 
             library.addSession(session);
 
@@ -520,12 +519,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final CompositeKey sessionKey,
         final int libraryId,
         final ConnectionType connectionType,
-        final boolean resetSequenceNumbers)
+        final SequenceNumberType sequenceNumberType)
         throws IOException
     {
         final ReceiverEndPoint receiverEndPoint =
             endPointFactory.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
-                sentSequenceNumberIndex, receivedSequenceNumberIndex, resetSequenceNumbers, connectionType);
+                sentSequenceNumberIndex, receivedSequenceNumberIndex, sequenceNumberType, connectionType);
         receiverEndPoints.add(receiverEndPoint);
 
         final SenderEndPoint senderEndPoint =

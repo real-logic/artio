@@ -120,7 +120,7 @@ public class FramerTest
 
         when(mockEndPointFactory
             .receiverEndPoint(any(), connectionId.capture(), anyLong(), anyInt(), any(),
-                eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean(), any()))
+                eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any()))
             .thenReturn(mockReceiverEndPoint);
 
         when(mockEndPointFactory.senderEndPoint(any(), anyLong(), anyInt(), any()))
@@ -571,7 +571,7 @@ public class FramerTest
     {
         verify(mockEndPointFactory).receiverEndPoint(
             notNull(TcpChannel.class), anyLong(), anyLong(), eq(ENGINE_LIBRARY_ID), eq(framer),
-            eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), anyBoolean(), any());
+            eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any());
 
         verify(mockEndPointFactory).senderEndPoint(
             notNull(TcpChannel.class), anyLong(), eq(ENGINE_LIBRARY_ID), eq(framer));

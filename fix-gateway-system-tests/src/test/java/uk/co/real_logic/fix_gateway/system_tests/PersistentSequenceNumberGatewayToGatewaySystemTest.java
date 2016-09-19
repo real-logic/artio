@@ -35,6 +35,7 @@ import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
+import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATED;
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
@@ -74,7 +75,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         final EngineConfiguration config =
             acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
-        config.acceptorSequenceNumbersResetUponReconnect(false);
+        config.sessionPersistenceStrategy(logon -> REPLICATED);
         acceptingEngine = FixEngine.launch(config);
         initiatingEngine = launchInitiatingGatewayWithSameLogs(libraryAeronPort);
 

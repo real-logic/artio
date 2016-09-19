@@ -114,6 +114,7 @@
         <enum name="SequenceNumberType" encodingType="uint8">
             <validValue name="TRANSIENT">0</validValue>
             <validValue name="PERSISTENT">1</validValue>
+            <validValue name="DETERMINE_AT_LOGON">2</validValue>
         </enum>
 
         <enum name="AcknowledgementStatus" encodingType="uint8">
