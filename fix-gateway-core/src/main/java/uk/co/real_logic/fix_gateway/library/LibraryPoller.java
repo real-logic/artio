@@ -248,18 +248,18 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void connect(final int reconnectAttempts)
     {
-        transport.initStreams(currentAeronChannel);
-        inboundSubscription = transport.inboundSubscription();
-        outboundPublication = transport.outboundPublication();
-
-        livenessDetector = LivenessDetector.forLibrary(
-            outboundPublication,
-            libraryId,
-            configuration.replyTimeoutInMs(),
-            onDisconnectFunc);
-
         try
         {
+            transport.initStreams(currentAeronChannel);
+            inboundSubscription = transport.inboundSubscription();
+            outboundPublication = transport.outboundPublication();
+
+            livenessDetector = LivenessDetector.forLibrary(
+                outboundPublication,
+                libraryId,
+                configuration.replyTimeoutInMs(),
+                onDisconnectFunc);
+
             try
             {
                 sendLibraryConnect();
@@ -331,7 +331,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             // so we must clean up after ourselves
             try
             {
-                close();
+                fixLibrary.close();
             }
             catch (Exception closeException)
             {
