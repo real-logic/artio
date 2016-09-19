@@ -33,6 +33,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
+import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.LOCAL_ARCHIVE;
+import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATED;
 
 @RunWith(Theories.class)
 public class MessageBasedSystemTest
@@ -72,8 +74,8 @@ public class MessageBasedSystemTest
             .bindTo("localhost", port)
             .libraryAeronChannel("aeron:ipc")
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
-            .logFileDir(ACCEPTOR_LOGS);
-        config.acceptorSequenceNumbersResetUponReconnect(sequenceNumberReset);
+            .logFileDir(ACCEPTOR_LOGS)
+            .sessionPersistenceStrategy(logon -> sequenceNumberReset ? LOCAL_ARCHIVE : REPLICATED);
         engine = FixEngine.launch(config);
     }
 

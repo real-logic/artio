@@ -81,7 +81,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         final LibraryConfiguration acceptingLibraryConfig =
             acceptingLibraryConfig(acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL);
-        acceptingLibraryConfig.acceptorSequenceNumbersResetUponReconnect(false);
         acceptingLibrary = FixLibrary.connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
 

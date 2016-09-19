@@ -54,12 +54,11 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
-import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.LogTag.LIBRARY_CONNECT;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
-import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
 final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable
 {
@@ -478,9 +477,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)
             {
-                final SessionState state = subscriber.session().state();
-                lastSentSequenceNumber = acceptorSequenceNumber(lastSentSequenceNumber, state);
-                lastReceivedSequenceNumber = acceptorSequenceNumber(lastReceivedSequenceNumber, state);
+                //final SessionState state = subscriber.session().state();
                 final CompositeKey compositeKey = senderCompId.length() == 0 ? null :
                     sessionIdStrategy.onLogon(senderCompId, senderSubId, senderLocationId, targetCompId);
                 subscriber.onLogon(
@@ -507,17 +504,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
 
         return CONTINUE;
-    }
-
-    private int acceptorSequenceNumber(int lastSequenceNumber, final SessionState state)
-    {
-        if (!configuration.acceptorSequenceNumbersResetUponReconnect() &&
-            lastSequenceNumber != SessionInfo.UNK_SESSION)
-        {
-            return lastSequenceNumber;
-        }
-
-        return state == ACTIVE ? 1 : 0;
     }
 
     public Action onMessage(

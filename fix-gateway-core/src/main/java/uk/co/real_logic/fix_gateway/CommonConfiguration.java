@@ -147,7 +147,6 @@ public class CommonConfiguration
 
     private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
     private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
-    private static final boolean ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT = true;
     public static final long DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS = MINUTES.toMillis(1);
 
     private boolean printErrorMessages = true;
@@ -169,7 +168,6 @@ public class CommonConfiguration
     private int outboundMaxClaimAttempts =
         getInteger(OUTBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_OUTBOUND_MAX_CLAIM_ATTEMPTS);
     private int defaultHeartbeatIntervalInS = DEFAULT_HEARTBEAT_INTERVAL_IN_S;
-    private boolean acceptorSequenceNumbersResetUponReconnect = ACCEPTOR_SEQUENCE_NUMBERS_RESET_UPON_RECONNECT_DEFAULT;
     private long histogramPollPeriodInMs =
         Long.getLong(HISTOGRAM_POLL_PERIOD_IN_MS_PROPERTY, DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS);
     private String histogramLoggingFile = null;
@@ -208,28 +206,6 @@ public class CommonConfiguration
     public int defaultHeartbeatIntervalInS()
     {
         return defaultHeartbeatIntervalInS;
-    }
-
-    /**
-     * Configure whether you want the session to reset its sequence number when it reconnects.
-     * The session is determined to be the same if the session id strategy allocates it the same
-     * id.
-     *
-     * @param value true if you want them to reset
-     * @return this configuration object.
-     *
-     * @see uk.co.real_logic.fix_gateway.library.SessionConfiguration#sequenceNumbersPersistent()
-     * @see this#sessionIdStrategy(SessionIdStrategy)
-     */
-    public CommonConfiguration acceptorSequenceNumbersResetUponReconnect(final boolean value)
-    {
-        this.acceptorSequenceNumbersResetUponReconnect = value;
-        return this;
-    }
-
-    public boolean acceptorSequenceNumbersResetUponReconnect()
-    {
-        return acceptorSequenceNumbersResetUponReconnect;
     }
 
     /**
