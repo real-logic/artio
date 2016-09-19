@@ -29,6 +29,8 @@ import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
+// TODO: identify how to improve liveness in the situation that no messages
+// are replicated for a long term once a stream has been replicated.
 class ClusterPositionSender implements Agent, ArchivedPositionHandler
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
