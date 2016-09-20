@@ -17,20 +17,13 @@ package uk.co.real_logic.fix_gateway.system_benchmarks;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.fix_gateway.builder.Printer;
-import uk.co.real_logic.fix_gateway.decoder.PrinterImpl;
 import uk.co.real_logic.fix_gateway.library.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
-import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 public final class BenchmarkSessionHandler implements SessionHandler
 {
-    private final AsciiBuffer flyweight = new MutableAsciiBuffer();
-    private final Printer printer = new PrinterImpl();
-
     public Action onMessage(
         final DirectBuffer buffer,
         final int offset,
@@ -41,9 +34,6 @@ public final class BenchmarkSessionHandler implements SessionHandler
         final long timestampInNs,
         final long position)
     {
-        //flyweight.wrap(buffer);
-        //System.out.printf("Received Message: ");
-        //System.out.println(printer.toString(flyweight, offset, length, messageType));
         return CONTINUE;
     }
 
