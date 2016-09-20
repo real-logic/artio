@@ -52,6 +52,8 @@ public final class ManyConnectionsBenchmarkClient extends AbstractBenchmarkClien
                 write(socketChannel, length);
 
                 read(socketChannel);
+
+                socketChannel.configureBlocking(true);
             }
 
             System.out.printf("Finished Client: %d\n", i + 1);

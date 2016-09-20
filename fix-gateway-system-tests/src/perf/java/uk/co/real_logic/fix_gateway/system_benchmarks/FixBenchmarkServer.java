@@ -72,7 +72,6 @@ public final class FixBenchmarkServer
         }
 
         final EngineConfiguration configuration = new EngineConfiguration();
-        setupAuthentication(configuration);
         return configuration
             .bindTo("localhost", BenchmarkConfiguration.PORT)
             .libraryAeronChannel(AERON_CHANNEL)
