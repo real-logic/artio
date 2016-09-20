@@ -71,7 +71,7 @@ class RetryManager
     // TODO: move to agrona version when 0.5.5 is released
     private static <T> int removeIf(final List<T> values, final Predicate<T> predicate)
     {
-        final int size = values.size();
+        int size = values.size();
         int total = 0;
 
         for (int i = 0; i < size;)
@@ -81,6 +81,7 @@ class RetryManager
             {
                 values.remove(i);
                 total++;
+                size--;
             }
             else
             {
