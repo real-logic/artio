@@ -43,7 +43,7 @@ public final class BenchmarkSessionHandler implements SessionHandler
 
     public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
     {
-        System.out.printf("%d disconnected\n", sessionId);
+        System.out.printf("%d disconnected due to %s\n", sessionId, reason);
 
         return CONTINUE;
     }
