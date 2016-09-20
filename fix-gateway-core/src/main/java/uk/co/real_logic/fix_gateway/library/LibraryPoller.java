@@ -541,7 +541,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             if (subscriber != null)
             {
                 final Action action = subscriber.onDisconnect(libraryId, reason);
-                if (action != ABORT)
+                if (action == ABORT)
+                {
+                    // If we abort the action then we should ensure that it can be processed when
+                    // re-run.
+                    connectionIdToSession.put(connectionId, subscriber);
+                }
+                else
                 {
                     final Session session = subscriber.session();
                     session.close();
