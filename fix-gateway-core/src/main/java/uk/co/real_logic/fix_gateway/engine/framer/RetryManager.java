@@ -20,6 +20,7 @@ import org.agrona.collections.Long2ObjectHashMap;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -64,6 +65,29 @@ class RetryManager
 
     int attemptSteps()
     {
-        return polledTransactions.removeIf(step -> step.attempt() == CONTINUE) ? 1 : 0;
+        return removeIf(polledTransactions, step -> step.attempt() == CONTINUE);
+    }
+
+    // TODO: move to agrona version when 0.5.5 is released
+    private static <T> int removeIf(final List<T> values, final Predicate<T> predicate)
+    {
+        final int size = values.size();
+        int total = 0;
+
+        for (int i = 0; i < size;)
+        {
+            final T value = values.get(i);
+            if (predicate.test(value))
+            {
+                values.remove(i);
+                total++;
+            }
+            else
+            {
+                i++;
+            }
+        }
+
+        return total;
     }
 }

@@ -140,8 +140,9 @@ public class GatewaySessions
     int pollSessions(final long time)
     {
         int eventsProcessed = 0;
-        for (final GatewaySession session : sessions)
+        for (int i = 0, size = sessions.size(); i < size; i++)
         {
+            final GatewaySession session = sessions.get(i);
             eventsProcessed += session.poll(time);
         }
         return eventsProcessed;

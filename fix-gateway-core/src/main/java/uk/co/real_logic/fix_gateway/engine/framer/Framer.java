@@ -283,14 +283,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long position = outboundLibrarySubscription.positionOf(librarySessionId);
         sentSequenceNumberIndex.awaitingIndexingUpTo(librarySessionId, position, idleStrategy);
 
-        for (final GatewaySession session : library.gatewaySessions())
+        final List<GatewaySession> sessions = library.gatewaySessions();
+        for (int i = 0, size = sessions.size(); i < size; i++)
         {
+            final GatewaySession session = sessions.get(i);
             final long sessionId = session.sessionId();
             final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             final boolean hasLoggedIn = receivedSequenceNumber != UNK_SESSION;
             final SessionState state = hasLoggedIn ? ACTIVE : CONNECTED;
-            gatewaySessions.acquire(
+            this.gatewaySessions.acquire(
                 session,
                 state,
                 session.heartbeatIntervalInS(),
