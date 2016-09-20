@@ -534,10 +534,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public Action onDisconnect(
         final int libraryId, final long connectionId, final DisconnectReason reason)
     {
+        DebugLogger.log(FIX_MESSAGE, "%2$d: Library Disconnect %3$d, %1$s\n", reason, libraryId, connectionId);
         if (libraryId == this.libraryId)
         {
             final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
-            DebugLogger.log(FIX_MESSAGE, "Library Disconnect %d, %s\n", connectionId, reason);
             if (subscriber != null)
             {
                 final Action action = subscriber.onDisconnect(libraryId, reason);
@@ -673,7 +673,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 sessionIds.add(sessionsDecoder.sessionId());
             }
 
-            for (int i = 0, size = sessions.size(); i < size; i++)
+            for (int i = 0, size = sessions.size(); i < size; )
             {
                 final Session session = sessions.get(i);
                 final long sessionId = session.id();
@@ -684,6 +684,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     {
                         subscriber.onTimeout(libraryId, sessionId);
                     }
+                    session.close();
+                    sessions.remove(i);
+                    size--;
+                }
+                else
+                {
+                    i++;
                 }
             }
 

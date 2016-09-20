@@ -72,6 +72,8 @@ public final class FixBenchmarkServer
         }
 
         final EngineConfiguration configuration = new EngineConfiguration();
+        // TODO: be able to configure failing authentication
+        // setupAuthentication(configuration);
         return configuration
             .bindTo("localhost", BenchmarkConfiguration.PORT)
             .libraryAeronChannel(AERON_CHANNEL)
