@@ -27,30 +27,30 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 class RetryManager
 {
-    private final Long2ObjectHashMap<Transaction> correlationIdToTransactions = new Long2ObjectHashMap<>();
-    private List<Transaction> polledTransactions = new ArrayList<>();
+    private final Long2ObjectHashMap<UnitOfWork> correlationIdToTransactions = new Long2ObjectHashMap<>();
+    private List<UnitOfWork> polledUnitOfWorks = new ArrayList<>();
 
     Action retry(final long correlationId)
     {
-        final Transaction transaction = correlationIdToTransactions.get(correlationId);
-        if (transaction == null)
+        final UnitOfWork unitOfWork = correlationIdToTransactions.get(correlationId);
+        if (unitOfWork == null)
         {
             return null;
         }
 
-        return attempt(correlationId, transaction);
+        return attempt(correlationId, unitOfWork);
     }
 
-    Action firstAttempt(final long correlationId, final Transaction transaction)
+    Action firstAttempt(final long correlationId, final UnitOfWork unitOfWork)
     {
-        correlationIdToTransactions.put(correlationId, transaction);
+        correlationIdToTransactions.put(correlationId, unitOfWork);
 
-        return attempt(correlationId, transaction);
+        return attempt(correlationId, unitOfWork);
     }
 
-    private Action attempt(final long correlationId, final Transaction transaction)
+    private Action attempt(final long correlationId, final UnitOfWork unitOfWork)
     {
-        final Action action = transaction.attempt();
+        final Action action = unitOfWork.attempt();
         if (action != ABORT)
         {
             correlationIdToTransactions.remove(correlationId);
@@ -58,14 +58,14 @@ class RetryManager
         return action;
     }
 
-    void schedule(final Transaction transaction)
+    void schedule(final UnitOfWork unitOfWork)
     {
-        polledTransactions.add(transaction);
+        polledUnitOfWorks.add(unitOfWork);
     }
 
     int attemptSteps()
     {
-        return removeIf(polledTransactions, step -> step.attempt() == CONTINUE);
+        return removeIf(polledUnitOfWorks, step -> step.attempt() == CONTINUE);
     }
 
     // TODO: move to agrona version when 0.5.5 is released

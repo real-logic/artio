@@ -24,18 +24,18 @@ import java.util.List;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-class Transaction
+class UnitOfWork
 {
     private final List<Continuation> continuationList;
 
     private int index = 0;
 
-    Transaction(final Continuation... continuations)
+    UnitOfWork(final Continuation... continuations)
     {
         this(Arrays.asList(continuations));
     }
 
-    Transaction(final List<Continuation> continuationList)
+    UnitOfWork(final List<Continuation> continuationList)
     {
         this.continuationList = continuationList;
     }

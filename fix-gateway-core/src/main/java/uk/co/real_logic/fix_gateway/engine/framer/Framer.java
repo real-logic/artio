@@ -272,7 +272,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private void saveLibraryTimeout(final LibraryInfo library)
     {
         final int libraryId = library.libraryId();
-        schedule(new Transaction(() ->
+        schedule(new UnitOfWork(() ->
             inboundPublication.saveLibraryTimeout(libraryId, 0)));
     }
 
@@ -437,7 +437,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             session.onLogon(sessionId, sessionKey, username, password, heartbeatIntervalInS);
 
-            final Transaction transaction = new Transaction(
+            final UnitOfWork unitOfWork = new UnitOfWork(
                 () -> inboundPublication.saveManageConnection(
                     connectionId, sessionId, address.toString(), libraryId, INITIATOR,
                     lastSentSequenceNumber, lastReceivedSequenceNumber, CONNECTED, heartbeatIntervalInS, correlationId),
@@ -448,7 +448,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     username, password, LogonStatus.NEW)
             );
 
-            return retryManager.firstAttempt(correlationId, transaction);
+            return retryManager.firstAttempt(correlationId, unitOfWork);
         }
         catch (final Exception e)
         {
@@ -610,7 +610,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LibraryInfo library = new LibraryInfo(libraryId, livenessDetector, aeronSessionId);
         idToLibrary.put(libraryId, library);
 
-        final Transaction transaction = new Transaction(
+        final UnitOfWork unitOfWork = new UnitOfWork(
             gatewaySessions
                 .sessions()
                 .stream()
@@ -619,7 +619,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         saveLogon(libraryId, gatewaySession, UNK_SESSION, UNK_SESSION, LIBRARY_NOTIFICATION))
                 .collect(Collectors.toList()));
 
-        return retryManager.firstAttempt(correlationId, transaction);
+        return retryManager.firstAttempt(correlationId, unitOfWork);
     }
 
     public Action onApplicationHeartbeat(final int libraryId)
@@ -738,7 +738,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySession,
             lastRecvSeqNum);
 
-        return retryManager.firstAttempt(correlationId, new Transaction(continuations));
+        return retryManager.firstAttempt(correlationId, new UnitOfWork(continuations));
     }
 
     private long saveLogon(final int libraryId,
@@ -852,7 +852,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     void onResetSessionIds(final File backupLocation, final ResetSessionIdsCommand command)
     {
         schedule(
-            new Transaction(
+            new UnitOfWork(
                 inboundPublication::saveResetSessionIds,
                 outboundPublication::saveResetSessionIds,
                 () ->
@@ -907,11 +907,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return "Framer " + configuration.nodeId();
     }
 
-    void schedule(final Transaction transaction)
+    void schedule(final UnitOfWork unitOfWork)
     {
-        if (transaction.attempt() != CONTINUE)
+        if (unitOfWork.attempt() != CONTINUE)
         {
-            retryManager.schedule(transaction);
+            retryManager.schedule(unitOfWork);
         }
     }
 }
