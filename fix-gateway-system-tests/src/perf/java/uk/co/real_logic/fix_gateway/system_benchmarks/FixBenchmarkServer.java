@@ -34,8 +34,6 @@ public final class FixBenchmarkServer
 {
     public static void main(String[] args)
     {
-        System.out.println(BenchmarkConfiguration.REJECT_LOGON);
-
         final EngineConfiguration configuration = engineConfiguration();
 
         try (final MediaDriver mediaDriver = newMediaDriver();
