@@ -700,6 +700,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_SESSION, correlationId));
         }
 
+        if (gatewaySession.session().state() != ACTIVE)
+        {
+            return Pressure.apply(
+                inboundPublication.saveRequestSessionReply(SESSION_NOT_LOGGED_IN, correlationId));
+        }
+
         final Action action = retryManager.retry(correlationId);
         if (action != null)
         {
@@ -780,17 +786,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final GatewaySession session,
         final int lastReceivedSeqNum)
     {
-
         if (replayFromSequenceNumber != NO_MESSAGE_REPLAY)
         {
             final long sessionId = session.sessionId();
-            if (sessionId == Session.UNKNOWN)
-            {
-                continuations.add(() ->
-                    inboundPublication.saveRequestSessionReply(SESSION_NOT_LOGGED_IN, correlationId));
-                return;
-            }
-
             final int expectedNumberOfMessages = lastReceivedSeqNum - replayFromSequenceNumber;
             if (expectedNumberOfMessages < 0)
             {
