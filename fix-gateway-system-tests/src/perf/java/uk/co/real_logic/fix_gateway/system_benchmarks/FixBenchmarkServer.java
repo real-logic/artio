@@ -24,11 +24,8 @@ import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.AcquiringSessionExistsHandler;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
-import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
 import java.io.File;
-import java.util.Arrays;
 
 import static java.util.Collections.singletonList;
 import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.*;
@@ -37,6 +34,8 @@ public final class FixBenchmarkServer
 {
     public static void main(String[] args)
     {
+        System.out.println(BenchmarkConfiguration.REJECT_LOGON);
+
         final EngineConfiguration configuration = engineConfiguration();
 
         try (final MediaDriver mediaDriver = newMediaDriver();
@@ -72,8 +71,7 @@ public final class FixBenchmarkServer
         }
 
         final EngineConfiguration configuration = new EngineConfiguration();
-        // TODO: be able to configure failing authentication
-        // setupAuthentication(configuration);
+        setupAuthentication(configuration);
         return configuration
             .bindTo("localhost", BenchmarkConfiguration.PORT)
             .libraryAeronChannel(AERON_CHANNEL)
@@ -95,13 +93,7 @@ public final class FixBenchmarkServer
 
     private static void setupAuthentication(final CommonConfiguration configuration)
     {
-        final MessageValidationStrategy validationStrategy =
-            MessageValidationStrategy.targetCompId(ACCEPTOR_ID)
-                .and(MessageValidationStrategy.senderCompId(Arrays.asList(INITIATOR_ID)));
-
-        final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
-
-        configuration.authenticationStrategy(authenticationStrategy);
+        configuration.authenticationStrategy(logon -> !REJECT_LOGON);
     }
 
 }
