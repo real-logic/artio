@@ -17,10 +17,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import io.aeron.driver.MediaDriver;
 import org.junit.After;
-import org.junit.experimental.theories.DataPoint;
-import org.junit.experimental.theories.Theories;
-import org.junit.experimental.theories.Theory;
-import org.junit.runner.RunWith;
+import org.junit.Test;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.decoder.LogoutDecoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -36,7 +33,6 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.LOCAL_ARCHIVE;
 import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATED;
 
-@RunWith(Theories.class)
 public class MessageBasedSystemTest
 {
     private int port = unusedPort();
@@ -49,13 +45,21 @@ public class MessageBasedSystemTest
     // < [8=FIX.4.4|9=0079|35=A|49=acceptor|56=initiator|34=1|52=20160825-10:24:57.920|98=0|108=30|141=N|10=013]
     // < [8=FIX.4.4|9=0070|35=2|49=acceptor|56=initiator|34=3|52=20160825-10:25:27.766|7=1|16=0|10=061]
 
-    @DataPoint
-    public static boolean on = true;
-    @DataPoint
-    public static boolean off = false;
+    @Test
+    public void shouldComplyWIthLogonBasedSequenceNumberResetOn()
+        throws IOException
+    {
+        shouldComplyWIthLogonBasedSequenceNumberReset(true);
+    }
 
-    @Theory
-    public void shouldComplyWIthLogonBasedSequenceNumberReset(final boolean sequenceNumberReset)
+    @Test
+    public void shouldComplyWIthLogonBasedSequenceNumberResetOff()
+        throws IOException
+    {
+        shouldComplyWIthLogonBasedSequenceNumberReset(false);
+    }
+
+    private void shouldComplyWIthLogonBasedSequenceNumberReset(final boolean sequenceNumberReset)
         throws IOException
     {
         setup(sequenceNumberReset);
