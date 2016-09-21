@@ -124,7 +124,7 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
 
     public long awaitSessionId(final Runnable poller)
     {
-        while (!hasSession())
+        while (!hasSeenSession())
         {
             poller.run();
         }
@@ -132,7 +132,7 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
         return lastSessionId().sessionId();
     }
 
-    private boolean hasSession()
+    public boolean hasSeenSession()
     {
         return !completeSessionIds.isEmpty();
     }

@@ -22,9 +22,11 @@ import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.decoder.LogoutDecoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.library.FixLibrary;
 
 import java.io.IOException;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.agrona.CloseHelper.close;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -69,6 +71,29 @@ public class MessageBasedSystemTest
         logonThenLogout();
     }
 
+    @Test
+    public void shouldNotNotifyLibraryOfSessionUntilLoggedOn() throws IOException
+    {
+        setup(true);
+
+        final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
+        final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
+        final FixLibrary library = FixLibrary.connect(
+            acceptingLibraryConfig(fakeHandler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL));
+
+        final FixConnection connection = new FixConnection(port);
+
+        library.poll(10);
+
+        assertFalse(fakeHandler.hasSeenSession());
+
+        logon(connection);
+
+        fakeHandler.awaitSessionIdFor(INITIATOR_ID, ACCEPTOR_ID, () -> library.poll(2));
+
+        connection.close();
+    }
+
     private void setup(final boolean sequenceNumberReset)
     {
         mediaDriver = launchMediaDriver();
@@ -76,7 +101,7 @@ public class MessageBasedSystemTest
         delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = new EngineConfiguration()
             .bindTo("localhost", port)
-            .libraryAeronChannel("aeron:ipc")
+            .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(ACCEPTOR_LOGS)
             .sessionPersistenceStrategy(logon -> sequenceNumberReset ? LOCAL_ARCHIVE : REPLICATED);
@@ -87,15 +112,25 @@ public class MessageBasedSystemTest
     {
         final FixConnection connection = new FixConnection(port);
 
-        connection.logon(System.currentTimeMillis());
+        logon(connection);
 
-        readLogonReply(connection);
+        logout(connection);
 
+        connection.close();
+    }
+
+    private void logout(final FixConnection connection)
+    {
         connection.logout();
 
         readLogoutReply(connection);
+    }
 
-        connection.close();
+    private void logon(final FixConnection connection)
+    {
+        connection.logon(System.currentTimeMillis());
+
+        readLogonReply(connection);
     }
 
     private void readLogoutReply(final FixConnection connection)
