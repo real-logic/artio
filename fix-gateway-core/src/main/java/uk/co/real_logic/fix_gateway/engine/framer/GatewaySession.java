@@ -123,7 +123,7 @@ class GatewaySession implements SessionInfo
             return 1;
         }
 
-        if (disconnectTimeout <= time)
+        if (disconnectTimeout <= time && !receiverEndPoint.hasDisconnected())
         {
             receiverEndPoint.onNoLogonDisconnect();
             return 1;

@@ -103,7 +103,7 @@ public final class LibraryInfo
 
     GatewaySession removeSession(final long connectionId)
     {
-        return GatewaySessions.removeSessionByConn(connectionId, allSessions);
+        return GatewaySessions.removeSessionByConnectionId(connectionId, allSessions);
     }
 
     void onReconnect(final long timeInMs)

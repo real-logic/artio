@@ -101,7 +101,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE = 8 * 1024 * 1024;
     public static final int DEFAULT_SESSION_ID_BUFFER_SIZE = 4 * 1024 * 1024;
     public static final int DEFAULT_SENDER_MAX_BYTES_IN_BUFFER = 1024 * 1024;
-    public static final int DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT = (int) SECONDS.toMillis(30);
+    public static final int DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT = (int) SECONDS.toMillis(5);
     public static final int DEFAULT_CLUSTER_TIMEOUT_IN_MS = 1000;
     public static final String DEFAULT_SESSION_ID_FILE = "session_id_buffer";
     public static final String DEFAULT_SEQUENCE_NUMBERS_SENT_FILE = "sequence_numbers_sent";

@@ -563,7 +563,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
         else
         {
-            gatewaySessions.release(connectionId);
+            gatewaySessions.releaseByConnectionId(connectionId);
         }
 
         return CONTINUE;
@@ -693,7 +693,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_LIBRARY, correlationId));
         }
 
-        final GatewaySession gatewaySession = gatewaySessions.release(sessionId);
+        final GatewaySession gatewaySession = gatewaySessions.releaseBySessionId(sessionId);
         if (gatewaySession == null)
         {
             return Pressure.apply(

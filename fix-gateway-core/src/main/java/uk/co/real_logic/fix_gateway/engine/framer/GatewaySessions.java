@@ -132,13 +132,20 @@ public class GatewaySessions
         }
     }
 
-    GatewaySession release(final long sessionId)
+    GatewaySession releaseBySessionId(final long sessionId)
     {
-        return removeSession(sessionId, sessions);
+        return removeSessionById(sessionId, sessions);
+    }
+
+    GatewaySession releaseByConnectionId(final long connectionId)
+    {
+        return removeSessionByConnectionId(connectionId, sessions);
     }
 
     int pollSessions(final long time)
     {
+        final List<GatewaySession> sessions = this.sessions;
+
         int eventsProcessed = 0;
         for (int i = 0, size = sessions.size(); i < size; i++)
         {
@@ -153,7 +160,7 @@ public class GatewaySessions
         return sessions;
     }
 
-    static GatewaySession removeSessionByConn(final long connectionId, final List<GatewaySession> sessions)
+    static GatewaySession removeSessionByConnectionId(final long connectionId, final List<GatewaySession> sessions)
     {
         for (int i = 0, size = sessions.size(); i < size; i++)
         {
@@ -168,7 +175,7 @@ public class GatewaySessions
         return null;
     }
 
-    private static GatewaySession removeSession(final long sessionId, final List<GatewaySession> sessions)
+    private static GatewaySession removeSessionById(final long sessionId, final List<GatewaySession> sessions)
     {
         for (int i = 0, size = sessions.size(); i < size; i++)
         {
