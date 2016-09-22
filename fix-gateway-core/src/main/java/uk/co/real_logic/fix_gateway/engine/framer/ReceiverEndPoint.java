@@ -333,6 +333,7 @@ class ReceiverEndPoint
                     return true;
                 }
                 close(DisconnectReason.DUPLICATE_SESSION);
+                removeEndpointFromFramer();
             }
             else
             {
