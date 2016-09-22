@@ -272,8 +272,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private void saveLibraryTimeout(final LibraryInfo library)
     {
         final int libraryId = library.libraryId();
-        schedule(new UnitOfWork(() ->
-            inboundPublication.saveLibraryTimeout(libraryId, 0)));
+        schedule(() -> inboundPublication.saveLibraryTimeout(libraryId, 0));
     }
 
     private void acquireLibrarySessions(final LibraryInfo library)
@@ -905,11 +904,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return "Framer " + configuration.nodeId();
     }
 
-    void schedule(final UnitOfWork unitOfWork)
+    void schedule(final Continuation continuation)
     {
-        if (unitOfWork.attempt() != CONTINUE)
+        if (continuation.attemptToAction() != CONTINUE)
         {
-            retryManager.schedule(unitOfWork);
+            retryManager.schedule(continuation);
         }
     }
 }

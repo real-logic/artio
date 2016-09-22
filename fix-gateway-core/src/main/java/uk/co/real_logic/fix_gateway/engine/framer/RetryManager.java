@@ -28,7 +28,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 class RetryManager
 {
     private final Long2ObjectHashMap<UnitOfWork> correlationIdToTransactions = new Long2ObjectHashMap<>();
-    private List<UnitOfWork> polledUnitOfWorks = new ArrayList<>();
+    private List<Continuation> polledUnitOfWorks = new ArrayList<>();
 
     Action retry(final long correlationId)
     {
@@ -50,7 +50,7 @@ class RetryManager
 
     private Action attempt(final long correlationId, final UnitOfWork unitOfWork)
     {
-        final Action action = unitOfWork.attempt();
+        final Action action = unitOfWork.attemptToAction();
         if (action != ABORT)
         {
             correlationIdToTransactions.remove(correlationId);
@@ -58,14 +58,14 @@ class RetryManager
         return action;
     }
 
-    void schedule(final UnitOfWork unitOfWork)
+    void schedule(final Continuation unitOfWork)
     {
         polledUnitOfWorks.add(unitOfWork);
     }
 
     int attemptSteps()
     {
-        return removeIf(polledUnitOfWorks, step -> step.attempt() == CONTINUE);
+        return removeIf(polledUnitOfWorks, step -> step.attemptToAction() == CONTINUE);
     }
 
     // TODO: move to agrona version when 0.5.5 is released

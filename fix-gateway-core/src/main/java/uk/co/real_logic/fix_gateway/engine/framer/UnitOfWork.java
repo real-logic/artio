@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import uk.co.real_logic.fix_gateway.Pressure;
 
 import java.util.Arrays;
 import java.util.List;
@@ -24,7 +23,7 @@ import java.util.List;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-class UnitOfWork
+class UnitOfWork implements Continuation
 {
     private final List<Continuation> continuationList;
 
@@ -40,12 +39,12 @@ class UnitOfWork
         this.continuationList = continuationList;
     }
 
-    Action attempt()
+    public Action attemptToAction()
     {
         for (final int size = continuationList.size(); index < size; index++)
         {
             final Continuation continuation = continuationList.get(index);
-            final Action action = Pressure.apply(continuation.attempt());
+            final Action action = continuation.attemptToAction();
 
             if (action == ABORT)
             {
@@ -54,5 +53,10 @@ class UnitOfWork
         }
 
         return CONTINUE;
+    }
+
+    public long attempt()
+    {
+        return 0;
     }
 }

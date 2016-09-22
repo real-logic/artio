@@ -15,9 +15,18 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import uk.co.real_logic.fix_gateway.Pressure;
+
+@FunctionalInterface
 interface Continuation
 {
     long COMPLETE = 1;
 
     long attempt();
+
+    default Action attemptToAction()
+    {
+        return Pressure.apply(attempt());
+    }
 }
