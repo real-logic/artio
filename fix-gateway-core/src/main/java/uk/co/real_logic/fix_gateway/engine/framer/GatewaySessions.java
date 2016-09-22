@@ -134,7 +134,19 @@ public class GatewaySessions
 
     GatewaySession releaseBySessionId(final long sessionId)
     {
-        return removeSessionById(sessionId, sessions);
+        final List<GatewaySession> sessions = this.sessions;
+
+        for (int i = 0, size = sessions.size(); i < size; i++)
+        {
+            final GatewaySession session = sessions.get(i);
+            if (session.sessionId() == sessionId)
+            {
+                sessions.remove(i);
+                return session;
+            }
+        }
+
+        return null;
     }
 
     GatewaySession releaseByConnectionId(final long connectionId)
@@ -175,18 +187,4 @@ public class GatewaySessions
         return null;
     }
 
-    private static GatewaySession removeSessionById(final long sessionId, final List<GatewaySession> sessions)
-    {
-        for (int i = 0, size = sessions.size(); i < size; i++)
-        {
-            final GatewaySession session = sessions.get(i);
-            if (session.sessionId() == sessionId)
-            {
-                sessions.remove(i);
-                return session;
-            }
-        }
-
-        return null;
-    }
 }
