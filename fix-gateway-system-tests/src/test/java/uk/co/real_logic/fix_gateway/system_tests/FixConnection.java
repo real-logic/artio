@@ -31,7 +31,7 @@ import static uk.co.real_logic.fix_gateway.LogTag.FIX_TEST;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.ACCEPTOR_ID;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.INITIATOR_ID;
 
-class FixConnection
+class FixConnection implements AutoCloseable
 {
     private static final int BUFFER_SIZE = 8 * 1024;
     private static final int OFFSET = 0;
@@ -42,6 +42,7 @@ class FixConnection
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
     private final LogonEncoder logon = new LogonEncoder();
     private final LogoutEncoder logout = new LogoutEncoder();
+    private final HeartbeatEncoder heartbeatEncoder = new HeartbeatEncoder();
 
     private final SocketChannel socket;
 
@@ -58,9 +59,17 @@ class FixConnection
 
         logon.resetSeqNumFlag(true)
              .encryptMethod(0)
-             .heartBtInt(30);
+             .heartBtInt(30)
+             .maxMessageSize(9999);
 
         send(logon);
+    }
+
+    void heartbeat(final long timestamp)
+    {
+        setupHeader(heartbeatEncoder.header(), timestamp);
+
+        send(heartbeatEncoder);
     }
 
     void logout()
@@ -103,6 +112,7 @@ class FixConnection
         try
         {
             final int length = encoder.encode(writeAsciiBuffer, OFFSET);
+            encoder.reset();
             writeBuffer.position(OFFSET).limit(length);
             final int written = socket.write(writeBuffer);
             assertEquals(length, written);
