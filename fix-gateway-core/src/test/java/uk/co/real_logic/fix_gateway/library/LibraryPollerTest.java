@@ -123,11 +123,7 @@ public class LibraryPollerTest
     {
         connect();
 
-        advanceBeyondReplyTimeout();
-
-        library.poll(1);
-
-        assertFalse("Library failed to timeout", library.isConnected());
+        disconnectDueToTimeout();
     }
 
     @Test
@@ -135,16 +131,25 @@ public class LibraryPollerTest
     {
         shouldDisconnectAfterTimeout();
 
-        receiveOneApplicationHeartbeat();
-
-        library.poll(1);
-
-        assertTrue("Library still timed out", library.isConnected());
+        reconnectAfterTimeout();
     }
 
-    private void advanceBeyondReplyTimeout()
+    @Test
+    public void shouldRepeatedlyReconnectAfterTimeoutOnHeartbeat()
     {
-        clock.advanceMilliSeconds(DEFAULT_REPLY_TIMEOUT_IN_MS + 1);
+        shouldReconnectAfterTimeoutOnHeartbeat();
+
+        disconnectDueToTimeout();
+
+        reconnectAfterTimeout();
+
+        disconnectDueToTimeout();
+
+        reconnectAfterTimeout();
+
+        disconnectDueToTimeout();
+
+        reconnectAfterTimeout();
     }
 
     @Test
@@ -163,6 +168,29 @@ public class LibraryPollerTest
     public void shouldNotAttemptAnotherEngineWithDifferentConnectCorrelation()
     {
         shouldReplyToOnNotLeaderWith(this::libraryId, () -> 0, FIRST_CHANNEL);
+    }
+
+    private void disconnectDueToTimeout()
+    {
+        advanceBeyondReplyTimeout();
+
+        library.poll(1);
+
+        assertFalse("Library failed to timeout", library.isConnected());
+    }
+
+    private void reconnectAfterTimeout()
+    {
+        receiveOneApplicationHeartbeat();
+
+        library.poll(1);
+
+        assertTrue("Library still timed out", library.isConnected());
+    }
+
+    private void advanceBeyondReplyTimeout()
+    {
+        clock.advanceMilliSeconds(DEFAULT_REPLY_TIMEOUT_IN_MS + 1);
     }
 
     private int libraryId()
