@@ -365,7 +365,8 @@ public class Session implements AutoCloseable
     {
         if (!canSendMessage())
         {
-            throw new IllegalStateException("Session isn't active, and thus can't send a message");
+            throw new IllegalStateException(
+                String.format("Session isn't active it's %s, and thus can't send a message", state));
         }
 
         final int sentSeqNum = newSentSeqNum();
