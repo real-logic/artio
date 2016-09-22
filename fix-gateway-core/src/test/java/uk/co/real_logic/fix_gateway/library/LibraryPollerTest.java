@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
-import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Before;
@@ -25,6 +24,7 @@ import org.mockito.InOrder;
 import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.OngoingStubbing;
 import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
 import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
@@ -38,11 +38,14 @@ import java.util.function.LongSupplier;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
@@ -74,6 +77,7 @@ public class LibraryPollerTest
     private FixLibrary fixLibrary = mock(FixLibrary.class);
     private UnsafeBuffer address = new UnsafeBuffer(new byte[1024]);
     private int addressLength = address.putStringUtf8(0, "localhost:1234");
+    private FakeEpochClock clock = new FakeEpochClock();
 
     private LibraryPoller library;
 
@@ -112,6 +116,35 @@ public class LibraryPollerTest
         library.onControlNotification(libraryId(), hasOtherSessionId());
 
         verify(sessionHandler).onTimeout(libraryId(), SESSION_ID);
+    }
+
+    @Test
+    public void shouldDisconnectAfterTimeout()
+    {
+        connect();
+
+        advanceBeyondReplyTimeout();
+
+        library.poll(1);
+
+        assertFalse("Library failed to timeout", library.isConnected());
+    }
+
+    @Test
+    public void shouldReconnectAfterTimeoutOnHeartbeat()
+    {
+        shouldDisconnectAfterTimeout();
+
+        receiveOneApplicationHeartbeat();
+
+        library.poll(1);
+
+        assertTrue("Library still timed out", library.isConnected());
+    }
+
+    private void advanceBeyondReplyTimeout()
+    {
+        clock.advanceMilliSeconds(DEFAULT_REPLY_TIMEOUT_IN_MS + 1);
     }
 
     @Test
@@ -180,11 +213,18 @@ public class LibraryPollerTest
 
     private void connect()
     {
-        whenPolled().then(replyWithApplicationHeartbeat()).then(noReply());
+        receiveOneApplicationHeartbeat();
 
         newLibraryPoller(singletonList(IPC_CHANNEL));
 
         library.connect();
+    }
+
+    private void receiveOneApplicationHeartbeat()
+    {
+        whenPolled()
+            .then(replyWithApplicationHeartbeat())
+            .then(noReply());
     }
 
     private Answer<Integer> replyWithApplicationHeartbeat()
@@ -212,7 +252,7 @@ public class LibraryPollerTest
             counters,
             transport,
             fixLibrary,
-            new SystemEpochClock());
+            clock);
     }
 
     private OngoingStubbing<Integer> whenPolled()

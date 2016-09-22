@@ -110,7 +110,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final FixCounters fixCounters,
         final LibraryTransport transport,
         final FixLibrary fixLibrary,
-        final SystemEpochClock clock)
+        final EpochClock clock)
     {
         this.libraryId = configuration.libraryId();
         this.fixCounters = fixCounters;

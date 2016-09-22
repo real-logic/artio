@@ -145,8 +145,8 @@ public class CommonConfiguration
     public static final long DEFAULT_SENDING_TIME_WINDOW = MINUTES.toMillis(2);
     public static final int DEFAULT_HEARTBEAT_INTERVAL_IN_S = 10;
 
-    private static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
-    private static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
+    public static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
+    public static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
     public static final long DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS = MINUTES.toMillis(1);
 
     private boolean printErrorMessages = true;
