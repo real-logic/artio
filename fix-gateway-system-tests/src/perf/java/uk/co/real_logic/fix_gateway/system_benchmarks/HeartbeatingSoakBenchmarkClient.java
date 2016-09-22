@@ -15,48 +15,42 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
-import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+import uk.co.real_logic.fix_gateway.builder.HeartbeatEncoder;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
 import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.INITIATOR_ID;
 
-public final class ManyConnectionsBenchmarkClient extends AbstractBenchmarkClient
+public final class HeartbeatingSoakBenchmarkClient extends AbstractBenchmarkClient
 {
 
     public static void main(String[] args) throws IOException
     {
-        new ManyConnectionsBenchmarkClient().runBenchmark();
+        new HeartbeatingSoakBenchmarkClient().runBenchmark();
     }
-
-    public static final int NUMBER_OF_CLIENTS = 10_000;
 
     public void runBenchmark() throws IOException
     {
-        for (int i = 0; i < NUMBER_OF_CLIENTS; i++)
+        final String initiatorId = INITIATOR_ID;
+        final HeartbeatEncoder heartbeat = new HeartbeatEncoder();
+
+        try (final SocketChannel socketChannel = open())
         {
-            final String initiatorId = INITIATOR_ID + i;
+            logon(socketChannel, initiatorId, 1);
 
-            try (final SocketChannel socketChannel = open())
+            setupHeader(initiatorId, heartbeat.header());
+
+            for (int seqNum = 2; true; seqNum++)
             {
-                logon(socketChannel, initiatorId, 10);
+                read(socketChannel);
 
-                final TestRequestEncoder testRequest = setupTestRequest(initiatorId);
-                testRequest.header().msgSeqNum(3);
-
-                timestampEncoder.encode(System.currentTimeMillis());
-
-                final int length = testRequest.encode(writeFlyweight, 0);
+                final int length = encode(heartbeat, heartbeat.header(), seqNum);
 
                 write(socketChannel, length);
 
-                read(socketChannel);
-
-                socketChannel.configureBlocking(true);
+                System.out.println("Sent " + seqNum);
             }
-
-            System.out.printf("Finished Client: %d\n", i + 1);
         }
     }
 

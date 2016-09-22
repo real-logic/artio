@@ -2,6 +2,7 @@ package uk.co.real_logic.fix_gateway.system_benchmarks;
 
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
+import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
@@ -43,30 +44,23 @@ public abstract class AbstractBenchmarkClient
     protected TestRequestEncoder setupTestRequest(final String initiatorId)
     {
         final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest
-            .header()
-            .sendingTime(timestampEncoder.buffer())
-            .senderCompID(initiatorId)
-            .targetCompID(ACCEPTOR_ID);
+        setupHeader(initiatorId, testRequest.header());
         testRequest.testReqID("a");
         return testRequest;
     }
 
     protected void logon(final SocketChannel socketChannel) throws IOException
     {
-        final LogonDecoder logonDecoder = logon(socketChannel, INITIATOR_ID);
+        final LogonDecoder logonDecoder = logon(socketChannel, INITIATOR_ID, 10);
         System.out.println("Authenticated: " + logonDecoder);
     }
 
-    protected LogonDecoder logon(final SocketChannel socketChannel, final String initiatorId) throws IOException
+    protected LogonDecoder logon(final SocketChannel socketChannel, final String initiatorId, final int heartBtInt)
+        throws IOException
     {
         final LogonEncoder logon = new LogonEncoder();
-        logon.heartBtInt(10);
-        logon
-            .header()
-            .sendingTime(timestampEncoder.buffer())
-            .senderCompID(initiatorId)
-            .targetCompID(ACCEPTOR_ID)
+        logon.heartBtInt(heartBtInt);
+        setupHeader(initiatorId, logon.header())
             .msgSeqNum(1);
 
         timestampEncoder.encode(System.currentTimeMillis());
@@ -77,6 +71,14 @@ public abstract class AbstractBenchmarkClient
         final LogonDecoder logonDecoder = new LogonDecoder();
         logonDecoder.decode(readFlyweight, 0, length);
         return logonDecoder;
+    }
+
+    protected HeaderEncoder setupHeader(final String initiatorId, final HeaderEncoder header)
+    {
+        return header
+            .sendingTime(timestampEncoder.buffer())
+            .senderCompID(initiatorId)
+            .targetCompID(ACCEPTOR_ID);
     }
 
     protected void write(final SocketChannel socketChannel, final int amount) throws IOException
@@ -175,7 +177,7 @@ public abstract class AbstractBenchmarkClient
         return readFlyweight.getChar(index) == '\001';
     }
 
-    protected int encode(final TestRequestEncoder testRequest, final HeaderEncoder header, final int seqNum)
+    protected int encode(final MessageEncoder testRequest, final HeaderEncoder header, final int seqNum)
     {
         header.msgSeqNum(seqNum);
         timestampEncoder.encode(System.currentTimeMillis());

@@ -20,8 +20,6 @@ import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.INITIATOR_ID;
-
 public final class RepeatConnectionBenchmarkClient extends AbstractBenchmarkClient
 {
 
@@ -36,13 +34,11 @@ public final class RepeatConnectionBenchmarkClient extends AbstractBenchmarkClie
     {
         for (int i = 0; i < NUMBER_OF_CONNECTIONS; i++)
         {
-            final String initiatorId = INITIATOR_ID;
-
             try (final SocketChannel socketChannel = open())
             {
-                logon(socketChannel, initiatorId);
+                logon(socketChannel);
 
-                final TestRequestEncoder testRequest = setupTestRequest(initiatorId);
+                final TestRequestEncoder testRequest = setupTestRequest();
                 testRequest.header().msgSeqNum(3);
 
                 timestampEncoder.encode(System.currentTimeMillis());
