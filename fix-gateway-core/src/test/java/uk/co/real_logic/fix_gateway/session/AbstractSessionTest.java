@@ -54,6 +54,7 @@ public abstract class AbstractSessionTest
     static final int LIBRARY_ID = 4;
 
     private static final byte[] MSG_TYPE_BYTES = "D".getBytes(US_ASCII);
+
     static final long POSITION = 1024;
 
     SessionProxy mockProxy = mock(SessionProxy.class);
@@ -290,10 +291,37 @@ public abstract class AbstractSessionTest
     {
         session().id(SESSION_ID);
 
-        session().onSequenceReset(3, 4, true, false);
-        onMessage(3);
+        onSequenceReset();
 
         verify(mockProxy).resendRequest(1, 1, 0);
+    }
+
+    @Test
+    public void shouldResendRequestForUnexpectedGapFillWhenBackPressured()
+    {
+        backPressureResendRequest();
+
+        session().id(SESSION_ID);
+
+        session().lastSentMsgSeqNum(70);
+        assertEquals(ABORT, onSequenceReset());
+        assertEquals(CONTINUE, onSequenceReset());
+
+        assertEquals(71, session().lastSentMsgSeqNum());
+        assertEquals(3, session().lastReceivedMsgSeqNum());
+
+        verify(mockProxy, times(2)).resendRequest(71, 1, 0);
+    }
+
+    private Action onSequenceReset()
+    {
+        return session().onSequenceReset(3, 4, true, false);
+    }
+
+    private void backPressureResendRequest()
+    {
+        when(mockProxy.resendRequest(anyInt(), anyInt(), anyInt()))
+            .thenReturn(BACK_PRESSURED, POSITION);
     }
 
     @Test

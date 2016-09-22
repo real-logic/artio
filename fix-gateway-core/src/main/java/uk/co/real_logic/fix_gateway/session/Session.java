@@ -610,7 +610,7 @@ public class Session implements AutoCloseable
                 if ((sendingTime < time - sendingTimeWindowInMs) || (sendingTime > time + sendingTimeWindowInMs))
                 {
                     final Action action = rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
-                    if (action != BREAK)
+                    if (action != ABORT)
                     {
                         logoutAndDisconnect(INVALID_SENDING_TIME);
                     }
@@ -945,7 +945,7 @@ public class Session implements AutoCloseable
         if (receivedMsgSeqNo > expectedMsgSeqNo)
         {
             final Action action = checkPosition(proxy.resendRequest(newSentSeqNum(), expectedMsgSeqNo, 0));
-            if (action != BREAK)
+            if (action != ABORT)
             {
                 lastReceivedMsgSeqNum(newSeqNo - 1);
             }
