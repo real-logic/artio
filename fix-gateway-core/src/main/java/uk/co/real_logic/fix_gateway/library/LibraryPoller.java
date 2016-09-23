@@ -26,10 +26,7 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.FixCounters;
-import uk.co.real_logic.fix_gateway.FixGatewayException;
-import uk.co.real_logic.fix_gateway.LivenessDetector;
+import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -581,10 +578,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onApplicationHeartbeat(final int libraryId)
     {
-        //System.out.println("HEARTBEAT libraryId = " + libraryId);
         if (libraryId == this.libraryId)
         {
-            livenessDetector.onHeartbeat(clock.time());
+            final long timeInMs = clock.time();
+            DebugLogger.log(
+                LIBRARY_CONNECT, "%d: Received Heartbeat from engine at timeInMs %d\n", libraryId, timeInMs);
+            livenessDetector.onHeartbeat(timeInMs);
         }
 
         return CONTINUE;

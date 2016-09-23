@@ -27,6 +27,7 @@ import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.QueuedPipe;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -61,6 +62,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.LogTag.LIBRARY_CONNECT;
 import static uk.co.real_logic.fix_gateway.Pressure.isBackPressured;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
@@ -627,6 +629,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (library != null)
         {
             final long timeInMs = clock.time();
+            DebugLogger.log(
+                LIBRARY_CONNECT, "Received Heartbeat from library %d at timeInMs %d\n", libraryId, timeInMs);
             library.onHeartbeat(timeInMs);
         }
 
