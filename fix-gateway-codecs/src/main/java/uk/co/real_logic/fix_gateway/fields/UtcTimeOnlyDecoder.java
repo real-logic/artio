@@ -60,7 +60,7 @@ public final class UtcTimeOnlyDecoder
         final int minute = getValidInt(time, startMinute, endMinute, 0, 59);
         final int second = getValidInt(time, startSecond, endSecond, 0, 60);
         final int millisecond;
-        if (length > endSecond && time.isDigit(startMillisecond))
+        if (offset + length > endSecond && time.isDigit(startMillisecond))
         {
             millisecond = time.getNatural(startMillisecond, endMillisecond);
         }
