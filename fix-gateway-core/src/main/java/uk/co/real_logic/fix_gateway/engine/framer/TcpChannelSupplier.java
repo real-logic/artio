@@ -25,6 +25,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
+import java.util.Set;
 
 import static java.net.StandardSocketOptions.SO_RCVBUF;
 import static java.net.StandardSocketOptions.SO_SNDBUF;
@@ -74,24 +75,29 @@ public class TcpChannelSupplier implements AutoCloseable
             return 0;
         }
 
-        final int newConnections = selector.selectNow();
-        if (newConnections > 0)
+        selector.selectNow();
+        final Set<SelectionKey> selectionKeys = selector.selectedKeys();
+        final int unprocessedConnections = selectionKeys.size();
+        if (unprocessedConnections > 0)
         {
-            final Iterator<SelectionKey> it = selector.selectedKeys().iterator();
+            final Iterator<SelectionKey> it = selectionKeys.iterator();
             while (it.hasNext())
             {
                 it.next();
 
                 final SocketChannel channel = listeningChannel.accept();
-                configure(channel);
+                if (channel != null)
+                {
+                    configure(channel);
 
-                handler.onNewChannel(timeInMs, newTcpChannel(channel));
+                    handler.onNewChannel(timeInMs, newTcpChannel(channel));
+                }
 
                 it.remove();
             }
         }
 
-        return newConnections;
+        return unprocessedConnections;
     }
 
     private void configure(final SocketChannel channel) throws IOException
