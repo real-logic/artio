@@ -614,7 +614,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return retryManager.firstAttempt(correlationId, unitOfWork);
     }
 
-    public Action onApplicationHeartbeat(final int libraryId)
+    public Action onApplicationHeartbeat(final int libraryId, final int aeronSessionId)
     {
         final LibraryInfo library = idToLibrary.get(libraryId);
         if (library != null)
@@ -623,9 +623,20 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             DebugLogger.log(
                 LIBRARY_CONNECT, "Received Heartbeat from library %d at timeInMs %d\n", libraryId, timeInMs);
             library.onHeartbeat(timeInMs);
-        }
 
-        return CONTINUE;
+            return CONTINUE;
+        }
+        else
+        {
+            final Action action = onLibraryConnect(libraryId, 0, aeronSessionId);
+            if (action == ABORT)
+            {
+                return ABORT;
+            }
+
+            return Pressure.apply(
+                inboundPublication.saveControlNotification(libraryId, NO_SESSIONS));
+        }
     }
 
     public Action onReleaseSession(

@@ -61,7 +61,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
 
             case ApplicationHeartbeatDecoder.TEMPLATE_ID:
             {
-                return onApplicationHeartbeat(buffer, offset, blockLength, version);
+                return onApplicationHeartbeat(buffer, offset, blockLength, version, header);
             }
 
             case LibraryConnectDecoder.TEMPLATE_ID:
@@ -83,13 +83,15 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         return CONTINUE;
     }
 
-    private Action onApplicationHeartbeat(final DirectBuffer buffer,
-                                       final int offset,
-                                       final int blockLength,
-                                       final int version)
+    private Action onApplicationHeartbeat(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
     {
         applicationHeartbeat.wrap(buffer, offset, blockLength, version);
-        return handler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
+        return handler.onApplicationHeartbeat(applicationHeartbeat.libraryId(), header.sessionId());
     }
 
     private Action onLibraryConnect(

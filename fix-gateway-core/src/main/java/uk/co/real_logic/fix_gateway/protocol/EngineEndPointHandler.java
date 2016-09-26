@@ -48,7 +48,7 @@ public interface EngineEndPointHandler
         final long connectionId,
         final DisconnectReason reason);
 
-    Action onApplicationHeartbeat(final int libraryId);
+    Action onApplicationHeartbeat(final int libraryId, final int aeronSessionId);
 
     Action onReleaseSession(
         final int libraryId,
