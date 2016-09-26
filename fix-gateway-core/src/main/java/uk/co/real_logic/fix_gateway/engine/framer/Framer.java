@@ -32,6 +32,7 @@ import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
@@ -59,6 +60,7 @@ import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
@@ -85,6 +87,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 {
 
     private static final ByteBuffer CONNECT_ERROR;
+    private static final List<SessionInfo> NO_SESSIONS = emptyList();
+
     static
     {
         final byte[] errorBytes =
@@ -583,19 +587,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LibraryInfo existingLibrary = idToLibrary.get(libraryId);
         if (existingLibrary != null)
         {
-            final long position =
-                inboundPublication.saveControlNotification(libraryId, existingLibrary.sessions());
-
-            if (position < 0)
-            {
-                return ABORT;
-            }
-
             existingLibrary.onHeartbeat(clock.time());
 
-            //System.out.println("EXISTING correlationId = " + correlationId);
-
-            return CONTINUE;
+            return Pressure.apply(
+                inboundPublication.saveControlNotification(libraryId, existingLibrary.sessions()));
         }
 
         final LivenessDetector livenessDetector = LivenessDetector.forEngine(
@@ -603,8 +598,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             libraryId,
             configuration.replyTimeoutInMs(),
             clock.time());
-
-        //System.out.println("SENT HEARTBEAT");
 
         final LibraryInfo library = new LibraryInfo(libraryId, livenessDetector, aeronSessionId);
         idToLibrary.put(libraryId, library);

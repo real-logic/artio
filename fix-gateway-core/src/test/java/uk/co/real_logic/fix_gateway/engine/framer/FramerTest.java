@@ -109,6 +109,7 @@ public class FramerTest
     private Session session = mock(Session.class);
     private SoloSubscription outboundSubscription = mock(SoloSubscription.class);
     private ClusterableStreams node = mock(ClusterableStreams.class);
+    private ArgumentCaptor<List> sessionCaptor = ArgumentCaptor.forClass(List.class);
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
@@ -421,6 +422,7 @@ public class FramerTest
 
         verifyLibraryControlNotified(Matchers.contains(gatewaySession));
     }
+
     @Test
     public void shouldNotifyLibraryOnlyOfControlledSessionsUponDuplicateConnect() throws IOException
     {
@@ -431,23 +433,46 @@ public class FramerTest
         verifyLibraryControlNotified(hasSize(0));
     }
 
-    private void duplicateLibraryConnect()
+    @Test
+    public void shouldNotNotifyLibraryOfControlledSessionsUponDuplicateConnectAfterTimeout() throws Exception
     {
-        framer.onLibraryConnect(LIBRARY_ID, CORR_ID + 1, AERON_SESSION_ID);
+        aClientConnects();
+
+        handoverSessionToLibrary();
+
+        timeoutLibrary();
+
+        framer.doWork();
+
+        reset(inboundPublication);
+
+        duplicateLibraryConnect();
+
+        saveControlNotification(never());
     }
 
     // TODO: check sessions
     // TODO: heartbeat again after timeout
 
+    private void duplicateLibraryConnect()
+    {
+        framer.onLibraryConnect(LIBRARY_ID, CORR_ID + 1, AERON_SESSION_ID);
+    }
+
     @SuppressWarnings("unchecked")
     private void verifyLibraryControlNotified(final Matcher<? super Collection<?>> sessionMatcher)
     {
-        final ArgumentCaptor<List> sessionCaptor = ArgumentCaptor.forClass(List.class);
         verify(inboundPublication).saveApplicationHeartbeat(LIBRARY_ID);
-        verify(inboundPublication).saveControlNotification(eq(LIBRARY_ID), sessionCaptor.capture());
+        saveControlNotification(times(1));
 
         final List<SessionInfo> sessions = sessionCaptor.getValue();
         assertThat(sessions, sessionMatcher);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void saveControlNotification(final VerificationMode times)
+    {
+        verify(inboundPublication, times).saveControlNotification(eq(LIBRARY_ID), sessionCaptor.capture());
     }
 
     private void verifyClientDisconnected()
