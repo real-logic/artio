@@ -525,7 +525,7 @@ public class Session implements AutoCloseable
         return actions;
     }
 
-    private boolean isActive()
+    public boolean isActive()
     {
         return state == ACTIVE || state == AWAITING_RESEND;
     }

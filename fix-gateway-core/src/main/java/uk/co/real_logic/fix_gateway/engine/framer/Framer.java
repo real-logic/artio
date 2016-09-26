@@ -574,9 +574,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                                    final long correlationId,
                                    final int aeronSessionId)
     {
-        //System.out.println("LIBRARY CONNECT correlationId = " + correlationId);
         final Action action = retryManager.retry(correlationId);
-        //System.out.println("action = " + action);
         if (action != null)
         {
             return action;
@@ -687,7 +685,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int libraryId,
         final long sessionId,
         final long correlationId,
-        int replayFromSequenceNumber)
+        final int replayFromSequenceNumber)
     {
         final LibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
@@ -703,7 +701,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_SESSION, correlationId));
         }
 
-        if (gatewaySession.session().state() != ACTIVE)
+        final Session session = gatewaySession.session();
+        if (!session.isActive())
         {
             return Pressure.apply(
                 inboundPublication.saveRequestSessionReply(SESSION_NOT_LOGGED_IN, correlationId));
@@ -716,7 +715,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         final long connectionId = gatewaySession.connectionId();
-        final Session session = gatewaySession.session();
         final int lastSentSeqNum = session.lastSentMsgSeqNum();
         final int lastRecvSeqNum = session.lastReceivedMsgSeqNum();
         final SessionState sessionState = session.state();

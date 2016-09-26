@@ -34,7 +34,7 @@ import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 /**
  * Keeps track of which sessions managed by the gateway
  */
-public class GatewaySessions
+class GatewaySessions
 {
     private final List<GatewaySession> sessions = new ArrayList<>();
     private final EpochClock clock;
@@ -47,7 +47,7 @@ public class GatewaySessions
     private final int sessionBufferSize;
     private final long sendingTimeWindowInMs;
 
-    public GatewaySessions(
+    GatewaySessions(
         final EpochClock clock,
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,

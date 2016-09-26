@@ -21,6 +21,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.QueuedPipe;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,12 +32,16 @@ import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
+import uk.co.real_logic.fix_gateway.messages.GatewayError;
+import uk.co.real_logic.fix_gateway.messages.LogonStatus;
+import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.replication.SoloSubscription;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
+import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.timing.Timer;
 
@@ -57,11 +62,13 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.APPLICATION_DISCONNECT;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 import static uk.co.real_logic.fix_gateway.messages.SequenceNumberType.TRANSIENT;
+import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
 
@@ -75,7 +82,8 @@ public class FramerTest
     private static final long HEARTBEAT_INTERVAL_IN_MS = TimeUnit.SECONDS.toMillis(HEARTBEAT_INTERVAL_IN_S);
     private static final int CORR_ID = 1;
     private static final long POSITION = 1024;
-    private static final int AERON_SESSION_ID = 1;
+    private static final int AERON_SESSION_ID = 234;
+    private static final long SESSION_ID = 123;
 
     private ServerSocketChannel server;
 
@@ -95,6 +103,7 @@ public class FramerTest
     private SessionIds sessionIds = mock(SessionIds.class);
     private GatewaySessions gatewaySessions = mock(GatewaySessions.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
+    private Session session = mock(Session.class);
     private SoloSubscription outboundSubscription = mock(SoloSubscription.class);
     private ClusterableStreams node = mock(ClusterableStreams.class);
 
@@ -132,8 +141,6 @@ public class FramerTest
 
         when(mockReceiverEndPoint.libraryId()).thenReturn(LIBRARY_ID);
 
-        //when(outboundSubscription.getImage(anyInt())).thenReturn(image);
-
         isLeader(true);
 
         framer = new Framer(
@@ -159,6 +166,8 @@ public class FramerTest
             node,
             mock(EngineDescriptorStore.class),
             new LongHashSet(SessionIds.MISSING));
+
+        when(sessionIds.onLogon(any())).thenReturn(SESSION_ID);
     }
 
     private void isLeader(final boolean value)
@@ -367,7 +376,7 @@ public class FramerTest
     {
         initiateConnection();
 
-        when(inboundPublication.saveReleaseSessionReply(SessionReplyStatus.OK, CORR_ID))
+        when(inboundPublication.saveReleaseSessionReply(OK, CORR_ID))
             .thenReturn(BACK_PRESSURED, POSITION);
 
         releaseConnection(ABORT);
@@ -390,11 +399,21 @@ public class FramerTest
         verify(errorHandler).onError(any(IllegalStateException.class));
     }
 
+    @Test
+    public void shouldHandoverSessionToLibraryUponRequest() throws IOException
+    {
+        aClientConnects();
+
+        handoverSessionToLibrary();
+    }
+
     @SuppressWarnings("unchecked")
     @Test
-    public void shouldNotifyLibraryOfControlledSessionsUponDuplicateConnect()
+    public void shouldNotifyLibraryOfControlledSessionsUponDuplicateConnect() throws IOException
     {
-        libraryConnects();
+        aClientConnects();
+
+        handoverSessionToLibrary();
 
         framer.onLibraryConnect(LIBRARY_ID, CORR_ID + 1, AERON_SESSION_ID);
 
@@ -404,7 +423,11 @@ public class FramerTest
         verify(inboundPublication).saveControlNotification(eq(LIBRARY_ID), sessionCaptor.capture());
 
         final List<SessionInfo> sessions = sessionCaptor.getValue();
+        assertThat(sessions, Matchers.contains(gatewaySession));
     }
+
+    // TODO: check sessions
+    // TODO: heartbeat again after timeout
 
     private void verifyClientDisconnected()
     {
@@ -424,6 +447,22 @@ public class FramerTest
                 return;
             }
         }
+    }
+
+    private void handoverSessionToLibrary()
+    {
+        sessionIsActive();
+
+        assertEquals(CONTINUE, framer.onRequestSession(LIBRARY_ID, SESSION_ID, CORR_ID, NO_MESSAGE_REPLAY));
+
+        verify(inboundPublication).saveRequestSessionReply(OK, CORR_ID);
+    }
+
+    private void sessionIsActive()
+    {
+        when(gatewaySessions.releaseBySessionId(SESSION_ID)).thenReturn(gatewaySession);
+        when(gatewaySession.session()).thenReturn(session);
+        when(session.isActive()).thenReturn(true);
     }
 
     private void verifyErrorPublished(final GatewayError error)
