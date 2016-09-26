@@ -492,9 +492,10 @@ class ReceiverEndPoint
 
     public void close(final DisconnectReason reason)
     {
+        closeResources();
+
         if (!hasDisconnected)
         {
-            closeResources();
             disconnectEndpoint(reason);
         }
     }
