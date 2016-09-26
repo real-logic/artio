@@ -21,6 +21,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.QueuedPipe;
+import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
@@ -50,6 +51,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -57,6 +59,7 @@ import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.notNull;
@@ -414,24 +417,37 @@ public class FramerTest
 
         handoverSessionToLibrary();
 
-        // Duplicate connect
-        framer.onLibraryConnect(LIBRARY_ID, CORR_ID + 1, AERON_SESSION_ID);
+        duplicateLibraryConnect();
 
-        verifyLibraryControlNotified();
+        verifyLibraryControlNotified(Matchers.contains(gatewaySession));
+    }
+    @Test
+    public void shouldNotifyLibraryOnlyOfControlledSessionsUponDuplicateConnect() throws IOException
+    {
+        aClientConnects();
+
+        duplicateLibraryConnect();
+
+        verifyLibraryControlNotified(hasSize(0));
+    }
+
+    private void duplicateLibraryConnect()
+    {
+        framer.onLibraryConnect(LIBRARY_ID, CORR_ID + 1, AERON_SESSION_ID);
     }
 
     // TODO: check sessions
     // TODO: heartbeat again after timeout
 
     @SuppressWarnings("unchecked")
-    private void verifyLibraryControlNotified()
+    private void verifyLibraryControlNotified(final Matcher<? super Collection<?>> sessionMatcher)
     {
         final ArgumentCaptor<List> sessionCaptor = ArgumentCaptor.forClass(List.class);
         verify(inboundPublication).saveApplicationHeartbeat(LIBRARY_ID);
         verify(inboundPublication).saveControlNotification(eq(LIBRARY_ID), sessionCaptor.capture());
 
         final List<SessionInfo> sessions = sessionCaptor.getValue();
-        assertThat(sessions, Matchers.contains(gatewaySession));
+        assertThat(sessions, sessionMatcher);
     }
 
     private void verifyClientDisconnected()
