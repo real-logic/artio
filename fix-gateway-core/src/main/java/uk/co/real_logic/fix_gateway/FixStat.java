@@ -35,6 +35,7 @@ public class FixStat
     public static void main(String[] args) throws InterruptedException
     {
         final EngineConfiguration configuration = new EngineConfiguration();
+        configuration.libraryAeronChannel("").conclude();
         try (final MonitoringFile monitoringFile = new MonitoringFile(false, configuration))
         {
             final CountersManager countersManager = monitoringFile.createCountersManager();
