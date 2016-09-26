@@ -470,9 +470,6 @@ public class FramerTest
         verifyLibraryControlNotified(hasSize(0));
     }
 
-    // TODO: check sessions
-    // TODO: heartbeat again after timeout
-
     private void duplicateLibraryConnect()
     {
         framer.onLibraryConnect(LIBRARY_ID, CORR_ID + 1, AERON_SESSION_ID);

@@ -628,7 +628,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
         else
         {
-            final Action action = onLibraryConnect(libraryId, 0, aeronSessionId);
+            final Action action = onLibraryConnect(libraryId, libraryId, aeronSessionId);
             if (action == ABORT)
             {
                 return ABORT;
