@@ -538,8 +538,7 @@ class ReceiverEndPoint
         {
             selectionKey.cancel();
         }
-        channel.close();
-        messagesRead.close();
+
         hasDisconnected = true;
     }
 
