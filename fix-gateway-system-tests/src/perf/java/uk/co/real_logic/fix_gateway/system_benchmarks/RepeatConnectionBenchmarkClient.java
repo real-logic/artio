@@ -28,7 +28,7 @@ public final class RepeatConnectionBenchmarkClient extends AbstractBenchmarkClie
         new RepeatConnectionBenchmarkClient().runBenchmark();
     }
 
-    public static final int NUMBER_OF_CONNECTIONS = 10_000;
+    public static final int NUMBER_OF_CONNECTIONS = 50_000;
 
     public void runBenchmark() throws IOException
     {
