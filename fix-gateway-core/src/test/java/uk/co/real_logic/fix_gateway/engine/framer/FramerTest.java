@@ -407,7 +407,6 @@ public class FramerTest
         handoverSessionToLibrary();
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void shouldNotifyLibraryOfControlledSessionsUponDuplicateConnect() throws IOException
     {
@@ -415,19 +414,25 @@ public class FramerTest
 
         handoverSessionToLibrary();
 
+        // Duplicate connect
         framer.onLibraryConnect(LIBRARY_ID, CORR_ID + 1, AERON_SESSION_ID);
 
-        final ArgumentCaptor<List> sessionCaptor = ArgumentCaptor.forClass(List.class);
+        verifyLibraryControlNotified();
+    }
 
+    // TODO: check sessions
+    // TODO: heartbeat again after timeout
+
+    @SuppressWarnings("unchecked")
+    private void verifyLibraryControlNotified()
+    {
+        final ArgumentCaptor<List> sessionCaptor = ArgumentCaptor.forClass(List.class);
         verify(inboundPublication).saveApplicationHeartbeat(LIBRARY_ID);
         verify(inboundPublication).saveControlNotification(eq(LIBRARY_ID), sessionCaptor.capture());
 
         final List<SessionInfo> sessions = sessionCaptor.getValue();
         assertThat(sessions, Matchers.contains(gatewaySession));
     }
-
-    // TODO: check sessions
-    // TODO: heartbeat again after timeout
 
     private void verifyClientDisconnected()
     {
