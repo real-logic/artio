@@ -57,13 +57,16 @@ public class TcpChannel implements AutoCloseable
 
     public void close()
     {
-        try
+        if (socketChannel.isOpen())
         {
-            socketChannel.close();
-        }
-        catch (IOException e)
-        {
-            LangUtil.rethrowUnchecked(e);
+            try
+            {
+                socketChannel.close();
+            }
+            catch (IOException e)
+            {
+                LangUtil.rethrowUnchecked(e);
+            }
         }
     }
 }

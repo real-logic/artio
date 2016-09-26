@@ -494,12 +494,12 @@ class ReceiverEndPoint
     {
         if (!hasDisconnected)
         {
-            closeChannel();
+            closeResources();
             disconnectEndpoint(reason);
         }
     }
 
-    private void closeChannel()
+    private void closeResources()
     {
         try
         {
@@ -538,6 +538,8 @@ class ReceiverEndPoint
         {
             selectionKey.cancel();
         }
+        channel.close();
+        messagesRead.close();
         hasDisconnected = true;
     }
 

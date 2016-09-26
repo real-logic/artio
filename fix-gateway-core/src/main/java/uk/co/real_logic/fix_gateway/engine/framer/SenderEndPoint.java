@@ -154,6 +154,7 @@ class SenderEndPoint implements AutoCloseable
     public void close()
     {
         bytesInBuffer.close();
+        invalidLibraryAttempts.close();
     }
 
     Action onQuarantinedMessageFragment(

@@ -97,6 +97,7 @@ class GatewaySession implements SessionInfo
         receiverEndPoint.pause();
         senderEndPoint.libraryId(libraryId);
         sessionParser = null;
+        session.close();
         session = null;
     }
 
@@ -218,5 +219,10 @@ class GatewaySession implements SessionInfo
     public long bytesInBuffer()
     {
         return senderEndPoint.bytesInBuffer();
+    }
+
+    void close()
+    {
+        session.close();
     }
 }

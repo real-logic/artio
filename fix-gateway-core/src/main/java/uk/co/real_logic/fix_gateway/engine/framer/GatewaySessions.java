@@ -151,7 +151,12 @@ class GatewaySessions
 
     GatewaySession releaseByConnectionId(final long connectionId)
     {
-        return removeSessionByConnectionId(connectionId, sessions);
+        final GatewaySession session = removeSessionByConnectionId(connectionId, sessions);
+        if (session != null)
+        {
+            session.close();
+        }
+        return session;
     }
 
     int pollSessions(final long time)
