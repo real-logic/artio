@@ -26,7 +26,7 @@ import static uk.co.real_logic.fix_gateway.messages.GatewayError.UNABLE_TO_CONNE
 /**
  * .
  */
-class InitiateSessionReply extends Reply<Session>
+class InitiateSessionReply extends LibraryReply<Session>
 {
     private final SessionConfiguration configuration;
 

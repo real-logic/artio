@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 
 import java.util.ArrayList;

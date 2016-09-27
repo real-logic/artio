@@ -81,7 +81,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final boolean enginesAreClustered;
     private final FixCounters fixCounters;
 
-    private final Long2ObjectHashMap<Reply<?>> correlationIdToReply = new Long2ObjectHashMap<>();
+    private final Long2ObjectHashMap<LibraryReply<?>> correlationIdToReply = new Long2ObjectHashMap<>();
     private final LibraryTransport transport;
     private final FixLibrary fixLibrary;
     private final Runnable onDisconnectFunc = this::onDisconnect;
@@ -358,10 +358,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
 
         int count = 0;
-        final Iterator<Reply<?>> iterator = correlationIdToReply.values().iterator();
+        final Iterator<LibraryReply<?>> iterator = correlationIdToReply.values().iterator();
         while (iterator.hasNext())
         {
-            final Reply<?> reply = iterator.next();
+            final LibraryReply<?> reply = iterator.next();
             if (reply.poll(timeInMs))
             {
                 iterator.remove();
@@ -397,7 +397,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return total;
     }
 
-    long register(final Reply<?> reply)
+    long register(final LibraryReply<?> reply)
     {
         final long correlationId = ++currentCorrelationId;
         correlationIdToReply.put(correlationId, reply);
@@ -561,7 +561,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            final Reply<?> reply = correlationIdToReply.remove(replyToId);
+            final LibraryReply<?> reply = correlationIdToReply.remove(replyToId);
             if (reply != null)
             {
                 reply.onError(errorType, errorMessage);

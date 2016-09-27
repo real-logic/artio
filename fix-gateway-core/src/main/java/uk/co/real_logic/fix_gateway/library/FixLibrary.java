@@ -20,6 +20,7 @@ import org.agrona.IoUtil;
 import org.agrona.concurrent.SystemEpochClock;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
+import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
@@ -193,7 +194,7 @@ public class FixLibrary extends GatewayProcess
     }
 
     /**
-     * Request a session be acquired from the Gateway. It returns a {@link Reply} object.
+     * Request a session be acquired from the Gateway. It returns a {@link LibraryReply} object.
      *
      * If this session is being managed by
      * the gateway then your {@link SessionAcquireHandler} will receive a callback

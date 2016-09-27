@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 
 /**
@@ -25,19 +26,8 @@ import uk.co.real_logic.fix_gateway.messages.GatewayError;
  *
  * @param <T> the return type of the method in question.
  */
-public abstract class Reply<T>
+abstract class LibraryReply<T> implements Reply<T>
 {
-    public enum State
-    {
-        /** The operation is currently being executed and its result is unknown. */
-        EXECUTING,
-        /** The operation has timed out without a result. */
-        TIMED_OUT,
-        /** The operation has completed with an error. */
-        ERRORED,
-        /** The operation has completed successfully. */
-        COMPLETED
-    }
 
     private final long latestReplyArrivalTime;
 
@@ -48,7 +38,7 @@ public abstract class Reply<T>
     private T result;
     private State state = State.EXECUTING;
 
-    Reply(final LibraryPoller libraryPoller, final long latestReplyArrivalTime)
+    LibraryReply(final LibraryPoller libraryPoller, final long latestReplyArrivalTime)
     {
         this.libraryPoller = libraryPoller;
         this.latestReplyArrivalTime = latestReplyArrivalTime;
@@ -80,41 +70,21 @@ public abstract class Reply<T>
         return state == State.COMPLETED;
     }
 
-    /**
-     * Gets the error iff <code>hasErrored() == true</code> or null otherwise.
-     *
-     * @return the error iff <code>hasErrored() == true</code> or null otherwise.
-     */
     public Exception error()
     {
         return error;
     }
 
-    /**
-     * Gets the result if the operation has completed successfully or null.
-     *
-     * @return the result if the operation has completed successfully or null.
-     */
     public T resultIfPresent()
     {
         return result;
     }
 
-    /**
-     * Gets the current state of the Reply.
-     *
-     * @return the current state of the Reply.
-     */
     public State state()
     {
         return state;
     }
 
-    /**
-     * Gets the correlation id of the message that is being replied to.
-     *
-     * @return the correlation id of the message that is being replied to.
-     */
     public long correlationId()
     {
         return correlationId;

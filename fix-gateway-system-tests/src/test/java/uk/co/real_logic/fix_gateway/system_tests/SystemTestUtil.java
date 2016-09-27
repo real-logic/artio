@@ -19,13 +19,13 @@ import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
+import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
-import uk.co.real_logic.fix_gateway.library.Reply;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -43,7 +43,7 @@ import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrate
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.optimalTmpDirName;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
-import static uk.co.real_logic.fix_gateway.library.Reply.State.COMPLETED;
+import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 

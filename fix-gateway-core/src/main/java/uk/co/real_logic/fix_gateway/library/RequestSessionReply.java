@@ -21,7 +21,7 @@ import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 /**
  * .
  */
-class RequestSessionReply extends Reply<SessionReplyStatus>
+class RequestSessionReply extends LibraryReply<SessionReplyStatus>
 {
     private final long sessionId;
     private final int lastReceivedSequenceNumber;

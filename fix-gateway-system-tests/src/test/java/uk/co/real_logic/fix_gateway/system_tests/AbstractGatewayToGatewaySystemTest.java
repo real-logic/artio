@@ -18,10 +18,10 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
 import org.junit.After;
+import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
-import uk.co.real_logic.fix_gateway.library.Reply;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import static org.hamcrest.Matchers.*;

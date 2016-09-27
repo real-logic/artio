@@ -22,7 +22,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 /**
  * .
  */
-class ReleaseToGatewayReply extends Reply<SessionReplyStatus>
+class ReleaseToGatewayReply extends LibraryReply<SessionReplyStatus>
 {
     private final Session session;
 

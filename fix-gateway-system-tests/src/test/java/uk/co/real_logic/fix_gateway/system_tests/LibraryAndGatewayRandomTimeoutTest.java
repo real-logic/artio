@@ -22,10 +22,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
+import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
-import uk.co.real_logic.fix_gateway.library.Reply;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.io.File;
@@ -34,8 +34,8 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
-import static uk.co.real_logic.fix_gateway.library.Reply.State.ERRORED;
-import static uk.co.real_logic.fix_gateway.library.Reply.State.TIMED_OUT;
+import static uk.co.real_logic.fix_gateway.Reply.State.ERRORED;
+import static uk.co.real_logic.fix_gateway.Reply.State.TIMED_OUT;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class LibraryAndGatewayRandomTimeoutTest
