@@ -106,6 +106,8 @@ public final class FixEngine extends GatewayProcess
     }
 
     /**
+     * Resets the sequence number of a given session. Asynchronous method, the Reply instance
+     * needs to be polled to ensure that it has completed.
      *
      * @param sessionId the id of the session that you want to reset
      *

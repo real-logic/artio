@@ -179,7 +179,8 @@ public final class OtfParser
                 {
                     position = parseGroup(tag, valueOffset, endOfField, end, newGroupFields);
 
-                    if (position < 0) {
+                    if (position < 0)
+                    {
                         return position;
                     }
                 }
