@@ -77,6 +77,7 @@ public class GatewayPublication extends ClaimablePublication
     private final NotLeaderEncoder notLeader = new NotLeaderEncoder();
     private final ControlNotificationEncoder controlNotification = new ControlNotificationEncoder();
     private final LibraryTimeoutEncoder libraryTimeout = new LibraryTimeoutEncoder();
+    private final ResetSequenceNumberEncoder resetSequenceNumber = new ResetSequenceNumberEncoder();
 
     private final NanoClock nanoClock;
 
@@ -356,6 +357,37 @@ public class GatewayPublication extends ClaimablePublication
             .templateId(resetSessionIds.sbeTemplateId())
             .schemaId(resetSessionIds.sbeSchemaId())
             .version(resetSessionIds.sbeSchemaVersion());
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+
+        return position;
+    }
+
+    public long saveResetSequenceNumber(final long sessionId)
+    {
+        final long position = claim(HEADER_LENGTH + ResetSequenceNumberEncoder.BLOCK_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(resetSequenceNumber.sbeBlockLength())
+            .templateId(resetSequenceNumber.sbeTemplateId())
+            .schemaId(resetSequenceNumber.sbeSchemaId())
+            .version(resetSequenceNumber.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        resetSequenceNumber
+            .wrap(buffer, offset)
+            .session(sessionId);
 
         bufferClaim.commit();
 

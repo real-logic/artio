@@ -2,13 +2,25 @@ package uk.co.real_logic.fix_gateway;
 
 public interface Reply<T>
 {
-    boolean isExecuting();
+    default boolean isExecuting()
+    {
+        return state() == State.EXECUTING;
+    }
 
-    boolean hasTimedOut();
+    default boolean hasTimedOut()
+    {
+        return state() == State.TIMED_OUT;
+    }
 
-    boolean hasErrored();
+    default boolean hasErrored()
+    {
+        return state() == State.ERRORED;
+    }
 
-    boolean hasCompleted();
+    default boolean hasCompleted()
+    {
+        return state() == State.COMPLETED;
+    }
 
     /**
      * Gets the error iff <code>hasErrored() == true</code> or null otherwise.

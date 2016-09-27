@@ -50,26 +50,6 @@ abstract class LibraryReply<T> implements Reply<T>
         correlationId = libraryPoller.register(this);
     }
 
-    public boolean isExecuting()
-    {
-        return state == State.EXECUTING;
-    }
-
-    public boolean hasTimedOut()
-    {
-        return state == State.TIMED_OUT;
-    }
-
-    public boolean hasErrored()
-    {
-        return state == State.ERRORED;
-    }
-
-    public boolean hasCompleted()
-    {
-        return state == State.COMPLETED;
-    }
-
     public Exception error()
     {
         return error;

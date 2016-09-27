@@ -21,6 +21,7 @@ import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
+import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.framer.FramerContext;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
@@ -102,6 +103,17 @@ public final class FixEngine extends GatewayProcess
     public void resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)
     {
         framerContext.resetSessionIds(backupLocation, idleStrategy);
+    }
+
+    /**
+     *
+     * @param sessionId the id of the session that you want to reset
+     *
+     * @return the reply object, or null if the request hasn't been successfully enqueued.
+     */
+    public Reply<?> resetSequenceNumber(final long sessionId)
+    {
+        return framerContext.resetSequenceNumber(sessionId);
     }
 
     private FixEngine(final EngineConfiguration configuration)

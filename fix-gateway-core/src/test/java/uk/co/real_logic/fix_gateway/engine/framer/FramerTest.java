@@ -124,8 +124,6 @@ public class FramerTest
     @SuppressWarnings("unchecked")
     public void setUp() throws IOException
     {
-        when(mockEndPointFactory.inboundPublication()).thenReturn(inboundPublication);
-
         server = ServerSocketChannel.open().bind(TEST_ADDRESS);
         server.configureBlocking(false);
 
@@ -169,7 +167,8 @@ public class FramerTest
             mock(GatewayPublication.class),
             node,
             mock(EngineDescriptorStore.class),
-            new LongHashSet(SessionIds.MISSING));
+            new LongHashSet(SessionIds.MISSING),
+            inboundPublication);
 
         when(sessionIds.onLogon(any())).thenReturn(SESSION_ID);
     }

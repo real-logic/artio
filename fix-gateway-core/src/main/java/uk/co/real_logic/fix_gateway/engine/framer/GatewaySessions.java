@@ -134,6 +134,28 @@ class GatewaySessions
 
     GatewaySession releaseBySessionId(final long sessionId)
     {
+        final int index = indexBySesionId(sessionId);
+        if (index < 0)
+        {
+            return  null;
+        }
+
+        return sessions.remove(index);
+    }
+
+    GatewaySession sessionById(final long sessionId)
+    {
+        final int index = indexBySesionId(sessionId);
+        if (index < 0)
+        {
+            return  null;
+        }
+
+        return sessions.get(index);
+    }
+
+    private int indexBySesionId(final long sessionId)
+    {
         final List<GatewaySession> sessions = this.sessions;
 
         for (int i = 0, size = sessions.size(); i < size; i++)
@@ -141,12 +163,11 @@ class GatewaySessions
             final GatewaySession session = sessions.get(i);
             if (session.sessionId() == sessionId)
             {
-                sessions.remove(i);
-                return session;
+                return i;
             }
         }
 
-        return null;
+        return -1;
     }
 
     GatewaySession releaseByConnectionId(final long connectionId)
@@ -191,5 +212,4 @@ class GatewaySessions
 
         return null;
     }
-
 }

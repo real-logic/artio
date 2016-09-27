@@ -21,11 +21,13 @@ import org.agrona.LangUtil;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineContext;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -49,6 +51,12 @@ public class FramerContext
 
     private final Framer framer;
 
+    private final GatewaySessions gatewaySessions;
+    private final SequenceNumberIndexReader sentSequenceNumberIndex;
+    private final SequenceNumberIndexReader receivedSequenceNumberIndex;
+    private final GatewayPublication outboundPublication;
+    private final GatewayPublication inboundLibraryPublication;
+
     public FramerContext(
         final EngineConfiguration configuration,
         final FixCounters fixCounters,
@@ -68,7 +76,7 @@ public class FramerContext
         final SystemEpochClock clock = new SystemEpochClock();
         final LongHashSet replicatedConnectionIds = new LongHashSet(SessionIds.MISSING);
 
-        final EndPointFactory handler = new EndPointFactory(
+        final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,
             sessionIdStrategy,
             sessionIds,
@@ -79,7 +87,7 @@ public class FramerContext
             errorHandler,
             replicatedConnectionIds);
 
-        final GatewaySessions gatewaySessions = new GatewaySessions(
+        gatewaySessions = new GatewaySessions(
             clock,
             outboundLibraryStreams.gatewayPublication(idleStrategy),
             sessionIdStrategy,
@@ -90,12 +98,17 @@ public class FramerContext
             configuration.sessionBufferSize(),
             configuration.sendingTimeWindowInMs());
 
+        sentSequenceNumberIndex = new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer());
+        receivedSequenceNumberIndex = new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer());
+        outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy);
+        inboundLibraryPublication = engineContext.inboundLibraryPublication();
+
         framer = new Framer(
             clock,
             timers.outboundTimer(),
             timers.sendTimer(),
             configuration,
-            handler,
+            endPointFactory,
             engineContext.outboundClusterSubscription(),
             engineContext.outboundLibrarySubscription(),
             engineContext.outboundLibrarySubscription(),
@@ -103,16 +116,17 @@ public class FramerContext
             adminCommands,
             sessionIdStrategy,
             sessionIds,
-            new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer()),
-            new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer()),
+            sentSequenceNumberIndex,
+            receivedSequenceNumberIndex,
             gatewaySessions,
             engineContext.inboundReplayQuery(),
             errorHandler,
-            outboundLibraryStreams.gatewayPublication(idleStrategy),
-            engineContext.inboundLibraryPublication(),
+            outboundPublication,
+            inboundLibraryPublication,
             streams,
             engineDescriptorStore,
-            replicatedConnectionIds);
+            replicatedConnectionIds,
+            endPointFactory.inboundPublication());
     }
 
     public Agent framer()
@@ -135,6 +149,23 @@ public class FramerContext
             idleStrategy.idle();
         }
         idleStrategy.reset();
+    }
+
+    public Reply<?> resetSequenceNumber(final long sessionId)
+    {
+        final ResetSequenceNumberReply reply = new ResetSequenceNumberReply(
+            sessionId,
+            gatewaySessions,
+            receivedSequenceNumberIndex,
+            sentSequenceNumberIndex,
+            inboundLibraryPublication,
+            outboundPublication);
+        if (adminCommands.offer(reply))
+        {
+            return reply;
+        }
+
+        return null;
     }
 
     public List<SessionInfo> gatewaySessions(final IdleStrategy idleStrategy)

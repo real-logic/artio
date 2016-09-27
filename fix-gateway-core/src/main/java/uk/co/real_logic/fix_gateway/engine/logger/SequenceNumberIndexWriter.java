@@ -43,8 +43,9 @@ public class SequenceNumberIndexWriter implements Index
     private static final long UNINITIALISED = -1;
     private static final int SEQUENCE_NUMBER_OFFSET = 8;
 
-    private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
+    private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
+    private final ResetSequenceNumberDecoder resetSequenceNumber = new ResetSequenceNumberDecoder();
     private final HeaderDecoder fixHeader = new HeaderDecoder();
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
@@ -119,14 +120,17 @@ public class SequenceNumberIndexWriter implements Index
         }
 
         int offset = srcOffset;
-        frameHeaderDecoder.wrap(buffer, offset);
-        switch (frameHeaderDecoder.templateId())
+        messageHeader.wrap(buffer, offset);
+
+        offset += messageHeader.encodedLength();
+        final int actingBlockLength = messageHeader.blockLength();
+        final int version = messageHeader.version();
+
+        switch (messageHeader.templateId())
         {
             case FixMessageEncoder.TEMPLATE_ID:
             {
-                final int actingBlockLength = frameHeaderDecoder.blockLength();
-                offset += frameHeaderDecoder.encodedLength();
-                messageFrame.wrap(buffer, offset, actingBlockLength, frameHeaderDecoder.version());
+                messageFrame.wrap(buffer, offset, actingBlockLength, version);
 
                 offset += actingBlockLength + 2;
 
@@ -144,6 +148,12 @@ public class SequenceNumberIndexWriter implements Index
             {
                 resetSequenceNumbers();
                 break;
+            }
+
+            case ResetSequenceNumberDecoder.TEMPLATE_ID:
+            {
+                resetSequenceNumber.wrap(buffer, offset, actingBlockLength, version);
+                saveRecord(1, resetSequenceNumber.session());
             }
         }
 

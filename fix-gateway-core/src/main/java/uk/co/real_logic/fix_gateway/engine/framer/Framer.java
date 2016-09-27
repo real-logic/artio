@@ -97,6 +97,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     }
 
     private final RetryManager retryManager = new RetryManager();
+    private final List<ResetSequenceNumberReply> replies = new ArrayList<>();
     private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final NewChannelHandler onNewConnectionFunc = this::onNewConnection;
@@ -159,7 +160,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final GatewayPublication replyPublication,
         final ClusterableStreams clusterableStreams,
         final EngineDescriptorStore engineDescriptorStore,
-        final LongHashSet replicatedConnectionIds)
+        final LongHashSet replicatedConnectionIds,
+        final GatewayPublication inboundPublication)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
@@ -174,7 +176,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.inboundMessages = inboundMessages;
         this.errorHandler = errorHandler;
         this.outboundPublication = outboundPublication;
-        this.inboundPublication = endPointFactory.inboundPublication();
+        this.inboundPublication = inboundPublication;
         this.clusterableStreams = clusterableStreams;
         this.senderEndPoints = new SenderEndPoints();
         this.sessionIdStrategy = sessionIdStrategy;
@@ -232,7 +234,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             pollNewConnections(timeInMs) +
             pollLibraries(timeInMs) +
             gatewaySessions.pollSessions(timeInMs) +
-            adminCommands.drain(onAdminCommand);
+            adminCommands.drain(onAdminCommand) +
+            checkReplies();
+    }
+
+    private int checkReplies()
+    {
+        return RetryManager.removeIf(replies, ResetSequenceNumberReply::poll);
     }
 
     private int sendReplayMessages()
@@ -891,6 +899,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         );
     }
 
+    void onResetSequenceNumber(final ResetSequenceNumberReply reply)
+    {
+        if (!reply.poll())
+        {
+            replies.add(reply);
+        }
+    }
+
     private boolean sequenceNumbersNotReset()
     {
         return sentSequenceNumberIndex.lastKnownSequenceNumber(1) != UNK_SESSION
@@ -917,4 +933,5 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             retryManager.schedule(continuation);
         }
     }
+
 }
