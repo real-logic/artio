@@ -170,11 +170,18 @@ public final class OtfParser
             }
             else
             {
-                position = parseGroup(tag, valueOffset, endOfField, end, newGroupFields);
-
-                if (position < 0)
+                if (insideAGroup(groupTag) && isEndOfGroup(groupFields))
                 {
+                    groupEnd(groupTag, numberOfElementsInGroup, indexOfGroupElement);
                     return position;
+                }
+                else
+                {
+                    position = parseGroup(tag, valueOffset, endOfField, end, newGroupFields);
+
+                    if (position < 0) {
+                        return position;
+                    }
                 }
             }
         }
