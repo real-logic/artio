@@ -16,7 +16,9 @@
 package uk.co.real_logic.fix_gateway.dictionary.ir;
 
 import org.agrona.Verify;
+import org.agrona.generation.ResourceConsumer;
 
+import java.io.IOException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -53,6 +55,29 @@ public final class Entry
             return withComponent.apply(this, (Component) element);
         }
         throw new IllegalStateException("Unknown element type: " + element);
+    }
+
+    public void forEach(
+        final ResourceConsumer<Field> withField,
+        final ResourceConsumer<Group> withGroup,
+        final ResourceConsumer<Component> withComponent) throws IOException
+    {
+        if (element instanceof Field)
+        {
+            withField.accept((Field) element);
+        }
+        else if (element instanceof Group)
+        {
+            withGroup.accept((Group) element);
+        }
+        else if (element instanceof Component)
+        {
+            withComponent.accept((Component) element);
+        }
+        else
+        {
+            throw new IllegalStateException("Unknown element type: " + element);
+        }
     }
 
     public <T> T matchEntry(

@@ -233,6 +233,9 @@ public class DecoderGeneratorTest
         assertEquals(2, getNoEgGroupGroupCounter(decoder));
 
         Object group = getEgGroup(decoder);
+        assertEquals(
+            heartbeat.getName() + "$EgGroupGroupDecoder",
+            group.getClass().getName());
         assertEquals(1, getGroupField(group));
 
         group = next(group);
@@ -254,6 +257,9 @@ public class DecoderGeneratorTest
         assertNull(next(group));
 
         final Object nestedGroup = getNestedGroup(group);
+        assertEquals(
+            heartbeat.getName() + "$EgGroupGroupDecoder$NestedGroupGroupDecoder",
+            nestedGroup.getClass().getName());
         assertEquals(1, get(nestedGroup, "nestedField"));
         assertNull(next(nestedGroup));
 

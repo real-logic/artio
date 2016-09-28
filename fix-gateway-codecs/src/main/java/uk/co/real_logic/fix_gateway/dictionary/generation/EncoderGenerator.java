@@ -76,33 +76,53 @@ public class EncoderGenerator extends Generator
         this.initialArraySize = initialArraySize;
     }
 
-    protected void aggregate(final Aggregate aggregate, final AggregateType aggregateType)
+    protected void generateAggregateFile(final Aggregate aggregate, final AggregateType aggregateType)
     {
         final String className = encoderClassName(aggregate.name());
-        final boolean isMessage = aggregateType == AggregateType.MESSAGE;
 
         outputManager.withOutput(className, out ->
         {
             out.append(fileHeader(builderPackage));
-            final Class<?> type = isMessage ? MessageEncoder.class : Encoder.class;
-            out.append(classDeclaration(className, aggregateType, emptyList(), "Encoder", type));
-            out.append(constructor(aggregate, dictionary));
-            if (isMessage)
-            {
-                out.append(commonCompoundImports("Encoder"));
-            }
-            else if (aggregateType == GROUP)
-            {
-                final Group group = (Group) aggregate;
-                out.append(nextMethod(group));
-            }
-            precomputedHeaders(out, aggregate.entries());
-            setters(out, className, aggregate.entries());
-            out.append(encodeMethod(aggregate.entries(), aggregateType));
-            out.append(completeResetMethod(isMessage, aggregate.entries(), ""));
-            out.append(toString(aggregate, isMessage));
-            out.append("}\n");
+            generateImports("Encoder", aggregateType, out);
+            generateAggregateClass(aggregate, aggregateType, className, out);
         });
+    }
+
+    protected Class<?> topType(final AggregateType aggregateType)
+    {
+        return aggregateType == AggregateType.MESSAGE ? MessageEncoder.class : Encoder.class;
+    }
+
+    private void generateAggregateClass(
+        final Aggregate aggregate,
+        final AggregateType type,
+        final String className,
+        final Writer out) throws IOException
+    {
+        final boolean isMessage = type == AggregateType.MESSAGE;
+        out.append(classDeclaration(className, emptyList(), topType(type), type == GROUP));
+        out.append(constructor(aggregate, dictionary));
+        if (isMessage)
+        {
+            out.append(commonCompoundImports("Encoder"));
+        }
+        else if (type == GROUP)
+        {
+            final Group group = (Group) aggregate;
+            out.append(nextMethod(group));
+        }
+        precomputedHeaders(out, aggregate.entries());
+        setters(out, className, aggregate.entries());
+        out.append(encodeMethod(aggregate.entries(), type));
+        out.append(completeResetMethod(isMessage, aggregate.entries(), ""));
+        out.append(toString(aggregate, isMessage));
+        out.append("}\n");
+    }
+
+    private void generateGroupClass(final Group group, final Writer out) throws IOException
+    {
+        final String className = encoderClassName(group.name());
+        generateAggregateClass(group, GROUP, className, out);
     }
 
     private String nextMethod(final Group group)
@@ -175,16 +195,16 @@ public class EncoderGenerator extends Generator
     {
         for (final Entry entry : entries)
         {
-            out.append(setter(className, entry));
+            setter(className, entry, out);
         }
     }
 
-    private String setter(final String className, final Entry entry)
+    private void setter(final String className, final Entry entry, final Writer out) throws IOException
     {
-        return entry.match(
-            (e, field) -> fieldSetter(className, field),
-            (e, group) -> groupSetter(className, group),
-            (e, component) -> componentField(encoderClassName(e.name()), component));
+        entry.forEach(
+            (field) -> out.append(fieldSetter(className, field)),
+            (group) -> generateGroup(className, group, out),
+            (component) -> componentField(encoderClassName(entry.name()), component, out));
     }
 
     private String fieldSetter(final String className, final Field field)
@@ -263,35 +283,34 @@ public class EncoderGenerator extends Generator
         }
     }
 
-    private String groupSetter(final String className, final Group group)
+    private void generateGroup(final String className, final Group group, final Writer out) throws IOException
     {
-        group(group);
+        generateGroupClass(group, out);
 
         final Entry numberField = group.numberField();
-        final String setter = setter(className, numberField);
+        setter(className, numberField, out);
 
-        return String.format(
-            "%1$s\n" +
-                "    public void inc%4$s()\n" +
-                "    {\n" +
-                "        %5$s++;\n" +
-                "    }\n\n" +
-                "    private %2$s %3$s = null;\n\n" +
-                "    public %2$s %3$s()\n" +
-                "    {\n" +
-                "        if (%3$s == null)\n" +
-                "        {\n" +
-                "            has%4$s = true;\n" +
-                "            %5$s = 1;\n" +
-                "            %3$s = new %2$s(this::inc%4$s);\n" +
-                "        }\n" +
-                "        return %3$s;\n" +
-                "    }\n\n",
-            setter,
+        out.append(String.format(
+            "\n" +
+            "    public void inc%3$s()\n" +
+            "    {\n" +
+            "        %4$s++;\n" +
+            "    }\n\n" +
+            "    private %1$s %2$s = null;\n\n" +
+            "    public %1$s %2$s()\n" +
+            "    {\n" +
+            "        if (%2$s == null)\n" +
+            "        {\n" +
+            "            has%3$s = true;\n" +
+            "            %4$s = 1;\n" +
+            "            %2$s = new %1$s(this::inc%3$s);\n" +
+            "        }\n" +
+            "        return %2$s;\n" +
+            "    }\n\n",
             encoderClassName(group.name()),
             formatPropertyName(group.name()),
             numberField.name(),
-            formatPropertyName(numberField.name()));
+            formatPropertyName(numberField.name())));
     }
 
     private String stringSetter(
@@ -635,17 +654,17 @@ public class EncoderGenerator extends Generator
         );
     }
 
-    protected String componentField(final String className, final Component element)
+    private void componentField(final String className, final Component element, final Writer out) throws IOException
     {
-        return String.format(
+        out.append(String.format(
             "    private final %1$s %2$s = new %1$s();\n" +
             "    public %1$s %2$s()\n" +
-            "    {" +
-            "        return %2$s;" +
-            "    }",
+            "    {\n" +
+            "        return %2$s;\n" +
+            "    }\n\n",
             className,
             formatPropertyName(element.name())
-        );
+        ));
     }
 
     protected String resetFloat(final String name)

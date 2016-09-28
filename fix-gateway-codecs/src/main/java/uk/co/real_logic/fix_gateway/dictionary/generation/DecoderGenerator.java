@@ -38,6 +38,7 @@ import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.generateFieldDictionary;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.sizeHashSet;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.rethrown;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
@@ -93,7 +94,7 @@ public class DecoderGenerator extends Generator
         this.initialBufferSize = initialBufferSize;
     }
 
-    protected void aggregate(final Aggregate aggregate, final AggregateType type)
+    protected void generateAggregateFile(final Aggregate aggregate, final AggregateType type)
     {
         if (type == COMPONENT)
         {
@@ -102,32 +103,53 @@ public class DecoderGenerator extends Generator
         }
 
         final String className = decoderClassName(aggregate);
-        final boolean isMessage = type == MESSAGE;
 
         outputManager.withOutput(className, out ->
         {
             out.append(fileHeader(builderPackage));
 
-            final List<String> interfaces =
-                aggregate.entriesWith(element -> element instanceof Component)
-                         .map(comp -> decoderClassName((Aggregate) comp.element()))
-                         .collect(toList());
-
-            out.append(classDeclaration(className, type, interfaces, "Decoder", Decoder.class));
-            validation(out, aggregate, type);
-            if (isMessage)
-            {
-                final Message message = (Message)aggregate;
-                out.append(messageType(message.fullType(), message.packedType()));
-                out.append(commonCompoundImports("Decoder"));
-            }
-            groupMethods(out, aggregate);
-            getters(out, className, aggregate.entries());
-            out.append(decodeMethod(aggregate.entries(), aggregate, type));
-            out.append(completeResetMethod(isMessage, aggregate.entries(), resetValidation()));
-            out.append(toString(aggregate, isMessage));
-            out.append("}\n");
+            generateImports("Decoder", type, out);
+            generateAggregateClass(aggregate, type, className, out);
         });
+    }
+
+    private void generateAggregateClass(
+        final Aggregate aggregate,
+        final AggregateType type,
+        final String className,
+        final Writer out) throws IOException
+    {
+        final boolean isMessage = type == MESSAGE;
+        final List<String> interfaces =
+            aggregate.entriesWith(element -> element instanceof Component)
+                     .map(comp -> decoderClassName((Aggregate) comp.element()))
+                     .collect(toList());
+
+        out.append(classDeclaration(className, interfaces, Decoder.class, type == GROUP));
+        validation(out, aggregate, type);
+        if (isMessage)
+        {
+            final Message message = (Message)aggregate;
+            out.append(messageType(message.fullType(), message.packedType()));
+            out.append(commonCompoundImports("Decoder"));
+        }
+        groupMethods(out, aggregate);
+        getters(out, aggregate.entries());
+        out.append(decodeMethod(aggregate.entries(), aggregate, type));
+        out.append(completeResetMethod(isMessage, aggregate.entries(), resetValidation()));
+        out.append(toString(aggregate, isMessage));
+        out.append("}\n");
+    }
+
+    private void generateGroupClass(final Group group, final Writer out) throws IOException
+    {
+        final String className = decoderClassName(group);
+        generateAggregateClass(group, GROUP, className, out);
+    }
+
+    protected Class<?> topType(final AggregateType aggregateType)
+    {
+        return Decoder.class;
     }
 
     protected String resetFloat(final String name)
@@ -242,7 +264,6 @@ public class DecoderGenerator extends Generator
         {
             if (isPrimitive)
             {
-
                 final String addValues =
                     field.values()
                         .stream()
@@ -393,12 +414,12 @@ public class DecoderGenerator extends Generator
         );
     }
 
-    private String getter(final Entry entry)
+    private void getter(final Entry entry, final Writer out) throws IOException
     {
-        return entry.match(
-            this::fieldGetter,
-            (e, group) -> groupGetter(group),
-            (e, component) -> componentField(component));
+        entry.forEach(
+            (field) -> out.append(fieldGetter(entry, field)),
+            (group) -> groupGetter(group, out),
+            (component) -> componentGetter(component, out));
     }
 
     private void groupMethods(final Writer out, final Aggregate aggregate) throws IOException
@@ -427,41 +448,42 @@ public class DecoderGenerator extends Generator
             fullType);
     }
 
-    private void getters(final Writer out, final String className, final List<Entry> entries) throws IOException
+    private void getters(final Writer out, final List<Entry> entries) throws IOException
     {
         for (final Entry entry : entries)
         {
-            out.append(getter(entry));
+            getter(entry, out);
         }
     }
 
-    private String componentField(final Component component)
+    private void componentGetter(final Component component, final Writer out) throws IOException
     {
-        return component
+        out.append("\n");
+        component
             .entries()
-            .stream()
-            .map(this::getter)
-            .collect(joining("\n", "", "\n"));
+            .forEach(rethrown(entry -> getter(entry, out)));
+        out.append("\n");
     }
 
-    private String groupGetter(final Group group)
+    private void groupGetter(final Group group, final Writer out) throws IOException
     {
-        group(group);
+        generateGroupClass(group, out);
 
         final Entry numberField = group.numberField();
         final String prefix = fieldGetter(numberField, (Field) numberField.element());
 
-        return String.format(
+        out.append(String.format(
+            "\n" +
             "    private %1$s %2$s = null;\n" +
-                "    public %1$s %2$s()\n" +
-                "    {\n" +
-                "        return %2$s;" +
-                "    }\n\n" +
-                "%3$s",
+            "    public %1$s %2$s()\n" +
+            "    {\n" +
+            "        return %2$s;" +
+            "    }\n\n" +
+            "%3$s",
             decoderClassName(group),
             formatPropertyName(group.name()),
             prefix
-        );
+        ));
     }
 
     private String fieldGetter(final Entry entry, final Field field)

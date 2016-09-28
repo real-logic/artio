@@ -31,16 +31,18 @@ import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import javax.annotation.Generated;
+import java.io.IOException;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static java.util.stream.Collectors.joining;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.*;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.COMPONENT;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.GROUP;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.MESSAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importStaticFor;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
@@ -68,15 +70,13 @@ public abstract class Generator
     }
 
     private static final String COMMON_COMPOUND_IMPORTS =
-            "import %1$s.Header%4$s;\n" +
-            "import %1$s.Trailer%4$s;\n";
+            "import %1$s.Header%2$s;\n" +
+            "import %1$s.Trailer%2$s;\n";
 
     protected final Dictionary dictionary;
     protected final String builderPackage;
     protected final OutputManager outputManager;
     protected final Class<?> validationClass;
-
-    private final Set<String> groupNames = new HashSet<>();
 
     protected Generator(
         final Dictionary dictionary,
@@ -92,60 +92,61 @@ public abstract class Generator
 
     public void generate()
     {
-        aggregate(dictionary.header(), AggregateType.HEADER);
-        aggregate(dictionary.trailer(), AggregateType.TRAILER);
-        dictionary.components().forEach((name, component) -> aggregate(component, COMPONENT));
-        dictionary.messages().forEach(msg -> aggregate(msg, MESSAGE));
+        generateAggregateFile(dictionary.header(), AggregateType.HEADER);
+        generateAggregateFile(dictionary.trailer(), AggregateType.TRAILER);
+        dictionary.components().forEach((name, component) -> generateAggregateFile(component, COMPONENT));
+        dictionary.messages().forEach(msg -> generateAggregateFile(msg, MESSAGE));
     }
 
-    protected abstract void aggregate(final Aggregate aggregate, final AggregateType type);
+    protected abstract void generateAggregateFile(final Aggregate aggregate, final AggregateType type);
 
-    protected void group(final Group group)
+    protected abstract Class<?> topType(final AggregateType aggregateType);
+
+    protected void generateImports(
+        final String compoundSuffix,
+        final AggregateType type,
+        final Writer out) throws IOException
     {
-        final String name = group.name();
-        if (groupNames.add(name))
-        {
-            aggregate(group, GROUP);
-        }
+        out
+            .append(importFor(MutableDirectBuffer.class))
+            .append(importStaticFor(CodecUtil.class))
+            .append(importStaticFor(StandardFixConstants.class))
+            .append(importFor(topType(MESSAGE)))
+            .append(importFor(topType(GROUP)))
+            .append(type == MESSAGE ? String.format(COMMON_COMPOUND_IMPORTS, builderPackage, compoundSuffix) : "")
+            .append(importFor(DecimalFloat.class))
+            .append(importFor(MutableAsciiBuffer.class))
+            .append(importFor(AsciiBuffer.class))
+            .append(importFor(LocalMktDateEncoder.class))
+            .append(importFor(UtcTimestampEncoder.class))
+            .append(importFor(StandardCharsets.class))
+            .append(importFor(Arrays.class))
+            .append(importFor(CharArraySet.class))
+            .append(importFor(IntHashSet.class))
+            .append(importFor(IntIterator.class))
+            .append(importFor(Generated.class))
+            .append(importFor(EncodingException.class))
+            .append(importStaticFor(StandardCharsets.class, "US_ASCII"))
+            .append(importStaticFor(validationClass, CODEC_VALIDATION_ENABLED));
     }
 
     protected String classDeclaration(
         final String className,
-        final AggregateType type,
         final List<String> interfaces,
-        final String compoundSuffix,
-        final Class<?> topType)
+        final Class<?> topType,
+        final boolean isStatic)
     {
         final String interfaceList = interfaces.isEmpty() ? "" : (", " + String.join(", ", interfaces));
 
         return String.format(
-            importFor(MutableDirectBuffer.class) +
-            importStaticFor(CodecUtil.class) +
-            importStaticFor(StandardFixConstants.class) +
-            importFor(topType) +
-            (type == MESSAGE ? COMMON_COMPOUND_IMPORTS : "") +
-            importFor(DecimalFloat.class) +
-            importFor(MutableAsciiBuffer.class) +
-            importFor(AsciiBuffer.class) +
-            importFor(LocalMktDateEncoder.class) +
-            importFor(UtcTimestampEncoder.class) +
-            importFor(StandardCharsets.class) +
-            importFor(Arrays.class) +
-            importFor(CharArraySet.class) +
-            importFor(IntHashSet.class) +
-            importFor(IntIterator.class) +
-            importFor(Generated.class) +
-            importFor(EncodingException.class) +
-            importStaticFor(StandardCharsets.class, "US_ASCII") +
-            importStaticFor(validationClass, CODEC_VALIDATION_ENABLED) +
-            String.format("\n@Generated(\"%s\")\n", getClass().getName()) +
-            "public class %2$s implements %5$s%3$s\n" +
+            "\n\n@Generated(\"%1$s\")\n" +
+            "public %5$sclass %2$s implements %3$s%4$s\n" +
             "{\n",
-            builderPackage,
+            getClass().getName(),
             className,
+            topType.getSimpleName(),
             interfaceList,
-            compoundSuffix,
-            topType.getSimpleName());
+            isStatic ? "static " : "");
     }
 
     protected String completeResetMethod(

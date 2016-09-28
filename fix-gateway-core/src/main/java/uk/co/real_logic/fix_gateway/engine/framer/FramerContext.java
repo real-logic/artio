@@ -160,6 +160,7 @@ public class FramerContext
             sentSequenceNumberIndex,
             inboundLibraryPublication,
             outboundPublication);
+
         if (adminCommands.offer(reply))
         {
             return reply;
