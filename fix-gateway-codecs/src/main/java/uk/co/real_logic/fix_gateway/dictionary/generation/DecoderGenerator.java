@@ -369,7 +369,7 @@ public class DecoderGenerator extends Generator
     {
         return entry.match(
             this::fieldInterfaceGetter,
-            (e, group) -> groupInterfaceGetter(group),
+            (e, group) -> "",
             (e, component) -> componentInterfaceGetter(component));
     }
 
@@ -378,17 +378,9 @@ public class DecoderGenerator extends Generator
         return component
             .entries()
             .stream()
+            .filter(entry -> !entry.isGroup())
             .map(this::interfaceGetter)
             .collect(joining("\n", "", "\n"));
-    }
-
-    private String groupInterfaceGetter(Group group)
-    {
-        return String.format(
-            "    public %1$s %2$s();\n",
-            decoderClassName(group),
-            formatPropertyName(group.name())
-        );
     }
 
     private String fieldInterfaceGetter(final Entry entry, final Field field)
