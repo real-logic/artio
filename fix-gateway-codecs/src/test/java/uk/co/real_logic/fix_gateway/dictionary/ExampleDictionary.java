@@ -37,6 +37,7 @@ public final class ExampleDictionary
 {
 
     public static final String NO_EG_GROUP = "NoEgGroup";
+    public static final String NO_COMPONENT_GROUP = "NoComponentGroup";
     public static final String EG_COMPONENT = "EgComponent";
 
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
@@ -138,6 +139,16 @@ public final class ExampleDictionary
         "  \"EgComponent\":  {\n" +
         "    \"MessageName\": \"EgComponent\",\n" +
         "    \"ComponentField\": \"2\",\n" +
+        "    \"ComponentGroupGroup\": [\n" +
+        "    {\n" +
+        "      \"MessageName\": \"ComponentGroupGroup\",\n" +
+        "      \"ComponentGroupField\": \"1\",\n" +
+        "    },\n" +
+        "    {\n" +
+        "      \"MessageName\": \"ComponentGroupGroup\",\n" +
+        "      \"ComponentGroupField\": \"2\",\n" +
+        "    }\n" +
+        "    ]\n" +
         "  }";
 
     public static final String ENCODED_MESSAGE =
@@ -203,8 +214,8 @@ public final class ExampleDictionary
             "\001120=1\001121=1\001122=1\001123=1\00110=159\001";
 
     public static final String COMPONENT_MESSAGE =
-        "8=FIX.4.4\0019=0059\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-            "\001124=2\00110=152\001";
+        "8=FIX.4.4\0019=0077\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+            "\001124=2\001130=2\001131=1\001131=2\00110=165\001";
 
     public static final String SHORT_TIMESTAMP_MESSAGE =
         "8=FIX.4.4\0019=0049\00135=0\001115=abc\001116=2\001117=1.1" +
@@ -255,8 +266,12 @@ public final class ExampleDictionary
         egGroup.optionalEntry(registerField(messageEgFields, 121, "GroupField", INT));
         egGroup.optionalEntry(nestedGroup);
 
+        final Group componentGroup = Group.of(registerField(messageEgFields, 130, NO_COMPONENT_GROUP, INT));
+        componentGroup.optionalEntry(registerField(messageEgFields, 131, "ComponentGroupField", INT));
+
         final Component egComponent = new Component(EG_COMPONENT);
         egComponent.optionalEntry(registerField(messageEgFields, 124, "ComponentField", INT));
+        egComponent.optionalEntry(componentGroup);
 
         final Message heartbeat = new Message("Heartbeat", "0", ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);

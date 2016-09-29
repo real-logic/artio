@@ -52,6 +52,7 @@ public class EncoderGeneratorTest
     public static void generate() throws Exception
     {
         sources = generateSources(true);
+        //System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
         headerClass = compileInMemory(HEADER_ENCODER, sources);
         otherMessage = compileInMemory(OTHER_MESSAGE_ENCODER, sources);
@@ -263,7 +264,7 @@ public class EncoderGeneratorTest
     {
         final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
-        setGroup(encoder);
+        setEgGroup(encoder);
 
         assertEncodesTo(encoder, REPEATING_GROUP_MESSAGE);
     }
@@ -418,7 +419,7 @@ public class EncoderGeneratorTest
     {
         final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
-        setGroup(encoder);
+        setEgGroup(encoder);
 
         assertThat(encoder, hasToString(containsString(STRING_FOR_GROUP)));
     }
@@ -492,20 +493,31 @@ public class EncoderGeneratorTest
     {
         final Object egComponent = getEgComponent(encoder);
         setInt(egComponent, COMPONENT_FIELD, 2);
+
+        Object componentGroup = getComponentGroup(egComponent);
+        setComponentGroupField(componentGroup, 1);
+
+        componentGroup = next(componentGroup);
+        setComponentGroupField(componentGroup, 2);
     }
 
-    private void setGroup(final Encoder encoder) throws Exception
+    private void setEgGroup(final Encoder encoder) throws Exception
     {
-        Object group = getEgGroup(encoder);
-        setGroupField(group, 1);
+        Object egGroup = getEgGroup(encoder);
+        setGroupField(egGroup, 1);
 
-        group = next(group);
-        setGroupField(group, 2);
+        egGroup = next(egGroup);
+        setGroupField(egGroup, 2);
     }
 
-    private void setGroupField(final Object tradingSessions, final int value) throws Exception
+    private void setGroupField(final Object group, final int value) throws Exception
     {
-        setInt(tradingSessions, "groupField", value);
+        setInt(group, "groupField", value);
+    }
+
+    private void setComponentGroupField(final Object group, final int value) throws Exception
+    {
+        setInt(group, "componentGroupField", value);
     }
 
     private void setupHeader(final Encoder encoder) throws Exception

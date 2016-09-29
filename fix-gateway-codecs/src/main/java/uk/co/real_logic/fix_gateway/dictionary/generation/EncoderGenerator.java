@@ -54,7 +54,13 @@ public class EncoderGenerator extends Generator
         "    {\n" +
         "        int position = offset;\n\n";
 
-    public static String encoderClassName(final String name)
+    private static final String RESET_NEXT_GROUP =
+        "        if (next != null)" +
+        "        {\n" +
+        "            next.reset();\n" +
+        "        }\n";
+
+    private static String encoderClassName(final String name)
     {
         return formatClassName(name + "Encoder");
     }
@@ -114,9 +120,16 @@ public class EncoderGenerator extends Generator
         precomputedHeaders(out, aggregate.entries());
         setters(out, className, aggregate.entries());
         out.append(encodeMethod(aggregate.entries(), type));
-        out.append(completeResetMethod(isMessage, aggregate.entries(), ""));
+        out.append(completeResetMethod(aggregate, isMessage, type));
         out.append(toString(aggregate, isMessage));
         out.append("}\n");
+    }
+
+    private String completeResetMethod(
+        final Aggregate aggregate, final boolean isMessage, final AggregateType type)
+    {
+        final String additionalReset =  type == GROUP ? RESET_NEXT_GROUP : "";
+        return super.completeResetMethod(isMessage, aggregate.entries(), additionalReset);
     }
 
     private void generateGroupClass(final Group group, final Writer out) throws IOException
