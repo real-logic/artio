@@ -21,6 +21,7 @@ import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionCustomisationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+import uk.co.real_logic.fix_gateway.timing.HistogramHandler;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
@@ -162,7 +163,6 @@ public class CommonConfiguration
     private Aeron.Context aeronContext = new Aeron.Context();
     private int errorSlotSize = DEFAULT_ERROR_SLOT_SIZE;
     private int sessionBufferSize = DEFAULT_SESSION_BUFFER_SIZE;
-
     private int inboundMaxClaimAttempts =
         getInteger(INBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS);
     private int outboundMaxClaimAttempts =
@@ -171,6 +171,7 @@ public class CommonConfiguration
     private long histogramPollPeriodInMs =
         Long.getLong(HISTOGRAM_POLL_PERIOD_IN_MS_PROPERTY, DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS);
     private String histogramLoggingFile = null;
+    private HistogramHandler histogramHandler;
 
     /**
      * Sets the sending time window. The sending time window is the period of acceptance
@@ -401,6 +402,12 @@ public class CommonConfiguration
         return this;
     }
 
+    public CommonConfiguration histogramHandler(final HistogramHandler histogramHandler)
+    {
+        this.histogramHandler = histogramHandler;
+        return this;
+    }
+
     public Aeron.Context aeronContext()
     {
         return aeronContext;
@@ -461,6 +468,45 @@ public class CommonConfiguration
         return histogramPollPeriodInMs;
     }
 
+    public int inboundMaxClaimAttempts()
+    {
+        return inboundMaxClaimAttempts;
+    }
+
+    public int outboundMaxClaimAttempts()
+    {
+        return outboundMaxClaimAttempts;
+    }
+
+    public int sessionBufferSize()
+    {
+        return sessionBufferSize;
+    }
+
+    public String histogramLoggingFile()
+    {
+        return histogramLoggingFile;
+    }
+
+    public HistogramHandler histogramHandler()
+    {
+        return histogramHandler;
+    }
+
+    protected void conclude(final String fixSuffix)
+    {
+        if (monitoringFile() == null)
+        {
+            monitoringFile(getProperty(MONITORING_FILE_PROPERTY, String.format(DEFAULT_MONITORING_FILE, fixSuffix)));
+        }
+
+        if (histogramLoggingFile() == null)
+        {
+            histogramLoggingFile(getProperty(
+                HISTOGRAM_LOGGING_FILE_PROPERTY, String.format(DEFAULT_HISTOGRAM_LOGGING_FILE, fixSuffix)));
+        }
+    }
+
     /**
      * If shared memory is available, use that as a temporary directory,
      * otherwise use the default temp directory
@@ -485,39 +531,5 @@ public class CommonConfiguration
     public static IdleStrategy backoffIdleStrategy()
     {
         return new BackoffIdleStrategy(BACKOFF_SPINS, BACKOFF_YIELDS, 1, 1 << 20);
-    }
-
-    public int inboundMaxClaimAttempts()
-    {
-        return inboundMaxClaimAttempts;
-    }
-
-    public int outboundMaxClaimAttempts()
-    {
-        return outboundMaxClaimAttempts;
-    }
-
-    public int sessionBufferSize()
-    {
-        return sessionBufferSize;
-    }
-
-    public String histogramLoggingFile()
-    {
-        return histogramLoggingFile;
-    }
-
-    protected void conclude(final String fixSuffix)
-    {
-        if (monitoringFile() == null)
-        {
-            monitoringFile(getProperty(MONITORING_FILE_PROPERTY, String.format(DEFAULT_MONITORING_FILE, fixSuffix)));
-        }
-
-        if (histogramLoggingFile() == null)
-        {
-            histogramLoggingFile(getProperty(
-                HISTOGRAM_LOGGING_FILE_PROPERTY, String.format(DEFAULT_HISTOGRAM_LOGGING_FILE, fixSuffix)));
-        }
     }
 }

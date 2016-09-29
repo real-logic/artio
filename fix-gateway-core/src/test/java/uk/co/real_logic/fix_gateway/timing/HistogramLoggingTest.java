@@ -38,6 +38,7 @@ import static org.mockito.Mockito.*;
 public class HistogramLoggingTest
 {
     private static final String NAME = "abc";
+    public static final HistogramHandler NO_HISTOGRAM_HANDLER = null;
 
     private EpochClock clock = mock(EpochClock.class);
     private HistogramLogHandler logHandler = mock(HistogramLogHandler.class);
@@ -46,7 +47,7 @@ public class HistogramLoggingTest
 
     private File file;
     private Timer timer;
-    private HistogramLogWriter writer;
+    private HistogramLogAgent writer;
     private HistogramLogReader reader;
 
     @Before
@@ -56,12 +57,13 @@ public class HistogramLoggingTest
 
         file = File.createTempFile("histogram", "tmp");
         timer = new Timer(NAME, 1);
-        writer = new HistogramLogWriter(
+        writer = new HistogramLogAgent(
             Arrays.asList(timer),
             file.getAbsolutePath(),
             100,
             errorHandler,
-            clock);
+            clock,
+            NO_HISTOGRAM_HANDLER);
         reader = new HistogramLogReader(file);
     }
 

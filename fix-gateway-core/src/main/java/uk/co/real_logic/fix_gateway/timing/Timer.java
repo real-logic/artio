@@ -18,9 +18,6 @@ package uk.co.real_logic.fix_gateway.timing;
 import org.HdrHistogram.Histogram;
 import org.HdrHistogram.SingleWriterRecorder;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 
 public class Timer
@@ -30,8 +27,8 @@ public class Timer
     // Only written to on recording thread
     private final SingleWriterRecorder recorder;
 
-    private final String name;
     // Only accesssed upon logging thread
+    private final String name;
     private final int id;
     private Histogram histogram;
 
@@ -60,19 +57,20 @@ public class Timer
         recorder.recordValue(duration);
     }
 
-    public void writeName(final ByteBuffer buffer)
+    int id()
     {
-        final byte[] name = this.name.getBytes(StandardCharsets.UTF_8);
-        buffer.putInt(id);
-        buffer.putInt(name.length);
-        buffer.put(name);
+        return id;
     }
 
-    public void writeTimings(final ByteBuffer buffer)
+    String name()
     {
-        buffer.putInt(id);
+        return name;
+    }
+
+    Histogram getTimings()
+    {
         histogram = recorder.getIntervalHistogram(histogram);
-        histogram.encodeIntoByteBuffer(buffer);
+        return histogram;
     }
 
 }

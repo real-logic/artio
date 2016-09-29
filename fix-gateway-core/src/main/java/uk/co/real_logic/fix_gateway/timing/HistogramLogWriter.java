@@ -15,62 +15,66 @@
  */
 package uk.co.real_logic.fix_gateway.timing;
 
+import org.HdrHistogram.Histogram;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.EpochClock;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.util.List;
 
-import static java.nio.file.StandardOpenOption.*;
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
+import static java.nio.file.StandardOpenOption.WRITE;
 
-public class HistogramLogWriter implements Agent
+class HistogramLogWriter implements HistogramHandler
 {
     private static final int BUFFER_SIZE = 1024 * 1024;
 
-    private final List<Timer> timers;
     private final FileChannel logFile;
-    private final long intervalInMs;
+    private final ByteBuffer buffer;
     private final ErrorHandler errorHandler;
-    private final EpochClock milliClock;
-    private final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
 
-    private long nextWriteTimeInMs = 0;
-
-    public HistogramLogWriter(
-        final List<Timer> timers,
-        final String logFile,
-        final long intervalInMs,
-        final ErrorHandler errorHandler,
-        final EpochClock milliClock)
+    HistogramLogWriter(
+        final int numberOfTimers, final String logFile, final ErrorHandler errorHandler)
     {
-        this.timers = timers;
-        this.intervalInMs = intervalInMs;
         this.errorHandler = errorHandler;
-        this.milliClock = milliClock;
+        buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
+        buffer.putInt(numberOfTimers);
         this.logFile = open(logFile);
-        buffer.putInt(timers.size());
-        timers.forEach(timer -> timer.writeName(buffer));
-        try
-        {
-            writeBuffer();
-        }
-        catch (IOException ex)
-        {
-            LangUtil.rethrowUnchecked(ex);
-        }
     }
 
-    private void writeBuffer() throws IOException
+    public void identifyTimer(final int id, final String name)
     {
-        buffer.flip();
-        logFile.write(buffer);
-        logFile.force(true);
+        final byte[] nameBytes = name.getBytes(StandardCharsets.UTF_8);
+        buffer.putInt(id);
+        buffer.putInt(nameBytes.length);
+        buffer.put(nameBytes);
+    }
+
+    public void onEndTimerIdentification()
+    {
+        writeBuffer();
+    }
+
+    public void onTimerUpdate(final int id, final Histogram histogram)
+    {
+        buffer.putInt(id);
+        histogram.encodeIntoByteBuffer(buffer);
+    }
+
+    public void onBeginTimerUpdate(final long currentTimeInMs)
+    {
+        buffer.clear();
+        buffer.putLong(currentTimeInMs);
+    }
+
+    public void onEndTimerUpdate()
+    {
+        writeBuffer();
     }
 
     private FileChannel open(final String logFile)
@@ -86,35 +90,21 @@ public class HistogramLogWriter implements Agent
         }
     }
 
-    public int doWork() throws Exception
+    private void writeBuffer()
     {
-        final long currentTimeInMs = milliClock.time();
-
-        if (currentTimeInMs > nextWriteTimeInMs)
+        try
         {
-            logHistograms(currentTimeInMs);
-
-            nextWriteTimeInMs = currentTimeInMs + intervalInMs;
-            return 1;
+            buffer.flip();
+            logFile.write(buffer);
+            logFile.force(true);
         }
-
-        return 0;
+        catch (final IOException e)
+        {
+            errorHandler.onError(e);
+        }
     }
 
-    private void logHistograms(final long currentTimeInMs) throws IOException
-    {
-        buffer.clear();
-        buffer.putLong(currentTimeInMs);
-        timers.forEach(timer -> timer.writeTimings(buffer));
-        writeBuffer();
-    }
-
-    public String roleName()
-    {
-        return "HistogramLogger";
-    }
-
-    public void onClose()
+    public void close()
     {
         try
         {

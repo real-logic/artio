@@ -19,7 +19,7 @@ import io.aeron.Aeron;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.*;
 import org.agrona.concurrent.errors.DistinctErrorLog;
-import uk.co.real_logic.fix_gateway.timing.HistogramLogWriter;
+import uk.co.real_logic.fix_gateway.timing.HistogramLogAgent;
 import uk.co.real_logic.fix_gateway.timing.Timer;
 
 import java.nio.channels.ClosedByInterruptException;
@@ -101,12 +101,13 @@ public class GatewayProcess implements AutoCloseable
         final List<Agent> agents = new ArrayList<>();
         if (TIME_MESSAGES)
         {
-            agents.add(new HistogramLogWriter(
+            agents.add(new HistogramLogAgent(
                 timers,
                 configuration.histogramLoggingFile(),
                 configuration.histogramPollPeriodInMs(),
                 errorHandler,
-                new SystemEpochClock()));
+                new SystemEpochClock(),
+                configuration.histogramHandler()));
         }
 
         if (configuration.printErrorMessages())
