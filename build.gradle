@@ -34,7 +34,6 @@ defaultTasks 'clean', 'build', 'install'
 
 ext {
     group = fixGroup
-    version = fixVersion
 
     if (!project.hasProperty('ossrhUsername')) {
         ossrhUsername = ''
@@ -67,7 +66,6 @@ subprojects {
     }
 
     group = fixGroup
-    version = fixVersion
 
     compileJava {
         sourceCompatibility = 1.8
