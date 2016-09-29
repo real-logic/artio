@@ -19,11 +19,13 @@ buildscript {
     dependencies {
         classpath 'com.puppycrawl.tools:checkstyle:7.0'
         classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+        classpath 'net.researchgate:gradle-release:2.4.0'
     }
 }
 
 apply plugin: 'maven'
 apply plugin: 'signing'
+apply plugin: 'net.researchgate.release'
 
 def aeronVersion = '1.0.1'
 def agronaVersion = '0.5.4'

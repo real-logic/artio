@@ -38,6 +38,7 @@ hs_err_pid*
 fix-gateway-system-tests/logs/
 logs/
 *acceptor-logs*
+acceptor_logs/
 
 *.jar
 *.jfr
