@@ -132,9 +132,8 @@ public class DecoderGeneratorTest
         assertValid(decoder);
     }
 
-
     @Test
-    public void ignoresMissingOptionalValues() throws Exception
+    public void shouldIgnoreMissingOptionalValues() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
 
@@ -293,9 +292,11 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void shouldGenerateComponentInterface() throws NoSuchMethodException
+    public void shouldGenerateComponentInterface() throws Exception
     {
-        assertTrue("heartbeat doesn't implement its component", component.isAssignableFrom(heartbeat));
+        assertTrue(
+            "heartbeat doesn't implement its component",
+            component.isAssignableFrom(heartbeat));
 
         assertHasComponentFieldGetter();
     }
@@ -442,10 +443,21 @@ public class DecoderGeneratorTest
 
     // TODO: validation for groups
 
-    private void assertHasComponentFieldGetter() throws NoSuchMethodException
+    private void assertHasComponentFieldGetter() throws NoSuchMethodException, ClassNotFoundException
     {
-        final Method method = component.getMethod("componentField");
-        assertEquals(int.class, method.getReturnType());
+        assertHasMethod("componentField", int.class);
+        assertHasMethod(HAS_COMPONENT_FIELD, boolean.class);
+
+        assertHasMethod(
+            "componentGroupGroup",
+            heartbeat.getClassLoader().loadClass(
+                "uk.co.real_logic.fix_gateway.builder.test.EgComponentDecoder$ComponentGroupGroupDecoder"));
+    }
+
+    private void assertHasMethod(final String name, final Class<?> expectedReturnType) throws NoSuchMethodException
+    {
+        final Method method = component.getMethod(name);
+        assertEquals(expectedReturnType, method.getReturnType());
     }
 
     private Object getNoEgGroupGroupCounter(final Decoder decoder) throws Exception

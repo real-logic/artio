@@ -16,20 +16,16 @@
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.agrona.LangUtil;
-import org.agrona.MutableDirectBuffer;
 import org.agrona.generation.OutputManager;
+import org.agrona.generation.ResourceConsumer;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
-import uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 import uk.co.real_logic.fix_gateway.fields.*;
-import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -39,7 +35,7 @@ import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.*
 import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.generateFieldDictionary;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.rethrown;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.*;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
@@ -81,6 +77,8 @@ public class DecoderGenerator extends Generator
         return name + "Decoder";
     }
 
+    private Aggregate currentAggregate = null;
+
     private final int initialBufferSize;
 
     public DecoderGenerator(
@@ -119,6 +117,9 @@ public class DecoderGenerator extends Generator
         final String className,
         final Writer out) throws IOException
     {
+        final Aggregate parentAggregate = currentAggregate;
+        currentAggregate = aggregate;
+
         final boolean isMessage = type == MESSAGE;
         final List<String> interfaces =
             aggregate.entriesWith(element -> element instanceof Component)
@@ -139,9 +140,10 @@ public class DecoderGenerator extends Generator
         out.append(completeResetMethod(isMessage, aggregate.entries(), resetValidation()));
         out.append(toString(aggregate, isMessage));
         out.append("}\n");
+        currentAggregate = parentAggregate;
     }
 
-    private void generateGroupClass(final Group group, final Writer out) throws IOException
+    private void groupClass(final Group group, final Writer out) throws IOException
     {
         final String className = decoderClassName(group);
         generateAggregateClass(group, GROUP, className, out);
@@ -343,44 +345,54 @@ public class DecoderGenerator extends Generator
         {
             out.append(fileHeader(builderPackage));
 
+            generateImports("Decoder", AggregateType.COMPONENT, out);
             out.append(String.format(
-                importFor(MutableDirectBuffer.class) +
-                importStaticFor(CodecUtil.class) +
-                importStaticFor(StandardFixConstants.class) +
-                importFor(DecimalFloat.class) +
-                importFor(MutableAsciiBuffer.class) +
-                importFor(AsciiBuffer.class) +
-                importFor(LocalMktDateEncoder.class) +
-                importFor(UtcTimestampEncoder.class) +
-                importFor(StandardCharsets.class) +
                 "\npublic interface %1$s\n" +
                 "{\n\n",
                 className));
 
             for (final Entry entry : component.entries())
             {
-                out.append(interfaceGetter(entry));
+                interfaceGetter(entry, out);
             }
             out.append("\n}\n");
         });
     }
 
-    private String interfaceGetter(final Entry entry)
+    private void interfaceGetter(final Entry entry, final Writer out) throws IOException
     {
-        return entry.match(
-            this::fieldInterfaceGetter,
-            (e, group) -> "",
-            (e, component) -> componentInterfaceGetter(component));
+        entry.forEach(
+            (field) -> out.append(fieldInterfaceGetter(entry, field)),
+            (group) -> groupInterfaceGetter(group, out),
+            (component) -> componentInterfaceGetter(component, out));
     }
 
-    private String componentInterfaceGetter(Component component)
+    private void groupInterfaceGetter(final Group group, final Writer out) throws IOException
     {
-        return component
+        groupClass(group, out);
+
+        out.append(String.format(
+            "    public %1$s %2$s();\n",
+            decoderClassName(group),
+            formatPropertyName(group.name())
+        ));
+    }
+
+    private void componentInterfaceGetter(
+        final Component component, final Writer out) throws IOException
+    {
+        wrappedForEachEntry(component, out, entry -> interfaceGetter(entry, out));
+    }
+
+    private void wrappedForEachEntry(
+        final Aggregate aggregate, final Writer out, final ResourceConsumer<Entry> consumer)
+        throws IOException
+    {
+        out.append("\n");
+        aggregate
             .entries()
-            .stream()
-            .filter(entry -> !entry.isGroup())
-            .map(this::interfaceGetter)
-            .collect(joining("\n", "", "\n"));
+            .forEach(rethrown(consumer));
+        out.append("\n");
     }
 
     private String fieldInterfaceGetter(final Entry entry, final Field field)
@@ -450,16 +462,19 @@ public class DecoderGenerator extends Generator
 
     private void componentGetter(final Component component, final Writer out) throws IOException
     {
-        out.append("\n");
-        component
-            .entries()
-            .forEach(rethrown(entry -> getter(entry, out)));
-        out.append("\n");
+        final Aggregate parentAggregate = currentAggregate;
+        currentAggregate = component;
+        wrappedForEachEntry(component, out, entry -> getter(entry, out));
+        currentAggregate = parentAggregate;
     }
 
     private void groupGetter(final Group group, final Writer out) throws IOException
     {
-        generateGroupClass(group, out);
+        // The component interface will generate the group class
+        if (!(currentAggregate instanceof Component))
+        {
+            groupClass(group, out);
+        }
 
         final Entry numberField = group.numberField();
         final String prefix = fieldGetter(numberField, (Field) numberField.element());
