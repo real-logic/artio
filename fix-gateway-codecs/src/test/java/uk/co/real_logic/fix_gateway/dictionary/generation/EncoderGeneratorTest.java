@@ -169,7 +169,7 @@ public class EncoderGeneratorTest
         final Encoder header = (Encoder)headerClass.newInstance();
 
         setCharSequence(header, "beginString", "abc");
-        setCharSequence(header, "msgType", "abc");
+        setCharSequence(header, MSG_TYPE, "abc");
 
         assertEncodesTo(header, "8=abc\0019=0000\00135=abc\001");
     }
@@ -491,7 +491,7 @@ public class EncoderGeneratorTest
     private void setupComponent(final Encoder encoder) throws Exception
     {
         final Object egComponent = getEgComponent(encoder);
-        setInt(egComponent, "componentField", 2);
+        setInt(egComponent, COMPONENT_FIELD, 2);
     }
 
     private void setGroup(final Encoder encoder) throws Exception
@@ -512,7 +512,7 @@ public class EncoderGeneratorTest
     {
         final Object header = Reflection.get(encoder, "header");
         setCharSequence(header, "beginString", "FIX.4.4");
-        setCharSequence(header, "msgType", "0");
+        setCharSequence(header, MSG_TYPE, "0");
     }
 
     private void setRequiredFields(Encoder encoder) throws Exception
