@@ -38,7 +38,8 @@ import static org.mockito.Mockito.*;
 public class HistogramLoggingTest
 {
     private static final String NAME = "abc";
-    public static final HistogramHandler NO_HISTOGRAM_HANDLER = null;
+
+    private static final HistogramHandler NO_HISTOGRAM_HANDLER = null;
 
     private EpochClock clock = mock(EpochClock.class);
     private HistogramLogHandler logHandler = mock(HistogramLogHandler.class);
