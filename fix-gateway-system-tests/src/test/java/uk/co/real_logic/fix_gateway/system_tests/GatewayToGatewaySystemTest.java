@@ -34,6 +34,7 @@ import static uk.co.real_logic.fix_gateway.CommonMatchers.hasConnectionId;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -138,8 +139,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void sessionsListedInAdminApi()
     {
-        final List<LibraryInfo> libraries = initiatingEngine.libraries(ADMIN_IDLE_STRATEGY);
-        assertThat(libraries, hasSize(1));
+        final List<LibraryInfo> libraries = libraries(initiatingEngine);
+        assertThat(libraries, hasSize(2));
 
         final LibraryInfo library = libraries.get(0);
         assertEquals(initiatingLibrary.libraryId(), library.libraryId());
@@ -154,6 +155,10 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertEquals(initiatingSession.connectedPort(), port);
         assertEquals(initiatingSession.connectedHost(), "localhost");
+
+        final LibraryInfo gatewayLibraryInfo = libraries.get(1);
+        assertEquals(ENGINE_LIBRARY_ID, gatewayLibraryInfo.libraryId());
+        assertThat(gatewayLibraryInfo.sessions(), hasSize(0));
     }
 
     @Test
@@ -252,7 +257,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(SessionState.DISABLED, session.state());
         assertThat(library.sessions(), hasSize(0));
 
-        final List<SessionInfo> sessions = engine.gatewaySessions(ADMIN_IDLE_STRATEGY);
+        final List<SessionInfo> sessions = gatewayLibraryInfo(engine).sessions();
         assertThat(sessions,
             contains(hasConnectionId(connectionId)));
     }
@@ -285,7 +290,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final SessionReplyStatus status = getSessionStatus(library, sessionId, NO_MESSAGE_REPLAY);
         assertEquals(SessionReplyStatus.OK, status);
 
-        assertThat(engine.gatewaySessions(ADMIN_IDLE_STRATEGY), hasSize(0));
+        assertThat(gatewayLibraryInfo(engine).sessions(), hasSize(0));
 
         engineIsManagingSession(engine, session.connectionId());
         assertContainsOnlySession(session, library);
@@ -306,7 +311,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
     private void engineIsManagingSession(final FixEngine engine, final long connectionId)
     {
-        final List<LibraryInfo> libraries = engine.libraries(ADMIN_IDLE_STRATEGY);
+        final List<LibraryInfo> libraries = libraries(engine);
         assertThat(libraries.get(0).sessions(),
             contains(hasConnectionId(connectionId)));
     }

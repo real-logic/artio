@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
-import org.agrona.concurrent.IdleStrategy;
 import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
@@ -37,15 +36,14 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasFluentProperty;
 
 public class EngineAndLibraryIntegrationTest
 {
-    private static final IdleStrategy ADMIN_IDLE_STRATEGY = backoffIdleStrategy();
     private static final int SHORT_TIMEOUT_IN_MS = 100;
 
     private MediaDriver mediaDriver;
@@ -76,7 +74,7 @@ public class EngineAndLibraryIntegrationTest
     @Test
     public void engineInitiallyHasNoConnectedLibraries()
     {
-        assertNoActiveLibraries(0);
+        assertNumActiveLibraries(0);
     }
 
     @Test
@@ -86,7 +84,9 @@ public class EngineAndLibraryIntegrationTest
 
         awaitLibraryConnect(library);
 
-        assertHasLibraries(matchesLibrary(library.libraryId()));
+        assertHasLibraries(
+            matchesLibrary(library.libraryId()),
+            matchesLibrary(ENGINE_LIBRARY_ID));
     }
 
     @Test
@@ -107,7 +107,8 @@ public class EngineAndLibraryIntegrationTest
 
         assertHasLibraries(
             matchesLibrary(library.libraryId()),
-            matchesLibrary(library2.libraryId()));
+            matchesLibrary(library2.libraryId()),
+            matchesLibrary(ENGINE_LIBRARY_ID));
     }
 
     @Test
@@ -124,7 +125,9 @@ public class EngineAndLibraryIntegrationTest
 
         assertLibrariesDisconnect(1, library2, engine);
 
-        assertHasLibraries(matchesLibrary(library2.libraryId()));
+        assertHasLibraries(
+            matchesLibrary(library2.libraryId()),
+            matchesLibrary(ENGINE_LIBRARY_ID));
 
         return library2;
     }
@@ -173,13 +176,14 @@ public class EngineAndLibraryIntegrationTest
     @SafeVarargs
     private final void assertHasLibraries(final Matcher<LibraryInfo>... libraryMatchers)
     {
-        final List<LibraryInfo> libraries = engine.libraries(ADMIN_IDLE_STRATEGY);
+        final List<LibraryInfo> libraries = libraries(engine);
         assertThat(libraries, containsInAnyOrder(libraryMatchers));
     }
 
-    private void assertNoActiveLibraries(final int count)
+    private void assertNumActiveLibraries(final int count)
     {
-        assertThat("libraries haven't disconnected yet", engine.libraries(ADMIN_IDLE_STRATEGY), hasSize(count));
+        // +1 to account for the gateway sesssions that are modelled as libraries.
+        assertThat("libraries haven't disconnected yet", libraries(engine), hasSize(count + 1));
     }
 
     private FixLibrary connectLibrary()

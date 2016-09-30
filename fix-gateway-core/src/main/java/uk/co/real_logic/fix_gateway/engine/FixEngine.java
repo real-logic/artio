@@ -72,23 +72,11 @@ public final class FixEngine extends GatewayProcess
     /**
      * Query the engine for the list of libraries currently active.
      *
-     * @param idleStrategy the strategy to idle with whilst waiting for a response.
      * @return a list of currently active libraries.
      */
-    public List<LibraryInfo> libraries(final IdleStrategy idleStrategy)
+    public Reply<List<LibraryInfo>> libraries()
     {
-        return framerContext.libraries(idleStrategy);
-    }
-
-    /**
-     * Query the engine for the lise of sessions currently managed.
-     *
-     * @param idleStrategy the strategy to idle with whilst waiting for a response.
-     * @return the lise of sessions currently managed.
-     */
-    public List<SessionInfo> gatewaySessions(final IdleStrategy idleStrategy)
-    {
-        return framerContext.gatewaySessions(idleStrategy);
+        return framerContext.libraries();
     }
 
     /**

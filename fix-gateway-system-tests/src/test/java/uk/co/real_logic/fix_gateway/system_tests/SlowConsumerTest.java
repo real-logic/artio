@@ -175,8 +175,8 @@ public class SlowConsumerTest
 
     private SessionInfo getSessionInfo()
     {
-        final List<LibraryInfo> libraries = engine.libraries(ADMIN_IDLE_STRATEGY);
-        assertThat(libraries, hasSize(1));
+        final List<LibraryInfo> libraries = libraries(engine);
+        assertThat(libraries, hasSize(2));
         final LibraryInfo libraryInfo = libraries.get(0);
         final List<SessionInfo> sessions = libraryInfo.sessions();
         assertThat(sessions, hasSize(1));

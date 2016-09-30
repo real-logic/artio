@@ -15,32 +15,40 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import org.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.Reply;
 
 import java.util.List;
 
-final class QueryLibrariesCommand implements AdminCommand
+final class QueryLibrariesCommand implements Reply<List<LibraryInfo>>, AdminCommand
 {
-    private volatile List<LibraryInfo> response;
+    // State written to from Framer thread, read by any other thread.
+    private volatile State state = State.EXECUTING;
+    private List<LibraryInfo> result;
 
     public void execute(final Framer framer)
     {
         framer.onQueryLibraries(this);
     }
 
-    void success(final List<LibraryInfo> response)
+    void success(final List<LibraryInfo> result)
     {
-        this.response = response;
+        this.result = result;
+        state = State.COMPLETED;
     }
 
-    List<LibraryInfo> awaitResponse(final IdleStrategy idleStrategy)
+    public Exception error()
     {
-        List<LibraryInfo> response;
-        while ((response = this.response) == null)
-        {
-            idleStrategy.idle();
-        }
-        idleStrategy.reset();
-        return response;
+        return null;
     }
+
+    public List<LibraryInfo> resultIfPresent()
+    {
+        return result;
+    }
+
+    public State state()
+    {
+        return state;
+    }
+
 }

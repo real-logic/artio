@@ -65,11 +65,6 @@ abstract class LibraryReply<T> implements Reply<T>
         return state;
     }
 
-    public long correlationId()
-    {
-        return correlationId;
-    }
-
     void onComplete(T result)
     {
         this.result = result;

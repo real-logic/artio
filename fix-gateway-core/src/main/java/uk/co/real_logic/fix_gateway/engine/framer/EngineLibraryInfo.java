@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Real Logic Ltd.
+ * Copyright 2015-2016 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,33 +15,29 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 
+import java.util.ArrayList;
 import java.util.List;
 
-final class GatewaySessionsCommand implements AdminCommand
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
+
+class EngineLibraryInfo implements LibraryInfo
 {
-    private volatile List<SessionInfo> response;
+    private final ArrayList<SessionInfo> sessions;
 
-    public void execute(final Framer framer)
+    EngineLibraryInfo(final GatewaySessions gatewaySessions)
     {
-        framer.onGatewaySessions(this);
+        sessions = new ArrayList<>(gatewaySessions.sessions());
     }
 
-    void success(final List<SessionInfo> response)
+    public int libraryId()
     {
-        this.response = response;
+        return ENGINE_LIBRARY_ID;
     }
 
-    List<SessionInfo> awaitResponse(final IdleStrategy idleStrategy)
+    public List<SessionInfo> sessions()
     {
-        List<SessionInfo> response;
-        while ((response = this.response) == null)
-        {
-            idleStrategy.idle();
-        }
-        idleStrategy.reset();
-        return response;
+        return sessions;
     }
 }

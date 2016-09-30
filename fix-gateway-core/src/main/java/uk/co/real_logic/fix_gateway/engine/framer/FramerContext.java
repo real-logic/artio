@@ -25,7 +25,6 @@ import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineContext;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
-import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
@@ -134,12 +133,16 @@ public class FramerContext
         return framer;
     }
 
-    public List<LibraryInfo> libraries(final IdleStrategy idleStrategy)
+    public Reply<List<LibraryInfo>> libraries()
     {
-        final QueryLibrariesCommand command = new QueryLibrariesCommand();
-        sendAdminCommand(idleStrategy, command);
+        final QueryLibrariesCommand reply = new QueryLibrariesCommand();
 
-        return command.awaitResponse(idleStrategy);
+        if (adminCommands.offer(reply))
+        {
+            return reply;
+        }
+
+        return null;
     }
 
     private void sendAdminCommand(final IdleStrategy idleStrategy, final AdminCommand query)
@@ -153,7 +156,7 @@ public class FramerContext
 
     public Reply<?> resetSequenceNumber(final long sessionId)
     {
-        final ResetSequenceNumberReply reply = new ResetSequenceNumberReply(
+        final ResetSequenceNumberCommand reply = new ResetSequenceNumberCommand(
             sessionId,
             gatewaySessions,
             receivedSequenceNumberIndex,
@@ -167,14 +170,6 @@ public class FramerContext
         }
 
         return null;
-    }
-
-    public List<SessionInfo> gatewaySessions(final IdleStrategy idleStrategy)
-    {
-        final GatewaySessionsCommand command = new GatewaySessionsCommand();
-        sendAdminCommand(idleStrategy, command);
-
-        return command.awaitResponse(idleStrategy);
     }
 
     public void resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)

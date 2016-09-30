@@ -43,13 +43,6 @@ public interface Reply<T>
      */
     State state();
 
-    /**
-     * Gets the correlation id of the message that is being replied to.
-     *
-     * @return the correlation id of the message that is being replied to.
-     */
-    long correlationId();
-
     enum State
     {
         /** The operation is currently being executed and its result is unknown. */

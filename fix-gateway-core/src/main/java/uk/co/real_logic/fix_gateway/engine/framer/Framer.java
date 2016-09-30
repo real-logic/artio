@@ -97,8 +97,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     }
 
     private final RetryManager retryManager = new RetryManager();
-    private final List<ResetSequenceNumberReply> replies = new ArrayList<>();
-    private final Int2ObjectHashMap<LibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
+    private final List<ResetSequenceNumberCommand> replies = new ArrayList<>();
+    private final Int2ObjectHashMap<LiveLibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final NewChannelHandler onNewConnectionFunc = this::onNewConnection;
 
@@ -240,7 +240,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int checkReplies()
     {
-        return RetryManager.removeIf(replies, ResetSequenceNumberReply::poll);
+        return RetryManager.removeIf(replies, ResetSequenceNumberCommand::poll);
     }
 
     private int sendReplayMessages()
@@ -267,10 +267,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private int pollLibraries(final long timeInMs)
     {
         int total = 0;
-        final Iterator<LibraryInfo> iterator = idToLibrary.values().iterator();
+        final Iterator<LiveLibraryInfo> iterator = idToLibrary.values().iterator();
         while (iterator.hasNext())
         {
-            final LibraryInfo library = iterator.next();
+            final LiveLibraryInfo library = iterator.next();
             total += library.poll(timeInMs);
             if (!library.isConnected())
             {
@@ -289,7 +289,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         schedule(() -> inboundPublication.saveLibraryTimeout(libraryId, 0));
     }
 
-    private void acquireLibrarySessions(final LibraryInfo library)
+    private void acquireLibrarySessions(final LiveLibraryInfo library)
     {
         // Ensure latest library message is indexed
         final int librarySessionId = library.aeronSessionId();
@@ -403,7 +403,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return action;
         }
 
-        final LibraryInfo library = idToLibrary.get(libraryId);
+        final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
         {
             saveError(GatewayError.UNKNOWN_LIBRARY, libraryId, correlationId);
@@ -569,7 +569,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         receiverEndPoints.removeConnection(connectionId, reason);
         senderEndPoints.removeConnection(connectionId);
-        final LibraryInfo library = idToLibrary.get(libraryId);
+        final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library != null)
         {
             library.removeSession(connectionId);
@@ -592,7 +592,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return action;
         }
 
-        final LibraryInfo existingLibrary = idToLibrary.get(libraryId);
+        final LiveLibraryInfo existingLibrary = idToLibrary.get(libraryId);
         if (existingLibrary != null)
         {
             existingLibrary.onHeartbeat(clock.time());
@@ -607,7 +607,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             configuration.replyTimeoutInMs(),
             clock.time());
 
-        final LibraryInfo library = new LibraryInfo(libraryId, livenessDetector, aeronSessionId);
+        final LiveLibraryInfo library = new LiveLibraryInfo(libraryId, livenessDetector, aeronSessionId);
         idToLibrary.put(libraryId, library);
 
         final UnitOfWork unitOfWork = new UnitOfWork(
@@ -624,7 +624,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public Action onApplicationHeartbeat(final int libraryId, final int aeronSessionId)
     {
-        final LibraryInfo library = idToLibrary.get(libraryId);
+        final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library != null)
         {
             final long timeInMs = clock.time();
@@ -659,7 +659,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final String password,
         final Header header)
     {
-        final LibraryInfo libraryInfo = idToLibrary.get(libraryId);
+        final LiveLibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
         {
             return Pressure.apply(
@@ -699,7 +699,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long correlationId,
         final int replayFromSequenceNumber)
     {
-        final LibraryInfo libraryInfo = idToLibrary.get(libraryId);
+        final LiveLibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
         {
             return Pressure.apply(
@@ -852,12 +852,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     void onQueryLibraries(final QueryLibrariesCommand command)
     {
         final List<LibraryInfo> libraries = new ArrayList<>(idToLibrary.values());
+        libraries.add(new EngineLibraryInfo(gatewaySessions));
         command.success(libraries);
-    }
-
-    void onGatewaySessions(final GatewaySessionsCommand command)
-    {
-        command.success(new ArrayList<>(gatewaySessions.sessions()));
     }
 
     void onResetSessionIds(final File backupLocation, final ResetSessionIdsCommand command)
@@ -899,7 +895,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         );
     }
 
-    void onResetSequenceNumber(final ResetSequenceNumberReply reply)
+    void onResetSequenceNumber(final ResetSequenceNumberCommand reply)
     {
         if (!reply.poll())
         {

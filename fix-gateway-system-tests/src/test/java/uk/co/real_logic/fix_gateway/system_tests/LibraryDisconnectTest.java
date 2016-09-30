@@ -19,9 +19,8 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
-
-import java.util.concurrent.locks.LockSupport;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.junit.Assert.assertEquals;
@@ -73,10 +72,12 @@ public class LibraryDisconnectTest extends AbstractGatewayToGatewaySystemTest
 
     private void engineAcquiresAcceptingLibrariesSession()
     {
-        while (acceptingEngine.gatewaySessions(ADMIN_IDLE_STRATEGY).isEmpty())
+        final LibraryInfo gatewayLibraryInfo = gatewayLibraryInfo(acceptingEngine);
+        while (gatewayLibraryInfo.sessions().isEmpty())
         {
-            LockSupport.parkNanos(100);
+            ADMIN_IDLE_STRATEGY.idle();
         }
+        ADMIN_IDLE_STRATEGY.reset();
     }
 
 }

@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
@@ -34,6 +35,7 @@ import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.List;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
@@ -41,9 +43,10 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.optimalTmpDirName;
-import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 
@@ -361,10 +364,22 @@ public final class SystemTestUtil
                 {
                     library.poll(1);
                 }
-                return engine.libraries(ADMIN_IDLE_STRATEGY).size() == count;
+                return libraries(engine).size() == count + 1;
             },
             AWAIT_TIMEOUT,
             1);
+    }
+
+    public static List<LibraryInfo> libraries(final FixEngine engine)
+    {
+        final Reply<List<LibraryInfo>> reply = engine.libraries();
+        while (reply.isExecuting())
+        {
+            ADMIN_IDLE_STRATEGY.idle();
+        }
+        ADMIN_IDLE_STRATEGY.reset();
+        assertEquals(COMPLETED, reply.state());
+        return reply.resultIfPresent();
     }
 
     public static void awaitLibraryConnect(final FixLibrary library)
@@ -390,5 +405,14 @@ public final class SystemTestUtil
                 .filter(message -> HI_ID.equals(message.get(Constants.TEST_REQ_ID)))
                 .isPresent();
         });
+    }
+
+    public static LibraryInfo gatewayLibraryInfo(final FixEngine engine)
+    {
+        return libraries(engine)
+            .stream()
+            .filter(libraryInfo -> libraryInfo.libraryId() == ENGINE_LIBRARY_ID)
+            .findAny()
+            .orElseThrow(IllegalStateException::new);
     }
 }

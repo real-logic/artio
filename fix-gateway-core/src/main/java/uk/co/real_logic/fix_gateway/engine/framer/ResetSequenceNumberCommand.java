@@ -25,7 +25,7 @@ import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.Reply.State.ERRORED;
 import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
 
-class ResetSequenceNumberReply implements Reply<Void>, AdminCommand
+class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 {
 
     private volatile State state = State.EXECUTING;
@@ -54,7 +54,7 @@ class ResetSequenceNumberReply implements Reply<Void>, AdminCommand
     }
     private Step step = Step.START;
 
-    ResetSequenceNumberReply(
+    ResetSequenceNumberCommand(
         final long sessionId,
         final GatewaySessions gatewaySessions,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
@@ -89,11 +89,6 @@ class ResetSequenceNumberReply implements Reply<Void>, AdminCommand
     public State state()
     {
         return state;
-    }
-
-    public long correlationId()
-    {
-        return 0;
     }
 
     public void execute(final Framer framer)
