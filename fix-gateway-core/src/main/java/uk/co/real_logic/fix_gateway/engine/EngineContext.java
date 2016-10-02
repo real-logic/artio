@@ -38,6 +38,7 @@ import java.util.List;
 import static java.util.Arrays.asList;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 public abstract class EngineContext implements AutoCloseable
 {
@@ -159,6 +160,11 @@ public abstract class EngineContext implements AutoCloseable
     {
         sentSequenceNumberIndex.close();
         receivedSequenceNumberIndex.close();
+    }
+
+    protected ArchiveReader archiveReader(final StreamIdentifier streamId)
+    {
+        return archiveReader(streamId, NO_FILTER);
     }
 
     protected ArchiveReader archiveReader(final StreamIdentifier streamId, final int reservedValueFilter)

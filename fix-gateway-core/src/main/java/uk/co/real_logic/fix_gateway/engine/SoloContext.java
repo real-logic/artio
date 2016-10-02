@@ -34,7 +34,6 @@ import java.util.List;
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 class SoloContext extends EngineContext
 {
@@ -121,13 +120,13 @@ class SoloContext extends EngineContext
         if (configuration.logInboundMessages())
         {
             inboundArchiver = addArchiver(inboundStreamId);
-            inboundArchiveReader = archiveReader(inboundStreamId, NO_FILTER);
+            inboundArchiveReader = archiveReader(inboundStreamId);
         }
 
         if (configuration.logOutboundMessages())
         {
             outboundArchiver = addArchiver(outboundStreamId);
-            outboundArchiveReader = archiveReader(outboundStreamId, NO_FILTER);
+            outboundArchiveReader = archiveReader(outboundStreamId);
         }
     }
 
@@ -170,8 +169,7 @@ class SoloContext extends EngineContext
             return null;
         }
 
-        final ArchiveReader archiveReader =
-            archiveReader(inboundStreamId, NO_FILTER);
+        final ArchiveReader archiveReader = archiveReader(inboundStreamId);
         return newReplayQuery(archiveReader);
     }
 

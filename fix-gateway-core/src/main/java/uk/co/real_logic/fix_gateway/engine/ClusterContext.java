@@ -29,7 +29,6 @@ import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
-import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 class ClusterContext extends EngineContext
 {
@@ -89,7 +88,7 @@ class ClusterContext extends EngineContext
         final int cacheSetSize = configuration.loggerCacheSetSize();
         final String logFileDir = configuration.logFileDir();
 
-        final ArchiveReader dataArchiveReader = archiveReader(dataStream, NO_FILTER);
+        final ArchiveReader dataArchiveReader = archiveReader(dataStream);
         final Archiver archiver = new Archiver(
             LoggerUtil.newArchiveMetaData(logFileDir), cacheNumSets, cacheSetSize, dataStream);
 
