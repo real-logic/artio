@@ -29,7 +29,6 @@ import org.junit.After;
 import org.junit.Before;
 import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
-import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.LogDirectoryDescriptor;
 
@@ -162,14 +161,6 @@ public class AbstractReplicationTest
             .acknowledgementPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID))
             .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
             .follow(0);
-    }
-
-    protected ArchiveReader followerArchiveReader(final Subscription subscription, final short id)
-    {
-        final ArchiveMetaData metaData = archiveMetaData(id);
-        final StreamIdentifier streamId = new StreamIdentifier(subscription);
-        return new ArchiveReader(
-            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, streamId, errorHandler);
     }
 
     public static ArchiveMetaData archiveMetaData(final short nodeId)

@@ -20,7 +20,6 @@ import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2IntHashMap;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -58,7 +57,6 @@ class NodeRunner implements AutoCloseable
     private final ClusterAgent clusterNode;
     private final ControlledFragmentHandler handler;
     private final ClusterableSubscription subscription;
-    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     private long replicatedPosition = -1;
 
@@ -99,7 +97,7 @@ class NodeRunner implements AutoCloseable
         final StreamIdentifier dataStream = new StreamIdentifier(AERON_CHANNEL, DEFAULT_DATA_STREAM_ID);
         final ArchiveMetaData metaData = AbstractReplicationTest.archiveMetaData((short) nodeId);
         final ArchiveReader archiveReader = new ArchiveReader(
-            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream, errorHandler);
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
         final Archiver archiver = new Archiver(
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
         final UnsafeBuffer nodeState = new UnsafeBuffer(new byte[SIZE_OF_SHORT]);

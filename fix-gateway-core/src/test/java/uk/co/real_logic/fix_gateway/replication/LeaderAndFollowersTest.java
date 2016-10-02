@@ -99,7 +99,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         final Subscription subscription = dataSubscription();
         final StreamIdentifier streamId = new StreamIdentifier(subscription);
         final ArchiveReader archiveReader = new ArchiveReader(
-            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, streamId, errorHandler);
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, streamId);
         final Archiver archiver = new Archiver(
             metaData,
             DEFAULT_LOGGER_CACHE_NUM_SETS,

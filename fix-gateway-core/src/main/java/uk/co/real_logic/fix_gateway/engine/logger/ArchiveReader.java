@@ -20,14 +20,13 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import io.aeron.logbuffer.LogBufferDescriptor;
-import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Int2ObjectCache;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.storage.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
+import uk.co.real_logic.fix_gateway.storage.messages.ArchiveMetaDataDecoder;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -79,8 +78,7 @@ public class ArchiveReader implements AutoCloseable
         final ArchiveMetaData metaData,
         final int cacheNumSets,
         final int cacheSetSize,
-        final StreamIdentifier streamId,
-        final ErrorHandler errorHandler)
+        final StreamIdentifier streamId)
     {
         this.cacheNumSets = cacheNumSets;
         this.cacheSetSize = cacheSetSize;

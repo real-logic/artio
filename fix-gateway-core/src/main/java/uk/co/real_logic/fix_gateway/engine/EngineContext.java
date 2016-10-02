@@ -173,8 +173,8 @@ public abstract class EngineContext implements AutoCloseable
             LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
             configuration.loggerCacheNumSets(),
             configuration.loggerCacheSetSize(),
-            streamId,
-            errorHandler);
+            streamId
+        );
     }
 
     protected AgentRunner newRunner(final Agent loggingAgent)
