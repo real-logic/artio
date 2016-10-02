@@ -91,7 +91,8 @@ public final class RepeatConnections
 
                     if (!reply.hasCompleted())
                     {
-                        System.err.println("Unable to initiate the session, " + reply.state() + " " + reply.error());
+                        System.err.println("Unable to initiate the session, " + reply.state());
+                        reply.error().printStackTrace();
                         System.exit(-1);
                     }
 
@@ -141,14 +142,18 @@ public final class RepeatConnections
         final Random random,
         final byte[] messageContent)
     {
+        final TestRequestEncoder testRequest = new TestRequestEncoder();
+
         for (int j = 0; j < StressConfiguration.MESSAGES_EXCHANGED; j++)
         {
-            final TestRequestEncoder testRequest = new TestRequestEncoder();
             final int messageLength = MIN_LENGTH + random.nextInt(MAX_LENGTH - MIN_LENGTH + 1);
             final String msg = createMessage(session.id(), j, new String(messageContent, 0, messageLength));
             testRequest.testReqID(msg);
 
-            session.send(testRequest);
+            while (session.send(testRequest) < 0)
+            {
+                idleStrategy.idle(library.poll(1));
+            }
 
             while (!msg.equals(testReqIdFinder.testReqId()))
             {

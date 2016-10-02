@@ -15,15 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.stress;
 
-public class StressConfiguration
+final class StressConfiguration
 {
-    public static final int PORT = Integer.getInteger("fix.stress.port", 9999);
-    public static final String ACCEPTOR_ID = "ACC";
-    public static final String INITIATOR_ID = "INIT";
-    public static final int NUM_SESSIONS = Integer.getInteger("fix.stress.sessions", 10);
-    public static final int MESSAGES_EXCHANGED = Integer.getInteger("fix.stress.messages", 3);
-    public static final boolean PRINT_EXCHANGE = Boolean.getBoolean("fix.stress.printExchange");
-    public static final long SEED = Long.getLong("fix.stress.seed", 42424242L);
-    public static final int MIN_LENGTH = Integer.getInteger("fix.stress.messages.minLength", 1);
-    public static final int MAX_LENGTH = Integer.getInteger("fix.stress.messages.maxLength", 20);
+    static final int PORT = Integer.getInteger("fix.stress.port", 9999);
+    static final String ACCEPTOR_ID = "ACC";
+    static final String INITIATOR_ID = "INIT";
+    static final int NUM_SESSIONS = Integer.getInteger("fix.stress.sessions", 10);
+    static final int MESSAGES_EXCHANGED = Integer.getInteger("fix.stress.messages", 3);
+    static final boolean PRINT_EXCHANGE = Boolean.getBoolean("fix.stress.printExchange");
+    static final long SEED = Long.getLong("fix.stress.seed", 42424242L);
+    static final int MIN_LENGTH = Integer.getInteger("fix.stress.messages.minLength", 1);
+    static final int MAX_LENGTH = Integer.getInteger("fix.stress.messages.maxLength", 20);
 }
