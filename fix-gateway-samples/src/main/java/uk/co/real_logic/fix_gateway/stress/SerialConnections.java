@@ -63,10 +63,14 @@ public final class SerialConnections
             messageContent[i] = 'X';
         }
 
+        final long startTime = System.currentTimeMillis();
+
         try (final FixEngine fixEngine = FixEngine.launch(engineConfiguration))
         {
             for (int i = 0; i < StressConfiguration.NUM_SESSIONS; i++)
             {
+                System.out.format("Starting session %d / %d%n", i + 1, StressConfiguration.NUM_SESSIONS);
+
                 final TestReqIdFinder testReqIdFinder = new TestReqIdFinder();
 
                 final SessionConfiguration sessionConfiguration = SessionConfiguration.builder()
@@ -126,6 +130,13 @@ public final class SerialConnections
 
         server.close();
 
+        System.out.format(
+            "Sessions %d. Messages %d per session.%n",
+            StressConfiguration.NUM_SESSIONS,
+            StressConfiguration.MESSAGES_EXCHANGED);
+
+        System.out.format("Stress test executed in %dms\n", System.currentTimeMillis() - startTime);
+
         System.exit(0);
     }
 
@@ -146,6 +157,8 @@ public final class SerialConnections
 
         for (int j = 0; j < StressConfiguration.MESSAGES_EXCHANGED; j++)
         {
+            System.out.format("\rMessage %d", j);
+
             final int messageLength = MIN_LENGTH + random.nextInt(MAX_LENGTH - MIN_LENGTH + 1);
             final String msg = createMessage(session.id(), j, new String(messageContent, 0, messageLength));
             testRequest.testReqID(msg);
@@ -166,5 +179,6 @@ public final class SerialConnections
                 System.out.println(testReqIdFinder.testReqId());
             }
         }
+        System.out.format("\r");
     }
 }
