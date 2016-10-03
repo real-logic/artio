@@ -36,7 +36,7 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.MAX_LENGTH;
 import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.MIN_LENGTH;
 
-public final class RepeatConnections
+public final class SerialConnections
 {
     public static void main(final String[] args) throws Exception
     {
