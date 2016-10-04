@@ -53,6 +53,7 @@ public class Server implements Agent
         final String aeronChannel = "aeron:udp?endpoint=localhost:10000";
         final EngineConfiguration configuration = new EngineConfiguration()
             .bindTo("localhost", StressConfiguration.PORT)
+            .logFileDir("stress-server-logs")
             .libraryAeronChannel(aeronChannel);
         configuration.authenticationStrategy(authenticationStrategy);
 

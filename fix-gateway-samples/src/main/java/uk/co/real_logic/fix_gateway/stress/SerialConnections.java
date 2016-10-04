@@ -33,8 +33,7 @@ import java.util.Random;
 
 import static java.util.Collections.singletonList;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
-import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.MAX_LENGTH;
-import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.MIN_LENGTH;
+import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.*;
 
 public final class SerialConnections
 {
@@ -49,6 +48,7 @@ public final class SerialConnections
         final String aeronChannel = "aeron:udp?endpoint=localhost:10002";
         final EngineConfiguration engineConfiguration = new EngineConfiguration()
             .libraryAeronChannel(aeronChannel)
+            .logFileDir("stress-client-logs")
             .bindTo("localhost", 10001);
 
         System.out.println("Client Logs at " + engineConfiguration.logFileDir());
@@ -56,8 +56,8 @@ public final class SerialConnections
         Server.cleanupOldLogFileDir(engineConfiguration);
 
         final Random random = new Random(StressConfiguration.SEED);
-        final byte[] messageContent = new byte[MAX_LENGTH + 1];
 
+        final byte[] messageContent = new byte[MAX_LENGTH + 1];
         for (int i = 0; i < messageContent.length; i++)
         {
             messageContent[i] = 'X';
@@ -67,9 +67,9 @@ public final class SerialConnections
 
         try (final FixEngine fixEngine = FixEngine.launch(engineConfiguration))
         {
-            for (int i = 0; i < StressConfiguration.NUM_SESSIONS; i++)
+            for (int i = 0; i < NUM_SESSIONS; i++)
             {
-                System.out.format("Starting session %d / %d%n", i + 1, StressConfiguration.NUM_SESSIONS);
+                System.out.format("Starting session %d / %d%n", i + 1, NUM_SESSIONS);
 
                 final TestReqIdFinder testReqIdFinder = new TestReqIdFinder();
 
@@ -130,10 +130,7 @@ public final class SerialConnections
 
         server.close();
 
-        System.out.format(
-            "Sessions %d. Messages %d per session.%n",
-            StressConfiguration.NUM_SESSIONS,
-            StressConfiguration.MESSAGES_EXCHANGED);
+        System.out.format("Sessions %d. Messages %d per session.%n", NUM_SESSIONS, MESSAGES_EXCHANGED);
 
         System.out.format("Stress test executed in %dms\n", System.currentTimeMillis() - startTime);
 
@@ -155,7 +152,7 @@ public final class SerialConnections
     {
         final TestRequestEncoder testRequest = new TestRequestEncoder();
 
-        for (int j = 0; j < StressConfiguration.MESSAGES_EXCHANGED; j++)
+        for (int j = 0; j < MESSAGES_EXCHANGED; j++)
         {
             System.out.format("\rMessage %d", j);
 
