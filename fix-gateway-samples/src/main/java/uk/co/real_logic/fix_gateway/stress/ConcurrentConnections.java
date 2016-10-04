@@ -77,68 +77,67 @@ public class ConcurrentConnections
                 threads[i] = new Thread(
                     () ->
                     {
-                        try
+                        final TestReqIdFinder testReqIdFinder = new TestReqIdFinder();
+
+                        final SessionConfiguration sessionConfiguration = SessionConfiguration.builder()
+                            .address("localhost", StressConfiguration.PORT)
+                            .targetCompId(targetCompId)
+                            .senderCompId(senderCompId)
+                            .build();
+
+                        final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
+                        libraryConfiguration.authenticationStrategy(logon -> true);
+                        libraryConfiguration
+                            .sessionAcquireHandler(session -> testReqIdFinder)
+                            .libraryAeronChannels(singletonList(aeronChannel));
+
+                        try (final FixLibrary library = FixLibrary.connect(libraryConfiguration))
                         {
                             barrier.await();
 
-                            final TestReqIdFinder testReqIdFinder = new TestReqIdFinder();
+                            final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
+                            final Reply<Session> reply = library.initiate(sessionConfiguration);
 
-                            final SessionConfiguration sessionConfiguration = SessionConfiguration.builder()
-                                .address("localhost", StressConfiguration.PORT)
-                                .targetCompId(targetCompId)
-                                .senderCompId(senderCompId)
-                                .build();
-
-                            final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
-                            libraryConfiguration.authenticationStrategy(logon -> true);
-                            libraryConfiguration
-                                .sessionAcquireHandler(session -> testReqIdFinder)
-                                .libraryAeronChannels(singletonList(aeronChannel));
-
-                            try (final FixLibrary library = FixLibrary.connect(libraryConfiguration))
+                            while (reply.isExecuting())
                             {
-                                final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
-                                final Reply<Session> reply = library.initiate(sessionConfiguration);
-
-                                while (reply.isExecuting())
-                                {
-                                    idleStrategy.idle(library.poll(1));
-                                }
-
-                                if (!reply.hasCompleted())
-                                {
-                                    System.err.println("Unable to initiate the session, " + reply.state());
-                                    reply.error().printStackTrace();
-                                    System.exit(-1);
-                                }
-
-                                if (StressConfiguration.PRINT_EXCHANGE)
-                                {
-                                    System.out.println("Replied with: " + reply.state());
-                                }
-
-                                final Session session = reply.resultIfPresent();
-                                while (!session.canSendMessage())
-                                {
-                                    idleStrategy.idle(library.poll(1));
-                                }
-
-                                StressUtil.exchangeMessages(
-                                    library, session, idleStrategy, testReqIdFinder, messagePool, random);
-
-                                session.startLogout();
-                                session.requestDisconnect();
-                                while (session.state() != DISCONNECTED)
-                                {
-                                    idleStrategy.idle(library.poll(1));
-                                }
-
-                                if (StressConfiguration.PRINT_EXCHANGE)
-                                {
-                                    System.out.println("Disconnected");
-                                }
+                                idleStrategy.idle(library.poll(1));
                             }
-                        } catch (final Exception ex)
+
+                            if (!reply.hasCompleted())
+                            {
+                                System.err.println("Unable to initiate the session, " + reply.state());
+                                reply.error().printStackTrace();
+                                System.exit(-1);
+                            }
+
+                            final Session session = reply.resultIfPresent();
+
+                            if (StressConfiguration.PRINT_EXCHANGE)
+                            {
+                                System.out.println(session.id() + " Replied with: " + reply.state());
+                            }
+
+                            while (!session.canSendMessage())
+                            {
+                                idleStrategy.idle(library.poll(1));
+                            }
+
+                            StressUtil.exchangeMessages(
+                                library, session, idleStrategy, testReqIdFinder, messagePool, random);
+
+                            session.startLogout();
+                            session.requestDisconnect();
+                            while (session.state() != DISCONNECTED)
+                            {
+                                idleStrategy.idle(library.poll(1));
+                            }
+
+                            if (StressConfiguration.PRINT_EXCHANGE)
+                            {
+                                System.out.println(session.id() + " Disconnected");
+                            }
+                        }
+                        catch (final Exception ex)
                         {
                             ex.printStackTrace();
                         }

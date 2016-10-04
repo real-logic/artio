@@ -58,7 +58,10 @@ final class StressUtil
 
         for (int j = 0; j < MESSAGES_EXCHANGED; j++)
         {
-            System.out.format("\rMessage %d", j);
+            if (!StressConfiguration.PRINT_EXCHANGE)
+            {
+                System.out.format("\rMessage %d", j);
+            }
 
             final String msg = messagePool[random.nextInt(messagePool.length)];
             testRequest.testReqID(msg);
@@ -75,10 +78,13 @@ final class StressUtil
 
             if (StressConfiguration.PRINT_EXCHANGE)
             {
-                System.out.println("Success, received reply!");
-                System.out.println(testReqIdFinder.testReqId());
+                System.out.println(session.id() + " Success, received reply! " + testReqIdFinder.testReqId());
             }
         }
-        System.out.format("\r");
+
+        if (!StressConfiguration.PRINT_EXCHANGE)
+        {
+            System.out.format("\r");
+        }
     }
 }
