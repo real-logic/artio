@@ -75,74 +75,7 @@ public class ConcurrentConnections
                 final String senderCompId = StressConfiguration.INITIATOR_ID + "-" + i;
 
                 threads[i] = new Thread(
-                    () ->
-                    {
-                        try
-                        {
-                            barrier.await();
-
-                            final TestReqIdFinder testReqIdFinder = new TestReqIdFinder();
-
-                            final SessionConfiguration sessionConfiguration = SessionConfiguration.builder()
-                                .address("localhost", StressConfiguration.PORT)
-                                .targetCompId(targetCompId)
-                                .senderCompId(senderCompId)
-                                .build();
-
-                            final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
-                            libraryConfiguration.authenticationStrategy(logon -> true);
-                            libraryConfiguration
-                                .sessionAcquireHandler(session -> testReqIdFinder)
-                                .libraryAeronChannels(singletonList(aeronChannel));
-
-                            try (final FixLibrary library = FixLibrary.connect(libraryConfiguration))
-                            {
-                                final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
-                                final Reply<Session> reply = library.initiate(sessionConfiguration);
-
-                                while (reply.isExecuting())
-                                {
-                                    idleStrategy.idle(library.poll(1));
-                                }
-
-                                if (!reply.hasCompleted())
-                                {
-                                    System.err.println("Unable to initiate the session, " + reply.state());
-                                    reply.error().printStackTrace();
-                                    System.exit(-1);
-                                }
-
-                                if (StressConfiguration.PRINT_EXCHANGE)
-                                {
-                                    System.out.println("Replied with: " + reply.state());
-                                }
-
-                                final Session session = reply.resultIfPresent();
-                                while (!session.canSendMessage())
-                                {
-                                    idleStrategy.idle(library.poll(1));
-                                }
-
-                                StressUtil.exchangeMessages(
-                                    library, session, idleStrategy, testReqIdFinder, messagePool, random);
-
-                                session.startLogout();
-                                session.requestDisconnect();
-                                while (session.state() != DISCONNECTED)
-                                {
-                                    idleStrategy.idle(library.poll(1));
-                                }
-
-                                if (StressConfiguration.PRINT_EXCHANGE)
-                                {
-                                    System.out.println("Disconnected");
-                                }
-                            }
-                        } catch (final Exception ex)
-                        {
-                            ex.printStackTrace();
-                        }
-                    });
+                    () -> runThread(aeronChannel, random, messagePool, barrier, targetCompId, senderCompId));
 
                 threads[i].start();
             }
@@ -156,9 +89,83 @@ public class ConcurrentConnections
         server.close();
 
         System.out.format("Sessions %d. Messages %d per session.%n", NUM_SESSIONS, MESSAGES_EXCHANGED);
-
         System.out.format("Stress test executed in %dms\n", System.currentTimeMillis() - startTime);
-
         System.exit(0);
+    }
+
+    private static void runThread(
+        final String aeronChannel,
+        final Random random,
+        final String[] messagePool,
+        final CyclicBarrier barrier,
+        final String targetCompId,
+        final String senderCompId)
+    {
+        try
+        {
+            barrier.await();
+
+            final TestReqIdFinder testReqIdFinder = new TestReqIdFinder();
+
+            final SessionConfiguration sessionConfiguration = SessionConfiguration.builder()
+                .address("localhost", StressConfiguration.PORT)
+                .targetCompId(targetCompId)
+                .senderCompId(senderCompId)
+                .build();
+
+            final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
+            libraryConfiguration.authenticationStrategy(logon -> true);
+            libraryConfiguration
+                .sessionAcquireHandler(session -> testReqIdFinder)
+                .libraryAeronChannels(singletonList(aeronChannel));
+
+            try (final FixLibrary library = FixLibrary.connect(libraryConfiguration))
+            {
+                final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
+                final Reply<Session> reply = library.initiate(sessionConfiguration);
+
+                while (reply.isExecuting())
+                {
+                    idleStrategy.idle(library.poll(1));
+                }
+
+                if (!reply.hasCompleted())
+                {
+                    System.err.println("Unable to initiate the session, " + reply.state());
+                    reply.error().printStackTrace();
+                    System.exit(-1);
+                }
+
+                if (StressConfiguration.PRINT_EXCHANGE)
+                {
+                    System.out.println("Replied with: " + reply.state());
+                }
+
+                final Session session = reply.resultIfPresent();
+                while (!session.canSendMessage())
+                {
+                    idleStrategy.idle(library.poll(1));
+                }
+
+                StressUtil.exchangeMessages(
+                    library, session, idleStrategy, testReqIdFinder, messagePool, random);
+
+                session.startLogout();
+                session.requestDisconnect();
+                while (session.state() != DISCONNECTED)
+                {
+                    idleStrategy.idle(library.poll(1));
+                }
+
+                if (StressConfiguration.PRINT_EXCHANGE)
+                {
+                    System.out.println("Disconnected");
+                }
+            }
+        }
+        catch (final Exception ex)
+        {
+            ex.printStackTrace();
+        }
     }
 }

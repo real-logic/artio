@@ -27,10 +27,8 @@ import uk.co.real_logic.fix_gateway.library.AcquiringSessionExistsHandler;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
-import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
 import java.io.File;
-import java.util.Arrays;
 
 import static io.aeron.driver.ThreadingMode.SHARED;
 import static java.util.Collections.singletonList;
