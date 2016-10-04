@@ -17,11 +17,9 @@ package uk.co.real_logic.fix_gateway.stress;
 
 import io.aeron.driver.MediaDriver;
 import org.agrona.concurrent.AgentRunner;
-import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.client.TestReqIdFinder;
 import uk.co.real_logic.fix_gateway.Reply;
-import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -56,12 +54,8 @@ public final class SerialConnections
         Server.cleanupOldLogFileDir(engineConfiguration);
 
         final Random random = new Random(StressConfiguration.SEED);
-
-        final byte[] messageContent = new byte[MAX_LENGTH + 1];
-        for (int i = 0; i < messageContent.length; i++)
-        {
-            messageContent[i] = 'X';
-        }
+        final String[] messagePool = new String[StressConfiguration.MESSAGE_POOL];
+        StressUtil.constructMessagePool(messagePool, random);
 
         final long startTime = System.currentTimeMillis();
 
@@ -111,7 +105,7 @@ public final class SerialConnections
                         idleStrategy.idle(library.poll(1));
                     }
 
-                    exchangeMessages(library, session, idleStrategy, testReqIdFinder, random, messageContent);
+                    StressUtil.exchangeMessages(library, session, idleStrategy, testReqIdFinder, messagePool, random);
 
                     session.startLogout();
                     session.requestDisconnect();
@@ -135,47 +129,5 @@ public final class SerialConnections
         System.out.format("Stress test executed in %dms\n", System.currentTimeMillis() - startTime);
 
         System.exit(0);
-    }
-
-    private static String createMessage(final long sessionNum, final int messageNum, final String content)
-    {
-        return String.format("TestReqId-%d-%d-%s", sessionNum, messageNum, content);
-    }
-
-    private static void exchangeMessages(
-        final FixLibrary library,
-        final Session session,
-        final IdleStrategy idleStrategy,
-        final TestReqIdFinder testReqIdFinder,
-        final Random random,
-        final byte[] messageContent)
-    {
-        final TestRequestEncoder testRequest = new TestRequestEncoder();
-
-        for (int j = 0; j < MESSAGES_EXCHANGED; j++)
-        {
-            System.out.format("\rMessage %d", j);
-
-            final int messageLength = MIN_LENGTH + random.nextInt(MAX_LENGTH - MIN_LENGTH + 1);
-            final String msg = createMessage(session.id(), j, new String(messageContent, 0, messageLength));
-            testRequest.testReqID(msg);
-
-            while (session.send(testRequest) < 0)
-            {
-                idleStrategy.idle(library.poll(1));
-            }
-
-            while (!msg.equals(testReqIdFinder.testReqId()))
-            {
-                idleStrategy.idle(library.poll(1));
-            }
-
-            if (StressConfiguration.PRINT_EXCHANGE)
-            {
-                System.out.println("Success, received reply!");
-                System.out.println(testReqIdFinder.testReqId());
-            }
-        }
-        System.out.format("\r");
     }
 }

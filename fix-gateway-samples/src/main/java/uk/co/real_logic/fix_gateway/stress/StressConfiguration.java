@@ -26,4 +26,5 @@ final class StressConfiguration
     static final long SEED = Long.getLong("fix.stress.seed", 42424242L);
     static final int MIN_LENGTH = Integer.getInteger("fix.stress.messages.minLength", 1);
     static final int MAX_LENGTH = Integer.getInteger("fix.stress.messages.maxLength", 20);
+    static final int MESSAGE_POOL = Integer.getInteger("fix.stress.messages.pool", MESSAGES_EXCHANGED);
 }
