@@ -43,11 +43,7 @@ public class Server implements Agent
 
     public Server()
     {
-        final MessageValidationStrategy validationStrategy =
-            MessageValidationStrategy.targetCompId(StressConfiguration.ACCEPTOR_ID)
-            .and(MessageValidationStrategy.senderCompId(Arrays.asList(StressConfiguration.INITIATOR_ID)));
-
-        final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
+        final AuthenticationStrategy authenticationStrategy = logon -> true;
 
         // Static configuration lasts the duration of a FIX-Gateway instance
         final String aeronChannel = "aeron:udp?endpoint=localhost:10000";
