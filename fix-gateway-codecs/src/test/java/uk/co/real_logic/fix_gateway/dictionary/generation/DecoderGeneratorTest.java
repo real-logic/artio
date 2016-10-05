@@ -229,19 +229,21 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
 
-        assertEquals(2, getNoEgGroupGroupCounter(decoder));
+        assertRepeatingGroupDecoded(decoder);
+    }
 
-        Object group = getEgGroup(decoder);
-        assertEquals(
-            heartbeat.getName() + "$EgGroupGroupDecoder",
-            group.getClass().getName());
-        assertEquals(1, getGroupField(group));
+    @Test
+    public void shouldDecodeRepeatingGroupsAfterReset() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
 
-        group = next(group);
-        assertEquals(2, getGroupField(group));
-        assertNull(next(group));
+        assertRepeatingGroupDecoded(decoder);
 
-        assertValid(decoder);
+        decoder.reset();
+
+        decode(REPEATING_GROUP_MESSAGE, decoder);
+
+        assertRepeatingGroupDecoded(decoder);
     }
 
     @Test
@@ -434,6 +436,23 @@ public class DecoderGeneratorTest
         final UtcTimestampDecoder someTimeDecoder = new UtcTimestampDecoder();
         final long someTimeValue = someTimeDecoder.decode(someTime, someTime.length);
         assertEquals(0, someTimeValue);
+    }
+
+    private void assertRepeatingGroupDecoded(final Decoder decoder) throws Exception
+    {
+        assertEquals(2, getNoEgGroupGroupCounter(decoder));
+
+        Object group = getEgGroup(decoder);
+        assertEquals(
+            heartbeat.getName() + "$EgGroupGroupDecoder",
+            group.getClass().getName());
+        assertEquals(1, getGroupField(group));
+
+        group = next(group);
+        assertEquals(2, getGroupField(group));
+        assertNull(next(group));
+
+        assertValid(decoder);
     }
 
     private Object getStatic(Class<?> cls, String field) throws IllegalAccessException, NoSuchFieldException
