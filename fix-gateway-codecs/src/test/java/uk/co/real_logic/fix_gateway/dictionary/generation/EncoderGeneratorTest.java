@@ -263,7 +263,7 @@ public class EncoderGeneratorTest
     {
         final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
-        setEgGroup(encoder);
+        setEgGroupToTwoElements(encoder);
 
         assertEncodesTo(encoder, REPEATING_GROUP_MESSAGE);
     }
@@ -334,23 +334,72 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void shouldReencodeGroupsAfterReset() throws Exception
+    public void shouldEncodeGroupsOfSizeZero() throws Exception
     {
         final Encoder encoder = (Encoder)heartbeat.newInstance();
 
         setRequiredFields(encoder);
-        setEgGroup(encoder);
+
+        final Object group = getEgGroup(encoder, 1);
+        setGroupField(group, 1);
+        setNestedField(group);
+
+        getEgGroup(encoder, 0);
+
+        assertEncodesTo(encoder, ZERO_REPEATING_GROUP_MESSAGE);
+    }
+
+    @Test
+    public void shouldEncodeGroupsAfterReset() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        setRequiredFields(encoder);
+        setEgGroupToTwoElements(encoder);
 
         reset(encoder);
 
         setRequiredFields(encoder);
-        setEgGroup(encoder);
+        setEgGroupToTwoElements(encoder);
 
         assertEncodesTo(encoder, REPEATING_GROUP_MESSAGE);
     }
 
-    // TODO: encode shorter groups without reset
-    // TODO: encode shorter groups after reset
+    @Test
+    public void shouldEncodeShorterGroups() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        setRequiredFields(encoder);
+        setEgGroupToTwoElements(encoder);
+
+        setRequiredFields(encoder);
+        setEgGroupToOneElement(encoder);
+
+        assertEncodesTo(encoder, SINGLE_REPEATING_GROUP_MESSAGE);
+    }
+
+    @Test
+    public void shouldEncodeShorterGroupsAfterReset() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        setRequiredFields(encoder);
+        setEgGroupToTwoElements(encoder);
+
+        reset(encoder);
+
+        setRequiredFields(encoder);
+        setEgGroupToOneElement(encoder);
+
+        assertEncodesTo(encoder, SINGLE_REPEATING_GROUP_MESSAGE);
+    }
+
+    // groups after reset
+    // encode shorter groups without reset
+    // encode shorter groups after reset
+    // TODO: toString() methods for all these scenarios
+    // TODO: not fragile to unnecessary .next() calls
 
     // TODO: encode nested groups after reset
     // TODO: encode nested shorter groups without reset
@@ -437,7 +486,7 @@ public class EncoderGeneratorTest
     {
         final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
-        setEgGroup(encoder);
+        setEgGroupToTwoElements(encoder);
 
         assertThat(encoder, hasToString(containsString(STRING_FOR_GROUP)));
     }
@@ -519,12 +568,18 @@ public class EncoderGeneratorTest
         setComponentGroupField(componentGroup, 2);
     }
 
-    private void setEgGroup(final Encoder encoder) throws Exception
+    private void setEgGroupToTwoElements(final Encoder encoder) throws Exception
     {
         Object egGroup = getEgGroup(encoder, 2);
         setGroupField(egGroup, 1);
 
         egGroup = next(egGroup);
+        setGroupField(egGroup, 2);
+    }
+
+    private void setEgGroupToOneElement(final Encoder encoder) throws Exception
+    {
+        final Object egGroup = getEgGroup(encoder, 1);
         setGroupField(egGroup, 2);
     }
 

@@ -38,6 +38,7 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 // TODO: optimisations
 // 1. Implement a reset method that doesn't reset the header to avoid having to set header information on every send.
+// TODO: stop trailers and groups from implementing the encoder interface
 public class EncoderGenerator extends Generator
 {
     private static final String SUFFIX =
@@ -54,11 +55,29 @@ public class EncoderGenerator extends Generator
         "    {\n" +
         "        int position = offset;\n\n";
 
+    private static final String GROUP_PREFIX =
+        "    public int encode(final MutableAsciiBuffer buffer, final int offset)\n" +
+        "    {\n" +
+        "        throw new UnsupportedOperationException();\n" +
+        "    }\n\n" +
+        "    public int encode(final MutableAsciiBuffer buffer, final int offset, final int remainingElements)\n" +
+        "    {\n" +
+        "        if (remainingElements == 0)\n" +
+        "        {\n" +
+        "            return 0;\n" +
+        "        }\n\n" +
+        "        int position = offset;\n\n";
+
     private static final String RESET_NEXT_GROUP =
         "        if (next != null)" +
         "        {\n" +
         "            next.reset();\n" +
         "        }\n";
+
+    private static final String OTHER_PREFIX =
+        "    public int encode(final MutableAsciiBuffer buffer, final int offset)\n" +
+        "    {\n" +
+        "        int position = offset;\n\n";
 
     private static String encoderClassName(final String name)
     {
@@ -384,13 +403,22 @@ public class EncoderGenerator extends Generator
     {
         final boolean hasCommonCompounds = aggregateType == AggregateType.MESSAGE;
 
-        final String prefix =
-            aggregateType == AggregateType.TRAILER ?
-                TRAILER_PREFIX :
-                ("    public int encode(final MutableAsciiBuffer buffer, final int offset)\n" +
-                "    {\n" +
-                "        int position = offset;\n\n" +
-                (hasCommonCompounds ? "        position += header.encode(buffer, position);\n" : ""));
+        final String prefix;
+        switch (aggregateType)
+        {
+            case TRAILER:
+                prefix = TRAILER_PREFIX;
+                break;
+
+            case GROUP:
+                prefix = GROUP_PREFIX;
+                break;
+
+            default:
+                prefix = OTHER_PREFIX +
+                    (hasCommonCompounds ? "        position += header.encode(buffer, position);\n" : "");
+                break;
+        }
 
         final String body =
             entries.stream()
@@ -407,7 +435,7 @@ public class EncoderGenerator extends Generator
             suffix =
                 "        if (next != null)\n" +
                 "        {\n" +
-                "            position += next.encode(buffer, position);\n" +
+                "            position += next.encode(buffer, position, remainingElements - 1);\n" +
                 "        }\n";
         }
         suffix += "        return position - offset;\n" +
@@ -563,10 +591,11 @@ public class EncoderGenerator extends Generator
             "%1$s\n" +
             "        if (%2$s != null)\n" +
             "        {\n" +
-            "            position += %2$s.encode(buffer, position);\n" +
+            "            position += %2$s.encode(buffer, position, %3$s);\n" +
             "        }\n",
             encodeField(group.numberField()),
-            formatPropertyName(group.name())
+            formatPropertyName(group.name()),
+            formatPropertyName(group.numberField().name())
         );
     }
 
