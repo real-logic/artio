@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.EncodingException;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
@@ -35,7 +36,6 @@ import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
-import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
 import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class EncoderGeneratorTest
@@ -52,7 +52,7 @@ public class EncoderGeneratorTest
     public static void generate() throws Exception
     {
         sources = generateSources(true);
-        //System.out.println(sources);
+        System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
         headerClass = compileInMemory(HEADER_ENCODER, sources);
         otherMessage = compileInMemory(OTHER_MESSAGE_ENCODER, sources);
@@ -311,13 +311,11 @@ public class EncoderGeneratorTest
     public void shouldResetComponents() throws Exception
     {
         final Encoder encoder = (Encoder)heartbeat.newInstance();
-
         setupComponent(encoder);
 
         reset(encoder);
 
         setRequiredFields(encoder);
-
         assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE);
     }
 
@@ -326,17 +324,40 @@ public class EncoderGeneratorTest
     {
         final Encoder encoder = (Encoder)heartbeat.newInstance();
 
-        final Object group = getEgGroup(encoder);
+        final Object group = getEgGroup(encoder, 1);
         setGroupField(group, 1);
-
         setNestedField(group);
 
         reset(encoder);
 
         setRequiredFields(encoder);
-
         assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE);
     }
+
+    @Ignore
+    @Test
+    public void shouldReencodeGroupsAfterReset() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        setRequiredFields(encoder);
+        setEgGroup(encoder);
+
+        reset(encoder);
+
+        setRequiredFields(encoder);
+        setEgGroup(encoder);
+
+        assertEncodesTo(encoder, REPEATING_GROUP_MESSAGE);
+    }
+
+    // TODO: encode groups after reset
+    // TODO: encode shorter groups without reset
+    // TODO: encode shorter groups after reset
+
+    // TODO: encode nested groups after reset
+    // TODO: encode nested shorter groups without reset
+    // TODO: encode nested shorter groups after reset
 
     @Test(expected = EncodingException.class)
     public void shouldValidateMissingRequiredStringFields() throws Exception
@@ -578,11 +599,11 @@ public class EncoderGeneratorTest
         setCharSequence(trailer, "checkSum", "12");
     }
 
-    private void assertEncodesTo(final Encoder encoder, final String value)
+    private void assertEncodesTo(final Encoder encoder, final String expectedValue)
     {
         final int length = encoder.encode(buffer, 1);
-        assertThat(buffer, containsAscii(value, 1, value.length()));
-        assertEquals(value.length(), length);
+        assertEquals(expectedValue, buffer.getAscii(1, expectedValue.length()));
+        assertEquals(expectedValue.length(), length);
     }
 
     private void assertTestReqIsValue(final Object encoder) throws Exception

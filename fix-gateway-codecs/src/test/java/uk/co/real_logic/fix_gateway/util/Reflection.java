@@ -77,6 +77,13 @@ public final class Reflection
                     .invoke(value);
     }
 
+    public static Object get(final Object value, final String name, final Object parameter) throws Exception
+    {
+        return value.getClass()
+                    .getMethod(name, parameter.getClass())
+                    .invoke(value, parameter);
+    }
+
     public static Object getField(final Object object, final String fieldName) throws Exception
     {
         return field(object, fieldName).get(object);
@@ -106,7 +113,7 @@ public final class Reflection
         return call(stub, "next");
     }
 
-    public static Object getEgGroup(final Object stub) throws Exception
+    public static Object getEgGroup(final Object stub, final int numberOfElements) throws Exception
     {
         return get(stub, "egGroupGroup");
     }

@@ -38,6 +38,7 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 // TODO: optimisations
 // 1. Implement a reset method that doesn't reset the header to avoid having to set header information on every send.
+// 2. Replace group encoder interface, with generating the name of the class itself.
 public class EncoderGenerator extends Generator
 {
     private static final String SUFFIX =
