@@ -38,7 +38,6 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 // TODO: optimisations
 // 1. Implement a reset method that doesn't reset the header to avoid having to set header information on every send.
-// 2. Replace group encoder interface, with generating the name of the class itself.
 public class EncoderGenerator extends Generator
 {
     private static final String SUFFIX =
@@ -147,8 +146,7 @@ public class EncoderGenerator extends Generator
             "    {\n" +
             "        if (next == null)\n" +
             "        {\n" +
-            "            next = new %1$s(onNext);\n" +
-            "            onNext.run();\n" +
+            "            next = new %1$s();\n" +
             "        }\n" +
             "        return next;\n" +
             "    }\n\n",
@@ -187,18 +185,6 @@ public class EncoderGenerator extends Generator
                 message.name(),
                 msgType,
                 beginString
-            );
-        }
-        else if (aggregate instanceof Group)
-        {
-            final Group group = (Group) aggregate;
-            return String.format(
-                "    private final Runnable onNext;\n\n" +
-                "    public %1$s(final Runnable onNext)\n" +
-                "    {\n" +
-                "        this.onNext = onNext;\n" +
-                "    }\n",
-                encoderClassName(group.name())
             );
         }
 
@@ -306,18 +292,14 @@ public class EncoderGenerator extends Generator
 
         out.append(String.format(
             "\n" +
-            "    public void inc%3$s()\n" +
-            "    {\n" +
-            "        %4$s++;\n" +
-            "    }\n\n" +
             "    private %1$s %2$s = null;\n\n" +
-            "    public %1$s %2$s()\n" +
+            "    public %1$s %2$s(final int numberOfElements)\n" +
             "    {\n" +
+            "        has%3$s = true;\n" +
+            "        %4$s = numberOfElements;\n" +
             "        if (%2$s == null)\n" +
             "        {\n" +
-            "            has%3$s = true;\n" +
-            "            %4$s = 1;\n" +
-            "            %2$s = new %1$s(this::inc%3$s);\n" +
+            "            %2$s = new %1$s();\n" +
             "        }\n" +
             "        return %2$s;\n" +
             "    }\n\n",

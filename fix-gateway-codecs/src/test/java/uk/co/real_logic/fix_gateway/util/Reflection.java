@@ -77,10 +77,10 @@ public final class Reflection
                     .invoke(value);
     }
 
-    public static Object get(final Object value, final String name, final Object parameter) throws Exception
+    public static Object get(final Object value, final String name, final int parameter) throws Exception
     {
         return value.getClass()
-                    .getMethod(name, parameter.getClass())
+                    .getMethod(name, int.class)
                     .invoke(value, parameter);
     }
 
@@ -113,19 +113,29 @@ public final class Reflection
         return call(stub, "next");
     }
 
-    public static Object getEgGroup(final Object stub, final int numberOfElements) throws Exception
+    public static Object getEgGroup(final Object stub) throws Exception
     {
         return get(stub, "egGroupGroup");
     }
 
-    public static Object getComponentGroup(final Object stub) throws Exception
+    public static Object getEgGroup(final Object stub, final int numberOfElements) throws Exception
     {
-        return get(stub, "componentGroupGroup");
+        return get(stub, "egGroupGroup", numberOfElements);
+    }
+
+    public static Object getComponentGroup(final Object stub, final int numberOfElements) throws Exception
+    {
+        return get(stub, "componentGroupGroup", numberOfElements);
     }
 
     public static Object getNestedGroup(final Object group) throws Exception
     {
         return get(group, "nestedGroupGroup");
+    }
+
+    public static Object getNestedGroup(final Object group, final int numberOfElements) throws Exception
+    {
+        return get(group, "nestedGroupGroup", numberOfElements);
     }
 
     public static Object getEgComponent(final Object object) throws Exception

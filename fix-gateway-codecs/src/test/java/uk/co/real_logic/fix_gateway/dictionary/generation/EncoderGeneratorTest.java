@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.EncodingException;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
@@ -52,7 +51,7 @@ public class EncoderGeneratorTest
     public static void generate() throws Exception
     {
         sources = generateSources(true);
-        System.out.println(sources);
+        //System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
         headerClass = compileInMemory(HEADER_ENCODER, sources);
         otherMessage = compileInMemory(OTHER_MESSAGE_ENCODER, sources);
@@ -275,7 +274,7 @@ public class EncoderGeneratorTest
         final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
 
-        final Object group = getEgGroup(encoder);
+        final Object group = getEgGroup(encoder, 1);
         setGroupField(group, 1);
 
         setNestedField(group);
@@ -334,7 +333,6 @@ public class EncoderGeneratorTest
         assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE);
     }
 
-    @Ignore
     @Test
     public void shouldReencodeGroupsAfterReset() throws Exception
     {
@@ -351,7 +349,6 @@ public class EncoderGeneratorTest
         assertEncodesTo(encoder, REPEATING_GROUP_MESSAGE);
     }
 
-    // TODO: encode groups after reset
     // TODO: encode shorter groups without reset
     // TODO: encode shorter groups after reset
 
@@ -496,7 +493,7 @@ public class EncoderGeneratorTest
 
     private void setNestedField(final Object group) throws Exception
     {
-        final Object nestedGroup = getNestedGroup(group);
+        final Object nestedGroup = getNestedGroup(group, 1);
         setInt(nestedGroup, "nestedField", 1);
     }
 
@@ -515,7 +512,7 @@ public class EncoderGeneratorTest
         final Object egComponent = getEgComponent(encoder);
         setInt(egComponent, COMPONENT_FIELD, 2);
 
-        Object componentGroup = getComponentGroup(egComponent);
+        Object componentGroup = getComponentGroup(egComponent, 2);
         setComponentGroupField(componentGroup, 1);
 
         componentGroup = next(componentGroup);
@@ -524,7 +521,7 @@ public class EncoderGeneratorTest
 
     private void setEgGroup(final Encoder encoder) throws Exception
     {
-        Object egGroup = getEgGroup(encoder);
+        Object egGroup = getEgGroup(encoder, 2);
         setGroupField(egGroup, 1);
 
         egGroup = next(egGroup);
