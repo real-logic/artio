@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
+import java.util.Arrays;
+
 /**
  * Fix float data type. Floats are used for a variety of things, including price.
  *
@@ -127,6 +129,12 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         if (scale > 0)
         {
             final int split = value.length() - scale;
+            if (split < 0)
+            {
+                final char[] zeros = new char[-split];
+                Arrays.fill(zeros, '0');
+                return new StringBuilder().append(value).append(zeros).toString();
+            }
             return value.substring(0, split) + "." + value.substring(split);
         }
         else

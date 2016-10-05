@@ -507,9 +507,24 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             final int end = start + length;
             final int split = end - scale;
             final int digitsBeforeDot = length - scale;
-            putBytes(start, this, tmpStart, digitsBeforeDot);
-            putByte(split, DOT);
-            putBytes(split + 1, this, tmpStart + digitsBeforeDot, scale);
+            if (digitsBeforeDot < 0)
+            {
+                putBytes(start, this, tmpStart, length);
+
+                final int numberOfZeros = -digitsBeforeDot;
+                final int startOfZeros = start + length;
+                for (int i = 0; i < numberOfZeros; i++)
+                {
+                    putByte(startOfZeros + i, ZERO);
+                }
+                return length + numberOfZeros;
+            }
+            else
+            {
+                putBytes(start, this, tmpStart, digitsBeforeDot);
+                putByte(split, DOT);
+                putBytes(split + 1, this, tmpStart + digitsBeforeDot, scale);
+            }
             return length + SIZE_OF_DOT + minusAdj;
         }
         else
