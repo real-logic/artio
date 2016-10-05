@@ -35,6 +35,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
     private static final byte Y = (byte)'Y';
     private static final byte N = (byte)'N';
+
     public static final int SIZE_OF_DOT = 1;
 
     private static final int[] INT_ROUNDS =
@@ -96,6 +97,17 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     public int getNatural(final int startInclusive, final int endExclusive)
     {
         int tally = 0;
+        for (int index = startInclusive; index < endExclusive; index++)
+        {
+            tally = (tally * 10) + getDigit(index);
+        }
+
+        return tally;
+    }
+
+    public long getNaturalLong(final int startInclusive, final int endExclusive)
+    {
+        long tally = 0;
         for (int index = startInclusive; index < endExclusive; index++)
         {
             tally = (tally * 10) + getDigit(index);

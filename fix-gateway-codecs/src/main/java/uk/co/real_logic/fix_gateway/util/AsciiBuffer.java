@@ -30,6 +30,8 @@ public interface AsciiBuffer extends DirectBuffer
 
     int getNatural(final int startInclusive, final int endExclusive);
 
+    long getNaturalLong(final int startInclusive, final int endExclusive);
+
     int getInt(int startInclusive, final int endExclusive);
 
     int getDigit(final int index);

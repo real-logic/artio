@@ -79,6 +79,14 @@ public class AsciiBufferTest
     }
 
     @Test
+    public void shouldGetLongValuesAtSpecifiedOffset()
+    {
+        final long value = buffer.getNaturalLong(16, 19);
+
+        assertEquals(145L, value);
+    }
+
+    @Test
     public void shouldDecodeSimpleMessageTypes()
     {
         putAscii("0");
