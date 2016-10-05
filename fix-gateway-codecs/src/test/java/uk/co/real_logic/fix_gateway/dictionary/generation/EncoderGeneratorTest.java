@@ -51,7 +51,7 @@ public class EncoderGeneratorTest
     public static void generate() throws Exception
     {
         sources = generateSources(true);
-        //System.out.println(sources);
+        // System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
         headerClass = compileInMemory(HEADER_ENCODER, sources);
         otherMessage = compileInMemory(OTHER_MESSAGE_ENCODER, sources);
@@ -395,15 +395,49 @@ public class EncoderGeneratorTest
         assertEncodesTo(encoder, SINGLE_REPEATING_GROUP_MESSAGE);
     }
 
-    // groups after reset
-    // encode shorter groups without reset
-    // encode shorter groups after reset
-    // TODO: toString() methods for all these scenarios
-    // TODO: not fragile to unnecessary .next() calls
+    @Test
+    public void shouldGenerateToStringForShorterGroups() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+        setEgGroupToTwoElements(encoder);
 
-    // TODO: encode nested groups after reset
-    // TODO: encode nested shorter groups without reset
-    // TODO: encode nested shorter groups after reset
+        setRequiredFields(encoder);
+        setEgGroupToOneElement(encoder);
+
+        assertThat(encoder, hasToString(containsString(STRING_GROUP_ONE_ELEMENT)));
+    }
+
+    @Test
+    public void shouldGenerateToStringForShorterGroupsAfterReset() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        setRequiredFields(encoder);
+        setEgGroupToTwoElements(encoder);
+
+        reset(encoder);
+
+        setRequiredFields(encoder);
+        setEgGroupToOneElement(encoder);
+
+        assertThat(encoder, hasToString(containsString(STRING_GROUP_ONE_ELEMENT)));
+    }
+
+    @Test
+    public void shouldIgnoreUnnecessaryGroupNextCalls() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        setRequiredFields(encoder);
+
+        Object egGroup = setEgGroupToOneElement(encoder);
+
+        egGroup = next(egGroup);
+        egGroup = next(egGroup);
+        next(egGroup);
+
+        assertEncodesTo(encoder, SINGLE_REPEATING_GROUP_MESSAGE);
+    }
 
     @Test(expected = EncodingException.class)
     public void shouldValidateMissingRequiredStringFields() throws Exception
@@ -482,13 +516,13 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void shouldDelegateToStringCallsForGroups() throws Exception
+    public void shouldGenerateToStringForGroups() throws Exception
     {
         final Encoder encoder = (Encoder)heartbeat.newInstance();
         setRequiredFields(encoder);
         setEgGroupToTwoElements(encoder);
 
-        assertThat(encoder, hasToString(containsString(STRING_FOR_GROUP)));
+        assertThat(encoder, hasToString(containsString(STRING_GROUP_TWO_ELEMENTS)));
     }
 
     @Test
@@ -577,11 +611,13 @@ public class EncoderGeneratorTest
         setGroupField(egGroup, 2);
     }
 
-    private void setEgGroupToOneElement(final Encoder encoder) throws Exception
+    private Object setEgGroupToOneElement(final Encoder encoder) throws Exception
     {
         final Object egGroup = getEgGroup(encoder, 1);
         setGroupField(egGroup, 2);
+        return egGroup;
     }
+
 
     private void setGroupField(final Object group, final int value) throws Exception
     {

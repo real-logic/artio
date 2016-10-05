@@ -697,6 +697,20 @@ public class EncoderGenerator extends Generator
         return resetByFlag(name);
     }
 
+    protected String toStringGroupParameters()
+    {
+        return "final int remainingEntries";
+    }
+
+    protected String toStringGroupSuffix()
+    {
+        return
+            "        if (remainingEntries > 1)\n" +
+            "        {\n" +
+            "            entries += \",\\n\" + next.toString(remainingEntries - 1);\n" +
+            "        }\n";
+    }
+
     protected boolean hasFlag(final Entry entry, final Field field)
     {
         return !entry.required() || field.type().isFloatBased();
@@ -714,5 +728,19 @@ public class EncoderGenerator extends Generator
             .filter(Entry::isComponent)
             .map(this::callComponentReset)
             .collect(joining());
+    }
+
+    protected String groupEntryToString(final Group element, final String name)
+    {
+        final Entry numberField = element.numberField();
+        return String.format(
+            "                (%3$s > 0 ? String.format(\"  \\\"%1$s\\\": [\\n" +
+            "  %%s" +
+            "\\n  ]" +
+            "\\n\", %2$s.toString(%3$s).replace(\"\\n\", \"\\n  \")" + ") : \"\")",
+            name,
+            formatPropertyName(name),
+            formatPropertyName(numberField.name())
+        );
     }
 }

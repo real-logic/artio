@@ -159,6 +159,20 @@ public class DecoderGenerator extends Generator
         return resetByMethod(name);
     }
 
+    protected String toStringGroupParameters()
+    {
+        return "";
+    }
+
+    protected String toStringGroupSuffix()
+    {
+        return
+            "        if (next != null)\n" +
+            "        {\n" +
+            "            entries += \",\\n\" + next.toString();\n" +
+            "        }\n";
+    }
+
     private String resetValidation()
     {
         return
@@ -941,5 +955,16 @@ public class DecoderGenerator extends Generator
                 return resetEntries(component.entries(), methods);
             })
             .collect(joining());
+    }
+
+    protected String groupEntryToString(final Group element, final String name)
+    {
+        return String.format(
+            "                (%2$s != null ? String.format(\"  \\\"%1$s\\\": [\\n" +
+            "  %%s" +
+            "\\n  ]" +
+            "\\n\", %2$s.toString().replace(\"\\n\", \"\\n  \")" + ") : \"\")",
+            name,
+            formatPropertyName(name));
     }
 }

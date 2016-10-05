@@ -270,7 +270,7 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
 
-        assertThat(decoder, hasToString(containsString(STRING_FOR_GROUP)));
+        assertThat(decoder, hasToString(containsString(STRING_GROUP_TWO_ELEMENTS)));
     }
 
     @Test

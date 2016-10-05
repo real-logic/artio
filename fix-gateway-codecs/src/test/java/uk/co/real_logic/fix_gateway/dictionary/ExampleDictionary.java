@@ -100,12 +100,20 @@ public final class ExampleDictionary
         "  \"DataField\": \"[49, 50, 51]\",\n" +
         "  \"SomeTimeField\": \"19700101-00:00:00.001\"";
 
-    public static final String STRING_FOR_GROUP =
+    public static final String STRING_GROUP_TWO_ELEMENTS =
         "  \"EgGroupGroup\": [\n" +
         "  {\n" +
         "    \"MessageName\": \"EgGroupGroup\",\n" +
         "    \"GroupField\": \"1\",\n" +
         "  },\n" +
+        "  {\n" +
+        "    \"MessageName\": \"EgGroupGroup\",\n" +
+        "    \"GroupField\": \"2\",\n" +
+        "  }\n" +
+        "  ]";
+
+    public static final String STRING_GROUP_ONE_ELEMENT =
+        "  \"EgGroupGroup\": [\n" +
         "  {\n" +
         "    \"MessageName\": \"EgGroupGroup\",\n" +
         "    \"GroupField\": \"2\",\n" +

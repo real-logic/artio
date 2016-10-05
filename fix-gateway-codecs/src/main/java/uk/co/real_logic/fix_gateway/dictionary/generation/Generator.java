@@ -429,27 +429,39 @@ public abstract class Generator
             !hasCommonCompounds ? ""
             : "\"  \\\"header\\\": \" + header" + EXPAND_INDENT + " + \"\\n\" + ";
 
-        final String suffix =
-            !(aggregate instanceof Group) ? ""
-            : "        if (next != null)\n" +
-              "        {\n" +
-              "            entries += \",\\n\" + next.toString();\n" +
-              "        }\n";
+        final String suffix;
+        final String parameters;
+        if (aggregate instanceof Group)
+        {
+            suffix = toStringGroupSuffix();
+
+            parameters = toStringGroupParameters();
+        }
+        else
+        {
+            suffix = "";
+            parameters = "";
+        }
 
         return String.format(
-            "    public String toString()\n" +
-                "    {\n" +
-                "        String entries =%1$s\n" +
-                "%2$s;\n\n" +
-                "        entries = \"{\\n  \\\"MessageName\\\": \\\"%4$s\\\",\\n\" + entries + \"}\";\n" +
-                "%3$s" +
-                "        return entries;\n" +
-                "    }\n\n",
+            "    public String toString(%5$s)\n" +
+            "    {\n" +
+            "        String entries = %1$s\n" +
+            "%2$s;\n\n" +
+            "        entries = \"{\\n  \\\"MessageName\\\": \\\"%4$s\\\",\\n\" + entries + \"}\";\n" +
+            "%3$s" +
+            "        return entries;\n" +
+            "    }\n\n",
             prefix,
             entriesToString,
             suffix,
-            aggregate.name());
+            aggregate.name(),
+            parameters);
     }
+
+    protected abstract String toStringGroupParameters();
+
+    protected abstract String toStringGroupSuffix();
 
     protected String entryToString(final Entry entry)
     {
@@ -473,14 +485,7 @@ public abstract class Generator
         }
         else if (element instanceof Group)
         {
-            return String.format(
-                "                (%2$s != null ? String.format(\"  \\\"%1$s\\\": [\\n" +
-                "  %%s" +
-                "\\n  ]" +
-                "\\n\", %2$s" + EXPAND_INDENT + ") : \"\")",
-                name,
-                formatPropertyName(name)
-            );
+            return groupEntryToString((Group) element, name);
         }
         else if (element instanceof Component)
         {
@@ -489,6 +494,8 @@ public abstract class Generator
 
         return "\"\"";
     }
+
+    protected abstract String groupEntryToString(Group element, String name);
 
     protected abstract boolean hasFlag(final Entry entry, final Field field);
 
