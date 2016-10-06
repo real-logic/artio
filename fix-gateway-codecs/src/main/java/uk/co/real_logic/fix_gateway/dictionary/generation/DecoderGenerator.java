@@ -690,6 +690,7 @@ public class DecoderGenerator extends Generator
                 "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
                 "        {\n" +
                 "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");\n" +
+                "            alreadyVisitedFields.clear();\n" +
                 "        }\n" +
                 "        final int end = offset + length;\n" +
                 "        int position = offset;\n" +

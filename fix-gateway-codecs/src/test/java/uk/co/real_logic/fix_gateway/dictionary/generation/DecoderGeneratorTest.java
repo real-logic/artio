@@ -66,7 +66,7 @@ public class DecoderGeneratorTest
         constantGenerator.generate();
         decoderGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
-        //System.out.println(sources);
+        // System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sources);
         if (heartbeat == null)
         {
@@ -189,6 +189,7 @@ public class DecoderGeneratorTest
         assertFalse(hasBooleanField(decoder));
         assertFalse(hasDataField(decoder));
         assertFalse(hasComponentField(decoder));
+        assertFalse(hasNoEgGroupGroupCounter(decoder));
 
         assertEquals(MISSING_FLOAT, getFloatField(decoder));
         assertEquals(MISSING_INT, getIntField(decoder));
@@ -244,6 +245,32 @@ public class DecoderGeneratorTest
         decode(REPEATING_GROUP_MESSAGE, decoder);
 
         assertRepeatingGroupDecoded(decoder);
+    }
+
+    @Test
+    public void shouldDecodeShorterRepeatingGroups() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
+
+        assertRepeatingGroupDecoded(decoder);
+
+        decode(SINGLE_REPEATING_GROUP_MESSAGE, decoder);
+
+        assertSingleRepeatingGroupDecoded(decoder);
+    }
+
+    @Test
+    public void shouldDecodeShorterRepeatingGroupsAfterReset() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
+
+        assertRepeatingGroupDecoded(decoder);
+
+        decoder.reset();
+
+        decode(SINGLE_REPEATING_GROUP_MESSAGE, decoder);
+
+        assertSingleRepeatingGroupDecoded(decoder);
     }
 
     @Test
@@ -455,6 +482,16 @@ public class DecoderGeneratorTest
         assertValid(decoder);
     }
 
+    private void assertSingleRepeatingGroupDecoded(final Decoder decoder) throws Exception
+    {
+        assertEquals(1, getNoEgGroupGroupCounter(decoder));
+
+        Object group = getEgGroup(decoder);
+        assertEquals(2, getGroupField(group));
+
+        assertValid(decoder);
+    }
+
     private Object getStatic(Class<?> cls, String field) throws IllegalAccessException, NoSuchFieldException
     {
         return cls.getField(field).get(null);
@@ -479,9 +516,14 @@ public class DecoderGeneratorTest
         assertEquals(expectedReturnType, method.getReturnType());
     }
 
-    private Object getNoEgGroupGroupCounter(final Decoder decoder) throws Exception
+    private int getNoEgGroupGroupCounter(final Decoder decoder) throws Exception
     {
-        return get(decoder, "noEgGroupGroupCounter");
+        return (int) get(decoder, "noEgGroupGroupCounter");
+    }
+
+    private boolean hasNoEgGroupGroupCounter(final Decoder decoder) throws Exception
+    {
+        return (boolean) get(decoder, "hasNoEgGroupGroupCounter");
     }
 
     private int getGroupField(final Object group) throws Exception
