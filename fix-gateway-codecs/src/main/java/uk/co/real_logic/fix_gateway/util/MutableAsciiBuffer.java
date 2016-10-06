@@ -32,6 +32,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     private static final byte ZERO = '0';
     private static final byte SEPARATOR = (byte)'\001';
     private static final byte DOT = (byte)'.';
+    private static final byte SPACE = ' ';
 
     private static final byte Y = (byte)'Y';
     private static final byte N = (byte)'N';
@@ -216,9 +217,9 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
     public DecimalFloat getFloat(final DecimalFloat number, int offset, int length)
     {
-        // Throw away trailing zeros
+        // Throw away trailing spaces or zeros
         int end = offset + length;
-        for (int index = end - 1; isDispensableCharacter(index) && index > offset; index--)
+        for (int index = end - 1; isSpaceOrZero(index) && index > offset; index--)
         {
             end--;
         }
@@ -228,11 +229,10 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         if (negative)
         {
             offset++;
-            length--;
         }
 
         // Throw away leading zeros
-        for (int index = offset; isDispensableCharacter(index) && index < end; index++)
+        for (int index = offset; isSpaceOrZero(index) && index < end; index++)
         {
             offset++;
         }
@@ -249,7 +249,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             }
             else
             {
-                final int digit = getDigit(index);
+                final int digit = getDigit(index, byteValue);
                 value = value * 10 + digit;
             }
         }
@@ -257,6 +257,12 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         number.value(negative ? -1 * value : value);
         number.scale(scale);
         return number;
+    }
+
+    private boolean isSpaceOrZero(final int index)
+    {
+        final byte character = getByte(index);
+        return character == ZERO || character == SPACE;
     }
 
     public int getLocalMktDate(final int offset, final int length)
@@ -328,12 +334,6 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         }
 
         return total % 256;
-    }
-
-    private boolean isDispensableCharacter(final int index)
-    {
-        final byte character = getByte(index);
-        return character == '0' || character == ' ';
     }
 
     public int putAscii(final int index, final String string)
