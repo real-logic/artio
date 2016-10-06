@@ -497,6 +497,7 @@ public class DecoderGeneratorTest
         return cls.getField(field).get(null);
     }
 
+    // TODO: should next() return null when you're at the end of the chain.
     // TODO: validation for groups
 
     private void assertHasComponentFieldGetter() throws NoSuchMethodException, ClassNotFoundException
