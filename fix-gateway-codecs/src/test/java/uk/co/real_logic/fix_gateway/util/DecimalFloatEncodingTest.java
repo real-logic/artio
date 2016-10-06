@@ -25,8 +25,6 @@ import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
 import static uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer.LONGEST_FLOAT_LENGTH;
 
 @RunWith(Parameterized.class)
@@ -44,9 +42,10 @@ public class DecimalFloatEncodingTest
             {"-.995", -995L, 3},
             {"-25", -25L, 0},
             {"1.1", 11L, 1},
-            // TODO: correct these encodings
-            /*{".6", 6L, 1},
-            {".06", 6L, 2}*/
+            {".6", 6L, 1},
+            {".06", 6L, 2},
+            {"-.6", -6L, 1},
+            {"-.06", -6L, 2}
         });
     }
 
@@ -71,7 +70,7 @@ public class DecimalFloatEncodingTest
 
         final int encodedLength = string.putAsciiFloat(1, price);
 
-        assertThat(string, containsAscii(input, 1, length));
+        assertEquals(input, string.getAscii(1, length));
         assertEquals(length, encodedLength);
     }
 }

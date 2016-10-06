@@ -125,15 +125,29 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 
     public String toString()
     {
-        final String value = String.valueOf(this.value);
+        String value = String.valueOf(this.value);
         if (scale > 0)
         {
+            final boolean isNegative = this.value < 0;
             final int split = value.length() - scale;
-            if (split < 0)
+            final int splitWithNegative = split - (isNegative ? 1 : 0);
+            if (splitWithNegative < 0)
             {
-                final char[] zeros = new char[-split];
+                // We have to add extra zeros between the start or '-' and the First Digit.
+                final StringBuilder builder = new StringBuilder();
+
+                if (isNegative)
+                {
+                    value = String.valueOf(-this.value());
+                    builder.append('-');
+                }
+
+                final char[] zeros = new char[-splitWithNegative];
                 Arrays.fill(zeros, '0');
-                return new StringBuilder().append(value).append(zeros).toString();
+                return builder
+                    .append('.')
+                    .append(zeros)
+                    .append(value).toString();
             }
             return value.substring(0, split) + "." + value.substring(split);
         }
