@@ -82,7 +82,7 @@ public class AbstractLogTest
         {
             testRequest
                 .header()
-                .possDupFlag(true);
+                .possDupFlag(false); // NB: set to false to check that it gets flipped upon resend
         }
 
         logEntryLength = testRequest.encode(asciiBuffer, 0);
