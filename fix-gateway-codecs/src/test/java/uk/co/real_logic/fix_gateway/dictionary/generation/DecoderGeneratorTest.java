@@ -486,7 +486,7 @@ public class DecoderGeneratorTest
     {
         assertEquals(1, getNoEgGroupGroupCounter(decoder));
 
-        Object group = getEgGroup(decoder);
+        final Object group = getEgGroup(decoder);
         assertEquals(2, getGroupField(group));
 
         assertValid(decoder);

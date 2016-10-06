@@ -28,6 +28,7 @@ import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREA
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
+import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
 public class ReplayQueryTest extends AbstractLogTest
 {
@@ -73,6 +74,16 @@ public class ReplayQueryTest extends AbstractLogTest
     public void shouldReturnLogEntriesMatchingQuery()
     {
         final int msgCount = query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
+
+        verifyMappedFile(SESSION_ID, 1);
+        verifyMessagesRead(1);
+        assertEquals(1, msgCount);
+    }
+
+    @Test
+    public void shouldReturnAllLogEntriesWhenMostResentMessageRequested()
+    {
+        final int msgCount = query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, MOST_RECENT_MESSAGE);
 
         verifyMappedFile(SESSION_ID, 1);
         verifyMessagesRead(1);

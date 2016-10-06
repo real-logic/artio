@@ -58,6 +58,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     public static final byte[] POSS_DUP_FIELD = "43=Y\001".getBytes(StandardCharsets.US_ASCII);
     public static final int POLL_LIMIT = 10;
     public static final int CHECKSUM_TAG_SIZE = 3;
+    public static final int MOST_RECENT_MESSAGE = 0;
 
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
 
@@ -107,7 +108,8 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final long connectionId,
         final long sessionId,
         final int messageType,
-        final long timestamp, final long position)
+        final long timestamp,
+        final long position)
     {
         if (messageType == ResendRequestDecoder.MESSAGE_TYPE)
         {
@@ -120,7 +122,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
             final int beginSeqNo = resendRequest.beginSeqNo();
             final int endSeqNo = resendRequest.endSeqNo();
-            if (endSeqNo < beginSeqNo)
+            if (endSeqNo != MOST_RECENT_MESSAGE && endSeqNo < beginSeqNo)
             {
                 onIllegalState(
                     "[%s] Error in resend request, endSeqNo (%d) < beginSeqNo (%d)",
@@ -128,13 +130,16 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
                 return CONTINUE;
             }
 
-            final int expectedCount = endSeqNo - beginSeqNo + 1;
             final int count = replayQuery.query(this, sessionId, beginSeqNo, endSeqNo);
-            if (count != expectedCount)
+            if (endSeqNo != MOST_RECENT_MESSAGE)
             {
-                onIllegalState(
-                    "[%s] Error in resend request, count(%d) < expectedCount (%d)",
-                    message(), count, expectedCount);
+                final int expectedCount = endSeqNo - beginSeqNo + 1;
+                if (count != expectedCount)
+                {
+                    onIllegalState(
+                        "[%s] Error in resend request, count(%d) < expectedCount (%d)",
+                        message(), count, expectedCount);
+                }
             }
         }
 

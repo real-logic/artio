@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.IdleStrategy;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
@@ -28,6 +29,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.POSS_DUP_FIELD;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
@@ -49,6 +51,7 @@ public class ReplayerTest extends AbstractLogTest
     public void setUp()
     {
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
+        when(replayQuery.query(eq(replayer), anyLong(), anyInt(), anyInt())).thenReturn(1);
     }
 
     @Test
@@ -57,7 +60,17 @@ public class ReplayerTest extends AbstractLogTest
         bufferHasResendRequest(END_SEQ_NO);
         onMessage(ResendRequestDecoder.MESSAGE_TYPE);
 
-        verifyQueriedService();
+        verifyQueriedService(END_SEQ_NO);
+        verifyNoMoreInteractions(publication);
+    }
+
+    @Test
+    public void shouldPublishAllRemainingMessages()
+    {
+        bufferHasResendRequest(MOST_RECENT_MESSAGE);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE);
+
+        verifyQueriedService(MOST_RECENT_MESSAGE);
         verifyNoMoreInteractions(publication);
     }
 
@@ -65,9 +78,7 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldPublishMessagesWithSetPossDupFlag()
     {
         bufferContainsMessage(true);
-        final int srcLength = fragmentLength();
-        setupClaim(srcLength);
-        setupPublication(srcLength);
+        final int srcLength = setupMessage();
 
         replayer.onFragment(buffer, START, srcLength, null);
 
@@ -80,9 +91,7 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldPublishMessagesWithoutSetPossDupFlag()
     {
         bufferContainsMessage(false);
-        final int srcLength = fragmentLength();
-        setupClaim(srcLength);
-        setupPublication(srcLength);
+        final int srcLength = setupMessage();
 
         replayer.onFragment(buffer, START, srcLength, null);
 
@@ -105,12 +114,27 @@ public class ReplayerTest extends AbstractLogTest
         bufferHasResendRequest(BEGIN_SEQ_NO - 1);
         onMessage(ResendRequestDecoder.MESSAGE_TYPE);
 
+        verify(errorHandler).onError(any());
         verifyNoMoreInteractions(replayQuery, publication);
     }
 
-    private void verifyQueriedService()
+    @After
+    public void shouldHaveNoMoreErrors()
     {
-        verify(replayQuery).query(replayer, SESSION_ID, BEGIN_SEQ_NO, END_SEQ_NO);
+        verifyNoMoreInteractions(errorHandler);
+    }
+
+    private int setupMessage()
+    {
+        final int srcLength = fragmentLength();
+        setupClaim(srcLength);
+        setupPublication(srcLength);
+        return srcLength;
+    }
+
+    private void verifyQueriedService(final int endSeqNo)
+    {
+        verify(replayQuery).query(replayer, SESSION_ID, BEGIN_SEQ_NO, endSeqNo);
     }
 
     private void assertHasSetPossDupFlag()

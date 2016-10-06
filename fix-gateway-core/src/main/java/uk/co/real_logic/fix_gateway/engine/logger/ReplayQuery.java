@@ -27,6 +27,7 @@ import java.nio.MappedByteBuffer;
 import java.util.function.LongFunction;
 
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
+import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
 /**
  * Queries an index of a composite key of session id and sequence number
@@ -99,6 +100,7 @@ public class ReplayQuery implements AutoCloseable
             final int actingBlockLength = messageFrameHeader.blockLength();
             final int actingVersion = messageFrameHeader.version();
             final int requiredStreamId = ReplayQuery.this.requiredStreamId;
+            final boolean upToMostRecentMessage = endSeqNo == MOST_RECENT_MESSAGE;
 
             int count = 0;
             int lastAeronSessionId = 0;
@@ -122,7 +124,8 @@ public class ReplayQuery implements AutoCloseable
                 }
 
                 final int sequenceNumber = indexRecord.sequenceNumber();
-                if (sequenceNumber >= beginSeqNo && sequenceNumber <= endSeqNo && streamId == requiredStreamId)
+                final boolean endSeqNoOk = upToMostRecentMessage || sequenceNumber <= endSeqNo;
+                if (sequenceNumber >= beginSeqNo && endSeqNoOk && streamId == requiredStreamId)
                 {
                     final long readTo = sessionReader.read(position, handler);
                     if (readTo < 0 || readTo == position)
