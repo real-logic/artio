@@ -82,7 +82,7 @@ public class AbstractLogTest
         {
             testRequest
                 .header()
-                .possDupFlag(false);
+                .possDupFlag(true);
         }
 
         logEntryLength = testRequest.encode(asciiBuffer, 0);

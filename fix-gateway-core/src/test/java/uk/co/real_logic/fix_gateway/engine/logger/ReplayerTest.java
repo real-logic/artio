@@ -33,9 +33,9 @@ import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
 public class ReplayerTest extends AbstractLogTest
 {
-    public static final int SIZE_OF_FRAME =
+    private static final int SIZE_OF_FRAME =
         FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength() + MessageHeaderDecoder.ENCODED_LENGTH;
-    public static final int MAX_CLAIM_ATTEMPTS = 100;
+    private static final int MAX_CLAIM_ATTEMPTS = 100;
 
     private ReplayQuery replayQuery = mock(ReplayQuery.class);
     private ClusterableSubscription subscription = mock(ClusterableSubscription.class);
