@@ -60,6 +60,8 @@ final class StressUtil
     {
         final TestRequestEncoder testRequest = new TestRequestEncoder();
 
+        String previousMsg = null;
+
         for (int j = 0; j < MESSAGES_EXCHANGED; j++)
         {
             if (!StressConfiguration.PRINT_EXCHANGE)
@@ -84,6 +86,8 @@ final class StressUtil
             {
                 System.out.println(session.id() + " Success, received reply! " + testReqIdFinder.testReqId());
             }
+
+            previousMsg = msg;
         }
 
         if (!StressConfiguration.PRINT_EXCHANGE)

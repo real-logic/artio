@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.otf.MessageControl;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQ_ID;
@@ -34,6 +35,8 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
 {
 
     private final OtfParser parser = new OtfParser(this, new IntDictionary());
+    private final MutableAsciiBuffer latestMessageBuffer = new MutableAsciiBuffer(new byte[8 * 1024]);
+    private int latestMessageLength = 0;
 
     private String testReqId;
 
@@ -47,10 +50,9 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
         final long timestampInNs,
         final long position)
     {
-        // You can hook your own parsers at this point,
-        // Here's an example using our otf parser
-
         parser.onMessage(buffer, offset, length);
+        latestMessageBuffer.putBytes(0, buffer, offset, length);
+        latestMessageLength = length;
 
         return CONTINUE;
     }
@@ -105,6 +107,11 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
                            final AsciiFieldFlyweight value)
     {
         return false;
+    }
+
+    public String getLatestMessage()
+    {
+        return latestMessageBuffer.getAscii(0, latestMessageLength);
     }
 
     public String testReqId()

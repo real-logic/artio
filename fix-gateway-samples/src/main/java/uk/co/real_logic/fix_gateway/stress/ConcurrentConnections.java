@@ -35,7 +35,7 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.MESSAGES_EXCHANGED;
 import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.NUM_SESSIONS;
 
-public class ConcurrentConnections
+public final class ConcurrentConnections
 {
     public static void main(final String[] args) throws Exception
     {
