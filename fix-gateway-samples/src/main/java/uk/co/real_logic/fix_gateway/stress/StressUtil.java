@@ -15,12 +15,16 @@
  */
 package uk.co.real_logic.fix_gateway.stress;
 
+import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.client.TestReqIdFinder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.session.Session;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Random;
 
 import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.MAX_LENGTH;
@@ -85,6 +89,24 @@ final class StressUtil
         if (!StressConfiguration.PRINT_EXCHANGE)
         {
             System.out.format("\r");
+        }
+    }
+
+    static void cleanupOldLogFileDir(final EngineConfiguration configuration)
+    {
+        IoUtil.delete(new File(configuration.logFileDir()), true);
+    }
+
+    static void awaitKeyPress()
+    {
+        System.out.println("Press any key to exit");
+        try
+        {
+            System.in.read();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
         }
     }
 }

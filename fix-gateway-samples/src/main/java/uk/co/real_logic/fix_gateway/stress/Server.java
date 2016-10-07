@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.stress;
 
 import io.aeron.driver.MediaDriver;
 import org.agrona.ErrorHandler;
-import org.agrona.IoUtil;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.IdleStrategy;
@@ -27,8 +26,6 @@ import uk.co.real_logic.fix_gateway.library.AcquiringSessionExistsHandler;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
-
-import java.io.File;
 
 import static io.aeron.driver.ThreadingMode.SHARED;
 import static java.util.Collections.singletonList;
@@ -53,7 +50,7 @@ public class Server implements Agent
 
         System.out.println("Server Logs at " + configuration.logFileDir());
 
-        cleanupOldLogFileDir(configuration);
+        StressUtil.cleanupOldLogFileDir(configuration);
 
         final MediaDriver.Context context = new MediaDriver.Context()
             .threadingMode(SHARED)
@@ -91,8 +88,4 @@ public class Server implements Agent
         mediaDriver.close();
     }
 
-    public static void cleanupOldLogFileDir(final EngineConfiguration configuration)
-    {
-        IoUtil.delete(new File(configuration.logFileDir()), true);
-    }
 }
