@@ -35,8 +35,8 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
 {
 
     private final OtfParser parser = new OtfParser(this, new IntDictionary());
-    private final MutableAsciiBuffer latestMessageBuffer = new MutableAsciiBuffer(new byte[8 * 1024]);
-    private int latestMessageLength = 0;
+    private final MutableAsciiBuffer latestTestRequestMessageBuffer = new MutableAsciiBuffer(new byte[8 * 1024]);
+    private int latestTestRequestMessageLength = 0;
 
     private String testReqId;
 
@@ -50,9 +50,14 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
         final long timestampInNs,
         final long position)
     {
+        testReqId = null;
         parser.onMessage(buffer, offset, length);
-        latestMessageBuffer.putBytes(0, buffer, offset, length);
-        latestMessageLength = length;
+
+        if (testReqId != null)
+        {
+            latestTestRequestMessageBuffer.putBytes(0, buffer, offset, length);
+            latestTestRequestMessageLength = length;
+        }
 
         return CONTINUE;
     }
@@ -111,7 +116,7 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
 
     public String getLatestMessage()
     {
-        return latestMessageBuffer.getAscii(0, latestMessageLength);
+        return latestTestRequestMessageBuffer.getAscii(0, latestTestRequestMessageLength);
     }
 
     public String testReqId()
