@@ -382,53 +382,108 @@ public class ArchiverTest
     }
 
     @Test
-    public void shouldPatchCurrentTerm()
+    public void shouldPatchCurrentTermFromArray()
+    {
+        shouldPatchCurrentTerm(true);
+    }
+
+    @Test
+    public void shouldPatchCurrentTermFromBuffer()
+    {
+        shouldPatchCurrentTerm(false);
+    }
+
+    public void shouldPatchCurrentTerm(final boolean isArray)
     {
         writeAndArchiveBuffer(INITIAL_VALUE);
 
-        patchBuffer(0);
+        patchBuffer(0, isArray);
 
         assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
 
     @Test
-    public void shouldPatchWrapAroundTerm()
+    public void shouldPatchWrapAroundTermFromArray()
+    {
+        shouldPatchWrapAroundTerm(true);
+    }
+
+    @Test
+    public void shouldPatchWrapAroundTermFromBuffer()
+    {
+        shouldPatchWrapAroundTerm(false);
+    }
+
+    public void shouldPatchWrapAroundTerm(final boolean isArray)
     {
         archiveBeyondEndOfTerm();
 
-        patchBuffer(TERM_LENGTH);
+        patchBuffer(TERM_LENGTH, isArray);
 
         assertReadsValueAt(PATCH_VALUE, TERM_LENGTH + HEADER_LENGTH);
     }
 
     @Test
-    public void shouldPatchPreviousTerm()
+    public void shouldPatchPreviousTermFromArray()
+    {
+        shouldPatchPreviousTerm(true);
+    }
+
+    @Test
+    public void shouldPatchPreviousTermFromBuffer()
+    {
+        shouldPatchPreviousTerm(false);
+    }
+
+    public void shouldPatchPreviousTerm(final boolean isArray)
     {
         archiveBeyondEndOfTerm();
 
-        patchBuffer(0);
+        patchBuffer(0, isArray);
 
         assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
 
     @Test
-    public void shouldPatchMissingTerm()
+    public void shouldPatchMissingTermFromArray()
+    {
+        shouldPatchMissingTerm(true);
+    }
+
+    @Test
+    public void shouldPatchMissingTermFromBuffer()
+    {
+        shouldPatchMissingTerm(false);
+    }
+
+    public void shouldPatchMissingTerm(final boolean isArray)
     {
         archiveBeyondEndOfTerm();
 
         removeLogFiles();
 
-        patchBuffer(0);
+        patchBuffer(0, isArray);
 
         assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH);
     }
 
     @Test
-    public void shouldNotBeAbleToPatchTheFuture()
+    public void shouldNotBeAbleToPatchTheFutureFromArray()
+    {
+        shouldNotBeAbleToPatchTheFuture(true);
+    }
+
+    @Test
+    public void shouldNotBeAbleToPatchTheFutureFromBuffer()
+    {
+        shouldNotBeAbleToPatchTheFuture(false);
+    }
+
+    public void shouldNotBeAbleToPatchTheFuture(final boolean isArray)
     {
         writeAndArchiveBuffer(INITIAL_VALUE);
 
-        assertFalse("Patched the future", patchBuffer(TERM_LENGTH));
+        assertFalse("Patched the future", patchBuffer(TERM_LENGTH, isArray));
     }
 
     private int lengthOfTwoMessages()
@@ -468,7 +523,7 @@ public class ArchiverTest
         verify(blockHandler, never()).onBlock(any(), anyInt(), anyInt(), anyInt(), anyInt());
     }
 
-    private boolean patchBuffer(final long position)
+    private boolean patchBuffer(final long position, final boolean isArray)
     {
         final int frameLength = HEADER_LENGTH + OFFSET_WITHIN_MESSAGE + SIZE_OF_INT;
         final int dataOffset = HEADER_LENGTH + OFFSET_WITHIN_MESSAGE;
@@ -481,8 +536,10 @@ public class ArchiverTest
         final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
 
         final int wrapAdjustment = 4;
-        final DataHeaderFlyweight flyweight = new DataHeaderFlyweight(
-            new UnsafeBuffer(new byte[size], wrapAdjustment, size - wrapAdjustment));
+        final UnsafeBuffer buffer = isArray ?
+            new UnsafeBuffer(new byte[size], wrapAdjustment, size - wrapAdjustment) :
+            new UnsafeBuffer(ByteBuffer.allocateDirect(size), wrapAdjustment, size - wrapAdjustment);
+        final DataHeaderFlyweight flyweight = new DataHeaderFlyweight(buffer);
         flyweight
             .sessionId(sessionId)
             .streamId(streamId)
