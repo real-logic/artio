@@ -392,6 +392,16 @@ public class ArchiverTest
     }
 
     @Test
+    public void shouldPatchWrapAroundTerm()
+    {
+        archiveBeyondEndOfTerm();
+
+        patchBuffer(TERM_LENGTH);
+
+        assertReadsValueAt(PATCH_VALUE, TERM_LENGTH + HEADER_LENGTH);
+    }
+
+    @Test
     public void shouldPatchPreviousTerm()
     {
         archiveBeyondEndOfTerm();
@@ -470,7 +480,9 @@ public class ArchiverTest
         final int termId = computeTermIdFromPosition(position, positionBitsToShift, initialTermId);
         final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
 
-        final DataHeaderFlyweight flyweight = new DataHeaderFlyweight(new UnsafeBuffer(new byte[1024]));
+        final int wrapAdjustment = 4;
+        final DataHeaderFlyweight flyweight = new DataHeaderFlyweight(
+            new UnsafeBuffer(new byte[size], wrapAdjustment, size - wrapAdjustment));
         flyweight
             .sessionId(sessionId)
             .streamId(streamId)

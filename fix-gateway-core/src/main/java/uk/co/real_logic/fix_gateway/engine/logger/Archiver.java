@@ -358,15 +358,16 @@ public class Archiver implements Agent, RawBlockHandler
 
         private void writeToFile(
             final DirectBuffer bodyBuffer,
-            final int readOffset,
+            int readOffset,
             final int bodyLength,
             int termWriteOffset,
             final FileChannel patchTermLogChannel,
             final RandomAccessFile patchTermLogFile) throws IOException
         {
-            final int messageOffset = readOffset + HEADER_LENGTH;
             checksum.reset();
 
+            readOffset += bodyBuffer.wrapAdjustment();
+            final int messageOffset = readOffset + HEADER_LENGTH;
             final ByteBuffer byteBuffer = bodyBuffer.byteBuffer();
             if (byteBuffer != null)
             {
