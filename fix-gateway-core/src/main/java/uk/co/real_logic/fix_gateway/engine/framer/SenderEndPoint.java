@@ -158,7 +158,7 @@ class SenderEndPoint implements AutoCloseable
         invalidLibraryAttempts.close();
     }
 
-    Action onQuarantinedMessageFragment(
+    Action onSlowConsumerMessageFragment(
         final FixMessageDecoder fixMessage,
         final DirectBuffer directBuffer,
         final int offset,

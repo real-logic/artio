@@ -71,7 +71,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
             final SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
             if (senderEndPoint != null)
             {
-                return senderEndPoint.onQuarantinedMessageFragment(fixMessage, buffer, offset, length - HEADER_LENGTH);
+                return senderEndPoint.onSlowConsumerMessageFragment(fixMessage, buffer, offset, length - HEADER_LENGTH);
             }
         }
 
