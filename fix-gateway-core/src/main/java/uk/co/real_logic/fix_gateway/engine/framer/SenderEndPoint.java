@@ -96,9 +96,10 @@ class SenderEndPoint implements AutoCloseable
 
         try
         {
+            final int wrapAdjustment = directBuffer.wrapAdjustment();
             final ByteBuffer buffer = directBuffer.byteBuffer();
-            buffer.limit(offset + length);
-            buffer.position(offset);
+            buffer.limit(wrapAdjustment + offset + length);
+            buffer.position(wrapAdjustment + offset);
 
             final int written = channel.write(buffer);
             DebugLogger.log(FIX_MESSAGE, "Written  %s\n", buffer, written);
