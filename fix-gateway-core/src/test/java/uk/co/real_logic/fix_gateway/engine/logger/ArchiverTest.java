@@ -86,8 +86,8 @@ public class ArchiverTest
                         .boxed()
                         .flatMap(size ->
                             Stream.of(
-                                new UnsafeBuffer(ByteBuffer.allocateDirect(128)),
-                                new UnsafeBuffer(new byte[128])))
+                                new UnsafeBuffer(ByteBuffer.allocateDirect(size)),
+                                new UnsafeBuffer(new byte[size])))
                         .map(buffer -> new Object[]{buffer})
                         .collect(Collectors.toList());
     }
@@ -107,6 +107,7 @@ public class ArchiverTest
     private ArchiveReader archiveReader;
     private Publication publication;
 
+    private int lastArchivedValue;
     private int work = 0;
 
     public ArchiverTest(final UnsafeBuffer buffer)
@@ -142,7 +143,7 @@ public class ArchiverTest
     @Test
     public void shouldReadDataThatWasWritten()
     {
-        writeAndArchiveBuffer();
+        writeAndArchiveBuffer(INITIAL_VALUE);
 
         assertReadsInitialValue(HEADER_LENGTH);
     }
@@ -150,7 +151,7 @@ public class ArchiverTest
     @Test
     public void shouldNotReadDataThatHasBeenCorrupted() throws IOException
     {
-        writeAndArchiveBuffer();
+        writeAndArchiveBuffer(INITIAL_VALUE);
 
         corruptLogFile();
 
@@ -162,7 +163,7 @@ public class ArchiverTest
     @Test
     public void shouldNotBlockReadDataThatHasBeenCorrupted() throws IOException
     {
-        writeAndArchiveBuffer();
+        writeAndArchiveBuffer(INITIAL_VALUE);
 
         corruptLogFile();
 
@@ -174,7 +175,7 @@ public class ArchiverTest
     @Test
     public void shouldNotReadUpToDataThatHasBeenCorrupted() throws IOException
     {
-        final long endPosition = writeAndArchiveBuffer();
+        final long endPosition = writeAndArchiveBuffer(INITIAL_VALUE);
 
         corruptLogFile();
 
@@ -198,7 +199,7 @@ public class ArchiverTest
     @Test
     public void shouldReadAfterException()
     {
-        writeAndArchiveBuffer();
+        writeAndArchiveBuffer(INITIAL_VALUE);
 
         try
         {
@@ -222,7 +223,7 @@ public class ArchiverTest
     {
         archiveBeyondEndOfTerm();
 
-        assertReadsInitialValue(TERM_LENGTH + HEADER_LENGTH);
+        assertReadsValueAt(lastArchivedValue, TERM_LENGTH + HEADER_LENGTH);
     }
 
     @Test
@@ -291,7 +292,7 @@ public class ArchiverTest
     @Test
     public void shouldNotReadDataForNotArchivedTerm()
     {
-        writeAndArchiveBuffer();
+        writeAndArchiveBuffer(INITIAL_VALUE);
 
         final long position = read(TERM_LENGTH + HEADER_LENGTH);
 
@@ -301,7 +302,7 @@ public class ArchiverTest
     @Test
     public void shouldNotReadNotArchivedDataInCurrentTerm()
     {
-        final long endPosition = writeAndArchiveBuffer();
+        final long endPosition = writeAndArchiveBuffer(INITIAL_VALUE);
 
         final long position = read(endPosition * 2);
 
@@ -311,7 +312,7 @@ public class ArchiverTest
     @Test
     public void shouldBlockReadDataThatWasWritten()
     {
-        writeAndArchiveBuffer();
+        writeAndArchiveBuffer(INITIAL_VALUE);
 
         assertCanBlockReadValueAt(HEADER_LENGTH);
     }
@@ -319,7 +320,7 @@ public class ArchiverTest
     @Test
     public void shouldBlockReadAfterException()
     {
-        writeAndArchiveBuffer();
+        writeAndArchiveBuffer(INITIAL_VALUE);
 
         try
         {
@@ -343,7 +344,7 @@ public class ArchiverTest
     {
         archiveBeyondEndOfTerm();
 
-        assertCanBlockReadValueAt(TERM_LENGTH + HEADER_LENGTH);
+        assertCanBlockReadValueAt(lastArchivedValue, TERM_LENGTH + HEADER_LENGTH);
     }
 
     @Test
@@ -357,7 +358,7 @@ public class ArchiverTest
     @Test
     public void shouldNotBlockReadDataForNotArchivedTerm()
     {
-        writeAndArchiveBuffer();
+        writeAndArchiveBuffer(INITIAL_VALUE);
 
         final boolean wasRead = readBlockTo(TERM_LENGTH + HEADER_LENGTH);
 
@@ -367,7 +368,7 @@ public class ArchiverTest
     @Test
     public void shouldUpdatePosition()
     {
-        final long endPosition = writeAndArchiveBuffer();
+        final long endPosition = writeAndArchiveBuffer(INITIAL_VALUE);
 
         assertPosition(endPosition);
     }
@@ -383,7 +384,7 @@ public class ArchiverTest
     @Test
     public void shouldPatchCurrentTerm()
     {
-        writeAndArchiveBuffer();
+        writeAndArchiveBuffer(INITIAL_VALUE);
 
         patchBuffer(0);
 
@@ -415,7 +416,7 @@ public class ArchiverTest
     @Test
     public void shouldNotBeAbleToPatchTheFuture()
     {
-        writeAndArchiveBuffer();
+        writeAndArchiveBuffer(INITIAL_VALUE);
 
         assertFalse("Patched the future", patchBuffer(TERM_LENGTH));
     }
@@ -494,18 +495,22 @@ public class ArchiverTest
     {
         long endPosition;
 
+        int value = INITIAL_VALUE - 1;
         do
         {
-            endPosition = writeAndArchiveBuffer();
+            value++;
+            endPosition = writeAndArchiveBuffer(value);
         }
         while (endPosition <= TERM_LENGTH);
+
+        this.lastArchivedValue = value;
 
         return endPosition;
     }
 
-    private long writeAndArchiveBuffer()
+    private long writeAndArchiveBuffer(final int value)
     {
-        final long endPosition = writeBuffer(INITIAL_VALUE);
+        final long endPosition = writeBuffer(value);
 
         assertDataPublished(endPosition);
 
