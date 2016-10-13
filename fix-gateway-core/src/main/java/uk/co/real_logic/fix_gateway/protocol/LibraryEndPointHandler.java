@@ -50,8 +50,7 @@ public interface LibraryEndPointHandler
         final String password);
 
     Action onError(
-        final GatewayError errorType,
-        final int libraryId,
+        final int libraryId, final GatewayError errorType,
         final long replyToId,
         final String message);
 

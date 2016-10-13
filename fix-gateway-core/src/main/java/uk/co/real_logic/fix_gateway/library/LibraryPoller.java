@@ -557,7 +557,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     }
 
     public Action onError(
-        final GatewayError errorType, final int libraryId, final long replyToId, final String message)
+        final int libraryId,
+        final GatewayError errorType,
+        final long replyToId,
+        final String message)
     {
         if (libraryId == this.libraryId)
         {

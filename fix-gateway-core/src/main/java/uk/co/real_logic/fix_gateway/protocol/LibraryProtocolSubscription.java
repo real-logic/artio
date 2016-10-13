@@ -20,6 +20,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.messages.ManageConnectionDecoder.addressHeaderLength;
 
@@ -115,8 +116,14 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final int version)
     {
         libraryConnect.wrap(buffer, offset, blockLength, version);
+        final int libraryId = libraryConnect.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
         return handler.onNotLeader(
-            libraryConnect.libraryId(),
+            libraryId,
             libraryConnect.replyToId(),
             libraryConnect.libraryChannel()
         );
@@ -129,8 +136,14 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final int version)
     {
         controlNotification.wrap(buffer, offset, blockLength, version);
+        final int libraryId = controlNotification.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
         return handler.onControlNotification(
-            controlNotification.libraryId(),
+            libraryId,
             controlNotification.sessions()
         );
     }
@@ -138,17 +151,24 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private Action onCatchup(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         catchup.wrap(buffer, offset, blockLength, version);
+        final int libraryId = catchup.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
         return handler.onCatchup(
-            catchup.libraryId(),
+            libraryId,
             catchup.connection(),
             catchup.messageCount()
         );
     }
 
-    private Action onApplicationHeartbeat(final DirectBuffer buffer,
-                                       final int offset,
-                                       final int blockLength,
-                                       final int version)
+    private Action onApplicationHeartbeat(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version)
     {
         applicationHeartbeat.wrap(buffer, offset, blockLength, version);
         return handler.onApplicationHeartbeat(applicationHeartbeat.libraryId());
@@ -158,6 +178,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         releaseSessionReply.wrap(buffer, offset, blockLength, version);
+        // TODO: library id
         return handler.onReleaseSessionReply(
             releaseSessionReply.replyToId(),
             releaseSessionReply.status());
@@ -176,9 +197,15 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         error.wrap(buffer, offset, blockLength, version);
+        final int libraryId = error.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
         return handler.onError(
+            libraryId,
             error.type(),
-            error.libraryId(),
             error.replyToId(),
             error.message()
         );
@@ -188,8 +215,14 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         newSentPosition.wrap(buffer, offset, blockLength, version);
+        final int libraryId = newSentPosition.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
         return handler.onNewSentPosition(
-            newSentPosition.libraryId(),
+            libraryId,
             newSentPosition.position()
         );
     }
@@ -199,8 +232,14 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     {
         manageConnection.wrap(buffer, offset, blockLength, version);
         final int addressOffset = offset + ManageConnectionDecoder.BLOCK_LENGTH + addressHeaderLength();
+        final int libraryId = manageConnection.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
         return handler.onManageConnection(
-            manageConnection.libraryId(),
+            libraryId,
             manageConnection.connection(),
             manageConnection.session(),
             manageConnection.type(),
@@ -218,8 +257,14 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         logon.wrap(buffer, offset, blockLength, version);
+        final int libraryId = logon.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
         return handler.onLogon(
-            logon.libraryId(),
+            libraryId,
             logon.connection(),
             logon.session(),
             logon.lastSentSequenceNumber(),
