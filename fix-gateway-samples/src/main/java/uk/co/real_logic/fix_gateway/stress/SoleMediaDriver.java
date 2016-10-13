@@ -15,26 +15,20 @@
  */
 package uk.co.real_logic.fix_gateway.stress;
 
-import uk.co.real_logic.fix_gateway.library.FixLibrary;
-import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
+import io.aeron.driver.MediaDriver;
 
-import java.io.IOException;
+import static io.aeron.driver.ThreadingMode.SHARED;
 
-import static java.util.Collections.singletonList;
-
-public final class SoleLibrary
+public final class SoleMediaDriver
 {
-    public static void main(String[] args) throws IOException
+    public static void main(String[] args)
     {
-        while (true)
+        final MediaDriver.Context context = new MediaDriver.Context()
+            .threadingMode(SHARED)
+            .dirsDeleteOnStart(true);
+        try (final MediaDriver mediaDriver = MediaDriver.launch(context))
         {
-            final LibraryConfiguration libraryConfiguration = new LibraryConfiguration()
-                .libraryAeronChannels(singletonList(SoleEngine.AERON_CHANNEL));
-
-            try (final FixLibrary library = FixLibrary.connect(libraryConfiguration))
-            {
-                System.out.println(library.isConnected());
-            }
+            StressUtil.awaitKeyPress();
         }
     }
 }

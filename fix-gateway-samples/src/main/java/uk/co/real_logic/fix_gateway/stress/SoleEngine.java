@@ -15,13 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.stress;
 
-import io.aeron.driver.MediaDriver;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 
 import java.io.IOException;
-
-import static io.aeron.driver.ThreadingMode.SHARED;
 
 public final class SoleEngine
 {
@@ -38,15 +35,9 @@ public final class SoleEngine
 
         StressUtil.cleanupOldLogFileDir(configuration);
 
-        final MediaDriver.Context context = new MediaDriver.Context()
-            .threadingMode(SHARED)
-            .dirsDeleteOnStart(true);
-        try (final MediaDriver mediaDriver = MediaDriver.launch(context))
+        try (final FixEngine fixEngine = FixEngine.launch(configuration))
         {
-            try (final FixEngine fixEngine = FixEngine.launch(configuration))
-            {
-                StressUtil.awaitKeyPress();
-            }
+            StressUtil.awaitKeyPress();
         }
     }
 }
