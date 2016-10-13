@@ -31,6 +31,8 @@ public final class SoleEngine
             .logFileDir("stress-server-logs")
             .libraryAeronChannel(AERON_CHANNEL);
 
+        configuration.replyTimeoutInMs(1000);
+
         System.out.println("Server Logs at " + configuration.logFileDir());
 
         StressUtil.cleanupOldLogFileDir(configuration);

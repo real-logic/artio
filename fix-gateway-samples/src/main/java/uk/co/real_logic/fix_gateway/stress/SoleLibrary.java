@@ -31,9 +31,37 @@ public final class SoleLibrary
             final LibraryConfiguration libraryConfiguration = new LibraryConfiguration()
                 .libraryAeronChannels(singletonList(SoleEngine.AERON_CHANNEL));
 
+            libraryConfiguration.replyTimeoutInMs(1000);
+
             try (final FixLibrary library = FixLibrary.connect(libraryConfiguration))
             {
-                System.out.println(library.isConnected());
+
+                while (library.isConnected())
+                {
+                    try
+                    {
+                        Thread.sleep(libraryConfiguration.replyTimeoutInMs() * 2);
+                    }
+                    catch (InterruptedException e)
+                    {
+                        e.printStackTrace();
+                    }
+
+                    System.out.println("Finishing sleeping");
+
+                    library.poll(1);
+                }
+
+                System.out.println("Disconnected: " + (!library.isConnected()));
+
+                while (!library.isConnected())
+                {
+                    library.poll(1);
+                }
+
+                System.out.println("Reconnected");
+                System.out.println();
+                System.out.println();
             }
         }
     }
