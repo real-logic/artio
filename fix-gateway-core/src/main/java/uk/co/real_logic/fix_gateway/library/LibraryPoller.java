@@ -592,7 +592,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onReleaseSessionReply(final long replyToId, final SessionReplyStatus status)
+    public Action onReleaseSessionReply(final int libraryId, final long replyToId, final SessionReplyStatus status)
     {
         final ReleaseToGatewayReply reply =
             (ReleaseToGatewayReply) correlationIdToReply.remove(replyToId);
@@ -604,7 +604,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onRequestSessionReply(final long replyToId, final SessionReplyStatus status)
+    public Action onRequestSessionReply(final int toId, final long replyToId, final SessionReplyStatus status)
     {
         final RequestSessionReply reply =
             (RequestSessionReply) correlationIdToReply.remove(replyToId);

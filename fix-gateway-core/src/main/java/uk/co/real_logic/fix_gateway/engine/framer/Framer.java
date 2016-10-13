@@ -663,17 +663,19 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (libraryInfo == null)
         {
             return Pressure.apply(
-                inboundPublication.saveReleaseSessionReply(SessionReplyStatus.UNKNOWN_LIBRARY, correlationId));
+                inboundPublication.saveReleaseSessionReply(
+                    libraryId, SessionReplyStatus.UNKNOWN_LIBRARY, correlationId));
         }
 
         final GatewaySession session = libraryInfo.removeSession(connectionId);
         if (session == null)
         {
             return Pressure.apply(
-                inboundPublication.saveReleaseSessionReply(SessionReplyStatus.UNKNOWN_SESSION, correlationId));
+                inboundPublication.saveReleaseSessionReply(
+                    libraryId, SessionReplyStatus.UNKNOWN_SESSION, correlationId));
         }
 
-        final Action action = Pressure.apply(inboundPublication.saveReleaseSessionReply(OK, correlationId));
+        final Action action = Pressure.apply(inboundPublication.saveReleaseSessionReply(libraryId, OK, correlationId));
         if (action == ABORT)
         {
             libraryInfo.addSession(session);
@@ -703,21 +705,24 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (libraryInfo == null)
         {
             return Pressure.apply(
-                inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_LIBRARY, correlationId));
+                inboundPublication.saveRequestSessionReply(
+                    libraryId, SessionReplyStatus.UNKNOWN_LIBRARY, correlationId));
         }
 
         final GatewaySession gatewaySession = gatewaySessions.releaseBySessionId(sessionId);
         if (gatewaySession == null)
         {
             return Pressure.apply(
-                inboundPublication.saveRequestSessionReply(SessionReplyStatus.UNKNOWN_SESSION, correlationId));
+                inboundPublication.saveRequestSessionReply(
+                    libraryId, SessionReplyStatus.UNKNOWN_SESSION, correlationId));
         }
 
         final Session session = gatewaySession.session();
         if (!session.isActive())
         {
             return Pressure.apply(
-                inboundPublication.saveRequestSessionReply(SESSION_NOT_LOGGED_IN, correlationId));
+                inboundPublication.saveRequestSessionReply(
+                    libraryId, SESSION_NOT_LOGGED_IN, correlationId));
         }
 
         final Action action = retryManager.retry(correlationId);
@@ -760,11 +765,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return retryManager.firstAttempt(correlationId, new UnitOfWork(continuations));
     }
 
-    private long saveLogon(final int libraryId,
-                          final GatewaySession gatewaySession,
-                          final int lastSentSeqNum,
-                          final int lastReceivedSeqNum,
-                          final LogonStatus status)
+    private long saveLogon(
+        final int libraryId,
+        final GatewaySession gatewaySession,
+        final int lastSentSeqNum,
+        final int lastReceivedSeqNum,
+        final LogonStatus status)
     {
         final CompositeKey compositeKey = gatewaySession.sessionKey();
         if (compositeKey != null)
@@ -806,7 +812,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             if (expectedNumberOfMessages < 0)
             {
                 continuations.add(() ->
-                    sequenceNumberTooHigh(correlationId, replayFromSequenceNumber, lastReceivedSeqNum));
+                    sequenceNumberTooHigh(libraryId, correlationId, replayFromSequenceNumber, lastReceivedSeqNum));
                 return;
             }
 
@@ -829,15 +835,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         else
         {
             continuations.add(() ->
-                CatchupReplayer.sendOk(inboundPublication, correlationId, session));
+                CatchupReplayer.sendOk(inboundPublication, correlationId, session, libraryId));
         }
     }
 
-    private long sequenceNumberTooHigh(final long correlationId,
-                                       final int replayFromSequenceNumber,
-                                       final int lastReceivedSeqNum)
+    private long sequenceNumberTooHigh(
+        final int libraryId,
+        final long correlationId,
+        final int replayFromSequenceNumber,
+        final int lastReceivedSeqNum)
     {
-        final long position = inboundPublication.saveRequestSessionReply(SEQUENCE_NUMBER_TOO_HIGH, correlationId);
+        final long position = inboundPublication.saveRequestSessionReply(
+            libraryId, SEQUENCE_NUMBER_TOO_HIGH, correlationId);
         if (position > 0)
         {
             errorHandler.onError(new IllegalStateException(String.format(

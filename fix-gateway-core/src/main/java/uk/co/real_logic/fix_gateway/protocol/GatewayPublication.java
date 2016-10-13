@@ -660,7 +660,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveReleaseSessionReply(final SessionReplyStatus status, final long replyToId)
+    public long saveReleaseSessionReply(final int libraryId, final SessionReplyStatus status, final long replyToId)
     {
         final long position = claim(RELEASE_SESSION_REPLY_LENGTH);
         if (position < 0)
@@ -692,10 +692,11 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveRequestSession(final int libraryId,
-                                   final long sessionId,
-                                   final long correlationId,
-                                   final int lastReceivedSequenceNumber)
+    public long saveRequestSession(
+        final int libraryId,
+        final long sessionId,
+        final long correlationId,
+        final int lastReceivedSequenceNumber)
     {
         final long position = claim(REQUEST_SESSION_LENGTH);
         if (position < 0)
@@ -729,7 +730,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveRequestSessionReply(final SessionReplyStatus status, final long replyToId)
+    public long saveRequestSessionReply(final int libraryId, final SessionReplyStatus status, final long replyToId)
     {
         final long position = claim(REQUEST_SESSION_REPLY_LENGTH);
         if (position < 0)

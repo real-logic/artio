@@ -177,12 +177,21 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         return inboundMessages == null;
     }
 
-    static long sendOk(
+    private long sendOk(
         final GatewayPublication publication,
         final long correlationId,
         final GatewaySession session)
     {
-        final long position = publication.saveRequestSessionReply(OK, correlationId);
+        return sendOk(publication, correlationId, session, libraryId);
+    }
+
+    static long sendOk(
+        final GatewayPublication publication,
+        final long correlationId,
+        final GatewaySession session,
+        final int libraryId)
+    {
+        final long position = publication.saveRequestSessionReply(libraryId, OK, correlationId);
         if (position >= 0)
         {
             session.play();
@@ -192,7 +201,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     private long sendMissingMessages()
     {
-        final long position = inboundPublication.saveRequestSessionReply(MISSING_MESSAGES, correlationId);
+        final long position = inboundPublication.saveRequestSessionReply(libraryId, MISSING_MESSAGES, correlationId);
         if (position > 0)
         {
             errorHandler.onError(new IllegalStateException(String.format(

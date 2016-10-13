@@ -379,7 +379,7 @@ public class FramerTest
     {
         initiateConnection();
 
-        when(inboundPublication.saveReleaseSessionReply(OK, CORR_ID))
+        when(inboundPublication.saveReleaseSessionReply(LIBRARY_ID, OK, CORR_ID))
             .thenReturn(BACK_PRESSURED, POSITION);
 
         releaseConnection(ABORT);
@@ -516,7 +516,7 @@ public class FramerTest
 
         assertEquals(CONTINUE, framer.onRequestSession(LIBRARY_ID, SESSION_ID, CORR_ID, NO_MESSAGE_REPLAY));
 
-        verify(inboundPublication).saveRequestSessionReply(OK, CORR_ID);
+        verify(inboundPublication).saveRequestSessionReply(LIBRARY_ID, OK, CORR_ID);
     }
 
     private void sessionIsActive()
