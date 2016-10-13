@@ -355,7 +355,7 @@ public class ClusterReplicationTest
         {
             node.poll(fragmentLimit);
         }
-        LockSupport.parkNanos(500);
+        LockSupport.parkNanos(50);
     }
 
     private boolean foundLeader()

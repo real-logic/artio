@@ -20,6 +20,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 public final class EngineProtocolSubscription implements ControlledFragmentHandler
@@ -51,7 +52,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         {
             case RequestDisconnectDecoder.TEMPLATE_ID:
             {
-                return onRequestDisconnect(buffer, offset, blockLength, version);
+                return onRequestDisconnect(buffer, offset, blockLength, version, header);
             }
 
             case InitiateConnectionDecoder.TEMPLATE_ID:
@@ -76,7 +77,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
 
             case RequestSessionDecoder.TEMPLATE_ID:
             {
-                return onRequestSession(buffer, offset, blockLength, version);
+                return onRequestSession(buffer, offset, blockLength, version, header);
             }
         }
 
@@ -95,21 +96,41 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
     }
 
     private Action onLibraryConnect(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
     {
         libraryConnect.wrap(buffer, offset, blockLength, version);
+        final int libraryId = libraryConnect.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action == ABORT)
+        {
+            return action;
+        }
         return handler.onLibraryConnect(
-            libraryConnect.libraryId(),
+            libraryId,
             libraryConnect.correlationId(),
             header.sessionId());
     }
 
     private Action onReleaseSession(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
     {
         releaseSession.wrap(buffer, offset, blockLength, version);
+        final int libraryId = releaseSession.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action == ABORT)
+        {
+            return action;
+        }
         return handler.onReleaseSession(
-            releaseSession.libraryId(),
+            libraryId,
             releaseSession.connection(),
             releaseSession.correlationId(),
             releaseSession.state(),
@@ -122,11 +143,21 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
     }
 
     private Action onRequestSession(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
     {
         requestSession.wrap(buffer, offset, blockLength, version);
+        final int libraryId = requestSession.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action == ABORT)
+        {
+            return action;
+        }
         return handler.onRequestSession(
-            requestSession.libraryId(),
+            libraryId,
             requestSession.sessionId(),
             requestSession.correlationId(),
             requestSession.lastReceivedSequenceNumber());
@@ -140,8 +171,14 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         final Header header)
     {
         initiateConnection.wrap(buffer, offset, blockLength, version);
+        final int libraryId = initiateConnection.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action == ABORT)
+        {
+            return action;
+        }
         return handler.onInitiateConnection(
-            initiateConnection.libraryId(),
+            libraryId,
             initiateConnection.port(),
             initiateConnection.host(),
             initiateConnection.senderCompId(),
@@ -158,14 +195,22 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         );
     }
 
-    private Action onRequestDisconnect(final DirectBuffer buffer,
-                                    final int offset,
-                                    final int blockLength,
-                                    final int version)
+    private Action onRequestDisconnect(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
     {
         requestDisconnect.wrap(buffer, offset, blockLength, version);
+        final int libraryId = requestDisconnect.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action == ABORT)
+        {
+            return action;
+        }
         return handler.onRequestDisconnect(
-            requestDisconnect.libraryId(),
+            libraryId,
             requestDisconnect.connection(),
             requestDisconnect.reason());
     }
