@@ -19,6 +19,7 @@ import io.aeron.Aeron;
 import io.aeron.Publication;
 import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.BlockHandler;
+import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.protocol.DataHeaderFlyweight;
 import io.aeron.protocol.HeaderFlyweight;
@@ -34,6 +35,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.io.File;
@@ -63,6 +65,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOG_FILE_DIR;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor.alignTerm;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.*;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
@@ -76,7 +79,9 @@ public class ArchiverTest
     private static final int OFFSET_WITHIN_MESSAGE = 42;
     private static final int INITIAL_VALUE = 43;
     private static final int PATCH_VALUE = 44;
+    private static final int RESERVED_VALUE = 1;
     private static final String CHANNEL = "aeron:udp?endpoint=localhost:9999";
+    private static final String LOG_FILE_DIR = "/dev/shm/logs";
 
     @Parameters
     public static Collection<Object[]> data()
@@ -99,12 +104,14 @@ public class ArchiverTest
 
     private final int size;
     private final UnsafeBuffer buffer;
+    private final BufferClaim bufferClaim = new BufferClaim();
 
     private LogDirectoryDescriptor logDirectoryDescriptor;
     private MediaDriver mediaDriver;
     private Aeron aeron;
     private Archiver archiver;
     private ArchiveReader archiveReader;
+    private ArchiveReader filteredArchiveReader;
     private Publication publication;
 
     private int lastArchivedValue;
@@ -122,22 +129,29 @@ public class ArchiverTest
         mediaDriver = launchMediaDriver(TERM_LENGTH);
         aeron = Aeron.connect(new Aeron.Context().imageMapMode(READ_WRITE));
 
-        final File logFileDir = new File(DEFAULT_LOG_FILE_DIR);
-        if (logFileDir.exists())
-        {
-            IoUtil.delete(logFileDir, false);
-        }
+        deleteLogFileDir();
 
         final StreamIdentifier dataStream = new StreamIdentifier(CHANNEL, STREAM_ID);
-        logDirectoryDescriptor = new LogDirectoryDescriptor(DEFAULT_LOG_FILE_DIR);
+        logDirectoryDescriptor = new LogDirectoryDescriptor(LOG_FILE_DIR);
         final ArchiveMetaData metaData = new ArchiveMetaData(logDirectoryDescriptor);
         archiveReader = new ArchiveReader(
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream, NO_FILTER);
+        filteredArchiveReader = new ArchiveReader(
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream, RESERVED_VALUE);
         archiver = new Archiver(
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
 
         publication = aeron.addPublication(CHANNEL, STREAM_ID);
         archiver.subscription(aeron.addSubscription(CHANNEL, STREAM_ID));
+    }
+
+    private void deleteLogFileDir()
+    {
+        final File logFileDir = new File(DEFAULT_LOG_FILE_DIR);
+        if (logFileDir.exists())
+        {
+            IoUtil.delete(logFileDir, false);
+        }
     }
 
     @Test
@@ -146,6 +160,24 @@ public class ArchiverTest
         writeAndArchiveBuffer(INITIAL_VALUE);
 
         assertReadsInitialValue(HEADER_LENGTH);
+    }
+
+    @Test
+    public void shouldReadFilteredDataThatWasWritten()
+    {
+        writeAndArchiveBuffer(INITIAL_VALUE, RESERVED_VALUE);
+
+        assertReadsValueAt(INITIAL_VALUE, (long) HEADER_LENGTH, filteredArchiveReader);
+    }
+
+    @Test
+    public void shouldFilteredDataThatWasWritten()
+    {
+        writeAndArchiveBuffer(INITIAL_VALUE, 0);
+
+        final long position = read((long) HEADER_LENGTH, filteredArchiveReader);
+
+        assertNothingRead(position, NO_MESSAGE);
     }
 
     @Test
@@ -284,7 +316,7 @@ public class ArchiverTest
     @Test
     public void shouldNotReadDataForNotArchivedSession()
     {
-        final long position = read((long)HEADER_LENGTH);
+        final long position = read(HEADER_LENGTH);
 
         assertNothingRead(position, UNKNOWN_SESSION);
     }
@@ -314,7 +346,24 @@ public class ArchiverTest
     {
         writeAndArchiveBuffer(INITIAL_VALUE);
 
-        assertCanBlockReadValueAt(HEADER_LENGTH);
+        assertBlockReadsValueAt(HEADER_LENGTH);
+    }
+
+    public void shouldBlockReadFilteredDataThatWasWritten()
+    {
+        writeAndArchiveBuffer(INITIAL_VALUE, RESERVED_VALUE);
+
+        assertBlockReadsValueAt(INITIAL_VALUE, HEADER_LENGTH, filteredArchiveReader);
+    }
+
+    @Test
+    public void shouldBlockFilteredDataThatWasWritten()
+    {
+        writeAndArchiveBuffer(INITIAL_VALUE, 0);
+
+        final boolean wasRead = readBlockTo(HEADER_LENGTH, filteredArchiveReader);
+
+        assertNothingBlockRead(wasRead);
     }
 
     @Test
@@ -336,7 +385,7 @@ public class ArchiverTest
         {
         }
 
-        assertCanBlockReadValueAt(HEADER_LENGTH);
+        assertBlockReadsValueAt(HEADER_LENGTH);
     }
 
     @Test
@@ -344,7 +393,7 @@ public class ArchiverTest
     {
         archiveBeyondEndOfTerm();
 
-        assertCanBlockReadValueAt(lastArchivedValue, TERM_LENGTH + HEADER_LENGTH);
+        assertBlockReadsValueAt(lastArchivedValue, TERM_LENGTH + HEADER_LENGTH, archiveReader);
     }
 
     @Test
@@ -493,10 +542,20 @@ public class ArchiverTest
 
     private long read(final long position)
     {
+        return read(position, archiveReader);
+    }
+
+    private long read(final long position, final ArchiveReader archiveReader)
+    {
         return archiveReader.read(publication.sessionId(), position, fragmentHandler);
     }
 
     private boolean readBlockTo(final long position)
+    {
+        return readBlockTo(position, archiveReader);
+    }
+
+    private boolean readBlockTo(final long position, final ArchiveReader archiveReader)
     {
         return archiveReader.readBlock(publication.sessionId(), position, size, blockHandler);
     }
@@ -588,6 +647,29 @@ public class ArchiverTest
         return endPosition;
     }
 
+    private void writeAndArchiveBuffer(final int value, final int reservedValue)
+    {
+        long endPosition;
+        while (true)
+        {
+            endPosition = publication.tryClaim(size, bufferClaim);
+            if (endPosition >= 0)
+            {
+                break;
+            }
+            LockSupport.parkNanos(50);
+        }
+
+        final int index = bufferClaim.offset() + OFFSET_WITHIN_MESSAGE;
+        bufferClaim.reservedValue(ReservedValue.ofClusterStreamId(reservedValue));
+        bufferClaim.buffer().putInt(index, value);
+        bufferClaim.commit();
+
+        assertDataPublished(endPosition);
+
+        archiveUpTo(endPosition);
+    }
+
     private void assertReadsInitialValue(final int position)
     {
         assertReadsValueAt(INITIAL_VALUE, position);
@@ -595,7 +677,12 @@ public class ArchiverTest
 
     private void assertReadsValueAt(final int value, final long position)
     {
-        final boolean hasRead = read(position) > 0;
+        assertReadsValueAt(value, position, archiveReader);
+    }
+
+    private void assertReadsValueAt(final int value, final long position, final ArchiveReader archiveReader)
+    {
+        final boolean hasRead = read(position, archiveReader) > 0;
 
         verify(fragmentHandler).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
 
@@ -607,14 +694,14 @@ public class ArchiverTest
         assertThat("Publication has failed an offer", endPosition, greaterThan((long) size));
     }
 
-    private void assertCanBlockReadValueAt(final int position)
+    private void assertBlockReadsValueAt(final int position)
     {
-        assertCanBlockReadValueAt(INITIAL_VALUE, position);
+        assertBlockReadsValueAt(INITIAL_VALUE, position, archiveReader);
     }
 
-    private void assertCanBlockReadValueAt(final int value, final long position)
+    private void assertBlockReadsValueAt(final int value, final long position, final ArchiveReader archiveReader)
     {
-        final boolean hasRead = readBlockTo(position);
+        final boolean hasRead = readBlockTo(position, archiveReader);
 
         verify(blockHandler).onBlock(
             bufferCaptor.capture(), offsetCaptor.capture(), eq(size), eq(publication.sessionId()), anyInt());
@@ -633,12 +720,15 @@ public class ArchiverTest
         buffer.putInt(OFFSET_WITHIN_MESSAGE, value);
 
         long endPosition;
-        do
+        while (true)
         {
             endPosition = publication.offer(buffer, 0, size);
+            if (endPosition >= 0)
+            {
+                break;
+            }
             LockSupport.parkNanos(100);
         }
-        while (endPosition < 0);
 
         return endPosition;
     }
@@ -661,6 +751,7 @@ public class ArchiverTest
         CloseHelper.close(mediaDriver);
         cleanupDirectory(mediaDriver);
 
+        deleteLogFileDir();
         System.gc();
     }
 }

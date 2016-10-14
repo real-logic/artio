@@ -217,6 +217,7 @@ public class ArchiveReader implements AutoCloseable
          */
         public long read(final long messagePosition, final ControlledFragmentHandler handler)
         {
+            final int reservedValueFilter = ArchiveReader.this.reservedValueFilter;
             final int termOffset = scan(messagePosition);
             if (termOffset == UNKNOWN_TERM)
             {
@@ -225,6 +226,12 @@ public class ArchiveReader implements AutoCloseable
 
             final int frameLength = header.frameLength();
             if (frameLength == 0)
+            {
+                return NO_MESSAGE;
+            }
+
+            final long reservedValue = header.reservedValue();
+            if ((reservedValue & reservedValueFilter) != reservedValueFilter)
             {
                 return NO_MESSAGE;
             }
@@ -339,6 +346,7 @@ public class ArchiveReader implements AutoCloseable
          */
         public boolean readBlock(final long position, final int requestedLength, final BlockHandler handler)
         {
+            final int reservedValueFilter = ArchiveReader.this.reservedValueFilter;
             final int termId = computeTermIdFromPosition(position);
             final ByteBuffer termBuffer = termIdToBuffer.computeIfAbsent(termId, newBuffer);
             if (termBuffer == null)
@@ -360,6 +368,12 @@ public class ArchiveReader implements AutoCloseable
                 final int headerOffset = messageOffset - HEADER_LENGTH;
                 header.offset(headerOffset);
                 final int frameLength = header.frameLength();
+                final long reservedValue = header.reservedValue();
+                if ((reservedValue & reservedValueFilter) != reservedValueFilter)
+                {
+                    return false;
+                }
+
                 if (!validateChecksum(messageOffset, frameLength))
                 {
                     return false;
