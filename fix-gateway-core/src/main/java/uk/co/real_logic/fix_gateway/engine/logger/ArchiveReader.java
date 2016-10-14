@@ -72,16 +72,28 @@ public class ArchiveReader implements AutoCloseable
     private final LogDirectoryDescriptor directoryDescriptor;
     private final int cacheNumSets;
     private final int cacheSetSize;
+    private final int reservedValueFilter;
     private final CRC32 checksum = new CRC32();
 
+    /**
+     * Create a new ArchiveReader.
+     *
+     * @param metaData
+     * @param cacheNumSets
+     * @param cacheSetSize
+     * @param streamId
+     * @param reservedValueFilter bitmask for the non-checksum reserved value, or 0 if you don't want to filter.
+     */
     public ArchiveReader(
         final ArchiveMetaData metaData,
         final int cacheNumSets,
         final int cacheSetSize,
-        final StreamIdentifier streamId)
+        final StreamIdentifier streamId,
+        final int reservedValueFilter)
     {
         this.cacheNumSets = cacheNumSets;
         this.cacheSetSize = cacheSetSize;
+        this.reservedValueFilter = reservedValueFilter;
         archiveBufferFactory = LoggerUtil::mapExistingFile;
         this.metaData = metaData;
         this.streamId = streamId;
@@ -118,14 +130,12 @@ public class ArchiveReader implements AutoCloseable
      * Reads a message out of the log archive.
      *
      * @param aeronSessionId the session to read from
-     * @param reservedValueFilter bitmask for the non-checksum reserved value, or 0 if you don't want to filter.
      * @param beginPosition the log position to start reading at
      * @param endPosition the last start position of a message to stop reading at (NB: can read up to a fragment beyond)
      * @param handler the handler to pass the data into
      * @return the position after the end of this message. If there's another message, then this is its start.
      */
     public long readUpTo(
-        final int reservedValueFilter,
         final int aeronSessionId,
         final long beginPosition,
         final long endPosition,
@@ -137,7 +147,7 @@ public class ArchiveReader implements AutoCloseable
             return UNKNOWN_SESSION;
         }
 
-        return sessionReader.readUpTo(reservedValueFilter, beginPosition, endPosition, handler);
+        return sessionReader.readUpTo(beginPosition, endPosition, handler);
     }
 
     /**
@@ -255,18 +265,17 @@ public class ArchiveReader implements AutoCloseable
         /**
          * Reads a message out of this session's log archive.
          *
-         * @param reservedValueFilter bitmask for the non-checksum reserved value, or 0 if you don't want to filter.
          * @param beginPosition the log position to start reading at
          * @param endPosition the last start position of a message to stop reading at (NB: can read up to a fragment beyond)
          * @param handler the handler to pass the data into
          * @return the position after the end of this message. If there's another message, then this is its start.
          */
         public long readUpTo(
-            final int reservedValueFilter,
             final long beginPosition,
             final long endPosition,
             final ControlledFragmentHandler handler)
         {
+            final int reservedValueFilter = ArchiveReader.this.reservedValueFilter;
             long position = beginPosition;
             while (position >= 0)
             {

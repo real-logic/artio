@@ -132,7 +132,7 @@ public class ArchiverTest
         logDirectoryDescriptor = new LogDirectoryDescriptor(DEFAULT_LOG_FILE_DIR);
         final ArchiveMetaData metaData = new ArchiveMetaData(logDirectoryDescriptor);
         archiveReader = new ArchiveReader(
-            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream, NO_FILTER);
         archiver = new Archiver(
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
 
@@ -180,7 +180,7 @@ public class ArchiverTest
         corruptLogFile();
 
         final long readPosition = archiveReader.readUpTo(
-            NO_FILTER, publication.sessionId(), (long) HEADER_LENGTH, endPosition, fragmentHandler);
+            publication.sessionId(), (long) HEADER_LENGTH, endPosition, fragmentHandler);
 
         assertNothingRead(readPosition, CORRUPT_LOG);
     }
@@ -274,7 +274,7 @@ public class ArchiverTest
 
         final long begin = HEADER_LENGTH;
         final long end = begin + lengthOfTwoMessages() + offsetIntoNextMessage;
-        final long res = archiveReader.readUpTo(NO_FILTER, publication.sessionId(), begin, end, fragmentHandler);
+        final long res = archiveReader.readUpTo(publication.sessionId(), begin, end, fragmentHandler);
 
         verify(fragmentHandler, times).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
 
