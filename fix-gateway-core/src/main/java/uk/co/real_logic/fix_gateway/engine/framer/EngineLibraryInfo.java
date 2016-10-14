@@ -40,4 +40,11 @@ class EngineLibraryInfo implements LibraryInfo
     {
         return sessions;
     }
+
+    public String toString()
+    {
+        return "EngineLibraryInfo{" +
+            "sessions=" + sessions +
+            '}';
+    }
 }
