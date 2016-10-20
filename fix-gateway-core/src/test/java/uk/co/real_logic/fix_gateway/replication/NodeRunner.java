@@ -96,16 +96,16 @@ class NodeRunner implements AutoCloseable
         aeron = Aeron.connect(clientContext);
 
         final StreamIdentifier dataStream = new StreamIdentifier(AERON_CHANNEL, DEFAULT_DATA_STREAM_ID);
-        final ArchiveMetaData metaData = AbstractReplicationTest.archiveMetaData((short) nodeId);
+        final ArchiveMetaData metaData = AbstractReplicationTest.archiveMetaData((short)nodeId);
         final ArchiveReader archiveReader = new ArchiveReader(
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream, NO_FILTER);
         final Archiver archiver = new Archiver(
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
         final UnsafeBuffer nodeState = new UnsafeBuffer(new byte[SIZE_OF_SHORT]);
-        nodeState.putShort(0, (short) nodeId);
+        nodeState.putShort(0, (short)nodeId);
 
         final ClusterNodeConfiguration configuration = new ClusterNodeConfiguration()
-            .nodeId((short) nodeId)
+            .nodeId((short)nodeId)
             .aeron(aeron)
             .otherNodes(otherNodeIds)
             .timeoutIntervalInMs(TIMEOUT_IN_MS)
@@ -190,11 +190,11 @@ class NodeRunner implements AutoCloseable
 
     private class NodeIdStasher implements NodeStateHandler
     {
-
-        public void onNewNodeState(final short nodeId,
-                                   final int aeronSessionId,
-                                   final DirectBuffer nodeStateBuffer,
-                                   final int nodeStateLength)
+        public void onNewNodeState(
+            final short nodeId,
+            final int aeronSessionId,
+            final DirectBuffer nodeStateBuffer,
+            final int nodeStateLength)
         {
             if (nodeStateLength == SIZE_OF_SHORT)
             {

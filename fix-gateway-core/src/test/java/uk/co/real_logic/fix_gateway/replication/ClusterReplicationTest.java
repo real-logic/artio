@@ -25,7 +25,6 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 
-import java.util.concurrent.locks.LockSupport;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -313,7 +312,7 @@ public class ClusterReplicationTest
     private void awaitLeadershipConsensus()
     {
         while (!(node1.leaderSessionId() == node2.leaderSessionId() &&
-                 node1.leaderSessionId() == node3.leaderSessionId()))
+            node1.leaderSessionId() == node3.leaderSessionId()))
         {
             pollAll();
         }
@@ -347,6 +346,7 @@ public class ClusterReplicationTest
                 bufferClaim.commit();
                 return position;
             }
+
             pollAll();
         }
     }
@@ -363,7 +363,8 @@ public class ClusterReplicationTest
         {
             node.poll(fragmentLimit);
         }
-        LockSupport.parkNanos(50);
+
+        Thread.yield();
     }
 
     private boolean foundLeader()
