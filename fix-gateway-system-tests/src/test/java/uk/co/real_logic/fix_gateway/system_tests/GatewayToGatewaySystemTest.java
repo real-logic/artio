@@ -30,13 +30,13 @@ import java.util.List;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.fix_gateway.CommonMatchers.hasConnectionId;
+import static uk.co.real_logic.fix_gateway.FixMatchers.hasConnectionId;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
-import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.DISABLED;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -401,15 +401,42 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void sessionsShouldNotBeActiveAfterLibraryClosed()
+    public void engineShouldAcquireTimedOutLibrariesSessions()
+    {
+        acquireAcceptingSession();
+
+        acceptingEngineHasSession();
+    }
+
+    @Test
+    public void engineShouldAcquireClosedLibrariesSessions()
     {
         acquireAcceptingSession();
         acceptingLibrary.close();
 
-        assertEquals(DISCONNECTED, acceptingSession.state());
+        assertEquals(DISABLED, acceptingSession.state());
 
-        /*acquireAcceptingSession();
-        assertEquals(ACTIVE, acceptingSession.state());*/
+        acceptingEngineHasSession();
+    }
+
+    private void acceptingEngineHasSession()
+    {
+        LibraryInfo engine;
+
+        while (true)
+        {
+            final List<LibraryInfo> libraries = SystemTestUtil.libraries(acceptingEngine);
+            if (libraries.size() == 1)
+            {
+                engine = libraries.get(0);
+                assertEquals(ENGINE_LIBRARY_ID, engine.libraryId());
+                break;
+            }
+            ADMIN_IDLE_STRATEGY.idle();
+        }
+        ADMIN_IDLE_STRATEGY.reset();
+
+        assertThat(engine.sessions(), contains(hasConnectionId(acceptingSession.connectionId())));
     }
 
 }

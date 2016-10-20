@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.library;
 
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.collections.Long2ObjectHashMap;
@@ -169,7 +168,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public void close()
     {
-        connectionIdToSession.values().forEach(CloseHelper::quietClose);
+        connectionIdToSession.values().forEach(subscriber -> subscriber.session().disable());
         closed = true;
     }
 

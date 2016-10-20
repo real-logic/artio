@@ -21,9 +21,9 @@ import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import static org.hamcrest.Matchers.equalTo;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasResult;
 
-public final class CommonMatchers
+public final class FixMatchers
 {
-    private CommonMatchers()
+    private FixMatchers()
     {
     }
 
