@@ -64,8 +64,8 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
-import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOG_FILE_DIR;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor.alignTerm;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.*;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
@@ -81,7 +81,7 @@ public class ArchiverTest
     private static final int PATCH_VALUE = 44;
     private static final int RESERVED_VALUE = 1;
     private static final String CHANNEL = "aeron:udp?endpoint=localhost:9999";
-    private static final String LOG_FILE_DIR = "/dev/shm/logs";
+    private static final String LOG_FILE_DIR = tmpLogsDirName() + "ArchiverTest-logs";
 
     @Parameters
     public static Collection<Object[]> data()
@@ -147,11 +147,28 @@ public class ArchiverTest
 
     private void deleteLogFileDir()
     {
-        final File logFileDir = new File(DEFAULT_LOG_FILE_DIR);
+        final File logFileDir = new File(LOG_FILE_DIR);
         if (logFileDir.exists())
         {
             IoUtil.delete(logFileDir, false);
         }
+    }
+
+    public static String tmpLogsDirName()
+    {
+        String dirName = IoUtil.tmpDirName();
+
+        if ("Linux".equalsIgnoreCase(System.getProperty("os.name")))
+        {
+            final File devShmDir = new File("/dev/shm");
+
+            if (devShmDir.exists())
+            {
+                dirName = "/dev/shm/";
+            }
+        }
+
+        return dirName;
     }
 
     @Test
