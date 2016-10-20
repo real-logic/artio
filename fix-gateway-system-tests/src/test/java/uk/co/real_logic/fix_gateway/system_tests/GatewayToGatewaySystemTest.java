@@ -36,6 +36,7 @@ import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -397,6 +398,18 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
 
         messagesCanBeExchanged();
+    }
+
+    @Test
+    public void sessionsShouldNotBeActiveAfterLibraryClosed()
+    {
+        acquireAcceptingSession();
+        acceptingLibrary.close();
+
+        assertEquals(DISCONNECTED, acceptingSession.state());
+
+        /*acquireAcceptingSession();
+        assertEquals(ACTIVE, acceptingSession.state());*/
     }
 
 }

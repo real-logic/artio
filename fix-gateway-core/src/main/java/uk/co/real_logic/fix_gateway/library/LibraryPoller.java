@@ -100,6 +100,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // Combined with Library Id, uniquely identifies library connection
     private long connectCorrelationId = NO_CORRELATION_ID;
+    private boolean closed = false;
 
     LibraryPoller(
         final LibraryConfiguration configuration,
@@ -169,6 +170,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public void close()
     {
         connectionIdToSession.values().forEach(CloseHelper::quietClose);
+        closed = true;
     }
 
     Reply<Session> initiate(final SessionConfiguration configuration)
@@ -197,6 +199,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     long saveReleaseSession(final Session session, final long correlationId)
     {
+        checkClosed();
+
         return outboundPublication.saveReleaseSession(
             libraryId,
             session.connectionId(),
@@ -215,6 +219,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long correlationId,
         final SessionConfiguration configuration)
     {
+        checkClosed();
+
         return outboundPublication.saveInitiateConnection(
             libraryId,
             host,
@@ -233,6 +239,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     long saveRequestSession(final long sessionId, final long correlationId, final int lastReceivedSequenceNumber)
     {
+        checkClosed();
+
         return outboundPublication.saveRequestSession(
             libraryId, sessionId, correlationId, lastReceivedSequenceNumber);
     }
@@ -373,6 +381,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void sendLibraryConnect()
     {
+        checkClosed();
+
         final long correlationId = ++currentCorrelationId;
         while (outboundPublication.saveLibraryConnect(libraryId, correlationId) < 0)
         {
@@ -860,5 +870,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     String currentAeronChannel()
     {
         return currentAeronChannel;
+    }
+
+    private void checkClosed()
+    {
+        if (closed)
+        {
+            throw new IllegalStateException("Library has been closed");
+        }
     }
 }
