@@ -39,7 +39,6 @@ import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
  */
 public class ClusterReplicationTest
 {
-
     private static final int BUFFER_SIZE = 1337;
     private static final int POSITION_AFTER_MESSAGE = BUFFER_SIZE + HEADER_LENGTH;
 
@@ -64,6 +63,14 @@ public class ClusterReplicationTest
 
         final NodeRunner leader = leader();
         DebugLogger.log(RAFT, "Leader elected: %d\n\n", leader.raftNode().nodeId());
+    }
+
+    @After
+    public void shutdown()
+    {
+        node1.close();
+        node2.close();
+        node3.close();
     }
 
     @Test
@@ -208,7 +215,7 @@ public class ClusterReplicationTest
 
     private void assertNodeStateReplicated()
     {
-        final int[] nodeIds = {1, 2, 3};
+        final int[] nodeIds = { 1, 2, 3 };
         final int followerCount = nodeIds.length - 1;
         final NodeRunner leader = leader();
         Int2IntHashMap nodeIdToId;
@@ -216,7 +223,8 @@ public class ClusterReplicationTest
         {
             pollAll();
             nodeIdToId = leader.nodeIdToId();
-        } while (nodeIdToId.size() < followerCount);
+        }
+        while (nodeIdToId.size() < followerCount);
 
         final short leaderId = leader.raftNode().nodeId();
 
@@ -234,12 +242,12 @@ public class ClusterReplicationTest
         return followers()[0];
     }
 
-    private void assertBecomesCandidate(final NodeRunner ... nodes)
+    private void assertBecomesCandidate(final NodeRunner... nodes)
     {
         assertBecomes(ClusterAgent::isCandidate, allNodes, nodes);
     }
 
-    private void assertBecomesFollower(final NodeRunner ... nodes)
+    private void assertBecomesFollower(final NodeRunner... nodes)
     {
         assertBecomes(ClusterAgent::isFollower, allNodes, nodes);
     }
@@ -267,7 +275,7 @@ public class ClusterReplicationTest
         return Stream.of(values).allMatch(predicate);
     }
 
-    private void assertElectsNewLeader(final NodeRunner ... followers)
+    private void assertElectsNewLeader(final NodeRunner... followers)
     {
         while (!foundLeader(followers))
         {
@@ -348,7 +356,7 @@ public class ClusterReplicationTest
         poll(allNodes);
     }
 
-    private void poll(final NodeRunner ... nodes)
+    private void poll(final NodeRunner... nodes)
     {
         final int fragmentLimit = 10;
         for (final NodeRunner node : nodes)
@@ -363,7 +371,7 @@ public class ClusterReplicationTest
         return foundLeader(node1, node2, node3);
     }
 
-    private boolean foundLeader(NodeRunner ... nodes)
+    private boolean foundLeader(NodeRunner... nodes)
     {
         final long leaderCount = Stream.of(nodes).filter(NodeRunner::isLeader).count();
         return leaderCount == 1;
@@ -382,7 +390,7 @@ public class ClusterReplicationTest
         int leaderCount = 0;
         int followerCount = 0;
 
-        for (final NodeRunner node: allNodes)
+        for (final NodeRunner node : allNodes)
         {
             if (node.isLeader())
             {
@@ -414,13 +422,4 @@ public class ClusterReplicationTest
     {
         return Stream.of(node1, node2, node3);
     }
-
-    @After
-    public void shutdown()
-    {
-        node1.close();
-        node2.close();
-        node3.close();
-    }
-
 }
