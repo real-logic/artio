@@ -126,7 +126,6 @@ public class Session implements AutoCloseable
 
     private boolean incorrectBeginString = false;
     protected boolean resendSaveLogon = false;
-    private boolean libraryConnected = true;
 
     public Session(
         final int heartbeatIntervalInS,
@@ -437,8 +436,7 @@ public class Session implements AutoCloseable
     {
         final int sentSeqNum = 1;
         final int heartbeatIntervalInS = (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs);
-        final long position = proxy.logon(
-            heartbeatIntervalInS, sentSeqNum, username(), password(), true);
+        final long position = proxy.logon(heartbeatIntervalInS, sentSeqNum, username(), password(), true);
         lastSentMsgSeqNum(sentSeqNum, position);
         return position;
     }
@@ -791,11 +789,6 @@ public class Session implements AutoCloseable
         password(password);
     }
 
-    private Action saveLogon(final long sessionId)
-    {
-        return Pressure.apply(publication.saveLogon(libraryId, connectionId, sessionId));
-    }
-
     public void setupSession(final long sessionId, final CompositeKey sessionKey)
     {
         id(sessionId);
@@ -989,7 +982,7 @@ public class Session implements AutoCloseable
                 {
                     incorrectBeginString = true;
                     state(DISCONNECTING);
-                    return isValid;
+                    return false;
                 }
                 else
                 {
@@ -998,6 +991,7 @@ public class Session implements AutoCloseable
             }
             requestDisconnect(INCORRECT_BEGIN_STRING);
         }
+
         return isValid;
     }
 
@@ -1167,7 +1161,6 @@ public class Session implements AutoCloseable
 
     public void libraryConnected(final boolean libraryConnected)
     {
-        this.libraryConnected = libraryConnected;
         proxy.libraryConnected(libraryConnected);
     }
 

@@ -50,6 +50,19 @@ public class AbstractGatewayToGatewaySystemTest
     protected FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
     protected FakeHandler initiatingHandler = new FakeHandler(initiatingOtfAcceptor);
 
+    @After
+    public void close()
+    {
+        CloseHelper.close(initiatingLibrary);
+        CloseHelper.close(acceptingLibrary);
+
+        CloseHelper.close(initiatingEngine);
+        CloseHelper.close(acceptingEngine);
+
+        CloseHelper.close(mediaDriver);
+        cleanupDirectory(mediaDriver);
+    }
+
     protected void assertOriginalLibraryDoesNotReceiveMessages(final int initiator1MessageCount)
     {
         initiatingLibrary.poll(LIBRARY_LIMIT);
@@ -166,19 +179,6 @@ public class AbstractGatewayToGatewaySystemTest
         acceptingSession.send(resendRequest);
     }
 
-    @After
-    public void close()
-    {
-        CloseHelper.close(initiatingLibrary);
-        CloseHelper.close(acceptingLibrary);
-
-        CloseHelper.close(initiatingEngine);
-        CloseHelper.close(acceptingEngine);
-
-        CloseHelper.close(mediaDriver);
-        cleanupDirectory(mediaDriver);
-    }
-
     protected void messagesCanBeExchanged()
     {
         final long position = messagesCanBeExchanged(
@@ -192,10 +192,11 @@ public class AbstractGatewayToGatewaySystemTest
         });
     }
 
-    protected long messagesCanBeExchanged(final Session sendingSession,
-                                          final FixLibrary library,
-                                          final FixLibrary library2,
-                                          final FakeOtfAcceptor receivingAcceptor)
+    protected long messagesCanBeExchanged(
+        final Session sendingSession,
+        final FixLibrary library,
+        final FixLibrary library2,
+        final FakeOtfAcceptor receivingAcceptor)
     {
         final long position = sendTestRequest(sendingSession);
 
@@ -203,5 +204,4 @@ public class AbstractGatewayToGatewaySystemTest
 
         return position;
     }
-
 }

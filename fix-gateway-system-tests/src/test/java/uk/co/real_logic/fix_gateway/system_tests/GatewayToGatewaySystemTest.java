@@ -41,14 +41,10 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
-
     @Before
     public void launch()
     {
         mediaDriver = launchMediaDriver();
-
-        // System GC required to ensure file closed. Hypothesis: finalizer thread holding onto object references?
-        System.gc();
 
         delete(ACCEPTOR_LOGS);
         launchAcceptingEngine();
@@ -62,8 +58,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
     private void launchAcceptingEngine()
     {
-        acceptingEngine = FixEngine.launch(
-            acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID));
+        acceptingEngine = FixEngine.launch(acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID));
     }
 
     @Test
@@ -169,7 +164,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final FakeOtfAcceptor initiatingOtfAcceptor2 = new FakeOtfAcceptor();
         final FakeHandler initiatingSessionHandler2 = new FakeHandler(initiatingOtfAcceptor2);
-        try (final FixLibrary library2 = newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2))
+        try (FixLibrary library2 = newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2))
         {
             acceptingHandler.clearSessions();
             final Session session2 = initiateAndAwait(library2, port, INITIATOR_ID2, ACCEPTOR_ID).resultIfPresent();
@@ -268,8 +263,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        reacquireReleasedSession(
-            initiatingSession, initiatingLibrary, initiatingEngine);
+        reacquireReleasedSession(initiatingSession, initiatingLibrary, initiatingEngine);
     }
 
     @Test
@@ -277,8 +271,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        reacquireReleasedSession(
-            acceptingSession, acceptingLibrary, acceptingEngine);
+        reacquireReleasedSession(acceptingSession, acceptingLibrary, acceptingEngine);
     }
 
     private void reacquireReleasedSession(
@@ -313,8 +306,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     private void engineIsManagingSession(final FixEngine engine, final long connectionId)
     {
         final List<LibraryInfo> libraries = libraries(engine);
-        assertThat(libraries.get(0).sessions(),
-            contains(hasConnectionId(connectionId)));
+        assertThat(libraries.get(0).sessions(), contains(hasConnectionId(connectionId)));
     }
 
     @Test
@@ -379,7 +371,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final FakeOtfAcceptor otfAcceptor2 = new FakeOtfAcceptor();
         final FakeHandler handler2 = new FakeHandler(otfAcceptor2);
-        try (final FixLibrary library2 = FixLibrary.connect(
+        try (FixLibrary library2 = FixLibrary.connect(
             acceptingLibraryConfig(handler2, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL)))
         {
             assertEquals(1, handler2.awaitSessionId(() -> library2.poll(1)));
@@ -434,9 +426,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             }
             ADMIN_IDLE_STRATEGY.idle();
         }
+
         ADMIN_IDLE_STRATEGY.reset();
 
         assertThat(engine.sessions(), contains(hasConnectionId(acceptingSession.connectionId())));
     }
-
 }

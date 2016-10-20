@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.YieldingIdleStrategy;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.Reply;
@@ -52,7 +53,7 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 
 public final class SystemTestUtil
 {
-    public static final IdleStrategy ADMIN_IDLE_STRATEGY = backoffIdleStrategy();
+    public static final IdleStrategy ADMIN_IDLE_STRATEGY = new YieldingIdleStrategy();
     public static final String ACCEPTOR_ID = "acceptor";
     public static final String INITIATOR_ID = "initiator";
     public static final String INITIATOR_ID2 = "initiator2";
@@ -378,7 +379,9 @@ public final class SystemTestUtil
             ADMIN_IDLE_STRATEGY.idle();
         }
         ADMIN_IDLE_STRATEGY.reset();
+
         assertEquals(COMPLETED, reply.state());
+
         return reply.resultIfPresent();
     }
 

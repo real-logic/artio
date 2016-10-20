@@ -34,7 +34,6 @@ import static org.junit.Assert.assertNotEquals;
 
 public class FakeHandler implements SessionHandler, SessionAcquireHandler, SessionExistsHandler, SentPositionHandler
 {
-
     private final Long2ObjectHashMap<Session> connectionIdToSession = new Long2ObjectHashMap<>();
     private final OtfParser parser;
     private final FakeOtfAcceptor acceptor;
@@ -93,14 +92,15 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
         return CONTINUE;
     }
 
-    public void onSessionExists(final FixLibrary library,
-                                final long sessionId,
-                                final String acceptorCompId,
-                                final String acceptorSubId,
-                                final String acceptorLocationId,
-                                final String initiatorCompId,
-                                final String username,
-                                final String password)
+    public void onSessionExists(
+        final FixLibrary library,
+        final long sessionId,
+        final String acceptorCompId,
+        final String acceptorSubId,
+        final String acceptorLocationId,
+        final String initiatorCompId,
+        final String username,
+        final String password)
     {
         completeSessionIds.add(new CompleteSessionId(acceptorCompId, initiatorCompId, sessionId));
     }
@@ -127,6 +127,7 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
         while (!hasSeenSession())
         {
             poller.run();
+            Thread.yield();
         }
 
         return lastSessionId().sessionId();
