@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
-import org.hamcrest.Matcher;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
@@ -42,7 +41,6 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.optimalTmpDirName;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -71,11 +69,6 @@ public final class SystemTestUtil
         {
             IoUtil.delete(directory, true);
         }
-    }
-
-    public static void assertSessionDisconnected(final FixLibrary library1, final Session session)
-    {
-        assertSessionDisconnected(library1, null, session);
     }
 
     public static void assertSessionDisconnected(
@@ -119,33 +112,6 @@ public final class SystemTestUtil
         {
             library2.poll(LIBRARY_LIMIT);
         }
-    }
-
-    public static <T> Matcher<Iterable<? super T>> containsInitiator()
-    {
-        return containsLogon(ACCEPTOR_ID, INITIATOR_ID);
-    }
-
-    public static <T> Matcher<Iterable<? super T>> containsAcceptor()
-    {
-        return containsLogon(INITIATOR_ID, ACCEPTOR_ID);
-    }
-
-    private static <T> Matcher<Iterable<? super T>> containsLogon(final String senderCompId, final String targetCompId)
-    {
-        return hasItem(
-            allOf(hasSenderCompId(senderCompId),
-                hasTargetCompId(targetCompId)));
-    }
-
-    private static <T> Matcher<T> hasTargetCompId(final String targetCompId)
-    {
-        return hasProperty("targetCompID", equalTo(targetCompId));
-    }
-
-    private static <T> Matcher<T> hasSenderCompId(final String senderCompId)
-    {
-        return hasProperty("senderCompID", equalTo(senderCompId));
     }
 
     public static Reply<Session> initiateAndAwait(
