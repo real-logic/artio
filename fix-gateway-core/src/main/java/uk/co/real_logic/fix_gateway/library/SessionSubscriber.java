@@ -30,21 +30,20 @@ class SessionSubscriber implements AutoCloseable
 {
     private final SessionParser parser;
     private final Session session;
-    private final SessionHandler handler;
     private final Timer receiveTimer;
     private final Timer sessionTimer;
     private int remainingCatchupCount;
 
+    private SessionHandler handler;
+
     SessionSubscriber(
         final SessionParser parser,
         final Session session,
-        final SessionHandler handler,
         final Timer receiveTimer,
         final Timer sessionTimer)
     {
         this.parser = parser;
         this.session = session;
-        this.handler = handler;
         this.receiveTimer = receiveTimer;
         this.sessionTimer = sessionTimer;
     }
@@ -105,8 +104,10 @@ class SessionSubscriber implements AutoCloseable
         final int lastReceivedSequenceNumber,
         final CompositeKey compositeKey,
         final String username,
-        final String password)
+        final String password,
+        final SessionHandler handler)
     {
+        this.handler = handler;
         if (compositeKey != null)
         {
             session.setupSession(sessionId, compositeKey);

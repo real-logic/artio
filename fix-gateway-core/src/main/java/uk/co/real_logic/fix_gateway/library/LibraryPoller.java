@@ -474,16 +474,18 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)
             {
-                //final SessionState state = subscriber.session().state();
                 final CompositeKey compositeKey = senderCompId.length() == 0 ? null :
                     sessionIdStrategy.onLogon(senderCompId, senderSubId, senderLocationId, targetCompId);
+                final SessionHandler handler =
+                    configuration.sessionAcquireHandler().onSessionAcquired(subscriber.session());
                 subscriber.onLogon(
                     sessionId,
                     lastSentSequenceNumber,
                     lastReceivedSequenceNumber,
                     compositeKey,
                     username,
-                    password);
+                    password,
+                    handler);
             }
         }
         else if (libraryId == ENGINE_LIBRARY_ID || thisLibrary && status == LIBRARY_NOTIFICATION)
@@ -726,9 +728,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
             session, sessionIdStrategy, authenticationStrategy, validationStrategy);
-        final SessionHandler handler = configuration.sessionAcquireHandler().onSessionAcquired(session);
-        final SessionSubscriber subscriber = new SessionSubscriber(parser, session, handler,
-            receiveTimer, sessionTimer);
+        final SessionSubscriber subscriber = new SessionSubscriber(parser, session, receiveTimer, sessionTimer);
         connectionIdToSession.put(connectionId, subscriber);
         sessions.add(session);
     }

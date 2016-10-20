@@ -26,6 +26,7 @@ import org.mockito.stubbing.OngoingStubbing;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
 import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
+import uk.co.real_logic.fix_gateway.messages.LogonStatus;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -303,6 +304,21 @@ public class LibraryPollerTest
             ACTIVE,
             HEARTBEAT_INTERVAL_IN_S,
             REPLY_TO_ID);
+
+        library.onLogon(
+            libraryId(),
+            connectionId,
+            sessionId,
+            LAST_SENT_SEQUENCE_NUMBER,
+            LAST_RECEIVED_SEQUENCE_NUMBER,
+            LogonStatus.NEW,
+            "",
+            "",
+            "",
+            "",
+            null,
+            null
+        );
     }
 
     private SessionsDecoder hasOtherSessionId()
