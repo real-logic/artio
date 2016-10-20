@@ -44,7 +44,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -73,7 +72,6 @@ import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 @RunWith(Parameterized.class)
 public class ArchiverTest
 {
-
     private static final int TERM_LENGTH = 65536;
     private static final int STREAM_ID = 1;
     private static final int OFFSET_WITHIN_MESSAGE = 42;
@@ -87,14 +85,15 @@ public class ArchiverTest
     public static Collection<Object[]> data()
     {
         // TODO: enable more comprehensive testing in a CI environment
-        return IntStream.of(1337/*, 129, 128, 4097*/)
-                        .boxed()
-                        .flatMap(size ->
-                            Stream.of(
-                                new UnsafeBuffer(ByteBuffer.allocateDirect(size)),
-                                new UnsafeBuffer(new byte[size])))
-                        .map(buffer -> new Object[]{buffer})
-                        .collect(Collectors.toList());
+        return IntStream
+            .of(1337/*, 129, 128, 4097*/)
+            .boxed()
+            .flatMap((size) ->
+                Stream.of(
+                    new UnsafeBuffer(ByteBuffer.allocateDirect(size)),
+                    new UnsafeBuffer(new byte[size])))
+            .map(buffer -> new Object[]{ buffer })
+            .collect(Collectors.toList());
     }
 
     private final BlockHandler blockHandler = mock(BlockHandler.class);
@@ -126,10 +125,10 @@ public class ArchiverTest
     @Before
     public void setUp()
     {
+        deleteLogFileDir();
+
         mediaDriver = launchMediaDriver(TERM_LENGTH);
         aeron = Aeron.connect(new Aeron.Context().imageMapMode(READ_WRITE));
-
-        deleteLogFileDir();
 
         final StreamIdentifier dataStream = new StreamIdentifier(CHANNEL, STREAM_ID);
         logDirectoryDescriptor = new LogDirectoryDescriptor(LOG_FILE_DIR);
@@ -143,6 +142,20 @@ public class ArchiverTest
 
         publication = aeron.addPublication(CHANNEL, STREAM_ID);
         archiver.subscription(aeron.addSubscription(CHANNEL, STREAM_ID));
+    }
+
+    @After
+    public void tearDown()
+    {
+        CloseHelper.close(archiveReader);
+        archiver.onClose();
+        CloseHelper.close(filteredArchiveReader);
+
+        CloseHelper.close(aeron);
+        CloseHelper.close(mediaDriver);
+        cleanupDirectory(mediaDriver);
+
+        deleteLogFileDir();
     }
 
     private void deleteLogFileDir()
@@ -184,7 +197,7 @@ public class ArchiverTest
     {
         writeAndArchiveBuffer(INITIAL_VALUE, RESERVED_VALUE);
 
-        assertReadsValueAt(INITIAL_VALUE, (long) HEADER_LENGTH, filteredArchiveReader);
+        assertReadsValueAt(INITIAL_VALUE, (long)HEADER_LENGTH, filteredArchiveReader);
     }
 
     @Test
@@ -192,7 +205,7 @@ public class ArchiverTest
     {
         writeAndArchiveBuffer(INITIAL_VALUE, 0);
 
-        final long position = read((long) HEADER_LENGTH, filteredArchiveReader);
+        final long position = read((long)HEADER_LENGTH, filteredArchiveReader);
 
         assertNothingRead(position, NO_MESSAGE);
     }
@@ -204,7 +217,7 @@ public class ArchiverTest
 
         corruptLogFile();
 
-        final long position = read((long) HEADER_LENGTH);
+        final long position = read((long)HEADER_LENGTH);
 
         assertNothingRead(position, CORRUPT_LOG);
     }
@@ -216,7 +229,7 @@ public class ArchiverTest
 
         corruptLogFile();
 
-        final boolean wasRead = readBlockTo((long) HEADER_LENGTH);
+        final boolean wasRead = readBlockTo((long)HEADER_LENGTH);
 
         assertNothingBlockRead(wasRead);
     }
@@ -229,7 +242,7 @@ public class ArchiverTest
         corruptLogFile();
 
         final long readPosition = archiveReader.readUpTo(
-            publication.sessionId(), (long) HEADER_LENGTH, endPosition, fragmentHandler);
+            publication.sessionId(), (long)HEADER_LENGTH, endPosition, fragmentHandler);
 
         assertNothingRead(readPosition, CORRUPT_LOG);
     }
@@ -390,7 +403,9 @@ public class ArchiverTest
 
         try
         {
-            archiveReader.readBlock(publication.sessionId(), (long)HEADER_LENGTH, size,
+            archiveReader.readBlock(
+                publication.sessionId(),
+                (long)HEADER_LENGTH, size,
                 (buffer, offset, length, sessionId, termId) ->
                 {
                     throw new RuntimeException();
@@ -674,7 +689,8 @@ public class ArchiverTest
             {
                 break;
             }
-            LockSupport.parkNanos(50);
+
+            Thread.yield();
         }
 
         final int index = bufferClaim.offset() + OFFSET_WITHIN_MESSAGE;
@@ -708,7 +724,7 @@ public class ArchiverTest
 
     private void assertDataPublished(final long endPosition)
     {
-        assertThat("Publication has failed an offer", endPosition, greaterThan((long) size));
+        assertThat("Publication has failed an offer", endPosition, greaterThan((long)size));
     }
 
     private void assertBlockReadsValueAt(final int position)
@@ -744,7 +760,8 @@ public class ArchiverTest
             {
                 break;
             }
-            LockSupport.parkNanos(100);
+
+            Thread.yield();
         }
 
         return endPosition;
@@ -757,18 +774,5 @@ public class ArchiverTest
             work += archiver.doWork();
         }
         while (work < endPosition);
-    }
-
-    @After
-    public void tearDown()
-    {
-        CloseHelper.close(archiveReader);
-        archiver.onClose();
-        CloseHelper.close(aeron);
-        CloseHelper.close(mediaDriver);
-        cleanupDirectory(mediaDriver);
-
-        deleteLogFileDir();
-        System.gc();
     }
 }
