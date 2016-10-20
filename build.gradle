@@ -110,9 +110,7 @@ subprojects {
 
     javadoc {
         title = '<h1>Fix Gateway</h1>'
-
         options.bottom = '<i>Copyright &#169; 2015 - 2016 Real Logic Ltd. All Rights Reserved.</i>'
-        options.addStringOption('XDignore.symbol.file', '-quiet')
     }
 
     task sourcesJar(type: Jar) {
