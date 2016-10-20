@@ -63,6 +63,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
+import static org.agrona.collections.CollectionUtil.removeIf;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.LogTag.LIBRARY_CONNECT;
 import static uk.co.real_logic.fix_gateway.Pressure.isBackPressured;
@@ -240,7 +241,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int checkReplies()
     {
-        return RetryManager.removeIf(replies, ResetSequenceNumberCommand::poll);
+        return removeIf(replies, ResetSequenceNumberCommand::poll);
     }
 
     private int sendReplayMessages()
