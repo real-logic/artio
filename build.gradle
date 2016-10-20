@@ -27,8 +27,8 @@ apply plugin: 'maven'
 apply plugin: 'signing'
 apply plugin: 'net.researchgate.release'
 
-def aeronVersion = '1.0.1'
-def agronaVersion = '0.5.4'
+def aeronVersion = '1.0.2'
+def agronaVersion = '0.5.5'
 
 defaultTasks 'clean', 'build', 'install'
 
@@ -155,7 +155,7 @@ project(':fix-gateway-codecs') {
 
     dependencies {
         compile "org.agrona:Agrona:${agronaVersion}"
-        compile 'uk.co.real-logic:sbe-all:1.5.1'
+        compile 'uk.co.real-logic:sbe-all:1.5.2'
         testCompile sourceSets.generated.output
     }
 
