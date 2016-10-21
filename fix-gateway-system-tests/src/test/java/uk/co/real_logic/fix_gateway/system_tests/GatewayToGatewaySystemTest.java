@@ -379,7 +379,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void gatewaysShouldBeRestartable()
+    public void gatewayAndLibraryPairsShouldBeRestartable()
     {
         messagesCanBeExchanged();
 
