@@ -396,6 +396,29 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
+    public void enginesShouldBeRestartable()
+    {
+        messagesCanBeExchanged();
+
+        acceptingEngine.close();
+
+        clearMessages();
+
+        while (acceptingLibrary.isConnected())
+        {
+            acceptingLibrary.poll(1);
+            ADMIN_IDLE_STRATEGY.idle();
+        }
+        ADMIN_IDLE_STRATEGY.reset();
+
+        launchAcceptingEngine();
+
+        wireSessions();
+
+        messagesCanBeExchanged();
+    }
+
+    @Test
     public void engineShouldAcquireTimedOutLibrariesSessions()
     {
         acquireAcceptingSession();
