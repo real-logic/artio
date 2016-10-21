@@ -645,6 +645,7 @@ public abstract class AbstractSessionTest
 
     private String sendTestRequest(final long nonSecondDurationInMs)
     {
+        testRequest.reset();
         testRequest.testReqID("testReqID");
         fakeClock.advanceMilliSeconds(nonSecondDurationInMs);
         session().send(testRequest);

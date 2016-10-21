@@ -303,6 +303,7 @@ public class EncoderGeneratorTest
 
         reset(encoder);
 
+        assertFalse(hasOnBehalfOfCompID(encoder));
         assertThat(encoder.toString(), containsString(STRING_RESET_SUFFIX));
     }
 
@@ -702,7 +703,7 @@ public class EncoderGeneratorTest
 
     private boolean hasTestReqId(final Object encoder) throws Exception
     {
-        return (boolean)getField(encoder, HAS_TEST_REQ_ID);
+        return (boolean)get(encoder, HAS_TEST_REQ_ID);
     }
 
     private void setTestReqId(final Object encoder) throws Exception

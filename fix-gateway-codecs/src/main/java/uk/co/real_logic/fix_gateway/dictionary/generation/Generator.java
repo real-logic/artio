@@ -257,7 +257,7 @@ public abstract class Generator
 
         if (!isRequired)
         {
-            return resetByFlag(name);
+            return optionalReset(field, name);
         }
 
         switch (field.type())
@@ -304,6 +304,8 @@ public abstract class Generator
                 throw new IllegalArgumentException("Unknown type: " + field.type());
         }
     }
+
+    protected abstract String optionalReset(Field field, String name);
 
     protected abstract String resetTemporalValue(final String name);
 
@@ -480,8 +482,9 @@ public abstract class Generator
                 value
             );
 
-            final boolean hasFlag = hasFlag(entry, field);
-            return "             " + (hasFlag ? String.format("(has%s ? %s : \"\")", name, formatter) : formatter);
+            final boolean hasFlag = toStringChecksHasGetter(entry, field);
+            return "             " +
+                (hasFlag ? String.format("(has%s() ? %s : \"\")", name, formatter) : formatter);
         }
         else if (element instanceof Group)
         {
@@ -494,6 +497,8 @@ public abstract class Generator
 
         return "\"\"";
     }
+
+    protected abstract boolean toStringChecksHasGetter(Entry entry, Field field);
 
     protected abstract String groupEntryToString(Group element, String name);
 

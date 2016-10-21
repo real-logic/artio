@@ -245,7 +245,7 @@ public class EncoderGenerator extends Generator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-                return stringSetter(className, fieldName, hasField, hasAssign);
+                return generateStringSetter(className, fieldName, name);
 
             case BOOLEAN:
                 return generateSetter.apply("boolean");
@@ -269,6 +269,7 @@ public class EncoderGenerator extends Generator
                 return generateSetter.apply("DecimalFloat");
 
             case DATA:
+                // DATA fields always come with their own Length field defined by the schema
                 return generateSetter.apply("byte[]");
 
             case UTCTIMESTAMP:
@@ -276,27 +277,7 @@ public class EncoderGenerator extends Generator
             case UTCDATEONLY:
             case UTCTIMEONLY:
             case MONTHYEAR:
-            {
-                return String.format(
-                    "    private byte[] %1$s;\n\n" +
-                    "    private int %1$sLength;\n\n" +
-                    "%2$s" +
-                    "    public %3$s %1$s(final byte[] value, final int length)\n" +
-                    "    {\n" +
-                    "        %1$s = value;\n" +
-                    "        %1$sLength = length;\n" +
-                    "%4$s" +
-                    "        return this;\n" +
-                    "    }\n\n" +
-                    "    public %3$s %1$s(final byte[] value)\n" +
-                    "    {\n" +
-                    "        return %1$s(value, value.length);\n" +
-                    "    }\n\n",
-                    fieldName,
-                    hasField,
-                    className,
-                    hasAssign);
-            }
+                return generateByteArraySetter(className, fieldName, name);
 
             default: throw new UnsupportedOperationException("Unknown type: " + field.type());
         }
@@ -328,50 +309,57 @@ public class EncoderGenerator extends Generator
             formatPropertyName(numberField.name())));
     }
 
-    private String stringSetter(
-        final String className,
-        final String fieldName,
-        final String optionalField,
-        final String optionalAssign)
+    private String generateByteArraySetter(final String className, final String fieldName, final String name)
     {
         return String.format(
-            "    private byte[] %s = new byte[%d];\n\n" +
+            "    private byte[] %1$s = new byte[%3$d];\n\n" +
             "    private int %1$sLength = 0;\n\n" +
-            "%s" +
-            "    public %s %1$s(final CharSequence value)\n" +
-            "    {\n" +
-            "        %1$s = toBytes(value, %1$s);\n" +
-            "        %1$sLength = value.length();\n" +
-            "%s" +
-            "        return this;\n" +
-            "    }\n\n" +
-            "    public %4$s %1$s(final char[] value)\n" +
-            "    {\n" +
-            "        return %1$s(value, value.length);\n" +
-            "    }\n\n" +
-            "    public %4$s %1$s(final char[] value, final int length)\n" +
-            "    {\n" +
-            "        %1$s = toBytes(value, %1$s, length);\n" +
-            "        %1$sLength = length;\n" +
-            "%5$s" +
-            "        return this;\n" +
-            "    }\n\n" +
-            "    public %4$s %1$s(final byte[] value)\n" +
-            "    {\n" +
-            "        return %1$s(value, value.length);\n" +
-            "    }\n\n" +
-            "    public %4$s %1$s(final byte[] value, final int length)\n" +
+            "    public %2$s %1$s(final byte[] value, final int length)\n" +
             "    {\n" +
             "        %1$s = value;\n" +
             "        %1$sLength = length;\n" +
-            "%5$s" +
+            "        return this;\n" +
+            "    }\n\n" +
+            "    public %2$s %1$s(final byte[] value)\n" +
+            "    {\n" +
+            "        return %1$s(value, value.length);\n" +
+            "    }\n\n" +
+            "    public boolean has%4$s()\n" +
+            "    {\n" +
+            "        return %1$sLength > 0;\n" +
+            "    }\n\n",
+            fieldName,
+            className,
+            initialArraySize,
+            name);
+    }
+
+    private String generateStringSetter(
+        final String className,
+        final String fieldName,
+        final String name)
+    {
+        return String.format(
+            "%2$s" +
+            "    public %3$s %1$s(final CharSequence value)\n" +
+            "    {\n" +
+            "        %1$s = toBytes(value, %1$s);\n" +
+            "        %1$sLength = value.length();\n" +
+            "        return this;\n" +
+            "    }\n\n" +
+            "    public %3$s %1$s(final char[] value)\n" +
+            "    {\n" +
+            "        return %1$s(value, value.length);\n" +
+            "    }\n\n" +
+            "    public %3$s %1$s(final char[] value, final int length)\n" +
+            "    {\n" +
+            "        %1$s = toBytes(value, %1$s, length);\n" +
+            "        %1$sLength = length;\n" +
             "        return this;\n" +
             "    }\n\n",
             fieldName,
-            initialArraySize,
-            optionalField,
-            className,
-            optionalAssign);
+            generateByteArraySetter(className, fieldName, name),
+            className);
     }
 
     private String setter(
@@ -489,7 +477,7 @@ public class EncoderGenerator extends Generator
         final String fieldName = formatPropertyName(name);
         final Field.Type type = field.type();
         final boolean mustCheckFlag = hasFlag(entry, field);
-        final boolean mustCheckLength = type.isStringBased();
+        final boolean mustCheckLength = type.isArrayBased();
         final boolean needsMissingThrow = (type.isFloatBased() || mustCheckLength) && entry.required();
 
         final String enablingPrefix;
@@ -713,7 +701,7 @@ public class EncoderGenerator extends Generator
 
     protected boolean hasFlag(final Entry entry, final Field field)
     {
-        return !entry.required() || field.type().isFloatBased();
+        return (!entry.required() && !field.type().isArrayBased()) || field.type().isFloatBased();
     }
 
     protected String resetTemporalValue(final String name)
@@ -742,5 +730,15 @@ public class EncoderGenerator extends Generator
             formatPropertyName(name),
             formatPropertyName(numberField.name())
         );
+    }
+
+    protected String optionalReset(final Field field, final String name)
+    {
+        return field.type().isArrayBased() ? resetLength(name) : resetByFlag(name);
+    }
+
+    protected boolean toStringChecksHasGetter(final Entry entry, final Field field)
+    {
+        return hasFlag(entry, field) || field.type().isArrayBased();
     }
 }

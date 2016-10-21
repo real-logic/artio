@@ -100,49 +100,55 @@ public final class Field implements Element
     public enum Type
     {
         // int types
-        INT(false, true, false),
-        LENGTH(false, true, false),
-        SEQNUM(false, true, false),
-        NUMINGROUP(false, true, false),
-        DAYOFMONTH(false, true, false),
+        INT(false, true, false, false),
+        LENGTH(false, true, false, false),
+        SEQNUM(false, true, false, false),
+        NUMINGROUP(false, true, false, false),
+        DAYOFMONTH(false, true, false, false),
 
         // float types
-        FLOAT(false, false, true),
-        PRICE(false, false, true),
-        PRICEOFFSET(false, false, true),
-        QTY(false, false, true),
-        PERCENTAGE(false, false, true), // Percentage represented as a float
-        AMT(false, false, true), // Float amount, not to be confused with boolean Y/N AMT
+        FLOAT(false, false, true, false),
+        PRICE(false, false, true, false),
+        PRICEOFFSET(false, false, true, false),
+        QTY(false, false, true, false),
+        PERCENTAGE(false, false, true, false), // Percentage represented as a float
+        AMT(false, false, true, false), // Float amount, not to be confused with boolean Y/N AMT
 
-        CHAR(false, false, false),
+        CHAR(false, false, false, false),
 
-        STRING(true, false, false),
-        MULTIPLEVALUESTRING(true, false, false),
+        STRING(true, false, false, true),
+        MULTIPLEVALUESTRING(true, false, false, true),
 
-        CURRENCY(true, false, false), // String using ISO 4217 (3 chars)
-        EXCHANGE(true, false, false), // String using ISO 10383 (2 chars)
-        COUNTRY(true, false, false), // String using ISO 3166
+        CURRENCY(true, false, false, true), // String using ISO 4217 (3 chars)
+        EXCHANGE(true, false, false, true), // String using ISO 10383 (2 chars)
+        COUNTRY(true, false, false, true), // String using ISO 3166
 
-        DATA(false, false, false),
+        DATA(false, false, false, false),
 
         // Boolean types
-        BOOLEAN(false, false, false),
+        BOOLEAN(false, false, false, false),
 
-        UTCTIMESTAMP(true, false, false), // YYYYMMDD-HH:MM:SS or YYYYMMDD-HH:MM:SS.sss
-        UTCTIMEONLY(true, false, false), // HH:MM:SS or HH:MM:SS.sss
-        UTCDATEONLY(true, false, false), // YYYYMMDD
-        LOCALMKTDATE(true, false, false), // YYYYMMDD
-        MONTHYEAR(true, false, false); // YYYYMM or YYYYMMDD or YYYYMMWW
+        UTCTIMESTAMP(true, false, false, true), // YYYYMMDD-HH:MM:SS or YYYYMMDD-HH:MM:SS.sss
+        UTCTIMEONLY(true, false, false, true), // HH:MM:SS or HH:MM:SS.sss
+        UTCDATEONLY(true, false, false, true), // YYYYMMDD
+        LOCALMKTDATE(true, false, false, true), // YYYYMMDD
+        MONTHYEAR(true, false, false, true); // YYYYMM or YYYYMMDD or YYYYMMWW
 
         private final boolean isStringBased;
         private final boolean isIntBased;
         private final boolean isFloatBased;
+        private final boolean isArrayBased;
 
-        Type(final boolean isStringBased, final boolean isIntBased, final boolean isFloatBased)
+        Type(
+            final boolean isStringBased,
+            final boolean isIntBased,
+            final boolean isFloatBased,
+            final boolean isArrayBased)
         {
             this.isStringBased = isStringBased;
             this.isIntBased = isIntBased;
             this.isFloatBased = isFloatBased;
+            this.isArrayBased = isArrayBased;
         }
 
         public boolean isStringBased()
@@ -158,6 +164,11 @@ public final class Field implements Element
         public boolean isFloatBased()
         {
             return isFloatBased;
+        }
+
+        public boolean isArrayBased()
+        {
+            return isArrayBased;
         }
 
         public static Type lookup(final String name)

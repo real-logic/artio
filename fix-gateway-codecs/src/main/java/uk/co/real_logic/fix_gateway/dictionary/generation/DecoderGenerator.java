@@ -968,4 +968,14 @@ public class DecoderGenerator extends Generator
             name,
             formatPropertyName(name));
     }
+
+    protected String optionalReset(final Field field, final String name)
+    {
+        return resetByFlag(name);
+    }
+
+    protected boolean toStringChecksHasGetter(final Entry entry, final Field field)
+    {
+        return hasFlag(entry, field);
+    }
 }

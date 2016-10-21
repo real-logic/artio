@@ -133,9 +133,7 @@ public final class ExampleDictionary
         "  \"SomeTimeField\": \"19700101-00:00:00.001\"";
 
     public static final String STRING_RESET_SUFFIX =
-        "  \"OnBehalfOfCompID\": \"\",\n" +
-        "  \"IntField\": \"-1\",\n" +
-        "  \"SomeTimeField\": \"\"";
+        "  \"IntField\": \"-1\"";
 
     public static final String STRING_NO_OPTIONAL_MESSAGE_EXAMPLE =
         "{\n" +
@@ -289,6 +287,8 @@ public final class ExampleDictionary
         egComponent.optionalEntry(registerField(messageEgFields, 124, "ComponentField", INT));
         egComponent.optionalEntry(componentGroup);
 
+        final Field dataFieldLength = registerField(messageEgFields, 200, "DataFieldLength", Type.LENGTH);
+
         final Message heartbeat = new Message("Heartbeat", "0", ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);
         heartbeat.optionalEntry(testReqID);
@@ -301,6 +301,7 @@ public final class ExampleDictionary
         heartbeat.requiredEntry(someTime);
         heartbeat.optionalEntry(egGroup);
         heartbeat.requiredEntry(egComponent);
+        heartbeat.optionalEntry(dataFieldLength);
 
         final Component header = new Component("Header");
         header.requiredEntry(beginString)
