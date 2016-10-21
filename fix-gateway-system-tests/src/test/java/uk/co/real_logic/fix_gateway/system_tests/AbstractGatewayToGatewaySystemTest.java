@@ -204,4 +204,10 @@ public class AbstractGatewayToGatewaySystemTest
 
         return position;
     }
+
+    protected void clearMessages()
+    {
+        initiatingOtfAcceptor.messages().clear();
+        acceptingOtfAcceptor.messages().clear();
+    }
 }

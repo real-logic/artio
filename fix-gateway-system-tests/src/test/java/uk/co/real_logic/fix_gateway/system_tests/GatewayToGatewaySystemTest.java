@@ -379,15 +379,18 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void gatewayAndLibraryPairsShouldBeRestartable()
+    public void engineAndLibraryPairsShouldBeRestartable()
     {
         messagesCanBeExchanged();
 
         acceptingLibrary.close();
         acceptingEngine.close();
+        clearMessages();
 
         launchAcceptingEngine();
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+
+        wireSessions();
 
         messagesCanBeExchanged();
     }
