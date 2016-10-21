@@ -16,20 +16,27 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
+import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.eq;
@@ -62,10 +69,30 @@ public abstract class AbstractSessionTest
     FakeEpochClock fakeClock = new FakeEpochClock();
     AtomicCounter mockReceivedMsgSeqNo = mock(AtomicCounter.class);
     AtomicCounter mockSentMsgSeqNo = mock(AtomicCounter.class);
+    SessionIdStrategy idStrategy = mock(SessionIdStrategy.class);
+    ArgumentCaptor<DirectBuffer> buffer = ArgumentCaptor.forClass(DirectBuffer.class);
+    ArgumentCaptor<Integer> length = ArgumentCaptor.forClass(Integer.class);
+    TestRequestEncoder testRequest = new TestRequestEncoder();
 
-    void verifyNoFurtherMessages()
+    AbstractSessionTest()
     {
-        verifyNoMoreInteractions(mockProxy);
+        doAnswer(inv ->
+        {
+            final HeaderEncoder encoder = (HeaderEncoder) inv.getArguments()[1];
+            encoder.senderCompID("senderCompID").targetCompID("targetCompID");
+            return null;
+        }).when(idStrategy).setupSession(any(), any());
+
+        when(mockPublication.saveMessage(
+            buffer.capture(),
+            anyInt(),
+            length.capture(),
+            anyInt(),
+            anyInt(),
+            anyLong(),
+            anyLong(),
+            any()
+        )).thenReturn(POSITION);
     }
 
     @Test
@@ -591,6 +618,45 @@ public abstract class AbstractSessionTest
         verifyNoFurtherMessages();
     }
 
+    @Test
+    public void shouldCorrectEncodeMessageTimestamps()
+    {
+        givenActive();
+
+        final String message = sendTestRequest(0);
+
+        assertThat(message, containsString(":00\001"));
+    }
+
+    @Test
+    public void shouldCorrectEncodeMessageTimestampsRepeatedly()
+    {
+        givenActive();
+
+        final long nonSecondDurationInMs = 111;
+        final long remainderInMs = SECONDS.toMillis(1) - nonSecondDurationInMs;
+
+        final String firstMessage = sendTestRequest(nonSecondDurationInMs);
+        final String secondMessage = sendTestRequest(remainderInMs);
+
+        assertThat(firstMessage, containsString(":00.111\001"));
+        assertThat(secondMessage, containsString(":01\001"));
+    }
+
+    private String sendTestRequest(final long nonSecondDurationInMs)
+    {
+        testRequest.testReqID("testReqID");
+        fakeClock.advanceMilliSeconds(nonSecondDurationInMs);
+        session().send(testRequest);
+        return getSentMessage();
+    }
+
+    private String getSentMessage()
+    {
+        final MutableAsciiBuffer buffer = (MutableAsciiBuffer) this.buffer.getValue();
+        return buffer.getAscii(0, length.getValue());
+    }
+
     private void verifySetupSession()
     {
         verify(mockProxy, atLeastOnce()).setupSession(anyLong(), any());
@@ -767,4 +833,10 @@ public abstract class AbstractSessionTest
     protected abstract Session session();
 
     protected abstract void readyForLogon();
+
+    void verifyNoFurtherMessages()
+    {
+        verifyNoMoreInteractions(mockProxy);
+    }
+
 }

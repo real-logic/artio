@@ -16,10 +16,8 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import org.agrona.MutableDirectBuffer;
 import org.agrona.Verify;
 import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
@@ -33,7 +31,8 @@ import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.lang.Integer.MIN_VALUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -96,8 +95,7 @@ public class Session implements AutoCloseable
     protected final long connectionId;
     protected final SessionIdStrategy sessionIdStrategy;
     protected final GatewayPublication publication;
-    protected final MutableDirectBuffer buffer;
-    protected final MutableAsciiBuffer string;
+    protected final MutableAsciiBuffer asciiBuffer;
     protected final int libraryId;
 
     final SessionProxy proxy;
@@ -160,8 +158,7 @@ public class Session implements AutoCloseable
         this.libraryId = libraryId;
         lastSentMsgSeqNum = initialSequenceNumber - 1;
 
-        buffer = new UnsafeBuffer(new byte[sessionBufferSize]);
-        string = new MutableAsciiBuffer(buffer);
+        asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
 
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);
@@ -369,20 +366,19 @@ public class Session implements AutoCloseable
         }
 
         final int sentSeqNum = newSentSeqNum();
-        timestampEncoder.encode(time());
         final HeaderEncoder header = (HeaderEncoder) encoder.header();
         header
             .msgSeqNum(sentSeqNum)
-            .sendingTime(timestampEncoder.buffer());
+            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(time()));
 
         if (!header.hasSenderCompID())
         {
             sessionIdStrategy.setupSession(sessionKey, header);
         }
 
-        final int length = encoder.encode(string, 0);
+        final int length = encoder.encode(asciiBuffer, 0);
         final long position = publication.saveMessage(
-            buffer, 0, length, libraryId, encoder.messageType(), id(), connectionId, OK);
+            asciiBuffer, 0, length, libraryId, encoder.messageType(), id(), connectionId, OK);
         lastSentMsgSeqNum(sentSeqNum, position);
         return position;
     }

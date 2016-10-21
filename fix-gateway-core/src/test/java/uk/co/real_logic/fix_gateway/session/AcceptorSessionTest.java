@@ -42,7 +42,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
             fakeClock,
             mockProxy,
             mockPublication,
-            null,
+            idStrategy,
             SENDING_TIME_WINDOW,
             mockReceivedMsgSeqNo,
             mockSentMsgSeqNo,
