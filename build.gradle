@@ -149,7 +149,7 @@ def validationXsdPath = project(':fix-gateway-codecs').projectDir.toString() + '
 project(':fix-gateway-codecs') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
-    def generatedDir = file("$buildDir/generated-src")
+    def generatedDir = file("${buildDir}/generated-src")
     sourceSets {
         generated.java.srcDir generatedDir
     }
@@ -185,8 +185,6 @@ project(':fix-gateway-codecs') {
     }
 
     jar.dependsOn compileGeneratedJava
-
-    checkstyleGenerated { exclude '**/*' }
 }
 
 project(':fix-gateway-session-codecs') {
@@ -218,8 +216,6 @@ project(':fix-gateway-session-codecs') {
     }
 
     jar.dependsOn compileGeneratedJava
-
-    checkstyleGenerated { exclude '**/*' }
 }
 
 project(':fix-gateway-core') {
