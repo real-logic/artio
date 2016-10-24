@@ -26,15 +26,14 @@ import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfigurat
 
 public final class SingleThreadedThroughputBenchmarkClient extends AbstractBenchmarkClient
 {
-
-    public static void main(String[] args) throws Exception
+    public static void main(final String[] args) throws Exception
     {
         new SingleThreadedThroughputBenchmarkClient().runBenchmark();
     }
 
     public void runBenchmark() throws Exception
     {
-        try (final SocketChannel socketChannel = open())
+        try (SocketChannel socketChannel = open())
         {
             logon(socketChannel);
 
@@ -63,9 +62,7 @@ public final class SingleThreadedThroughputBenchmarkClient extends AbstractBench
         }
     }
 
-    private int greedyRead(
-        final SocketChannel socketChannel,
-        final MutableAsciiBuffer readFlyweight)
+    private int greedyRead(final SocketChannel socketChannel, final MutableAsciiBuffer readFlyweight)
     {
         int messagesReceived = 0;
 
@@ -75,13 +72,12 @@ public final class SingleThreadedThroughputBenchmarkClient extends AbstractBench
             final int length = socketChannel.read(readBuffer);
             messagesReceived += scanForReceivesMessages(readFlyweight, length);
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
-            e.printStackTrace();
+            ex.printStackTrace();
             System.exit(-1);
         }
 
         return messagesReceived;
     }
-
 }

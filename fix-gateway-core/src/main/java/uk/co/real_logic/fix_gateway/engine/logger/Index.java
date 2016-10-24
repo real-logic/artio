@@ -51,12 +51,12 @@ public interface Index extends ControlledFragmentHandler, AutoCloseable
      * @param aeronSessionId the Aeron session id.
      * @param endPosition the position to which the image has advanced on reading this message.
      */
-    void indexRecord(final DirectBuffer buffer,
-                     final int offset,
-                     final int length,
-                     final int streamId,
-                     final int aeronSessionId,
-                     final long endPosition);
+    void indexRecord(DirectBuffer buffer,
+                     int offset,
+                     int length,
+                     int streamId,
+                     int aeronSessionId,
+                     long endPosition);
 
     default String getName()
     {
@@ -70,7 +70,7 @@ public interface Index extends ControlledFragmentHandler, AutoCloseable
      *
      * @param consumer a callback that receives each session id and position
      */
-    void readLastPosition(final IndexedPositionConsumer consumer);
+    void readLastPosition(IndexedPositionConsumer consumer);
 
     /**
      * Optional method to perform some period work on the index, eg compaction or updating another system.

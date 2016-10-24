@@ -40,7 +40,7 @@ import static org.agrona.IoUtil.checkFileExists;
  */
 public class HistogramLogReader implements AutoCloseable
 {
-    public static void main(String[] args) throws IOException
+    public static void main(final String[] args) throws IOException
     {
         if (args.length != 1)
         {
@@ -55,12 +55,12 @@ public class HistogramLogReader implements AutoCloseable
         final BackoffIdleStrategy idleStrategy = new BackoffIdleStrategy(0, 0, MILLISECONDS.toNanos(1),
             MINUTES.toNanos(1));
 
-        try (final HistogramLogReader logReader = new HistogramLogReader(file))
+        try (HistogramLogReader logReader = new HistogramLogReader(file))
         {
             while (true)
             {
-                final int sampleCount = logReader.read((recordedAtTime, name, histogram) ->
-                    prettyPrint(recordedAtTime, histogram, name, scalingFactor));
+                final int sampleCount = logReader.read(
+                    (recordedAtTime, name, histogram) -> prettyPrint(recordedAtTime, histogram, name, scalingFactor));
 
                 idleStrategy.idle(sampleCount);
             }
@@ -190,9 +190,10 @@ public class HistogramLogReader implements AutoCloseable
             scaledPercentile(histogram, scalingFactor, 100));
     }
 
-    private static double scaledPercentile(final Histogram histogram,
-                                           final double scalingFactor,
-                                           final double percentile)
+    private static double scaledPercentile(
+        final Histogram histogram,
+        final double scalingFactor,
+        final double percentile)
     {
         return histogram.getValueAtPercentile(percentile) / scalingFactor;
     }

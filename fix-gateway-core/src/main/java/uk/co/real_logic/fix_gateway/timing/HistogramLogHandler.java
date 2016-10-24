@@ -26,8 +26,8 @@ public interface HistogramLogHandler
      * A new histogram has been read from the log file.
      *
      * @param timestampInMs the time at which the histogram was recorded.
-     * @param name the name of the time being measured.
-     * @param histogram the histogram that was recorded.
+     * @param name          the name of the time being measured.
+     * @param histogram     the histogram that was recorded.
      */
-    void onHistogram(final long timestampInMs, final String name, final Histogram histogram);
+    void onHistogram(long timestampInMs, String name, Histogram histogram);
 }

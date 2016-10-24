@@ -37,12 +37,12 @@ public interface SessionExistsHandler
      * @param password
      */
     void onSessionExists(
-        final FixLibrary library,
-        final long sessionId,
-        final String acceptorCompId,
-        final String acceptorSubId,
-        final String acceptorLocationId,
-        final String initiatorCompId,
-        final String username,
-        final String password);
+        FixLibrary library,
+        long sessionId,
+        String acceptorCompId,
+        String acceptorSubId,
+        String acceptorLocationId,
+        String initiatorCompId,
+        String username,
+        String password);
 }

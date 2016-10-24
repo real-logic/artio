@@ -24,7 +24,7 @@ public final class SoleEngine
 {
     static final String AERON_CHANNEL = "aeron:udp?endpoint=localhost:10000";
 
-    public static void main(String[] args) throws IOException
+    public static void main(final String[] args) throws IOException
     {
         final EngineConfiguration configuration = new EngineConfiguration()
             .bindTo("localhost", StressConfiguration.PORT)
@@ -37,7 +37,7 @@ public final class SoleEngine
 
         StressUtil.cleanupOldLogFileDir(configuration);
 
-        try (final FixEngine fixEngine = FixEngine.launch(configuration))
+        try (FixEngine ignore = FixEngine.launch(configuration))
         {
             StressUtil.awaitKeyPress();
         }

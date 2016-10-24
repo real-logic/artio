@@ -22,15 +22,15 @@ import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 public interface ProtocolHandler
 {
     Action onMessage(
-        final DirectBuffer buffer,
-        final int offset,
-        final int length,
-        final int libraryId,
-        final long connectionId,
-        final long sessionId,
-        final int messageType,
-        final long timestamp,
-        final long position);
+        DirectBuffer buffer,
+        int offset,
+        int length,
+        int libraryId,
+        long connectionId,
+        long sessionId,
+        int messageType,
+        long timestamp,
+        long position);
 
-    Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason);
+    Action onDisconnect(int libraryId, long connectionId, DisconnectReason reason);
 }

@@ -22,12 +22,12 @@ public interface LibraryConnectHandler
      *
      * @param library the library that has connected
      */
-    void onConnect(final FixLibrary library);
+    void onConnect(FixLibrary library);
 
     /**
      * Invoked when the {@link FixLibrary} instance this is registered get's disconnected.
      *
      * @param library the library that has disconnected
      */
-    void onDisconnect(final FixLibrary library);
+    void onDisconnect(FixLibrary library);
 }

@@ -21,12 +21,13 @@ import static io.aeron.driver.ThreadingMode.SHARED;
 
 public final class SoleMediaDriver
 {
-    public static void main(String[] args)
+    public static void main(final String[] args)
     {
         final MediaDriver.Context context = new MediaDriver.Context()
             .threadingMode(SHARED)
             .dirsDeleteOnStart(true);
-        try (final MediaDriver mediaDriver = MediaDriver.launch(context))
+
+        try (MediaDriver ignore = MediaDriver.launch(context))
         {
             StressUtil.awaitKeyPress();
         }

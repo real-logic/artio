@@ -44,7 +44,7 @@ public class Archiver implements Agent, RawBlockHandler
 {
     public interface ArchivedPositionHandler
     {
-        void onArchivedPosition(final int aeronSessionId, final long position);
+        void onArchivedPosition(int aeronSessionId, long position);
     }
 
     private static final int POLL_LENGTH = TERM_BUFFER_LENGTH_DEFAULT;
@@ -61,6 +61,7 @@ public class Archiver implements Agent, RawBlockHandler
     private ArchivedPositionHandler positionHandler = (aeronSessionId, position) ->
     {
     };
+
     private DataHeaderFlyweight header = new DataHeaderFlyweight();
     private Subscription subscription;
 
@@ -226,9 +227,9 @@ public class Archiver implements Agent, RawBlockHandler
                         transferred));
                 }
             }
-            catch (IOException e)
+            catch (final IOException ex)
             {
-                LangUtil.rethrowUnchecked(e);
+                LangUtil.rethrowUnchecked(ex);
             }
         }
 
@@ -324,9 +325,9 @@ public class Archiver implements Agent, RawBlockHandler
 
                 return true;
             }
-            catch (IOException e)
+            catch (final IOException ex)
             {
-                LangUtil.rethrowUnchecked(e);
+                LangUtil.rethrowUnchecked(ex);
                 return false;
             }
         }

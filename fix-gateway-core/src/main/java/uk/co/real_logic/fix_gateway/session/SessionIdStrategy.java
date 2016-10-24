@@ -56,7 +56,7 @@ public interface SessionIdStrategy
      * @param header the header of the logon message.
      * @return the composite session key.
      */
-    CompositeKey onLogon(final HeaderDecoder header);
+    CompositeKey onLogon(HeaderDecoder header);
 
     /**
      * Creates the composite session key when you initiate a logon.
@@ -75,25 +75,25 @@ public interface SessionIdStrategy
      * @param compositeKey the composite session key.
      * @param headerEncoder the outbound message header.
      */
-    void setupSession(final CompositeKey compositeKey, final HeaderEncoder headerEncoder);
+    void setupSession(CompositeKey compositeKey, HeaderEncoder headerEncoder);
 
     /**
      * Saves the given composite key to a buffer.
      *
      * @param compositeKey the key to save
      * @param buffer the buffer to save it to
-     * @param offset the offset withint the buffer to start saving at
+     * @param offset the offset within the buffer to start saving at
      * @return the length used to save the key, or {@link SessionIdStrategy#INSUFFICIENT_SPACE} otherwise
      */
-    int save(final CompositeKey compositeKey, final MutableDirectBuffer buffer, final int offset);
+    int save(CompositeKey compositeKey, MutableDirectBuffer buffer, int offset);
 
     /**
      * Loads a composite key from a buffer.
      *
      * @param buffer the buffer to save it to
-     * @param offset the offset withint the buffer to start saving at
+     * @param offset the offset within the buffer to start saving at
      * @param length the length within the buffer to read from
      * @return the loaded key or null if there was a failure.
      */
-    CompositeKey load(final DirectBuffer buffer, final int offset, final int length);
+    CompositeKey load(DirectBuffer buffer, int offset, int length);
 }

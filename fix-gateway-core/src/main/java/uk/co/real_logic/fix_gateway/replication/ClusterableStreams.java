@@ -32,7 +32,7 @@ public abstract class ClusterableStreams
      * @param clusterStreamId a unique identifier for the stream
      * @return the publication for this stream id.
      */
-    public abstract ClusterablePublication publication(final int clusterStreamId);
+    public abstract ClusterablePublication publication(int clusterStreamId);
 
     /**
      * Get the subscription for this stream id, new object every time.
@@ -40,5 +40,5 @@ public abstract class ClusterableStreams
      * @param clusterStreamId a unique identifier for the stream
      * @return the subscription for this stream id.
      */
-    public abstract ClusterableSubscription subscription(final int clusterStreamId);
+    public abstract ClusterableSubscription subscription(int clusterStreamId);
 }

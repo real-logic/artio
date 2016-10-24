@@ -92,14 +92,14 @@ public class MappedFile implements AutoCloseable
 
     public void transferTo(final File backupLocation)
     {
-        try (final FileChannel backupChannel = FileChannel.open(backupLocation.toPath(), WRITE))
+        try (FileChannel backupChannel = FileChannel.open(backupLocation.toPath(), WRITE))
         {
             fileChannel.transferTo(0L, fileChannel.size(), backupChannel);
             force(backupChannel);
         }
-        catch (Exception e)
+        catch (final Exception ex)
         {
-            LangUtil.rethrowUnchecked(e);
+            LangUtil.rethrowUnchecked(ex);
         }
     }
 
@@ -135,9 +135,9 @@ public class MappedFile implements AutoCloseable
             {
                 fileChannel.force(true);
             }
-            catch (IOException e)
+            catch (final IOException ex)
             {
-                LangUtil.rethrowUnchecked(e);
+                LangUtil.rethrowUnchecked(ex);
             }
         }
     }

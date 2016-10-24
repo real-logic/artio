@@ -39,14 +39,14 @@ public interface SessionHandler
      * @return an action to indicate the correct back pressure behaviour.
      */
     Action onMessage(
-        final DirectBuffer buffer,
-        final int offset,
-        final int length,
-        final int libraryId,
-        final long sessionId,
-        final int messageType,
-        final long timestampInNs,
-        final long position);
+        DirectBuffer buffer,
+        int offset,
+        int length,
+        int libraryId,
+        long sessionId,
+        int messageType,
+        long timestampInNs,
+        long position);
 
     /**
      * This session has timed out on this library. It is still connected, but will
@@ -55,7 +55,7 @@ public interface SessionHandler
      * @param libraryId the id of library which the session used to owned by.
      * @param sessionId the id of the session.
      */
-    void onTimeout(final int libraryId, final long sessionId);
+    void onTimeout(int libraryId, long sessionId);
 
     /**
      * The session has disconnected.
@@ -66,5 +66,5 @@ public interface SessionHandler
      * @param reason the reason for the disconnection happening.
      * @return an action to indicate the correct back pressure behaviour.
      */
-    Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason);
+    Action onDisconnect(int libraryId, long sessionId, DisconnectReason reason);
 }

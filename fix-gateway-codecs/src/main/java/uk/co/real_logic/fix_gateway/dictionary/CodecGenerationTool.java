@@ -26,7 +26,7 @@ import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.
 
 public final class CodecGenerationTool
 {
-    public static void main(String[] args) throws Exception
+    public static void main(final String[] args) throws Exception
     {
         final String outputPath = args[0];
         final String xmlPath = args[1];
@@ -38,7 +38,7 @@ public final class CodecGenerationTool
         }
 
         final DictionaryParser parser = new DictionaryParser();
-        try (final FileInputStream input = new FileInputStream(xmlPath))
+        try (FileInputStream input = new FileInputStream(xmlPath))
         {
             final Dictionary dictionary = parser.parse(input);
 
@@ -48,11 +48,11 @@ public final class CodecGenerationTool
             final EnumGenerator enumGenerator = new EnumGenerator(dictionary, parent);
             final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, DECODER_PACKAGE, parent);
 
-            final EncoderGenerator encoderGenerator = new EncoderGenerator(dictionary, 1, ENCODER_PACKAGE,
-                new PackageOutputManager(outputPath, ENCODER_PACKAGE), Validation.class);
+            final EncoderGenerator encoderGenerator = new EncoderGenerator(
+                dictionary, 1, ENCODER_PACKAGE, new PackageOutputManager(outputPath, ENCODER_PACKAGE), Validation.class);
 
-            final DecoderGenerator decoderGenerator = new DecoderGenerator(dictionary, 1, DECODER_PACKAGE, decoder,
-                Validation.class);
+            final DecoderGenerator decoderGenerator = new DecoderGenerator(
+                dictionary, 1, DECODER_PACKAGE, decoder, Validation.class);
             final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE, decoder);
             final AcceptorGenerator acceptorGenerator = new AcceptorGenerator(dictionary, DECODER_PACKAGE, decoder);
 

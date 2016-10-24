@@ -29,7 +29,7 @@ import static uk.co.real_logic.server.SampleServer.*;
 
 public final class SampleClient
 {
-    private static final TestReqIdFinder TEST_REQ_ID_FINDER = new TestReqIdFinder();;
+    private static final TestReqIdFinder TEST_REQ_ID_FINDER = new TestReqIdFinder();
 
     public static void main(final String[] args) throws Exception
     {
@@ -41,7 +41,7 @@ public final class SampleClient
 
         cleanupOldLogFileDir(configuration);
 
-        try (final FixEngine gateway = FixEngine.launch(configuration))
+        try (FixEngine ignore = FixEngine.launch(configuration))
         {
             // Each outbound session with an Exchange or broker is represented by
             // a Session object. Each session object can be configured with connection
@@ -52,9 +52,9 @@ public final class SampleClient
                 .senderCompId(INITIATOR_COMP_ID)
                 .build();
 
-            try (final FixLibrary library = FixLibrary.connect(new LibraryConfiguration()
-                .sessionAcquireHandler(SampleClient::onConnect)
-                .libraryAeronChannels(singletonList(aeronChannel))))
+            try (FixLibrary library = FixLibrary.connect(new LibraryConfiguration()
+                    .sessionAcquireHandler(SampleClient::onConnect)
+                    .libraryAeronChannels(singletonList(aeronChannel))))
             {
                 final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
                 final Reply<Session> reply = library.initiate(sessionConfig);

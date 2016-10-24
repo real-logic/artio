@@ -29,19 +29,19 @@ public interface RoleHandler
      *
      * @param leadershipTerm the current leadership term.
      */
-    void onTransitionToLeader(final int leadershipTerm);
+    void onTransitionToLeader(int leadershipTerm);
 
     /**
      * Invoked when the node that the handler has been registered with transitions to a follower.
      *
      * @param leadershipTerm the current leadership term.
      */
-    void onTransitionToFollower(final int leadershipTerm);
+    void onTransitionToFollower(int leadershipTerm);
 
     /**
      * Invoked when the node that the handler has been registered with transitions to a candidate.
      *
      * @param leadershipTerm the current leadership term.
      */
-    void onTransitionToCandidate(final int leadershipTerm);
+    void onTransitionToCandidate(int leadershipTerm);
 }

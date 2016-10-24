@@ -30,8 +30,8 @@ public interface AuthenticationStrategy
 
     static AuthenticationStrategy of(final MessageValidationStrategy delegate)
     {
-        return logon -> delegate.validate(logon.header());
+        return (logon) -> delegate.validate(logon.header());
     }
 
-    boolean authenticate(final LogonDecoder logon);
+    boolean authenticate(LogonDecoder logon);
 }

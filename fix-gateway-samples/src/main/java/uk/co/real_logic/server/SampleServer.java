@@ -30,7 +30,7 @@ import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
 import java.io.File;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.aeron.driver.ThreadingMode.SHARED;
@@ -39,7 +39,6 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 
 public final class SampleServer
 {
-
     public static final String ACCEPTOR_COMP_ID = "acceptor";
     public static final String INITIATOR_COMP_ID = "initiator";
 
@@ -48,7 +47,7 @@ public final class SampleServer
     public static void main(final String[] args) throws Exception
     {
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(ACCEPTOR_COMP_ID)
-            .and(MessageValidationStrategy.senderCompId(Arrays.asList(INITIATOR_COMP_ID)));
+            .and(MessageValidationStrategy.senderCompId(Collections.singletonList(INITIATOR_COMP_ID)));
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
@@ -64,17 +63,20 @@ public final class SampleServer
         final Context context = new Context()
             .threadingMode(SHARED)
             .dirsDeleteOnStart(true);
-        try (final MediaDriver driver = MediaDriver.launch(context);
-             final FixEngine gateway = FixEngine.launch(configuration))
+        try (MediaDriver driver = MediaDriver.launch(context);
+             FixEngine gateway = FixEngine.launch(configuration))
         {
             final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
             libraryConfiguration.authenticationStrategy(authenticationStrategy);
-            try (final FixLibrary library = FixLibrary.connect(libraryConfiguration
-                // You register the new session handler - which is your application hook
-                // that receives messages for new sessions
+
+            // You register the new session handler - which is your application hook
+            // that receives messages for new sessions
+            libraryConfiguration
                 .sessionAcquireHandler(SampleServer::onConnect)
                 .sessionExistsHandler(new AcquiringSessionExistsHandler())
-                .libraryAeronChannels(singletonList(aeronChannel))))
+                .libraryAeronChannels(singletonList(aeronChannel));
+
+            try (FixLibrary library = FixLibrary.connect(libraryConfiguration))
             {
                 final AtomicBoolean running = new AtomicBoolean(true);
                 SigInt.register(() -> running.set(false));
@@ -110,5 +112,4 @@ public final class SampleServer
 
         return new SampleSessionHandler(session);
     }
-
 }

@@ -47,7 +47,7 @@ public interface MessageValidationStrategy
      * @param header the header to validate.
      * @return true if valid, false otherwise.
      */
-    boolean validate(final HeaderDecoder header);
+    boolean validate(HeaderDecoder header);
 
     /**
      * Returns the id of the tag that was invalid if the header didn't validate, undefined otherwise.
@@ -70,7 +70,7 @@ public interface MessageValidationStrategy
      * @param right the other validation strategy to compose with.
      * @return the new message validation strategy.
      */
-    default MessageValidationStrategy and(MessageValidationStrategy right)
+    default MessageValidationStrategy and(final MessageValidationStrategy right)
     {
         final MessageValidationStrategy left = this;
         return new MessageValidationStrategy()

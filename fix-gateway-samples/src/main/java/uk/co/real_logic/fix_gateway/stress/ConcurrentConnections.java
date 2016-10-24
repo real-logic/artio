@@ -50,7 +50,7 @@ public final class ConcurrentConnections
             .libraryAeronChannel(aeronChannel)
             .logFileDir("stress-client-logs")
             .bindTo("localhost", 10001);
-        engineConfiguration.authenticationStrategy(logon -> true);
+        engineConfiguration.authenticationStrategy((logon) -> true);
 
         System.out.println("Client Logs at " + engineConfiguration.logFileDir());
 
@@ -62,7 +62,7 @@ public final class ConcurrentConnections
 
         final long startTime = System.currentTimeMillis();
 
-        try (final FixEngine fixEngine = FixEngine.launch(engineConfiguration))
+        try (FixEngine ignore = FixEngine.launch(engineConfiguration))
         {
             final CyclicBarrier barrier = new CyclicBarrier(NUM_SESSIONS);
             final Thread[] threads = new Thread[NUM_SESSIONS];
@@ -115,7 +115,7 @@ public final class ConcurrentConnections
             .sessionAcquireHandler(session -> testReqIdFinder)
             .libraryAeronChannels(singletonList(aeronChannel));
 
-        try (final FixLibrary library = FixLibrary.connect(libraryConfiguration))
+        try (FixLibrary library = FixLibrary.connect(libraryConfiguration))
         {
             barrier.await();
 

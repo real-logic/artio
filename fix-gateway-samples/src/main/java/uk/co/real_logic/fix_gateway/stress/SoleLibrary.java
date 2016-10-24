@@ -24,7 +24,7 @@ import static java.util.Collections.singletonList;
 
 public final class SoleLibrary
 {
-    public static void main(String[] args) throws IOException
+    public static void main(final String[] args) throws IOException
     {
         while (true)
         {
@@ -33,7 +33,7 @@ public final class SoleLibrary
 
             libraryConfiguration.replyTimeoutInMs(1000);
 
-            try (final FixLibrary library = FixLibrary.connect(libraryConfiguration))
+            try (FixLibrary library = FixLibrary.connect(libraryConfiguration))
             {
 
                 while (library.isConnected())

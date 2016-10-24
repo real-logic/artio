@@ -17,7 +17,6 @@ import org.gradle.plugins.ide.eclipse.model.Classpath
 
 buildscript {
     dependencies {
-        classpath 'com.puppycrawl.tools:checkstyle:7.1.2'
         classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
         classpath 'net.researchgate:gradle-release:2.4.0'
     }
@@ -83,6 +82,7 @@ subprojects {
     }
 
     dependencies {
+        checkstyle 'com.puppycrawl.tools:checkstyle:7.1.2'
         checkstyle "com.github.sevntu.checkstyle:sevntu-checks:1.21.0"
 
         testCompile 'org.hamcrest:hamcrest-all:1.3',

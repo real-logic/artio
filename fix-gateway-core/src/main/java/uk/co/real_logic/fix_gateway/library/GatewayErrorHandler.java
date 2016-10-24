@@ -29,5 +29,5 @@ import uk.co.real_logic.fix_gateway.messages.GatewayError;
 @FunctionalInterface
 public interface GatewayErrorHandler
 {
-    Action onError(final GatewayError errorType, final int libraryId, final String message);
+    Action onError(GatewayError errorType, int libraryId, String message);
 }

@@ -28,15 +28,14 @@ import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfigurat
 
 public final class LatencyBenchmarkClient extends AbstractBenchmarkClient
 {
-
-    public static void main(String[] args) throws IOException
+    public static void main(final String[] args) throws IOException
     {
         new LatencyBenchmarkClient().runBenchmark();
     }
 
     public void runBenchmark() throws IOException
     {
-        try (final SocketChannel socketChannel = open())
+        try (SocketChannel socketChannel = open())
         {
             logon(socketChannel);
 
@@ -52,10 +51,11 @@ public final class LatencyBenchmarkClient extends AbstractBenchmarkClient
         }
     }
 
-    private void runWarmup(final SocketChannel socketChannel,
-                           final TestRequestEncoder testRequest,
-                           final HeaderEncoder header,
-                           final Histogram histogram) throws IOException
+    private void runWarmup(
+        final SocketChannel socketChannel,
+        final TestRequestEncoder testRequest,
+        final HeaderEncoder header,
+        final Histogram histogram) throws IOException
     {
         for (int i = 0; i < WARMUP_MESSAGES; i++)
         {
@@ -101,5 +101,4 @@ public final class LatencyBenchmarkClient extends AbstractBenchmarkClient
         final long returnTime = System.nanoTime();
         histogram.recordValue(returnTime - sendingTime);
     }
-
 }

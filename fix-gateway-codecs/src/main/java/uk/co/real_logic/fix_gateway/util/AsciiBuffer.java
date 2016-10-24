@@ -28,54 +28,54 @@ public interface AsciiBuffer extends DirectBuffer
     byte YES = 'Y';
     byte NEGATIVE = '-';
 
-    int getNatural(final int startInclusive, final int endExclusive);
+    int getNatural(int startInclusive, int endExclusive);
 
-    long getNaturalLong(final int startInclusive, final int endExclusive);
+    long getNaturalLong(int startInclusive, int endExclusive);
 
-    int getInt(int startInclusive, final int endExclusive);
+    int getInt(int startInclusive, int endExclusive);
 
-    int getDigit(final int index);
+    int getDigit(int index);
 
-    boolean isDigit(final int index);
+    boolean isDigit(int index);
 
-    byte getByte(final int index);
+    byte getByte(int index);
 
-    char getChar(final int index);
+    char getChar(int index);
 
-    boolean getBoolean(final int index);
+    boolean getBoolean(int index);
 
-    byte[] getBytes(final byte[] oldBuffer, final int offset, final int length);
+    byte[] getBytes(byte[] oldBuffer, int offset, int length);
 
-    char[] getChars(final char[] oldBuffer, final int offset, final int length);
+    char[] getChars(char[] oldBuffer, int offset, int length);
 
     /**
-     * May not  be a performant conversion: don't use this on a critical application path.
+     * May not  be the best performance conversion: don't use this on a critical application path.
      *
-     * @param offset
-     * @param length
+     * @param offset at which the string begins.
+     * @param length of the string in bytes.
      * @return a String
      */
-    String getAscii(final int offset, final int length);
+    String getAscii(int offset, int length);
 
-    int getMessageType(final int offset, final int length);
+    int getMessageType(int offset, int length);
 
-    DecimalFloat getFloat(final DecimalFloat number, int offset, int length);
+    DecimalFloat getFloat(DecimalFloat number, int offset, int length);
 
-    int getLocalMktDate(final int offset, final int length);
+    int getLocalMktDate(int offset, int length);
 
-    long getUtcTimestamp(final int offset, final int length);
+    long getUtcTimestamp(int offset, int length);
 
-    long getUtcTimeOnly(final int offset, final int length);
+    long getUtcTimeOnly(int offset, int length);
 
-    int getUtcDateOnly(final int offset);
+    int getUtcDateOnly(int offset);
 
-    int scanBack(final int startInclusive, final int endExclusive, final char terminatingCharacter);
+    int scanBack(int startInclusive, int endExclusive, char terminatingCharacter);
 
-    int scanBack(final int startInclusive, final int endExclusive, final byte terminator);
+    int scanBack(int startInclusive, int endExclusive, byte terminator);
 
-    int scan(final int startInclusive, final int endInclusive, final char terminatingCharacter);
+    int scan(int startInclusive, int endInclusive, char terminatingCharacter);
 
-    int scan(final int startInclusive, final int endInclusive, final byte terminator);
+    int scan(int startInclusive, int endInclusive, byte terminator);
 
-    int computeChecksum(final int offset, final int end);
+    int computeChecksum(int offset, int end);
 }

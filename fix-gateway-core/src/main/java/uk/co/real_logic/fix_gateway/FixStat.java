@@ -32,11 +32,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class FixStat
 {
-    public static void main(String[] args) throws InterruptedException
+    public static void main(final String[] args) throws InterruptedException
     {
         final EngineConfiguration configuration = new EngineConfiguration();
         configuration.libraryAeronChannel("").conclude();
-        try (final MonitoringFile monitoringFile = new MonitoringFile(false, configuration))
+        try (MonitoringFile monitoringFile = new MonitoringFile(false, configuration))
         {
             final CountersManager countersManager = monitoringFile.createCountersManager();
             final AtomicBuffer countersBuffer = monitoringFile.countersBuffer();

@@ -21,7 +21,7 @@ public interface Decoder
 {
     int NO_ERROR = -1;
 
-    int decode(final AsciiBuffer buffer, final int offset, final int length);
+    int decode(AsciiBuffer buffer, int offset, int length);
 
     void reset();
 

@@ -125,6 +125,7 @@ public class TcpChannelSupplier implements AutoCloseable
         final SocketChannel channel = SocketChannel.open();
         channel.connect(address);
         configure(channel);
+
         return newTcpChannel(channel);
     }
 
@@ -136,7 +137,6 @@ public class TcpChannelSupplier implements AutoCloseable
     @FunctionalInterface
     public interface NewChannelHandler
     {
-        void onNewChannel(final long timeInMs, final TcpChannel socketChannel) throws IOException;
+        void onNewChannel(long timeInMs, TcpChannel socketChannel) throws IOException;
     }
-
 }

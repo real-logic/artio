@@ -23,15 +23,15 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 @FunctionalInterface
 public interface FixMessagePredicate
 {
-    boolean test(final FixMessageDecoder message);
+    boolean test(FixMessageDecoder message);
 
     default FixMessagePredicate and(final FixMessagePredicate other)
     {
-        return message -> test(message) && other.test(message);
+        return (message) -> test(message) && other.test(message);
     }
 
     default FixMessagePredicate or(final FixMessagePredicate other)
     {
-        return message -> test(message) || other.test(message);
+        return (message) -> test(message) || other.test(message);
     }
 }

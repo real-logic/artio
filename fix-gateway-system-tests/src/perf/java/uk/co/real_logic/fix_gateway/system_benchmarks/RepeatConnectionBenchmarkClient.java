@@ -22,8 +22,7 @@ import java.nio.channels.SocketChannel;
 
 public final class RepeatConnectionBenchmarkClient extends AbstractBenchmarkClient
 {
-
-    public static void main(String[] args) throws IOException
+    public static void main(final String[] args) throws IOException
     {
         new RepeatConnectionBenchmarkClient().runBenchmark();
     }
@@ -34,7 +33,7 @@ public final class RepeatConnectionBenchmarkClient extends AbstractBenchmarkClie
     {
         for (int i = 0; i < NUMBER_OF_CONNECTIONS; i++)
         {
-            try (final SocketChannel socketChannel = open())
+            try (SocketChannel socketChannel = open())
             {
                 logon(socketChannel);
 
@@ -53,5 +52,4 @@ public final class RepeatConnectionBenchmarkClient extends AbstractBenchmarkClie
             System.out.printf("Finished Connection: %d\n", i + 1);
         }
     }
-
 }

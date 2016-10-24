@@ -23,48 +23,43 @@ import uk.co.real_logic.fix_gateway.messages.SessionState;
 
 public interface EngineEndPointHandler
 {
-    Action onLibraryConnect(final int libraryId,
-                            final long correlationId,
-                            final int aeronSessionId);
+    Action onLibraryConnect(int libraryId, long correlationId, int aeronSessionId);
 
     Action onInitiateConnection(
-        final int libraryId,
-        final int port,
-        final String host,
-        final String senderCompId,
-        final String senderSubId,
-        final String senderLocationId,
-        final String targetCompId,
-        final SequenceNumberType sequenceNumberType,
-        final int requestedInitialSequenceNumber,
-        final String username,
-        final String password,
-        final int heartbeatIntervalInS,
-        final long correlationId,
-        final Header header);
+        int libraryId,
+        int port,
+        String host,
+        String senderCompId,
+        String senderSubId,
+        String senderLocationId,
+        String targetCompId,
+        SequenceNumberType sequenceNumberType,
+        int requestedInitialSequenceNumber,
+        String username,
+        String password,
+        int heartbeatIntervalInS,
+        long correlationId,
+        Header header);
 
-    Action onRequestDisconnect(
-        final int libraryId,
-        final long connectionId,
-        final DisconnectReason reason);
+    Action onRequestDisconnect(int libraryId, long connectionId, DisconnectReason reason);
 
-    Action onApplicationHeartbeat(final int libraryId, final int aeronSessionId);
+    Action onApplicationHeartbeat(int libraryId, int aeronSessionId);
 
     Action onReleaseSession(
-        final int libraryId,
-        final long connectionId,
-        final long correlationId,
-        final SessionState state,
-        final long heartbeatIntervalInMs,
-        final int lastSentSequenceNumber,
-        final int lastReceivedSequenceNumber,
-        final String username,
-        final String password,
-        final Header header);
+        int libraryId,
+        long connectionId,
+        long correlationId,
+        SessionState state,
+        long heartbeatIntervalInMs,
+        int lastSentSequenceNumber,
+        int lastReceivedSequenceNumber,
+        String username,
+        String password,
+        Header header);
 
     Action onRequestSession(
-        final int libraryId,
-        final long sessionId,
-        final long correlationId,
-        final int lastReceivedSequenceNumber);
+        int libraryId,
+        long sessionId,
+        long correlationId,
+        int lastReceivedSequenceNumber);
 }

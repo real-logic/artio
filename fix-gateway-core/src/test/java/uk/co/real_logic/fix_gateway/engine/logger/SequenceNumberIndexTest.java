@@ -38,8 +38,7 @@ import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDesc
 public class SequenceNumberIndexTest extends AbstractLogTest
 {
     private static final int BUFFER_SIZE = 16 * 1024;
-
-    public static final String INDEX_FILE_PATH = IoUtil.tmpDirName() + "/SequenceNumberIndex";
+    private static final String INDEX_FILE_PATH = IoUtil.tmpDirName() + "/SequenceNumberIndex";
 
     private AtomicBuffer inMemoryBuffer = newBuffer();
 
@@ -157,7 +156,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private void corruptIndexFile()
     {
-        try (final MappedFile mappedFile = newIndexFile())
+        try (MappedFile mappedFile = newIndexFile())
         {
             mappedFile.buffer().putBytes(0, new byte[SECTOR_SIZE / 2]);
         }
@@ -173,11 +172,9 @@ public class SequenceNumberIndexTest extends AbstractLogTest
             indexRecord(alignedEndPosition() + (i * fragmentLength()));
         }
 
-        try (final MappedFile mappedFile = newIndexFile())
+        try (MappedFile mappedFile = newIndexFile())
         {
-            final SequenceNumberIndexReader newReader = new SequenceNumberIndexReader(
-                    mappedFile.buffer()
-            );
+            final SequenceNumberIndexReader newReader = new SequenceNumberIndexReader(mappedFile.buffer());
 
             assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER + requiredMessagesToRoll, newReader);
         }
@@ -273,5 +270,4 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         final int number = reader.lastKnownSequenceNumber(sessionId);
         assertEquals(expectedSequenceNumber, number);
     }
-
 }

@@ -34,21 +34,23 @@ public final class MessageSchemaIr
     private static ByteBuffer encodeSchema()
     {
         final ByteBuffer byteBuffer = ByteBuffer.allocate(64 * 1024);
-        try (final InputStream in = MessageSchemaLocation.class.getResourceAsStream(PATH))
+        try (InputStream in = MessageSchemaLocation.class.getResourceAsStream(PATH))
         {
             final MessageSchema schema = XmlSchemaParser.parse(in, ParserOptions.DEFAULT);
             final Ir ir = new IrGenerator().generate(schema);
-            try (final IrEncoder irEncoder = new IrEncoder(byteBuffer, ir))
+            try (IrEncoder irEncoder = new IrEncoder(byteBuffer, ir))
             {
                 irEncoder.encode();
             }
+
             byteBuffer.flip();
         }
-        catch (Exception e)
+        catch (final Exception ex)
         {
-            e.printStackTrace();
+            ex.printStackTrace();
             return null;
         }
+
         return byteBuffer;
     }
 }

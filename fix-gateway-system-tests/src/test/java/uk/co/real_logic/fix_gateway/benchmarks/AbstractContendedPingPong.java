@@ -36,7 +36,7 @@ public abstract class AbstractContendedPingPong
     {
         serverSocket = ServerSocketChannel.open().bind(ADDRESS);
 
-        try (final SocketChannel pingChannel = SocketChannel.open())
+        try (SocketChannel pingChannel = SocketChannel.open())
         {
             if (!pingChannel.connect(ADDRESS))
             {
@@ -56,9 +56,9 @@ public abstract class AbstractContendedPingPong
                         pong(channel);
                     }
                 }
-                catch (IOException e)
+                catch (final IOException ex)
                 {
-                    e.printStackTrace();
+                    ex.printStackTrace();
                 }
             });
 
@@ -102,9 +102,9 @@ public abstract class AbstractContendedPingPong
             }
             printStats(histogram);
         }
-        catch (final IOException e)
+        catch (final IOException ex)
         {
-            e.printStackTrace();
+            ex.printStackTrace();
         }
     }
 
@@ -119,15 +119,15 @@ public abstract class AbstractContendedPingPong
             }
             System.out.println("Sent all pings");
         }
-        catch (final IOException e)
+        catch (final IOException ex)
         {
-            e.printStackTrace();
+            ex.printStackTrace();
         }
     }
 
-    protected abstract void sendPing(final SocketChannel channel, final long time) throws IOException;
+    protected abstract void sendPing(SocketChannel channel, long time) throws IOException;
 
-    protected abstract long readResponse(final SocketChannel channel) throws IOException;
+    protected abstract long readResponse(SocketChannel channel) throws IOException;
 
     protected void pong(final SocketChannel channel) throws IOException
     {
@@ -143,5 +143,4 @@ public abstract class AbstractContendedPingPong
             }
         }
     }
-
 }

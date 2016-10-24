@@ -22,29 +22,26 @@ import uk.co.real_logic.fix_gateway.replication.messages.Vote;
 
 interface RaftHandler
 {
-    Action onMessageAcknowledgement(
-        final long newAckedPosition, final short nodeId, final AcknowledgementStatus status);
+    Action onMessageAcknowledgement(long newAckedPosition, short nodeId, AcknowledgementStatus status);
 
-    Action onRequestVote(
-        final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long lastAckedPosition);
+    Action onRequestVote(short candidateId, int candidateSessionId, int leaderShipTerm, long lastAckedPosition);
 
     Action onReplyVote(
-        final short senderNodeId,
-        final short candidateId,
-        final int leaderShipTerm,
-        final Vote vote,
-        final DirectBuffer nodeStateBuffer,
-        final int nodeStateLength,
-        final int aeronSessionId);
+        short senderNodeId,
+        short candidateId,
+        int leaderShipTerm,
+        Vote vote,
+        DirectBuffer nodeStateBuffer,
+        int nodeStateLength,
+        int aeronSessionId);
 
-    Action onConsensusHeartbeat(
-        final short nodeId, final int leaderShipTerm, final long position, final int leaderSessionId);
+    Action onConsensusHeartbeat(short nodeId, int leaderShipTerm, long position, int leaderSessionId);
 
     Action onResend(
-        final int leaderSessionId,
-        final int leaderShipTerm,
-        final long startPosition,
-        final DirectBuffer bodyBuffer,
-        final int bodyOffset,
-        final int bodyLength);
+        int leaderSessionId,
+        int leaderShipTerm,
+        long startPosition,
+        DirectBuffer bodyBuffer,
+        int bodyOffset,
+        int bodyLength);
 }

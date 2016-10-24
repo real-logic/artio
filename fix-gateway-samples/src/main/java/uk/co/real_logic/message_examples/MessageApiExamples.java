@@ -27,7 +27,8 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
-import static java.util.Arrays.asList;
+import java.util.Collections;
+
 import static java.util.Collections.singletonList;
 import static uk.co.real_logic.fix_gateway.builder.OrdType.Market;
 import static uk.co.real_logic.fix_gateway.builder.Side.Sell;
@@ -41,21 +42,21 @@ public final class MessageApiExamples
     public static final String SENDER_COMP_ID = "senderCompId";
     public static final String AERON_CHANNEL = "ipc:9999";
 
-    public static void main(String[] args) throws Exception
+    public static void main(final String[] args) throws Exception
     {
         // Static configuration lasts the duration of a FIX-Gateway instance
         final EngineConfiguration configuration = new EngineConfiguration()
             .libraryAeronChannel(AERON_CHANNEL);
 
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(TARGET_COMP_ID)
-            .and(MessageValidationStrategy.senderCompId(asList(SENDER_COMP_ID)));
+            .and(MessageValidationStrategy.senderCompId(Collections.singletonList(SENDER_COMP_ID)));
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
         configuration.messageValidationStrategy(validationStrategy)
                      .authenticationStrategy(authenticationStrategy);
 
-        try (final FixEngine gateway = FixEngine.launch(configuration))
+        try (FixEngine ignore = FixEngine.launch(configuration))
         {
             final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
             libraryConfiguration
@@ -63,7 +64,7 @@ public final class MessageApiExamples
                 .messageValidationStrategy(validationStrategy)
                 .authenticationStrategy(authenticationStrategy);
 
-            try (final FixLibrary library = FixLibrary.connect(libraryConfiguration))
+            try (FixLibrary library = FixLibrary.connect(libraryConfiguration))
             {
                 // Each outbound session with an Exchange or broker is represented by
                 // a Session object. Each session object can be configured with connection
@@ -97,7 +98,8 @@ public final class MessageApiExamples
                 final DecimalFloat quantity = new DecimalFloat(10, 0);
 
                 final OrderSingleEncoder orderSingle = new OrderSingleEncoder();
-                orderSingle.clOrdID("1")
+                orderSingle
+                    .clOrdID("1")
                     .handlInst('1')
                     .ordType(Market)
                     // The API would follow a fluent style for setting up the different FIX message fields.
@@ -113,12 +115,14 @@ public final class MessageApiExamples
                 // If you want to produce multiple messages and rapidly fire them off then you just
                 // need to update the fields in question and the other remain the side as your previous
                 // usage.
-                orderSingle.price(price.value(2010))
+                orderSingle
+                    .price(price.value(2010))
                     .orderQty(quantity.value(20));
 
                 session.send(orderSingle);
 
-                orderSingle.price(price.value(2020))
+                orderSingle
+                    .price(price.value(2020))
                     .orderQty(quantity.value(30));
 
                 session.send(orderSingle);

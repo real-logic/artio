@@ -35,5 +35,5 @@ public interface SentPositionHandler
      * @param position the position that corresponds to what has been sent via TCP.
      * @return appropriate action to indicate back pressure
      */
-    Action onSendCompleted(final long position);
+    Action onSendCompleted(long position);
 }

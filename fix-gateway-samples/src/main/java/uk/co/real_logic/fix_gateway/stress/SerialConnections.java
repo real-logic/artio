@@ -59,7 +59,7 @@ public final class SerialConnections
 
         final long startTime = System.currentTimeMillis();
 
-        try (final FixEngine fixEngine = FixEngine.launch(engineConfiguration))
+        try (FixEngine ignore = FixEngine.launch(engineConfiguration))
         {
             for (int i = 0; i < NUM_SESSIONS; i++)
             {
@@ -77,7 +77,7 @@ public final class SerialConnections
                     .sessionAcquireHandler(session -> testReqIdFinder)
                     .libraryAeronChannels(singletonList(aeronChannel));
 
-                try (final FixLibrary library = FixLibrary.connect(libraryConfiguration))
+                try (FixLibrary library = FixLibrary.connect(libraryConfiguration))
                 {
                     final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
                     final Reply<Session> reply = library.initiate(sessionConfiguration);
@@ -127,7 +127,5 @@ public final class SerialConnections
         System.out.format("Sessions %d. Messages %d per session.%n", NUM_SESSIONS, MESSAGES_EXCHANGED);
 
         System.out.format("Stress test executed in %dms\n", System.currentTimeMillis() - startTime);
-
-        System.exit(0);
     }
 }

@@ -19,5 +19,5 @@ import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
 public interface Printer
 {
-    String toString(final AsciiBuffer input, final int offset, final int length, final int messageType);
+    String toString(AsciiBuffer input, int offset, int length, int messageType);
 }

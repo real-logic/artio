@@ -26,7 +26,7 @@ import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfigurat
 
 public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
 {
-    public static void main(String[] args) throws Exception
+    public static void main(final String[] args) throws Exception
     {
         new ThroughputBenchmarkClient().runBenchmark();
     }
@@ -56,9 +56,9 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
                         final int length = read(socketChannel);
                         messagesReceived += scanForReceivesMessages(readFlyweight, length);
                     }
-                    catch (IOException e)
+                    catch (final IOException ex)
                     {
-                        e.printStackTrace();
+                        ex.printStackTrace();
                         System.exit(-1);
                     }
                 }
@@ -71,7 +71,7 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
 
     public void runBenchmark() throws Exception
     {
-        try (final SocketChannel socketChannel = open())
+        try (SocketChannel socketChannel = open())
         {
             logon(socketChannel);
 
@@ -96,5 +96,4 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
             }
         }
     }
-
 }

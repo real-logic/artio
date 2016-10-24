@@ -23,15 +23,15 @@ interface Role
     default int poll(final int fragmentLimit, final long timeInMs)
     {
         return pollCommands(fragmentLimit, timeInMs) +
-               readData() +
-               checkConditions(timeInMs);
+            readData() +
+            checkConditions(timeInMs);
     }
 
-    int pollCommands(final int fragmentLimit, final long timeInMs);
+    int pollCommands(int fragmentLimit, long timeInMs);
 
     int readData();
 
-    int checkConditions(final long timeInMs);
+    int checkConditions(long timeInMs);
 
     void closeStreams();
 }

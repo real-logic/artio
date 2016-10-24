@@ -31,7 +31,7 @@ public interface HistogramHandler extends AutoCloseable
      * @param id the unique id of the operation being measured
      * @param name the human readable name of of the operation being measured
      */
-    void identifyTimer(final int id, final String name);
+    void identifyTimer(int id, String name);
 
     /**
      * Callback after all the timers have been identified.
@@ -44,13 +44,13 @@ public interface HistogramHandler extends AutoCloseable
      * @param id the unique id of the operation being measured
      * @param histogram the histogram of timings for the operation being measured
      */
-    void onTimerUpdate(final int id, final Histogram histogram);
+    void onTimerUpdate(int id, Histogram histogram);
 
     /**
      * Callback before after all onTimerUpdate calls happen.
-     * @param currentTimeInMs
+     * @param currentTimeInMs at which to being recording.
      */
-    void onBeginTimerUpdate(final long currentTimeInMs);
+    void onBeginTimerUpdate(long currentTimeInMs);
 
     /**
      * Callback before after all onTimerUpdate calls happen.

@@ -28,7 +28,6 @@ import uk.co.real_logic.fix_gateway.messages.GatewayError;
  */
 abstract class LibraryReply<T> implements Reply<T>
 {
-
     private final long latestReplyArrivalTime;
 
     final LibraryPoller libraryPoller;
@@ -77,7 +76,7 @@ abstract class LibraryReply<T> implements Reply<T>
         state = State.ERRORED;
     }
 
-    abstract void onError(final GatewayError errorType, final String errorMessage);
+    abstract void onError(GatewayError errorType, String errorMessage);
 
     /**
      * Poll the reply's duty cycle.

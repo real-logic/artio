@@ -250,7 +250,7 @@ public class ArchiverTest
     private void corruptLogFile() throws IOException
     {
         final File file = logFiles().get(0);
-        try (final RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw"))
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw"))
         {
             randomAccessFile.seek(HEADER_LENGTH);
             randomAccessFile.write(new byte[size]);

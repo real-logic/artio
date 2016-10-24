@@ -28,12 +28,12 @@ public interface SessionPersistenceStrategy
 {
     static SessionPersistenceStrategy alwaysReplicated()
     {
-        return logon -> REPLICATED;
+        return (logon) -> REPLICATED;
     }
 
     static SessionPersistenceStrategy alwaysLocallyArchive()
     {
-        return logon -> LOCAL_ARCHIVE;
+        return (logon) -> LOCAL_ARCHIVE;
     }
 
     static boolean resetSequenceNumbersUponLogon(final PersistenceLevel persistenceLevel)
@@ -45,9 +45,9 @@ public interface SessionPersistenceStrategy
             case LOCAL_ARCHIVE:
                 return true;
             default:
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException("persistenceLevel=" + persistenceLevel);
         }
     }
 
-    PersistenceLevel getPersistenceLevel(final LogonDecoder logon);
+    PersistenceLevel getPersistenceLevel(LogonDecoder logon);
 }

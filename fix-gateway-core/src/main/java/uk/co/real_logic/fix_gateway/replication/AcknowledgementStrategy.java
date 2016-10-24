@@ -35,7 +35,7 @@ public interface AcknowledgementStrategy
         return new EntireClusterAcknowledgementStrategy();
     }
 
-    long findAckedTerm(final Long2LongHashMap sessionIdToPosition);
+    long findAckedTerm(Long2LongHashMap sessionIdToPosition);
 
-    boolean isElected(final int receivedVotes, final int clusterSize);
+    boolean isElected(int receivedVotes, int clusterSize);
 }

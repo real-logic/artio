@@ -32,13 +32,13 @@ import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfigurat
 
 public final class FixBenchmarkServer
 {
-    public static void main(String[] args)
+    public static void main(final String[] args)
     {
         final EngineConfiguration configuration = engineConfiguration();
 
-        try (final MediaDriver mediaDriver = newMediaDriver();
-             final FixEngine engine = FixEngine.launch(configuration);
-             final FixLibrary library = FixLibrary.connect(libraryConfiguration()))
+        try (MediaDriver mediaDriver = newMediaDriver();
+             FixEngine engine = FixEngine.launch(configuration);
+             FixLibrary library = FixLibrary.connect(libraryConfiguration()))
         {
             final IdleStrategy idleStrategy = IDLE_STRATEGY;
             System.out.printf("Using %s idle strategy\n", idleStrategy.getClass().getSimpleName());
@@ -70,6 +70,7 @@ public final class FixBenchmarkServer
 
         final EngineConfiguration configuration = new EngineConfiguration();
         setupAuthentication(configuration);
+
         return configuration
             .bindTo("localhost", BenchmarkConfiguration.PORT)
             .libraryAeronChannel(AERON_CHANNEL)
@@ -83,6 +84,7 @@ public final class FixBenchmarkServer
     {
         final LibraryConfiguration configuration = new LibraryConfiguration();
         setupAuthentication(configuration);
+
         return configuration
             .libraryAeronChannels(singletonList(AERON_CHANNEL))
             .sessionAcquireHandler(session -> new BenchmarkSessionHandler())
@@ -91,7 +93,6 @@ public final class FixBenchmarkServer
 
     private static void setupAuthentication(final CommonConfiguration configuration)
     {
-        configuration.authenticationStrategy(logon -> !REJECT_LOGON);
+        configuration.authenticationStrategy((logon) -> !REJECT_LOGON);
     }
-
 }

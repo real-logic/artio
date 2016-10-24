@@ -24,8 +24,7 @@ import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfigurat
 
 public final class ManyConnectionsBenchmarkClient extends AbstractBenchmarkClient
 {
-
-    public static void main(String[] args) throws IOException
+    public static void main(final String[] args) throws IOException
     {
         new ManyConnectionsBenchmarkClient().runBenchmark();
     }
@@ -38,7 +37,7 @@ public final class ManyConnectionsBenchmarkClient extends AbstractBenchmarkClien
         {
             final String initiatorId = INITIATOR_ID + i;
 
-            try (final SocketChannel socketChannel = open())
+            try (SocketChannel socketChannel = open())
             {
                 logon(socketChannel, initiatorId, 10);
 
@@ -59,5 +58,4 @@ public final class ManyConnectionsBenchmarkClient extends AbstractBenchmarkClien
             System.out.printf("Finished Client: %d\n", i + 1);
         }
     }
-
 }

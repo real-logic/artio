@@ -23,48 +23,46 @@ import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.Sessions
 public interface LibraryEndPointHandler
 {
     Action onManageConnection(
-        final int libraryId,
-        final long connectionId,
-        final long sessionId,
-        final ConnectionType type,
-        final int lastSequenceNumber,
-        final int lastReceivedSequenceNumber,
-        final DirectBuffer buffer,
-        final int addressOffset,
-        final int addressLength,
-        final SessionState state,
-        final int heartbeatIntervalInS,
-        final long replyToId);
+        int libraryId,
+        long connectionId,
+        long sessionId,
+        ConnectionType type,
+        int lastSequenceNumber,
+        int lastReceivedSequenceNumber,
+        DirectBuffer buffer,
+        int addressOffset,
+        int addressLength,
+        SessionState state,
+        int heartbeatIntervalInS,
+        long replyToId);
 
     Action onLogon(
-        final int libraryId,
-        final long connectionId,
-        final long sessionId,
-        final int lastSentSequenceNumber,
-        final int lastReceivedSequenceNumber,
-        final LogonStatus status, final String senderCompId,
-        final String senderSubId,
-        final String senderLocationId,
-        final String targetCompId,
-        final String username,
-        final String password);
+        int libraryId,
+        long connectionId,
+        long sessionId,
+        int lastSentSequenceNumber,
+        int lastReceivedSequenceNumber,
+        LogonStatus status,
+        String senderCompId,
+        String senderSubId,
+        String senderLocationId,
+        String targetCompId,
+        String username,
+        String password);
 
-    Action onError(
-        final int libraryId, final GatewayError errorType,
-        final long replyToId,
-        final String message);
+    Action onError(int libraryId, GatewayError errorType, long replyToId, String message);
 
-    Action onApplicationHeartbeat(final int libraryId);
+    Action onApplicationHeartbeat(int libraryId);
 
-    Action onReleaseSessionReply(final int libraryId, final long replyToId, final SessionReplyStatus status);
+    Action onReleaseSessionReply(int libraryId, long replyToId, SessionReplyStatus status);
 
-    Action onRequestSessionReply(final int toId, final long replyToId, final SessionReplyStatus status);
+    Action onRequestSessionReply(int toId, long replyToId, SessionReplyStatus status);
 
-    Action onCatchup(int libraryId, long connectionId, final int messageCount);
+    Action onCatchup(int libraryId, long connectionId, int messageCount);
 
-    Action onNewSentPosition(final int libraryId, final long position);
+    Action onNewSentPosition(int libraryId, long position);
 
-    Action onNotLeader(final int libraryId, final long replyToId, final String libraryChannel);
+    Action onNotLeader(int libraryId, long replyToId, String libraryChannel);
 
-    Action onControlNotification(final int libraryId, final SessionsDecoder sessions);
+    Action onControlNotification(int libraryId, SessionsDecoder sessions);
 }

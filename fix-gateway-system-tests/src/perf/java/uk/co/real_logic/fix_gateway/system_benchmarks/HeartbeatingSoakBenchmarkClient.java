@@ -24,8 +24,7 @@ import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfigurat
 
 public final class HeartbeatingSoakBenchmarkClient extends AbstractBenchmarkClient
 {
-
-    public static void main(String[] args) throws IOException
+    public static void main(final String[] args) throws IOException
     {
         new HeartbeatingSoakBenchmarkClient().runBenchmark();
     }
@@ -35,7 +34,7 @@ public final class HeartbeatingSoakBenchmarkClient extends AbstractBenchmarkClie
         final String initiatorId = INITIATOR_ID;
         final HeartbeatEncoder heartbeat = new HeartbeatEncoder();
 
-        try (final SocketChannel socketChannel = open())
+        try (SocketChannel socketChannel = open())
         {
             logon(socketChannel, initiatorId, 1);
 
@@ -53,5 +52,4 @@ public final class HeartbeatingSoakBenchmarkClient extends AbstractBenchmarkClie
             }
         }
     }
-
 }

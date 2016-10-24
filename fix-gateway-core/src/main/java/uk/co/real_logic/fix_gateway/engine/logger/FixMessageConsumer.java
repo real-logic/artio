@@ -26,9 +26,9 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 public interface FixMessageConsumer
 {
     void onMessage(
-        final FixMessageDecoder message,
-        final DirectBuffer buffer,
-        final int offset,
-        final int length,
-        final Header header);
+        FixMessageDecoder message,
+        DirectBuffer buffer,
+        int offset,
+        int length,
+        Header header);
 }

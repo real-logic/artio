@@ -37,10 +37,9 @@ public abstract class ClusterablePublication implements Closeable
         return new SoloPublication(dataPublication);
     }
 
-    public abstract long tryClaim(final int length, final BufferClaim bufferClaim);
+    public abstract long tryClaim(int length, BufferClaim bufferClaim);
 
     public abstract void close();
 
     public abstract int id();
-
 }

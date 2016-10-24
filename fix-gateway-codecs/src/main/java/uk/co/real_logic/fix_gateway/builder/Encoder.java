@@ -19,7 +19,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 public interface Encoder
 {
-    int encode(final MutableAsciiBuffer buffer, final int offset);
+    int encode(MutableAsciiBuffer buffer, int offset);
 
     void reset();
 }
