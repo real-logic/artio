@@ -23,13 +23,12 @@ public final class CharArrayMap<V>
     private final CharArrayWrapper wrapper = new CharArrayWrapper();
     private final Map<CharArrayWrapper, V> map;
 
-    public CharArrayMap(Map<String, V> buildFrom)
+    public CharArrayMap(final Map<String, V> buildFrom)
     {
         this.map = buildFrom
             .entrySet()
             .stream()
-            .collect(Collectors.toMap(
-                entry -> new CharArrayWrapper().wrap(entry.getKey()), Map.Entry::getValue));
+            .collect(Collectors.toMap((entry) -> new CharArrayWrapper().wrap(entry.getKey()), Map.Entry::getValue));
     }
 
     public V get(final char[] value, final int length)
@@ -37,5 +36,4 @@ public final class CharArrayMap<V>
         wrapper.wrap(value, length);
         return map.get(wrapper);
     }
-
 }
