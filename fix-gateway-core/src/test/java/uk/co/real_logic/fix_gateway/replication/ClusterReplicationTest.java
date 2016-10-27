@@ -33,7 +33,6 @@ import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 /**
  * Test simulated cluster.
  */
-@Ignore
 public class ClusterReplicationTest
 {
     private static final int BUFFER_SIZE = 1337;
