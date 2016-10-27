@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import io.aeron.exceptions.DriverTimeoutException;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
@@ -253,35 +254,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         try
         {
-            if (enginesAreClustered || isFirstConnect())
+            if (initStreamsOrRetry(reconnectAttempts))
             {
-                transport.initStreams(currentAeronChannel);
-                inboundSubscription = transport.inboundSubscription();
-                outboundPublication = transport.outboundPublication();
+                return;
             }
 
-            livenessDetector = LivenessDetector.forLibrary(
-                outboundPublication,
-                libraryId,
-                configuration.replyTimeoutInMs(),
-                onDisconnectFunc);
+            newLivenessDetector();
 
-            try
+            if (sendLibraryConnectOrRetry(reconnectAttempts))
             {
-                sendLibraryConnect();
-            }
-            catch (final NotConnectedException e)
-            {
-                if (enginesAreClustered)
-                {
-                    attemptNextEngine();
-                    connect(reconnectAttempts - 1);
-                    return;
-                }
-                else
-                {
-                    throw e;
-                }
+                return;
             }
 
             final String currentAeronChannel = this.currentAeronChannel;
@@ -346,6 +328,62 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
             LangUtil.rethrowUnchecked(e);
         }
+    }
+
+    private boolean initStreamsOrRetry(final int reconnectAttempts)
+    {
+        try
+        {
+            if (enginesAreClustered || isFirstConnect())
+            {
+                transport.initStreams(currentAeronChannel);
+                inboundSubscription = transport.inboundSubscription();
+                outboundPublication = transport.outboundPublication();
+            }
+
+            return false;
+        }
+        catch (final DriverTimeoutException e)
+        {
+            if (enginesAreClustered)
+            {
+                attemptNextEngine();
+            }
+
+            connect(reconnectAttempts - 1);
+            return true;
+        }
+    }
+
+    private boolean sendLibraryConnectOrRetry(final int reconnectAttempts)
+    {
+        try
+        {
+            sendLibraryConnect();
+        }
+        catch (final NotConnectedException e)
+        {
+            if (enginesAreClustered)
+            {
+                attemptNextEngine();
+                connect(reconnectAttempts - 1);
+                return true;
+            }
+            else
+            {
+                throw e;
+            }
+        }
+        return false;
+    }
+
+    private void newLivenessDetector()
+    {
+        livenessDetector = LivenessDetector.forLibrary(
+            outboundPublication,
+            libraryId,
+            configuration.replyTimeoutInMs(),
+            onDisconnectFunc);
     }
 
     private boolean isFirstConnect()

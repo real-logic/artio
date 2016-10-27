@@ -56,11 +56,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         connectSessions();
     }
 
-    private void launchAcceptingEngine()
-    {
-        acceptingEngine = FixEngine.launch(acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID));
-    }
-
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptor()
     {
@@ -391,7 +386,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
 
         wireSessions();
-
         messagesCanBeExchanged();
     }
 
@@ -414,7 +408,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         launchAcceptingEngine();
 
         wireSessions();
-
         messagesCanBeExchanged();
     }
 
@@ -437,24 +430,4 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingEngineHasSession();
     }
 
-    private void acceptingEngineHasSession()
-    {
-        LibraryInfo engine;
-
-        while (true)
-        {
-            final List<LibraryInfo> libraries = SystemTestUtil.libraries(acceptingEngine);
-            if (libraries.size() == 1)
-            {
-                engine = libraries.get(0);
-                assertEquals(ENGINE_LIBRARY_ID, engine.libraryId());
-                break;
-            }
-            ADMIN_IDLE_STRATEGY.idle();
-        }
-
-        ADMIN_IDLE_STRATEGY.reset();
-
-        assertThat(engine.sessions(), contains(hasConnectionId(acceptingSession.connectionId())));
-    }
 }

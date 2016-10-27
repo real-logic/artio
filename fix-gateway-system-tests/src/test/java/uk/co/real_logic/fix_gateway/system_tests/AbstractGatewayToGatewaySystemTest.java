@@ -21,14 +21,21 @@ import org.junit.After;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.session.Session;
 
+import java.util.List;
+
 import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static uk.co.real_logic.fix_gateway.FixMatchers.hasConnectionId;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class AbstractGatewayToGatewaySystemTest
@@ -209,5 +216,31 @@ public class AbstractGatewayToGatewaySystemTest
     {
         initiatingOtfAcceptor.messages().clear();
         acceptingOtfAcceptor.messages().clear();
+    }
+
+    protected void launchAcceptingEngine()
+    {
+        acceptingEngine = FixEngine.launch(acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID));
+    }
+
+    protected void acceptingEngineHasSession()
+    {
+        LibraryInfo engine;
+
+        while (true)
+        {
+            final List<LibraryInfo> libraries = SystemTestUtil.libraries(acceptingEngine);
+            if (libraries.size() == 1)
+            {
+                engine = libraries.get(0);
+                assertEquals(ENGINE_LIBRARY_ID, engine.libraryId());
+                break;
+            }
+            ADMIN_IDLE_STRATEGY.idle();
+        }
+
+        ADMIN_IDLE_STRATEGY.reset();
+
+        assertThat(engine.sessions(), contains(hasConnectionId(acceptingSession.connectionId())));
     }
 }
