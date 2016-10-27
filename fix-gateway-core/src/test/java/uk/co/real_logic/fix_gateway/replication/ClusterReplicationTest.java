@@ -18,10 +18,7 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.collections.Int2IntHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.rules.Timeout;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 
@@ -36,6 +33,7 @@ import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 /**
  * Test simulated cluster.
  */
+@Ignore
 public class ClusterReplicationTest
 {
     private static final int BUFFER_SIZE = 1337;
