@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
-import io.aeron.exceptions.DriverTimeoutException;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
@@ -254,10 +253,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         try
         {
-            if (initStreamsOrRetry(reconnectAttempts))
-            {
-                return;
-            }
+            initStreams();
 
             newLivenessDetector();
 
@@ -330,28 +326,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
     }
 
-    private boolean initStreamsOrRetry(final int reconnectAttempts)
+    private void initStreams()
     {
-        try
+        if (enginesAreClustered || isFirstConnect())
         {
-            if (enginesAreClustered || isFirstConnect())
-            {
-                transport.initStreams(currentAeronChannel);
-                inboundSubscription = transport.inboundSubscription();
-                outboundPublication = transport.outboundPublication();
-            }
-
-            return false;
-        }
-        catch (final DriverTimeoutException e)
-        {
-            if (enginesAreClustered)
-            {
-                attemptNextEngine();
-            }
-
-            connect(reconnectAttempts - 1);
-            return true;
+            transport.initStreams(currentAeronChannel);
+            inboundSubscription = transport.inboundSubscription();
+            outboundPublication = transport.outboundPublication();
         }
     }
 
