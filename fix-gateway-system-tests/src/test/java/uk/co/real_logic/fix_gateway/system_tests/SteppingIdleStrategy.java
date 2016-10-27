@@ -20,13 +20,12 @@ import org.agrona.concurrent.IdleStrategy;
 
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
-
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class SteppingIdleStrategy implements IdleStrategy
 {
-    private static final long RUN_FREE_IDLE_TIME_IN_NS = MILLISECONDS.toNanos(1);
+    private static final long RUN_FREE_IDLE_TIME_IN_NS = TimeUnit.MILLISECONDS.toNanos(1);
 
     private volatile boolean isStepping = false;
     private final CyclicBarrier barrier = new CyclicBarrier(2);
@@ -53,7 +52,11 @@ public class SteppingIdleStrategy implements IdleStrategy
             {
                 barrier.await();
             }
-            catch (InterruptedException | BrokenBarrierException e)
+            catch (final BrokenBarrierException e)
+            {
+                // Deliberately blank as we can knowingly interrupt the barrier.
+            }
+            catch (final InterruptedException e)
             {
                 LangUtil.rethrowUnchecked(e);
             }
@@ -72,5 +75,6 @@ public class SteppingIdleStrategy implements IdleStrategy
     public void stopStepping()
     {
         isStepping = false;
+        barrier.reset();
     }
 }

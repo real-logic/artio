@@ -94,7 +94,6 @@ public class LibraryAndGatewayRandomTimeoutTest
     {
         initiatingLibrary = FixLibrary.connect(
             new LibraryConfiguration()
-                .replyTimeoutInMs(5000)
                 .sessionAcquireHandler(initiatingSessionHandler)
                 .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + aeronPort))
                 .monitoringFile(IoUtil.tmpDirName() + "fix-client" + File.separator + "libraryCounters"));
@@ -108,9 +107,9 @@ public class LibraryAndGatewayRandomTimeoutTest
     @After
     public void close() throws Exception
     {
-        CloseHelper.close(initiatingLibrary);
-        CloseHelper.close(initiatingEngine);
-        CloseHelper.close(mediaDriver);
+        CloseHelper.quietClose(initiatingLibrary);
+        CloseHelper.quietClose(initiatingEngine);
+        CloseHelper.quietClose(mediaDriver);
         cleanupDirectory(mediaDriver);
     }
 }

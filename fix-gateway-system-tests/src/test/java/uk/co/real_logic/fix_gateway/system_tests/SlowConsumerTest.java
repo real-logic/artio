@@ -153,6 +153,8 @@ public class SlowConsumerTest
             framerIdleStrategy.step();
         }
 
+        framerIdleStrategy.stopStepping();
+
         assertEquals(ACTIVE, session.state());
         assertTrue(socketIsConnected());
     }
