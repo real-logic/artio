@@ -51,7 +51,7 @@ public final class Timing
     public static void assertEventuallyTrue(
         final String message,
         final Runnable runnable,
-        final long timeout)
+        final long timeoutMs)
     {
         assertEventuallyTrue(message,
             () ->
@@ -66,13 +66,14 @@ public final class Timing
                     return false;
                 }
             },
-            timeout, 100);
+            timeoutMs, 100);
     }
 
-    public static void assertEventuallyTrue(final String message,
-                                            final BooleanSupplier condition,
-                                            final long timeout,
-                                            final long interval)
+    public static void assertEventuallyTrue(
+        final String message,
+        final BooleanSupplier condition,
+        final long timeout,
+        final long intervalMs)
     {
         final long startTime = System.currentTimeMillis();
 
@@ -85,11 +86,11 @@ public final class Timing
 
             try
             {
-                Thread.sleep(interval);
+                Thread.sleep(intervalMs);
             }
-            catch (final InterruptedException e)
+            catch (final InterruptedException ex)
             {
-                LangUtil.rethrowUnchecked(e);
+                LangUtil.rethrowUnchecked(ex);
             }
         }
 
