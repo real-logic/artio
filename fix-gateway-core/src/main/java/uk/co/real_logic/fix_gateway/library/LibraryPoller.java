@@ -253,9 +253,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         try
         {
-            transport.initStreams(currentAeronChannel);
-            inboundSubscription = transport.inboundSubscription();
-            outboundPublication = transport.outboundPublication();
+            if (enginesAreClustered || isFirstConnect())
+            {
+                transport.initStreams(currentAeronChannel);
+                inboundSubscription = transport.inboundSubscription();
+                outboundPublication = transport.outboundPublication();
+            }
 
             livenessDetector = LivenessDetector.forLibrary(
                 outboundPublication,
@@ -343,6 +346,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
             LangUtil.rethrowUnchecked(e);
         }
+    }
+
+    private boolean isFirstConnect()
+    {
+        return !transport.isReconnect();
+    }
+
+    private boolean streamsNotInitialised()
+    {
+        return inboundSubscription == null;
     }
 
     private LibraryPoller connectError(final String message)

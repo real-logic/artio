@@ -85,7 +85,7 @@ class LibraryTransport
         return outboundPublication;
     }
 
-    private boolean isReconnect()
+    boolean isReconnect()
     {
         return inboundSubscription != null;
     }
