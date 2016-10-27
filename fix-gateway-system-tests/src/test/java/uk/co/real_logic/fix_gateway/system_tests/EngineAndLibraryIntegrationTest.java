@@ -65,8 +65,7 @@ public class EngineAndLibraryIntegrationTest
     private void launchEngine(final int replyTimeoutInMs)
     {
         delete(ACCEPTOR_LOGS);
-        final EngineConfiguration config = acceptingConfig(
-            unusedPort(), "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
+        final EngineConfiguration config = acceptingConfig(unusedPort(), "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
         config.replyTimeoutInMs(replyTimeoutInMs);
         engine = FixEngine.launch(config);
     }
@@ -182,7 +181,7 @@ public class EngineAndLibraryIntegrationTest
 
     private void assertNumActiveLibraries(final int count)
     {
-        // +1 to account for the gateway sesssions that are modelled as libraries.
+        // +1 to account for the gateway sessions that are modelled as libraries.
         assertThat("libraries haven't disconnected yet", libraries(engine), hasSize(count + 1));
     }
 
