@@ -29,6 +29,7 @@ import java.io.File;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -172,6 +173,8 @@ public class CommonConfiguration
         Long.getLong(HISTOGRAM_POLL_PERIOD_IN_MS_PROPERTY, DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS);
     private String histogramLoggingFile = null;
     private HistogramHandler histogramHandler;
+
+    private final AtomicBoolean isConcluded = new AtomicBoolean(false);
 
     /**
      * Sets the sending time window. The sending time window is the period of acceptance
@@ -495,15 +498,23 @@ public class CommonConfiguration
 
     protected void conclude(final String fixSuffix)
     {
-        if (monitoringFile() == null)
+        if (isConcluded.compareAndSet(false, true))
         {
-            monitoringFile(getProperty(MONITORING_FILE_PROPERTY, String.format(DEFAULT_MONITORING_FILE, fixSuffix)));
-        }
+            if (monitoringFile() == null)
+            {
+                monitoringFile(getProperty(MONITORING_FILE_PROPERTY, String.format(DEFAULT_MONITORING_FILE, fixSuffix)));
+            }
 
-        if (histogramLoggingFile() == null)
+            if (histogramLoggingFile() == null)
+            {
+                histogramLoggingFile(getProperty(
+                    HISTOGRAM_LOGGING_FILE_PROPERTY, String.format(DEFAULT_HISTOGRAM_LOGGING_FILE, fixSuffix)));
+            }
+        }
+        else
         {
-            histogramLoggingFile(getProperty(
-                HISTOGRAM_LOGGING_FILE_PROPERTY, String.format(DEFAULT_HISTOGRAM_LOGGING_FILE, fixSuffix)));
+            throw new IllegalStateException(
+                "This configuration has already been concluded, are you trying to re-use it?");
         }
     }
 

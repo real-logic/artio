@@ -31,6 +31,8 @@ import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
  * Provides configuration for initiating an instance of Fix Library. Individual configuration options are
  * documented on their setters.
  *
+ * NB: DO NOT REUSE this object over multiple {@code FixLibrary.connect()} calls.
+ *
  * @see FixLibrary
  */
 public final class LibraryConfiguration extends CommonConfiguration

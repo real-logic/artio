@@ -44,6 +44,8 @@ import static uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy
  * <p>
  * See setters or properties for documentation of what specific configuration options do.
  *
+ * NB: DO NOT REUSE this object over multiple {@code FixEngine.launch(EngineConfiguration)} calls.
+ *
  * @see FixEngine
  */
 public final class EngineConfiguration extends CommonConfiguration implements AutoCloseable
