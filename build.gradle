@@ -109,6 +109,13 @@ subprojects {
                 }
             }
         }
+
+        afterTest { desc, result ->
+            if (System.properties["printTestNames"] != null)
+            {
+                println "Executing test ${desc.name} [${desc.className}] with result: ${result.resultType}"
+            }
+        }
     }
 
     javadoc {

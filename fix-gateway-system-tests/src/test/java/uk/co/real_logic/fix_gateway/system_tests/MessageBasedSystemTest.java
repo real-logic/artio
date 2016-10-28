@@ -78,20 +78,20 @@ public class MessageBasedSystemTest
 
         final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
         final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
-        final FixLibrary library = FixLibrary.connect(
-            acceptingLibraryConfig(fakeHandler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL));
+        try (final FixLibrary library = FixLibrary.connect(
+            acceptingLibraryConfig(fakeHandler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL)))
+        {
+            try (final FixConnection connection = new FixConnection(port))
+            {
+                library.poll(10);
 
-        final FixConnection connection = new FixConnection(port);
+                assertFalse(fakeHandler.hasSeenSession());
 
-        library.poll(10);
+                logon(connection);
 
-        assertFalse(fakeHandler.hasSeenSession());
-
-        logon(connection);
-
-        fakeHandler.awaitSessionIdFor(INITIATOR_ID, ACCEPTOR_ID, () -> library.poll(2));
-
-        connection.close();
+                fakeHandler.awaitSessionIdFor(INITIATOR_ID, ACCEPTOR_ID, () -> library.poll(2));
+            }
+        }
     }
 
     private void setup(final boolean sequenceNumberReset)
